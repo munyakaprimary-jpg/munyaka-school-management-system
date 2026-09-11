@@ -84,10 +84,8 @@ export default function StaffAccessMaster() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
-  // Form states
+  // Security & Credentials form states (No Add button in UI)
   const [staffName, setStaffName] = useState('');
-  const [staffId, setStaffId] = useState('');
-  const [registeredEmail, setRegisteredEmail] = useState('');
   const [systemRole, setSystemRole] = useState('Teacher');
   const [tempAccessCode, setTempAccessCode] = useState('');
 
@@ -134,8 +132,6 @@ export default function StaffAccessMaster() {
   const handleOpenEdit = (record: StaffMember) => {
     setEditingStaff(record);
     setStaffName(record.staffName);
-    setStaffId(record.staffId);
-    setRegisteredEmail(record.registeredEmail);
     setSystemRole(record.systemRole);
     setTempAccessCode(record.tempAccessCode);
     setIsModalOpen(true);
@@ -143,24 +139,15 @@ export default function StaffAccessMaster() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!staffName.trim() || !registeredEmail.trim()) {
-      showError('Please fill in Name and Email Address');
-      return;
-    }
+    if (!editingStaff) return;
 
-    if (editingStaff) {
-      const updated = staffList.map(s => s.id === editingStaff.id ? {
-        ...s,
-        staffName: staffName.trim(),
-        staffId: staffId.trim() || s.staffId,
-        registeredEmail: registeredEmail.trim().toLowerCase(),
-        systemRole,
-        tempAccessCode: tempAccessCode.trim() || s.tempAccessCode
-      } : s);
-      saveToStorage(updated);
-      showSuccess(`Updated staff: ${staffName}`);
-    }
-
+    const updated = staffList.map(s => s.id === editingStaff.id ? {
+      ...s,
+      systemRole,
+      tempAccessCode: tempAccessCode.trim() || s.tempAccessCode
+    } : s);
+    saveToStorage(updated);
+    showSuccess(`Updated security credentials for ${editingStaff.staffName}`);
     setIsModalOpen(false);
   };
 
@@ -187,14 +174,14 @@ export default function StaffAccessMaster() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       
-      {/* Header */}
+      {/* Header (No Add New Staff button) */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black uppercase tracking-wider mb-2">
-            <Shield size={14} /> Security & Access Master
+            <Shield size={14} /> Security & Credentials Master
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Staff Access Master</h1>
-          <p className="text-slate-500 text-sm font-medium">Manage access credentials and account statuses across all roles.</p>
+          <p className="text-slate-500 text-sm font-medium">Manage access credentials, security access codes, and RBAC permissions.</p>
         </div>
       </div>
 
@@ -311,49 +298,27 @@ export default function StaffAccessMaster() {
         </CardContent>
       </Card>
 
-      {/* Edit Modal */}
+      {/* Edit Modal (Focused on Security & RBAC Roles) */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md rounded-3xl p-6 md:p-8 bg-white border-none shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-black text-slate-900">
-              Edit Staff Access & Permissions
+              Edit Security & Access Credentials
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Full Name</Label>
+              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Staff Member</Label>
               <Input
                 value={staffName}
-                onChange={e => setStaffName(e.target.value)}
-                className="h-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-indigo-200"
-                required
+                disabled
+                className="h-12 rounded-xl bg-slate-100 border-none font-bold text-base text-slate-600"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Staff / TSC ID</Label>
-              <Input
-                value={staffId}
-                onChange={e => setStaffId(e.target.value)}
-                className="h-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-indigo-200"
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Email Address</Label>
-              <Input
-                type="email"
-                value={registeredEmail}
-                onChange={e => setRegisteredEmail(e.target.value)}
-                className="h-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-indigo-200"
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Role</Label>
+              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">System Role / RBAC Permission</Label>
               <Select value={systemRole} onValueChange={setSystemRole}>
                 <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:ring-2 focus:ring-indigo-200">
                   <SelectValue placeholder="Select role" />
@@ -364,6 +329,7 @@ export default function StaffAccessMaster() {
                   <SelectItem value="Support Staff" className="font-bold">Support Staff</SelectItem>
                   <SelectItem value="Librarian" className="font-bold">Librarian</SelectItem>
                   <SelectItem value="Bursar" className="font-bold">Bursar</SelectItem>
+                  <SelectItem value="Admin" className="font-bold">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -391,7 +357,7 @@ export default function StaffAccessMaster() {
                 type="submit"
                 className="h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 shadow-lg shadow-indigo-100"
               >
-                Save Changes
+                Save Credentials
               </Button>
             </DialogFooter>
           </form>

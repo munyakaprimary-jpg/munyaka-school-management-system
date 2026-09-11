@@ -9,15 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Users, 
   UserPlus, 
-  Key, 
   Search, 
   Shield, 
   CheckCircle2, 
   XCircle, 
   Edit3, 
   Trash2, 
-  RefreshCw,
-  Mail,
   UserCheck
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
@@ -28,7 +25,8 @@ interface StaffRecord {
   staffName: string;
   registeredEmail: string;
   systemRole: string;
-  tempAccessCode: string;
+  department?: string;
+  subjects?: string;
   isActive: boolean;
 }
 
@@ -39,7 +37,8 @@ const DEFAULT_STAFF_RECORDS: StaffRecord[] = [
     staffName: 'Mary Wanjiku',
     registeredEmail: 'mary.wanjiku@munyaka.sc.ke',
     systemRole: 'Teacher',
-    tempAccessCode: 'MUNYAKA-5721',
+    department: 'Academics',
+    subjects: 'Mathematics, Science',
     isActive: true
   },
   {
@@ -48,7 +47,8 @@ const DEFAULT_STAFF_RECORDS: StaffRecord[] = [
     staffName: 'Grace Njeri',
     registeredEmail: 'grace.njeri@munyaka.sc.ke',
     systemRole: 'Head Teacher',
-    tempAccessCode: 'MUNYAKA-1001',
+    department: 'Administration',
+    subjects: 'School Management',
     isActive: true
   },
   {
@@ -57,7 +57,8 @@ const DEFAULT_STAFF_RECORDS: StaffRecord[] = [
     staffName: 'David Kiprotich',
     registeredEmail: 'david.kiprotich@munyaka.sc.ke',
     systemRole: 'Support Staff',
-    tempAccessCode: 'MUNYAKA-4005',
+    department: 'Operations',
+    subjects: 'Maintenance & Security',
     isActive: true
   }
 ];
@@ -68,14 +69,15 @@ export default function StaffDirectory() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffRecord | null>(null);
 
-  // Form states
+  // Form states (HR focused)
   const [staffName, setStaffName] = useState('');
   const [staffId, setStaffId] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [systemRole, setSystemRole] = useState('Teacher');
-  const [tempAccessCode, setTempAccessCode] = useState('');
+  const [department, setDepartment] = useState('Academics');
+  const [subjects, setSubjects] = useState('');
 
-  // Load from localStorage on mount
+  // Load strictly from munyaka_staff
   useEffect(() => {
     try {
       const raw = localStorage.getItem('munyaka_staff');
@@ -86,17 +88,16 @@ export default function StaffDirectory() {
       if (!Array.isArray(data) || data.length === 0) {
         data = DEFAULT_STAFF_RECORDS;
         localStorage.setItem('munyaka_staff', JSON.stringify(data));
-        localStorage.setItem('munyaka_personnel', JSON.stringify(data));
       }
 
-      // Normalize records to the required standardized schema
       const normalized: StaffRecord[] = data.map((s: any, index: number) => ({
         id: s.id || `SUP-00${index + 1}`,
-        staffId: s.staffId || s.tscNo || `TSC-${Math.floor(100000 + Math.random() * 900000)}`,
-        staffName: s.staffName || s.name || 'Staff Member',
+        staffId: s.staffId || s.tscNo || s.tscNumber || `TSC-${Math.floor(100000 + Math.random() * 900000)}`,
+        staffName: s.staffName || s.name || s.fullName || 'Staff Member',
         registeredEmail: s.registeredEmail || s.email || '',
         systemRole: s.systemRole || s.role || 'Teacher',
-        tempAccessCode: s.tempAccessCode || s.accessCode || `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`,
+        department: s.department || 'Academics',
+        subjects: s.subjects || 'General',
         isActive: s.isActive !== undefined ? Boolean(s.isActive) : true
       }));
 
@@ -109,8 +110,21 @@ export default function StaffDirectory() {
 
   const saveToStorage = (updatedList: StaffRecord[]) => {
     try {
-      localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
-      localStorage.setItem('munyaka_personnel', JSON.stringify(updatedList));
+      // Preserve existing security fields (like tempAccessCode) when saving HR updates
+      const raw = localStorage.getItem('munyaka_staff');
+      let existing = [];
+      if (raw) { try { existing = JSON.parse(raw); } catch {} }
+
+      const merged = updatedList.map(newItem => {
+        const found = existing.find((e: any) => e.id === newItem.id || e.staffId === newItem.staffId);
+        return {
+          ...(found || {}),
+          ...newItem,
+          tempAccessCode: found?.tempAccessCode || found?.accessCode || 'MUNYAKA-2026'
+        };
+      });
+
+      localStorage.setItem('munyaka_staff', JSON.stringify(merged));
       setStaffList(updatedList);
     } catch (err) {
       console.error('[StaffDirectory] Failed to save staff:', err);
@@ -124,7 +138,8 @@ export default function StaffDirectory() {
     setStaffId(`TSC-${Math.floor(100000 + Math.random() * 900000)}`);
     setRegisteredEmail('');
     setSystemRole('Teacher');
-    setTempAccessCode(`MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`);
+    setDepartment('Academics');
+    setSubjects('');
     setIsModalOpen(true);
   };
 
@@ -134,7 +149,8 @@ export default function StaffDirectory() {
     setStaffId(record.staffId);
     setRegisteredEmail(record.registeredEmail);
     setSystemRole(record.systemRole);
-    setTempAccessCode(record.tempAccessCode);
+    setDepartment(record.department || 'Academics');
+    setSubjects(record.subjects || '');
     setIsModalOpen(true);
   };
 
@@ -152,10 +168,11 @@ export default function StaffDirectory() {
         staffId: staffId.trim() || s.staffId,
         registeredEmail: registeredEmail.trim().toLowerCase(),
         systemRole,
-        tempAccessCode: tempAccessCode.trim() || s.tempAccessCode
+        department,
+        subjects
       } : s);
       saveToStorage(updated);
-      showSuccess(`Updated staff: ${staffName}`);
+      showSuccess(`Updated staff HR profile: ${staffName}`);
     } else {
       const newRecord: StaffRecord = {
         id: `SUP-00${staffList.length + 1}`,
@@ -163,7 +180,8 @@ export default function StaffDirectory() {
         staffName: staffName.trim(),
         registeredEmail: registeredEmail.trim().toLowerCase(),
         systemRole,
-        tempAccessCode: tempAccessCode.trim() || `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`,
+        department,
+        subjects,
         isActive: true
       };
       saveToStorage([newRecord, ...staffList]);
@@ -179,13 +197,6 @@ export default function StaffDirectory() {
     showSuccess('Staff status updated');
   };
 
-  const handleResetCode = (id: string) => {
-    const newCode = `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`;
-    const updated = staffList.map(s => s.id === id ? { ...s, tempAccessCode: newCode } : s);
-    saveToStorage(updated);
-    showSuccess(`Reset access code to: ${newCode}`);
-  };
-
   const handleDelete = (id: string) => {
     if (!confirm('Are you sure you want to delete this staff member?')) return;
     const updated = staffList.filter(s => s.id !== id);
@@ -197,7 +208,8 @@ export default function StaffDirectory() {
     s.staffName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.registeredEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.staffId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.systemRole.toLowerCase().includes(searchTerm.toLowerCase())
+    s.systemRole.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.department && s.department.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -207,10 +219,10 @@ export default function StaffDirectory() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black uppercase tracking-wider mb-2">
-            <Shield size={14} /> Personnel Directory
+            <Users size={14} /> Human Resources
           </div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Staff & Personnel Management</h1>
-          <p className="text-slate-500 text-sm font-medium">Manage standardized staff records, access codes, and permissions.</p>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Staff Directory & HR Profiles</h1>
+          <p className="text-slate-500 text-sm font-medium">Manage staff personal details, departments, subjects, and employment status.</p>
         </div>
         <Button onClick={handleOpenAdd} className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100">
           <UserPlus size={18} /> Add New Staff
@@ -224,30 +236,30 @@ export default function StaffDirectory() {
           <Input
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search by name, email, TSC/Staff ID, or role..."
-            className="border-none bg-transparent font-medium text-slate-800 focus-visible:ring-0 placeholder:text-slate-400"
+            placeholder="Search by name, email, ID, department, or role..."
+            className="border-none bg-transparent font-medium text-slate-800 focus-visible:ring-0 placeholder:text-slate-400 text-xs"
           />
         </div>
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between px-6">
-          <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Total Staff</span>
-          <span className="text-xl font-black text-indigo-600">{staffList.length}</span>
+          <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">Total Active Staff</span>
+          <span className="text-xl font-black text-indigo-600">{staffList.filter(s => s.isActive).length}</span>
         </div>
       </div>
 
-      {/* Staff Table */}
+      {/* Staff Table - HR Focused (No Access Codes) */}
       <Card className="border-none shadow-xl rounded-3xl bg-white overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-black uppercase tracking-wider text-slate-400">
-                  <th className="py-3 px-5 whitespace-nowrap">Staff Name</th>
-                  <th className="py-3 px-5 whitespace-nowrap">Staff / TSC ID</th>
-                  <th className="py-3 px-5 whitespace-nowrap">Email Address</th>
-                  <th className="py-3 px-5 whitespace-nowrap">Role</th>
-                  <th className="py-3 px-5 whitespace-nowrap">Access Code</th>
-                  <th className="py-3 px-5 whitespace-nowrap">Status</th>
-                  <th className="py-3 px-5 text-right whitespace-nowrap">Actions</th>
+                  <th className="py-2.5 px-4 whitespace-nowrap">Staff Name</th>
+                  <th className="py-2.5 px-4 whitespace-nowrap">Staff / TSC ID</th>
+                  <th className="py-2.5 px-4 whitespace-nowrap">Email Address</th>
+                  <th className="py-2.5 px-4 whitespace-nowrap">Role</th>
+                  <th className="py-2.5 px-4 whitespace-nowrap">Department / Subjects</th>
+                  <th className="py-2.5 px-4 whitespace-nowrap">Status</th>
+                  <th className="py-2.5 px-4 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
@@ -260,47 +272,36 @@ export default function StaffDirectory() {
                 ) : (
                   filteredStaff.map((staff) => (
                     <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3 px-5 font-semibold text-slate-900 flex items-center gap-2.5 whitespace-nowrap">
+                      <td className="py-3 px-4 font-semibold text-slate-900 flex items-center gap-2.5 whitespace-nowrap">
                         <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 font-black text-[11px] flex items-center justify-center shrink-0">
                           {staff.staffName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                         </div>
-                        <span className="text-[13px]">{staff.staffName}</span>
+                        <span className="text-[13px] font-semibold">{staff.staffName}</span>
                       </td>
-                      <td className="py-3 px-5 text-slate-500 font-mono text-[11px] font-bold whitespace-nowrap">{staff.staffId}</td>
-                      <td className="py-3 px-5 text-slate-600 text-xs whitespace-nowrap">{staff.registeredEmail}</td>
-                      <td className="py-3 px-5 whitespace-nowrap">
-                        <Badge variant="outline" className="font-bold text-[11px] py-0.5 px-2 bg-indigo-50/50 text-indigo-700 border-indigo-100">
+                      <td className="py-3 px-4 font-mono text-[11px] text-gray-500 whitespace-nowrap">{staff.staffId}</td>
+                      <td className="py-3 px-4 text-xs text-gray-600 whitespace-nowrap">{staff.registeredEmail}</td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <Badge variant="outline" className="font-bold text-[11px] py-0.5 px-2 rounded-full bg-indigo-50/50 text-indigo-700 border-indigo-100">
                           {staff.systemRole}
                         </Badge>
                       </td>
-                      <td className="py-3 px-5 whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 font-mono text-[11px] font-bold text-slate-700">
-                          <Key size={11} className="text-slate-400" />
-                          <span>{staff.tempAccessCode}</span>
-                        </div>
+                      <td className="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">
+                        <span className="font-bold">{staff.department || 'Academics'}</span>
+                        {staff.subjects && <span className="text-slate-400"> • {staff.subjects}</span>}
                       </td>
-                      <td className="py-3 px-5 whitespace-nowrap">
+                      <td className="py-3 px-4 whitespace-nowrap">
                         {staff.isActive ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold">
+                          <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold">
                             <CheckCircle2 size={11} /> Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[11px] font-bold">
+                          <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full bg-rose-50 text-rose-700 text-[11px] font-bold">
                             <XCircle size={11} /> Inactive
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-5 text-right whitespace-nowrap">
-                        <div className="flex flex-row items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleResetCode(staff.id)}
-                            title="Reset Access Code"
-                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
-                          >
-                            <RefreshCw size={13} />
-                          </Button>
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="flex flex-row items-center justify-end gap-1.5">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -314,7 +315,7 @@ export default function StaffDirectory() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleOpenEdit(staff)}
-                            title="Edit Staff"
+                            title="Edit HR Profile"
                             className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
                           >
                             <Edit3 size={13} />
@@ -323,7 +324,7 @@ export default function StaffDirectory() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(staff.id)}
-                            title="Delete Staff"
+                            title="Delete Record"
                             className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50"
                           >
                             <Trash2 size={13} />
@@ -344,7 +345,7 @@ export default function StaffDirectory() {
         <DialogContent className="max-w-md rounded-3xl p-6 md:p-8 bg-white border-none shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-black text-slate-900">
-              {editingStaff ? 'Edit Staff Record' : 'Register New Staff Member'}
+              {editingStaff ? 'Edit Staff HR Profile' : 'Add New Staff Member'}
             </DialogTitle>
           </DialogHeader>
 
@@ -384,7 +385,7 @@ export default function StaffDirectory() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">System Role</Label>
+              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Role</Label>
               <Select value={systemRole} onValueChange={setSystemRole}>
                 <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:ring-2 focus:ring-indigo-200">
                   <SelectValue placeholder="Select role" />
@@ -394,20 +395,30 @@ export default function StaffDirectory() {
                   <SelectItem value="Head Teacher" className="font-bold">Head Teacher</SelectItem>
                   <SelectItem value="Support Staff" className="font-bold">Support Staff</SelectItem>
                   <SelectItem value="Librarian" className="font-bold">Librarian</SelectItem>
-                  <SelectItem value="Admin" className="font-bold">Admin</SelectItem>
+                  <SelectItem value="Bursar" className="font-bold">Bursar</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Temporary Access Code</Label>
-              <Input
-                value={tempAccessCode}
-                onChange={e => setTempAccessCode(e.target.value)}
-                placeholder="e.g. MUNYAKA-5721"
-                className="h-12 rounded-xl bg-slate-50 border-none font-bold text-base font-mono focus:bg-white focus:ring-2 focus:ring-indigo-200"
-                required
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Department</Label>
+                <Input
+                  value={department}
+                  onChange={e => setDepartment(e.target.value)}
+                  placeholder="e.g. Academics"
+                  className="h-12 rounded-xl bg-slate-50 border-none font-bold text-sm focus:bg-white focus:ring-2 focus:ring-indigo-200"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Subjects / Area</Label>
+                <Input
+                  value={subjects}
+                  onChange={e => setSubjects(e.target.value)}
+                  placeholder="e.g. Math, Science"
+                  className="h-12 rounded-xl bg-slate-50 border-none font-bold text-sm focus:bg-white focus:ring-2 focus:ring-indigo-200"
+                />
+              </div>
             </div>
 
             <DialogFooter className="pt-4">
@@ -423,7 +434,7 @@ export default function StaffDirectory() {
                 type="submit"
                 className="h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 shadow-lg shadow-indigo-100"
               >
-                {editingStaff ? 'Save Changes' : 'Register Staff'}
+                {editingStaff ? 'Save HR Profile' : 'Register Staff'}
               </Button>
             </DialogFooter>
           </form>
