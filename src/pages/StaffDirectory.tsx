@@ -14,7 +14,12 @@ import {
   XCircle, 
   Edit3, 
   Trash2, 
-  Eye
+  UserCheck,
+  Eye,
+  Mail,
+  BookOpen,
+  Building2,
+  Shield
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
@@ -70,7 +75,11 @@ export default function StaffDirectory() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffRecord | null>(null);
 
-  // HR Form states
+  // View Modal state
+  const [selectedStaff, setSelectedStaff] = useState<StaffRecord | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
+  // Form states (HR focused)
   const [staffName, setStaffName] = useState('');
   const [staffId, setStaffId] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
@@ -116,7 +125,7 @@ export default function StaffDirectory() {
       if (raw) { try { existing = JSON.parse(raw); } catch {} }
 
       const merged = updatedList.map(newItem => {
-        const found = existing.find((e: any) => e.id === newItem.id || e.staffId === newItem.staffId);
+        const found = existing.find((e: any) => e.id === newItem.id || e.staffId === newItem.staffId || e.email === newItem.registeredEmail);
         return {
           ...(found || {}),
           ...newItem,
@@ -155,7 +164,15 @@ export default function StaffDirectory() {
   };
 
   const handleViewProfile = (record: StaffRecord) => {
-    navigate(`/staff/${record.id}`);
+    const targetId = record.id || record.staffId;
+    const foundStaff = staffList.find((s) => 
+      s.id === targetId || 
+      s.staffId === targetId || 
+      s.registeredEmail === targetId
+    ) || record;
+
+    setSelectedStaff(foundStaff);
+    setIsViewModalOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -193,6 +210,12 @@ export default function StaffDirectory() {
     }
 
     setIsModalOpen(false);
+  };
+
+  const handleToggleStatus = (id: string) => {
+    const updated = staffList.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s);
+    saveToStorage(updated);
+    showSuccess('Staff status updated');
   };
 
   const handleDelete = (id: string) => {
@@ -337,6 +360,77 @@ export default function StaffDirectory() {
           </div>
         </CardContent>
       </Card>
+
+      {/* View Staff Profile Modal */}
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="max-w-lg rounded-3xl p-6 md:p-8 bg-white border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 font-black text-sm flex items-center justify-center shrink-0">
+                {selectedStaff?.staffName?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <div>{selectedStaff?.staffName}</div>
+                <div className="text-xs font-medium text-slate-500">{selectedStaff?.systemRole}</div>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedStaff && (
+            <div className="space-y-4 mt-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-2xl">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Staff / TSC ID</span>
+                  <span className="font-mono font-bold text-slate-800">{selectedStaff.staffId}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Account Status</span>
+                  {selectedStaff.isActive ? (
+                    <span className="text-emerald-600 font-bold flex items-center gap-1"><CheckCircle2 size={14}/> Active</span>
+                  ) : (
+                    <span className="text-rose-600 font-bold flex items-center gap-1"><XCircle size={14}/> Inactive</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl">
+                  <Mail size={18} className="text-slate-400 shrink-0" />
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Email Address</div>
+                    <div className="font-bold text-slate-800">{selectedStaff.registeredEmail}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl">
+                  <Building2 size={18} className="text-slate-400 shrink-0" />
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Department</div>
+                    <div className="font-bold text-slate-800">{selectedStaff.department || 'Academics'}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl">
+                  <BookOpen size={18} className="text-slate-400 shrink-0" />
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Subjects / Area</div>
+                    <div className="font-bold text-slate-800">{selectedStaff.subjects || 'General'}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="pt-4">
+            <Button
+              onClick={() => setIsViewModalOpen(false)}
+              className="w-full h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold"
+            >
+              Close Profile
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit HR Profile Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
