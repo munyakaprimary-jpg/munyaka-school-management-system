@@ -70,14 +70,28 @@ export default function DevDashboard() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'details' | 'configuration' | 'gateways'>('details');
 
-  // Configuration Form State (Exact requirement)
-  const [configPlanName, setConfigPlanName] = useState('Munyaka School License');
-  const [configPlanLabel, setConfigPlanLabel] = useState('Enterprise Plan');
-  const [configAmount, setConfigAmount] = useState('20000');
-  const [configCurrency, setConfigCurrency] = useState('KES — Kenyan Shilling');
-  const [configBillingDate, setConfigBillingDate] = useState('02/09/2026');
-  const [configSeats, setConfigSeats] = useState('1000');
-  const [configTier, setConfigTier] = useState('Starter');
+  // Configuration Form State (Exact requirement with centralized subscription config state)
+  const [config, setConfig] = useState(() => {
+    const saved = localStorage.getItem('munyaka_subscription_config');
+    return saved ? JSON.parse(saved) : {
+      amount: '20000',
+      currency: 'KES',
+      nextBilling: '2026-09-02',
+      seats: '1000',
+      planName: 'Munyaka School License',
+      planLabel: 'Enterprise Plan',
+      tier: 'Starter'
+    };
+  });
+
+  // Individual form inputs tied to config state for easy editing
+  const [configPlanName, setConfigPlanName] = useState(config.planName);
+  const [configPlanLabel, setConfigPlanLabel] = useState(config.planLabel);
+  const [configAmount, setConfigAmount] = useState(config.amount);
+  const [configCurrency, setConfigCurrency] = useState(config.currency.includes('KES') ? 'KES — Kenyan Shilling' : config.currency);
+  const [configBillingDate, setConfigBillingDate] = useState(config.nextBilling);
+  const [configSeats, setConfigSeats] = useState(config.seats);
+  const [configTier, setConfigTier] = useState(config.tier);
 
   // Dynamic tenant state
   const [selectedTenant, setSelectedTenant] = useState<{ id: string; name: string } | null>({
@@ -246,10 +260,12 @@ export default function DevDashboard() {
               {/* Top Right Box ("CURRENT BILL") */}
               <div className="bg-purple-950/70 border border-purple-700/40 rounded-2xl p-5 backdrop-blur-md shadow-inner flex flex-col justify-center min-w-[240px] space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-widest text-purple-300">Current Bill</p>
-                <p className="text-2xl md:text-3xl font-black text-white">KES 20,000 <span className="text-xs font-normal text-purple-300">/mo</span></p>
+                <p className="text-2xl md:text-3xl font-black text-white">
+                  {config.currency.split(' ')[0]} {Number(config.amount || 0).toLocaleString()} <span className="text-xs font-normal text-purple-300">/mo</span>
+                </p>
                 <div className="text-xs text-purple-200 space-y-0.5 pt-1 border-t border-purple-800/60">
-                  <p className="font-medium">Next billing: <strong className="text-white">2026-09-02</strong></p>
-                  <p className="font-medium">Seats: <strong className="text-white">1,000 institutional seats</strong></p>
+                  <p className="font-medium">Next: <strong className="text-white">{config.nextBilling}</strong></p>
+                  <p className="font-medium"><strong className="text-white">{Number(config.seats || 0).toLocaleString()} institutional seats</strong></p>
                 </div>
               </div>
             </div>
@@ -502,18 +518,20 @@ export default function DevDashboard() {
             <div>
               <Button
                 onClick={() => {
+                  const updatedConfig = {
+                    amount: configAmount,
+                    currency: configCurrency.split(' ')[0],
+                    nextBilling: configBillingDate,
+                    seats: configSeats,
+                    planName: configPlanName,
+                    planLabel: configPlanLabel,
+                    tier: configTier
+                  };
+                  setConfig(updatedConfig);
                   try {
-                    localStorage.setItem('munyaka_sub_config', JSON.stringify({
-                      planName: configPlanName,
-                      planLabel: configPlanLabel,
-                      amount: configAmount,
-                      currency: configCurrency,
-                      billingDate: configBillingDate,
-                      seats: configSeats,
-                      tier: configTier
-                    }));
+                    localStorage.setItem('munyaka_subscription_config', JSON.stringify(updatedConfig));
                   } catch (e) {}
-                  showSuccess('Configuration saved and persisted successfully!');
+                  showSuccess('Subscription settings saved! Hero summary updated.');
                 }}
                 className="w-full bg-purple-700 hover:bg-purple-800 text-white font-black text-base rounded-2xl h-14 shadow-xl gap-2 transition-all transform active:scale-[0.99]"
               >
