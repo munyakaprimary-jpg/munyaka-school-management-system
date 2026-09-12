@@ -6,13 +6,54 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import {
   Shield, Key, Wifi, CreditCard, Server, Activity, CheckCircle2, RefreshCw,
   Terminal, Cpu, Building2, Settings as SettingsIcon, FileText, Monitor,
   FolderArchive, Plus, Search, Download, Trash2, Power, AlertTriangle, Play,
-  Laptop, HardDrive, Printer, Check, Copy, User, Sparkles, ArrowUpRight, Zap
+  Laptop, HardDrive, Printer, Check, Copy, User, Sparkles, ArrowUpRight, Zap,
+  X
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+
+interface LicenseRecord {
+  id: string;
+  key: string;
+  issuedTo: string;
+  deviceId: string;
+  paymentMethod: string;
+  paymentRef: string;
+  amount: string;
+  validFor: string;
+  issuedDate: string;
+  expiryDate: string;
+  status: 'Active' | 'Expired';
+}
+
+interface PaymentRecord {
+  id: string;
+  date: string;
+  tenant: string;
+  method: string;
+  ref: string;
+  amount: string;
+  status: string;
+}
 
 export default function DevDashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -23,7 +64,12 @@ export default function DevDashboard() {
   const [autoRenew, setAutoRenew] = useState(true);
   const [selectedRow, setSelectedRow] = useState(false);
 
-  // Dynamic tenant state for multi-tenancy support
+  // 1. MODAL STATES
+  const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  const [isGenerateKeyOpen, setIsGenerateKeyOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Dynamic tenant state
   const [selectedTenant, setSelectedTenant] = useState<{ id: string; name: string } | null>({
     id: 'SCH-01',
     name: 'Munyaka Primary & Junior Secondary',
@@ -32,11 +78,128 @@ export default function DevDashboard() {
   const licenseTitle = selectedTenant ? `${selectedTenant.name} License` : 'Tenant Subscription License';
   const subtitleName = selectedTenant ? selectedTenant.name : 'Institutional Tenant';
 
+  // License keys state
+  const [licenseHistory, setLicenseHistory] = useState<LicenseRecord[]>([
+    {
+      id: 'LIC-001',
+      key: 'MUNYAKA-2026-MF59-6CN5-NHGS-RWXU',
+      issuedTo: 'School Operator',
+      deviceId: 'OFFICE-001',
+      paymentMethod: 'M-Pesa',
+      paymentRef: 'JEM03456',
+      amount: 'KES 20,000',
+      validFor: '30 Days (Trial)',
+      issuedDate: '8/29/2026',
+      expiryDate: '9/28/2026',
+      status: 'Active',
+    },
+  ]);
+
+  // Payment history records
+  const [paymentHistory, setPaymentHistory] = useState<PaymentRecord[]>([
+    {
+      id: 'PAY-1001',
+      date: '2026-08-29',
+      tenant: 'Munyaka Primary & Junior Secondary',
+      method: 'M-Pesa',
+      ref: 'JEM03456',
+      amount: 'KES 20,000',
+      status: 'Verified',
+    },
+    {
+      id: 'PAY-1000',
+      date: '2026-07-29',
+      tenant: 'Munyaka Primary & Junior Secondary',
+      method: 'Bank Transfer (KCB)',
+      ref: 'KCB-99201',
+      amount: 'KES 20,000',
+      status: 'Verified',
+    },
+  ]);
+
+  // Form states: Record Payment
+  const [paymentTenant, setPaymentTenant] = useState('Munyaka Primary');
+  const [paymentAmount, setPaymentAmount] = useState('20000');
+  const [paymentMethod, setPaymentMethod] = useState('M-Pesa');
+  const [paymentRef, setPaymentRef] = useState('MPESA' + Math.floor(100000 + Math.random() * 900000));
+  const [paymentValidity, setPaymentValidity] = useState('30 Days');
+
+  // Form states: Generate Key
+  const [targetDeviceId, setTargetDeviceId] = useState('OFFICE-001');
+  const [targetTier, setTargetTier] = useState('Enterprise');
+  const [targetExpiry, setTargetExpiry] = useState('2026-10-30');
+  const [generatedKeyResult, setGeneratedKeyResult] = useState<string | null>(null);
+
   const handleExportReport = () => {
     showSuccess('Platform Developer report exported successfully.');
   };
 
-  // If path is /dev/subscriptions, render the exact requested subscriptions layout with dynamic tenant title
+  const handleRecordPaymentSubmit = () => {
+    if (!paymentAmount || !paymentRef) {
+      showError('Please fill in all required fields.');
+      return;
+    }
+
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    const newPayment: PaymentRecord = {
+      id: 'PAY-' + Math.floor(1000 + Math.random() * 9000),
+      date: dateStr,
+      tenant: paymentTenant,
+      method: paymentMethod,
+      ref: paymentRef,
+      amount: `KES ${Number(paymentAmount).toLocaleString()}`,
+      status: 'Verified',
+    };
+
+    // Auto generate an activation key
+    const hex = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+    const newKey = `MUNYAKA-2026-${hex()}-${hex()}-${hex()}-${hex()}`;
+
+    const newLicense: LicenseRecord = {
+      id: 'LIC-' + Math.floor(100 + Math.random() * 900),
+      key: newKey,
+      issuedTo: paymentTenant,
+      deviceId: 'DEV-' + hex(),
+      paymentMethod: paymentMethod,
+      paymentRef: paymentRef,
+      amount: `KES ${Number(paymentAmount).toLocaleString()}`,
+      validFor: paymentValidity,
+      issuedDate: today.toLocaleDateString(),
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      status: 'Active',
+    };
+
+    setPaymentHistory([newPayment, ...paymentHistory]);
+    setLicenseHistory([newLicense, ...licenseHistory]);
+    setIsRecordPaymentOpen(false);
+    showSuccess(`Payment recorded & Key generated: ${newKey}`);
+  };
+
+  const handleGenerateKeySubmit = () => {
+    const hex = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+    const newKey = `MUNYAKA-2026-${hex()}-${hex()}-${hex()}-${hex()}`;
+    setGeneratedKeyResult(newKey);
+
+    const newLicense: LicenseRecord = {
+      id: 'LIC-' + Math.floor(100 + Math.random() * 900),
+      key: newKey,
+      issuedTo: selectedTenant?.name || 'School Operator',
+      deviceId: targetDeviceId || 'OFFICE-001',
+      paymentMethod: 'Offline Generated',
+      paymentRef: 'OFFLINE-' + hex(),
+      amount: 'KES 0',
+      validFor: '30 Days',
+      issuedDate: new Date().toLocaleDateString(),
+      expiryDate: targetExpiry || '2026-10-30',
+      status: 'Active',
+    };
+
+    setLicenseHistory([newLicense, ...licenseHistory]);
+    showSuccess(`Offline Key Generated: ${newKey}`);
+  };
+
+  // If path is /dev/subscriptions, render the exact requested subscriptions layout
   if (path === '/dev/subscriptions') {
     return (
       <div className="space-y-8 animate-in fade-in duration-300 pb-16">
@@ -81,27 +244,27 @@ export default function DevDashboard() {
               </div>
             </div>
 
-            {/* Quick Actions Section */}
+            {/* 2. BUTTON onClick BINDINGS */}
             <div className="pt-4 border-t border-purple-800/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-3">
-                <Button onClick={() => showSuccess('Payment recording modal opened.')} className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl h-11 px-5 shadow-lg gap-2">
+                <Button onClick={() => setIsRecordPaymentOpen(true)} className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl h-11 px-5 shadow-lg gap-2">
                   <Zap size={16} className="text-amber-300" /> Record Payment
                 </Button>
-                <Button onClick={() => showSuccess('Generated new license key: MUNYAKA-2026-KEY')} variant="outline" className="border-purple-600 bg-purple-900/40 text-purple-100 hover:bg-purple-800 font-bold rounded-2xl h-11 px-5 gap-2">
+                <Button onClick={() => { setGeneratedKeyResult(null); setIsGenerateKeyOpen(true); }} variant="outline" className="border-purple-600 bg-purple-900/40 text-purple-100 hover:bg-purple-800 font-bold rounded-2xl h-11 px-5 gap-2">
                   <Sparkles size={16} className="text-purple-300" /> Generate License Key
                 </Button>
-                <Button onClick={() => showSuccess('Refreshed payment records.')} variant="outline" className="border-purple-600 bg-purple-900/40 text-purple-100 hover:bg-purple-800 font-bold rounded-2xl h-11 px-5 gap-2">
+                <Button onClick={() => setIsHistoryOpen(true)} variant="outline" className="border-purple-600 bg-purple-900/40 text-purple-100 hover:bg-purple-800 font-bold rounded-2xl h-11 px-5 gap-2">
                   <RefreshCw size={16} className="text-purple-300" /> View Payment History
                 </Button>
               </div>
               <p className="text-xs text-purple-300 font-medium">
-                1 payment logged · 1 active license · $15.40 paid (this year)
+                {paymentHistory.length} payments logged · {licenseHistory.length} active licenses · KES {(paymentHistory.length * 20000).toLocaleString()} paid
               </p>
             </div>
           </div>
         </div>
 
-        {/* 2. TOP NAVIGATION TABS BAR */}
+        {/* TOP NAVIGATION TABS BAR */}
         <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 flex flex-wrap items-center gap-2">
           <Button variant="default" className="bg-indigo-600 text-white font-bold rounded-xl text-xs h-10 px-4 gap-2">
             <RefreshCw size={14} /> License Details (Active)
@@ -112,12 +275,12 @@ export default function DevDashboard() {
           <Button onClick={() => showSuccess('Payment gateways configured.')} variant="ghost" className="text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2">
             <Wifi size={14} /> Payment Gateways
           </Button>
-          <Button onClick={() => navigate('/dev/payments')} variant="ghost" className="text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2">
+          <Button onClick={() => setIsHistoryOpen(true)} variant="ghost" className="text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2">
             <FileText size={14} /> Invoice History
           </Button>
         </div>
 
-        {/* 3. MAIN LICENSE DETAILS CARD */}
+        {/* MAIN LICENSE DETAILS CARD */}
         <Card className="border-none shadow-xl rounded-3xl bg-white p-6 md:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -197,7 +360,7 @@ export default function DevDashboard() {
               </Button>
             </div>
 
-            <Button onClick={() => showSuccess('Payment & License generated successfully.')} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl h-12 shadow-lg gap-2">
+            <Button onClick={() => setIsRecordPaymentOpen(true)} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl h-12 shadow-lg gap-2">
               <Key size={16} /> Record Payment & Generate License Key
             </Button>
 
@@ -207,16 +370,19 @@ export default function DevDashboard() {
           </div>
         </Card>
 
-        {/* 4. LICENSE HISTORY & ACTIVATION KEYS TABLE CARD */}
+        {/* LICENSE HISTORY & ACTIVATION KEYS TABLE CARD */}
         <Card className="border-none shadow-xl rounded-3xl bg-white p-6 md:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
                 <h3 className="text-lg font-black text-slate-900">License History &amp; Activation Keys</h3>
-                <Badge className="bg-purple-100 text-purple-800 border-none font-bold text-xs">🔑 1 key issued</Badge>
+                <Badge className="bg-purple-100 text-purple-800 border-none font-bold text-xs">🔑 {licenseHistory.length} key{licenseHistory.length === 1 ? '' : 's'} issued</Badge>
               </div>
               <p className="text-xs text-slate-500 font-medium mt-1">Select one or more rows to enable batch deletion. All issued activation keys, their payment records, and status.</p>
             </div>
+            <Button onClick={() => { setGeneratedKeyResult(null); setIsGenerateKeyOpen(true); }} size="sm" className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl gap-1.5">
+              <Plus size={14} /> Generate Offline Key
+            </Button>
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-slate-100">
@@ -237,40 +403,264 @@ export default function DevDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                <tr className="hover:bg-slate-50/80 transition-colors">
-                  <td className="p-4 text-center">
-                    <Checkbox checked={selectedRow} onCheckedChange={(c) => setSelectedRow(!!c)} />
-                  </td>
-                  <td className="p-4 font-mono font-bold text-purple-600 text-xs">
-                    MUNYAKA-2026-MF59-6CN5-NHGS-RWXU
-                  </td>
-                  <td className="p-4 font-bold text-slate-900">School Operator</td>
-                  <td className="p-4">
-                    <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-800">OFFICE-001</code>
-                  </td>
-                  <td className="p-4 font-bold text-slate-900">
-                    M-Pesa <span className="text-[11px] font-normal text-slate-400 block font-mono">JEM03456</span>
-                  </td>
-                  <td className="p-4 text-xs font-bold text-slate-700">30 Days (Trial)</td>
-                  <td className="p-4 font-mono text-xs text-slate-600">
-                    9/28/2026
-                    <span className="text-[10px] text-slate-400 block font-normal">Issued: 8/29/2026</span>
-                  </td>
-                  <td className="p-4">
-                    <Badge className="bg-emerald-100 text-emerald-800 border-none font-bold gap-1 w-max">
-                      <CheckCircle2 size={12} /> Active
-                    </Badge>
-                  </td>
-                  <td className="p-4 text-right">
-                    <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText('MUNYAKA-2026-MF59-6CN5-NHGS-RWXU'); showSuccess('Key copied.'); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
-                      Copy Key
-                    </Button>
-                  </td>
-                </tr>
+                {licenseHistory.map((lic) => (
+                  <tr key={lic.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-4 text-center">
+                      <Checkbox checked={selectedRow} onCheckedChange={(c) => setSelectedRow(!!c)} />
+                    </td>
+                    <td className="p-4 font-mono font-bold text-purple-600 text-xs">
+                      {lic.key}
+                    </td>
+                    <td className="p-4 font-bold text-slate-900">{lic.issuedTo}</td>
+                    <td className="p-4">
+                      <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-800">{lic.deviceId}</code>
+                    </td>
+                    <td className="p-4 font-bold text-slate-900">
+                      {lic.paymentMethod} <span className="text-[11px] font-normal text-slate-400 block font-mono">{lic.paymentRef}</span>
+                    </td>
+                    <td className="p-4 text-xs font-bold text-slate-700">{lic.validFor}</td>
+                    <td className="p-4 font-mono text-xs text-slate-600">
+                      {lic.expiryDate}
+                      <span className="text-[10px] text-slate-400 block font-normal">Issued: {lic.issuedDate}</span>
+                    </td>
+                    <td className="p-4">
+                      <Badge className={lic.status === 'Active' ? 'bg-emerald-100 text-emerald-800 border-none font-bold gap-1 w-max' : 'bg-slate-100 text-slate-600 border-none font-bold gap-1 w-max'}>
+                        <CheckCircle2 size={12} /> {lic.status}
+                      </Badge>
+                    </td>
+                    <td className="p-4 text-right">
+                      <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(lic.key); showSuccess('Key copied to clipboard.'); }} className="text-xs font-bold text-indigo-600 hover:bg-indigo-50">
+                        Copy Key
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </Card>
+
+        {/* 3. MODAL COMPONENT IMPLEMENTATIONS */}
+
+        {/* A. RECORD PAYMENT MODAL */}
+        <Dialog open={isRecordPaymentOpen} onOpenChange={setIsRecordPaymentOpen}>
+          <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white border border-slate-100">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
+                <Zap size={20} className="text-purple-600" /> Record New Payment
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 font-medium">
+                Log an offline or mobile transaction and issue an activated license key.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Tenant / Campus</label>
+                <Select value={paymentTenant} onValueChange={setPaymentTenant}>
+                  <SelectTrigger className="rounded-xl border-slate-200">
+                    <SelectValue placeholder="Select Tenant" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="Munyaka Primary">Munyaka Primary & Junior Secondary</SelectItem>
+                    <SelectItem value="Munyaka West Campus">Munyaka Academy (West Campus)</SelectItem>
+                    <SelectItem value="Munyaka E-Learning Hub">Munyaka E-Learning Hub</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Amount (KES)</label>
+                <Input
+                  type="number"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder="20000"
+                  className="rounded-xl border-slate-200 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Payment Method</label>
+                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <SelectTrigger className="rounded-xl border-slate-200">
+                      <SelectValue placeholder="Select Method" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="M-Pesa">M-Pesa Express / Paybill</SelectItem>
+                      <SelectItem value="Bank Transfer">Bank Transfer (KCB)</SelectItem>
+                      <SelectItem value="Cash">Cash at Bursar Desk</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Validity</label>
+                  <Select value={paymentValidity} onValueChange={setPaymentValidity}>
+                    <SelectTrigger className="rounded-xl border-slate-200">
+                      <SelectValue placeholder="Period" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="30 Days">30 Days (Monthly)</SelectItem>
+                      <SelectItem value="90 Days">90 Days (Quarterly)</SelectItem>
+                      <SelectItem value="365 Days">365 Days (Annual)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Reference / Transaction Code</label>
+                <Input
+                  value={paymentRef}
+                  onChange={(e) => setPaymentRef(e.target.value)}
+                  placeholder="e.g. QKE89128LK"
+                  className="rounded-xl border-slate-200 font-mono text-sm"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-slate-100">
+              <Button variant="outline" onClick={() => setIsRecordPaymentOpen(false)} className="rounded-xl font-bold">
+                Cancel
+              </Button>
+              <Button onClick={handleRecordPaymentSubmit} className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl gap-1.5">
+                <Key size={14} /> Record & Issue Key
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* B. GENERATE LICENSE KEY MODAL */}
+        <Dialog open={isGenerateKeyOpen} onOpenChange={setIsGenerateKeyOpen}>
+          <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white border border-slate-100">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
+                <Sparkles size={20} className="text-amber-500" /> Generate Offline Activation Key
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 font-medium">
+                Cryptographically bind hardware ID or machine hash with an offline license cert.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Target Device ID / HWID</label>
+                <Input
+                  value={targetDeviceId}
+                  onChange={(e) => setTargetDeviceId(e.target.value)}
+                  placeholder="e.g. OFFICE-001 or HWID-UUID"
+                  className="rounded-xl border-slate-200 font-mono text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Tier</label>
+                  <Select value={targetTier} onValueChange={setTargetTier}>
+                    <SelectTrigger className="rounded-xl border-slate-200">
+                      <SelectValue placeholder="Tier" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="Starter">Starter (100 Seats)</SelectItem>
+                      <SelectItem value="Standard">Standard (350 Seats)</SelectItem>
+                      <SelectItem value="Enterprise">Enterprise (1,000 Seats)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Expiry Date</label>
+                  <Input
+                    type="date"
+                    value={targetExpiry}
+                    onChange={(e) => setTargetExpiry(e.target.value)}
+                    className="rounded-xl border-slate-200 text-xs font-bold"
+                  />
+                </div>
+              </div>
+
+              {generatedKeyResult && (
+                <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200 space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-purple-700">Newly Generated Activation Key</p>
+                  <code className="text-xs font-mono font-bold text-purple-900 block break-all">{generatedKeyResult}</code>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => { navigator.clipboard.writeText(generatedKeyResult); showSuccess('Key copied to clipboard.'); }}
+                    className="w-full font-bold text-xs bg-white text-purple-700 border-purple-300 hover:bg-purple-100 rounded-xl mt-1"
+                  >
+                    <Copy size={13} className="mr-1" /> Copy Key
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-slate-100">
+              <Button variant="outline" onClick={() => setIsGenerateKeyOpen(false)} className="rounded-xl font-bold">
+                Close
+              </Button>
+              <Button onClick={handleGenerateKeySubmit} className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl gap-1.5">
+                <Key size={14} /> Generate Key
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* C. PAYMENT HISTORY MODAL */}
+        <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+          <DialogContent className="sm:max-w-2xl rounded-3xl p-6 bg-white border border-slate-100 max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
+                <FileText size={20} className="text-indigo-600" /> Tenant Payment History
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 font-medium">
+                Official transaction logs and digital receipt audit records.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="overflow-y-auto flex-1 my-2 rounded-2xl border border-slate-100">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 bg-slate-50">
+                  <tr>
+                    <th className="p-3.5">Invoice #</th>
+                    <th className="p-3.5">Date</th>
+                    <th className="p-3.5">Tenant</th>
+                    <th className="p-3.5">Method</th>
+                    <th className="p-3.5">Reference</th>
+                    <th className="p-3.5 text-right">Amount</th>
+                    <th className="p-3.5">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700 text-xs">
+                  {paymentHistory.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3.5 font-mono font-bold text-indigo-600">{p.id}</td>
+                      <td className="p-3.5 text-slate-500">{p.date}</td>
+                      <td className="p-3.5 font-bold text-slate-900">{p.tenant}</td>
+                      <td className="p-3.5">{p.method}</td>
+                      <td className="p-3.5 font-mono text-slate-600">{p.ref}</td>
+                      <td className="p-3.5 text-right font-black text-slate-900">{p.amount}</td>
+                      <td className="p-3.5">
+                        <Badge className="bg-emerald-100 text-emerald-800 border-none font-bold text-[10px]">
+                          {p.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <DialogFooter className="pt-2 border-t border-slate-100 flex items-center justify-between sm:justify-between">
+              <p className="text-[11px] text-slate-400 font-medium">{paymentHistory.length} total receipts archived</p>
+              <Button variant="default" onClick={() => setIsHistoryOpen(false)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl px-5">
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
