@@ -50,7 +50,10 @@ import {
   FlaskConical,
   Fingerprint,
   CreditCard,
-  Gamepad2
+  Gamepad2,
+  UserCheck,
+  Shield,
+  Wifi
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -96,7 +99,24 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     navigate('/login');
   };
 
-  const menuItems = [
+  const roleLower = String(user?.role || '').toLowerCase();
+  const isPlatformAdmin = roleLower === 'platformadmin' || roleLower === 'owner';
+  const isAdmin = roleLower === 'admin';
+
+  const menuItems = isPlatformAdmin ? [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/platform/dashboard' },
+    { icon: CreditCard, label: 'App Subscriptions', path: '/payment-management' },
+    { icon: Shield, label: 'License Management', path: '/platform/dashboard' },
+    { icon: CreditCard, label: 'Payment History', path: '/payment-management' },
+    { icon: Wifi, label: 'Connected Devices (LAN/Printers/Nodes)', path: '/lan-config' },
+  ] : isAdmin ? [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/admin-dashboard' },
+    { icon: Users, label: 'Staff Access Master', path: '/admin/control-center' },
+    { icon: UserCheck, label: 'Student Directory', path: '/students' },
+    { icon: BookOpen, label: 'CBC Assessment', path: '/central-data' },
+    { icon: Calendar, label: 'Timetable', path: '/timetable' },
+    { icon: ClipboardCheck, label: 'Attendance', path: '/attendance' },
+  ] : [
     // ── Dashboard — position #1 for ALL roles; the Dashboard component
     // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
     // based on the user's session role.  Only one Dashboard entry exists.
@@ -142,12 +162,29 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       const userObj = user || {};
       const role = userObj.role ?? '';
       const roleLower = String(role).toLowerCase();
-  
-      // ── Dashboard is ALWAYS first for every authenticated user ─────────────────
-      // The Dashboard item is the single navigation entry point that routes
-      // to the user's role-specific view (/).  It must appear regardless of
-      // role so the owner always has a way to reach OwnerDashboard.
-      // The remaining items are then filtered by role below.
+      const isPlatformAdmin = roleLower === 'platformadmin' || roleLower === 'owner';
+      const isAdmin = roleLower === 'admin';
+
+      if (isPlatformAdmin) {
+        return [
+          { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+          { icon: CreditCard, label: 'App Subscriptions', path: '/payment-management' },
+          { icon: Shield, label: 'License Management', path: '/dashboard' },
+          { icon: CreditCard, label: 'Payment History', path: '/payment-management' },
+          { icon: Wifi, label: 'Connected Devices (LAN/Printers/Nodes)', path: '/lan-config' },
+        ];
+      }
+
+      if (isAdmin) {
+        return [
+          { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+          { icon: Users, label: 'Staff Access Master', path: '/admin/control-center' },
+          { icon: UserCheck, label: 'Student Directory', path: '/students' },
+          { icon: BookOpen, label: 'CBC Assessment', path: '/central-data' },
+          { icon: Calendar, label: 'Timetable', path: '/timetable' },
+          { icon: ClipboardCheck, label: 'Attendance', path: '/attendance' },
+        ];
+      }
       const dashboardItem = menuItems.find(item => item.path === '/');
   
       // ADMIN (and the legacy "super_admin" alias used by persisted sessions)
@@ -404,7 +441,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                         <Link to="/" onClick={() => setIsOpen(false)}>
                           <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{displayName}</p>
                         </Link>
-                        <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{displayRole} {displayMeta ? `• ${displayMeta}` : ''}</p>
+                        <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
+                          {isPlatformAdmin ? 'PLATFORM DEVELOPER' : isAdmin ? 'SCHOOL ADMINISTRATOR' : displayRole} {displayMeta ? `• ${displayMeta}` : ''}
+                        </p>
                       </>
                     );
                   })()}

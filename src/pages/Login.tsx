@@ -70,7 +70,7 @@ const hasCustomAdminPassword = (): boolean => {
 // so they can both authenticate when the lock screen is active, but they have
 // entirely separate permission matrices.
 
-type AdminRole = 'admin' | 'owner' | 'dev';
+type AdminRole = 'admin' | 'owner' | 'dev' | 'platform';
 
 interface RoleConfig {
   id: AdminRole;
@@ -79,7 +79,7 @@ interface RoleConfig {
   fullDescription: string;
   email: string;
   userName: string;
-  userRole: 'owner' | 'admin';
+  userRole: 'owner' | 'admin' | 'PlatformAdmin';
   redirectPath: string;
   icon: LucideIcon;
   primaryColor: 'indigo' | 'amber';
@@ -113,9 +113,22 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     primaryColor: 'amber',
     defaultPassword: 'munyaka2026',
   },
+  platform: {
+    id: 'platform',
+    label: 'Platform Developer',
+    description: 'Software management, App Subscriptions, License Management & LAN Nodes',
+    fullDescription: 'Dedicated software management console for App Subscriptions, License Management, Payment History, and Connected Devices.',
+    email: 'platform@munyaka.sc.ke',
+    userName: 'Platform Developer',
+    userRole: 'PlatformAdmin',
+    redirectPath: '/platform/dashboard',
+    icon: Shield,
+    primaryColor: 'amber',
+    defaultPassword: 'dev2026',
+  },
   dev: {
     id: 'dev',
-    label: 'Platform Developer',
+    label: 'Platform Developer (Legacy)',
     description: 'Full platform debugging, API access, and system logs',
     fullDescription: 'Developer console for system monitoring, logs, diagnostics, and API diagnostics.',
     email: 'dev@munyaka.sc.ke',
@@ -273,17 +286,22 @@ const Login: React.FC = () => {
 
     const success = await login(config.email, entered);
             if (success) {
+              if (selectedAdminRole === 'platform') {
+                localStorage.setItem('munyaka_user', JSON.stringify({
+                  role: 'PlatformAdmin',
+                  name: 'Platform Developer',
+                  isAuthenticated: true
+                }));
+              }
               const adminSession = {
-                role: selectedAdminRole,
+                role: selectedAdminRole === 'platform' ? 'PlatformAdmin' : selectedAdminRole,
                 roleLabel: config.label,
                 roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
                 timestamp: Date.now(),
               };
           localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
           showSuccess(`Welcome, ${config.userName}!`);
-          // Send every authenticated user straight to the main dashboard,
-          // bypassing any role-specific landing screens.
-          navigate('/dashboard', { replace: true });
+          navigate(config.redirectPath, { replace: true });
         } else {
           setAdminAuthError('Login failed. Please try again.');
           showError('Authentication failed');
@@ -555,12 +573,12 @@ const Login: React.FC = () => {
                             <span className="sm:hidden">Admin</span>
                           </TabsTrigger>
                           <TabsTrigger
-                            value="super"
+                            value="platform"
                             className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
                           >
-                            <Crown size={12} className="mr-1 shrink-0" />
-                            <span className="hidden sm:inline">Owner</span>
-                            <span className="sm:hidden">Owner</span>
+                            <Shield size={12} className="mr-1 shrink-0" />
+                            <span className="hidden sm:inline">Platform Dev</span>
+                            <span className="sm:hidden">Platform</span>
                           </TabsTrigger>
               <TabsTrigger
                 value="staff"
@@ -679,27 +697,27 @@ const Login: React.FC = () => {
               )}
             </TabsContent>
 
-            {/* ── OWNER TAB ── */}
-                        <TabsContent value="super" className="mt-4 space-y-4">
-                          {!selectedAdminRole ? (
-                            <>
-                              {adminAuthError && (
-                                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
-                                  <ShieldAlert size={20} className="shrink-0" />
-                                  <span>{adminAuthError}</span>
-                                </div>
-                              )}
-                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
-                                Choose Your Role
-                              </p>
-                              <RoleCard
-                                role={ROLE_CONFIGS.owner}
-                                onClick={() => handleRoleSelect('owner')}
-                                bgColor="bg-amber-50"
-                                textColor="text-amber-700"
-                                borderColor="border-amber-200"
-                              />
-                            </>
+            {/* ── PLATFORM DEVELOPER TAB ── */}
+            <TabsContent value="platform" className="mt-4 space-y-4">
+              {!selectedAdminRole ? (
+                <>
+                  {adminAuthError && (
+                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
+                      <ShieldAlert size={20} className="shrink-0" />
+                      <span>{adminAuthError}</span>
+                    </div>
+                  )}
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
+                    Choose Your Role
+                  </p>
+                  <RoleCard
+                    role={ROLE_CONFIGS.platform}
+                    onClick={() => handleRoleSelect('platform')}
+                    bgColor="bg-amber-50"
+                    textColor="text-amber-700"
+                    borderColor="border-amber-200"
+                  />
+                </>
               ) : (
                 <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
                   <CardContent className="p-6 md:p-8 space-y-6">
@@ -748,23 +766,13 @@ const Login: React.FC = () => {
                           </button>
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium pt-1">
-                          {hasCustomAdminPassword() ? (
-                            <span className="flex items-center gap-1">
-                              <KeyRound size={9} />
-                              Custom PIN — set via Configuration &rarr; Owner Security
-                            </span>
-                          ) : (
-                            <>
-                              Default PIN:{' '}
-                              <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span>
-                            </>
-                          )}
+                          Default PIN: <span className="font-bold">dev2026</span>
                         </p>
                       </div>
                       <Button
                         type="submit"
-                                                disabled={isAdminVerifying || !String(adminPassword || '').trim()}
-                                                className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
+                        disabled={isAdminVerifying || !String(adminPassword || '').trim()}
+                        className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
                       >
                         {isAdminVerifying ? (
                           <><Loader2 className="animate-spin" size={20} /> Verifying...</>
