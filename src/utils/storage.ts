@@ -477,65 +477,16 @@ export function hydrateAllStores(): HydrationReport {
 
 export const getStudents = (): Student[] => {
   try {
-    const ls = getLocalStorage();
-    if (!ls) return [];
+    const primary = readStorage<Student[] | null>(STORAGE_KEY, null);
+    if (primary && Array.isArray(primary) && primary.length > 0) return primary;
 
-    // ── Primary store (single source of truth) ──────────────────────────
-    const primaryRaw = ls.getItem(STORAGE_KEY);
-    let primary: Student[] = [];
-    if (primaryRaw != null) {
-      const parsed = safeParse<Student[]>(primaryRaw, []);
-      if (Array.isArray(parsed)) primary = parsed;
-    }
-
-    // ── Merge legacy keys without overwriting existing entries ─────────
-    // Legacy keys may still hold records from older app versions. We append
-    // any record whose id (or admission number) is not already present in the
-    // primary store, then persist the merged result back to the canonical key
-    // so future reads are consistent and no data is silently lost.
-    const legacyKeys = ['students', 'munyaka_registered_students'];
-    const seenIds = new Set<string>();
-    const seenAdms = new Set<string>();
-    primary.forEach((s) => {
-      if (s.id) seenIds.add(String(s.id));
-      const adm = String(s.admNo ?? s.admissionNo ?? '').trim().toUpperCase();
-      if (adm) seenAdms.add(adm);
-    });
-
-    let merged = [...primary];
-    let added = 0;
+    // Check legacy fallback keys
+    const legacyKeys = ['munyaka_registered_students', 'students', 'school_learners_data', 'learners', 'pupils', 'school_students', 'registered_students'];
     for (const lKey of legacyKeys) {
-      const raw = ls.getItem(lKey);
-      if (raw == null) continue;
-      const legacy = safeParse<Student[]>(raw, []);
-      if (!Array.isArray(legacy)) continue;
-      for (const s of legacy) {
-        if (!s || typeof s !== 'object') continue;
-        const id = s.id ? String(s.id) : '';
-        const adm = String(s.admNo ?? s.admissionNo ?? '').trim().toUpperCase();
-        if ((id && seenIds.has(id)) || (adm && seenAdms.has(adm))) continue;
-        merged.push(s);
-        added++;
-        if (id) seenIds.add(id);
-        if (adm) seenAdms.add(adm);
-      }
+      const legacy = readStorage<Student[] | null>(lKey, null);
+      if (legacy && Array.isArray(legacy) && legacy.length > 0) return legacy;
     }
-
-    // Persist the merged result only when we actually pulled in legacy data,
-    // so reads remain side-effect-free when the primary store is already whole.
-    if (added > 0) {
-      try {
-        ls.setItem(STORAGE_KEY, JSON.stringify(merged));
-      } catch (err) {
-        if (isQuotaExceeded(err)) {
-          handleQuotaError(STORAGE_KEY);
-        } else {
-          console.error('[storage] getStudents merge write failed:', err);
-        }
-      }
-    }
-
-    return merged;
+    return [];
   } catch {
     return [];
   }
@@ -590,7 +541,8 @@ export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: str
       id: studentId,
     };
     const updated = [...existing.filter(s => s.id !== studentId), fullStudent];
-    setStudents(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new Event('students-updated'));
     return fullStudent;
   } catch (err) {
     console.error('[storage] saveStudent failed:', err);

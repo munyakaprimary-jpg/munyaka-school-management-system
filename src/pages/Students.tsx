@@ -26,7 +26,7 @@ import {
   getStreamsForGrade,
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
-import { getStudents, saveStudent as saveStudentStorage, setStudents as persistStudents, Student } from '@/utils/storage';
+import { getStudents, saveStudent as saveStudentStorage, Student } from '@/utils/storage';
 import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 /**
@@ -725,7 +725,8 @@ export default function Students() {
               if (adm) seenAdms.add(adm);
               return true;
             });
-            persistStudents(unique);
+            localStorage.setItem('munyaka_students', JSON.stringify(unique));
+            window.dispatchEvent(new Event('students-updated'));
             return unique;
           });
           console.log('[Registration Success] Learner updated:', { id: editingLearnerId, name: normalizedEntry.name });
@@ -829,7 +830,8 @@ export default function Students() {
         };
         const nextStudents = [compatInserted, ...students.filter(l => l.id !== inserted.id)];
         setStudents(nextStudents as unknown as Student[]);
-        persistStudents(nextStudents as unknown as Student[]);
+        localStorage.setItem('munyaka_students', JSON.stringify(nextStudents));
+        window.dispatchEvent(new Event('students-updated'));
         setIsTransferInOpen(false);
     
         // Apply the grade & stream filters so the user lands on the updated
@@ -851,7 +853,8 @@ export default function Students() {
     const confirmDelete = (learner: LearnerRowCompat) => {
         const nextStudents = students.filter((item) => item.id !== learner.id);
         setStudents(nextStudents);
-        persistStudents(nextStudents);
+        localStorage.setItem('munyaka_students', JSON.stringify(nextStudents));
+        window.dispatchEvent(new Event('students-updated'));
         // Write a secure audit-log entry so the deletion is traceable.
         logDeletionAudit({
           action: "DELETE_LEARNER",
@@ -1237,7 +1240,8 @@ export default function Students() {
             // Also persist the status update directly to localStorage
             // (the useEffect will also sync, but this avoids a stale-gap)
             try {
-              persistStudents(nextStudents);
+              localStorage.setItem('munyaka_students', JSON.stringify(nextStudents));
+              window.dispatchEvent(new Event('students-updated'));
             } catch { /* localStorage unavailable */ }
             setIsTransferOpen(false);
             setTransferLearner(null);

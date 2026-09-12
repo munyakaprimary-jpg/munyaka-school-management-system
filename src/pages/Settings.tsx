@@ -825,7 +825,7 @@ const Settings = () => {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="font-bold text-slate-900">School Administrator</p>
-                                    <p className="text-xs text-slate-500">Full administrative access to manage school operations</p>
+                                    <p className="text-xs text-slate-500">Full access: Settings, Users, Fees, Academics, RBAC, Security</p>
                                   </div>
                                   <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-600 font-bold text-[10px]">
                                     PIN: sysadmin2026
@@ -970,7 +970,7 @@ const Settings = () => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="font-bold text-slate-900">School Administrator</p>
-                                <p className="text-xs text-slate-500">Full administrative access to manage school operations</p>
+                                <p className="text-xs text-slate-500">Full access: Settings, Users, Fees, Academics, RBAC, Security</p>
                               </div>
                               {session.role === 'admin' && (
                                 <Badge className="bg-indigo-100 text-indigo-600 font-bold text-[10px]">Current</Badge>
