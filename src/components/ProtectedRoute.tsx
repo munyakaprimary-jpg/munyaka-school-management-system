@@ -55,8 +55,7 @@ const ProtectedRoute = ({
   // Route-level role denylist with support staff normalization: redirect blocked roles back to dashboard.
   if (user) {
     const rawRole = String(user.role || '').trim().toUpperCase();
-    const normalizedUserRole = rawRole.includes('PLATFORM') ? 'platform_admin' :
-                               rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
+    const normalizedUserRole = rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
                                rawRole.includes('ADMIN') ? 'admin' :
                                rawRole.includes('OWNER') || rawRole.includes('SUPER') ? 'owner' :
                                rawRole.includes('STUDENT') ? 'student' :
@@ -66,13 +65,13 @@ const ProtectedRoute = ({
                                rawRole.includes('SUPPORT') || rawRole.includes('NON_TEACHING') || rawRole.includes('NON-TEACHING') ? 'support_staff' : 'staff';
 
     const isBlocked = blockedRoles.some(r => {
-          const target = r.toLowerCase();
-          return target === normalizedUserRole || target === rawRole.toLowerCase() || target === 'platform_admin';
-        });
-        if (isBlocked) {
-          console.warn('[ProtectedRoute] Role Restriction: User role is blocked:', { userRole: rawRole, blockedRoles });
-          return <Navigate to="/dashboard" replace />;
-        }
+      const target = r.toLowerCase();
+      return target === normalizedUserRole || target === rawRole.toLowerCase();
+    });
+    if (isBlocked) {
+      console.warn('[ProtectedRoute] Role Restriction: User role is blocked:', { userRole: rawRole, blockedRoles });
+      return <Navigate to="/dashboard" replace />;
+    }
 
     // Role allowlist: if specified, only these roles may access (allowing support staff & normalization).
     if (allowedRoles && allowedRoles.length > 0) {
