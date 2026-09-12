@@ -411,44 +411,41 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                         <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                           <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <Link to="/" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">{user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}</div>
-              </Link>
-              {!isCollapsed && (
-                <div className="overflow-hidden flex-1">
-                  {(() => {
-                    const isLearnerRole = (user?.role || '').toLowerCase() === 'student' || (user?.role || '').toLowerCase() === 'learner';
-                    let displayName = user?.name || 'User';
-                    let displayRole = user?.role?.replace('_', ' ') || 'User';
-                    let displayMeta = '';
-                    if (isLearnerRole) {
-                      try {
-                        const studentsList = JSON.parse(localStorage.getItem('munyaka_registered_students') || localStorage.getItem('school_learners_data') || '[]');
-                        const match = studentsList.find((s: any) =>
-                          (user?.admissionNumber && (s.admissionNo === user.admissionNumber || s.admissionNumber === user.admissionNumber)) ||
-                          (user?.id && s.id === user.id) ||
-                          (user?.name && s.name?.toLowerCase() === user.name?.toLowerCase())
-                        ) || studentsList[0];
-                        if (match) {
-                          displayName = match.fullName || match.name || displayName;
-                          displayRole = `${match.grade || 'Grade'} • ${match.stream || 'Stream'}`;
-                          displayMeta = match.admissionNo || match.admissionNumber || match.id || '';
-                        }
-                      } catch {}
-                    }
-                    return (
-                      <>
+              {(() => {
+                let storedUser: { role?: string; name?: string; avatar?: string } = {};
+                try {
+                  storedUser = JSON.parse(localStorage.getItem('munyaka_user') || '{}');
+                } catch { /* ignore */ }
+                const currentRole = user?.role || storedUser.role || 'Admin';
+                const isDev = String(currentRole).toLowerCase() === 'dev' || String(currentRole).toLowerCase() === 'platformadmin';
+                const isAdminRole = String(currentRole).toLowerCase() === 'admin';
+
+                const avatarInitials = isDev ? 'DEV' : (isAdminRole ? 'AD' : (user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'));
+                const displayName = isDev ? 'Platform Developer' : (isAdminRole ? (user?.name || 'Admin') : (user?.name || 'User'));
+                const displayBadge = isDev ? 'SYSTEM DEVELOPER' : (isAdminRole ? 'ADMINISTRATOR' : (currentRole.replace('_', ' ').toUpperCase()));
+
+                return (
+                  <>
+                    <Link to="/" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">
+                        {avatarInitials}
+                      </div>
+                    </Link>
+                    {!isCollapsed && (
+                      <div className="overflow-hidden flex-1">
                         <Link to="/" onClick={() => setIsOpen(false)}>
-                          <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{displayName}</p>
+                          <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">
+                            {displayName}
+                          </p>
                         </Link>
                         <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
-                          {isPlatformAdmin ? 'PLATFORM DEVELOPER' : isAdmin ? 'SCHOOL ADMINISTRATOR' : displayRole} {displayMeta ? `• ${displayMeta}` : ''}
+                          {displayBadge}
                         </p>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             {!isCollapsed && (
               <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
