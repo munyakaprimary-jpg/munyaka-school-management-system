@@ -15,8 +15,8 @@ import Staff from './pages/Staff';
 
 export function App() {
   return (
-    <AuthProvider>
-      <HashRouter>
+    <HashRouter>
+      <AuthProvider>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -39,8 +39,8 @@ export function App() {
           {/* Default Fallback */}
           <Route path="*" element={<Login />} />
         </Routes>
-      </HashRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </HashRouter>
   );
 }
 
