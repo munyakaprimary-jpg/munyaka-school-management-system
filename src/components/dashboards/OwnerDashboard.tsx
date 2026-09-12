@@ -800,7 +800,7 @@ const BillingRowSkeleton: React.FC = () => (
  * The "System Billing & Subscription Audit" table shows only platform-level
  * charges: subscription renewals, add-ons, and license upgrades.
  */
-const OwnerDashboard: React.FC = () => {
+const DevDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { connectionStatus, isConnected } = useLanSync();
@@ -929,7 +929,7 @@ const OwnerDashboard: React.FC = () => {
               className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 bg-indigo-50 text-indigo-700 gap-1.5"
             >
               <Shield size={10} />
-              Owner Console
+              Platform Developer Console
             </Badge>
             <Badge
               variant="outline"
@@ -943,7 +943,7 @@ const OwnerDashboard: React.FC = () => {
             </span>
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            Owner Dashboard
+            Platform Developer Dashboard
           </h1>
           <p className="text-slate-500 mt-1 text-sm">
             Subscription, billing, and high-level financial health
@@ -1337,7 +1337,7 @@ const OwnerDashboard: React.FC = () => {
                         </div>
                   
                         {/* ── 2b. LAN Server Config (Owner-only) ─────────────────────────────
-                            Dedicated owner-only surface for managing the platform LAN server.
+                            Dedicated platform-only surface for managing the platform LAN server.
                             Distinct from the Admin Control Center (admin-only operational route).
                             Clicking the card navigates to /lan-config, which is also restricted
                             to the owner role at the route guard level. */}
@@ -1367,7 +1367,7 @@ const OwnerDashboard: React.FC = () => {
                                   </div>
                                   <div>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-white/80">
-                                      Owner Portal · Network
+                                      Platform Portal · Network
                                     </p>
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                                       <h2 className="text-2xl md:text-3xl font-black text-white">
@@ -1401,7 +1401,7 @@ const OwnerDashboard: React.FC = () => {
                                     </div>
                                     <p className="text-xs text-white/80 mt-3 max-w-md leading-relaxed">
                                       Configure the LAN synchronization endpoint, monitor device connections,
-                                      and manage offline sync behavior. Restricted to the owner role.
+                                      and manage offline sync behavior. Restricted to the platform developer role.
                                     </p>
                                   </div>
                                 </div>
@@ -1464,7 +1464,7 @@ const OwnerDashboard: React.FC = () => {
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                       Access Scope
                                     </p>
-                                    <p className="text-sm font-bold text-slate-900 truncate">Owner Only</p>
+                                    <p className="text-sm font-bold text-slate-900 truncate">Platform Admin Only</p>
                                   </div>
                                 </div>
                               </div>
@@ -1689,4 +1689,4 @@ const OwnerDashboard: React.FC = () => {
   );
 };
 
-export default OwnerDashboard;
+export default DevDashboard;

@@ -10,7 +10,7 @@ import { NotificationProvider } from "@/components/ui/notification-provider";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
-import OwnerDashboard from "./components/dashboards/OwnerDashboard";
+import OwnerDashboard as DevDashboard from "./components/dashboards/OwnerDashboard";
 import Login from "./pages/Login";
 import ParentPortal from "./pages/ParentPortal";
 import Index from "./pages/Index";
@@ -307,8 +307,8 @@ const App = () => {
                       {/* Protected Routes */}
                       <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/platform/dashboard" element={<ProtectedRoute allowedRoles={['PlatformAdmin', 'owner', 'Dev']}><AppUnlock><Layout><OwnerDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/dashboard" element={<ProtectedRoute allowedRoles={['PlatformAdmin', 'owner', 'Dev']}><AppUnlock><Layout><OwnerDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/platform/dashboard" element={<ProtectedRoute allowedRoles={['PlatformAdmin', 'owner', 'Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/dashboard" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner', 'PlatformAdmin']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
