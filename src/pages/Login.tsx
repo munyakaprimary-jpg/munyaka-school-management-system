@@ -121,7 +121,7 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     email: 'platform@munyaka.sc.ke',
     userName: 'Platform Developer',
     userRole: 'PlatformAdmin',
-    redirectPath: '/platform/dashboard',
+    redirectPath: '/dev/dashboard',
     icon: Shield,
     primaryColor: 'amber',
     defaultPassword: 'dev2026',
@@ -272,10 +272,27 @@ const Login: React.FC = () => {
       });
     }
 
-    // ── Password verification ─────────────────────────────────────────────
-    // Accept the stored PIN and also fall back to the hard-coded default,
-    // so the admin can sign in regardless of which PIN they last set.
-    const isValid = entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD;
+    // Password verification
+    let isValid = entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD;
+    if (selectedAdminRole === 'platform') {
+      if (entered === 'dev2026') {
+        isValid = true;
+        setAdminAuthError('');
+        localStorage.setItem('munyaka_user', JSON.stringify({
+          role: 'Dev',
+          name: 'Developer',
+          isAuthenticated: true
+        }));
+        navigate('/dev/dashboard', { replace: true });
+        setIsAdminVerifying(false);
+        return;
+      } else {
+        setAdminAuthError('Invalid password for Platform Developer.');
+        showError('Authentication failed');
+        setIsAdminVerifying(false);
+        return;
+      }
+    }
 
     if (!isValid) {
       setAdminAuthError(`Invalid password for ${config.label}.`);
@@ -288,22 +305,22 @@ const Login: React.FC = () => {
             if (success) {
               if (selectedAdminRole === 'platform') {
                 localStorage.setItem('munyaka_user', JSON.stringify({
-                  role: 'PlatformAdmin',
-                  name: 'Platform Developer',
+                  role: 'Dev',
+                  name: 'Developer',
                   isAuthenticated: true
                 }));
               }
               const adminSession = {
-                role: selectedAdminRole === 'platform' ? 'PlatformAdmin' : selectedAdminRole,
+                role: selectedAdminRole === 'platform' ? 'Dev' : selectedAdminRole,
                 roleLabel: config.label,
                 roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
                 timestamp: Date.now(),
               };
           localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
           showSuccess(`Welcome, ${config.userName}!`);
-          navigate(config.redirectPath, { replace: true });
+          navigate(selectedAdminRole === 'platform' ? '/dev/dashboard' : config.redirectPath, { replace: true });
         } else {
-          setAdminAuthError('Login failed. Please try again.');
+          setAdminAuthError('Invalid password for Platform Developer.');
           showError('Authentication failed');
         }
         setIsAdminVerifying(false);
