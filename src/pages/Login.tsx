@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Loader2,
@@ -13,13 +12,10 @@ import {
   Eye,
   EyeOff,
   Settings2,
-  Crown,
   Laptop,
-  ChevronLeft,
   ShieldAlert,
   Unlock,
   Users,
-  CreditCard,
   ArrowRight,
   Send,
   Mail,
@@ -60,18 +56,14 @@ const hasCustomAdminPassword = (): boolean => {
 
 // ─── Admin role configs ─────────────────────────────────────────────────────
 //
-// NOTE: PlatformAdmin and Admin are TWO DISTINCT entities in this app:
-//   - platform_admin → PLATFORM-ONLY role.   Lands on Platform Dashboard. Only sees
+// NOTE: Dev and Admin are TWO DISTINCT entities in this app:
+//   - dev        → PLATFORM-ONLY role.   Lands on Dev Dashboard. Only sees
 //                    platform management widgets (subscriptions, licenses, payments, devices).
 //                    No access to learners, attendance, settings, etc.
 //   - admin  → OPERATIONAL FULL ADMIN role.  Manages users, RBAC, ICT
 //                    systems, system settings, etc.  No special platform privs.
-//
-// The platform_admin and admin share the same ADMIN PIN override flow
-// so they can both authenticate when the lock screen is active, but they have
-// entirely separate permission matrices.
 
-type AdminRole = 'admin' | 'platform_admin';
+type AdminRole = 'admin' | 'dev';
 
 interface RoleConfig {
   id: AdminRole;
@@ -80,7 +72,7 @@ interface RoleConfig {
   fullDescription: string;
   email: string;
   userName: string;
-  userRole: 'platform_admin' | 'admin';
+  userRole: 'dev' | 'admin';
   redirectPath: string;
   icon: LucideIcon;
   primaryColor: 'indigo' | 'purple';
@@ -101,15 +93,15 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     primaryColor: 'indigo',
     defaultPassword: DEFAULT_ADMIN_PASSWORD,
   },
-  platform_admin: {
-    id: 'platform_admin',
+  dev: {
+    id: 'dev',
     label: 'Platform Developer',
-    description: 'Platform Management Console — Platform Dashboard',
-    fullDescription: 'Dedicated access to platform subscriptions, license management, payment history, and connected devices. No access to operational routes (learners, attendance, settings).',
+    description: 'Platform Management Console — Dev Dashboard',
+    fullDescription: 'Dedicated access to platform subscriptions, license management, payment history, and connected devices.',
     email: 'platform@munyaka.sc.ke',
-    userName: 'Platform Developer',
-    userRole: 'platform_admin',
-    redirectPath: '/platform/dashboard',
+    userName: 'Developer',
+    userRole: 'dev',
+    redirectPath: '/dev/dashboard',
     icon: Laptop,
     primaryColor: 'purple',
     defaultPassword: 'platform2026',
@@ -123,66 +115,6 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
 function getStaffRedirectPath(_systemRole: string): string {
   return '/dashboard';
 }
-
-// ─── Role card for admin tab ─────────────────────────────────────────────────
-
-interface RoleCardProps {
-  role: RoleConfig;
-  onClick: () => void;
-  bgColor: string;
-  textColor: string;
-  borderColor: string;
-  featureIcons: { Icon: LucideIcon; label: string }[];
-  /** Whether a custom PIN has been set for this role. */
-  hasCustomPassword: boolean;
-}
-
-const RoleCard: React.FC<RoleCardProps> = ({
-  role, onClick, bgColor, textColor, borderColor, featureIcons, hasCustomPassword,
-}) => {
-  const Icon = role.icon;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full p-5 md:p-6 rounded-3xl border-2 bg-white hover:shadow-xl transition-all duration-300 text-left group active:scale-[0.98]",
-        borderColor,
-      )}
-    >
-      <div className="flex items-start gap-4">
-        <div className={cn("p-3 md:p-4 rounded-2xl shrink-0 transition-transform group-hover:scale-110", bgColor, textColor)}>
-          <Icon size={28} className="md:hidden" />
-          <Icon size={32} className="hidden md:inline" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <h3 className="text-lg md:text-xl font-black text-slate-900">{role.label}</h3>
-            <ArrowRight size={18} className={cn("shrink-0 transition-transform group-hover:translate-x-1", textColor)} />
-          </div>
-          <p className="text-xs md:text-sm text-slate-500 font-medium mb-3">{role.description}</p>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {featureIcons.map(({ Icon: FeatureIcon, label }, idx) => (
-              <div key={idx} className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold", bgColor, textColor)}>
-                <FeatureIcon size={10} />
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
-          <Badge variant="outline" className={cn("font-bold text-[10px] border", borderColor, textColor)}>
-            {hasCustomPassword ? (
-              <span className="flex items-center gap-1">
-                <KeyRound size={9} /> Custom PIN set
-              </span>
-            ) : (
-              `Default PIN: ${role.defaultPassword}`
-            )}
-          </Badge>
-        </div>
-      </div>
-    </button>
-  );
-};
 
 // ─── Main Login page ──────────────────────────────────────────────────────────
 
