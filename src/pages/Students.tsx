@@ -26,7 +26,7 @@ import {
   getStreamsForGrade,
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
-import { getStudents, saveStudent as saveStudentStorage, Student } from '@/utils/storage';
+import { getStudents, saveStudent as saveStudentStorage, setStudents as persistStudents, Student } from '@/utils/storage';
 import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 /**
@@ -128,7 +128,9 @@ const getGradeMatchKey = (name: string): string => {
 
 export default function Students() {
   // 1. LocalStorage Persistence Setup for Learners with Lazy Initialization
-  const [students, setStudents] = useState<Student[]>(() => getStudents());
+  const [students, setStudents] = useState<Student[]>(() => {
+    return getStudents();
+  });
 
   // 2. Use the academic calendar hook for dynamic term/year
     const { activeTerm, activeYear, isLoading } = useAcademicCalendar();
@@ -137,7 +139,7 @@ export default function Students() {
       return formatTermBadge(activeTerm, activeYear);
     }, [activeTerm, activeYear, isLoading]);
 
-  // Add event listener to refresh UI instantly when a student is saved
+  // Refresh UI instantly when a student is saved, updated, or deleted
   useEffect(() => {
     const syncStudents = () => setStudents(getStudents() as unknown as Student[]);
     window.addEventListener('students-updated', syncStudents);
@@ -595,7 +597,7 @@ export default function Students() {
       phone: learner.phone,
       email: (learner as any).email ?? '',
       feeBalance: (learner as any).feeBalance ?? 0,
-      status: ((learner as any).status ?? 'Active') as 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended',
+      status: (((learner as any).status === 'TRANSFERRED' ? 'Transferred' : (learner as any).status) ?? 'Active') as 'Active' | 'Transferred' | 'Graduated' | 'Suspended',
       dateOfAdmission: (learner as any).dateOfAdmission ?? new Date().toISOString().split('T')[0],
       coCurricularActivities: (learner as any).coCurricularActivities ?? '',
       health: '',
@@ -725,8 +727,7 @@ export default function Students() {
               if (adm) seenAdms.add(adm);
               return true;
             });
-            localStorage.setItem('munyaka_students', JSON.stringify(unique));
-            window.dispatchEvent(new Event('students-updated'));
+            persistStudents(unique);
             return unique;
           });
           console.log('[Registration Success] Learner updated:', { id: editingLearnerId, name: normalizedEntry.name });
@@ -830,8 +831,7 @@ export default function Students() {
         };
         const nextStudents = [compatInserted, ...students.filter(l => l.id !== inserted.id)];
         setStudents(nextStudents as unknown as Student[]);
-        localStorage.setItem('munyaka_students', JSON.stringify(nextStudents));
-        window.dispatchEvent(new Event('students-updated'));
+        persistStudents(nextStudents as unknown as Student[]);
         setIsTransferInOpen(false);
     
         // Apply the grade & stream filters so the user lands on the updated
@@ -853,8 +853,7 @@ export default function Students() {
     const confirmDelete = (learner: LearnerRowCompat) => {
         const nextStudents = students.filter((item) => item.id !== learner.id);
         setStudents(nextStudents);
-        localStorage.setItem('munyaka_students', JSON.stringify(nextStudents));
-        window.dispatchEvent(new Event('students-updated'));
+        persistStudents(nextStudents);
         // Write a secure audit-log entry so the deletion is traceable.
         logDeletionAudit({
           action: "DELETE_LEARNER",
@@ -1240,8 +1239,7 @@ export default function Students() {
             // Also persist the status update directly to localStorage
             // (the useEffect will also sync, but this avoids a stale-gap)
             try {
-              localStorage.setItem('munyaka_students', JSON.stringify(nextStudents));
-              window.dispatchEvent(new Event('students-updated'));
+              persistStudents(nextStudents);
             } catch { /* localStorage unavailable */ }
             setIsTransferOpen(false);
             setTransferLearner(null);
@@ -1259,7 +1257,7 @@ export default function Students() {
               prompt="Admin Password"
               onConfirm={(isValid) => {
                 if (isValid && learnerToDelete) {
-                  confirmDelete(learnerToDelete);
+                  confirmDelete(learnerToDelete as any);
                 }
               }}
             />

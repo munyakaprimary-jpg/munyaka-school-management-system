@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookOpen, GraduationCap, Wifi, Wallet } from 'lucide-react';
 
@@ -104,10 +105,20 @@ const FeatureTag: React.FC<FeatureTagProps> = ({ icon, label }) => (
 
 // ── Main Cover Page Component ───────────────────────────────────────────────
 interface CoverPageProps {
-  onEnter: () => void;
+  onEnter?: () => void;
 }
 
 const CoverPage: React.FC<CoverPageProps> = ({ onEnter }) => {
+  const navigate = useNavigate();
+
+  const handleEnter = () => {
+    if (onEnter) {
+      onEnter();
+    } else {
+      navigate('/login');
+    }
+  };
+
   return (
     <div className="min-h-screen relative flex flex-col items-center justify-center p-4 overflow-hidden">
 
@@ -169,11 +180,11 @@ const CoverPage: React.FC<CoverPageProps> = ({ onEnter }) => {
                 </h2>
               </div>
 
-              {/* ── EST. 1980 Badge ──────────────────────────────────── */}
+              {/* ── EST. 1991 Badge ──────────────────────────────────── */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/15 backdrop-blur-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                 <span className="text-[11px] font-black tracking-[0.2em] text-white/70 uppercase">
-                  Est. 1980
+                  Est. 1991
                 </span>
               </div>
             </div>
@@ -210,7 +221,7 @@ const CoverPage: React.FC<CoverPageProps> = ({ onEnter }) => {
             {/* ── Primary CTA Button ──────────────────────────────────── */}
             <div className="w-full space-y-3 pt-2">
               <Button
-                onClick={onEnter}
+                onClick={() => navigate('/login')}
                 className="w-full h-13 md:h-14 rounded-2xl shadow-2xl shadow-blue-600/40 hover:shadow-2xl hover:shadow-emerald-500/40 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white font-bold text-base transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] group"
               >
                 <span>Proceed to Portal Sign In</span>

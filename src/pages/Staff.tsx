@@ -123,9 +123,11 @@ const Staff = () => {
     const refresh = () => setMasterRecords(getStaffMaster());
     window.addEventListener('staff-changed', refresh);
     window.addEventListener('munyaka:staff-directory-changed', refresh);
+    window.addEventListener('staff-updated', refresh);
     return () => {
       window.removeEventListener('staff-changed', refresh);
       window.removeEventListener('munyaka:staff-directory-changed', refresh);
+      window.removeEventListener('staff-updated', refresh);
     };
   }, []);
 
@@ -285,6 +287,7 @@ const Staff = () => {
           updatePayload.assignedSubjects = [];
         }
 
+        // Update staff member using their unique ID
         updateStaffMaster(editingStaff.id, updatePayload);
         showSuccess(`Staff member "${formData.full_name}" updated successfully.`);
       } catch (err) {
@@ -495,7 +498,7 @@ const Staff = () => {
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">System Role</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Registered Email</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Temp Access Code</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Status</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
                     </tr>
                   </thead>
@@ -535,11 +538,6 @@ const Staff = () => {
                           <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{member.email || 'No Email Provided'}</span>
                         </td>
                         <td className="px-8 py-5 min-w-[140px]">
-                          <span className="font-mono text-xs font-bold text-amber-600 whitespace-nowrap">
-                            {(member as any).ref || (member as any).accessCode || (member as any).tempAccessCode || '—'}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5 text-center min-w-[140px]">
                           <Badge className={member.status === 'Active' ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl" : "bg-amber-50 text-amber-700 border-none font-bold text-xs px-3 py-1 rounded-xl"}>
                             {member.status}
                           </Badge>

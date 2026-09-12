@@ -45,6 +45,7 @@ export const STAFF_MASTER_KEY = 'munyaka_master_staff_list';
 /** Legacy keys still written by mutations for backwards compatibility. */
 const LEGACY_DIRECTORY_KEY = 'munyaka_staff_directory';
 const LEGACY_PREREG_KEY   = 'munyaka_staff_prereg';
+const LEGACY_STAFF_KEY    = 'munyaka_staff';
 
 /**
  * Teaching staff system roles — these roles are directly involved in
@@ -801,6 +802,7 @@ export function migrateLibrarianRoles(): LibrarianMigrationResult {
 function persist(records: MasterStaffRecord[]): void {
   const json = JSON.stringify(records);
   localStorage.setItem(STAFF_MASTER_KEY, json);
+  localStorage.setItem('munyaka_staff', json);
   localStorage.setItem(LEGACY_DIRECTORY_KEY, JSON.stringify(records.map(r => ({
     id: r.id,
     id_no: r.nationalId,
@@ -1025,13 +1027,13 @@ export function updateStaffMaster(
   patch: Partial<MasterStaffRecord>
 ): MasterStaffRecord | null {
   const existing = getStaffMaster();
-  const idx = existing.findIndex(r => r.id === id);
+  const idx = existing.findIndex(r => r.id === id || r.staffId === id || r.email === patch.email);
   if (idx < 0) return null;
-  const updated = [...existing];
-  updated[idx] = { ...existing[idx], ...patch };
+  const targetId = existing[idx].id;
+  const updated = existing.map(r => r.id === targetId ? { ...r, ...patch } : r);
   persist(updated);
   broadcast();
-  return updated[idx];
+  return updated.find(r => r.id === targetId) || null;
 }
 
 export function deleteStaffMaster(id: string): boolean {

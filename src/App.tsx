@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import CoverPage from "./pages/CoverPage";
 import ParentPortal from "./pages/ParentPortal";
 import Index from "./pages/Index";
 import Students from "./pages/Students";
@@ -25,6 +26,7 @@ import Portfolio from "./pages/Portfolio";
 import Fees from "./pages/Fees";
 import Settings from "./pages/Settings";
 import Staff from "./pages/Staff";
+import StaffDirectory from "./pages/StaffDirectory";
 import StaffProfile from "./pages/StaffProfile";
 import StaffRegistration from "./pages/StaffRegistration";
 import StaffPreRegistration from "./pages/StaffPreRegistration";
@@ -73,6 +75,7 @@ import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
+import { initializeSeedData } from "./utils/seedData";
 
 // ── LocalStorage keys that hold active learner rows ────────────────────────
 const LEARNER_STORAGE_KEYS = [
@@ -252,34 +255,7 @@ const App = () => {
   //
   // Each is idempotent and gated by its own localStorage flag.
   useEffect(() => {
-    // ── TEMP: hard-fix migration ────────────────────────────────────────
-    // Clear stale learner + fee storage so the app re-initializes with
-    // clean data on next hydrate. Safe to remove once every browser has
-    // been refreshed.
-    try {
-      const KEYS_TO_RESET = [
-        'munyaka_learners',
-        'school_learners_data',
-        'munyaka_students',
-        // Fee ledgers so previously-seeded mock data never resurfaces.
-        'munyaka_fees_records',
-        'munyaka_student_fees',
-        'munyaka_payment_records',
-        'munyaka_transactions',
-        // Force every legacy learner key to start as `[]` so the table
-        // renders an empty roster by default.
-        'students',
-        'learners',
-        'pupils',
-        'school_students',
-        'registered_students',
-      ];
-      for (const k of KEYS_TO_RESET) {
-        try {
-          window.localStorage.removeItem(k);
-        } catch { /* no-op */ }
-      }
-    } catch { /* no-op */ }
+    initializeSeedData();
     runOneTimeAssessmentCleanup();
     runOneTimeLegacyAdmNoMigration();
     runOneTimeAdmissionNoBackfill();
@@ -300,11 +276,13 @@ const App = () => {
                     <Sonner />
                     <Routes>
                       {/* Public Routes */}
+                      <Route path="/" element={<CoverPage />} />
                       <Route path="/login" element={<Login />} />
+                      <Route path="/staff-login" element={<Login />} />
+                      <Route path="/cover" element={<CoverPage />} />
                       <Route path="/portal" element={<ParentPortal />} />
 
                       {/* Protected Routes */}
-                      <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
@@ -314,7 +292,8 @@ const App = () => {
                       <Route path="/grades" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><GradesStreams /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/learning-areas" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><LearningAreas /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/exam-types" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ExamTypes /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><Staff /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><StaffDirectory /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff/legacy" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><Staff /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/registration" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><StaffRegistration /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/pre-registration" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><StaffPreRegistration /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/attendance" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><StaffAttendancePage /></Layout></AppUnlock></ProtectedRoute>} />

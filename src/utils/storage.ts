@@ -83,10 +83,12 @@ export interface Student {
   deletedAt?: string;
   admissionNo?: string;
   birthCertificateNo?: string;
+  birthCertNo?: string;
   dob?: string;
   dateOfAdmission?: string;
   admissionYear?: number;
   assessmentNo?: string;
+  admissionNumber?: string;
   [key: string]: unknown;
 }
 
@@ -477,20 +479,56 @@ export function hydrateAllStores(): HydrationReport {
 
 export const getStudents = (): Student[] => {
   try {
-    const primary = readStorage<Student[] | null>(STORAGE_KEY, null);
-    if (primary && Array.isArray(primary) && primary.length > 0) return primary;
+    const ls = getLocalStorage();
+    if (!ls) return [];
 
-    // Check legacy fallback keys
-    const legacyKeys = ['munyaka_registered_students', 'students', 'school_learners_data', 'learners', 'pupils', 'school_students', 'registered_students'];
-    for (const lKey of legacyKeys) {
-      const legacy = readStorage<Student[] | null>(lKey, null);
-      if (legacy && Array.isArray(legacy) && legacy.length > 0) return legacy;
+    // Guard: Read STORAGE_KEY ('munyaka_students') first. If data exists, parse and return immediately.
+    // NEVER overwrite existing localStorage with empty arrays or run seeding/resets if keys exist.
+    const primaryRaw = ls.getItem(STORAGE_KEY);
+    if (primaryRaw != null) {
+      const parsed = safeParse<Student[]>(primaryRaw, []);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
     }
+
+    // Also check school_learners_data as primary key if munyaka_students is absent
+    const altRaw = ls.getItem('school_learners_data');
+    if (altRaw != null) {
+      const parsed = safeParse<Student[]>(altRaw, []);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // sync to STORAGE_KEY without overwriting if munyaka_students was somehow empty
+        try { ls.setItem(STORAGE_KEY, altRaw); } catch {}
+        return parsed;
+      }
+    }
+
+    // Only if neither primary nor alt exists, return empty array (do NOT overwrite anything)
     return [];
   } catch {
     return [];
   }
 };
+
+/**
+ * Case-insensitive lookup of a single learner by any of their identifiers.
+ *
+ * Matches against `assessmentNo`, `birthCertNo`, `admissionNumber`, and `id`
+ * using a trimmed, lower-cased comparison so that casing / whitespace
+ * differences never prevent a valid login.
+ */
+export function getStudentByIdentifier(identifier: string): Student | undefined {
+  if (!identifier) return undefined;
+  const cleanInput = identifier.trim().toLowerCase();
+  const students = getStudents();
+  return students.find((s) =>
+    s.assessmentNo?.trim().toLowerCase() === cleanInput ||
+    s.birthCertNo?.trim().toLowerCase() === cleanInput ||
+    s.admissionNumber?.trim().toLowerCase() === cleanInput ||
+    s.id?.trim().toLowerCase() === cleanInput ||
+    s.admNo?.trim().toLowerCase() === cleanInput
+  );
+}
 
 export const getLearningAreas = (): LearningAreaCluster[] =>
   readStorage<LearningAreaCluster[]>(STORAGE_KEYS.CBC_LEARNING_AREAS, []);
@@ -526,7 +564,17 @@ export function setStudents(students: Student[]): boolean {
 
 export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: string })): Student {
   try {
-    const existing = getStudents();
+    // Fetch current records directly from localStorage (append-only semantics)
+    const ls = getLocalStorage();
+    let existing: Student[] = [];
+    if (ls) {
+      const raw = ls.getItem(STORAGE_KEY);
+      if (raw != null) {
+        const parsed = safeParse<Student[]>(raw, []);
+        if (Array.isArray(parsed)) existing = parsed;
+      }
+    }
+
     const studentId = student.id ?? generateId('stu');
     const fullStudent: Student = {
       admNo: String(student.admNo ?? student.admissionNo ?? 'ADM-001'),
@@ -541,20 +589,20 @@ export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: str
       id: studentId,
     };
     const updated = [...existing.filter(s => s.id !== studentId), fullStudent];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    window.dispatchEvent(new Event('students-updated'));
+    setStudents(updated);
     return fullStudent;
   } catch (err) {
     console.error('[storage] saveStudent failed:', err);
     const fallbackStudent: Student = {
       id: student.id ?? generateId('stu'),
-      admNo: String(student.admNo ?? 'ADM-001'),
+      admNo: String(student.admNo ?? student.admissionNo ?? 'ADM-001'),
       name: String(student.name ?? 'Unnamed'),
       grade: String(student.grade ?? 'Grade 1'),
       stream: String(student.stream ?? 'North'),
       gender: String(student.gender ?? 'Female'),
       guardian: String(student.guardian ?? 'Parent'),
       phone: String(student.phone ?? ''),
+      status: String(student.status ?? 'Active'),
       ...student,
     };
     return fallbackStudent;
@@ -631,8 +679,18 @@ export function generateId(prefix: string = 'id'): string {
 }
 
 // ── Students ────────────────────────────────────────────────────────────────
-export function createStudent(input: Omit<Student, 'id'> & { id?: string }): Student {
-  const newStudent: Student = { ...input, id: input.id ?? generateId('stu') };
+export function createStudent(input: Student | Partial<Student>): Student {
+  const newStudent: Student = {
+    id: input.id ?? generateId('stu'),
+    admNo: (input as any).admNo ?? (input as any).admissionNumber ?? '',
+    name: (input as any).name ?? '',
+    grade: (input as any).grade ?? '',
+    stream: (input as any).stream ?? '',
+    gender: (input as any).gender ?? 'Male',
+    guardian: (input as any).guardian ?? '',
+    phone: (input as any).phone ?? '',
+    ...(input as any),
+  };
   const next = [...getStudents(), newStudent];
   setStudents(next);
   return newStudent;
