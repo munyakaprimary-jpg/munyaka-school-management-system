@@ -55,7 +55,8 @@ const ProtectedRoute = ({
   // Route-level role denylist with support staff normalization: redirect blocked roles back to dashboard.
   if (user) {
     const rawRole = String(user.role || '').trim().toUpperCase();
-    const normalizedUserRole = rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
+    const normalizedUserRole = rawRole.includes('DEV') ? 'dev' :
+                               rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
                                rawRole.includes('ADMIN') ? 'admin' :
                                rawRole.includes('OWNER') || rawRole.includes('SUPER') ? 'owner' :
                                rawRole.includes('STUDENT') ? 'student' :
@@ -80,7 +81,7 @@ const ProtectedRoute = ({
         return target === normalizedUserRole || target === rawRole.toLowerCase() ||
                (target === 'staff' && ['support_staff', 'accountant', 'driver', 'staff'].includes(normalizedUserRole));
       });
-      if (!isAllowed && normalizedUserRole !== 'admin' && normalizedUserRole !== 'owner') {
+      if (!isAllowed && normalizedUserRole !== 'admin' && normalizedUserRole !== 'owner' && normalizedUserRole !== 'dev') {
         console.warn('[ProtectedRoute] Role Restriction: User role not allowed for route:', { userRole: rawRole, allowedRoles });
         return <Navigate to="/dashboard" replace />;
       }

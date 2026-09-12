@@ -278,11 +278,11 @@ const Login: React.FC = () => {
       if (entered === 'dev2026') {
         isValid = true;
         setAdminAuthError('');
-        localStorage.setItem('munyaka_user', JSON.stringify({
-          role: 'Dev',
-          name: 'Developer',
-          isAuthenticated: true
-        }));
+        const devUser = { role: 'Dev', name: 'Platform Developer', isAuthenticated: true };
+        localStorage.setItem('munyaka_user', JSON.stringify(devUser));
+        try {
+          await login(config.email, entered);
+        } catch { /* ignore */ }
         navigate('/dev/dashboard', { replace: true });
         setIsAdminVerifying(false);
         return;
