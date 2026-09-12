@@ -1,22 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Settings,
-  Building2,
-  CreditCard,
-  Key,
-  Wifi,
-  Monitor,
-  Activity,
-  LogOut,
-  Users,
-  UserCheck,
-  BookOpen,
-  Calendar,
-  ClipboardCheck
-} from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { LogOut } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -29,45 +13,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   setIsOpen,
   isCollapsed,
-  setIsCollapsed,
 }) => {
   const location = useLocation();
-  const { user } = useAuth();
 
   let storedUser: { role?: string; name?: string } = {};
   try {
     storedUser = JSON.parse(localStorage.getItem('munyaka_user') || '{}');
   } catch { /* ignore */ }
 
-  const userRole = storedUser.role || user?.role || 'Admin';
-  const isDev = userRole === 'Dev' || userRole === 'PlatformAdmin';
-
-  const devNavItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dev/dashboard' },
-    { icon: Settings, label: 'Platform Settings', path: '/dev/settings' },
-    { icon: Building2, label: 'School Management', path: '/dev/schools' },
-    { icon: CreditCard, label: 'App Subscriptions', path: '/payment-management' },
-    { icon: Key, label: 'License Management', path: '/dev/licenses' },
-    { icon: CreditCard, label: 'Payment History', path: '/payment-management' },
-    { icon: Wifi, label: 'LAN & Offline Sync', path: '/lan-config' },
-    { icon: Monitor, label: 'Connected Devices', path: '/lan-config' },
-    { icon: Activity, label: 'System Logs & Metrics', path: '/dev/logs' },
-  ];
-
-  const adminNavItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/admin-dashboard' },
-    { icon: Users, label: 'Staff Access Master', path: '/admin/control-center' },
-    { icon: UserCheck, label: 'Student Directory', path: '/students' },
-    { icon: BookOpen, label: 'CBC Assessment', path: '/central-data' },
-    { icon: Calendar, label: 'Timetable', path: '/timetable' },
-    { icon: ClipboardCheck, label: 'Attendance', path: '/attendance' },
-  ];
-
-  const navList = isDev ? devNavItems : adminNavItems;
+  const userRole = storedUser.role || 'Admin';
+  const isDev = userRole === 'Dev' || userRole === 'PlatformAdmin' || userRole === 'owner';
 
   const avatarText = isDev ? 'DV' : 'AD';
   const userNameLabel = isDev ? 'Platform Developer' : 'Admin';
   const subtitleLabel = isDev ? 'DEVELOPER' : 'ADMINISTRATOR';
+
+  const isActive = (path: string) => location.pathname === path || (path === '/dev/dashboard' && location.pathname === '/');
 
   return (
     <aside
@@ -93,26 +54,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
-        {navList.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path + item.label}
-              to={item.path}
-              onClick={() => setIsOpen(false)}
-              className={`flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 group ${
-                isActive
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400'
-              }`}
-            >
-              <Icon size={20} className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 shrink-0'} />
-              {!isCollapsed && <span className="truncate">{item.label}</span>}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+        <a href="#/dev/dashboard" onClick={() => setIsOpen(false)} className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm ${isActive('/dev/dashboard') ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+          <span className="font-bold">📊</span>
+          {!isCollapsed && <span>Dashboard</span>}
+        </a>
+        <a href="#/dev/settings" onClick={() => setIsOpen(false)} className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm ${isActive('/dev/settings') ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+          <span className="font-bold">⚙️</span>
+          {!isCollapsed && <span>Platform Settings</span>}
+        </a>
+        <a href="#/dev/schools" onClick={() => setIsOpen(false)} className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm ${isActive('/dev/schools') ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+          <span className="font-bold">🏫</span>
+          {!isCollapsed && <span>School Management</span>}
+        </a>
+        <a href="#/dev/subscriptions" onClick={() => setIsOpen(false)} className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm ${isActive('/dev/subscriptions') ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+          <span className="font-bold">💳</span>
+          {!isCollapsed && <span>App Subscriptions</span>}
+        </a>
+        <a href="#/dev/licenses" onClick={() => setIsOpen(false)} className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm ${isActive('/dev/licenses') ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+          <span className="font-bold">🔑</span>
+          {!isCollapsed && <span>License Management</span>}
+        </a>
+        <a href="#/dev/payments" onClick={() => setIsOpen(false)} className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm ${isActive('/dev/payments') ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+          <span className="font-bold">🧾</span>
+          {!isCollapsed && <span>Payment History</span>}
+        </a>
+        <a href="#/dev/lan-sync" onClick={() => setIsOpen(false)} className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm ${isActive('/dev/lan-sync') ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+          <span className="font-bold">📶</span>
+          {!isCollapsed && <span>LAN & Offline Sync</span>}
+        </a>
+        <a href="#/dev/devices" onClick={() => setIsOpen(false)} className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm ${isActive('/dev/devices') ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+          <span className="font-bold">🖥️</span>
+          {!isCollapsed && <span>Connected Devices</span>}
+        </a>
+        <a href="#/dev/logs" onClick={() => setIsOpen(false)} className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm ${isActive('/dev/logs') ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'}`}>
+          <span className="font-bold">📁</span>
+          {!isCollapsed && <span>System Logs & Metrics</span>}
+        </a>
       </nav>
 
       {/* Bottom Profile Card */}
