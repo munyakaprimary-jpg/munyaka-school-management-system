@@ -280,8 +280,13 @@ const Login: React.FC = () => {
         setAdminAuthError('');
         const devUser = { role: 'Dev', name: 'Developer', isAuthenticated: true };
         localStorage.setItem('munyaka_user', JSON.stringify(devUser));
+        localStorage.setItem('munyaka_admin_session', JSON.stringify({
+          role: 'Dev',
+          roleLabel: 'Platform Developer',
+          roleIcon: 'shield',
+          timestamp: Date.now(),
+        }));
         try {
-          // Force auth context or storage reload if needed
           window.dispatchEvent(new Event('storage'));
         } catch { /* ignore */ }
         navigate('/dev/dashboard', { replace: true });

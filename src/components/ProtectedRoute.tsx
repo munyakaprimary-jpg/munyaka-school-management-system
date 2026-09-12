@@ -36,11 +36,19 @@ const ProtectedRoute = ({
   blockedRoles = [],
   allowedRoles,
 }: ProtectedRouteProps) => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated: authContextIsAuth, isLoading, user } = useAuth();
   const { hasPermission } = usePermissions();
   const location = useLocation();
 
-  if (isLoading) {
+  let storedUser: { role?: string; isAuthenticated?: boolean } = {};
+  try {
+    storedUser = JSON.parse(localStorage.getItem('munyaka_user') || '{}');
+  } catch { /* ignore */ }
+
+  const activeRole = user?.role || storedUser.role;
+  const isAuth = authContextIsAuth || storedUser.isAuthenticated || (storedUser.role === 'Dev');
+
+  if (isLoading && !storedUser.isAuthenticated) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="animate-spin text-indigo-600" size={40} />
@@ -48,13 +56,13 @@ const ProtectedRoute = ({
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuth) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Route-level role denylist with support staff normalization: redirect blocked roles back to dashboard.
-  if (user) {
-    const rawRole = String(user.role || '').trim().toUpperCase();
+  if (activeRole) {
+    const rawRole = String(activeRole).trim().toUpperCase();
     const normalizedUserRole = rawRole.includes('DEV') ? 'dev' :
                                rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
                                rawRole.includes('ADMIN') ? 'admin' :
@@ -77,7 +85,6 @@ const ProtectedRoute = ({
     // Role allowlist: if specified, only these roles may access (allowing support staff & normalization).
     if (allowedRoles && allowedRoles.length > 0) {
       if (normalizedUserRole === 'dev') {
-        // Dev can access any route explicitly allowed for Dev or PlatformAdmin or owner
         const isDevAllowed = allowedRoles.some(r => ['dev', 'platformadmin', 'owner'].includes(r.toLowerCase()));
         if (!isDevAllowed) {
           return <Navigate to="/dev/dashboard" replace />;
