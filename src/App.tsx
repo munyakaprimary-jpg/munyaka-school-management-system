@@ -310,15 +310,15 @@ const App = () => {
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['Admin', 'admin']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/dashboard" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/settings" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/schools" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/subscriptions" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/licenses" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/payments" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/lan-sync" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/devices" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/logs" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/dashboard" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/settings" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/schools" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/subscriptions" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/licenses" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/payments" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/lan-sync" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/devices" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/logs" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/settings" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/schools" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/subscriptions" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
