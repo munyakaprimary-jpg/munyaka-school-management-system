@@ -331,53 +331,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         {/* Navigation List */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
-          {navMenu.map((item) => {
-            // Section header (non-clickable divider)
-            if ((item as any).section) {
-              if (isCollapsed) {
-                return (
-                  <div
-                    key={`section-${item.label}`}
-                    className="my-2 border-t border-slate-200 dark:border-slate-800"
-                    aria-label={item.label}
-                  />
-                );
-              }
-              return (
-                <div
-                  key={`section-${item.label}`}
-                  className="px-3 pt-4 pb-1.5 flex items-center gap-2"
-                >
-                  <item.icon size={14} className="text-indigo-500 shrink-0" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                    {item.label}
-                  </span>
-                </div>
-              );
-            }
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
-                  isActive
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
-                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
-                )}
-              >
-                <item.icon size={20} className={cn(
-                  "shrink-0",
-                  isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                )} />
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 8px' }}>
+          <a href="#/dev/dashboard" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#4f46e5', fontWeight: 'bold' }}>📊 Dashboard</a>
+          <a href="#/dev/settings" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>⚙️ Platform Settings</a>
+          <a href="#/dev/schools" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>🏫 School Management</a>
+          <a href="#/dev/subscriptions" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>💳 App Subscriptions</a>
+          <a href="#/dev/licenses" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>🔑 License Management</a>
+          <a href="#/dev/payments" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>🧾 Payment History</a>
+          <a href="#/dev/lan-sync" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>📶 LAN & Offline Sync</a>
+          <a href="#/dev/devices" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>🖥️ Connected Devices</a>
+          <a href="#/dev/logs" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>📁 System Logs & Metrics</a>
+        </div>
 
             {/* User Account Footer */}
             <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
