@@ -331,44 +331,23 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         {/* Navigation List */}
-        <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-          <a href="#/dev/dashboard" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50">
-            <span className="font-bold">📊</span>
-            {!isCollapsed && <span>Dashboard</span>}
-          </a>
-          <a href="#/dev/settings" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-            <span className="font-bold">⚙️</span>
-            {!isCollapsed && <span>Platform Settings</span>}
-          </a>
-          <a href="#/dev/schools" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-            <span className="font-bold">🏫</span>
-            {!isCollapsed && <span>School Management</span>}
-          </a>
-          <a href="#/dev/subscriptions" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-            <span className="font-bold">💳</span>
-            {!isCollapsed && <span>App Subscriptions</span>}
-          </a>
-          <a href="#/dev/licenses" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-            <span className="font-bold">🔑</span>
-            {!isCollapsed && <span>License Management</span>}
-          </a>
-          <a href="#/dev/payments" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-            <span className="font-bold">🧾</span>
-            {!isCollapsed && <span>Payment History</span>}
-          </a>
-          <a href="#/dev/lan-sync" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-            <span className="font-bold">📶</span>
-            {!isCollapsed && <span>LAN & Offline Sync</span>}
-          </a>
-          <a href="#/dev/devices" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-            <span className="font-bold">🖥️</span>
-            {!isCollapsed && <span>Connected Devices</span>}
-          </a>
-          <a href="#/dev/logs" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
-            <span className="font-bold">📁</span>
-            {!isCollapsed && <span>System Logs & Metrics</span>}
-          </a>
-        </nav>
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
+          {navMenu.map((item) => {
+            // Section header (non-clickable divider)
+            if ((item as any).section) {
+              if (isCollapsed) {
+                return (
+                  <div
+                    key={`section-${item.label}`}
+                    className="my-2 border-t border-slate-200 dark:border-slate-800"
+                    aria-label={item.label}
+                  />
+                );
+              }
+              return (
+                <div
+                  key={`section-${item.label}`}
+                  className="px-3 pt-4 pb-1.5 flex items-center gap-2"
                 >
                   <item.icon size={14} className="text-indigo-500 shrink-0" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
