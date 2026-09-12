@@ -547,7 +547,7 @@ export default function DevDashboard() {
                 <Building2 size={24} />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900">{licenseTitle}</h3>
+                <h3 className="text-lg font-black text-slate-900">{config.planName || licenseTitle}</h3>
                 <p className="text-xs text-slate-500 font-medium">{subtitleName}</p>
               </div>
             </div>
@@ -556,7 +556,7 @@ export default function DevDashboard() {
                 <CheckCircle2 size={12} /> Active
               </Badge>
               <Badge className="bg-indigo-100 text-indigo-800 border-none font-bold">
-                STARTER
+                {config.tier ? config.tier.toUpperCase() : 'STARTER'}
               </Badge>
             </div>
           </div>
@@ -565,7 +565,7 @@ export default function DevDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Plan</span>
-              <span className="text-sm font-black text-slate-900">Enterprise Plan</span>
+              <span className="text-sm font-black text-slate-900">{config.planLabel || 'Enterprise Plan'}</span>
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Interval</span>
@@ -573,11 +573,11 @@ export default function DevDashboard() {
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Amount</span>
-              <span className="text-sm font-black text-slate-900">KES 20,000</span>
+              <span className="text-sm font-black text-slate-900">{config.currency.split(' ')[0]} {Number(config.amount || 0).toLocaleString()}</span>
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Next Billing</span>
-              <span className="text-sm font-black text-slate-900">2026-09-02</span>
+              <span className="text-sm font-black text-slate-900">{config.nextBilling || '2026-09-02'}</span>
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Billing Cycle</span>
@@ -585,7 +585,7 @@ export default function DevDashboard() {
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5"><User size={14} className="text-indigo-600" /> Institutional Seats</span>
-              <span className="text-sm font-black text-slate-900">1,000 seats</span>
+              <span className="text-sm font-black text-slate-900">{Number(config.seats || 0).toLocaleString()} seats</span>
             </div>
           </div>
 
