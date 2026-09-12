@@ -36,13 +36,13 @@ interface NavItem {
 
 // 1. SCHOOL ADMIN & STAFF MENU
 const adminNavItems: NavItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { label: 'Learners & Admission', path: '/learners', icon: GraduationCap },
-  { label: 'Staff & Teachers', path: '/staff', icon: Users },
-  { label: 'CBC Assessment & Grading', path: '/grading', icon: ClipboardCheck },
-  { label: 'Attendance & Timetable', path: '/attendance', icon: CalendarCheck },
-  { label: 'School Fees & Accounts', path: '/fees', icon: Wallet },
-  { label: 'School Settings', path: '/settings', icon: Settings },
+  { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+  { label: 'Learners & Admission', path: '/admin/learners', icon: GraduationCap },
+  { label: 'Staff & Teachers', path: '/admin/staff', icon: Users },
+  { label: 'CBC Assessment & Grading', path: '/admin/grading', icon: ClipboardCheck },
+  { label: 'Attendance & Timetable', path: '/admin/attendance', icon: CalendarCheck },
+  { label: 'School Fees & Accounts', path: '/admin/fees', icon: Wallet },
+  { label: 'School Settings', path: '/admin/settings', icon: Settings },
 ];
 
 // 2. PLATFORM DEVELOPER MENU
@@ -61,7 +61,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // 3. ROLE-BASED NAVIGATION SWITCHING
+  // 3. FLEXIBLE ROLE & PATH MATCHING
   const isDevView = user?.role === 'developer' || location.pathname.startsWith('/dev');
   const activeNavItems = isDevView ? devNavItems : adminNavItems;
 
@@ -115,7 +115,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
           <nav className="mt-4 px-3 space-y-1">
             {activeNavItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.path;
+              // Matches exact paths or sub-paths (e.g., /learners or /admin/learners)
+              const isActive =
+                location.pathname === item.path ||
+                location.pathname === item.path.replace('/admin', '') ||
+                (item.path !== '/admin/dashboard' && location.pathname.includes(item.path.replace('/admin/', '')));
 
               return (
                 <Link
