@@ -17,6 +17,14 @@ export default {
         "2xl": "1400px",
       },
     },
+    screens: {
+      "xs": "480px",
+      "sm": "640px",
+      "md": "768px",
+      "lg": "1024px",
+      "xl": "1280px",
+      "2xl": "1400px",
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",
@@ -92,5 +100,18 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function({ addUtilities }: { addUtilities: (utilities: Record<string, Record<string, string>>, variants?: string[]) => void }) {
+      addUtilities({
+        ".scrollbar-hide": {
+          "-ms-overflow-style": "none",
+          "scrollbar-width": "none",
+          "&::-webkit-scrollbar": {
+            display: "none",
+          },
+        },
+      }, ["responsive"]);
+    },
+  ],
 } satisfies Config;

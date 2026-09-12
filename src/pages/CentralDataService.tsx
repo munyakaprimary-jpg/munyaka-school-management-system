@@ -2,20 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Upload, Database, RefreshCw, CheckCircle, FileCode, HardDrive, ShieldCheck, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
+import { Download, Upload, Database, RefreshCw, CheckCircle, FileCode, HardDrive, ShieldCheck, AlertCircle, Sparkles, Loader2, Users, UserCheck, Briefcase, GraduationCap, BookOpen } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
 import { useFileDownload } from '@/utils/fileDownloader';
 import { useCentralData, notifyDataChanged, getActiveLearners, getActiveTeachers } from '@/hooks/useCentralData';
+import { lsSet, lsRead } from '@/utils/storage';
+import { STAFF_MASTER_KEY, getCategorizedMetrics, isTeachingRole, getStaffMaster } from '@/services/staffMasterService';
+import { tryParse } from '@/utils/storageUtils';
 
 export default function CentralDataService() {
   const centralStats = useCentralData();
+  
+  // Get categorized staff metrics for Teaching vs Non-Teaching display
+  const staffMetrics = getCategorizedMetrics();
+  
+  // Staff list tab state
+  const [staffListTab, setStaffListTab] = useState<'all' | 'teaching' | 'non-teaching'>('all');
+  
   const [stats, setStats] = useState({
     studentsCount: 0,
-    staffCount: 0,
     attendanceCount: 0,
     feesCount: 0,
-    lastExportDate: localStorage.getItem('munyaka_last_export_date') || 'Never'
+    lastExportDate: lsRead<string>('munyaka_last_export_date', '') || 'Never'
   });
 
   const [importJsonText, setImportJsonText] = useState('');
@@ -28,16 +37,14 @@ export default function CentralDataService() {
   const loadStats = () => {
     try {
       const students = getActiveLearners();
-      const staff = getActiveTeachers();
-      const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '{}');
-      const fees = JSON.parse(localStorage.getItem('munyaka_fees_records') || '{}');
+      const attendance = lsRead<Record<string, unknown>>('munyaka_attendance_records', {});
+      const fees = lsRead<Record<string, unknown>>('munyaka_fees_records', {});
 
       setStats({
-        studentsCount: students.length,
-        staffCount: staff.length,
-        attendanceCount: Object.keys(attendance).length,
-        feesCount: Object.keys(fees).length,
-        lastExportDate: localStorage.getItem('munyaka_last_export_date') || 'Never'
+        studentsCount: Array.isArray(students) ? students.length : 0,
+        attendanceCount: Object.keys(attendance ?? {}).length,
+        feesCount: Object.keys(fees ?? {}).length,
+        lastExportDate: lsRead<string>('munyaka_last_export_date', '') || 'Never'
       });
     } catch (e) {
       console.error(e);
@@ -53,36 +60,38 @@ export default function CentralDataService() {
   const handleExportDatabase = async () => {
     try {
       const dbBundle = {
-        version: "4.0",
+        version: "5.0", // v5.0: includes munyaka_master_staff_list
         exportDate: new Date().toISOString(),
         school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-        students: JSON.parse(localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students') || '[]'),
-        staff: JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]'),
-        staffPrereg: JSON.parse(localStorage.getItem('munyaka_staff_prereg') || '[]'),
-        fees: JSON.parse(localStorage.getItem('munyaka_fees_records') || '{}'),
-        transactions: JSON.parse(localStorage.getItem('munyaka_transactions') || '[]'),
-        attendance: JSON.parse(localStorage.getItem('munyaka_attendance_records') || '{}'),
-        grades: JSON.parse(localStorage.getItem('munyaka_grades') || '[]'),
-        examTypes: JSON.parse(localStorage.getItem('munyaka_exam_types') || '[]'),
-        learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || '[]'),
-        assessmentScores: JSON.parse(localStorage.getItem('munyaka_assessment_scores') || '{}'),
-        libraryBooks: JSON.parse(localStorage.getItem('munyaka_library_books') || '[]'),
-        ictAssets: JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]'),
-        settings: JSON.parse(localStorage.getItem('munyaka_system_settings_v3') || '{}')
+        students: lsRead<unknown>('school_learners_data', lsRead<unknown>('munyaka_students', [])),
+        staff: lsRead<unknown>('munyaka_staff_directory', []),
+        staffPrereg: lsRead<unknown>('munyaka_staff_prereg', []),
+        staffMaster: lsRead<unknown>(STAFF_MASTER_KEY, []),   // canonical master ledger
+        fees: lsRead<unknown>('munyaka_fees_records', {}),
+        transactions: lsRead<unknown>('munyaka_transactions', []),
+        attendance: lsRead<unknown>('munyaka_attendance_records', {}),
+        grades: lsRead<unknown>('munyaka_grades', []),
+        examTypes: lsRead<unknown>('munyaka_exam_types', []),
+        learningAreas: lsRead<unknown>('munyaka_learning_areas', []),
+        assessmentScores: lsRead<unknown>('munyaka_assessment_scores', {}),
+        libraryBooks: lsRead<unknown>('munyaka_library_books', []),
+        ictAssets: lsRead<unknown>('munyaka_ict_assets', []),
+        settings: lsRead<unknown>('munyaka_system_settings_v3', {})
       };
 
       // Serialize EVERY single key stored in localStorage into a clean key-value dictionary object
       const allLocalStorageData: Record<string, any> = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key !== 'app_seed_version') {
-          const val = localStorage.getItem(key);
-          try {
-            allLocalStorageData[key] = val ? JSON.parse(val) : val;
-          } catch {
-            allLocalStorageData[key] = val;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key !== 'app_seed_version') {
+            const val = localStorage.getItem(key);
+            const parsed = tryParse(val);
+            allLocalStorageData[key] = parsed !== null ? parsed : val;
           }
         }
+      } catch (err) {
+        console.error('[CentralDataService] Failed to snapshot localStorage:', err);
       }
 
       const fullExportObject = {
@@ -91,9 +100,9 @@ export default function CentralDataService() {
       };
 
       const jsonString = `export const INITIAL_SEED_DATA = ${JSON.stringify(fullExportObject, null, 2)};\n`;
-      
+
       const nowStr = new Date().toLocaleString();
-      localStorage.setItem('munyaka_last_export_date', nowStr);
+      lsSet('munyaka_last_export_date', nowStr);
       setStats(prev => ({ ...prev, lastExportDate: nowStr }));
 
       await seedExport.download({
@@ -118,11 +127,11 @@ export default function CentralDataService() {
         version: "3.5",
         exportDate: new Date().toISOString(),
         school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-        students: JSON.parse(localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students') || '[]'),
-        staff: JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]'),
-        fees: JSON.parse(localStorage.getItem('munyaka_fees_records') || '{}'),
-        attendance: JSON.parse(localStorage.getItem('munyaka_attendance_records') || '{}'),
-        grades: JSON.parse(localStorage.getItem('munyaka_grades') || '[]')
+        students: lsRead<unknown>('school_learners_data', lsRead<unknown>('munyaka_students', [])),
+        staff: lsRead<unknown>('munyaka_staff_directory', []),
+        fees: lsRead<unknown>('munyaka_fees_records', {}),
+        attendance: lsRead<unknown>('munyaka_attendance_records', {}),
+        grades: lsRead<unknown>('munyaka_grades', [])
       };
 
       const jsonString = JSON.stringify(dbBundle, null, 2);
@@ -143,44 +152,44 @@ export default function CentralDataService() {
   };
 
   const handleImportDatabase = () => {
-    if (!importJsonText.trim()) {
+    if (!String(importJsonText || '').trim()) {
       showError("Please paste or load valid JSON seed data.");
       return;
     }
     try {
       setIsImporting(true);
-      const parsed = JSON.parse(importJsonText);
+      const parsed = JSON.parse(importJsonText) as Record<string, unknown>;
       
-      if (parsed.students && Array.isArray(parsed.students)) {
-        localStorage.setItem('school_learners_data', JSON.stringify(parsed.students));
-        localStorage.setItem('munyaka_students', JSON.stringify(parsed.students));
+      if (parsed?.students && Array.isArray(parsed.students)) {
+        lsSet('school_learners_data', parsed.students);
+        lsSet('munyaka_students', parsed.students);
       }
-      if (parsed.staff && Array.isArray(parsed.staff)) {
-        localStorage.setItem('munyaka_staff_directory', JSON.stringify(parsed.staff));
+      if (parsed?.staff && Array.isArray(parsed.staff)) {
+        lsSet('munyaka_staff_directory', parsed.staff);
       }
-      if (parsed.staffPrereg && Array.isArray(parsed.staffPrereg)) {
-        localStorage.setItem('munyaka_staff_prereg', JSON.stringify(parsed.staffPrereg));
+      if (parsed?.staffPrereg && Array.isArray(parsed.staffPrereg)) {
+        lsSet('munyaka_staff_prereg', parsed.staffPrereg);
       }
-      if (parsed.fees) {
-        localStorage.setItem('munyaka_fees_records', JSON.stringify(parsed.fees));
+      if (parsed?.fees) {
+        lsSet('munyaka_fees_records', parsed.fees);
       }
-      if (parsed.transactions) {
-        localStorage.setItem('munyaka_transactions', JSON.stringify(parsed.transactions));
+      if (parsed?.transactions) {
+        lsSet('munyaka_transactions', parsed.transactions);
       }
-      if (parsed.attendance) {
-        localStorage.setItem('munyaka_attendance_records', JSON.stringify(parsed.attendance));
+      if (parsed?.attendance) {
+        lsSet('munyaka_attendance_records', parsed.attendance);
       }
-      if (parsed.grades) {
-        localStorage.setItem('munyaka_grades', JSON.stringify(parsed.grades));
+      if (parsed?.grades) {
+        lsSet('munyaka_grades', parsed.grades);
       }
-      if (parsed.examTypes) {
-        localStorage.setItem('munyaka_exam_types', JSON.stringify(parsed.examTypes));
+      if (parsed?.examTypes) {
+        lsSet('munyaka_exam_types', parsed.examTypes);
       }
-      if (parsed.learningAreas) {
-        localStorage.setItem('munyaka_learning_areas', JSON.stringify(parsed.learningAreas));
+      if (parsed?.learningAreas) {
+        lsSet('munyaka_learning_areas', parsed.learningAreas);
       }
-      if (parsed.assessmentScores) {
-        localStorage.setItem('munyaka_assessment_scores', JSON.stringify(parsed.assessmentScores));
+      if (parsed?.assessmentScores) {
+        lsSet('munyaka_assessment_scores', parsed.assessmentScores);
       }
 
       showSuccess("Central database successfully restored and loaded!");
@@ -200,7 +209,7 @@ export default function CentralDataService() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 p-6 rounded-2xl text-white shadow-xl">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <BackButton />
+            <BackButton parentPath="/" />
             <Badge variant="outline" className="border-emerald-400 text-emerald-300 px-3 py-1 text-xs uppercase tracking-wider">
               Centralized Data & APK Backups
             </Badge>
@@ -220,7 +229,7 @@ export default function CentralDataService() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <Card className="border-emerald-500/20 shadow-sm bg-card hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="text-sm font-medium text-muted-foreground">Registered Students</div>
@@ -228,25 +237,50 @@ export default function CentralDataService() {
             <p className="text-xs text-muted-foreground mt-1">Managed centrally</p>
           </CardContent>
         </Card>
-        <Card className="border-teal-500/20 shadow-sm bg-card hover:shadow-md transition-shadow">
+        <Card className="border-indigo-500/20 shadow-sm bg-card hover:shadow-md transition-shadow">
           <CardContent className="p-6">
-            <div className="text-sm font-medium text-muted-foreground">Staff Members</div>
-            <div className="text-3xl font-extrabold text-teal-600 mt-2">{stats.staffCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Directory & Pre-reg</p>
+            <div className="flex items-center gap-2">
+              <Users size={16} className="text-indigo-500" />
+              <div className="text-sm font-medium text-muted-foreground">Teaching Staff</div>
+            </div>
+            <div className="text-3xl font-extrabold text-indigo-600 mt-2">{staffMetrics.teaching.count}</div>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-xs text-emerald-600 font-medium">Active: {staffMetrics.teaching.active}</span>
+              <span className="text-xs text-amber-600 font-medium">Pending: {staffMetrics.teaching.pending}</span>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-orange-500/20 shadow-sm bg-card hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2">
+              <Briefcase size={16} className="text-orange-500" />
+              <div className="text-sm font-medium text-muted-foreground">Non-Teaching Staff</div>
+            </div>
+            <div className="text-3xl font-extrabold text-orange-600 mt-2">{staffMetrics.nonTeaching.count}</div>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-xs text-emerald-600 font-medium">Active: {staffMetrics.nonTeaching.active}</span>
+              <span className="text-xs text-amber-600 font-medium">Pending: {staffMetrics.nonTeaching.pending}</span>
+            </div>
           </CardContent>
         </Card>
         <Card className="border-blue-500/20 shadow-sm bg-card hover:shadow-md transition-shadow">
           <CardContent className="p-6">
-            <div className="text-sm font-medium text-muted-foreground">Attendance Logs</div>
-            <div className="text-3xl font-extrabold text-blue-600 mt-2">{stats.attendanceCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Term records</p>
+            <div className="flex items-center gap-2">
+              <UserCheck size={16} className="text-blue-500" />
+              <div className="text-sm font-medium text-muted-foreground">Total Staff</div>
+            </div>
+            <div className="text-3xl font-extrabold text-blue-600 mt-2">{staffMetrics.total.count}</div>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-xs text-emerald-600 font-medium">Active: {staffMetrics.total.active}</span>
+              <span className="text-xs text-amber-600 font-medium">Pending: {staffMetrics.total.pending}</span>
+            </div>
           </CardContent>
         </Card>
-        <Card className="border-amber-500/20 shadow-sm bg-card hover:shadow-md transition-shadow">
+        <Card className="border-cyan-500/20 shadow-sm bg-card hover:shadow-md transition-shadow">
           <CardContent className="p-6">
-            <div className="text-sm font-medium text-muted-foreground">Fee Ledgers</div>
-            <div className="text-3xl font-extrabold text-amber-600 mt-2">{stats.feesCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Financial records</p>
+            <div className="text-sm font-medium text-muted-foreground">Attendance Logs</div>
+            <div className="text-3xl font-extrabold text-cyan-600 mt-2">{stats.attendanceCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Term records</p>
           </CardContent>
         </Card>
         <Card className="border-purple-500/20 shadow-sm bg-card hover:shadow-md transition-shadow">
@@ -331,9 +365,9 @@ export default function CentralDataService() {
               />
             </div>
             <div className="flex justify-end gap-3">
-              <Button 
+              <Button
                 onClick={handleImportDatabase}
-                disabled={isImporting || !importJsonText.trim()}
+                disabled={isImporting || !String(importJsonText || '').trim()}
                 className="bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-2"
               >
                 {isImporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -343,6 +377,113 @@ export default function CentralDataService() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Tabbed Staff List */}
+      <Card className="border-slate-200 shadow-md">
+        <CardHeader className="bg-slate-50/50 pb-0 border-b">
+          <div className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-indigo-600" />
+              <CardTitle className="text-lg">Staff Directory</CardTitle>
+            </div>
+            {/* Tab Buttons */}
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
+              {(['all', 'teaching', 'non-teaching'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setStaffListTab(tab)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                    staffListTab === tab
+                      ? 'bg-white text-indigo-600 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {tab === 'all' && '👥 All Staff'}
+                  {tab === 'teaching' && '👩\u200d🏫 Teaching Staff'}
+                  {tab === 'non-teaching' && '👔 Non-Teaching Staff'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Tab Counts */}
+          <div className="flex gap-4 pb-3 text-xs">
+            <span className="text-indigo-600 font-medium">
+              All: {staffMetrics.total.count}
+            </span>
+            <span className="text-emerald-600 font-medium">
+              Teaching: {staffMetrics.teaching.count}
+            </span>
+            <span className="text-orange-600 font-medium">
+              Non-Teaching: {staffMetrics.nonTeaching.count}
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {(() => {
+            const allStaff = getStaffMaster();
+            const teachingStaff = allStaff.filter(s => isTeachingRole(s.systemRole));
+            const nonTeachingStaff = allStaff.filter(s => !isTeachingRole(s.systemRole));
+            
+            const displayStaff = staffListTab === 'teaching' ? teachingStaff
+              : staffListTab === 'non-teaching' ? nonTeachingStaff
+              : allStaff;
+            
+            if (displayStaff.length === 0) {
+              return (
+                <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                  <Users size={40} className="mb-3 opacity-40" />
+                  <p className="font-bold text-sm">No staff in this category</p>
+                </div>
+              );
+            }
+            
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500">Staff ID</th>
+                      <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500">Name</th>
+                      <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500">System Role</th>
+                      <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500">Email</th>
+                      <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500">Department</th>
+                      <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {displayStaff.map((staff) => (
+                      <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs text-slate-600">{staff.staffId}</td>
+                        <td className="px-4 py-3 font-bold text-slate-800">{staff.name}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            isTeachingRole(staff.systemRole)
+                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                              : 'bg-orange-50 text-orange-700 border border-orange-100'
+                          }`}>
+                            {staff.systemRole}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 text-xs">{staff.email}</td>
+                        <td className="px-4 py-3 text-slate-600 text-xs">{staff.department || 'N/A'}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            (staff.status || '').toLowerCase() === 'active'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                              : 'bg-amber-50 text-amber-700 border border-amber-100'
+                          }`}>
+                            {staff.status || 'Unknown'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </CardContent>
+      </Card>
     </div>
   );
 }

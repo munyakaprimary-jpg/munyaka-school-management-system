@@ -3,17 +3,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
+import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
+import AdminDashboardComponent from '@/components/dashboards/AdminDashboard';
+import type { LucideIcon } from 'lucide-react';
+import { useAcademicCalendar, formatTermBadge } from '@/hooks/useAcademicCalendar';
+
+/** Identifiers for the dashboard widgets used by the RBAC matrix. */
+export type WidgetKey =
+  | 'totalStudents'
+  | 'totalTeachers'
+  | 'todayAttendance'
+  | 'feesCollected'
+  | 'systemStatus'
+  | 'activePortalLogins'
+  | 'networkQuotas'
+  | 'labSchedule'
+  | 'subscriptionStatus'
+  | 'totalActiveEnrollment'
+  | 'renewalDate'
+  | 'myAssignedClassCount'
+  | 'myClassAttendanceRate'
+  | 'pendingMarks'
+  | 'todayLessonSchedule';
 import {
   Users,
-  UserCheck,
-  User as UserIcon,
-  GraduationCap,
-  Activity,
-  DollarSign,
   Megaphone,
   PenLine,
   ClipboardCheck,
+  ClipboardList,
   CalendarDays,
+  CalendarClock,
   Wifi,
   WifiOff,
   Server,
@@ -21,8 +40,18 @@ import {
   ArrowRight,
   AlertTriangle,
   RefreshCw,
+  BookOpen,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  Circle,
+  UsersRound,
+  BookMarked,
+  AlertCircle,
+  UserCircle,
+  Wallet,
+  Gamepad2,
 } from 'lucide-react';
-import { useCentralData } from '@/hooks/useCentralData';
 import { useAuth } from '@/context/AuthContext';
 import { getNotices } from '@/utils/notice-board';
 import { useLanSync } from '@/hooks/useLanSync';
@@ -64,7 +93,7 @@ const StatCard = ({
   value,
   subtitle,
 }: {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   iconBg: string;
   iconColor: string;
   title: string;
@@ -88,7 +117,7 @@ const StatCard = ({
 // ─── Quick Action Card ────────────────────────────────────────────────────────
 
 const QuickActionCard: React.FC<{
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   gradient: string;
   title: string;
   description: string;
@@ -297,15 +326,782 @@ const NoticeItem: React.FC<{ notice: any; onClick: () => void }> = ({ notice, on
 
 // ─── Role: Teacher Dashboard ──────────────────────────────────────────────────
 
+// Helper to get today's day key (mon, tue, wed, thu, fri)
+const getTodayKey = (): string => {
+  const dayIndex = new Date().getDay();
+  const days: Record<number, string> = { 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri' };
+  return days[dayIndex] || 'mon';
+};
+
+// Helper to check if current time is within a period
+const isCurrentPeriod = (startTime: string, endTime: string): boolean => {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = endH * 60 + endM;
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+};
+
+// ─── ClassScheduleItem Interface ────────────────────────────────────────────────
+/**
+ * Data model for a single period in the teacher's daily schedule.
+ * Used by MyDailyScheduleCard to render dynamic lesson/break rows.
+ */
+export interface ClassScheduleItem {
+  /** Unique identifier for this schedule entry */
+  id: string | number;
+  /** Sequential period number (1-based) */
+  periodNumber: number;
+  /** Learning area / subject name (empty string for breaks) */
+  subject: string;
+  /** Assigned grade & stream for this lesson (null for breaks/special periods) */
+  grade: string | null;
+  /** Period start time in HH:MM format */
+  startTime: string;
+  /** Period end time in HH:MM format */
+  endTime: string;
+  /** True when the current time falls within this period */
+  isLive?: boolean;
+  /** True when this is a break, lunch, assembly, etc. (non-instructional) */
+  isBreak?: boolean;
+  /** Optional custom category label (e.g., "Games / PE", "Assembly") */
+  category?: string | null;
+}
+
+// ─── Break Categories Registry ─────────────────────────────────────────────────
+const BREAK_CATEGORIES = new Set([
+  'Break', 'Lunch Break', 'Games / PE', 'Assembly', 'Pastoral / Clubs',
+]);
+
+// ─── Sample Mock Dataset ────────────────────────────────────────────────────────
+/**
+ * Realistic test data for the daily schedule until a backend API
+ * is wired up. Replace with live data from useTeacherTimetable() hook.
+ */
+const SAMPLE_MOCK_SCHEDULE: ClassScheduleItem[] = [
+  { id: 'p1', periodNumber: 1, subject: 'Mathematics', grade: 'Grade 4 Blue', startTime: '08:00', endTime: '08:30', isLive: false },
+  { id: 'p2', periodNumber: 2, subject: 'English', grade: 'Grade 4 Blue', startTime: '08:30', endTime: '09:10', isLive: false },
+  { id: 'p3', periodNumber: 3, subject: 'Agriculture', grade: 'Grade 5 Green', startTime: '09:10', endTime: '09:50', isLive: false },
+  { id: 'p4', periodNumber: 4, subject: 'Science', grade: 'Grade 5 Green', startTime: '09:50', endTime: '10:30', isLive: true },
+  { id: 'p5', periodNumber: 5, subject: '', grade: null, startTime: '10:30', endTime: '11:00', isBreak: true, category: 'Break' },
+  { id: 'p6', periodNumber: 6, subject: 'Social Studies', grade: 'Grade 4 Blue', startTime: '11:00', endTime: '11:40', isLive: false },
+  { id: 'p7', periodNumber: 7, subject: 'Creative Arts', grade: 'Grade 4 Blue', startTime: '11:40', endTime: '12:20', isLive: false },
+  { id: 'p8', periodNumber: 8, subject: '', grade: null, startTime: '12:20', endTime: '13:00', isBreak: true, category: 'Lunch Break' },
+  { id: 'p9', periodNumber: 9, subject: 'Kiswahili', grade: 'Grade 4 Blue', startTime: '13:00', endTime: '13:40', isLive: false },
+  { id: 'p10', periodNumber: 10, subject: 'Religious Education', grade: 'Grade 4 Blue', startTime: '13:40', endTime: '14:20', isLive: false },
+];
+
+// ─── Data Pipeline Helper ──────────────────────────────────────────────────────
+/**
+ * Loads the teacher's daily schedule from localStorage timetable data.
+ * Falls back to SAMPLE_MOCK_SCHEDULE when no live data is available.
+ *
+ * In production, replace this with a call to useTeacherTimetable() or
+ * a fetch() against the backend API endpoint.
+ */
+const getTeacherDailySchedule = (teacherGradeId?: string): ClassScheduleItem[] => {
+  const todayKey = getTodayKey();
+  const GRADES_KEY = 'school-timetable-grades';
+  const TIMETABLE_KEY = 'school-timetable-data';
+
+  try {
+    const gradesRaw = localStorage.getItem(GRADES_KEY);
+    const timetableRaw = localStorage.getItem(TIMETABLE_KEY);
+
+    if (gradesRaw && timetableRaw) {
+      const grades = JSON.parse(gradesRaw) as { id: string; name: string }[];
+      const timetables = JSON.parse(timetableRaw) as Record<string, { timeSlots: any[]; entries: any[] }>;
+
+      // Find the grade to display (use first grade or teacherGradeId if provided)
+      const targetGrade = teacherGradeId
+        ? grades.find((g) => g.id === teacherGradeId)
+        : grades[0];
+
+      if (!targetGrade || !timetables[targetGrade.id]) {
+        return SAMPLE_MOCK_SCHEDULE;
+      }
+
+      const { timeSlots, entries } = timetables[targetGrade.id];
+
+      // Map timetable rows to ClassScheduleItem[]
+      const schedule: ClassScheduleItem[] = timeSlots.map((slot: any, slotIndex: number) => {
+        const dayEntry = entries[slotIndex]?.[todayKey];
+        const subject = dayEntry?.subject || slot.category || '';
+        const isBreak = !dayEntry || BREAK_CATEGORIES.has(subject);
+
+        return {
+          id: slot.id || `slot-${slotIndex}`,
+          periodNumber: slotIndex + 1,
+          subject: isBreak ? '' : subject,
+          grade: isBreak ? null : (targetGrade.name || null),
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          isLive: isCurrentPeriod(slot.startTime, slot.endTime),
+          isBreak,
+          category: slot.category || (isBreak ? subject : null),
+        };
+      });
+
+      // Sort by start time and return
+      return schedule.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    }
+  } catch (err) {
+    console.warn('[getTeacherDailySchedule] Failed to load from localStorage, using mock data:', err);
+  }
+
+  // Fallback: compute live status for mock data and return
+  return SAMPLE_MOCK_SCHEDULE.map((item) => ({
+    ...item,
+    isLive: isCurrentPeriod(item.startTime, item.endTime),
+  }));
+};
+
+// ─── Empty State Component ─────────────────────────────────────────────────────
+const EmptyScheduleState: React.FC = () => (
+  <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+    <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
+      <CalendarClock size={24} className="text-slate-400" />
+    </div>
+    <div>
+      <p className="text-sm font-semibold text-slate-700">No classes scheduled for today</p>
+      <p className="text-xs text-slate-400 mt-1 max-w-xs">
+        Your timetable for today is empty. Check the weekly view for full schedule details.
+      </p>
+    </div>
+  </div>
+);
+
+// ─── Schedule Row Component ─────────────────────────────────────────────────────
+interface ScheduleRowProps {
+  item: ClassScheduleItem;
+  onClick?: () => void;
+}
+
+const ScheduleRow: React.FC<ScheduleRowProps> = ({ item }) => {
+  const timeRange = `${item.startTime} – ${item.endTime}`;
+
+  // A period is "completed" if its end time has passed today
+  const now = new Date();
+  const [endH, endM] = item.endTime.split(':').map(Number);
+  const isCompleted = !item.isLive && !item.isBreak && (now.getHours() * 60 + now.getMinutes() >= endH * 60 + endM);
+
+  // Determine display name (subject or category for breaks)
+  const displayName = item.isBreak ? (item.category || 'Break') : item.subject;
+
+  return (
+    <div
+      className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+        item.isLive
+          ? 'bg-emerald-50 border border-emerald-200'
+          : item.isBreak
+          ? 'bg-amber-50/50 border border-amber-100'
+          : isCompleted
+          ? 'bg-slate-50 opacity-60 border border-transparent'
+          : 'bg-white border border-slate-100 hover:border-slate-200'
+      }`}
+    >
+      {/* Period number / status indicator */}
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
+        item.isLive
+          ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200'
+          : item.isBreak
+          ? 'bg-amber-200 text-amber-700'
+          : isCompleted
+          ? 'bg-slate-200 text-slate-500'
+          : 'bg-indigo-100 text-indigo-600'
+      }`}>
+        {isCompleted ? (
+          <CheckCircle2 size={14} />
+        ) : item.isBreak ? (
+          <span className="text-[10px]">☕</span>
+        ) : (
+          item.periodNumber
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className={`text-sm font-bold truncate ${
+            item.isLive ? 'text-emerald-700' : item.isBreak ? 'text-amber-700' : 'text-slate-800'
+          }`}>
+            {displayName}
+          </p>
+          {item.isLive && (
+            <Badge
+              variant="outline"
+              className="rounded-full px-2 py-0 text-[9px] font-black bg-emerald-100 text-emerald-700 border-emerald-200"
+            >
+              LIVE
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-slate-500 truncate">
+          {item.grade ? `${item.grade} • ` : ''}{timeRange}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ─── My Daily Schedule Card ────────────────────────────────────────────────────
+const MyDailyScheduleCard: React.FC<{ onViewTimetable: () => void }> = ({ onViewTimetable }) => {
+  const todayLabel = new Date().toLocaleDateString('en-KE', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+
+  // Dynamic schedule data — loaded from localStorage or mock fallback
+  const scheduleItems: ClassScheduleItem[] = useMemo(
+    () => getTeacherDailySchedule(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [] // Re-compute on mount; timetable changes trigger full page refresh
+  );
+
+  const isEmpty = !scheduleItems || scheduleItems.length === 0;
+
+  return (
+    <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <CalendarClock size={18} className="text-indigo-600" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold text-slate-800">
+                Today's Classes & Learning Areas
+              </CardTitle>
+              <p className="text-xs text-slate-500">{todayLabel}</p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onViewTimetable}
+            className="text-indigo-600 hover:bg-indigo-50 gap-1.5 h-7 text-xs font-bold"
+          >
+            Full Timetable
+            <ArrowRight size={12} />
+          </Button>
+        </div>
+      </CardHeader>
+
+      <CardContent className="pt-0">
+        {/* Empty state */}
+        {isEmpty ? (
+          <EmptyScheduleState />
+        ) : (
+          /* Dynamic schedule list */
+          <div className="space-y-2">
+            {scheduleItems.map((item) => (
+              <ScheduleRow key={item.id} item={item} />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// ─── Quick Actions Grid ────────────────────────────────────────────────────────
+interface QuickActionItem {
+  icon: LucideIcon;
+  gradient: string;
+  title: string;
+  description: string;
+  badge?: string;
+  badgeVariant?: 'pending' | 'saved' | 'info';
+  onClick: () => void;
+}
+
+const QuickActionsGrid: React.FC<{
+  attendanceStatus: 'pending' | 'saved';
+  pendingMarksCount: number;
+  onMarkAttendance: () => void;
+  onEnterMarks: () => void;
+  onDownloadReports: () => void;
+  onViewTimetable: () => void;
+}> = ({
+  attendanceStatus,
+  pendingMarksCount,
+  onMarkAttendance,
+  onEnterMarks,
+  onDownloadReports,
+  onViewTimetable,
+}) => {
+  const actions: QuickActionItem[] = [
+    {
+      icon: ClipboardCheck,
+      gradient: 'from-emerald-500 to-teal-600',
+      title: 'Mark Attendance',
+      description: attendanceStatus === 'saved' ? 'Register saved for today' : 'Take today\'s roll call',
+      badge: attendanceStatus === 'saved' ? 'Saved' : 'Pending',
+      badgeVariant: attendanceStatus === 'saved' ? 'saved' : 'pending',
+      onClick: onMarkAttendance,
+    },
+    {
+      icon: PenLine,
+      gradient: 'from-indigo-500 to-violet-600',
+      title: 'Enter Assessment',
+      description: 'Record learner scores & evaluations',
+      badge: pendingMarksCount > 0 ? `${pendingMarksCount} Pending` : undefined,
+      badgeVariant: pendingMarksCount > 0 ? 'pending' : 'info',
+      onClick: onEnterMarks,
+    },
+    {
+      icon: FileText,
+      gradient: 'from-amber-500 to-orange-600',
+      title: 'Report Cards',
+      description: 'Generate & download CBC reports',
+      onClick: onDownloadReports,
+    },
+    {
+      icon: CalendarDays,
+      gradient: 'from-blue-500 to-cyan-600',
+      title: 'Class Timetable',
+      description: 'View your weekly schedule',
+      onClick: onViewTimetable,
+    },
+  ];
+
+  return (
+    <div>
+      <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3">
+        Daily Tasks
+      </h2>
+      <div className="grid grid-cols-2 gap-3">
+        {actions.map((action) => (
+          <button
+            key={action.title}
+            type="button"
+            onClick={action.onClick}
+            className="group text-left bg-white border border-slate-100 shadow-sm rounded-2xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-300 relative"
+          >
+            <div className={`bg-gradient-to-br ${action.gradient} p-2.5 rounded-xl shadow-md mb-3 w-fit`}>
+              <action.icon size={18} className="text-white" />
+            </div>
+            <h3 className="text-sm font-black text-slate-900 leading-tight">{action.title}</h3>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">{action.description}</p>
+            {action.badge && (
+              <Badge
+                variant="outline"
+                className={`absolute top-3 right-3 rounded-full px-2 py-0.5 text-[9px] font-black border-0 ${
+                  action.badgeVariant === 'saved'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : action.badgeVariant === 'pending'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {action.badge}
+              </Badge>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── My Assigned Classes Summary ───────────────────────────────────────────────
+const MyClassesSummary: React.FC = () => {
+  const learners = useMemo(() => safeRead<any[]>('school_learners_data', []), []);
+  const activeLearners = learners.filter((l: any) => l.status !== 'TRANSFERRED');
+  
+  // Mock data - in real app, these would come from teacher's assigned class
+  const myClass = 'Grade 4 Blue';
+  const totalLearners = activeLearners.length;
+  const boysCount = activeLearners.filter((l: any) => l.gender?.toLowerCase() === 'male').length;
+  const girlsCount = activeLearners.filter((l: any) => l.gender?.toLowerCase() === 'female').length;
+  const pendingMarks = 3; // Mock pending marks count
+
+  return (
+    <Card className="border-none shadow-sm bg-gradient-to-r from-indigo-500 to-violet-600 rounded-2xl overflow-hidden text-white">
+      <CardContent className="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-white/20 rounded-lg">
+            <BookOpen size={18} className="text-white" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-white/80">My Class</p>
+            <p className="text-lg font-black">{myClass}</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white/10 rounded-xl p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <UsersRound size={14} className="text-white/70" />
+              <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Enrolled</p>
+            </div>
+            <p className="text-xl font-black">{totalLearners}</p>
+            <p className="text-[10px] text-white/70">
+              {boysCount} Boys / {girlsCount} Girls
+            </p>
+          </div>
+          
+          <div className="bg-white/10 rounded-xl p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <BookMarked size={14} className="text-white/70" />
+              <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Pending Marks</p>
+            </div>
+            <p className="text-xl font-black">{pendingMarks}</p>
+            <p className="text-[10px] text-white/70">unsubmitted entries</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ─── Compact LAN Sync Banner ──────────────────────────────────────────────────
+const CompactLanSyncBanner: React.FC<{
+  isOnline: boolean;
+  isConnected: boolean;
+  serverUrl: string;
+  latency: number | null;
+  onOpenSettings: () => void;
+  onRefresh: () => Promise<void>;
+}> = ({ isOnline, isConnected, serverUrl, latency, onOpenSettings, onRefresh }) => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const isHealthy = isOnline && isConnected;
+  
+  const displayHost = useMemo(() => {
+    if (!serverUrl) return 'Not configured';
+    try {
+      return serverUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '').slice(0, 24);
+    } catch {
+      return serverUrl;
+    }
+  }, [serverUrl]);
+
+  const handleRefresh = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  }, [isRefreshing, onRefresh]);
+
+  return (
+    <div
+      className={`flex items-center gap-3 p-3 rounded-xl border ${
+        isHealthy ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'
+      }`}
+    >
+      <div className={`p-2 rounded-lg ${isHealthy ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+        <Server size={16} className={isHealthy ? 'text-emerald-600' : 'text-amber-600'} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className={`text-xs font-bold ${isHealthy ? 'text-emerald-700' : 'text-amber-700'}`}>
+            {isHealthy ? 'LAN Connected' : 'Offline / Local Mode'}
+          </p>
+          <span className={`relative flex h-2 w-2 ${isHealthy ? '' : 'opacity-50'}`}>
+            {isHealthy && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />}
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${isHealthy ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          </span>
+        </div>
+        <p className="text-[10px] text-slate-500 truncate">
+          {displayHost}{latency !== null && ` • ${latency}ms`}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={handleRefresh}
+        className={`p-2 rounded-lg bg-white/70 hover:bg-white transition-all active:scale-90 ${
+          isRefreshing ? 'animate-spin' : ''
+        }`}
+      >
+        <RefreshCw size={14} className={isHealthy ? 'text-emerald-600' : 'text-amber-600'} />
+      </button>
+    </div>
+  );
+};
+
+// ─── Class Attendance Widget ─────────────────────────────────────────────────
+interface AttendanceStats {
+  present: number;
+  absent: number;
+  excused: number;
+  late: number;
+  total: number;
+  unmarked: number;
+  percentage: number;
+}
+
+const getTodayDate = (): string => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const getAttendanceForClass = (grade: string, stream: string): AttendanceStats => {
+  const todayStr = getTodayDate();
+  const stats: AttendanceStats = { present: 0, absent: 0, excused: 0, late: 0, total: 0, unmarked: 0, percentage: 0 };
+
+  // Get learners for this class
+  const learners: any[] = safeRead('school_learners_data', []);
+  const classLearners = learners.filter((l: any) =>
+    l.grade === grade && l.stream === stream && l.status !== 'TRANSFERRED'
+  );
+  stats.total = classLearners.length;
+
+  // Try legacy flat attendance log
+  const legacyKey = 'school_attendance_logs';
+  const legacyData: any[] = safeRead(legacyKey, []);
+  const legacyToday = legacyData.filter((a: any) => a.date === todayStr);
+
+  // Try v2 attendance rosters
+  const rosterKey = 'school_attendance_rosters';
+  const rosterData: any[] = safeRead(rosterKey, []);
+  const rosterToday = rosterData.filter((r: any) => {
+    if (r.grade !== grade || r.stream !== stream) return false;
+    if (!r.records) return false;
+    return Object.values(r.records).some((entry: any) => {
+      if (!entry || typeof entry !== 'object') return false;
+      const entryDate = entry.date || (entry.morning?.date) || (entry.afternoon?.date);
+      if (entryDate && entryDate !== todayStr) return false;
+      const morningStatus = entry.morning?.status || entry.morning;
+      const afternoonStatus = entry.afternoon?.status || entry.afternoon;
+      return morningStatus || afternoonStatus;
+    });
+  });
+
+  // Count from legacy
+  legacyToday.forEach((a: any) => {
+    const learner = classLearners.find((l: any) => l.id === a.studentId);
+    if (!learner) return;
+    if (a.status === 'present' || a.status === 'late') stats.present++;
+    else if (a.status === 'absent') stats.absent++;
+    else if (a.status === 'excused') stats.excused++;
+  });
+
+  // Count from v2 roster
+  rosterToday.forEach((r: any) => {
+    if (!r.records) return;
+    Object.values(r.records).forEach((entry: any) => {
+      if (!entry || typeof entry !== 'object') return;
+      const morningStatus = entry.morning?.status || entry.morning;
+      const afternoonStatus = entry.afternoon?.status || entry.afternoon;
+      const status = morningStatus || afternoonStatus || '';
+      if (status === 'P' || status === 'present') stats.present++;
+      else if (status === 'A' || status === 'absent') stats.absent++;
+      else if (status === 'E' || status === 'excused') stats.excused++;
+      else if (status === 'L' || status === 'late') stats.late++;
+    });
+  });
+
+  // Deduplicate by studentId
+  const marked = new Set<string>();
+  legacyToday.forEach((a: any) => { if (classLearners.some((l: any) => l.id === a.studentId)) marked.add(a.studentId); });
+  rosterToday.forEach((r: any) => {
+    if (r.records) {
+      Object.entries(r.records).forEach(([studentId, entry]: [string, any]) => {
+        if (classLearners.some((l: any) => l.id === studentId)) {
+          const morningStatus = entry?.morning?.status || entry?.morning;
+          const afternoonStatus = entry?.afternoon?.status || entry?.afternoon;
+          if (morningStatus || afternoonStatus) marked.add(studentId);
+        }
+      });
+    }
+  });
+
+  stats.unmarked = Math.max(0, stats.total - marked.size);
+  stats.percentage = stats.total > 0 ? Math.round((marked.size / stats.total) * 100) : 0;
+  return stats;
+};
+
+const StatBadge: React.FC<{
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  bg: string;
+  text: string;
+  border: string;
+  iconBg: string;
+}> = ({ label, value, icon: Icon, bg, text, border, iconBg }) => (
+  <div className={`flex items-center gap-2 p-3 rounded-xl ${bg} border ${border}`}>
+    <div className={`p-1.5 rounded-lg ${iconBg}`}>
+      <Icon size={14} className={text} />
+    </div>
+    <div>
+      <p className={`text-lg font-black ${text} leading-none`}>{value}</p>
+      <p className="text-[10px] font-medium text-slate-500 mt-0.5">{label}</p>
+    </div>
+  </div>
+);
+
+const ClassAttendanceWidget: React.FC<{ onTakeAttendance: () => void }> = ({ onTakeAttendance }) => {
+  const todayStr = getTodayDate();
+  const todayLabel = new Date().toLocaleDateString('en-KE', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  // Mock teacher's assigned class — in real app, this comes from teacher profile
+  const myClassGrade = 'Grade 4';
+  const myClassStream = 'Blue';
+
+  const attendance = useMemo(
+    () => getAttendanceForClass(myClassGrade, myClassStream),
+    [myClassGrade, myClassStream]
+  );
+
+  const isComplete = attendance.unmarked === 0 && attendance.total > 0;
+  const hasStarted = attendance.present > 0 || attendance.absent > 0 || attendance.excused > 0 || attendance.late > 0;
+  const markedCount = attendance.present + attendance.absent + attendance.excused + attendance.late;
+
+  return (
+    <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <ClipboardCheck size={18} className="text-blue-600" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold text-slate-800">Today's Class Attendance</CardTitle>
+              <p className="text-xs text-slate-500">{todayLabel}</p>
+            </div>
+          </div>
+          <Badge className="rounded-full px-3 py-1 text-[10px] font-black bg-indigo-100 text-indigo-700 border-indigo-200">
+            {myClassGrade} {myClassStream}
+          </Badge>
+        </div>
+      </CardHeader>
+
+      <CardContent className="pt-0 space-y-4">
+        {/* Warning banner if not yet started */}
+        {!hasStarted && attendance.total > 0 && (
+          <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <div className="p-1.5 bg-amber-100 rounded-lg">
+              <AlertCircle size={16} className="text-amber-600" />
+            </div>
+            <p className="text-xs font-semibold text-amber-700">
+              Roll call for today has not been submitted yet.
+            </p>
+          </div>
+        )}
+
+        {/* Stat Badges */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <StatBadge
+            label="Present"
+            value={attendance.present}
+            icon={CheckCircle2}
+            bg="bg-emerald-50"
+            text="text-emerald-700"
+            border="border-emerald-200"
+            iconBg="bg-emerald-100"
+          />
+          <StatBadge
+            label="Absent"
+            value={attendance.absent}
+            icon={XCircle}
+            bg="bg-red-50"
+            text="text-red-700"
+            border="border-red-200"
+            iconBg="bg-red-100"
+          />
+          <StatBadge
+            label="Excused / Sick"
+            value={attendance.excused}
+            icon={AlertTriangle}
+            bg="bg-amber-50"
+            text="text-amber-700"
+            border="border-amber-200"
+            iconBg="bg-amber-100"
+          />
+          <StatBadge
+            label="Unmarked"
+            value={attendance.unmarked}
+            icon={Circle}
+            bg="bg-slate-50"
+            text="text-slate-600"
+            border="border-slate-200"
+            iconBg="bg-slate-100"
+          />
+        </div>
+
+        {/* Progress Bar */}
+        {attendance.total > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-slate-600">
+                {markedCount}/{attendance.total} Learners Marked
+              </p>
+              <p className="text-xs font-black text-indigo-600">{attendance.percentage}%</p>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-indigo-500 to-violet-500 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${attendance.percentage}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Total learners info */}
+        {attendance.total === 0 && (
+          <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+              <Users size={18} className="text-slate-400" />
+            </div>
+            <p className="text-sm font-semibold text-slate-600">No learners enrolled in this class</p>
+            <p className="text-xs text-slate-400">Assign learners to {myClassGrade} {myClassStream} to begin tracking attendance.</p>
+          </div>
+        )}
+
+        {/* Action Button */}
+        {attendance.total > 0 && (
+          <Button
+            onClick={onTakeAttendance}
+            className={`w-full font-bold gap-2 rounded-xl h-10 ${
+              isComplete
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : hasStarted
+                ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                : 'bg-amber-500 hover:bg-amber-600 text-white'
+            }`}
+          >
+            {isComplete ? (
+              <>
+                <CheckCircle2 size={16} />
+                Update Register
+              </>
+            ) : hasStarted ? (
+              <>
+                <ClipboardList size={16} />
+                Update Attendance
+              </>
+            ) : (
+              <>
+                <ClipboardCheck size={16} />
+                Take Today's Attendance
+              </>
+            )}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// ─── Teacher Dashboard Component ────────────────────────────────────────────────
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { connectionStatus } = useLanSync();
 
-  // Local state for refresh updates — synced with the global hook via subscription
   const [localStatus, setLocalStatus] = useState(connectionStatus);
 
-  // Keep localStatus in sync with the global hook's connection status
   useEffect(() => {
     const unsubscribe = subscribeToConnectionStatus((status) => {
       setLocalStatus(status);
@@ -319,40 +1115,31 @@ const TeacherDashboard: React.FC = () => {
     [today]
   );
 
-  // Assigned students count
-  const assignedStudentsCount = useMemo(() => {
-    const learners: any[] = safeRead('school_learners_data', []);
-    return learners.filter((l: any) => l.status !== 'TRANSFERRED').length;
-  }, []);
-
-  // LAN server URL
   const serverUrl = useMemo(() => {
-    return (
-      localStorage.getItem('lan_server_url') ||
-      localStorage.getItem('munyaka_lan_server_url') ||
-      ''
-    );
+    return localStorage.getItem('lan_server_url') || localStorage.getItem('munyaka_lan_server_url') || '';
   }, []);
 
-  // Recent notices
-  const recentNotices = useMemo(() => getNotices().slice(0, 5), []);
-
-  // Trigger an immediate ping against the stored LAN server URL.
-    // checkServerConnection() reads from localStorage.getItem('lan_server_url')
-    // internally, so we just need to invoke it and reflect the result.
-    const handleLanRefresh = useCallback(async () => {
-      const status = await checkServerConnection();
-      setLocalStatus(status);
-    }, []);
+  const handleLanRefresh = useCallback(async () => {
+    const status = await checkServerConnection();
+    setLocalStatus(status);
+  }, []);
 
   const handleOpenLanSettings = () => {
-    navigate('/lan-config');
-  };
+      // Only owners can open the LAN Server Config page; for other roles,
+      // the click is a no-op (the banner remains read-only status display).
+      if ((user?.role ?? '').toLowerCase() === 'owner') {
+        navigate('/lan-config');
+      }
+    };
+
+  // Mock data - in real app, these would come from teacher's assignments
+  const attendanceStatus = 'pending'; // or 'saved'
+  const pendingMarksCount = 2; // Number of pending assessment entries
 
   return (
-    <div className="space-y-6 pb-10">
-      {/* ── LAN Server Sync Status Badge (clickable) ── */}
-      <LanSyncBanner
+    <div className="space-y-4 pb-10">
+      {/* ── Compact LAN Sync Banner ── */}
+      <CompactLanSyncBanner
         isOnline={localStatus.isOnline}
         isConnected={localStatus.serverReachable}
         serverUrl={serverUrl}
@@ -361,159 +1148,217 @@ const TeacherDashboard: React.FC = () => {
         onRefresh={handleLanRefresh}
       />
 
-      {/* ── Quick Action Cards ── */}
-      <div>
-        <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3">
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <QuickActionCard
-            icon={PenLine}
-            gradient="from-indigo-500 to-violet-600"
-            title="Enter Marks"
-            description="Record learner scores for active learning areas."
-            cta="Open Marks Entry"
-            onClick={() => navigate('/assessments')}
-          />
-          <QuickActionCard
-            icon={ClipboardCheck}
-            gradient="from-emerald-500 to-teal-600"
-            title="Mark Attendance"
-            description="Take the daily student roll call for your class."
-            cta="Take Roll Call"
-            onClick={() => navigate('/attendance')}
-          />
-          <QuickActionCard
-            icon={CalendarDays}
-            gradient="from-amber-500 to-orange-600"
-            title="Timetable"
-            description="View your weekly lesson schedule and periods."
-            cta="Open Timetable"
-            onClick={() => navigate('/timetable')}
+      {/* ── My Assigned Classes Summary ── */}
+      <MyClassesSummary />
+
+      {/* ── Class Attendance Widget (Today's Roll Call) ── */}
+      <ClassAttendanceWidget onTakeAttendance={() => navigate('/attendance')} />
+
+      {/* ── Two Column Layout: Schedule + Quick Actions ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Left: My Daily Schedule */}
+        <div className="lg:col-span-3">
+          <MyDailyScheduleCard onViewTimetable={() => navigate('/timetable')} />
+        </div>
+
+        {/* Right: Quick Actions Grid */}
+        <div className="lg:col-span-2">
+          <QuickActionsGrid
+            attendanceStatus={attendanceStatus}
+            pendingMarksCount={pendingMarksCount}
+            onMarkAttendance={() => navigate('/attendance')}
+            onEnterMarks={() => navigate('/assessments')}
+            onDownloadReports={() => navigate('/reports')}
+            onViewTimetable={() => navigate('/timetable')}
           />
         </div>
       </div>
-
-      {/* ── Summary Card: Assigned Students ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          icon={Users}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-500"
-          title="Assigned Students"
-          value={assignedStudentsCount}
-          subtitle="across all active classes"
-        />
-      </div>
-
-      {/* ── Notice & Events Feed ── */}
-      <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <div className="flex items-center gap-2">
-            <Megaphone size={18} className="text-purple-500" />
-            <CardTitle className="text-base font-bold text-slate-800">Notice & Events</CardTitle>
-          </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => navigate('/notices')}
-            className="text-purple-700 hover:bg-purple-50 hover:text-purple-800 gap-1.5 h-8 text-xs font-bold"
-          >
-            View all
-            <ArrowRight size={12} />
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {recentNotices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-              <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center">
-                <Megaphone size={20} className="text-purple-400" />
-              </div>
-              <p className="text-sm font-semibold text-slate-700">No new notices</p>
-              <p className="text-xs text-slate-400 max-w-xs">
-                School announcements published by the admin will appear here in real time.
-              </p>
-            </div>
-          ) : (
-            recentNotices.map((notice: any) => (
-              <NoticeItem
-                key={notice.id}
-                notice={notice}
-                onClick={() => navigate('/notices')}
-              />
-            ))
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };
 
-// ─── Role: Admin Dashboard ────────────────────────────────────────────────────
+// ─── Learner Dashboard Component ────────────────────────────────────────────────
+const LearnerDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { activeTerm, activeYear } = useAcademicCalendar();
+  const termBadge = formatTermBadge(activeTerm, activeYear);
 
-const AdminDashboard: React.FC = () => {
-  const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useCentralData();
+  // Resolve the current learner's profile from the roster using the
+  // authenticated user's ID or admission number.
+  const learnerProfile = useMemo(() => {
+    if (!user) return null;
 
-  const feesCollected = useMemo(() => {
-    const txRaw = localStorage.getItem('munyaka_transactions');
-    if (!txRaw) return 'KES 0';
+    const raw = localStorage.getItem('school_learners_data');
+    if (!raw) return null;
+
     try {
-      const list: any[] = JSON.parse(txRaw);
-      const total = list
-        .filter((t: any) => t?.status === 'paid' || t?.paidAt)
-        .reduce((s: number, t: any) => s + (Number(t?.amount) || 0), 0);
-      return `KES ${total.toLocaleString()}`;
+      const learners = JSON.parse(raw) as any[];
+      const learnerId = user.id;
+      return learners.find(
+        (learner) =>
+          learner.id === learnerId ||
+          learner.admissionNumber === learnerId ||
+          learner.admNo === learnerId ||
+          learner.admissionNumber === user.email ||
+          learner.admNo === user.email
+      ) || null;
     } catch {
-      return 'KES 0';
+      return null;
     }
-  }, [totalStudents]);
+  }, [user]);
+
+  if (!learnerProfile) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
+              <AlertCircle size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-rose-900">Learner profile not found</h2>
+              <p className="mt-1 text-sm text-rose-700">
+                Your account is not linked to a learner record. Please contact the school administrator to complete your registration.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const learnerName = learnerProfile.name || user.name;
+  const learnerId = learnerProfile.admissionNumber || learnerProfile.admNo || learnerProfile.id || user.id;
+  const grade = learnerProfile.grade || '—';
+  const stream = learnerProfile.stream || '—';
 
   return (
-    <div className="space-y-8 pb-10">
-      {/* ── System Vitals Cards ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          icon={Users}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-500"
-          title="Total Students"
-          value={isLoading ? '—' : totalStudents.toString()}
-        />
-        <StatCard
-          icon={UserIcon}
-          iconBg="bg-indigo-50"
-          iconColor="text-indigo-500"
-          title="Total Teachers"
-          value={isLoading ? '—' : totalTeachers.toString()}
-        />
-        <StatCard
-          icon={UserCheck}
-          iconBg="bg-green-50"
-          iconColor="text-green-500"
-          title="Today's Attendance"
-          value={isLoading ? '—' : `${todayAttendanceRate}%`}
-        />
-        <StatCard
-          icon={GraduationCap}
-          iconBg="bg-purple-50"
-          iconColor="text-purple-500"
-          title="Junior School"
-          value={isLoading ? '—' : Math.max(0, Math.floor(totalStudents * 0.25)).toString()}
-        />
-        <StatCard
-          icon={Activity}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-500"
-          title="System Status"
-          value="Live"
-        />
-        <StatCard
-          icon={DollarSign}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-500"
-          title="Fees Collected"
-          value={isLoading ? '—' : feesCollected}
-        />
+    <div className="space-y-6">
+      {/* Learner identity */}
+      <div className="overflow-hidden rounded-3xl border border-indigo-100 bg-white shadow-sm">
+        <div className="bg-gradient-to-br from-indigo-500 to-violet-600 p-6 text-white">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
+              <UserCircle size={32} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-indigo-100">My Learner Profile</p>
+              <h2 className="truncate text-2xl font-black">{learnerName}</h2>
+              <p className="mt-1 text-sm text-indigo-100">Admission No. {learnerId}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-3">
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Grade</p>
+            <p className="mt-1 text-lg font-black text-slate-900">{grade}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Stream</p>
+            <p className="mt-1 text-lg font-black text-slate-900">{stream}</p>
+          </div>
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Academic Year</p>
+            <p className="mt-1 text-lg font-black text-slate-900">{activeYear}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Learner quick actions */}
+      <div>
+        <h3 className="mb-3 text-sm font-black uppercase tracking-widest text-slate-400">My Learning Hub</h3>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => navigate('/attendance')}
+            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+              <ClipboardCheck size={20} />
+            </div>
+            <h4 className="font-bold text-slate-900">My Attendance Log</h4>
+            <p className="mt-1 text-sm text-slate-500">Review your daily attendance record</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/reports')}
+            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+              <FileText size={20} />
+            </div>
+            <h4 className="font-bold text-slate-900">My CBC Report Cards</h4>
+            <p className="mt-1 text-sm text-slate-500">View your learning progress and results</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/fees')}
+            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+              <Wallet size={20} />
+            </div>
+            <h4 className="font-bold text-slate-900">My Fee Balance</h4>
+            <p className="mt-1 text-sm text-slate-500">Check your school fee status</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/study-corner')}
+            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+              <BookOpen size={20} />
+            </div>
+            <h4 className="font-bold text-slate-900">Study Corner</h4>
+            <p className="mt-1 text-sm text-slate-500">Revision and CBC learning tools</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/games')}
+            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
+              <Gamepad2 size={20} />
+            </div>
+            <h4 className="font-bold text-slate-900">Games Hub</h4>
+            <p className="mt-1 text-sm text-slate-500">Educational mini-games for fun learning</p>
+          </button>
+        </div>
+      </div>
+
+      {/* Term summary */}
+      <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-slate-900">Term Overview</h3>
+            <p className="text-sm text-slate-500">Your learning activity for {activeTerm} {activeYear}</p>
+          </div>
+          <Badge className="rounded-full bg-indigo-50 text-indigo-700">{termBadge}</Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-xl bg-emerald-50 p-3">
+            <p className="text-xs font-medium text-emerald-700">Attendance</p>
+            <p className="mt-1 text-xl font-black text-emerald-800">—</p>
+          </div>
+          <div className="rounded-xl bg-indigo-50 p-3">
+            <p className="text-xs font-medium text-indigo-700">Assessments</p>
+            <p className="mt-1 text-xl font-black text-indigo-800">—</p>
+          </div>
+          <div className="rounded-xl bg-amber-50 p-3">
+            <p className="text-xs font-medium text-amber-700">Fee Balance</p>
+            <p className="mt-1 text-xl font-black text-amber-800">—</p>
+          </div>
+          <div className="rounded-xl bg-purple-50 p-3">
+            <p className="text-xs font-medium text-purple-700">Study Time</p>
+            <p className="mt-1 text-xl font-black text-purple-800">—</p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -525,40 +1370,118 @@ const AdminDashboard: React.FC = () => {
  * Top-level Dashboard component.
  *
  * Reads the current user's role and renders the role-specific view:
- *   • teacher  → quick action tiles (Enter Marks, Mark Attendance, Timetable)
- *                 + LAN sync status + notice feed
- *   • admin     → system-wide statistics (total students, teachers,
- *                 attendance, fees, etc.)
+ *   • owner    → OwnerDashboard (subscription / billing / licensing)
+ *   • admin    → AdminDashboardComponent (operational system overview,
+ *                 LAN status, management cards, notices)
+ *   • teacher  → TeacherDashboard (quick action tiles + LAN sync + notices)
+ *   • student/learner → LearnerDashboard (personal profile context)
+ *
+ * The 'admin' and 'owner' roles are STRICTLY SEPARATED. The admin role
+ * never sees the OwnerDashboard, and the owner role never sees the
+ * AdminDashboardComponent. Each component is a self-contained module
+ * under src/components/dashboards/.
  *
  * The header title is dynamic:
+ *   • "Owner Dashboard" for the owner role
+ *   • "Admin Dashboard" for the admin role
  *   • "Teacher's Dashboard" for the teacher role
+ *   • "Learner Dashboard" for the student/learner role
  *   • "Dashboard" for every other role
- *
- * No fallback "Limited Access" banner — non-teacher / non-admin users
- * are not expected to land on this page (route guards handle them).
  */
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const title = user?.role === 'teacher' ? "Teacher's Dashboard" : "Dashboard";
   const role = user?.role;
+  const { activeTerm, activeYear } = useAcademicCalendar();
+  const termBadge = formatTermBadge(activeTerm, activeYear);
 
+  // Owner-level sees the full Owner Dashboard; no wrapper header needed there
+  if (role === 'owner' || role === 'librarian') {
+    return <OwnerDashboard />;
+  }
+
+  // Admin sees the dedicated Admin Dashboard (operational full admin)
+  if (role === 'admin') {
+    return <AdminDashboardComponent />;
+  }
+
+  // Teacher sees the dedicated Teacher Dashboard
+  if (role === 'teacher') {
+    return (
+      <div className="space-y-6">
+        {/* ── Dynamic Header ── */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                Teacher's Dashboard
+              </h1>
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
+                {termBadge}
+              </span>
+            </div>
+            <p className="text-sm font-medium text-slate-500">
+              Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'User'}</span>
+            </p>
+          </div>
+          <LiveBadge label="TEACHER SYNC" />
+        </div>
+
+        {/* ── Teacher-only view ── */}
+        <TeacherDashboard />
+      </div>
+    );
+  }
+
+  // Learner sees the Learner Dashboard with personal profile context
+  const roleLower = (role ?? '').toLowerCase();
+  if (roleLower === 'student' || roleLower === 'learner') {
+    return (
+      <div className="space-y-6">
+        {/* ── Dynamic Header ── */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                Learner Dashboard
+              </h1>
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
+                {termBadge}
+              </span>
+            </div>
+            <p className="text-sm font-medium text-slate-500">
+              Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'User'}</span>
+            </p>
+          </div>
+          <LiveBadge label="LEARNER SYNC" />
+        </div>
+
+        {/* ── Learner-only view with personal profile context ── */}
+        <LearnerDashboard />
+      </div>
+    );
+  }
+
+  // Default dashboard for other roles (parent, etc.)
+  const title = "Dashboard";
   return (
     <div className="space-y-6">
       {/* ── Dynamic Header ── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            {title}
-          </h1>
-          <p className="text-muted-foreground mt-1">
+          <div className="flex items-center gap-3 mb-1 flex-wrap">
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              {title}
+            </h1>
+            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
+              {termBadge}
+            </span>
+          </div>
+          <p className="text-sm font-medium text-slate-500">
             Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'User'}</span>
           </p>
         </div>
-        <LiveBadge label={role === 'teacher' ? 'TEACHER SYNC' : 'LIVE SYNC'} />
+        <LiveBadge label="LIVE SYNC" />
       </div>
-
-      {/* ── Role-Based View Switch ── */}
-      {role === 'teacher' ? <TeacherDashboard /> : <AdminDashboard />}
     </div>
   );
 };

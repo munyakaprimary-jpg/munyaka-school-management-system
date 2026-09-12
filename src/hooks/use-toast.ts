@@ -2,8 +2,11 @@ import * as React from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
-const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+const TOAST_LIMIT = 2;
+/** Time (ms) after `open` flips to `false` before the toast element is
+ *  unmounted from the DOM. Animation duration is ~300ms; 1500ms gives
+ *  the close animation time to play without leaving stale nodes behind. */
+const TOAST_REMOVE_DELAY = 1500;
 
 type ToasterToast = ToastProps & {
   id: string;

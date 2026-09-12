@@ -4,8 +4,6 @@ import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GRADES_DATA } from '@/lib/mock-data';
-
 interface FeeFiltersProps {
   year: string;
   setYear: (v: string) => void;
@@ -50,7 +48,17 @@ const FeeFilters = ({ year, setYear, term, setTerm, grade, setGrade }: FeeFilter
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {GRADES_DATA.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+              <SelectItem value="pp1">Pre-Primary 1</SelectItem>
+              <SelectItem value="pp2">Pre-Primary 2</SelectItem>
+              <SelectItem value="grade1">Grade 1</SelectItem>
+              <SelectItem value="grade2">Grade 2</SelectItem>
+              <SelectItem value="grade3">Grade 3</SelectItem>
+              <SelectItem value="grade4">Grade 4</SelectItem>
+              <SelectItem value="grade5">Grade 5</SelectItem>
+              <SelectItem value="grade6">Grade 6</SelectItem>
+              <SelectItem value="grade7">Grade 7</SelectItem>
+              <SelectItem value="grade8">Grade 8</SelectItem>
+              <SelectItem value="grade9">Grade 9</SelectItem>
             </SelectContent>
           </Select>
         </div>

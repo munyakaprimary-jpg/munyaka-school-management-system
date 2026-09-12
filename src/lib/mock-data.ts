@@ -1,14 +1,46 @@
+/**
+ * mock-data.ts — DEPRECATED
+ * ──────────────────────────
+ * This module previously exported hardcoded learner, staff, book, notice,
+ * and timetable data for the demo. Those values surfaced as mock data on
+ * cold start, contaminating executive dashboards and grade rosters.
+ *
+ * All exports are now empty (typed) so any remaining import site compiles
+ * and renders an empty list, instead of seeding the app with synthetic
+ * records. New data should be created through the app's own mutation
+ * flows, which persist to localStorage and are reflected back to the UI.
+ *
+ * If a component still needs to render a placeholder, it should derive
+ * data from localStorage (via the helpers in `@/utils/storage`) and fall
+ * back to `[]` when nothing has been recorded yet.
+ */
+
 import { sortGrades, formatGradeName } from '@/utils/gradeSort';
 
-export const STUDENTS = [
-  { id: "1787737452457", admNo: "B002961576", name: "MUTWIKA KILONZO", grade: "Grade 7", stream: "VENUS", gender: "Female", guardian: "STEPHEN KILONZO KINGOO", phone: "0705221675" },
-  { id: "1787724752520", admNo: "B004123291", name: "OCTEVIOR LUVISIA", grade: "Grade 6", stream: "Yellow", gender: "Male", guardian: "TITUS KIJUSA LUVISIA", phone: "0705138090" },
-  { id: "1787724509755", admNo: "B004761829", name: "SAMWEL KAMAU WANJIKU", grade: "Grade 6", stream: "Yellow", gender: "Male", guardian: "MARY WANJIKU WAIRIMU", phone: "0719182804" },
-  { id: "1787655781527", admNo: "A009702345", name: "EMILY CHEBET", grade: "Grade 5", stream: "Yellow", gender: "Female", guardian: "EDWARD LIMO", phone: "07892356787" },
-  { id: "2", admNo: "B004779091", name: "PETER WAITITU", grade: "Grade 6", stream: "South", gender: "Male", guardian: "JANE WANJIKU WAITITO", phone: "0114222031" },
-  { id: "3", admNo: "B004276095", name: "ALFRED JUMA", grade: "Grade 6", stream: "East", gender: "Male", guardian: "PHANICE NASIMIYU KIRISWA", phone: "0141893904" }
-];
+export interface Student {
+  id: string;
+  admNo: string;
+  assessment: string;
+  admissionNumber?: string;
+  name: string;
+  grade: string;
+  stream: string;
+  gender: string;
+  guardian: string;
+  phone: string;
+  email?: string;
+  dob?: string;
+  status?: string;
+  schoolId?: string;
+}
 
+/** Empty roster — learners are populated via the app, not seeded. */
+export const STUDENTS: Student[] = [];
+
+// ── Grade & Stream scaffolding ───────────────────────────────────────────────
+// Grades are still exposed (the school needs PP1 → Grade 9 by default) so
+// the Grade-Stream configuration page has a starting point. The stream
+// student counts are zeroed out — they are filled in from the real roster.
 export interface Stream {
   id: string;
   name: string;
@@ -24,144 +56,76 @@ export interface Grade {
 }
 
 export const GRADES_DATA: Grade[] = sortGrades([
-  {
-    id: "gpp1",
-    name: "PP1",
-    category: "Pre-Primary",
-    streams: [
-      { id: "spp1a", name: "Yellow", teacher: "Unassigned", studentsCount: 30 },
-      { id: "spp1b", name: "Green", teacher: "Unassigned", studentsCount: 28 }
-    ]
-  },
-  {
-    id: "gpp2",
-    name: "PP2",
-    category: "Pre-Primary",
-    streams: [
-      { id: "spp2a", name: "Yellow", teacher: "Unassigned", studentsCount: 32 },
-      { id: "spp2b", name: "Green", teacher: "Unassigned", studentsCount: 29 }
-    ]
-  },
-  {
-    id: "g1",
-    name: "Grade 1",
-    category: "Primary",
-    streams: [
-      { id: "s1", name: "Blue", teacher: "Unassigned", studentsCount: 42 },
-      { id: "s2", name: "Green", teacher: "Unassigned", studentsCount: 38 }
-    ]
-  },
-  {
-    id: "g2",
-    name: "Grade 2",
-    category: "Primary",
-    streams: [
-      { id: "s2a", name: "Blue", teacher: "Unassigned", studentsCount: 40 },
-      { id: "s2b", name: "Green", teacher: "Unassigned", studentsCount: 35 }
-    ]
-  },
-  {
-    id: "g3",
-    name: "Grade 3",
-    category: "Primary",
-    streams: [
-      { id: "s3a", name: "Blue", teacher: "Unassigned", studentsCount: 38 },
-      { id: "s3b", name: "Green", teacher: "Unassigned", studentsCount: 36 }
-    ]
-  },
-  {
-    id: "g4",
-    name: "Grade 4",
-    category: "Primary",
-    streams: [
-      { id: "s3", name: "Blue", teacher: "Jane Mwangi", studentsCount: 42 },
-      { id: "s4", name: "Green", teacher: "Unassigned", studentsCount: 38 }
-    ]
-  },
-  {
-    id: "g5",
-    name: "Grade 5",
-    category: "Primary",
-    streams: [
-      { id: "s5", name: "Alpha", teacher: "John Kamau", studentsCount: 40 },
-      { id: "s6", name: "Beta", teacher: "Unassigned", studentsCount: 36 }
-    ]
-  },
-  {
-    id: "g6",
-    name: "Grade 6",
-    category: "Primary",
-    streams: [
-      { id: "s6a", name: "Yellow", teacher: "Unassigned", studentsCount: 38 },
-      { id: "s6b", name: "Green", teacher: "Unassigned", studentsCount: 35 }
-    ]
-  },
-  {
-    id: "g7",
-    name: "Grade 7",
-    category: "Junior School",
-    streams: [
-      { id: "s7", name: "Alpha", teacher: "Peter Omondi", studentsCount: 45 },
-      { id: "s8", name: "Beta", teacher: "Unassigned", studentsCount: 31 }
-    ]
-  },
-  {
-    id: "g8",
-    name: "Grade 8",
-    category: "Junior School",
-    streams: [
-      { id: "s9", name: "Alpha", teacher: "Unassigned", studentsCount: 35 },
-      { id: "s10", name: "Beta", teacher: "Unassigned", studentsCount: 31 }
-    ]
-  },
-  {
-    id: "g9",
-    name: "Grade 9",
-    category: "Junior School",
-    streams: [
-      { id: "s11", name: "Alpha", teacher: "Unassigned", studentsCount: 30 },
-      { id: "s12", name: "Beta", teacher: "Unassigned", studentsCount: 28 }
-    ]
-  }
-].map(g => ({
+  { id: 'gpp1', name: 'PP1',  category: 'Pre-Primary', streams: [
+    { id: 'spp1a', name: 'Yellow', teacher: 'Unassigned', studentsCount: 0 },
+    { id: 'spp1b', name: 'Green',  teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+  { id: 'gpp2', name: 'PP2',  category: 'Pre-Primary', streams: [
+    { id: 'spp2a', name: 'Yellow', teacher: 'Unassigned', studentsCount: 0 },
+    { id: 'spp2b', name: 'Green',  teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+  { id: 'g1', name: 'Grade 1', category: 'Primary', streams: [
+    { id: 's1', name: 'Blue',  teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's2', name: 'Green', teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+  { id: 'g2', name: 'Grade 2', category: 'Primary', streams: [
+    { id: 's2a', name: 'Blue',  teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's2b', name: 'Green', teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+  { id: 'g3', name: 'Grade 3', category: 'Primary', streams: [
+    { id: 's3a', name: 'Blue',  teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's3b', name: 'Green', teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+  { id: 'g4', name: 'Grade 4', category: 'Primary', streams: [
+    { id: 's3', name: 'Blue',  teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's4', name: 'Green', teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+  { id: 'g5', name: 'Grade 5', category: 'Primary', streams: [
+    { id: 's5', name: 'Alpha', teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's6', name: 'Beta',  teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+  { id: 'g6', name: 'Grade 6', category: 'Primary', streams: [
+    { id: 's6a', name: 'Yellow', teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's6b', name: 'Green',  teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's6c', name: 'South',  teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's6d', name: 'East',   teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+  { id: 'g7', name: 'Grade 7', category: 'Junior School', streams: [
+    { id: 's7a', name: 'MERCURY', teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's7b', name: 'VENUS',   teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's7c', name: 'JUPITER', teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's7d', name: 'NEPTUNE', teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+  { id: 'g8', name: 'Grade 8', category: 'Junior School', streams: [
+    { id: 's9',  name: 'Alpha', teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's10', name: 'Beta',  teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+  { id: 'g9', name: 'Grade 9', category: 'Junior School', streams: [
+    { id: 's11', name: 'Alpha', teacher: 'Unassigned', studentsCount: 0 },
+    { id: 's12', name: 'Beta',  teacher: 'Unassigned', studentsCount: 0 },
+  ]},
+].map((g) => ({
   ...g,
   name: formatGradeName(g.name),
   streams: Array.from(
-    new Map(g.streams.map(s => [s.name.trim().toLowerCase(), s])).values()
-  )
-})));
+    new Map(g.streams.map((s) => [String(s.name || '').trim().toLowerCase(), s])).values()
+  ),
+})) as unknown as Grade[]);
 
-export const BOOKS = [
-  { id: "1", title: "Spark: English Grade 4", author: "Oxford", isbn: "978-019", category: "Core Text", stock: 120, borrowed: 85 },
-  { id: "2", title: "KLB Mathematics Grade 5", author: "KLB", isbn: "978-9966", category: "Core Text", stock: 150, borrowed: 142 },
-  { id: "3", title: "Dunia Yetu: Kiswahili", author: "Longhorn", isbn: "978-9977", category: "Reference", stock: 45, borrowed: 12 },
-  { id: "4", title: "Science in Action", author: "Pearson", isbn: "978-0321", category: "Supplementary", stock: 60, borrowed: 58 },
-];
+/** Empty library — books are created through the Library page. */
+export const BOOKS: unknown[] = [];
 
-export const MESSAGES = [
-  { id: "1", recipient: "All Parents", subject: "Fee Balance Reminder", type: "SMS", date: "Oct 18, 2024", status: "Delivered" },
-  { id: "2", recipient: "Grade 4 Blue", subject: "Trip to Museum", type: "Email", date: "Oct 16, 2024", status: "Opened" },
-  { id: "3", recipient: "Samuel Kiptoo", subject: "Disciplinary Notice", type: "SMS", date: "Oct 15, 2024", status: "Delivered" },
-];
+/** Empty messaging inbox. */
+export const MESSAGES: unknown[] = [];
 
-export const NOTICES = [
-  { id: "1", title: "Half-Term Break", content: "School will close on Friday 20th Oct for a one-week break.", date: "Oct 15, 2024", category: "Urgent", color: "bg-red-50 text-red-600" },
-  { id: "2", title: "Sports Day 2024", content: "All parents are invited to the annual sports day on Nov 5th.", date: "Oct 12, 2024", category: "Event", color: "bg-blue-50 text-blue-600" },
-  { id: "3", title: "CBC Materials Needed", description: "Grade 4 learners require clay for Creative Arts next week.", date: "Oct 10, 2024", category: "Notice", color: "bg-emerald-50 text-emerald-600" },
-];
+/** Empty noticeboard. */
+export const NOTICES: unknown[] = [];
 
-export const INVENTORY = [
-  { id: "1", item: "Jembes (Small)", category: "Agriculture", qty: 45, status: "Available", color: "text-emerald-600" },
-  { id: "2", item: "Science Kits", category: "Science & Tech", qty: 12, status: "Low Stock", color: "text-amber-600" },
-  { id: "3", item: "Music Keyboards", category: "Creative Arts", qty: 8, status: "Available", color: "text-purple-600" },
-  { id: "4", item: "Grade 4 English Textbooks", category: "Library", qty: 120, status: "In Use", color: "text-blue-600" },
-];
+/** Empty inventory log. */
+export const INVENTORY: unknown[] = [];
 
-export const ASSET_LOGS = [
-  { id: 1, item: "Science Kit #04", issuedTo: "Unassigned", date: "Oct 18, 2024", dateReturned: undefined, status: "In Use" },
-  { id: 2, item: "Music Keyboard #01", issuedTo: "Brian Kiptoo", date: "Oct 17, 2024", dateReturned: "Oct 20, 2024", status: "Returned" },
-  { id: 3, item: "Jembe #22", issuedTo: "Grade 4 Blue", date: "Oct 19, 2024", dateReturned: undefined, status: "In Use" },
-];
+/** Empty asset-issuance log. */
+export const ASSET_LOGS: unknown[] = [];
 
 export interface StaffMember {
   id: string;
@@ -177,106 +141,20 @@ export interface StaffMember {
   department: string;
 }
 
-export const STAFF: StaffMember[] = [
-  {
-    id: "ST-101",
-    id_no: "28374615",
-    tsc_no: "TSC-482910",
-    name: "Jane Mwangi",
-    role: "Class Teacher",
-    subjects: ["Mathematics", "Science & Tech"],
-    phone: "+254 712 345 678",
-    email: "jane.mwangi@munyaka.sc.ke",
-    status: "Active",
-    joined: "Jan 2022",
-    department: "Mathematics & Science"
-  },
-  {
-    id: "ST-102",
-    id_no: "31948201",
-    tsc_no: "TSC-592014",
-    name: "John Kamau",
-    role: "Senior Teacher",
-    subjects: ["English", "Social Studies"],
-    phone: "+254 722 987 654",
-    email: "john.kamau@munyaka.sc.ke",
-    status: "Active",
-    joined: "Mar 2021",
-    department: "Languages & Humanities"
-  },
-  {
-    id: "ST-103",
-    id: "ST-103",
-    id_no: "25839102",
-    tsc_no: "TSC-382910",
-    name: "Peter Omondi",
-    role: "Subject Teacher",
-    subjects: ["Pre-Technical", "Computer Science"],
-    phone: "+254 733 456 789",
-    email: "peter.omondi@munyaka.sc.ke",
-    status: "Pre-Registered",
-    joined: "Jan 2024",
-    department: "Technical & Vocational"
-  },
-  {
-    id: "ST-104",
-    id_no: "29482019",
-    tsc_no: "TSC-610293",
-    name: "Sarah Chebet",
-    role: "Class Teacher",
-    subjects: ["Kiswahili", "CRE"],
-    phone: "+254 701 112 233",
-    email: "sarah.chebet@munyaka.sc.ke",
-    status: "Active",
-    joined: "Sep 2022",
-    department: "Languages & Humanities"
-  },
-  {
-    id: "ST-105",
-    id_no: "30291847",
-    tsc_no: "TSC-719203",
-    name: "Grace Njeri",
-    role: "Head Teacher",
-    subjects: ["Administration"],
-    phone: "+254 700 000 111",
-    email: "grace.njeri@munyaka.sc.ke",
-    status: "Active",
-    joined: "Jan 2020",
-    department: "School Administration"
-  }
-];
+/** Empty staff roster — staff are added through the Pre-Registration flow. */
+export const STAFF: StaffMember[] = [];
 
-export const EVENTS = [
-  { id: 1, title: "Staff Meeting", date: "2024-10-25", time: "02:00 PM", type: "Internal" },
-  { id: 2, title: "Music Festival", date: "2024-11-02", time: "08:00 AM", type: "County" },
-  { id: 3, title: "End of Term Exams", date: "2024-11-15", time: "All Day", type: "Academic" },
-];
+/** Empty calendar. */
+export const EVENTS: unknown[] = [];
 
-export const TIMETABLE = [
-  { time: "08:00 - 08:30", mon: "Assembly", tue: "Pastoral", wed: "Assembly", thu: "Pastoral", fri: "Assembly" },
-  { time: "08:30 - 09:10", mon: "Mathematics", tue: "English", wed: "Kiswahili", thu: "Kiswahili", fri: "Creative Arts" },
-  { time: "09:10 - 09:50", mon: "Mathematics", tue: "English", wed: "Kiswahili", thu: "Science", fri: "Creative Arts" },
-  { time: "09:50 - 10:30", mon: "English", tue: "Mathematics", wed: "Science", thu: "Kiswahili", fri: "Social Studies" },
-  { time: "10:30 - 11:00", mon: "BREAK", tue: "BREAK", wed: "BREAK", thu: "BREAK", fri: "BREAK" },
-  { time: "11:00 - 11:40", mon: "Physical Ed", tue: "Pre-Tech", wed: "Agri", thu: "Nutrition", fri: "Library" },
-];
+/** Empty class timetable. */
+export const TIMETABLE: unknown[] = [];
 
-export const ATTENDANCE_TREND = [
-  { day: "Mon", rate: 94 },
-  { day: "Tue", rate: 96 },
-  { day: "Wed", rate: 92 },
-  { day: "Thu", rate: 95 },
-  { day: "Fri", rate: 91 },
-];
+/** Empty attendance-trend series. */
+export const ATTENDANCE_TREND: unknown[] = [];
 
-export const FEES_DATA = [
-  { id: "1", student: "Brian Kiptoo", total: 15000, paid: 0, status: "Pending" },
-  { id: "2", student: "Mary Atieno", total: 15000, paid: 15000, status: "Cleared" },
-  { id: "3", student: "Emmanuel Maina", total: 15000, paid: 5000, status: "Pending" },
-];
+/** Empty fee ledger. */
+export const FEES_DATA: unknown[] = [];
 
-export const TRANSACTIONS = [
-  { id: "TX-901", date: "Oct 12, 2024", amount: 5000, method: "M-Pesa", ref: "RI82JD91S", category: "Tuition" },
-  { id: "TX-882", date: "Sep 28, 2024", amount: 2000, method: "Bank Deposit", ref: "DEP-2938", category: "Activity" },
-  { id: "TX-750", date: "Aug 15, 2024", amount: 5000, method: "M-Pesa", ref: "QH12LK34P", category: "Tuition" },
-];
+/** Empty transaction log. */
+export const TRANSACTIONS: unknown[] = [];

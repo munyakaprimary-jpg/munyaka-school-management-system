@@ -1,752 +1,185 @@
 /**
  * MUNYAKA PRIMARY AND JUNIOR SCHOOL — Initial Seed Data
  * ======================================================
- * This file is the single source of truth for the APK's default baseline.
- * On fresh install (APK boot) the StorageInitService and hydrateAllStores
- * populate every localStorage key from this export.
+ * Cold-start defaults for the APK / offline-first app.
  *
- * Version: v_full_sync_v2  (matches StorageInitService.CURRENT_SEED_VERSION)
- * Last updated: matches current Dyad preview live dataset
+ * On first launch (when localStorage is empty), `hydrateAllStores` in
+ * `src/utils/storage.ts` reads from this export to populate every store.
  *
- * Statistics baseline:
- *   • 14 Active Learners (students)
- *   • 6 Staff Members (5 Active + 1 Pre-Registered)
- *   • 12 Grade Classes (PP1 → Grade 9)
- *   • Active attendance, fees, and transaction records
+ * Version: "sample-v1"
  */
 export const INITIAL_SEED_DATA = {
-  version: "4.0",
-  seedVersion: "v_full_sync_v2",
+  version: "sample-v1",
+  seedVersion: "sample-v1",
   exportDate: new Date().toISOString(),
   school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
 
   // ── Students / Learners ───────────────────────────────────────────────────────
-  students: [
-    {
-      id: "1787737452457",
-      admNo: "B002961576",
-      name: "MUTWIKA KILONZO",
-      grade: "Grade 7",
-      stream: "VENUS",
-      gender: "Female",
-      guardian: "STEPHEN KILONZO KINGOO",
-      phone: "0705221675",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "1787724752520",
-      admNo: "B004123291",
-      name: "OCTEVIOR LUVISIA",
-      grade: "Grade 6",
-      stream: "Yellow",
-      gender: "Male",
-      guardian: "TITUS KIJUSA LUVISIA",
-      phone: "0705138090",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "1787724509755",
-      admNo: "B004761829",
-      name: "SAMWEL KAMAU WANJIKU",
-      grade: "Grade 6",
-      stream: "Yellow",
-      gender: "Male",
-      guardian: "MARY WANJIKU WAIRIMU",
-      phone: "0719182804",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "1787655781527",
-      admNo: "A009702345",
-      name: "EMILY CHEBET",
-      grade: "Grade 5",
-      stream: "Yellow",
-      gender: "Female",
-      guardian: "EDWARD LIMO",
-      phone: "07892356787",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "2",
-      admNo: "B004779091",
-      name: "PETER WAITITU",
-      grade: "Grade 6",
-      stream: "South",
-      gender: "Male",
-      guardian: "JANE WANJIKU WAITITO",
-      phone: "0114222031",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "3",
-      admNo: "B004276095",
-      name: "ALFRED JUMA",
-      grade: "Grade 6",
-      stream: "East",
-      gender: "Male",
-      guardian: "PHANICE NASIMIYU KIRISWA",
-      phone: "0141893904",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "4",
-      admNo: "B003881023",
-      name: "BRIAN KIPTOO",
-      grade: "Grade 4",
-      stream: "Blue",
-      gender: "Male",
-      guardian: "JAMES KIPTOO",
-      phone: "0712345678",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "5",
-      admNo: "B003882045",
-      name: "MARY ATIENO",
-      grade: "Grade 4",
-      stream: "Blue",
-      gender: "Female",
-      guardian: "PAUL ATIENO",
-      phone: "0713456789",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "6",
-      admNo: "B003883067",
-      name: "EMMA NAKUMEN",
-      grade: "Grade 5",
-      stream: "Yellow",
-      gender: "Female",
-      guardian: "JOHN NAKUMEN",
-      phone: "0723456789",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "7",
-      admNo: "B002961577",
-      name: "JAMES KIMUTAI",
-      grade: "Grade 7",
-      stream: "MERCURY",
-      gender: "Male",
-      guardian: "DAVID KIMUTAI",
-      phone: "0734567890",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "8",
-      admNo: "B002961578",
-      name: "LUCY JEPKOCHIR",
-      grade: "Grade 7",
-      stream: "VENUS",
-      gender: "Female",
-      guardian: "SAMUEL JEPKOCHIR",
-      phone: "0745678901",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "9",
-      admNo: "B001223344",
-      name: "DANIEL MWANGI",
-      grade: "Grade 8",
-      stream: "Alpha",
-      gender: "Male",
-      guardian: "PETER MWANGI",
-      phone: "0756789012",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "10",
-      admNo: "B001223345",
-      name: "CAROLINE WANJIRU",
-      grade: "Grade 8",
-      stream: "Beta",
-      gender: "Female",
-      guardian: "JAMES WANJIRU",
-      phone: "0767890123",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "11",
-      admNo: "B001334455",
-      name: "KEVIN CHERUIYOT",
-      grade: "Grade 9",
-      stream: "Alpha",
-      gender: "Male",
-      guardian: "SAMSON CHERUIYOT",
-      phone: "0778901234",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "12",
-      admNo: "B001334456",
-      name: "FAITH JEPchirchir",
-      grade: "Grade 9",
-      stream: "Beta",
-      gender: "Female",
-      guardian: "JOHN CHERUIYOT",
-      phone: "0789012345",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "13",
-      admNo: "B001445566",
-      name: "SAMUEL KIPROP",
-      grade: "Grade 4",
-      stream: "Green",
-      gender: "Male",
-      guardian: "WILLIAM KIPROP",
-      phone: "0790123456",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "14",
-      admNo: "B001445567",
-      name: "MONICA JEPNG'OK",
-      grade: "Grade 4",
-      stream: "Green",
-      gender: "Female",
-      guardian: "DAVID JEPNG'OK",
-      phone: "0701234567",
-      status: "Active",
-      schoolId: "MUNYAKA-001"
-    }
-  ],
+  // EMPTY by default. The app boots with zero registered students; the
+  // Learners page reads exclusively from localStorage and shows the empty
+  // state until an admin registers the first learner through the UI.
+  students: [],
 
-  // ── Staff / Teachers ──────────────────────────────────────────────────────────
+  // ── Staff / Teachers ──────────────────────────────────────────────────────
+  // Sample staff pre-seeded for immediate APK usability.
   staff: [
-    {
-      id: "ST-1787658809855",
-      id_no: "122654",
-      tsc_no: "1234566",
-      name: "JOEL MWANGI",
-      role: "TEACHER",
-      subjects: [],
-      phone: "0768234567",
-      email: "joelmwangi@school.ac.ke",
-      status: "Active",
-      joined: "Aug 2026",
-      department: "School Administration",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "ST-101",
-      id_no: "28374615",
-      tsc_no: "TSC-482910",
-      name: "Jane Mwangi",
-      role: "Class Teacher",
-      subjects: ["Mathematics", "Science & Tech"],
-      phone: "+254 712 345 678",
-      email: "jane.mwangi@munyaka.sc.ke",
-      status: "Active",
-      joined: "Jan 2022",
-      department: "Mathematics & Science",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "ST-102",
-      id_no: "31948201",
-      tsc_no: "TSC-592014",
-      name: "John Kamau",
-      role: "Senior Teacher",
-      subjects: ["English", "Social Studies"],
-      phone: "+254 722 987 654",
-      email: "john.kamau@munyaka.sc.ke",
-      status: "Active",
-      joined: "Mar 2021",
-      department: "Languages & Humanities",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "ST-103",
-      id_no: "25839102",
-      tsc_no: "TSC-382910",
-      name: "Peter Omondi",
-      role: "Subject Teacher",
-      subjects: ["Pre-Technical", "Computer Science"],
-      phone: "+254 733 456 789",
-      email: "peter.omondi@munyaka.sc.ke",
-      status: "Pre-Registered",
-      joined: "Jan 2024",
-      department: "Technical & Vocational",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "ST-104",
-      id_no: "29482019",
-      tsc_no: "TSC-610293",
-      name: "Sarah Chebet",
-      role: "Class Teacher",
-      subjects: ["Kiswahili", "CRE"],
-      phone: "+254 701 112 233",
-      email: "sarah.chebet@munyaka.sc.ke",
-      status: "Active",
-      joined: "Sep 2022",
-      department: "Languages & Humanities",
-      schoolId: "MUNYAKA-001"
-    },
-    {
-      id: "ST-105",
-      id_no: "30291847",
-      tsc_no: "TSC-719203",
-      name: "Grace Njeri",
-      role: "Head Teacher",
-      subjects: ["Administration"],
-      phone: "+254 700 000 111",
-      email: "grace.njeri@munyaka.sc.ke",
-      status: "Active",
-      joined: "Jan 2020",
-      department: "School Administration",
-      schoolId: "MUNYAKA-001"
-    }
+    { id: "staff-001", name: "Grace Njeri", tscNo: "TSC-88421", idNo: "22345678", phone: "+254720001001", email: "grace.njeri@munyaka.sc.ke", role: "Head Teacher", grade: "—", stream: "—", gender: "Female", status: "Active", salary: 95000, joinedDate: "2018-01-15", emergencyContact: "+254711001001", emergencyName: "John Njeri", profileComplete: true, schoolId: "munyaka-sc" },
+    { id: "staff-002", name: "John Kamau",  tscNo: "TSC-77102", idNo: "11223344", phone: "+254720002002", email: "john.kamau@munyaka.sc.ke",  role: "Teacher", grade: "Grade 7", stream: "MERCURY", gender: "Male", status: "Active", salary: 75000, joinedDate: "2020-03-01", emergencyContact: "+254722002002", emergencyName: "Mary Kamau", profileComplete: true, schoolId: "munyaka-sc" },
+    { id: "staff-003", name: "Sarah Achieng", tscNo: "TSC-66211", idNo: "33445566", phone: "+254720003003", email: "sarah.achieng@munyaka.sc.ke", role: "Teacher", grade: "Grade 4", stream: "Blue", gender: "Female", status: "Active", salary: 72000, joinedDate: "2021-06-10", emergencyContact: "+254722003003", emergencyName: "Peter Achieng", profileComplete: true, schoolId: "munyaka-sc" },
+    { id: "staff-004", name: "Peter Omondi", tscNo: "TSC-55330", idNo: "44556677", phone: "+254720004004", email: "peter.omondi@munyaka.sc.ke", role: "Teacher", grade: "Grade 8", stream: "Alpha", gender: "Male", status: "Active", salary: 73000, joinedDate: "2019-09-01", emergencyContact: "+254722004004", emergencyName: "Jane Omondi", profileComplete: true, schoolId: "munyaka-sc" },
+    { id: "staff-005", name: "Mary Wanjiku", tscNo: "TSC-44019", idNo: "55667788", phone: "+254720005005", email: "mary.wanjiku@munyaka.sc.ke", role: "Teacher", grade: "Grade 5", stream: "Alpha", gender: "Female", status: "Active", salary: 71000, joinedDate: "2022-01-20", emergencyContact: "+254722005005", emergencyName: "Joseph Wanjiku", profileComplete: true, schoolId: "munyaka-sc" },
+    { id: "staff-006", name: "David Kiprotich", tscNo: "TSC-33128", idNo: "66778899", phone: "+254720006006", email: "david.kiprotich@munyaka.sc.ke", role: "Bursar", grade: "—", stream: "—", gender: "Male", status: "Active", salary: 80000, joinedDate: "2017-04-05", emergencyContact: "+254722006006", emergencyName: "Grace Kiprotich", profileComplete: true, schoolId: "munyaka-sc" },
   ],
 
-  // ── Staff Pre-Registration ───────────────────────────────────────────────────
+  // ── Staff Pre-Registration ────────────────────────────────────────────────
+  // Sample pre-registrations awaiting approval.
   staffPrereg: [
-    {
-      id: "PR-1787658909839",
-      fullName: "Grace Njeri",
-      nationalId: "30291847",
-      tscNumber: "TSC-719203",
-      email: "grace.njeri@munyaka.sc.ke",
-      phone: "+254 700 000 111",
-      systemRole: "head_teacher",
-      department: "",
-      assignedSubjects: ["Administration"],
-      tempAccessCode: "MUNYAKA-9632",
-      status: "Pre-Registered",
-      datePreRegistered: "2026-08-25"
-    },
-    {
-      id: "PR-1787658904111",
-      fullName: "Peter Omondi",
-      nationalId: "25839102",
-      tscNumber: "TSC-382910",
-      email: "peter.omondi@munyaka.sc.ke",
-      phone: "+254 733 456 789",
-      systemRole: "subject_teacher",
-      department: "",
-      assignedSubjects: ["Pre-Technical", "Computer Science"],
-      tempAccessCode: "MUNYAKA-2647",
-      status: "Pre-Registered",
-      datePreRegistered: "2026-08-25"
-    },
-    {
-      id: "PR-1787658895559",
-      fullName: "Jane Mwangi",
-      nationalId: "28374615",
-      tscNumber: "TSC-482910",
-      email: "jane.mwangi@munyaka.sc.ke",
-      phone: "+254 712 345 678",
-      systemRole: "class_teacher",
-      department: "",
-      assignedSubjects: ["Mathematics", "Science & Tech"],
-      tempAccessCode: "MUNYAKA-9020",
-      status: "Pre-Registered",
-      datePreRegistered: "2026-08-25"
-    },
-    {
-      id: "PR-1787658885534",
-      fullName: "Sarah Chebet",
-      nationalId: "29482019",
-      tscNumber: "TSC-610293",
-      email: "sarah.chebet@munyaka.sc.ke",
-      phone: "+254 701 112 233",
-      systemRole: "class_teacher",
-      department: "",
-      assignedSubjects: ["Kiswahili", "CRE"],
-      tempAccessCode: "MUNYAKA-7496",
-      status: "Pre-Registered",
-      datePreRegistered: "2026-08-25"
-    },
-    {
-      id: "PR-1787658875279",
-      fullName: "John Kamau",
-      nationalId: "31948201",
-      tscNumber: "TSC-592014",
-      email: "john.kamau@munyaka.sc.ke",
-      phone: "+254 722 987 654",
-      systemRole: "senior_teacher",
-      department: "",
-      assignedSubjects: ["English", "Social Studies"],
-      tempAccessCode: "MUNYAKA-2116",
-      status: "Pre-Registered",
-      datePreRegistered: "2026-08-25"
-    },
-    {
-      id: "PR-1787658841599",
-      fullName: "JOEL MWANGI",
-      nationalId: "122654",
-      tscNumber: "1234566",
-      email: "joelmwangi@school.ac.ke",
-      phone: "0768234567",
-      systemRole: "subject_teacher",
-      department: "",
-      assignedSubjects: [],
-      tempAccessCode: "MUNYAKA-7849",
-      status: "Pre-Registered",
-      datePreRegistered: "2026-08-25"
-    }
+    { id: "prereg-001", name: "Faith Chebet", phone: "+254720101101", idNo: "77889900", role: "Teacher", status: "pending", requestedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), schoolId: "munyaka-sc" },
+    { id: "prereg-002", name: "Kevin Kipkemoi", phone: "+254720202202", idNo: "88990011", role: "Lab Technician", status: "pending", requestedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), schoolId: "munyaka-sc" },
   ],
 
-  // ── Fee Records ──────────────────────────────────────────────────────────────
-  fees: [
-    {
-      id: "1",
-      student: "Brian Kiptoo",
-      studentId: "4",
-      total: 15000,
-      paid: 0,
-      balance: 15000,
-      status: "Pending"
-    },
-    {
-      id: "2",
-      student: "Mary Atieno",
-      studentId: "5",
-      total: 15000,
-      paid: 15000,
-      balance: 0,
-      status: "Cleared"
-    },
-    {
-      id: "3",
-      student: "Emmanuel Maina",
-      studentId: "6",
-      total: 15000,
-      paid: 5000,
-      balance: 10000,
-      status: "Pending"
-    }
-  ],
+  // ── Fee Records ───────────────────────────────────────────────────────────
+  // All learners start at KES 0 balance. Fee records are accumulated only
+  // through the Fees page's payment recording flow — never pre-seeded.
+  // NOTE: the `fees` object maps studentId → fee ledger row. Each entry
+  // represents a configured fee structure for the student's grade, not
+  // historical payment data. Historical payments live in `transactions`.
+  fees: {},
 
-  // ── Fee Structures (per grade) ───────────────────────────────────────────────
+  // ── Fee Structures (per grade) ──────────────────────────────────────────
+  // Seeded so the Fee Configuration page has a starting structure.
   feeStructures: [
-    { id: "fs-1", gradeId: "gpp1", gradeName: "PP1", year: "2026", term: "term1", amount: 8000 },
-    { id: "fs-2", gradeId: "gpp2", gradeName: "PP2", year: "2026", term: "term1", amount: 8000 },
-    { id: "fs-3", gradeId: "g1", gradeName: "Grade 1", year: "2026", term: "term1", amount: 12000 },
-    { id: "fs-4", gradeId: "g2", gradeName: "Grade 2", year: "2026", term: "term1", amount: 12000 },
-    { id: "fs-5", gradeId: "g3", gradeName: "Grade 3", year: "2026", term: "term1", amount: 12000 },
-    { id: "fs-6", gradeId: "g4", gradeName: "Grade 4", year: "2026", term: "term1", amount: 15000 },
-    { id: "fs-7", gradeId: "g5", gradeName: "Grade 5", year: "2026", term: "term1", amount: 15000 },
-    { id: "fs-8", gradeId: "g6", gradeName: "Grade 6", year: "2026", term: "term1", amount: 15000 },
-    { id: "fs-9", gradeId: "g7", gradeName: "Grade 7", year: "2026", term: "term1", amount: 18000 },
-    { id: "fs-10", gradeId: "g8", gradeName: "Grade 8", year: "2026", term: "term1", amount: 18000 },
-    { id: "fs-11", gradeId: "g9", gradeName: "Grade 9", year: "2026", term: "term1", amount: 20000 }
+    { id: "fs-1",  gradeId: "gpp1", gradeName: "PP1",       year: "2026", term: "term1", amount: 8000  },
+    { id: "fs-2",  gradeId: "gpp2", gradeName: "PP2",       year: "2026", term: "term1", amount: 8000  },
+    { id: "fs-3",  gradeId: "g1",   gradeName: "Grade 1",   year: "2026", term: "term1", amount: 12000 },
+    { id: "fs-4",  gradeId: "g2",   gradeName: "Grade 2",   year: "2026", term: "term1", amount: 12000 },
+    { id: "fs-5",  gradeId: "g3",   gradeName: "Grade 3",   year: "2026", term: "term1", amount: 12000 },
+    { id: "fs-6",  gradeId: "g4",   gradeName: "Grade 4",   year: "2026", term: "term1", amount: 15000 },
+    { id: "fs-7",  gradeId: "g5",   gradeName: "Grade 5",   year: "2026", term: "term1", amount: 15000 },
+    { id: "fs-8",  gradeId: "g6",   gradeName: "Grade 6",   year: "2026", term: "term1", amount: 15000 },
+    { id: "fs-9",  gradeId: "g7",   gradeName: "Grade 7",   year: "2026", term: "term1", amount: 18000 },
+    { id: "fs-10", gradeId: "g8",   gradeName: "Grade 8",   year: "2026", term: "term1", amount: 18000 },
+    { id: "fs-11", gradeId: "g9",   gradeName: "Grade 9",   year: "2026", term: "term1", amount: 20000 },
   ],
 
-  // ── Transactions ─────────────────────────────────────────────────────────────
-  transactions: [
-    {
-      id: "TX-516",
-      date: "8/26/2026",
-      paidAt: "2026-08-26T10:15:00.000Z",
-      amount: 700,
-      method: "M-Pesa",
-      ref: "AUTO-GEN",
-      category: "Tuition",
-      studentId: "1787737452457",
-      learnerName: "MUTWIKA KILONZO",
-      status: "paid"
-    },
-    {
-      id: "TX-901",
-      date: "Oct 12, 2024",
-      amount: 5000,
-      method: "M-Pesa",
-      ref: "RI82JD91S",
-      category: "Tuition",
-      status: "paid"
-    },
-    {
-      id: "TX-882",
-      date: "Sep 28, 2024",
-      amount: 2000,
-      method: "Bank Deposit",
-      ref: "DEP-2938",
-      category: "Activity",
-      status: "paid"
-    },
-    {
-      id: "TX-750",
-      date: "Aug 15, 2024",
-      amount: 5000,
-      method: "M-Pesa",
-      ref: "QH12LK34P",
-      category: "Tuition",
-      status: "paid"
-    }
-  ],
+  // ── Transactions ──────────────────────────────────────────────────────────
+  // Empty by default — transactions are recorded through the Fees page.
+  transactions: [],
 
-  // ── Attendance Records ───────────────────────────────────────────────────────
-  attendance: {
-    "Grade 4_Blue_2026-08-26_morning": {
-      session: "morning",
-      class: "Grade 4",
-      stream: "Blue",
-      date: "2026-08-26",
-      savedAt: "2026-08-26T07:05:17.006Z",
-      "4": "P",
-      "5": "P"
-    },
-    "Grade 4_all_2026-08-26_morning": {
-      session: "morning",
-      class: "Grade 4",
-      stream: "all",
-      date: "2026-08-26",
-      savedAt: "2026-08-26T07:13:13.158Z",
-      "4": "P",
-      "5": "P"
-    },
-    "Grade 6_all_2026-08-26_morning": {
-      session: "morning",
-      class: "Grade 6",
-      stream: "all",
-      date: "2026-08-26",
-      savedAt: "2026-08-26T08:56:37.698Z",
-      "2": "P",
-      "3": "P"
-    }
-  },
+  // ── Attendance Records ────────────────────────────────────────────────────
+  // Empty by default — attendance records are created when teachers submit
+  // the daily register through the Attendance page.
+  attendance: {},
 
-  // ── Grades / Classes ─────────────────────────────────────────────────────────
+  // ── Grades / Classes ──────────────────────────────────────────────────────
+  // Seeded with grade + stream structure so the app has a starting
+  // grade-roster configuration.  All student counts are zero.
   grades: [
-    {
-      id: "gpp1",
-      name: "PP1",
-      category: "Pre-Primary",
-      streams: [
-        { id: "spp1a", name: "Yellow", teacher: "Unassigned", studentsCount: 30 },
-        { id: "spp1b", name: "Green", teacher: "Unassigned", studentsCount: 28 }
-      ]
-    },
-    {
-      id: "gpp2",
-      name: "PP2",
-      category: "Pre-Primary",
-      streams: [
-        { id: "spp2a", name: "Yellow", teacher: "Unassigned", studentsCount: 32 },
-        { id: "spp2b", name: "Green", teacher: "Unassigned", studentsCount: 29 }
-      ]
-    },
-    {
-      id: "g1",
-      name: "Grade 1",
-      category: "Primary",
-      streams: [
-        { id: "s1", name: "Blue", teacher: "Unassigned", studentsCount: 42 },
-        { id: "s2", name: "Green", teacher: "Unassigned", studentsCount: 38 }
-      ]
-    },
-    {
-      id: "g2",
-      name: "Grade 2",
-      category: "Primary",
-      streams: [
-        { id: "s2a", name: "Blue", teacher: "Unassigned", studentsCount: 40 },
-        { id: "s2b", name: "Green", teacher: "Unassigned", studentsCount: 35 }
-      ]
-    },
-    {
-      id: "g3",
-      name: "Grade 3",
-      category: "Primary",
-      streams: [
-        { id: "s3a", name: "Blue", teacher: "Unassigned", studentsCount: 38 },
-        { id: "s3b", name: "Green", teacher: "Unassigned", studentsCount: 36 }
-      ]
-    },
-    {
-      id: "g4",
-      name: "Grade 4",
-      category: "Primary",
-      streams: [
-        { id: "s3", name: "Blue", teacher: "Jane Mwangi", studentsCount: 42 },
-        { id: "s4", name: "Green", teacher: "Unassigned", studentsCount: 38 }
-      ]
-    },
-    {
-      id: "g5",
-      name: "Grade 5",
-      category: "Primary",
-      streams: [
-        { id: "s5", name: "Alpha", teacher: "John Kamau", studentsCount: 40 },
-        { id: "s6", name: "Beta", teacher: "Unassigned", studentsCount: 36 }
-      ]
-    },
-    {
-      id: "g6",
-      name: "Grade 6",
-      category: "Primary",
-      streams: [
-        { id: "s6a", name: "Yellow", teacher: "Unassigned", studentsCount: 38 },
-        { id: "s6b", name: "Green", teacher: "Unassigned", studentsCount: 35 },
-        { id: "s6c", name: "South", teacher: "Unassigned", studentsCount: 0 },
-        { id: "s6d", name: "East", teacher: "Unassigned", studentsCount: 0 }
-      ]
-    },
-    {
-      id: "g7",
-      name: "Grade 7",
-      category: "Junior School",
-      streams: [
-        { id: "s7a", name: "MERCURY", teacher: "Unassigned", studentsCount: 0 },
-        { id: "s7b", name: "VENUS", teacher: "Unassigned", studentsCount: 0 },
-        { id: "s7c", name: "JUPITER", teacher: "Unassigned", studentsCount: 0 },
-        { id: "s7d", name: "NEPTUNE", teacher: "Unassigned", studentsCount: 0 }
-      ]
-    },
-    {
-      id: "g8",
-      name: "Grade 8",
-      category: "Junior School",
-      streams: [
-        { id: "s9", name: "Alpha", teacher: "Unassigned", studentsCount: 35 },
-        { id: "s10", name: "Beta", teacher: "Unassigned", studentsCount: 31 }
-      ]
-    },
-    {
-      id: "g9",
-      name: "Grade 9",
-      category: "Junior School",
-      streams: [
-        { id: "s11", name: "Alpha", teacher: "Unassigned", studentsCount: 30 },
-        { id: "s12", name: "Beta", teacher: "Unassigned", studentsCount: 28 }
-      ]
-    }
+    { id: "gpp1", name: "PP1",  category: "Pre-Primary",    streams: [
+      { id: "spp1a", name: "Yellow", teacher: "Unassigned", studentsCount: 0 },
+      { id: "spp1b", name: "Green",  teacher: "Unassigned", studentsCount: 0 },
+    ]},
+    { id: "gpp2", name: "PP2",  category: "Pre-Primary",    streams: [
+      { id: "spp2a", name: "Yellow", teacher: "Unassigned", studentsCount: 0 },
+      { id: "spp2b", name: "Green",  teacher: "Unassigned", studentsCount: 0 },
+    ]},
+    { id: "g1",   name: "Grade 1", category: "Primary", streams: [
+      { id: "s1", name: "Blue",  teacher: "Unassigned", studentsCount: 0 },
+      { id: "s2", name: "Green", teacher: "Unassigned", studentsCount: 0 },
+    ]},
+    { id: "g2",   name: "Grade 2", category: "Primary", streams: [
+      { id: "s2a", name: "Blue",  teacher: "Unassigned", studentsCount: 0 },
+      { id: "s2b", name: "Green", teacher: "Unassigned", studentsCount: 0 },
+    ]},
+    { id: "g3",   name: "Grade 3", category: "Primary", streams: [
+      { id: "s3a", name: "Blue",  teacher: "Unassigned", studentsCount: 0 },
+      { id: "s3b", name: "Green", teacher: "Unassigned", studentsCount: 0 },
+    ]},
+    { id: "g4",   name: "Grade 4", category: "Primary", streams: [
+      { id: "s3", name: "Blue",  teacher: "Unassigned", studentsCount: 0 },
+      { id: "s4", name: "Green", teacher: "Unassigned", studentsCount: 0 },
+    ]},
+    { id: "g5",   name: "Grade 5", category: "Primary", streams: [
+      { id: "s5", name: "Alpha", teacher: "Unassigned", studentsCount: 0 },
+      { id: "s6", name: "Beta",  teacher: "Unassigned", studentsCount: 0 },
+    ]},
+    { id: "g6",   name: "Grade 6", category: "Primary", streams: [
+      { id: "s6a", name: "Yellow", teacher: "Unassigned", studentsCount: 0 },
+      { id: "s6b", name: "Green",  teacher: "Unassigned", studentsCount: 0 },
+      { id: "s6c", name: "South",  teacher: "Unassigned", studentsCount: 0 },
+      { id: "s6d", name: "East",   teacher: "Unassigned", studentsCount: 0 },
+    ]},
+    { id: "g7",   name: "Grade 7", category: "Junior School", streams: [
+      { id: "s7a", name: "MERCURY", teacher: "Unassigned", studentsCount: 0 },
+      { id: "s7b", name: "VENUS",   teacher: "Unassigned", studentsCount: 0 },
+      { id: "s7c", name: "JUPITER", teacher: "Unassigned", studentsCount: 0 },
+      { id: "s7d", name: "NEPTUNE", teacher: "Unassigned", studentsCount: 0 },
+    ]},
+    { id: "g8",   name: "Grade 8", category: "Junior School", streams: [
+      { id: "s9",  name: "Alpha", teacher: "Unassigned", studentsCount: 0 },
+      { id: "s10", name: "Beta",  teacher: "Unassigned", studentsCount: 0 },
+    ]},
+    { id: "g9",   name: "Grade 9", category: "Junior School", streams: [
+      { id: "s11", name: "Alpha", teacher: "Unassigned", studentsCount: 0 },
+      { id: "s12", name: "Beta",  teacher: "Unassigned", studentsCount: 0 },
+    ]},
   ],
 
-  // ── Exam Types ───────────────────────────────────────────────────────────────
+  // ── Exam Types ────────────────────────────────────────────────────────────
+  // Seeded so the Exam Creator has CBC exam type options.
   examTypes: [
-    {
-      id: "et-1",
-      name: "Formative Assessment",
-      code: "FORMATIVE",
-      weight: 40,
-      category: "Formative",
-      description: "Continuous assessment tests and classroom activities"
-    },
-    {
-      id: "et-2",
-      name: "Summative Assessment",
-      code: "SUMMATIVE",
-      weight: 60,
-      category: "Summative",
-      description: "End of term comprehensive evaluation"
-    },
-    {
-      id: "et-3",
-      name: "Opener Exam",
-      code: "OPENER",
-      weight: 0,
-      category: "Other",
-      description: "Beginning of term diagnostic test"
-    },
-    {
-      id: "et-4",
-      name: "Mid-Term Exam",
-      code: "MIDTERM",
-      weight: 0,
-      category: "Other",
-      description: "Mid-term progress evaluation"
-    }
+    { id: "et-1", name: "Formative Assessment",  code: "FORMATIVE",  weight: 40, category: "Formative",  description: "Continuous assessment tests and classroom activities" },
+    { id: "et-2", name: "Summative Assessment", code: "SUMMATIVE", weight: 60, category: "Summative",  description: "End of term comprehensive evaluation" },
+    { id: "et-3", name: "Opener Exam",          code: "OPENER",    weight: 0,  category: "Other",      description: "Beginning of term diagnostic test" },
+    { id: "et-4", name: "Mid-Term Exam",         code: "MIDTERM",   weight: 0,  category: "Other",      description: "Mid-term progress evaluation" },
   ],
 
-  // ── Learning Areas ───────────────────────────────────────────────────────────
+  // ── Learning Areas ─────────────────────────────────────────────────────────
+  // Seeded with cluster structure so the CBC Learning Areas page has defaults.
   learningAreas: [
-    {
-      id: "pre-primary",
-      name: "Pre-Primary",
-      description: "Early childhood development learning areas",
-      learningAreas: []
-    },
-    {
-      id: "lower-primary",
-      name: "Lower Primary",
-      description: "Foundational learning areas for Grades 1, 2, and 3",
-      learningAreas: []
-    },
-    {
-      id: "upper-primary",
-      name: "Upper Primary",
-      description: "Intermediate learning areas for Grades 4, 5, and 6",
-      learningAreas: []
-    },
-    {
-      id: "junior-school",
-      name: "Junior School",
-      description: "Secondary preparation learning areas",
-      learningAreas: []
-    }
+    { id: "pre-primary",    name: "Pre-Primary",   description: "Early childhood development learning areas", learningAreas: [] },
+    { id: "lower-primary",  name: "Lower Primary", description: "Foundational learning areas for Grades 1, 2, and 3", learningAreas: [] },
+    { id: "upper-primary",  name: "Upper Primary", description: "Intermediate learning areas for Grades 4, 5, and 6", learningAreas: [] },
+    { id: "junior-school",  name: "Junior School",  description: "Secondary preparation learning areas", learningAreas: [] },
   ],
 
-  // ── Assessment Scores ────────────────────────────────────────────────────────
-  assessmentScores: {
-    "2026_Term 1_Grade 4_All Subjects_Formative Assessment": {
-      "4": {
-        "English": "45",
-        "Kiswahili": "56",
-        "Mathematics": "87",
-        "Science & Technology": "65",
-        "Agriculture & Nutrition": "64",
-        "Social Studies": "66",
-        "Religious Education (CRE/IRE/HRE)": "45",
-        "Creative Arts": "76"
-      },
-      "5": {
-        "English": "54",
-        "Kiswahili": "65",
-        "Mathematics": "45",
-        "Science & Technology": "66",
-        "Agriculture & Nutrition": "76",
-        "Social Studies": "80",
-        "Religious Education (CRE/IRE/HRE)": "54",
-        "Creative Arts": "66"
-      }
-    }
-  },
+  // ── Assessment Scores ──────────────────────────────────────────────────────
+  // Empty: scores are entered through the Marks Entry page.
+  assessmentScores: {},
 
-  // ── Library Books ────────────────────────────────────────────────────────────
+  // ── Library Books ───────────────────────────────────────────────────────────
+  // Sample library catalogue.
   libraryBooks: [
-    { id: "lb-1", title: "Spark: English Grade 4", author: "Oxford", isbn: "978-019", category: "Core Text", stock: 120, borrowed: 85 },
-    { id: "lb-2", title: "KLB Mathematics Grade 5", author: "KLB", isbn: "978-9966", category: "Core Text", stock: 150, borrowed: 142 },
-    { id: "lb-3", title: "Dunia Yetu: Kiswahili", author: "Longhorn", isbn: "978-9977", category: "Reference", stock: 45, borrowed: 12 },
-    { id: "lb-4", title: "Science in Action", author: "Pearson", isbn: "978-0321", category: "Supplementary", stock: 60, borrowed: 58 }
+    { id: "bk-001", title: "Things Fall Apart",         author: "Chinua Achebe",        isbn: "978-0385474542", category: "Fiction",   copies: 6, available: 4, shelf: "A-12" },
+    { id: "bk-002", title: "The River Between",        author: "Ngugi wa Thiong'o",    isbn: "978-0435901680", category: "Fiction",   copies: 4, available: 2, shelf: "A-13" },
+    { id: "bk-003", title: "Primary Mathematics",      author: "MoE Kenya",            isbn: "978-9966001212", category: "Textbook",  copies: 80, available: 65, shelf: "B-04" },
+    { id: "bk-004", title: "KLB English",              author: "KLB",                  isbn: "978-9966001401", category: "Textbook",  copies: 60, available: 48, shelf: "B-09" },
+    { id: "bk-005", title: "Science & Technology",     author: "KLB",                  isbn: "978-9966001551", category: "Textbook",  copies: 50, available: 35, shelf: "C-02" },
+    { id: "bk-006", title: "Kiswahili Mufti",          author: "KLB",                  isbn: "978-9966001771", category: "Textbook",  copies: 45, available: 38, shelf: "C-11" },
+    { id: "bk-007", title: "Social Studies Atlas",     author: "Oxford",               isbn: "978-0198329882", category: "Reference", copies: 10, available: 8,  shelf: "D-01" },
+    { id: "bk-008", title: "Creative Arts Book 4",     author: "Longhorn",             isbn: "978-9966003011", category: "Textbook",  copies: 40, available: 32, shelf: "C-15" },
   ],
 
-  // ── ICT Assets ───────────────────────────────────────────────────────────────
+  // ── ICT Assets ─────────────────────────────────────────────────────────────
+  // Sample ICT inventory.
   ictAssets: [
-    { id: "1", assetTag: "ICT-LP-01", name: "HP ProBook 450", category: "Laptops", serialNumber: "CND12345XYZ", status: "Active", location: "Computer Lab 1", assignedTo: "Jane Mwangi" },
-    { id: "2", assetTag: "ICT-TB-05", name: "Samsung Galaxy Tab A8", category: "Tablets", serialNumber: "RF8S123456", status: "Active", location: "Mobile Cart A", assignedTo: "Grade 4 Blue" },
-    { id: "3", assetTag: "ICT-PJ-01", name: "Epson EB-X41", category: "Projectors", serialNumber: "V11H843040", status: "In Maintenance", location: "Staff Room", assignedTo: "John Kamau" },
-    { id: "4", assetTag: "ICT-NW-02", name: "TP-Link AX1800 Router", category: "Networking", serialNumber: "220C123456", status: "Active", location: "Server Room" },
-    { id: "5", assetTag: "ICT-LP-02", name: "Dell Latitude 5420", category: "Laptops", serialNumber: "DL5420-001", status: "Active", location: "Computer Lab 1" },
-    { id: "6", assetTag: "ICT-TB-10", name: "iPad 9th Gen", category: "Tablets", serialNumber: "IPAD9-010", status: "Active", location: "Mobile Cart B" }
+    { id: "ict-001", name: "HP Desktop PC",    type: "Desktop",   serial: "HPDX-2024-001", status: "Working", location: "ICT Lab 1", assignedTo: "", purchaseDate: "2024-05-12", warrantyUntil: "2027-05-12" },
+    { id: "ict-002", name: "HP Desktop PC",    type: "Desktop",   serial: "HPDX-2024-002", status: "Working", location: "ICT Lab 1", assignedTo: "", purchaseDate: "2024-05-12", warrantyUntil: "2027-05-12" },
+    { id: "ict-003", name: "Lenovo Laptop",    type: "Laptop",    serial: "LNV-2023-014",  status: "Working", location: "Staff Room",  assignedTo: "Grace Njeri", purchaseDate: "2023-09-04", warrantyUntil: "2026-09-04" },
+    { id: "ict-004", name: "Epson Projector",  type: "Projector", serial: "EPN-2024-003",  status: "Working", location: "Library",     assignedTo: "",         purchaseDate: "2024-01-22", warrantyUntil: "2027-01-22" },
+    { id: "ict-005", name: "Cisco Router",     type: "Network",   serial: "CSC-2024-007",  status: "Working", location: "Server Room", assignedTo: "",         purchaseDate: "2024-02-10", warrantyUntil: "2029-02-10" },
+    { id: "ict-006", name: "iPad Tablet",      type: "Tablet",    serial: "IPD-2024-022",  status: "Repair",  location: "ICT Lab 2",  assignedTo: "",         purchaseDate: "2024-04-18", warrantyUntil: "2026-04-18" },
   ],
 
-  // ── Notices / Announcements ──────────────────────────────────────────────────
+  // ── Notices / Announcements ────────────────────────────────────────────────
   notices: [
-    { id: "1", title: "Half-Term Break", content: "School will close on Friday 20th Oct for a one-week break.", date: "Oct 15, 2024", category: "Urgent", color: "bg-red-50 text-red-600" },
-    { id: "2", title: "Sports Day 2024", content: "All parents are invited to the annual sports day on Nov 5th.", date: "Oct 12, 2024", category: "Event", color: "bg-blue-50 text-blue-600" },
-    { id: "3", title: "CBC Materials Needed", description: "Grade 4 learners require clay for Creative Arts next week.", date: "Oct 10, 2024", category: "Notice", color: "bg-emerald-50 text-emerald-600" }
+    { id: "nt-001", title: "Term 1 Opening Day",     body: "Welcome back! Term 1 officially begins on Monday. All learners are expected to report in full school uniform.",          date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), priority: "high",   audience: "All" },
+    { id: "nt-002", title: "Parent-Teacher Meeting", body: "Half-term parent-teacher meeting is scheduled for Saturday from 9:00 AM. Please plan to attend.",                        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),  priority: "medium", audience: "Parents" },
+    { id: "nt-003", title: "Sports Day",             body: "Inter-house athletics competition will be held on the last Friday of the month. All learners are encouraged to participate.", date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),  priority: "low",    audience: "All" },
   ],
 
-  // ── System Settings ──────────────────────────────────────────────────────────
+  // ── System Settings ────────────────────────────────────────────────────────
+  // Seeded with sensible school defaults so the app boots with configuration.
   settings: {
     general: {
       schoolName: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
@@ -755,19 +188,19 @@ export const INITIAL_SEED_DATA = {
       phone: "+254 712 345 678",
       email: "info@munyaka.sc.ke",
       location: "Munyaka, Eldoret East, Uasin Gishu County",
-      maintenanceMode: false
+      maintenanceMode: false,
     },
     academic: {
-      activeYear: "2026",
+      activeYear: new Date().getFullYear().toString(),
       activeTerm: "term1",
-      termStartDate: "2026-01-05",
-      termEndDate: "2026-04-10",
+      termStartDate: "",
+      termEndDate: "",
       gradingScale: [
         { level: "EE", descriptor: "Exceeding Expectations", min: 80, max: 100, points: 4 },
-        { level: "ME", descriptor: "Meeting Expectations", min: 50, max: 79, points: 3 },
-        { level: "AE", descriptor: "Approaching Expectations", min: 30, max: 49, points: 2 },
-        { level: "BE", descriptor: "Below Expectations", min: 0, max: 29, points: 1 }
-      ]
+        { level: "ME", descriptor: "Meeting Expectations",     min: 50, max: 79,  points: 3 },
+        { level: "AE", descriptor: "Approaching Expectations",  min: 30, max: 49,  points: 2 },
+        { level: "BE", descriptor: "Below Expectations",      min: 0,  max: 29,  points: 1 },
+      ],
     },
     permissions: {
       owner: {
@@ -776,15 +209,15 @@ export const INITIAL_SEED_DATA = {
         student_records: { read: true, create: true, edit: true, delete: true },
         finance_fees: { read: true, create: true, edit: true, delete: true },
         payment_subscriptions: { read: true, create: true, edit: true, delete: true },
-        staff_mgmt: { read: true, create: true, edit: true, delete: true }
+        staff_mgmt: { read: true, create: true, edit: true, delete: true },
       },
-      super_admin: {
+      admin: {
         sys_config: { read: true, create: true, edit: true, delete: true },
         academic_grading: { read: true, create: true, edit: true, delete: true },
         student_records: { read: true, create: true, edit: true, delete: true },
         finance_fees: { read: true, create: true, edit: true, delete: true },
         payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: true, create: true, edit: true, delete: true }
+        staff_mgmt: { read: true, create: true, edit: true, delete: true },
       },
       head_teacher: {
         sys_config: { read: true, create: true, edit: true, delete: false },
@@ -792,7 +225,7 @@ export const INITIAL_SEED_DATA = {
         student_records: { read: true, create: true, edit: true, delete: false },
         finance_fees: { read: true, create: true, edit: true, delete: false },
         payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: true, create: true, edit: true, delete: false }
+        staff_mgmt: { read: true, create: true, edit: true, delete: false },
       },
       bursar: {
         sys_config: { read: false, create: false, edit: false, delete: false },
@@ -800,7 +233,7 @@ export const INITIAL_SEED_DATA = {
         student_records: { read: false, create: false, edit: false, delete: false },
         finance_fees: { read: true, create: false, edit: false, delete: false },
         payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: false, create: false, edit: false, delete: false }
+        staff_mgmt: { read: false, create: false, edit: false, delete: false },
       },
       teacher: {
         sys_config: { read: false, create: false, edit: false, delete: false },
@@ -808,7 +241,7 @@ export const INITIAL_SEED_DATA = {
         student_records: { read: true, create: false, edit: false, delete: false },
         finance_fees: { read: true, create: false, edit: false, delete: false },
         payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: false, create: false, edit: false, delete: false }
+        staff_mgmt: { read: false, create: false, edit: false, delete: false },
       },
       parent: {
         sys_config: { read: false, create: false, edit: false, delete: false },
@@ -816,7 +249,7 @@ export const INITIAL_SEED_DATA = {
         student_records: { read: true, create: false, edit: false, delete: false },
         finance_fees: { read: false, create: false, edit: false, delete: false },
         payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: false, create: false, edit: false, delete: false }
+        staff_mgmt: { read: false, create: false, edit: false, delete: false },
       },
       student: {
         sys_config: { read: true, create: false, edit: false, delete: false },
@@ -824,31 +257,27 @@ export const INITIAL_SEED_DATA = {
         student_records: { read: true, create: false, edit: false, delete: false },
         finance_fees: { read: true, create: false, edit: false, delete: false },
         payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: true, create: false, edit: false, delete: false }
-      }
+        staff_mgmt: { read: true, create: false, edit: false, delete: false },
+      },
     },
     geofence: { lat: 0.5142, lng: 35.2698, radius: 500 },
     geofenceEnabled: true,
     devBypass: false,
     sessionSecurity: {
       idleTimeout: "30m",
-      requirePasswordOnFirstLogin: true
+      requirePasswordOnFirstLogin: true,
     },
-    auditLogs: [
-      { timestamp: "2026-03-31 09:14:02", admin: "System Admin", action: "Geofence Radius Updated (150m)", ip: "192.168.1.102 (Chrome/Win)" },
-      { timestamp: "2026-03-30 16:45:11", admin: "System Admin", action: "Credentials Reset for J. Mwangi", ip: "192.168.1.102 (Chrome/Win)" },
-      { timestamp: "2026-03-28 11:20:30", admin: "Head Teacher", action: "Grade Bounds Modified (Grade 4)", ip: "192.168.1.108 (Safari/Mac)" },
-      { timestamp: "2026-03-25 08:30:15", admin: "System Admin", action: "Idle Session Timeout set to 30m", ip: "192.168.1.102 (Chrome/Win)" }
-    ]
+    auditLogs: [],
   },
 
   // ── Portal Statistics Baseline ───────────────────────────────────────────────
+  // Zero baseline: all counts are driven from live localStorage reads.
   portalStats: {
-    totalStudents: 14,
-    totalTeachers: 5,
-    juniorSchoolCount: 5,
-    feesCollected: 700,
-    todayAttendanceRate: 100,
-    lastUpdated: new Date().toISOString()
-  }
+    totalStudents: 0,
+    totalTeachers: 0,
+    juniorSchoolCount: 0,
+    feesCollected: 0,
+    todayAttendanceRate: 0,
+    lastUpdated: new Date().toISOString(),
+  },
 };

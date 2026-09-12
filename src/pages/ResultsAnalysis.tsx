@@ -32,7 +32,8 @@ import {
   X,
   Download
 } from 'lucide-react';
-import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
+import { GRADES_DATA, Grade } from '@/lib/mock-data';
+import { getStudents } from '@/services/persistentStore';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useFileDownload } from '@/utils/fileDownloader';
@@ -69,7 +70,7 @@ const GRADE_ORDER = [
 ];
 
 const getGradeSortIndex = (gradeName: string): number => {
-  const normalized = gradeName.toLowerCase().trim();
+  const normalized = String(gradeName || '').toLowerCase().trim();
   const index = GRADE_ORDER.findIndex(g => normalized.includes(g));
   return index !== -1 ? index : 999;
 };
@@ -184,10 +185,11 @@ const ResultsAnalysis = () => {
   const filteredStudents = useMemo(() => {
     if (!currentGrade) return [];
     const gradeNum = currentGrade.name.replace(/[^0-9]/g, '');
+    const students = getStudents();
 
-    return STUDENTS.filter(s => {
-      const matchesGrade = 
-        s.grade === gradeNum || 
+    return students.filter(s => {
+      const matchesGrade =
+        s.grade === gradeNum ||
         s.grade === currentGrade.name ||
         `Grade ${s.grade}` === currentGrade.name;
 
@@ -195,16 +197,15 @@ const ResultsAnalysis = () => {
       if (selectedStreamId !== "all") {
         const streamObj = availableStreams.find(sItem => sItem.id === selectedStreamId);
         if (streamObj) {
-          matchesStream = s.stream.toLowerCase() === streamObj.name.toLowerCase();
+          matchesStream = String(s.stream ?? "").toLowerCase() === streamObj.name.toLowerCase();
         }
       }
 
-      const matchesSearch = 
-        !searchTerm.trim() ||
-        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) || 
-        (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+      const matchesSearch =
+              !String(searchTerm || '').trim() ||
+              (s.name && String(s.name).toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (s.admNo && String(s.admNo).toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (s.id && String(s.id).toLowerCase().includes(String(searchTerm || '').toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
     });
@@ -238,7 +239,7 @@ const ResultsAnalysis = () => {
       return {
         studentId: student.id,
         name: student.name,
-        assessmentNo: student.admissionNumber || student.assessment || student.id,
+        assessmentNo: String((student as any).admissionNumber || (student as any).assessment || student.id),
         stream: student.stream,
         scores,
         totalMarks: total,
@@ -340,7 +341,7 @@ const ResultsAnalysis = () => {
     const line4 = `YEAR: ${academicYear}, GRADE: ${currentGrade.name}, STREAM: ${selectedStreamName}, TERM: ${termLabel}, EXAM: ${examType}`;
     const line5 = `CLASS MEAN SCORE: ${classMeanScore}%, TOTAL LEARNERS: ${studentResults.length}`;
 
-    const headers = ["Rank", "Assessment No", "Student Name", "Stream", ...learningAreas.map(a => a.name), "Total Marks", "Mean Score (%)", "Grade Level"];
+    const headers = ["Rank", "Assessment No", "Student Name", "Stream", ...learningAreas.map(a => (a as any).name), "Total Marks", "Mean Score (%)", "Grade Level"];
 
     const rows = studentResults.map(s => {
       const subjectScores = learningAreas.map(a => s.scores[a] || 0);
@@ -386,28 +387,28 @@ const ResultsAnalysis = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      
-      {/* Header & Export Action Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">Results Analysis</h1>
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+
+      {/* Header & Export Action Controls - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 w-full max-w-full overflow-hidden">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900 whitespace-normal break-words">Results Analysis</h1>
             {showSavedBadge && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
                 <CheckCircle2 size={12} /> Saved
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1 break-words hyphens-auto">
             Performance analytics, subject rankings, and class score sheets.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <Button
             variant="outline"
-            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
             onClick={handleDownloadCSV}
             disabled={resultsExport.isDownloading}
           >
@@ -417,7 +418,7 @@ const ResultsAnalysis = () => {
 
           <Button
             variant="outline"
-            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
             onClick={handlePrint}
           >
             <Printer size={16} /> Print Report / Save PDF
@@ -442,9 +443,9 @@ const ResultsAnalysis = () => {
         </div>
       </div>
 
-      {/* Filter Toolbar (Hidden on Print) */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 print:hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+      {/* Filter Toolbar (Hidden on Print) - responsive grid */}
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 print:hidden w-full max-w-full overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           <div className="space-y-1.5">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Academic Year</label>
@@ -684,7 +685,7 @@ const ResultsAnalysis = () => {
                   </div>
                   <div>
                     <p className="font-bold text-slate-900 text-sm leading-tight">{student.name}</p>
-                    <p className="text-[11px] text-slate-400 font-medium">Stream: {student.stream} • ID: {student.assessmentNo}</p>
+                    <p className="text-[11px] text-slate-400 font-medium">Stream: {student?.stream} • ID: {student?.assessmentNo}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -762,33 +763,33 @@ const ResultsAnalysis = () => {
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left border-collapse">
+          <div className="w-full overflow-x-auto block">
+            <table className="w-full text-sm text-left border-collapse min-w-[650px] table-auto">
               <thead className="bg-slate-50/80 border-b">
                 <tr>
-                  <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-16 text-center">
+                  <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-16 text-center">
                     Rank
                   </th>
-                  <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r min-w-[200px]">
+                  <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-slate-400 border-r min-w-[200px]">
                     Student Name & Admin No
                   </th>
                   {selectedStreamId === "all" && (
-                    <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center border-r">
+                    <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-slate-400 text-center border-r">
                       Stream
                     </th>
                   )}
                   {learningAreas.map(area => (
-                    <th key={area} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-600 text-center border-r min-w-[90px]">
+                    <th key={area} className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-slate-600 text-center border-r min-w-[90px]">
                       {area}
                     </th>
                   ))}
-                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
+                  <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
                     Total Marks
                   </th>
-                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
+                  <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
                     Mean (%)
                   </th>
-                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-slate-700 text-center min-w-[90px]">
+                  <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-slate-700 text-center min-w-[90px]">
                     Level
                   </th>
                 </tr>
@@ -797,26 +798,26 @@ const ResultsAnalysis = () => {
                 {studentResults.length > 0 ? (
                   studentResults.map((student) => (
                     <tr key={student.studentId} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 font-black text-center border-r text-slate-900">
+                      <td className="px-4 py-3 whitespace-nowrap font-black text-center border-r text-slate-900">
                         #{student.rank}
                       </td>
-                      <td className="px-6 py-4 border-r">
+                      <td className="px-4 py-3 whitespace-nowrap border-r">
                         <p className="font-bold text-slate-900">{student.name}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Admin No: {student.assessmentNo}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Admin No: {student?.assessmentNo}</p>
                       </td>
                       {selectedStreamId === "all" && (
-                        <td className="px-4 py-4 text-center font-bold text-slate-600 border-r">
+                        <td className="px-4 py-3 whitespace-nowrap text-center font-bold text-slate-600 border-r">
                           <Badge variant="outline" className="rounded-lg border-slate-200 text-xs">
                             {student.stream}
                           </Badge>
                         </td>
                       )}
                       {learningAreas.map(area => (
-                        <td key={area} className="px-3 py-4 border-r text-center font-bold text-slate-700">
+                        <td key={area} className="px-3 py-3 whitespace-nowrap border-r text-center font-bold text-slate-700">
                           {student.scores[area] !== undefined ? student.scores[area] : "—"}
                         </td>
                       ))}
-                      <td className="px-4 py-4 text-center bg-indigo-50/20 font-black text-indigo-900">
+                      <td className="px-4 py-3 whitespace-nowrap text-center bg-indigo-50/20 font-black text-indigo-900">
                         {student.totalMarks}
                       </td>
                       <td className="px-4 py-4 text-center bg-indigo-50/20 font-black text-indigo-700 text-base">

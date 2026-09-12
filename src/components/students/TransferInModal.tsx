@@ -48,7 +48,9 @@ interface FormState {
   fullName: string;
   gender: 'Male' | 'Female' | 'Other';
   dob: string;
+  birthCertificateNo: string;
   admissionNumber: string;
+  assessmentNo: string;
   nemisUpi: string;
 
   // ── Transfer metadata ─────────────────────────────────────────────
@@ -74,12 +76,35 @@ const REASON_PRESETS = [
 ];
 
 /**
- * Auto-generate a fresh Admission Number using the school's A-prefix
- * format. Six random digits keep collision risk negligible for the
- * sizes we expect while remaining easy to read aloud.
+ * Auto-generate a fresh Admission Number using the school's MUN prefix
+ * format with grade and year-based sequence.
  */
-const generateAdmissionNumber = (): string =>
-  `A${Math.floor(100000 + Math.random() * 900000)}`;
+const generateUniqueAdmissionNo = (
+  grade: string,
+  existingStudents: Learner[],
+  enrollmentYear: number
+): string => {
+  // Ensure grade has a safe default
+  const safeGrade = grade || 'Grade 1';
+  const safeStudents = existingStudents || [];
+  
+  // Extract numeric grade digit (e.g., "Grade 4" -> 4, "PP1" -> 0, "PP2" -> 2)
+  const gradeMatch = safeGrade.match(/(\d+)/);
+  const gradeDigit = gradeMatch ? gradeMatch[1] : '0';
+  
+  // Filter students by same grade and enrollment year
+  const cohortStudents = safeStudents.filter((s: Learner) => {
+    const matchesGrade = (s.grade || '').toLowerCase() === safeGrade.toLowerCase();
+    // Check if student has admission year matching (stored in dateOfAdmission)
+    const studentYear = s.dateOfAdmission
+      ? new Date(s.dateOfAdmission).getFullYear()
+      : null;
+    return matchesGrade && studentYear === enrollmentYear;
+  });
+  
+  const nextSeq = cohortStudents.length + 1;
+  return `MUN-G${gradeDigit}-${String(nextSeq).padStart(3, '0')}/${enrollmentYear}`;
+};
 
 const todayIso = (): string => new Date().toISOString().split('T')[0];
 
@@ -137,19 +162,36 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
   }, [isOpen]);
 
   /* ── form state ─────────────────────────────────────────────────── */
-  const buildInitialState = (): FormState => ({
-    fullName: '',
-    gender: 'Male',
-    dob: '',
-    admissionNumber: generateAdmissionNumber(),
-    nemisUpi: '',
-    previousSchool: '',
-    clearanceRef: '',
-    reason: REASON_PRESETS[0],
-    dateAdmitted: todayIso(),
-    grade: gradesConfig.grades[0] ?? '',
-    stream: '',
-  });
+  const getExistingLearners = (): Learner[] => {
+    try {
+      const raw = localStorage.getItem('school_learners_data');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const currentYear = new Date().getFullYear();
+  
+  const buildInitialState = (): FormState => {
+    const existingStudents = getExistingLearners();
+    const defaultGrade = gradesConfig.grades[0] ?? 'Grade 1';
+    return {
+      fullName: '',
+      gender: 'Male',
+      dob: '',
+      birthCertificateNo: '',
+      admissionNumber: generateUniqueAdmissionNo(defaultGrade, existingStudents, currentYear),
+      assessmentNo: '',
+      nemisUpi: '',
+      previousSchool: '',
+      clearanceRef: '',
+      reason: REASON_PRESETS[0],
+      dateAdmitted: todayIso(),
+      grade: defaultGrade,
+      stream: '',
+    };
+  };
 
   const [form, setForm] = useState<FormState>(buildInitialState);
   const [formError, setFormError] = useState('');
@@ -182,13 +224,36 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
     }
   }, [form.grade, availableStreams, form.stream]);
 
+  /* Auto-regenerate admission number when grade changes. */
+  useEffect(() => {
+    const grade = form.grade || gradesConfig.grades[0] || 'Grade 1';
+    const existingStudents = getExistingLearners() || [];
+    const selectedYear = form.dateAdmitted
+      ? new Date(form.dateAdmitted).getFullYear()
+      : new Date().getFullYear();
+    const newAdmNo = generateUniqueAdmissionNo(grade, existingStudents, selectedYear);
+    setForm((prev) => ({ ...prev, admissionNumber: newAdmNo }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.grade]);
+
   /* ── handlers ───────────────────────────────────────────────────── */
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleRegenerateAdmNo = () => {
-    setForm((prev) => ({ ...prev, admissionNumber: generateAdmissionNumber() }));
+    const existingStudents = getExistingLearners() || [];
+    const selectedYear = form.dateAdmitted
+      ? new Date(form.dateAdmitted).getFullYear()
+      : new Date().getFullYear();
+    
+    const newAdmNo = generateUniqueAdmissionNo(
+      form.grade || 'Grade 1',
+      existingStudents,
+      selectedYear
+    );
+
+    setForm((prev) => ({ ...prev, admissionNumber: newAdmNo }));
   };
 
   const handleClose = () => {
@@ -197,26 +262,33 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
   };
 
   const validate = (): string => {
-    if (!form.fullName.trim()) return 'Please enter the learner\u2019s Full Name.';
-    if (!form.gender) return 'Please select a Gender.';
-    if (!form.dob) return 'Please provide the Date of Birth.';
-    if (!form.admissionNumber.trim()) return 'Admission Number is required.';
-
-    // Assessment-number format check (school convention: starts with a letter).
-    if (!/^[A-Za-z]/.test(form.admissionNumber.trim())) {
-      return 'Admission Number must start with an alphabetic letter (e.g. A827361).';
-    }
-
-    if (!form.previousSchool.trim())
-      return 'Please record the Previous School Name for audit purposes.';
-    if (!form.clearanceRef.trim())
-      return 'Please capture the Previous School Clearance / Transfer Reference Number.';
-    if (!form.reason.trim()) return 'Please provide a Reason for Transfer.';
-    if (!form.dateAdmitted) return 'Please select the Date Admitted.';
-    if (!form.grade) return 'Please select a Grade Level.';
-    if (!form.stream) return 'Please select a Stream.';
-    return '';
-  };
+      if (!String(form.fullName || '').trim()) return 'Please enter the learner\u2019s Full Name.';
+      if (!form.gender) return 'Please select a Gender.';
+      if (!form.dob) return 'Please provide the Date of Birth.';
+      
+      // Admission Number is required
+      const hasAdmNo = String(form.admissionNumber || '').trim();
+      if (!hasAdmNo) {
+        return 'Please generate or enter an Admission Number.';
+      }
+      
+      // At least one other identifier should be provided
+      const hasBirthCert = String(form.birthCertificateNo || '').trim();
+      const hasAssessment = String(form.assessmentNo || '').trim();
+      if (!hasBirthCert && !hasAssessment) {
+        return 'Please provide either a Birth Certificate Number or Assessment Number.';
+      }
+ 
+      if (!String(form.previousSchool || '').trim())
+        return 'Please record the Previous School Name for audit purposes.';
+      if (!String(form.clearanceRef || '').trim())
+        return 'Please capture the Previous School Clearance / Transfer Reference Number.';
+      if (!String(form.reason || '').trim()) return 'Please provide a Reason for Transfer.';
+      if (!form.dateAdmitted) return 'Please select the Date Admitted.';
+      if (!form.grade) return 'Please select a Grade Level.';
+      if (!form.stream) return 'Please select a Stream.';
+      return '';
+    };
 
   /**
    * Persist the learner row + roster insertion + history log atomically.
@@ -234,7 +306,10 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
     }
 
     // Reject duplicate admission numbers — they MUST be unique.
-    const admNo = form.admissionNumber.trim();
+    const admNo = String(form.admissionNumber || '').trim();
+    const birthCertNo = String(form.birthCertificateNo || '').trim();
+    const assessmentNo = String(form.assessmentNo || '').trim();
+    
     if (existing.some((l) => (l.admNo || '').toLowerCase() === admNo.toLowerCase())) {
       showError(
         `Admission Number ${admNo} already exists. Please choose another.`,
@@ -248,7 +323,9 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
         Math.random() * 1000,
       )}`,
       admNo,
-      name: form.fullName.trim(),
+      birthCertificateNo: birthCertNo || undefined,
+      assessment: assessmentNo || undefined,
+      name: String(form.fullName || '').trim(),
       grade: form.grade,
       stream: form.stream,
       gender: form.gender,
@@ -257,10 +334,10 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
       status: 'Active',
       dob: form.dob,
       dateOfAdmission: form.dateAdmitted,
-      nemisUpi: form.nemisUpi.trim() || admNo,
-      previousSchool: form.previousSchool.trim(),
-      previousSchoolClearanceRef: form.clearanceRef.trim(),
-      transferReason: form.reason.trim(),
+      nemisUpi: String(form.nemisUpi || '').trim() || admNo,
+      previousSchool: String(form.previousSchool || '').trim(),
+      previousSchoolClearanceRef: String(form.clearanceRef || '').trim(),
+      transferReason: String(form.reason || '').trim(),
     };
 
     // 1. Insert into the active learner directory.
@@ -464,39 +541,72 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Admission Number <span className="text-rose-500">*</span>
+                Birth Certificate Number
               </Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Hash
-                    size={14}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                  <Input
-                    value={form.admissionNumber}
-                    onChange={(e) =>
-                      update('admissionNumber', e.target.value.toUpperCase())
-                    }
-                    placeholder="A100200"
-                    className="pl-9 uppercase rounded-xl h-12 bg-slate-50 border-none font-bold"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleRegenerateAdmNo}
-                  className="h-12 rounded-xl border-slate-200 bg-white hover:bg-slate-50 px-3 font-bold text-slate-600 gap-1.5"
-                  title="Generate a fresh admission number"
-                >
-                  <Sparkles size={14} />
-                  Auto
-                </Button>
-              </div>
+              <Input
+                value={form.birthCertificateNo}
+                onChange={(e) =>
+                  update('birthCertificateNo', e.target.value.toUpperCase())
+                }
+                placeholder="e.g. BC12345"
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold uppercase"
+              />
               <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-                Use the Auto button to generate a unique assessment number, or
-                type your own.
+                Enter the official Birth Certificate number. Required for Parent Portal verification.
               </p>
             </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Assessment No. <span className="text-[9px] font-bold text-slate-400 normal-case tracking-normal">(KNEC / NEMIS)</span>
+              </Label>
+              <Input
+                value={form.assessmentNo}
+                onChange={(e) =>
+                  update('assessmentNo', e.target.value.toUpperCase())
+                }
+                placeholder="Optional"
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold uppercase"
+              />
+              <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                KNEC or NEMIS assessment number (optional).
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+              Admission Number <span className="text-rose-500">*</span>
+            </Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Hash
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <Input
+                  value={form.admissionNumber}
+                  onChange={(e) =>
+                    update('admissionNumber', e.target.value.toUpperCase())
+                  }
+                  placeholder="Auto-generated"
+                  className="pl-9 uppercase rounded-xl h-12 bg-indigo-50 border border-indigo-200 font-bold text-indigo-700"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleRegenerateAdmNo}
+                className="h-12 rounded-xl border-slate-200 bg-white hover:bg-slate-50 px-3 font-bold text-slate-600 gap-1.5"
+                title="Generate a fresh admission number"
+              >
+                <Sparkles size={14} />
+                Auto
+              </Button>
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+              Click Auto to generate a unique admission number in MUN-G[Grade]-[Seq]/[Year] format, or enter manually.
+            </p>
           </div>
         </section>
 

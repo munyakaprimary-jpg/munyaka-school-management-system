@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format } from "date-fns";
-import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
 import { downloadCSV } from '@/utils/downloadHelper';
+import { lsSet, notifyDataChanged, lsRead } from '@/utils/storage';
+import { getLocalStorage, tryParse } from '@/utils/storageUtils';
 
 interface SessionAttendance {
   status: string;
@@ -31,14 +32,14 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
   const { selectedGrade: propSelectedGrade, selectedStream: propSelectedStream, selectedDate: propSelectedDate } = options;
 
   // Initialize filters from localStorage or props
-  const [selectedClass, setSelectedClass] = useState(() => 
-    propSelectedGrade || localStorage.getItem(SELECTED_CLASS_KEY) || 'Grade 6'
+  const [selectedClass, setSelectedClass] = useState(() =>
+    propSelectedGrade || lsRead<string>(SELECTED_CLASS_KEY, '') || 'Grade 6'
   );
-  const [selectedStream, setSelectedStream] = useState(() => 
-    propSelectedStream || localStorage.getItem(SELECTED_STREAM_KEY) || 'all'
+  const [selectedStream, setSelectedStream] = useState(() =>
+    propSelectedStream || lsRead<string>(SELECTED_STREAM_KEY, '') || 'all'
   );
-  const [selectedDate, setSelectedDate] = useState(() => 
-    propSelectedDate || localStorage.getItem(SELECTED_DATE_KEY) || format(new Date(), "yyyy-MM-dd")
+  const [selectedDate, setSelectedDate] = useState(() =>
+    propSelectedDate || lsRead<string>(SELECTED_DATE_KEY, '') || format(new Date(), "yyyy-MM-dd")
   );
 
   // Sync with props when they change
@@ -62,28 +63,18 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
 
   // Load grades/streams from localStorage
   const [gradesData, setGradesData] = useState<any[]>(() => {
-    try {
-      const stored = localStorage.getItem(GRADES_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.error("Error loading munyaka_grades:", e);
-    }
-    return GRADES_DATA;
+    const parsed = lsRead<unknown>(GRADES_KEY, []);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed as any[];
+    return [];
   });
 
   // Listen for storage changes
   useEffect(() => {
     const handleStorageChange = () => {
       try {
-        const stored = localStorage.getItem(GRADES_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setGradesData(parsed);
-          }
+        const parsed = lsRead<unknown>(GRADES_KEY, []);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setGradesData(parsed as any[]);
         }
       } catch (e) {
         console.error("Error parsing munyaka_grades:", e);
@@ -91,36 +82,41 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    const onChanged = () => handleStorageChange();
+    window.addEventListener('munyaka:data-changed', onChanged);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('munyaka:data-changed', onChanged);
+    };
   }, []);
 
   // Persist filter changes
   useEffect(() => {
-    localStorage.setItem(SELECTED_CLASS_KEY, selectedClass);
+    lsSet(SELECTED_CLASS_KEY, selectedClass);
   }, [selectedClass]);
 
   useEffect(() => {
-    localStorage.setItem(SELECTED_STREAM_KEY, selectedStream);
+    lsSet(SELECTED_STREAM_KEY, selectedStream);
   }, [selectedStream]);
 
   useEffect(() => {
-    localStorage.setItem(SELECTED_DATE_KEY, selectedDate);
+    lsSet(SELECTED_DATE_KEY, selectedDate);
   }, [selectedDate]);
 
   // Check if attendance has been submitted globally
   const [isRegisterSubmitted, setIsRegisterSubmitted] = useState(false);
   
   useEffect(() => {
-    const stored = localStorage.getItem(SUBMISSION_STATUS_KEY);
-    if (stored) {
-      try {
-        const submissionData = JSON.parse(stored);
+    const ls = getLocalStorage();
+    if (ls) {
+      const stored = ls.getItem(SUBMISSION_STATUS_KEY);
+      const submissionData = tryParse<Record<string, boolean>>(stored);
+      if (submissionData) {
         const key = `${selectedClass}_${selectedStream}_${selectedDate}`;
         if (submissionData[key]) {
           setIsRegisterSubmitted(true);
+          return;
         }
-      } catch (e) {
-        console.error("Error parsing submission status:", e);
       }
     }
     setIsRegisterSubmitted(false);
@@ -129,32 +125,31 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
   useEffect(() => {
     const submissionData = {};
     submissionData[`${selectedClass}_${selectedStream}_${selectedDate}`] = isRegisterSubmitted;
-    localStorage.setItem(SUBMISSION_STATUS_KEY, JSON.stringify(submissionData));
+    lsSet(SUBMISSION_STATUS_KEY, submissionData);
   }, [isRegisterSubmitted, selectedClass, selectedStream, selectedDate]);
 
   // Get available streams for the selected class
   const getAvailableStreams = (): string[] => {
     try {
-      const rawGrades = localStorage.getItem('munyaka_grades');
-      if (!rawGrades) return ['All Streams'];
+      const grades = lsRead<unknown>('munyaka_grades', []);
+      if (!Array.isArray(grades) || grades.length === 0) return ['All Streams'];
 
-      const grades = JSON.parse(rawGrades);
       const currentGradeObj = grades.find(
-        (g: any) => g.name === selectedClass || g.id === selectedClass || g.code === selectedClass
+        (g: any) => g?.name === selectedClass || g?.id === selectedClass || g?.code === selectedClass
       );
 
-      if (currentGradeObj && Array.isArray(currentGradeObj.streams) && currentGradeObj.streams.length > 0) {
+      if (currentGradeObj && Array.isArray(currentGradeObj?.streams) && currentGradeObj.streams.length > 0) {
         const extractedStreams = currentGradeObj.streams.map((s: any) =>
-          typeof s === 'string' ? s : s.name || s.label || s.streamName
+          typeof s === 'string' ? s : s?.name || s?.label || s?.streamName
         );
         return ['All Streams', ...extractedStreams];
       }
 
       const allUniqueStreams = new Set<string>();
       grades.forEach((g: any) => {
-        if (Array.isArray(g.streams)) {
+        if (Array.isArray(g?.streams)) {
           g.streams.forEach((s: any) => {
-            const streamName = typeof s === 'string' ? s : s.name || s.label;
+            const streamName = typeof s === 'string' ? s : s?.name || s?.label;
             if (streamName) allUniqueStreams.add(streamName);
           });
         }
@@ -180,50 +175,42 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
   }, [selectedClass, availableStreams, selectedStream]);
 
   // Source of truth: Students filtered by class and stream
-  const learnersInGrade = useMemo(() => {
-    let students = [];
-    
-    const storedStudents = localStorage.getItem(STUDENTS_KEY);
-    if (storedStudents) {
-      try {
-        students = JSON.parse(storedStudents);
-      } catch (e) {
-        console.error("Error parsing students:", e);
-        students = STUDENTS;
-      }
-    } else {
-      students = STUDENTS;
-    }
+  const learnersInGrade = useMemo((): { id: number; name: string; assessment: string }[] => {
+    const storedStudents = lsRead<unknown>(STUDENTS_KEY, []);
+    const students = Array.isArray(storedStudents)
+      ? storedStudents.filter((item): item is Record<string, unknown> =>
+          item !== null && typeof item === 'object'
+        )
+      : [];
 
     // Normalize the selected class for comparison
-    const normalizeGrade = (grade: string) => {
-      return grade.replace(/^Grade\s*/i, '').trim();
-    };
+    const normalizeGrade = (grade: string): string =>
+      grade?.replace?.(/^Grade\s*/i, '')?.trim?.() ?? grade ?? '';
 
     const selectedGradeNormalized = normalizeGrade(selectedClass);
-    
+
     // Filter by class (grade) - handle both "Grade 6" and "6" formats
     const classStudents = students.filter(s => {
-      const studentGrade = s.grade || s.class || '';
-      const studentGradeNormalized = normalizeGrade(studentGrade);
+      const studentGrade = s?.grade ?? s?.class ?? '';
+      const studentGradeNormalized = normalizeGrade(studentGrade as string);
       return studentGradeNormalized === selectedGradeNormalized;
     });
 
     // Filter by stream - handle case-insensitive matching
     if (selectedStream !== 'all' && selectedStream !== 'All Streams') {
-      return classStudents.filter(s => 
-        s.stream?.toLowerCase() === selectedStream.toLowerCase()
-      ).map(s => ({
-        id: parseInt(s.id) || Math.random(),
-        name: s.name,
-        assessment: s.assessment
-      }));
+      return classStudents
+        .filter((s: Record<string, unknown>) => String(s?.stream ?? '').toLowerCase() === selectedStream?.toLowerCase?.())
+        .map((s: Record<string, unknown>) => ({
+          id: parseInt(String(s?.id ?? ''), 10) || Math.random(),
+          name: String(s?.name ?? 'Unknown'),
+          assessment: String(s?.assessment ?? ''),
+        }));
     }
-    
-    return classStudents.map(s => ({
-      id: parseInt(s.id) || Math.random(),
-      name: s.name,
-      assessment: s.assessment
+
+    return classStudents.map((s: Record<string, unknown>) => ({
+      id: parseInt(String(s?.id ?? ''), 10) || Math.random(),
+      name: String(s?.name ?? 'Unknown'),
+      assessment: String(s?.assessment ?? ''),
     }));
   }, [selectedClass, selectedStream]);
 
@@ -234,15 +221,10 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
 
   useEffect(() => {
     setIsInitialized(false);
-    const saved = localStorage.getItem(currentStorageKey);
-    
-    if (saved) {
-      try {
-        setMarkedStudents(JSON.parse(saved));
-      } catch (e) {
-        console.error("Error loading attendance:", e);
-        initializeDefaults();
-      }
+    const saved = lsRead<Record<number, StudentAttendance>>(currentStorageKey, {});
+
+    if (saved && Object.keys(saved).length > 0) {
+      setMarkedStudents(saved);
     } else {
       initializeDefaults();
     }
@@ -264,7 +246,7 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
 
   useEffect(() => {
     if (isInitialized && Object.keys(markedStudents).length > 0) {
-      localStorage.setItem(currentStorageKey, JSON.stringify(markedStudents));
+      lsSet(currentStorageKey, markedStudents);
     }
   }, [markedStudents, isInitialized, currentStorageKey]);
 

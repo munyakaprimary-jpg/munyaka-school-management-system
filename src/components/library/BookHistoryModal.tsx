@@ -193,7 +193,7 @@ export const BookHistoryModal: React.FC<BookHistoryModalProps> = ({
           <div class="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL</div>
           <div class="report-title">LIBRARY CIRCULATION REPORT</div>
           <div class="report-meta">
-            <strong>Book:</strong> ${book.title} (${book.accession_no}) | 
+            <strong>Book:</strong> ${book.title} (${(book as any).accession_no ?? book.isbn ?? ''}) |
             <strong>Report Date:</strong> ${todayStr} | 
             <strong>Filters:</strong> Grade: ${gradeLabel}, Stream: ${streamLabel} | 
             <strong>Total Records:</strong> ${filteredLogs.length}

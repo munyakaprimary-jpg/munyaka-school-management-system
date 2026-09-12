@@ -24,19 +24,17 @@ import {
   hasStudentPortalAccess,
   PERMISSIONS,
 } from '@/rbac/permissionMatrix';
+import { getLocalStorage, tryParse, safeWrite } from '@/utils/storageUtils';
 
 const ICT_MANAGER_PERMISSION_KEY = 'munyaka_ict_manager_permission';
 
 /* ── legacy localStorage helpers (kept intact for RBAC-delegation) ── */
 const getIctUserIds = (): string[] => {
-  try {
-    const raw = localStorage.getItem(ICT_MANAGER_PERMISSION_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed.userIds) ? parsed.userIds : [];
-  } catch {
-    return [];
-  }
+  const ls = getLocalStorage();
+  if (!ls) return [];
+  const parsed = tryParse<{ userIds?: unknown }>(ls.getItem(ICT_MANAGER_PERMISSION_KEY));
+  if (!parsed || !Array.isArray(parsed.userIds)) return [];
+  return parsed.userIds.filter((id): id is string => typeof id === 'string');
 };
 
 export function usePermissions() {
@@ -93,24 +91,17 @@ export function usePermissions() {
 
   /* ── legacy delegation helpers (admin always passes) ── */
   const grantIctPermission = (uid: string): void => {
-    try {
-      const ids = getIctUserIds();
-      if (!ids.includes(uid)) {
-        localStorage.setItem(
-          ICT_MANAGER_PERMISSION_KEY,
-          JSON.stringify({ userIds: [...ids, uid] })
-        );
-      }
-    } catch { /* ignore */ }
+    const ids = getIctUserIds();
+    if (!ids.includes(uid)) {
+      safeWrite(ICT_MANAGER_PERMISSION_KEY, { userIds: [...ids, uid] });
+    }
   };
 
   const revokeIctPermission = (uid: string): void => {
-    try {
-      localStorage.setItem(
-        ICT_MANAGER_PERMISSION_KEY,
-        JSON.stringify({ userIds: getIctUserIds().filter((id) => id !== uid) })
-      );
-    } catch { /* ignore */ }
+    safeWrite(
+      ICT_MANAGER_PERMISSION_KEY,
+      { userIds: getIctUserIds().filter((id) => id !== uid) }
+    );
   };
 
   return {

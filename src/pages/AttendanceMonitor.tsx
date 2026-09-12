@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { getStaffMaster, initializeStaffMaster, isTeachingRole } from '@/services/staffMasterService';
 
 interface AttendanceRecord {
   id: string;
@@ -29,140 +30,53 @@ interface AttendanceRecord {
   date: string;
   arrival: string;
   departure: string;
-  status: 'Present' | 'Departed' | 'Early Departure' | 'Absent';
+  status: 'Present' | 'Departed' | 'Early Departure' | 'Absent' | 'Not Marked';
   earlyDepartureReason?: string;
   avatarUrl?: string;
 }
 
-const INITIAL_RECORDS: AttendanceRecord[] = [
-  {
-    id: '1',
-    teacherName: 'Dr. Margaret Akoth',
-    department: 'Mathematics',
-    date: new Date().toISOString().split('T')[0],
-    arrival: '07:15 AM',
-    departure: '-',
-    status: 'Present',
-  },
-  {
-    id: '2',
-    teacherName: 'John Kamau',
-    department: 'Sciences',
-    date: new Date().toISOString().split('T')[0],
-    arrival: '07:30 AM',
-    departure: '01:15 PM',
-    status: 'Departed',
-  },
-  {
-    id: '3',
-    teacherName: 'Sarah Ochieng',
-    department: 'Languages',
-    date: new Date().toISOString().split('T')[0],
-    arrival: '07:22 AM',
-    departure: '11:30 AM',
-    status: 'Early Departure',
-    earlyDepartureReason: 'Medical appointment at County Referral Hospital',
-  },
-  {
-    id: '4',
-    teacherName: 'David Njoroge',
-    department: 'Humanities',
-    date: new Date().toISOString().split('T')[0],
-    arrival: '-',
-    departure: '-',
-    status: 'Absent',
-    earlyDepartureReason: 'Unexcused / Sick leave pending approval',
-  },
-  {
-    id: '5',
-    teacherName: 'Grace Wanjiku',
-    department: 'Creative Arts',
-    date: new Date().toISOString().split('T')[0],
-    arrival: '07:05 AM',
-    departure: '-',
-    status: 'Present',
-  },
-  {
-    id: '6',
-    teacherName: 'Patrick Omondi',
-    department: 'ICT & Computer Studies',
-    date: new Date().toISOString().split('T')[0],
-    arrival: '07:45 AM',
-    departure: '02:00 PM',
-    status: 'Departed',
-  },
-  {
-    id: '7',
-    teacherName: 'Beatrice Mutua',
-    department: 'Primary Section',
-    date: new Date().toISOString().split('T')[0],
-    arrival: '07:12 AM',
-    departure: '12:00 PM',
-    status: 'Early Departure',
-    earlyDepartureReason: 'Family bereavement emergency',
-  },
-  {
-    id: '8',
-    teacherName: 'Hassan Juma',
-    department: 'Physical Education',
-    date: new Date().toISOString().split('T')[0],
-    arrival: '07:20 AM',
-    departure: '-',
-    status: 'Present',
-  },
-];
-
 type MonitorTheme = 'midnight' | 'light' | 'emerald';
 
 interface ThemeConfig {
-  // Outer page background
   pageBg: string;
-  // Main card (outer container)
   cardBg: string;
   cardBorder: string;
   cardShadow: string;
   cardText: string;
   cardSubText: string;
-  // Stat card variants
   statCard: {
     present: string;
     departed: string;
     earlyDeparture: string;
     absent: string;
   };
-  // Accent border color (left side strip on each stat card)
   accentBorder: {
     present: string;
     departed: string;
     earlyDeparture: string;
     absent: string;
   };
-  // Inner icon container styling
   iconBox: {
     present: string;
     departed: string;
     earlyDeparture: string;
     absent: string;
   };
-  // Number text color (the big stat value)
   valueText: {
     present: string;
     departed: string;
     earlyDeparture: string;
     absent: string;
   };
-  // Label/footer text color
   labelText: {
     present: string;
     departed: string;
     earlyDeparture: string;
     absent: string;
   };
-  // Theme toggle group styling
   toggleGroup: string;
   toggleActive: string;
   toggleInactive: string;
-  // Table styling
   tableHeadBg: string;
   tableHeadText: string;
   tableRowHover: string;
@@ -171,27 +85,20 @@ interface ThemeConfig {
   tableBorder: string;
   tableContainerBg: string;
   tableContainerBorder: string;
-  // Header text colors
   titleText: string;
   subtitleText: string;
-  // Live pill
   livePillBg: string;
   livePillText: string;
   livePillBorder: string;
   liveDot: string;
-  // Refresh button
   refreshBtn: string;
   refreshIconActive: string;
-  // Empty state
   emptyIconBg: string;
   emptyText: string;
   emptySubText: string;
-  // Footer
   footerText: string;
-  // Count badge
   countBadgeBg: string;
   countBadgeText: string;
-  // Search input
   searchBg: string;
   searchText: string;
   searchBorder: string;
@@ -398,10 +305,21 @@ const THEME_CONFIGS: Record<MonitorTheme, ThemeConfig> = {
   },
 };
 
+// Helper to generate avatar initials
+const getInitials = (name: string): string => {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+};
+
 export default function AttendanceMonitor() {
   const [isLive, setIsLive] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [records, setRecords] = useState<AttendanceRecord[]>(INITIAL_RECORDS);
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [lastRefresh, setLastRefresh] = useState<string>(
     new Date().toLocaleTimeString('en-US', { hour12: false })
   );
@@ -410,10 +328,48 @@ export default function AttendanceMonitor() {
 
   const theme = THEME_CONFIGS[monitorTheme];
 
+  // Load staff from staffMasterService
+  useEffect(() => {
+    initializeStaffMaster();
+    const staff = getStaffMaster();
+    
+    // Filter only teaching staff and map to attendance records
+    const today = new Date().toISOString().split('T')[0];
+    const attendanceRecords: AttendanceRecord[] = staff
+      .filter(s => isTeachingRole(s.systemRole))
+      .map((s, idx) => ({
+        id: s.id,
+        teacherName: s.name,
+        department: s.department || 'School Administration',
+        date: today,
+        arrival: '-',
+        departure: '-',
+        status: 'Not Marked' as const,
+      }));
+    
+    setRecords(attendanceRecords);
+  }, []);
+
   // Handle manual refresh
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
+      // Re-read from staffMasterService
+      const staff = getStaffMaster();
+      const today = new Date().toISOString().split('T')[0];
+      const attendanceRecords: AttendanceRecord[] = staff
+        .filter(s => isTeachingRole(s.systemRole))
+        .map((s) => ({
+          id: s.id,
+          teacherName: s.name,
+          department: s.department || 'School Administration',
+          date: today,
+          arrival: '-',
+          departure: '-',
+          status: 'Not Marked' as const,
+        }));
+      
+      setRecords(attendanceRecords);
       setLastRefresh(new Date().toLocaleTimeString('en-US', { hour12: false }));
       setIsRefreshing(false);
     }, 600);
@@ -527,9 +483,9 @@ export default function AttendanceMonitor() {
   );
 
   return (
-    <div className={cn("min-h-screen p-4 md:p-8 space-y-6 transition-all duration-300", theme.pageBg)}>
-      {/* Header with Theme Toggle */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-opacity-30 pb-6">
+    <div className={cn("w-full max-w-full overflow-x-hidden px-4 py-3 p-4 md:p-8 space-y-6 transition-all duration-300", theme.pageBg)}>
+      {/* Header with Theme Toggle - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-opacity-30 pb-6 w-full max-w-full">
         <div className="space-y-1.5">
           <div className="flex items-center gap-3">
             <h1 className={cn("text-2xl md:text-3xl font-black tracking-tight flex items-center gap-3", theme.titleText)}>
@@ -551,7 +507,7 @@ export default function AttendanceMonitor() {
             </span>
           </div>
           <p className={cn("text-sm font-medium", theme.subtitleText)}>
-            Principal&apos;s real-time tracking dashboard <span className="mx-1.5 opacity-60">•</span> Last refresh: {lastRefresh}
+            Registered teaching staff directory <span className="mx-1.5 opacity-60">•</span> Last refresh: {lastRefresh}
           </p>
         </div>
 
@@ -753,7 +709,7 @@ export default function AttendanceMonitor() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className={cn("border-b", theme.tableHeadBg, theme.tableBorder)}>
-                <th className={cn("py-4 px-6 font-black text-[11px] uppercase tracking-widest", theme.tableHeadText)}>Teacher Name</th>
+                <th className={cn("py-4 px-6 font-black text-[11px] uppercase tracking-widest whitespace-nowrap", theme.tableHeadText)}>Teacher Name</th>
                 <th className={cn("py-4 px-6 font-black text-[11px] uppercase tracking-widest", theme.tableHeadText)}>Date</th>
                 <th className={cn("py-4 px-6 font-black text-[11px] uppercase tracking-widest", theme.tableHeadText)}>Arrival</th>
                 <th className={cn("py-4 px-6 font-black text-[11px] uppercase tracking-widest", theme.tableHeadText)}>Departure</th>
@@ -762,7 +718,7 @@ export default function AttendanceMonitor() {
               </tr>
             </thead>
             <tbody className={cn("divide-y", theme.tableBorder)}>
-              {filteredRecords.length === 0 ? (
+              {records.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3">
@@ -772,9 +728,26 @@ export default function AttendanceMonitor() {
                       )}>
                         <Users size={26} />
                       </div>
-                      <p className={cn("text-base font-bold", theme.emptyText)}>No attendance records for today yet</p>
+                      <p className={cn("text-base font-bold", theme.emptyText)}>No teaching staff registered yet</p>
                       <p className={cn("text-xs max-w-sm", theme.emptySubText)}>
-                        {searchQuery ? 'No teachers match your search criteria.' : 'Attendance check-ins will appear here automatically as teachers clock in.'}
+                        Add teaching staff through the Staff Directory or Staff Access Master to see them here.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-16 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className={cn(
+                        "w-14 h-14 rounded-2xl flex items-center justify-center",
+                        theme.emptyIconBg
+                      )}>
+                        <Search size={26} />
+                      </div>
+                      <p className={cn("text-base font-bold", theme.emptyText)}>No matching teachers found</p>
+                      <p className={cn("text-xs max-w-sm", theme.emptySubText)}>
+                        Try adjusting your search query.
                       </p>
                     </div>
                   </td>
@@ -788,38 +761,38 @@ export default function AttendanceMonitor() {
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-3">
                         <div className={cn(
-                          "w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-md",
+                          "w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 shadow-md whitespace-nowrap",
                           monitorTheme === 'light'
                             ? "bg-gradient-to-br from-indigo-500 to-indigo-700 text-white"
                             : monitorTheme === 'emerald'
                             ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white"
                             : "bg-gradient-to-br from-indigo-500 to-indigo-700 text-white"
                         )}>
-                          {record.teacherName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          {getInitials(record.teacherName)}
                         </div>
-                        <div>
-                          <div className={cn("font-bold group-hover:text-emerald-400 transition-colors", theme.tableRowText)}>
+                        <div className="min-w-0">
+                          <div className={cn("font-bold group-hover:text-emerald-400 transition-colors whitespace-nowrap", theme.tableRowText)}>
                             {record.teacherName}
                           </div>
-                          <div className={cn("text-xs font-medium", theme.tableSubText)}>
+                          <div className={cn("text-xs font-medium whitespace-nowrap", theme.tableSubText)}>
                             {record.department}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className={cn("py-4 px-6 font-mono text-xs", theme.tableSubText)}>
+                    <td className={cn("py-4 px-6 font-mono text-xs whitespace-nowrap", theme.tableSubText)}>
                       {record.date}
                     </td>
-                    <td className={cn("py-4 px-6 font-mono text-xs", theme.tableRowText)}>
+                    <td className={cn("py-4 px-6 font-mono text-xs whitespace-nowrap", theme.tableRowText)}>
                       {record.arrival}
                     </td>
-                    <td className={cn("py-4 px-6 font-mono text-xs", theme.tableRowText)}>
+                    <td className={cn("py-4 px-6 font-mono text-xs whitespace-nowrap", theme.tableRowText)}>
                       {record.departure}
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-4 px-6 whitespace-nowrap">
                       {statusBadge(record.status)}
                     </td>
-                    <td className={cn("py-4 px-6 text-xs italic", theme.tableSubText)}>
+                    <td className={cn("py-4 px-6 text-xs italic whitespace-nowrap", theme.tableSubText)}>
                       {record.earlyDepartureReason || <span className="not-italic opacity-60">-</span>}
                     </td>
                   </tr>
@@ -845,7 +818,7 @@ export default function AttendanceMonitor() {
             <span>Auto-refreshes every 8s when live</span>
           </div>
           <div>
-            <span className={cn("font-bold", theme.cardText)}>{totalActiveTeachers}</span> active teachers on register
+            <span className={cn("font-bold", theme.cardText)}>{totalActiveTeachers}</span> registered teaching staff
           </div>
         </div>
       </div>

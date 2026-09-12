@@ -46,9 +46,10 @@ const FeeStatement = ({ student, transactions, year, term, gradeName }: FeeState
     </div>
 
     <div className="space-y-4">
-      <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Ledger Entries</h4>
-      <div className="border rounded-2xl overflow-hidden">
-        <table className="w-full text-xs">
+          <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Ledger Entries</h4>
+          <div className="border rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-max">
           <thead className="bg-slate-50 border-b">
             <tr>
               <th className="px-4 py-3 text-left font-black uppercase tracking-widest">Description</th>
@@ -79,6 +80,7 @@ const FeeStatement = ({ student, transactions, year, term, gradeName }: FeeState
             </tr>
           </tfoot>
         </table>
+        </div>
       </div>
     </div>
   </div>

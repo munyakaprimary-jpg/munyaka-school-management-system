@@ -334,15 +334,15 @@ const PracticalCompetencies = () => {
   }, []);
 
   const handleAddProject = () => {
-    if (!newProjectTitle.trim() || !newProjectGrade || !newProjectStream || !newProjectSubject) return;
+    if (!String(newProjectTitle || '').trim() || !newProjectGrade || !newProjectStream || !newProjectSubject) return;
     
-    const newProject: ProjectRecord = {
-      id: `proj-${Date.now()}`,
-      title: newProjectTitle.trim(),
-      grade: newProjectGrade,
-      stream: newProjectStream,
-      subject: newProjectSubject,
-      rubricCriteria: newProjectRubric.trim(),
+        const newProject: ProjectRecord = {
+          id: `proj-${Date.now()}`,
+          title: String(newProjectTitle || '').trim(),
+          grade: newProjectGrade,
+          stream: newProjectStream,
+          subject: newProjectSubject,
+          rubricCriteria: String(newProjectRubric || '').trim(),
       maxPoints: parseInt(newProjectMaxPoints) || 100,
       submissionsTotal: 0,
       submissionsGraded: 0,
@@ -395,21 +395,21 @@ const PracticalCompetencies = () => {
   };
 
   const handleAddObservation = () => {
-    if (!newObsStudent.trim() || !newObsGrade || !newObsStream || !newObsActivity || !newObsCompetency || !newObsObservation.trim()) return;
+    if (!String(newObsStudent || '').trim() || !newObsGrade || !newObsStream || !newObsActivity || !newObsCompetency || !String(newObsObservation || '').trim()) return;
     
-    const newObs: ObservationRecord = {
-      id: `obs-${Date.now()}`,
-      studentName: newObsStudent.trim(),
-      grade: newObsGrade,
-      stream: newObsStream,
-      activity: newObsActivity.trim(),
-      competency: newObsCompetency,
-      observation: newObsObservation.trim(),
-      rating: newObsRating,
-      observedBy: "Current Teacher",
-      observedDate: new Date().toISOString().split('T')[0],
-      evidence: newObsEvidence.trim() || undefined
-    };
+        const newObs: ObservationRecord = {
+          id: `obs-${Date.now()}`,
+          studentName: String(newObsStudent || '').trim(),
+          grade: newObsGrade,
+          stream: newObsStream,
+          activity: String(newObsActivity || '').trim(),
+          competency: newObsCompetency,
+          observation: String(newObsObservation || '').trim(),
+          rating: newObsRating,
+          observedBy: "Current Teacher",
+          observedDate: new Date().toISOString().split('T')[0],
+          evidence: String(newObsEvidence || '').trim() || undefined
+        };
     
     console.log("New observation created:", newObs);
     
@@ -483,14 +483,14 @@ const PracticalCompetencies = () => {
   };
 
   const getRubricCriteriaArray = (criteria: string) => {
-    return criteria.split(',').map(c => c.trim());
-  };
+      return criteria.split(',').map(c => String(c || '').trim());
+    };
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
+          <BackButton parentPath="/" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Practical Competencies</h1>
             <p className="text-gray-500">CBC project assessments, observational rubrics, and practical task logs.</p>
@@ -839,9 +839,9 @@ const PracticalCompetencies = () => {
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Student Name</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Grade / Stream</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Project</th>
-                      {getRubricCriteriaArray(MOCK_RUBRICS[0]?.rubricCriteria || "").map((crit, i) => (
+                      {getRubricCriteriaArray((MOCK_RUBRICS[0] as any)?.rubricCriteria || "").map((crit, i) => (
                         <th key={i} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[90px]">
-                          {crit.split('(')[0].trim()}
+                          {String(crit || '').split('(')[0].trim()}
                         </th>
                       ))}
                       <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
@@ -871,7 +871,7 @@ const PracticalCompetencies = () => {
                               <p className="font-bold text-slate-800 truncate max-w-[200px]">{project?.title || rubric.projectId}</p>
                             </td>
                             {criteria.map((crit, i) => {
-                              const critName = crit.split('(')[0].trim();
+                              const critName = String(crit || '').split('(')[0].trim();
                               const score = rubric.scores[critName] || 0;
                               return (
                                 <td key={i} className="px-4 py-5 border-r text-center font-bold text-slate-700">
@@ -1149,7 +1149,7 @@ const PracticalCompetencies = () => {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Status</Label>
-                  <Select value={newProjectStatus} onValueChange={setNewProjectStatus}>
+                  <Select value={newProjectStatus} onValueChange={setNewProjectStatus as (value: string) => void}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Draft">Draft</SelectItem>
@@ -1220,7 +1220,7 @@ const PracticalCompetencies = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Rating</Label>
-                  <Select value={newObsRating} onValueChange={setNewObsRating}>
+                  <Select value={newObsRating} onValueChange={setNewObsRating as (value: string) => void}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="EE">EE - Exceeding Expectation</SelectItem>
@@ -1258,7 +1258,7 @@ const PracticalCompetencies = () => {
               <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div><p className="text-2xl font-black text-indigo-700">{selectedRubric.percentage}%</p><p className="text-xs font-bold text-indigo-600 uppercase">Total Score</p></div>
-                  <div><p className="text-2xl font-black text-slate-900">{selectedRubric.totalScore} / {selectedRubric.maxPoints || 100}</p><p className="text-xs font-bold text-slate-400 uppercase">Points</p></div>
+                  <div><p className="text-2xl font-black text-slate-900">{selectedRubric.totalScore} / {(selectedRubric as any).maxPoints || 100}</p><p className="text-xs font-bold text-slate-400 uppercase">Points</p></div>
                   <div>{getRatingBadge(selectedRubric.level)}</div>
                 </div>
               </div>

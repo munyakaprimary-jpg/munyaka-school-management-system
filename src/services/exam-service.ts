@@ -1,5 +1,3 @@
-import { STUDENTS } from '@/lib/mock-data';
-
 export interface MarkRecord {
   learnerId: string;
   grade: string;

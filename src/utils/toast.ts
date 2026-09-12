@@ -1,19 +1,43 @@
 import { toast } from "sonner";
 
-export const showSuccess = (message: string) => {
-  toast.success(message);
+/** Re-export the raw sonner `toast` for callers that need direct access. */
+export { toast };
+
+/** Default auto-dismiss duration in milliseconds. */
+const DEFAULT_DURATION_MS = 3000;
+
+/** Dismiss all existing toasts before showing a new one — prevents stacking
+ *  when buttons are clicked rapidly or multiple handlers fire in sequence. */
+const dismissAllBeforeNew = () => {
+  toast.dismiss();
 };
 
-export const showError = (message: string) => {
-  toast.error(message);
+export const showSuccess = (message: string, duration: number = DEFAULT_DURATION_MS) => {
+  dismissAllBeforeNew();
+  toast.success(message, {
+    duration,
+  });
+};
+
+export const showError = (message: string, duration: number = DEFAULT_DURATION_MS) => {
+  dismissAllBeforeNew();
+  toast.error(message, {
+    duration,
+  });
 };
 
 export const showLoading = (message: string) => {
-  return toast.loading(message);
+  return toast.loading(message, {
+    duration: Infinity, // Loading toasts must be manually dismissed via dismissToast()
+  });
 };
 
-export const dismissToast = (toastId: string) => {
-  toast.dismiss(toastId);
+export const dismissToast = (toastId?: string | number) => {
+  if (toastId !== undefined && toastId !== null) {
+    toast.dismiss(toastId);
+  } else {
+    toast.dismiss(); // Dismiss all
+  }
 };
 
 /**
@@ -30,14 +54,13 @@ export function showSuccessWithAction(
   message: string,
   actionLabel?: string,
   onAction?: () => void,
-  actionAriaLabel?: string
+  _actionAriaLabel?: string
 ) {
   if (actionLabel && onAction) {
     toast.success(message, {
       action: {
         label: actionLabel,
         onClick: onAction,
-        ariaLabel: actionAriaLabel,
       },
       duration: 10000, // Keep the toast visible longer when there's an action
     });

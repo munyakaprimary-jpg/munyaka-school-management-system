@@ -24,7 +24,8 @@ import {
   MapPin,
   Sparkles,
 } from 'lucide-react';
-import { GRADES_DATA, Grade } from '@/lib/mock-data';
+import { GRADES_DATA } from '@/lib/mock-data';
+import type { Grade } from '@/types/school';
 import { showSuccess } from '@/utils/toast';
 import { PaymentMethod, PaymentDetails, Transaction } from '@/types/fees';
 import { ValidityDuration, LICENSE_METHOD_LABELS } from '@/types/license';
@@ -272,28 +273,28 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
   // ─────────────────────────────────────────────
   const validate = (): string => {
     // Either a learner must be selected OR a recipient (license flow)
-    if (!hideLearnerSelection && !selectedStudentId && !issuedTo.trim()) {
-      return "Please select a learner or enter an institution / recipient.";
-    }
-    if (hideLearnerSelection && !issuedTo.trim()) {
-      return "Please enter the recipient / institution name.";
-    }
-    const n = parseFloat(amount);
-    if (isNaN(n) || n <= 0) return "Please enter a valid payment amount.";
-    if (paymentMethod === 'cash' && !receivedBy.trim() && !issuedTo.trim()) {
-      return "Please enter the staff name who received the cash payment.";
-    }
-    if (paymentMethod === 'bank') {
-      if (!bankName.trim()) return "Please enter the bank name.";
-      if (!bankRef.trim()) return "Please enter the transaction reference number.";
-    }
-    if (paymentMethod === 'cheque') {
-      if (!chequeBankName.trim()) return "Please enter the bank name on the cheque.";
-      if (!chequeNumber.trim()) return "Please enter the cheque number.";
-    }
-    if (paymentMethod === 'mpesa' && !mpesaReceipt.trim()) {
-      return "Please enter the M-Pesa receipt number.";
-    }
+    if (!hideLearnerSelection && !selectedStudentId && !String(issuedTo || '').trim()) {
+          return "Please select a learner or enter an institution / recipient.";
+        }
+        if (hideLearnerSelection && !String(issuedTo || '').trim()) {
+          return "Please enter the recipient / institution name.";
+        }
+        const n = parseFloat(amount);
+        if (isNaN(n) || n <= 0) return "Please enter a valid payment amount.";
+        if (paymentMethod === 'cash' && !String(receivedBy || '').trim() && !String(issuedTo || '').trim()) {
+          return "Please enter the staff name who received the cash payment.";
+        }
+        if (paymentMethod === 'bank') {
+          if (!String(bankName || '').trim()) return "Please enter the bank name.";
+          if (!String(bankRef || '').trim()) return "Please enter the transaction reference number.";
+        }
+        if (paymentMethod === 'cheque') {
+          if (!String(chequeBankName || '').trim()) return "Please enter the bank name on the cheque.";
+          if (!String(chequeNumber || '').trim()) return "Please enter the cheque number.";
+        }
+        if (paymentMethod === 'mpesa' && !String(mpesaReceipt || '').trim()) {
+          return "Please enter the M-Pesa receipt number.";
+        }
     return "";
   };
 
@@ -307,30 +308,30 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
 
     switch (paymentMethod) {
       case 'cash':
-        details = { receivedBy: receivedBy.trim() || issuedTo.trim() };
-        date = cashDate || new Date().toISOString().slice(0, 10);
-        ref = `CASH-${Date.now().toString().slice(-6)}`;
-        break;
-      case 'bank':
-        details = { bankName: bankName.trim(), branch: bankBranch.trim(), transactionRef: bankRef.trim() };
-        date = bankDate || new Date().toISOString().slice(0, 10);
-        ref = bankRef.trim();
-        break;
-      case 'cheque':
-        details = { bankName: chequeBankName.trim(), branch: chequeBranch.trim(), chequeNumber: chequeNumber.trim() };
-        date = chequeDate || new Date().toISOString().slice(0, 10);
-        ref = `CHQ-${chequeNumber.trim()}`;
-        break;
-      case 'mpesa':
-        details = { receiptNumber: mpesaReceipt.trim() };
-        date = mpesaDate || new Date().toISOString().slice(0, 10);
-        ref = mpesaReceipt.trim();
-        break;
-    }
-
-    const txDescription = subscriptionName.trim()
-      ? `${subscriptionName.trim()} — ${issuedTo.trim() || selectedStudent?.name || 'Subscription'}`
-      : `Payment for ${selectedStudent?.name ?? issuedTo.trim() ?? 'Subscription'}`;
+              details = { receivedBy: String(receivedBy || '').trim() || String(issuedTo || '').trim() };
+              date = cashDate || new Date().toISOString().slice(0, 10);
+              ref = `CASH-${Date.now().toString().slice(-6)}`;
+              break;
+            case 'bank':
+              details = { bankName: String(bankName || '').trim(), branch: String(bankBranch || '').trim(), transactionRef: String(bankRef || '').trim() };
+              date = bankDate || new Date().toISOString().slice(0, 10);
+              ref = String(bankRef || '').trim();
+              break;
+            case 'cheque':
+              details = { bankName: String(chequeBankName || '').trim(), branch: String(chequeBranch || '').trim(), chequeNumber: String(chequeNumber || '').trim() };
+              date = chequeDate || new Date().toISOString().slice(0, 10);
+              ref = `CHQ-${String(chequeNumber || '').trim()}`;
+              break;
+            case 'mpesa':
+              details = { receiptNumber: String(mpesaReceipt || '').trim() };
+              date = mpesaDate || new Date().toISOString().slice(0, 10);
+              ref = String(mpesaReceipt || '').trim();
+              break;
+          }
+      
+          const txDescription = String(subscriptionName || '').trim()
+            ? `${String(subscriptionName || '').trim()} — ${String(issuedTo || '').trim() || selectedStudent?.name || 'Subscription'}`
+            : `Payment for ${selectedStudent?.name ?? String(issuedTo || '').trim() ?? 'Subscription'}`;
 
     return {
       id: `TX-${Date.now()}`,
@@ -369,22 +370,22 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
     // If activation-key generation is enabled, issue a license too.
     if (!hideActivationKey) {
       try {
-        const recipient = issuedTo.trim() || selectedStudent?.name || 'Munyaka School';
-        const license = issueLicense({
-          issuedTo: recipient,
-          deviceId: getDeviceId(),
-          validityDays,
-          payment: {
-            method: paymentMethod,
-            refNumber: tx.ref,
-            amount: tx.amount.toString(),
-            bankName: paymentMethod === 'bank' ? bankName.trim() : undefined,
-            branch: paymentMethod === 'bank' ? bankBranch.trim() :
-                    paymentMethod === 'cheque' ? chequeBranch.trim() : undefined,
-          },
-          notes: notes.trim() ||
-            (subscriptionName.trim() ? `Subscription: ${subscriptionName.trim()}` : undefined),
-        });
+        const recipient = String(issuedTo || '').trim() || selectedStudent?.name || 'Munyaka School';
+                const license = issueLicense({
+                  issuedTo: recipient,
+                  deviceId: getDeviceId(),
+                  validityDays,
+                  payment: {
+                    method: paymentMethod,
+                    refNumber: tx.ref,
+                    amount: tx.amount.toString(),
+                    bankName: paymentMethod === 'bank' ? String(bankName || '').trim() : undefined,
+                    branch: paymentMethod === 'bank' ? String(bankBranch || '').trim() :
+                            paymentMethod === 'cheque' ? String(chequeBranch || '').trim() : undefined,
+                  },
+                  notes: String(notes || '').trim() ||
+                    (String(subscriptionName || '').trim() ? `Subscription: ${String(subscriptionName || '').trim()}` : undefined),
+                });
 
         onSubmitPayment({
           transaction: tx,

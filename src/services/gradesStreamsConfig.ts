@@ -14,8 +14,12 @@ export interface GradesStreamsConfig {
   gradeStreamMap: Record<string, string[]>;
 }
 
-// Supported localStorage keys (checked in priority order)
+// Supported localStorage keys (checked in priority order).
+// `configured_streams` is the canonical name across the project; the
+// historical `munyaka_*` keys are still read so user data isn't lost when
+// the key naming is unified.
 const STORAGE_KEYS = [
+  'configured_streams',
   'munyaka_grades',
   'munyaka_grades_streams',
   'munyaka_grades_streams_data',
@@ -25,24 +29,26 @@ const STORAGE_KEYS = [
 
 function normaliseGradeName(name: string): string {
   if (!name) return '';
-  const t = name.trim();
+  const t = String(name || '').trim();
   return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '';
 }
 
 function normaliseStreamName(name: string): string {
   if (!name) return '';
-  const t = name.trim();
+  const t = String(name || '').trim();
   return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '';
 }
 
 function getGradeMatchKey(name: string): string {
   if (!name) return '';
-  const t = name.trim().toLowerCase();
+  const t = String(name || '').trim().toLowerCase();
   if (t === 'pp1' || t === 'pp2') return t;
   const m = t.match(/(\d+)/);
   if (m) return `grade${m[1]}`;
   return t.replace(/\s+/g, '');
 }
+
+import { sortGradesAscending } from "../utils/gradeSort";
 
 function sortCaseInsensitive(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
@@ -97,7 +103,7 @@ export function readGradesAndStreams(): GradesStreamsConfig {
     Object.values(gradeStreamMap).forEach((s) => s.forEach((st) => streamsSet.add(st)));
 
     return {
-      grades: Array.from(gradesSet).sort(sortCaseInsensitive),
+      grades: sortGradesAscending(Array.from(gradesSet)),
       streams: Array.from(streamsSet).sort(sortCaseInsensitive),
       gradeStreamMap,
     };

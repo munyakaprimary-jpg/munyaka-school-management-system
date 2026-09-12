@@ -18,7 +18,7 @@
 export const MUNYAKA_ADMIN_PASSWORD = 'munyaka_admin_password';
 
 /** Hard-coded default — used only as a last-resort fallback. */
-export const DEFAULT_ADMIN_PASSWORD = 'sysadmin2026';
+export const DEFAULT_ADMIN_PASSWORD = 'munyaka2026';
 
 
 /**
@@ -30,9 +30,9 @@ export const getActiveAdminPassword = (): string => {
   try {
     const raw = localStorage.getItem(MUNYAKA_ADMIN_PASSWORD);
     if (raw != null) {
-      const trimmed = raw.trim();
-      if (trimmed.length > 0) return trimmed;
-    }
+          const trimmed = String(raw || '').trim();
+          if (trimmed.length > 0) return trimmed;
+        }
   } catch {
     /* localStorage unavailable */
   }
@@ -46,7 +46,7 @@ export const getActiveAdminPassword = (): string => {
  */
 export const saveAdminPassword = (newPin: string | null | undefined): boolean => {
   if (newPin == null) return false;
-  const trimmed = newPin.trim();
+  const trimmed = String(newPin || '').trim();
   if (!trimmed) return false;
   try {
     localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, trimmed);

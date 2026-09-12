@@ -32,6 +32,7 @@ export interface ConnectionStatus {
   serverReachable: boolean;
   latency: number | null;
   lastChecked: string | null;
+  serverUrl: string | null;
 }
 
 export interface SyncResult {
@@ -45,30 +46,41 @@ export interface SyncResult {
  * Get the configured LAN server URL.
  * Reads `lan_server_url` (primary). Falls back to the legacy
  * `munyaka_lan_server_url` key and migrates it on first access.
+ *
+ * Wrapped in try-catch for browsers with restricted localStorage access
+ * (private browsing, some mobile WebViews).
  */
 const getServerUrl = (): string => {
-  // Primary key first
-  const primary = localStorage.getItem(SERVER_URL_KEY);
-  if (primary) return primary;
+  try {
+    // Primary key first
+    const primary = localStorage.getItem(SERVER_URL_KEY);
+    if (primary) return primary;
 
-  // Legacy fallback + one-time migration
-  const legacy = localStorage.getItem(LEGACY_SERVER_URL_KEY);
-  if (legacy) {
-    localStorage.setItem(SERVER_URL_KEY, legacy);
-    localStorage.removeItem(LEGACY_SERVER_URL_KEY);
-    return legacy;
+    // Legacy fallback + one-time migration
+    const legacy = localStorage.getItem(LEGACY_SERVER_URL_KEY);
+    if (legacy) {
+      localStorage.setItem(SERVER_URL_KEY, legacy);
+      localStorage.removeItem(LEGACY_SERVER_URL_KEY);
+      return legacy;
+    }
+  } catch {
+    /* localStorage unavailable — treat as unconfigured */
   }
-
   return '';
 };
 
 const getDeviceId = (): string => {
-  let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-  if (!deviceId) {
-    deviceId = `device-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    localStorage.setItem(DEVICE_ID_KEY, deviceId);
+  try {
+    let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+    if (!deviceId) {
+      deviceId = `device-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      localStorage.setItem(DEVICE_ID_KEY, deviceId);
+    }
+    return deviceId;
+  } catch {
+    /* localStorage unavailable — return a transient id so callers don't crash */
+    return `device-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   }
-  return deviceId;
 };
 
 // ========================================
@@ -85,9 +97,13 @@ export const getSyncQueue = (): SyncQueueItem[] => {
 };
 
 export const saveSyncQueue = (queue: SyncQueueItem[]) => {
-  // Keep last 200 items to avoid localStorage limits
-  const trimmed = queue.slice(-200);
-  localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(trimmed));
+  try {
+    // Keep last 200 items to avoid localStorage limits
+    const trimmed = queue.slice(-200);
+    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(trimmed));
+  } catch {
+    /* localStorage unavailable — queue state is lost but sync still proceeds in memory */
+  }
 };
 
 export const getPendingSyncCount = (): number => {
@@ -159,7 +175,8 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => {
       isOnline,
       serverReachable: false,
       latency: null,
-      lastChecked: new Date().toISOString()
+      lastChecked: new Date().toISOString(),
+      serverUrl,
     };
   }
 
@@ -180,14 +197,16 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => {
       isOnline,
       serverReachable: response.ok,
       latency: response.ok ? latency : null,
-      lastChecked: new Date().toISOString()
+      lastChecked: new Date().toISOString(),
+      serverUrl,
     };
   } catch {
     return {
       isOnline,
       serverReachable: false,
       latency: null,
-      lastChecked: new Date().toISOString()
+      lastChecked: new Date().toISOString(),
+      serverUrl,
     };
   }
 };
@@ -234,7 +253,7 @@ export const sendHeartbeat = async (): Promise<boolean> => {
       body: JSON.stringify({ device_id: getDeviceId() })
     });
     if (response.ok) {
-      localStorage.setItem(LAST_HEARTBEAT_KEY, new Date().toISOString());
+      try { localStorage.setItem(LAST_HEARTBEAT_KEY, new Date().toISOString()); } catch { /* no-op */ }
     }
     return response.ok;
   } catch {
@@ -302,7 +321,7 @@ export const syncPendingItems = async (): Promise<SyncResult> => {
         }
       }
 
-      localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+      try { localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString()); } catch { /* no-op */ }
 
       return {
         success: itemsFailed === 0,
@@ -343,7 +362,7 @@ export const syncPendingItems = async (): Promise<SyncResult> => {
     }
 
     if (itemsSynced > 0) {
-      localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+      try { localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString()); } catch { /* no-op */ }
     }
 
     return {
@@ -386,11 +405,15 @@ export const startAutoSync = (
 
   const tick = async () => {
     if (!navigator.onLine) {
-      notifyListeners({ isOnline: false, serverReachable: false, latency: null, lastChecked: new Date().toISOString() });
+      notifyListeners({ isOnline: false, serverReachable: false, latency: null, lastChecked: new Date().toISOString(), serverUrl: getServerUrl() });
       return;
     }
 
     const status = await checkServerConnection();
+    // Ensure serverUrl is always included in the status payload
+    if (status.serverUrl === undefined) {
+      status.serverUrl = getServerUrl();
+    }
     notifyListeners(status);
 
     if (status.serverReachable) {
@@ -540,6 +563,9 @@ export const apiGet = async <T = any>(
 export const setupAutoSyncOnReconnect = () => {
   const handleOnline = async () => {
     const status = await checkServerConnection();
+    if (status.serverUrl === undefined) {
+      status.serverUrl = getServerUrl();
+    }
     notifyListeners(status);
     
     if (status.serverReachable) {
@@ -552,7 +578,7 @@ export const setupAutoSyncOnReconnect = () => {
   };
 
   const handleOffline = () => {
-    notifyListeners({ isOnline: false, serverReachable: false, latency: null, lastChecked: new Date().toISOString() });
+    notifyListeners({ isOnline: false, serverReachable: false, latency: null, lastChecked: new Date().toISOString(), serverUrl: getServerUrl() });
   };
 
   window.addEventListener('online', handleOnline);
@@ -568,9 +594,9 @@ export const setupAutoSyncOnReconnect = () => {
  * Get last sync timestamp
  */
 export const getLastSyncTime = (): string | null => {
-  return localStorage.getItem(LAST_SYNC_KEY);
+  try { return localStorage.getItem(LAST_SYNC_KEY); } catch { return null; }
 };
 
 export const getLastHeartbeatTime = (): string | null => {
-  return localStorage.getItem(LAST_HEARTBEAT_KEY);
+  try { return localStorage.getItem(LAST_HEARTBEAT_KEY); } catch { return null; }
 };

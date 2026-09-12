@@ -1,6 +1,16 @@
 export type AssessmentType = 'Formative' | 'Summative' | 'ReportCard';
 
+/** Alias of AssessmentType kept for callers that import the legacy name. */
+export type AssessmentLevel = AssessmentType;
+
 export type PerformanceLevel = 'EE' | 'ME' | 'AE' | 'BE';
+
+export type ExamType =
+  | 'Opener Exam'
+  | 'Mid-Term Exam'
+  | 'End of Term Exam'
+  | 'Continuous Assessment (CAT)'
+  | 'Mock / National Assessment';
 
 export interface HistoricalAssessment {
   id: string;
@@ -10,6 +20,8 @@ export interface HistoricalAssessment {
   performanceLevel: PerformanceLevel;
   comment: string;
   assessmentType: AssessmentType;
+  /** Optional free-form exam type label (e.g. "Opener Exam"). */
+  examType?: ExamType | string;
   gradeLevel: string;
   academicYear: string;
   term: string;
@@ -64,6 +76,17 @@ export const PERFORMANCE_LEVELS: PerformanceLevelConfig[] = [
 
 export const getPerformanceLevel = (code: PerformanceLevel): PerformanceLevelConfig => {
   return PERFORMANCE_LEVELS.find(l => l.code === code) || PERFORMANCE_LEVELS[1];
+};
+
+/** Alias used by callers that ask for the rubric label by performance level. */
+export const getRubricLabel = (code: PerformanceLevel): string => {
+  return getPerformanceLevel(code).label;
+};
+
+/** Alias used by callers that ask for the rubric Tailwind classes by performance level. */
+export const getRubricColor = (code: PerformanceLevel): string => {
+  const cfg = getPerformanceLevel(code);
+  return `${cfg.bgColor} ${cfg.color}`;
 };
 
 export const getPerformanceFromScore = (score: number): PerformanceLevel => {

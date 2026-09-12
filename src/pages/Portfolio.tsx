@@ -10,40 +10,44 @@ import { PortfolioFilters } from '@/components/portfolio/PortfolioFilters';
 import { PortfolioCard } from '@/components/portfolio/PortfolioCard';
 import { UploadArtifactModal } from '@/components/portfolio/UploadArtifactModal';
 import { ArtifactViewerModal } from '@/components/portfolio/ArtifactViewerModal';
-import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
+import { GRADES_DATA } from '@/lib/mock-data';
+import { getStudents } from '@/services/persistentStore';
 import { showSuccess } from '@/utils/toast';
 
 const Portfolio = () => {
   const [artifacts, setArtifacts] = useState<Artifact[]>(INITIAL_ARTIFACTS);
-  
+
   // Filters State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("all");
   const [selectedStream, setSelectedStream] = useState("all");
   const [selectedArea, setSelectedArea] = useState("all");
-  
+
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
+
+  // Learners are populated via the app's registration flow.
+  const learners = useMemo(() => getStudents(), []);
 
   // Extract unique streams
   const uniqueStreams = useMemo(() => {
     const streams = new Set<string>();
     GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
-    STUDENTS.forEach(s => { if (s.stream) streams.add(s.stream); });
+    learners.forEach(s => { if (s.stream) streams.add(String(s.stream)); });
     return Array.from(streams).sort();
-  }, []);
+  }, [learners]);
 
   // Filtered Artifacts with Grade, Stream, Learner Search Box, and Area logic
   const filteredArtifacts = useMemo(() => {
     return artifacts.filter(art => {
-      // Find matching student object to get grade and stream information
-      const studentObj = STUDENTS.find(s => s.name.toLowerCase() === art.student.toLowerCase());
+      // Find matching learner object to get grade and stream information
+      const studentObj = learners.find(s => String(s.name ?? "").toLowerCase() === art.student.toLowerCase());
 
       // Search term matching: Learner Name, Assessment ID, or Artifact Title
-      const matchesSearch = 
-        art.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      const matchesSearch =
+        art.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         art.student.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (studentObj && studentObj.assessment.toLowerCase().includes(searchTerm.toLowerCase()));
+        (studentObj && String(studentObj.assessment ?? "").toLowerCase().includes(searchTerm.toLowerCase()));
 
       // Grade matching
       let matchesGrade = true;
@@ -93,11 +97,11 @@ const Portfolio = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
+          <BackButton parentPath="/" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learner Portfolio</h1>
             <p className="text-muted-foreground">Upload and manage student artifacts directly from your computer storage.</p>

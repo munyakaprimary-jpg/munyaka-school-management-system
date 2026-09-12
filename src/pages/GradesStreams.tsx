@@ -12,10 +12,14 @@ import BackButton from '@/components/ui/BackButton';
 import { Layers, Plus, Users, User, Trash2, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
-import { sortGrades } from '@/utils/gradeSort';
+import { sortGrades, GRADE_ORDER } from '@/utils/gradeSort';
 import { notifyDataChanged } from '@/utils/storage';
 
-const STORAGE_KEY = 'munyaka_grades';
+// Primary canonical key — all readers should now use `configured_streams`.
+const STORAGE_KEY = 'configured_streams';
+// Legacy key kept so existing cross-tab listeners and other pages that
+// watch `munyaka_grades` keep working without needing to be updated.
+const LEGACY_STORAGE_KEY = 'munyaka_grades';
 const SCHOOL_INFO_KEY = 'munyaka_school_info';
 
 // Filter helper: detect "mock" grades and streams by checking against the
@@ -47,20 +51,24 @@ const GradesStreams = () => {
       }));
   };
 
-  // Initial state — only user-created records from localStorage. If the
-  // user has never added anything, this array is empty and the page
-  // shows a friendly empty state.
+  // Initial state — reads from the canonical key first, then the legacy
+  // key, so users don't lose data when the key name is unified. If both
+  // are missing or corrupted, falls through to an empty array (the page
+  // will show its friendly empty state rather than crashing).
   const [grades, setGrades] = useState<Grade[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return stripSeedData(parsed);
+    const keys = [STORAGE_KEY, LEGACY_STORAGE_KEY];
+    for (const k of keys) {
+      try {
+        const saved = localStorage.getItem(k);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return stripSeedData(parsed);
+          }
         }
+      } catch {
+        // Corrupted JSON — skip this key and try the next one
       }
-    } catch {
-      // ignore — fall through to empty state
     }
     return [];
   });
@@ -83,13 +91,19 @@ const GradesStreams = () => {
   const [newStreamStudents, setNewStreamStudents] = useState("");
 
   useEffect(() => {
-    if (grades.length > 0) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(grades));
-        notifyDataChanged('munyaka_grades');
-      } catch (e) {
-        // localStorage quota exceeded — best-effort, fall through silently
-      }
+    // Always persist to the canonical key AND the legacy key so that:
+    //   1. New readers find data under the canonical name
+    //   2. Existing pages listening on `munyaka_grades` still work
+    // Including when grades becomes [] after a delete so we don't leave
+    // stale entries in localStorage.
+    try {
+      const data = JSON.stringify(grades);
+      localStorage.setItem(STORAGE_KEY, data);
+      localStorage.setItem(LEGACY_STORAGE_KEY, data);
+      notifyDataChanged(STORAGE_KEY);
+      notifyDataChanged(LEGACY_STORAGE_KEY);
+    } catch (e) {
+      // localStorage quota exceeded — best-effort, fall through silently
     }
   }, [grades]);
 
@@ -137,18 +151,21 @@ const GradesStreams = () => {
     };
   }, []);
 
-  // Sort grades logically (Pre-Primary → Primary → Junior School,
-  // then PP1 < PP2 < Grade 1 < Grade 2 ...)
+  // ── Strict grade ordering ───────────────────────────────────────────────
+  // Rendered in canonical sequence: PP1 → PP2 → Grade 1 → … → Grade 9.
+  // Any custom user-added grade not in GRADE_ORDER is pushed to the end
+  // and sorted alphabetically. The sortGrades() helper from
+  // @/utils/gradeSort enforces this via index lookup against GRADE_ORDER.
   const sortedGrades = useMemo(() => {
     return sortGrades(grades);
   }, [grades]);
 
   const normalizeGradeKey = (name: string) => {
-    return name.trim().toLowerCase();
-  };
-
-  const handleAddGrade = () => {
-    const trimmedName = newGradeName.trim();
+      return String(name || '').trim().toLowerCase();
+    };
+  
+    const handleAddGrade = () => {
+      const trimmedName = String(newGradeName || '').trim();
     if (!trimmedName) {
       showError("Please enter a grade name.");
       return;
@@ -180,7 +197,7 @@ const GradesStreams = () => {
   };
 
   const handleAddStream = () => {
-    const trimmedStreamName = newStreamName.trim();
+      const trimmedStreamName = String(newStreamName || '').trim();
 
     if (!selectedGradeId) {
       showError("Please select a grade level.");
@@ -196,7 +213,7 @@ const GradesStreams = () => {
       // Case-normalize the new stream name to deduplicate (e.g. "BLUE" vs "Blue")
       const normalizedNew = trimmedStreamName.charAt(0).toUpperCase() + trimmedStreamName.slice(1).toLowerCase();
       const streamExists = parentGrade.streams.some(
-        s => s.name.trim().toLowerCase() === normalizedNew.toLowerCase()
+        s => String(s.name || '').trim().toLowerCase() === normalizedNew.toLowerCase()
       );
       if (streamExists) {
         showError(`Stream "${trimmedStreamName}" already exists in ${parentGrade.name}.`);
@@ -210,7 +227,7 @@ const GradesStreams = () => {
         const newStream: Stream = {
           id: `s-${Date.now()}`,
           name: trimmedStreamName,
-          teacher: newStreamTeacher.trim() || "Unassigned",
+          teacher: String(newStreamTeacher || '').trim() || "Unassigned",
           studentsCount
         };
         return { ...grade, streams: [...grade.streams, newStream] };
@@ -279,10 +296,10 @@ const GradesStreams = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
+          <BackButton parentPath="/" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Grades & Streams</h1>
             <p className="text-muted-foreground">Configure school classes, streams, and assign class teachers.</p>

@@ -182,13 +182,13 @@ export default function MobileSettings() {
     }, [serverUrl]);
 
   const testConnection = async () => {
-    if (!serverUrl.trim()) {
-      showError('Please enter a server IP address');
-      return;
-    }
-
-    // Validate URL format
-    let testUrl = serverUrl.trim();
+    if (!String(serverUrl || '').trim()) {
+          showError('Please enter a server IP address');
+          return;
+        }
+    
+        // Validate URL format
+        let testUrl = String(serverUrl || '').trim();
     if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) {
       testUrl = `http://${testUrl}`;
     }
@@ -203,15 +203,15 @@ export default function MobileSettings() {
   };
 
   const saveServerUrl = async () => {
-    if (!serverUrl.trim()) {
-      showError('Please enter a server IP address');
-      return;
-    }
-
-    setIsSaving(true);
+    if (!String(serverUrl || '').trim()) {
+          showError('Please enter a server IP address');
+          return;
+        }
     
-    // Normalize URL
-    let normalizedUrl = serverUrl.trim();
+        setIsSaving(true);
+        
+        // Normalize URL
+        let normalizedUrl = String(serverUrl || '').trim();
     if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
       normalizedUrl = `http://${normalizedUrl}`;
     }
@@ -421,7 +421,7 @@ export default function MobileSettings() {
           <div className="flex gap-3">
             <Button
               onClick={testConnection}
-              disabled={isTesting || !serverUrl.trim()}
+              disabled={isTesting || !String(serverUrl || '').trim()}
               variant="outline"
               className="flex-1 h-12 rounded-xl font-bold"
             >

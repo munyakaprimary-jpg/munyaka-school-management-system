@@ -13,13 +13,11 @@
  *  ROLE TAXONOMY
  *  ───────────────────────────────────────────────────────────────────────────
  *  admin        → SCHOOL ADMINISTRATOR. Full unrestricted access to every
- *                  module, widget, route, sidebar entry, and operational
- *                  control surface in the school system.  Super-set of
- *                  HEADTEACHER + BURSAR + ICT + the old super_admin.
- *
- *                  NOTE: super_admin and admin are merged.  Both identifiers
- *                  resolve to the admin role at runtime.  The canonical
- *                  identifier stored in auth is "admin".
+  *                  module, widget, route, sidebar entry, and operational
+  *                  control surface in the school system.  Super-set of
+  *                  HEADTEACHER + BURSAR + ICT.
+  *
+  *                  NOTE: The canonical identifier stored in auth is "admin".
  *
  *  owner        → PLATFORM BILLING OWNER. Completely separate from admin.
  *                  Has NO operational access. Can see subscription/billing
@@ -56,6 +54,11 @@ export const ROLES = {
   TEACHER: "teacher",
   BURSAR: "bursar",
   ICT_TEACHER: "ict_teacher",
+  LIBRARIAN: "librarian",
+  STOREKEEPER: "storekeeper",
+  LAB_ASSISTANT: "lab_assistant",
+  ICT_TECH: "ict_tech",
+  NON_TEACHING_STAFF: "non_teaching_staff",
   PARENT: "parent",
   STUDENT: "student",
   OWNER: "owner",
@@ -63,24 +66,28 @@ export const ROLES = {
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
-/** Maps legacy "super_admin" identifier → canonical "admin" at runtime.
- *  The canonical identifier stored in auth is always "admin".
- *  Callers can pass either "admin" or "super_admin" and get admin behaviour. */
+/** Maps alternative identifiers → canonical role at runtime.
+ *  The canonical identifier stored in auth is always "admin". */
 export const normalizeAdmin = (role?: string | null): Role | null => {
   if (!role) return null;
   const r = role.toLowerCase();
   if (r === "admin" || r === "super_admin") return ROLES.ADMIN;
   if (r === "head_teacher" || r === "headteacher") return ROLES.HEAD_TEACHER;
   if (r === "ict_teacher" || r === "ict_technician") return ROLES.ICT_TEACHER;
+  if (r === "librarian" || r === "library_staff") return ROLES.LIBRARIAN;
+  if (r === "storekeeper" || r === "stores") return ROLES.STOREKEEPER;
+  if (r === "lab_assistant" || r === "science_lab_assistant") return ROLES.LAB_ASSISTANT;
+  if (r === "ict_tech" || r === "ict_lab_technician") return ROLES.ICT_TECH;
+  if (r === "non_teaching_staff" || r === "support_staff" || r === "office_staff") return ROLES.NON_TEACHING_STAFF;
   if (r in ROLES) return r as Role;
   return null;
 };
 
-/** True when role is the school administrator (admin / super_admin merged). */
+/** True when role is the school administrator. */
 export const isAdmin = (role?: string | null): boolean => {
   if (!role) return false;
   const r = role.toLowerCase();
-  return r === "admin" || r === "super_admin";
+  return r === "admin";
 };
 
 /** True when role is the platform billing owner. Completely separate from
@@ -111,24 +118,23 @@ export const FULL_DASHBOARD_ROLES: ReadonlyArray<Role> = [
  *  Dashboard Overview.
  *
  *  Accepted inputs (case-insensitive, normalised):
- *    • admin        ✓
- *    • super_admin  ✓ (legacy alias for admin)
- *    • head_teacher ✓
- *    • dev          ✓
- *
- *  Every other role (teacher, bursar, ict_teacher, parent, student,
- *  owner, …) returns `false` and must be routed to a scoped dashboard
- *  instead. */
-export function hasFullDashboardAccess(
-  role?: string | null
-): boolean {
-  if (!role) return false;
-  const r = role.toLowerCase();
-  if (r === "admin" || r === "super_admin") return true;
-  if (r === "head_teacher" || r === "headteacher") return true;
-  if (r === "dev") return true;
-  return false;
-}
+  *    • admin        ✓
+  *    • head_teacher ✓
+  *    • dev          ✓
+  *
+  *  Every other role (teacher, bursar, ict_teacher, parent, student,
+  *  owner, …) returns `false` and must be routed to a scoped dashboard
+  *  instead. */
+ export function hasFullDashboardAccess(
+   role?: string | null
+ ): boolean {
+   if (!role) return false;
+   const r = role.toLowerCase();
+   if (r === "admin" || r === "super_admin") return true;
+   if (r === "head_teacher" || r === "headteacher") return true;
+   if (r === "dev") return true;
+   return false;
+ }
 
 /** True for users who should see a class-level, restricted dashboard.
  *  Currently: any teaching staff (teacher / ict_teacher / head_teacher)
@@ -184,10 +190,13 @@ export const PERMISSIONS = {
   MARK_STUDENT_ATTENDANCE: "mark_student_attendance",
   MANAGE_STAFF_ATTENDANCE: "manage_staff_attendance",
 
-  // Academic
+  // Academic (RESTRICTED for non-teaching staff)
   ENTER_MARKS: "enter_marks",
   VIEW_RESULTS_ANALYSIS: "view_results_analysis",
   MANAGE_TIMETABLE: "manage_timetable",
+  ACCESS_CBC_ASSESSMENT: "access_cbc_assessment",
+  ACCESS_MARKSHEET_ENTRIES: "access_marksheet_entries",
+  CLASS_TEACHER_REGISTER_OVERRIDE: "class_teacher_register_override",
 
   // Finance
   COLLECT_FEES: "collect_fees",
@@ -211,6 +220,30 @@ export const PERMISSIONS = {
   ACCESS_PORTAL_LOGINS: "access_portal_logins",
   ACCESS_NETWORK_QUOTAS: "access_network_quotas",
   ACCESS_LAB_SCHEDULES: "access_lab_schedules",
+
+  // Library (for Librarian role)
+  ACCESS_LIBRARY_CATALOG: "access_library_catalog",
+  ACCESS_BOOK_CHECKOUT: "access_book_checkout",
+  ACCESS_INVENTORY_LOGS: "access_inventory_logs",
+
+  // Storekeeper / Inventory
+  ACCESS_STOCK_REQUISITIONS: "access_stock_requisitions",
+  ACCESS_INVENTORY_AUDITS: "access_inventory_audits",
+  ACCESS_SUPPLY_REQUESTS: "access_supply_requests",
+
+  // Lab Assistant
+  ACCESS_SCIENCE_LAB_INVENTORY: "access_science_lab_inventory",
+  ACCESS_REAGENT_LOGS: "access_reagent_logs",
+  ACCESS_MAINTENANCE_REQUESTS: "access_maintenance_requests",
+
+  // ICT Lab Technician
+  ACCESS_COMPUTER_LAB_ASSETS: "access_computer_lab_assets",
+  ACCESS_IT_TICKETS: "access_it_tickets",
+  ACCESS_DEVICE_ASSIGNMENT: "access_device_assignment",
+
+  // General support staff
+  ACCESS_DUTY_ROSTER: "access_duty_roster",
+  ACCESS_INTERNAL_MESSAGING: "access_internal_messaging",
 
   // Settings
   EDIT_SCHOOL_SETTINGS: "edit_school_settings",
@@ -253,6 +286,9 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     enter_marks: true,
     view_results_analysis: true,
     manage_timetable: true,
+    access_cbc_assessment: true,
+    access_marksheet_entries: true,
+    class_teacher_register_override: true,
     view_recent_alerts: true,
     publish_notices: true,
     manage_staff_accounts: true,
@@ -268,6 +304,21 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     manage_subscription: null,
     manage_billing: null,
     manage_parent_access: null,
+    // Support staff module permissions
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+    access_computer_lab_assets: null,
+    access_it_tickets: null,
+    access_device_assignment: null,
+    access_duty_roster: true,
+    access_internal_messaging: true,
   },
 
   /* ───────────── TEACHER: class marksheets & registers ───────────── */
@@ -297,6 +348,25 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     edit_school_settings: null,
     access_central_data: true,
     manage_parent_access: null,
+    // Academic permissions
+    access_cbc_assessment: true,
+    access_marksheet_entries: true,
+    class_teacher_register_override: null,
+    // Support staff module permissions
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+    access_computer_lab_assets: null,
+    access_it_tickets: null,
+    access_device_assignment: null,
+    access_duty_roster: null,
+    access_internal_messaging: null,
   },
 
   /* ───────────── BURSAR: fees, payments, ledger logs ───────────── */
@@ -326,6 +396,25 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     access_lab_schedules: null,
     edit_school_settings: null,
     manage_parent_access: null,
+    // Academic permissions (restricted)
+    access_cbc_assessment: null,
+    access_marksheet_entries: null,
+    class_teacher_register_override: null,
+    // Support staff module permissions
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+    access_computer_lab_assets: null,
+    access_it_tickets: null,
+    access_device_assignment: null,
+    access_duty_roster: null,
+    access_internal_messaging: null,
   },
 
   /* ───────────── ICT_TEACHER: infrastructure ───────────── */
@@ -334,6 +423,8 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     access_portal_logins: true,
     access_network_quotas: true,
     access_lab_schedules: true,
+    access_computer_lab_assets: true,
+    access_it_tickets: true,
     view_operational_dashboard: true,
     access_central_data: true,
     view_attendance_trends: null,
@@ -355,6 +446,21 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     manage_billing: null,
     edit_school_settings: null,
     manage_parent_access: null,
+    access_cbc_assessment: null,
+    access_marksheet_entries: null,
+    class_teacher_register_override: null,
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+    access_device_assignment: null,
+    access_duty_roster: null,
+    access_internal_messaging: null,
   },
 
   /* ───────────── PARENT: read-only on own data ───────────── */
@@ -384,6 +490,23 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     access_lab_schedules: null,
     edit_school_settings: null,
     manage_parent_access: null,
+    access_cbc_assessment: null,
+    access_marksheet_entries: null,
+    class_teacher_register_override: null,
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+    access_computer_lab_assets: null,
+    access_it_tickets: null,
+    access_device_assignment: null,
+    access_duty_roster: null,
+    access_internal_messaging: null,
   },
 
   /* ───────────── STUDENT: read-only on own data ───────────── */
@@ -413,6 +536,23 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     access_lab_schedules: null,
     edit_school_settings: null,
     manage_parent_access: null,
+    access_cbc_assessment: null,
+    access_marksheet_entries: null,
+    class_teacher_register_override: null,
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+    access_computer_lab_assets: null,
+    access_it_tickets: null,
+    access_device_assignment: null,
+    access_duty_roster: null,
+    access_internal_messaging: null,
   },
 
   /* ───────────── OWNER: platform billing only — NO operational access ───────────── */
@@ -443,6 +583,263 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     // Owner has explicit billing access only
     manage_subscription: true,
     manage_billing: true,
+    access_cbc_assessment: null,
+    access_marksheet_entries: null,
+    class_teacher_register_override: null,
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+    access_computer_lab_assets: null,
+    access_it_tickets: null,
+    access_device_assignment: null,
+    access_duty_roster: null,
+    access_internal_messaging: null,
+  },
+
+  /* ───────────── LIBRARIAN: library focus, no academic access ───────────── */
+  librarian: {
+    access_library_catalog: true,
+    access_book_checkout: true,
+    access_inventory_logs: true,
+    manage_staff_attendance: true,
+    access_duty_roster: true,
+    access_internal_messaging: true,
+    // Restricted: no academic permissions
+    view_operational_dashboard: null,
+    manage_learners: null,
+    execute_transfers: null,
+    view_learner_archive: null,
+    view_attendance_trends: null,
+    mark_student_attendance: null,
+    enter_marks: null,
+    view_results_analysis: null,
+    manage_timetable: null,
+    access_cbc_assessment: null,
+    access_marksheet_entries: null,
+    class_teacher_register_override: null,
+    collect_fees: null,
+    view_fee_reports: null,
+    manage_subscription: null,
+    manage_billing: null,
+    manage_staff_accounts: null,
+    promote_students: null,
+    manage_parent_access: null,
+    view_recent_alerts: null,
+    publish_notices: null,
+    manage_ict_systems: null,
+    access_portal_logins: null,
+    access_network_quotas: null,
+    access_lab_schedules: null,
+    edit_school_settings: null,
+    access_central_data: null,
+    // Non-core library perms
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+    access_computer_lab_assets: null,
+    access_it_tickets: null,
+    access_device_assignment: null,
+  },
+
+  /* ───────────── STOREKEEPER: inventory focus, no academic access ───────────── */
+  storekeeper: {
+    access_stock_requisitions: true,
+    access_inventory_audits: true,
+    access_supply_requests: true,
+    manage_staff_attendance: true,
+    access_duty_roster: true,
+    access_internal_messaging: true,
+    // Restricted: no academic permissions
+    view_operational_dashboard: null,
+    manage_learners: null,
+    execute_transfers: null,
+    view_learner_archive: null,
+    view_attendance_trends: null,
+    mark_student_attendance: null,
+    enter_marks: null,
+    view_results_analysis: null,
+    manage_timetable: null,
+    access_cbc_assessment: null,
+    access_marksheet_entries: null,
+    class_teacher_register_override: null,
+    collect_fees: null,
+    view_fee_reports: null,
+    manage_subscription: null,
+    manage_billing: null,
+    manage_staff_accounts: null,
+    promote_students: null,
+    manage_parent_access: null,
+    view_recent_alerts: null,
+    publish_notices: null,
+    manage_ict_systems: null,
+    access_portal_logins: null,
+    access_network_quotas: null,
+    access_lab_schedules: null,
+    edit_school_settings: null,
+    access_central_data: null,
+    // Non-core storekeeper perms
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+    access_computer_lab_assets: null,
+    access_it_tickets: null,
+    access_device_assignment: null,
+  },
+
+  /* ───────────── LAB_ASSISTANT: science lab focus, no academic access ───────────── */
+  lab_assistant: {
+    access_science_lab_inventory: true,
+    access_reagent_logs: true,
+    access_maintenance_requests: true,
+    manage_staff_attendance: true,
+    access_duty_roster: true,
+    access_internal_messaging: true,
+    // Restricted: no academic permissions
+    view_operational_dashboard: null,
+    manage_learners: null,
+    execute_transfers: null,
+    view_learner_archive: null,
+    view_attendance_trends: null,
+    mark_student_attendance: null,
+    enter_marks: null,
+    view_results_analysis: null,
+    manage_timetable: null,
+    access_cbc_assessment: null,
+    access_marksheet_entries: null,
+    class_teacher_register_override: null,
+    collect_fees: null,
+    view_fee_reports: null,
+    manage_subscription: null,
+    manage_billing: null,
+    manage_staff_accounts: null,
+    promote_students: null,
+    manage_parent_access: null,
+    view_recent_alerts: null,
+    publish_notices: null,
+    manage_ict_systems: null,
+    access_portal_logins: null,
+    access_network_quotas: null,
+    access_lab_schedules: null,
+    edit_school_settings: null,
+    access_central_data: null,
+    // Non-core lab perms
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_computer_lab_assets: null,
+    access_it_tickets: null,
+    access_device_assignment: null,
+  },
+
+  /* ───────────── ICT_TECH: IT focus, no academic access ───────────── */
+  ict_tech: {
+    access_computer_lab_assets: true,
+    access_it_tickets: true,
+    access_device_assignment: true,
+    manage_staff_attendance: true,
+    access_duty_roster: true,
+    access_internal_messaging: true,
+    // Restricted: no academic permissions
+    view_operational_dashboard: null,
+    manage_learners: null,
+    execute_transfers: null,
+    view_learner_archive: null,
+    view_attendance_trends: null,
+    mark_student_attendance: null,
+    enter_marks: null,
+    view_results_analysis: null,
+    manage_timetable: null,
+    access_cbc_assessment: null,
+    access_marksheet_entries: null,
+    class_teacher_register_override: null,
+    collect_fees: null,
+    view_fee_reports: null,
+    manage_subscription: null,
+    manage_billing: null,
+    manage_staff_accounts: null,
+    promote_students: null,
+    manage_parent_access: null,
+    view_recent_alerts: null,
+    publish_notices: null,
+    manage_ict_systems: null,
+    access_portal_logins: null,
+    access_network_quotas: null,
+    access_lab_schedules: null,
+    edit_school_settings: null,
+    access_central_data: null,
+    // Non-core ICT perms
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+  },
+
+  /* ───────────── NON_TEACHING_STAFF: general support, no academic access ───────────── */
+  non_teaching_staff: {
+    access_duty_roster: true,
+    access_internal_messaging: true,
+    manage_staff_attendance: true,
+    // Restricted: no academic permissions
+    view_operational_dashboard: null,
+    manage_learners: null,
+    execute_transfers: null,
+    view_learner_archive: null,
+    view_attendance_trends: null,
+    mark_student_attendance: null,
+    enter_marks: null,
+    view_results_analysis: null,
+    manage_timetable: null,
+    access_cbc_assessment: null,
+    access_marksheet_entries: null,
+    class_teacher_register_override: null,
+    collect_fees: null,
+    view_fee_reports: null,
+    manage_subscription: null,
+    manage_billing: null,
+    manage_staff_accounts: null,
+    promote_students: null,
+    manage_parent_access: null,
+    view_recent_alerts: null,
+    publish_notices: null,
+    manage_ict_systems: null,
+    access_portal_logins: null,
+    access_network_quotas: null,
+    access_lab_schedules: null,
+    edit_school_settings: null,
+    access_central_data: null,
+    // Non-core perms
+    access_library_catalog: null,
+    access_book_checkout: null,
+    access_inventory_logs: null,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: null,
+    access_reagent_logs: null,
+    access_maintenance_requests: null,
+    access_computer_lab_assets: null,
+    access_it_tickets: null,
+    access_device_assignment: null,
   },
 };
 
@@ -534,6 +931,17 @@ export const ROLE_DASHBOARD_WIDGETS: Record<Role, WidgetKey[]> = {
     "systemStatus",
   ],
 
+  // Support Staff: minimal dashboard widgets
+  librarian: ["systemStatus", "todayAttendance"],
+  storekeeper: ["systemStatus", "todayAttendance"],
+  lab_assistant: ["systemStatus", "todayAttendance"],
+  ict_tech: [
+    "activePortalLogins",
+    "networkQuotas",
+    "systemStatus",
+  ],
+  non_teaching_staff: ["systemStatus"],
+
   parent: ["totalActiveEnrollment"],
   student: ["todayAttendance"],
 
@@ -585,6 +993,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   "/staff/attendance-monitor": PERMISSIONS.MANAGE_STAFF_ATTENDANCE,
   "/fees": PERMISSIONS.COLLECT_FEES,
   "/payment-management": PERMISSIONS.MANAGE_SUBSCRIPTION,
+  "/admin/control-center": PERMISSIONS.EDIT_SCHOOL_SETTINGS, // operational — owner excluded
   "/system-management": PERMISSIONS.MANAGE_ICT_SYSTEMS,
   "/communication": PERMISSIONS.PUBLISH_NOTICES,
   "/notices": PERMISSIONS.PUBLISH_NOTICES,
@@ -639,6 +1048,11 @@ export const ROLE_LABELS: Record<Role, string> = {
   teacher: "Teacher",
   bursar: "Bursar",
   ict_teacher: "ICT Teacher",
+  librarian: "Librarian",
+  storekeeper: "Storekeeper",
+  lab_assistant: "Lab Assistant",
+  ict_tech: "ICT Lab Technician",
+  non_teaching_staff: "Non-Teaching Staff",
   parent: "Parent",
   student: "Student",
   owner: "Owner",

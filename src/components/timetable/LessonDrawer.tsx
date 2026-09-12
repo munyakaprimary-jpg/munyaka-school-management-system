@@ -12,6 +12,7 @@ interface LessonDrawerProps {
   slotIndex: number | null;
   timeLabel: string;
   currentEntry: LessonEntry | null;
+  isReadOnly?: boolean;
   onSave: (subject: string, colorClass?: string) => void;
   onDelete: () => void;
 }
@@ -46,6 +47,7 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
   slotIndex,
   timeLabel,
   currentEntry,
+  isReadOnly = false,
   onSave,
   onDelete,
 }) => {
@@ -70,7 +72,7 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
   if (!open || !day || slotIndex === null) return null;
 
   const handleSave = () => {
-    const finalSubject = isCustom ? customSubject.trim() : subject;
+    const finalSubject = isCustom ? String(customSubject || '').trim() : subject;
     if (!finalSubject) return;
     const preset = PRESET_SUBJECTS.find(p => p.name === finalSubject);
     onSave(finalSubject, preset?.color);
@@ -87,11 +89,17 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
       <div className="fixed right-0 top-0 bottom-0 z-50 w-full sm:w-[420px] bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-emerald-600" />
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${isReadOnly ? 'bg-slate-100' : 'bg-emerald-100'}`}>
+              {isReadOnly ? (
+                <BookOpen className="w-5 h-5 text-slate-400" />
+              ) : (
+                <BookOpen className="w-5 h-5 text-emerald-600" />
+              )}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Assign Lesson</h2>
+              <h2 className="text-lg font-bold text-slate-900">
+                {isReadOnly ? 'Lesson Details' : 'Assign Lesson'}
+              </h2>
               <p className="text-xs text-slate-500">{DAY_LABELS[day]} • {timeLabel}</p>
             </div>
           </div>
@@ -106,68 +114,85 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Current lesson */}
-          {currentEntry && (
+          {currentEntry ? (
             <div className="bg-slate-50 rounded-2xl p-4">
               <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Current Lesson</Label>
               <div className="mt-2 flex items-center justify-between">
                 <span className={`inline-block px-3 py-1.5 rounded-xl text-sm font-bold ${currentEntry.color}`}>
                   {currentEntry.subject}
                 </span>
-                <button
-                  onClick={onDelete}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Remove
-                </button>
+                {!isReadOnly && (
+                  <button
+                    onClick={onDelete}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove
+                  </button>
+                )}
               </div>
+            </div>
+          ) : !isReadOnly && (
+            <div className="bg-slate-50 rounded-2xl p-4">
+              <p className="text-sm text-slate-500 text-center">No lesson assigned yet.</p>
             </div>
           )}
 
           {/* Preset subjects */}
-          <div>
-            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Choose a Subject</Label>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {PRESET_SUBJECTS.map((preset) => (
-                <button
-                  key={preset.name}
-                  onClick={() => {
-                    setSubject(preset.name);
-                    setIsCustom(false);
-                  }}
-                  className={`p-2.5 rounded-xl text-xs font-bold text-left transition-all ${preset.color} ${
-                    !isCustom && subject === preset.name
-                      ? 'ring-2 ring-offset-2 ring-indigo-500 scale-[0.98]'
-                      : 'hover:scale-[1.02]'
-                  }`}
-                >
-                  {preset.name}
-                </button>
-              ))}
+          {!isReadOnly && (
+            <div>
+              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Choose a Subject</Label>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {PRESET_SUBJECTS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    onClick={() => {
+                      setSubject(preset.name);
+                      setIsCustom(false);
+                    }}
+                    className={`p-2.5 rounded-xl text-xs font-bold text-left transition-all ${preset.color} ${
+                      !isCustom && subject === preset.name
+                        ? 'ring-2 ring-offset-2 ring-indigo-500 scale-[0.98]'
+                        : 'hover:scale-[1.02]'
+                    }`}
+                  >
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Custom subject */}
-          <div className="border-t pt-5">
-            <div className="flex items-center justify-between mb-3">
-              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Custom Subject</Label>
-              <button
-                onClick={() => setIsCustom(!isCustom)}
-                className={`text-xs font-semibold ${isCustom ? 'text-indigo-600' : 'text-slate-500 hover:text-indigo-600'} transition-colors`}
-              >
-                {isCustom ? 'Using custom' : '+ Use custom'}
-              </button>
+          {!isReadOnly && (
+            <div className="border-t pt-5">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Custom Subject</Label>
+                <button
+                  onClick={() => setIsCustom(!isCustom)}
+                  className={`text-xs font-semibold ${isCustom ? 'text-indigo-600' : 'text-slate-500 hover:text-indigo-600'} transition-colors`}
+                >
+                  {isCustom ? 'Using custom' : '+ Use custom'}
+                </button>
+              </div>
+              {isCustom && (
+                <Input
+                  value={customSubject}
+                  onChange={(e) => setCustomSubject(e.target.value)}
+                  placeholder="Enter custom subject name..."
+                  className="rounded-xl"
+                  autoFocus
+                />
+              )}
             </div>
-            {isCustom && (
-              <Input
-                value={customSubject}
-                onChange={(e) => setCustomSubject(e.target.value)}
-                placeholder="Enter custom subject name..."
-                className="rounded-xl"
-                autoFocus
-              />
-            )}
-          </div>
+          )}
+
+          {/* Read-only notice */}
+          {isReadOnly && !currentEntry && (
+            <div className="bg-slate-50 rounded-2xl p-4">
+              <p className="text-sm text-slate-500 text-center">No lesson assigned.</p>
+            </div>
+          )}
         </div>
 
         <div className="p-6 border-t bg-slate-50 flex gap-2">
@@ -176,15 +201,17 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
             variant="outline"
             className="flex-1 rounded-xl"
           >
-            Cancel
+            {isReadOnly ? 'Close' : 'Cancel'}
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isCustom ? !customSubject.trim() : !subject}
-            className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700"
-          >
-            Save Lesson
-          </Button>
+          {!isReadOnly && (
+            <Button
+              onClick={handleSave}
+              disabled={isCustom ? !String(customSubject || '').trim() : !subject}
+              className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700"
+            >
+              Save Lesson
+            </Button>
+          )}
         </div>
       </div>
     </>

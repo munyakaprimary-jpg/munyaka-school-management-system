@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { Modal } from '@/components/ui/modal';
+import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,7 +32,7 @@ export const BookReturnModal: React.FC<BookReturnModalProps> = ({
 
   const filteredLogs = useMemo(() => {
     return historyLogs.filter(log => log.id === selectedLogId);
-  });
+  }, [historyLogs, selectedLogId]);
 
   const selectedLog = selectedLogId ? historyLogs.find(log => log.id === selectedLogId) : null;
 
@@ -57,7 +57,7 @@ export const BookReturnModal: React.FC<BookReturnModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onProcessReturn(selectedLogId, condition, notes.trim());
+      await onProcessReturn(selectedLogId, condition, String(notes || '').trim());
       setIsSubmitting(false);
       setSelectedLogId('');
       setCondition('Good');
@@ -134,7 +134,7 @@ export const BookReturnModal: React.FC<BookReturnModalProps> = ({
 
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Condition on Return</Label>
-            <Select value={condition} onValueChange={setCondition}>
+            <Select value={condition} onValueChange={(val) => setCondition(val as ConditionReturnStatus)}>
               <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
                 <SelectValue />
               </SelectTrigger>

@@ -16,10 +16,10 @@ const StaffCheckIn = () => {
   } = useStaffAttendance(location);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
+          <BackButton parentPath="/" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Daily Duty Check-In</h1>
             <p className="text-muted-foreground">Log your arrival and departure within the school geofence.</p>

@@ -14,23 +14,7 @@ import { Plus, Trash2, GraduationCap, AlertCircle, Lock, Loader2, Edit, Sparkles
 import { showSuccess, showError } from '@/utils/toast';
 import { DEFAULT_CBC_CLUSTERS, buildDefaultClusters } from '@/data/defaultCbcLearningAreas';
 import { notifyDataChanged } from '@/utils/storage';
-
-interface LearningArea {
-  id: string;
-  name: string;
-  periodsPerWeek: number;
-  type: 'Core' | 'Elective';
-  description?: string;
-  /** True for auto-seeded CBC areas; false for user-created items */
-  isDefault?: boolean;
-}
-
-interface ClusterData {
-  id: string;
-  name: string;
-  description: string;
-  learningAreas: LearningArea[];
-}
+import type { LearningArea, ClusterData } from '@/types/assessments';
 
 /** Rehydrate a saved cluster, restoring missing default areas if any were removed */
 const hydrateClusters = (savedClusters: ClusterData[]): ClusterData[] => {
@@ -54,6 +38,7 @@ const hydrateClusters = (savedClusters: ClusterData[]): ClusterData[] => {
     // No saved data for this cluster — seed with defaults
     return {
       ...defaultCluster,
+      description: defaultCluster.description ?? '',
       learningAreas: defaultCluster.learningAreas.map((area, index) => ({
         id: `default-${defaultCluster.id}-${index}-${Date.now().toString(36)}`,
         name: area.name,
@@ -72,9 +57,9 @@ const LearningAreas = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        return hydrateClusters(JSON.parse(saved));
+        return hydrateClusters(JSON.parse(saved)) as ClusterData[];
       } catch {
-        return buildDefaultClusters();
+        return buildDefaultClusters() as ClusterData[];
       }
     }
     return buildDefaultClusters();
@@ -112,26 +97,26 @@ const LearningAreas = () => {
   };
 
   const handleAddLearningArea = () => {
-    if (!name.trim()) {
-      showError('Please enter a learning area name.');
-      return;
-    }
-
-    if (!isNameUniqueInCluster(selectedClusterId, name.trim())) {
-      showError(
-        `A learning area named "${name.trim()}" already exists in ${
-          clusters.find((c) => c.id === selectedClusterId)?.name
-        }.`
-      );
-      return;
-    }
-
-    const newArea: LearningArea = {
-      id: `la-${Date.now()}`,
-      name: name.trim(),
-      periodsPerWeek: parseInt(periods) || 4,
-      type,
-      description: description.trim() || undefined,
+      if (!String(name || '').trim()) {
+        showError('Please enter a learning area name.');
+        return;
+      }
+  
+      if (!isNameUniqueInCluster(selectedClusterId, String(name || '').trim())) {
+        showError(
+          `A learning area named "${String(name || '').trim()}" already exists in ${
+            clusters.find((c) => c.id === selectedClusterId)?.name
+          }.`
+        );
+        return;
+      }
+  
+      const newArea: LearningArea = {
+        id: `la-${Date.now()}`,
+        name: String(name || '').trim(),
+        periodsPerWeek: parseInt(periods) || 4,
+        type,
+        description: String(description || '').trim() || undefined,
       isDefault: false,
     };
 
@@ -153,43 +138,43 @@ const LearningAreas = () => {
   };
 
   const handleEditLearningArea = () => {
-    if (!name.trim()) {
-      showError('Please enter a learning area name.');
-      return;
-    }
-
-    if (!isNameUniqueInCluster(targetClusterId, name.trim(), targetLearningArea?.id)) {
-      showError(
-        `A learning area named "${name.trim()}" already exists in ${
-          clusters.find((c) => c.id === targetClusterId)?.name
-        }.`
-      );
-      return;
-    }
-
-    if (targetLearningArea) {
-      setClusters((prev) =>
-        prev.map((c) =>
-          c.id === targetClusterId
-            ? {
-                ...c,
-                learningAreas: c.learningAreas.map((la) =>
-                  la.id === targetLearningArea.id
-                    ? {
-                        ...la,
-                        name: name.trim(),
-                        periodsPerWeek: parseInt(periods) || 4,
-                        type,
-                        description: description.trim() || undefined,
-                      }
-                    : la
-                ),
-              }
-            : c
-        )
-      );
-      showSuccess(`Successfully updated "${name.trim()}"!`);
-    }
+      if (!String(name || '').trim()) {
+        showError('Please enter a learning area name.');
+        return;
+      }
+  
+      if (!isNameUniqueInCluster(targetClusterId, String(name || '').trim(), targetLearningArea?.id)) {
+        showError(
+          `A learning area named "${String(name || '').trim()}" already exists in ${
+            clusters.find((c) => c.id === targetClusterId)?.name
+          }.`
+        );
+        return;
+      }
+  
+      if (targetLearningArea) {
+        setClusters((prev) =>
+          prev.map((c) =>
+            c.id === targetClusterId
+              ? {
+                  ...c,
+                  learningAreas: c.learningAreas.map((la) =>
+                    la.id === targetLearningArea.id
+                      ? {
+                          ...la,
+                          name: String(name || '').trim(),
+                          periodsPerWeek: parseInt(periods) || 4,
+                          type,
+                          description: String(description || '').trim() || undefined,
+                        }
+                      : la
+                  ),
+                }
+              : c
+          )
+        );
+        showSuccess(`Successfully updated "${String(name || '').trim()}"!`);
+      }
 
     setIsEditOpen(false);
     setTargetLearningArea(null);
@@ -219,10 +204,10 @@ const LearningAreas = () => {
   }, []);
 
   const handleVerifyAuth = useCallback(async () => {
-    if (!authPassword.trim()) {
-      setAuthError('Password is required');
-      return;
-    }
+    if (!String(authPassword || '').trim()) {
+          setAuthError('Password is required');
+          return;
+        }
 
     setIsVerifying(true);
     setAuthError('');
@@ -274,11 +259,11 @@ const LearningAreas = () => {
   const customCount = activeCluster?.learningAreas.filter((la) => !la.isDefault).length ?? 0;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
+          <BackButton parentPath="/" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learning Area Manager</h1>
             <p className="text-muted-foreground">Manage CBC subjects and lesson classifications.</p>

@@ -17,7 +17,8 @@ import {
   FileSpreadsheet,
   Calendar
 } from 'lucide-react';
-import { STUDENTS, GRADES_DATA, Grade } from '@/lib/mock-data';
+import { GRADES_DATA, Grade } from '@/lib/mock-data';
+import { getStudents } from '@/services/persistentStore';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { downloadCSV, SCHOOL_HEADERS, generateCSVHeader } from '@/utils/downloadHelper';
@@ -68,7 +69,7 @@ const GRADE_ORDER = [
 
 // Helper function to get the sort index for a grade name
 const getGradeSortIndex = (gradeName: string): number => {
-  const normalized = gradeName.toLowerCase().trim();
+  const normalized = String(gradeName || '').toLowerCase().trim();
   const index = GRADE_ORDER.findIndex(g => normalized.includes(g));
   return index !== -1 ? index : 999;
 };
@@ -167,10 +168,13 @@ const ReportCards = () => {
 
   // Derived Filtered Students based on current Academic Year & Grade/Stream/Search filters
   const filteredStudents = useMemo(() => {
-    return STUDENTS.filter(s => {
-      const matchesSearch = !searchTerm || s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
+    const students = getStudents();
+    return students.filter(s => {
+      const matchesSearch = !searchTerm ||
+        String(s.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String((s as any).assessment ?? "").toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGrade = grade === "all" || s.grade === grade;
-      const matchesStream = stream === "all" || s.stream.toLowerCase() === stream.toLowerCase();
+      const matchesStream = stream === "all" || String(s.stream ?? "").toLowerCase() === stream.toLowerCase();
       return matchesSearch && matchesGrade && matchesStream;
     });
   }, [searchTerm, grade, stream]);
@@ -358,7 +362,7 @@ const ReportCards = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 pb-20 animate-in fade-in duration-500">
       <style>{`
         @media print {
           @page {
@@ -440,7 +444,7 @@ const ReportCards = () => {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print action-bar">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
+          <BackButton parentPath="/" />
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Generator</h1>
         </div>
         <div className="flex gap-2">
@@ -579,8 +583,8 @@ const ReportCards = () => {
         {/* Right Side: Page Info */}
         <div className="flex-1 space-y-2">
           <p className="text-slate-500 text-sm font-medium">
-            {searchTerm.trim() 
-              ? `Filtered individual search: Previewing ${filteredStudents.length} report card(s) for "${searchTerm}". Click "Download Current" to download.` 
+            {String(searchTerm || '').trim()
+                          ? `Filtered individual search: Previewing ${filteredStudents.length} report card(s) for "${searchTerm}". Click "Download Current" to download.`
               : `Previewing ${filteredStudents.length} report cards for Grade ${grade} (${year}). Type a learner's name in the search box to download an individual report.`}
           </p>
         </div>
@@ -625,7 +629,7 @@ const ReportCards = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">ULI</span>
-                  <span className="font-black font-mono text-slate-900">{s.assessment}</span>
+                  <span className="font-black font-mono text-slate-900">{String((s as any).assessment ?? "")}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Grade / Stream</span>
@@ -728,8 +732,8 @@ const ReportCards = () => {
         <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
           <Layers size={16} className="text-indigo-600" />
           <span>
-            {searchTerm.trim() 
-              ? `Ready to download individual 1-page portrait report for ${filteredStudents[0]?.name || 'searched learner'}` 
+            {String(searchTerm || '').trim()
+                          ? `Ready to download individual 1-page portrait report for ${filteredStudents[0]?.name || 'searched learner'}`
               : `Type a learner's name in search to download their individual report card`}
           </span>
         </div>
