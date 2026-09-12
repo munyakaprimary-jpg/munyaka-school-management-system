@@ -76,14 +76,22 @@ const ProtectedRoute = ({
 
     // Role allowlist: if specified, only these roles may access (allowing support staff & normalization).
     if (allowedRoles && allowedRoles.length > 0) {
-      const isAllowed = allowedRoles.some(r => {
-        const target = r.toLowerCase();
-        return target === normalizedUserRole || target === rawRole.toLowerCase() ||
-               (target === 'staff' && ['support_staff', 'accountant', 'driver', 'staff'].includes(normalizedUserRole));
-      });
-      if (!isAllowed && normalizedUserRole !== 'admin' && normalizedUserRole !== 'owner' && normalizedUserRole !== 'dev') {
-        console.warn('[ProtectedRoute] Role Restriction: User role not allowed for route:', { userRole: rawRole, allowedRoles });
-        return <Navigate to="/dashboard" replace />;
+      if (normalizedUserRole === 'dev') {
+        // Dev can access any route explicitly allowed for Dev or PlatformAdmin or owner
+        const isDevAllowed = allowedRoles.some(r => ['dev', 'platformadmin', 'owner'].includes(r.toLowerCase()));
+        if (!isDevAllowed) {
+          return <Navigate to="/dev/dashboard" replace />;
+        }
+      } else {
+        const isAllowed = allowedRoles.some(r => {
+          const target = r.toLowerCase();
+          return target === normalizedUserRole || target === rawRole.toLowerCase() ||
+                 (target === 'staff' && ['support_staff', 'accountant', 'driver', 'staff'].includes(normalizedUserRole));
+        });
+        if (!isAllowed && normalizedUserRole !== 'admin' && normalizedUserRole !== 'owner') {
+          console.warn('[ProtectedRoute] Role Restriction: User role not allowed for route:', { userRole: rawRole, allowedRoles });
+          return <Navigate to="/dashboard" replace />;
+        }
       }
     }
   }
