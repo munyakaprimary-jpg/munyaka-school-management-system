@@ -52,17 +52,39 @@ const ProtectedRoute = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Route-level role denylist: redirect blocked roles back to dashboard.
-  if (user && blockedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  // Route-level role denylist with support staff normalization: redirect blocked roles back to dashboard.
+  if (user) {
+    const rawRole = String(user.role || '').trim().toUpperCase();
+    const normalizedUserRole = rawRole.includes('PLATFORM') ? 'platform_admin' :
+                               rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
+                               rawRole.includes('ADMIN') ? 'admin' :
+                               rawRole.includes('OWNER') || rawRole.includes('SUPER') ? 'owner' :
+                               rawRole.includes('STUDENT') ? 'student' :
+                               rawRole.includes('PARENT') ? 'parent' :
+                               rawRole.includes('ACCOUNTANT') ? 'accountant' :
+                               rawRole.includes('DRIVER') ? 'driver' :
+                               rawRole.includes('SUPPORT') || rawRole.includes('NON_TEACHING') || rawRole.includes('NON-TEACHING') ? 'support_staff' : 'staff';
 
-  // Role allowlist: if specified, only these roles may access.
-  if (allowedRoles && allowedRoles.length > 0 && user) {
-    const normalizedUserRole = user.role.toLowerCase();
-    const isAllowed = allowedRoles.some(r => r.toLowerCase() === normalizedUserRole);
-    if (!isAllowed) {
-      return <Navigate to="/dashboard" replace />;
+    const isBlocked = blockedRoles.some(r => {
+          const target = r.toLowerCase();
+          return target === normalizedUserRole || target === rawRole.toLowerCase() || target === 'platform_admin';
+        });
+        if (isBlocked) {
+          console.warn('[ProtectedRoute] Role Restriction: User role is blocked:', { userRole: rawRole, blockedRoles });
+          return <Navigate to="/dashboard" replace />;
+        }
+
+    // Role allowlist: if specified, only these roles may access (allowing support staff & normalization).
+    if (allowedRoles && allowedRoles.length > 0) {
+      const isAllowed = allowedRoles.some(r => {
+        const target = r.toLowerCase();
+        return target === normalizedUserRole || target === rawRole.toLowerCase() ||
+               (target === 'staff' && ['support_staff', 'accountant', 'driver', 'staff'].includes(normalizedUserRole));
+      });
+      if (!isAllowed && normalizedUserRole !== 'admin' && normalizedUserRole !== 'owner') {
+        console.warn('[ProtectedRoute] Role Restriction: User role not allowed for route:', { userRole: rawRole, allowedRoles });
+        return <Navigate to="/dashboard" replace />;
+      }
     }
   }
 

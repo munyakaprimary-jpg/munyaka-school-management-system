@@ -43,6 +43,7 @@ interface RegisterModalProps {
   setGender?: (value: 'Male' | 'Female' | 'Other') => void;
   formError?: string;
   onRegister: (e?: React.FormEvent) => void;
+  isSubmitting?: boolean;
   // Optional teacher-restriction props (for non-admin users)
   currentUserId?: string;
   currentUserEmail?: string;
@@ -76,6 +77,7 @@ export default function RegisterModal({
   setGender,
   formError = '',
   onRegister,
+  isSubmitting = false,
   currentUserId,
   currentUserEmail,
   isCurrentUserAdmin = false,
@@ -179,25 +181,28 @@ export default function RegisterModal({
       title="Register New Student"
       description="Enroll learner into the academic system. Provide at least one of Assessment Number or Birth Certificate Number."
       footer={
-        <>
-          <Button
-            variant="ghost"
-            className="rounded-xl h-12 px-6 font-bold"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            className="rounded-xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black gap-2 shadow-lg shadow-indigo-100"
-            onClick={onRegister}
-          >
-            Register Student
-          </Button>
-        </>
-      }
-      maxWidth="max-w-xl"
-    >
-      <div className="space-y-6">
+          <>
+            <Button
+              variant="ghost"
+              className="rounded-xl h-12 px-6 font-bold"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="register-student-form"
+              disabled={isSubmitting}
+              className="rounded-xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black gap-2 shadow-lg shadow-indigo-100 disabled:opacity-50"
+            >
+              {isSubmitting ? 'Registering...' : 'Register Student'}
+            </Button>
+          </>
+        }
+        maxWidth="max-w-xl"
+      >
+        <form id="register-student-form" onSubmit={onRegister} className="space-y-6">
               {formError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2 animate-in slide-in-from-top-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
@@ -231,22 +236,6 @@ export default function RegisterModal({
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                 />
               </div>
-
-        {/* 2. Admission Number (Auto-generated) */}
-        <div className="space-y-2">
-          <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-            Admission Number
-          </Label>
-          <Input
-            value={admissionNumber}
-            readOnly
-            placeholder="Auto-generated"
-            className="rounded-xl h-12 bg-indigo-50 border border-indigo-200 font-bold text-indigo-700 cursor-not-allowed"
-          />
-          <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-            Auto-generated: MUN-G[Grade]-[Seq]/[Year]
-          </p>
-        </div>
 
         {/* 3. Assessment No & 4. Birth Certificate No */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -405,6 +394,24 @@ export default function RegisterModal({
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* Admission Number (Auto-generated) placed directly between Gender and Guardian Name */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                      Admission Number
+                    </Label>
+                    <Input
+                      value={admissionNumber}
+                      readOnly
+                      placeholder="Auto-generated"
+                      className="rounded-xl h-12 bg-indigo-50 border border-indigo-200 font-bold text-indigo-700 cursor-not-allowed"
+                    />
+                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                      MUN-G[Grade]-[Seq]/[Year]
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                       Guardian Name <span className="text-rose-500">*</span>
@@ -416,9 +423,6 @@ export default function RegisterModal({
                       className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                     />
                   </div>
-                </div>
-        
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                       Phone <span className="text-[9px] font-bold text-slate-400 normal-case tracking-normal">(optional)</span>
@@ -431,7 +435,7 @@ export default function RegisterModal({
                     />
                   </div>
                 </div>
-      </div>
-    </Modal>
+        </form>
+      </Modal>
   );
 }

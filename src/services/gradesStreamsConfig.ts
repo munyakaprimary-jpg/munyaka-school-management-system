@@ -48,6 +48,8 @@ function getGradeMatchKey(name: string): string {
   return t.replace(/\s+/g, '');
 }
 
+import { sortGradesAscending } from "../utils/gradeSort";
+
 function sortCaseInsensitive(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
 }
@@ -101,7 +103,7 @@ export function readGradesAndStreams(): GradesStreamsConfig {
     Object.values(gradeStreamMap).forEach((s) => s.forEach((st) => streamsSet.add(st)));
 
     return {
-      grades: Array.from(gradesSet).sort(sortCaseInsensitive),
+      grades: sortGradesAscending(Array.from(gradesSet)),
       streams: Array.from(streamsSet).sort(sortCaseInsensitive),
       gradeStreamMap,
     };
