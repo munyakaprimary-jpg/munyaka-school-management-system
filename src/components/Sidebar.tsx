@@ -416,30 +416,29 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 try {
                   storedUser = JSON.parse(localStorage.getItem('munyaka_user') || '{}');
                 } catch { /* ignore */ }
-                const currentRole = user?.role || storedUser.role || 'Admin';
-                const isDev = String(currentRole).toLowerCase() === 'dev' || String(currentRole).toLowerCase() === 'platformadmin';
-                const isAdminRole = String(currentRole).toLowerCase() === 'admin';
+                const userRole = storedUser.role || user?.role || 'Admin';
+                const isDev = String(userRole).toLowerCase() === 'dev' || String(userRole).toLowerCase() === 'platformadmin';
 
-                const avatarInitials = isDev ? 'DEV' : (isAdminRole ? 'AD' : (user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'));
-                const displayName = isDev ? 'Platform Developer' : (isAdminRole ? (user?.name || 'Admin') : (user?.name || 'User'));
-                const displayBadge = isDev ? 'SYSTEM DEVELOPER' : (isAdminRole ? 'ADMINISTRATOR' : (currentRole.replace('_', ' ').toUpperCase()));
+                const avatarText = isDev ? 'DV' : 'AD';
+                const userNameLabel = isDev ? 'Platform Developer' : 'Admin';
+                const subtitleLabel = isDev ? 'DEVELOPER' : 'ADMINISTRATOR';
 
                 return (
                   <>
                     <Link to="/" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
                       <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">
-                        {avatarInitials}
+                        {avatarText}
                       </div>
                     </Link>
                     {!isCollapsed && (
                       <div className="overflow-hidden flex-1">
                         <Link to="/" onClick={() => setIsOpen(false)}>
                           <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">
-                            {displayName}
+                            {userNameLabel}
                           </p>
                         </Link>
                         <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
-                          {displayBadge}
+                          {subtitleLabel}
                         </p>
                       </div>
                     )}
@@ -451,7 +450,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
               <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
                 <button
                   type="button"
-                  onClick={handleLogout}
+                  onClick={() => {
+                    localStorage.removeItem('munyaka_user');
+                    localStorage.removeItem('munyaka_admin_session');
+                    setIsOpen(false);
+                    window.location.hash = '/login';
+                  }}
                   className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors py-1.5 px-2 rounded-md hover:bg-red-50"
                 >
                   <LogOut className="w-4 h-4"/>
