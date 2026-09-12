@@ -83,12 +83,10 @@ export interface Student {
   deletedAt?: string;
   admissionNo?: string;
   birthCertificateNo?: string;
-  birthCertNo?: string;
   dob?: string;
   dateOfAdmission?: string;
   admissionYear?: number;
   assessmentNo?: string;
-  admissionNumber?: string;
   [key: string]: unknown;
 }
 
@@ -482,53 +480,66 @@ export const getStudents = (): Student[] => {
     const ls = getLocalStorage();
     if (!ls) return [];
 
-    // Guard: Read STORAGE_KEY ('munyaka_students') first. If data exists, parse and return immediately.
-    // NEVER overwrite existing localStorage with empty arrays or run seeding/resets if keys exist.
+    // ── Primary store (single source of truth) ──────────────────────────
     const primaryRaw = ls.getItem(STORAGE_KEY);
+    let primary: Student[] = [];
     if (primaryRaw != null) {
       const parsed = safeParse<Student[]>(primaryRaw, []);
-      if (Array.isArray(parsed)) {
-        return parsed;
+      if (Array.isArray(parsed)) primary = parsed;
+    }
+
+    // ── Merge legacy keys without overwriting existing entries ─────────
+    // Legacy keys may still hold records from older app versions. We append
+    // any record whose id (or admission number) is not already present in the
+    // primary store, then persist the merged result back to the canonical key
+    // so future reads are consistent and no data is silently lost.
+    const legacyKeys = ['students', 'munyaka_registered_students'];
+    const seenIds = new Set<string>();
+    const seenAdms = new Set<string>();
+    primary.forEach((s) => {
+      if (s.id) seenIds.add(String(s.id));
+      const adm = String(s.admNo ?? s.admissionNo ?? '').trim().toUpperCase();
+      if (adm) seenAdms.add(adm);
+    });
+
+    let merged = [...primary];
+    let added = 0;
+    for (const lKey of legacyKeys) {
+      const raw = ls.getItem(lKey);
+      if (raw == null) continue;
+      const legacy = safeParse<Student[]>(raw, []);
+      if (!Array.isArray(legacy)) continue;
+      for (const s of legacy) {
+        if (!s || typeof s !== 'object') continue;
+        const id = s.id ? String(s.id) : '';
+        const adm = String(s.admNo ?? s.admissionNo ?? '').trim().toUpperCase();
+        if ((id && seenIds.has(id)) || (adm && seenAdms.has(adm))) continue;
+        merged.push(s);
+        added++;
+        if (id) seenIds.add(id);
+        if (adm) seenAdms.add(adm);
       }
     }
 
-    // Also check school_learners_data as primary key if munyaka_students is absent
-    const altRaw = ls.getItem('school_learners_data');
-    if (altRaw != null) {
-      const parsed = safeParse<Student[]>(altRaw, []);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // sync to STORAGE_KEY without overwriting if munyaka_students was somehow empty
-        try { ls.setItem(STORAGE_KEY, altRaw); } catch {}
-        return parsed;
+    // Persist the merged result only when we actually pulled in legacy data,
+    // so reads remain side-effect-free when the primary store is already whole.
+    if (added > 0) {
+      try {
+        ls.setItem(STORAGE_KEY, JSON.stringify(merged));
+      } catch (err) {
+        if (isQuotaExceeded(err)) {
+          handleQuotaError(STORAGE_KEY);
+        } else {
+          console.error('[storage] getStudents merge write failed:', err);
+        }
       }
     }
 
-    // Only if neither primary nor alt exists, return empty array (do NOT overwrite anything)
-    return [];
+    return merged;
   } catch {
     return [];
   }
 };
-
-/**
- * Case-insensitive lookup of a single learner by any of their identifiers.
- *
- * Matches against `assessmentNo`, `birthCertNo`, `admissionNumber`, and `id`
- * using a trimmed, lower-cased comparison so that casing / whitespace
- * differences never prevent a valid login.
- */
-export function getStudentByIdentifier(identifier: string): Student | undefined {
-  if (!identifier) return undefined;
-  const cleanInput = identifier.trim().toLowerCase();
-  const students = getStudents();
-  return students.find((s) =>
-    s.assessmentNo?.trim().toLowerCase() === cleanInput ||
-    s.birthCertNo?.trim().toLowerCase() === cleanInput ||
-    s.admissionNumber?.trim().toLowerCase() === cleanInput ||
-    s.id?.trim().toLowerCase() === cleanInput ||
-    s.admNo?.trim().toLowerCase() === cleanInput
-  );
-}
 
 export const getLearningAreas = (): LearningAreaCluster[] =>
   readStorage<LearningAreaCluster[]>(STORAGE_KEYS.CBC_LEARNING_AREAS, []);
@@ -564,17 +575,7 @@ export function setStudents(students: Student[]): boolean {
 
 export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: string })): Student {
   try {
-    // Fetch current records directly from localStorage (append-only semantics)
-    const ls = getLocalStorage();
-    let existing: Student[] = [];
-    if (ls) {
-      const raw = ls.getItem(STORAGE_KEY);
-      if (raw != null) {
-        const parsed = safeParse<Student[]>(raw, []);
-        if (Array.isArray(parsed)) existing = parsed;
-      }
-    }
-
+    const existing = getStudents();
     const studentId = student.id ?? generateId('stu');
     const fullStudent: Student = {
       admNo: String(student.admNo ?? student.admissionNo ?? 'ADM-001'),
@@ -595,14 +596,13 @@ export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: str
     console.error('[storage] saveStudent failed:', err);
     const fallbackStudent: Student = {
       id: student.id ?? generateId('stu'),
-      admNo: String(student.admNo ?? student.admissionNo ?? 'ADM-001'),
+      admNo: String(student.admNo ?? 'ADM-001'),
       name: String(student.name ?? 'Unnamed'),
       grade: String(student.grade ?? 'Grade 1'),
       stream: String(student.stream ?? 'North'),
       gender: String(student.gender ?? 'Female'),
       guardian: String(student.guardian ?? 'Parent'),
       phone: String(student.phone ?? ''),
-      status: String(student.status ?? 'Active'),
       ...student,
     };
     return fallbackStudent;
@@ -679,18 +679,8 @@ export function generateId(prefix: string = 'id'): string {
 }
 
 // ── Students ────────────────────────────────────────────────────────────────
-export function createStudent(input: Student | Partial<Student>): Student {
-  const newStudent: Student = {
-    id: input.id ?? generateId('stu'),
-    admNo: (input as any).admNo ?? (input as any).admissionNumber ?? '',
-    name: (input as any).name ?? '',
-    grade: (input as any).grade ?? '',
-    stream: (input as any).stream ?? '',
-    gender: (input as any).gender ?? 'Male',
-    guardian: (input as any).guardian ?? '',
-    phone: (input as any).phone ?? '',
-    ...(input as any),
-  };
+export function createStudent(input: Omit<Student, 'id'> & { id?: string }): Student {
+  const newStudent: Student = { ...input, id: input.id ?? generateId('stu') };
   const next = [...getStudents(), newStudent];
   setStudents(next);
   return newStudent;

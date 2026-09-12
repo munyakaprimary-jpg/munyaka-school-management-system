@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookOpen, GraduationCap, Wifi, Wallet } from 'lucide-react';
 
@@ -105,20 +104,10 @@ const FeatureTag: React.FC<FeatureTagProps> = ({ icon, label }) => (
 
 // ── Main Cover Page Component ───────────────────────────────────────────────
 interface CoverPageProps {
-  onEnter?: () => void;
+  onEnter: () => void;
 }
 
 const CoverPage: React.FC<CoverPageProps> = ({ onEnter }) => {
-  const navigate = useNavigate();
-
-  const handleEnter = () => {
-    if (onEnter) {
-      onEnter();
-    } else {
-      navigate('/login');
-    }
-  };
-
   return (
     <div className="min-h-screen relative flex flex-col items-center justify-center p-4 overflow-hidden">
 
@@ -221,7 +210,7 @@ const CoverPage: React.FC<CoverPageProps> = ({ onEnter }) => {
             {/* ── Primary CTA Button ──────────────────────────────────── */}
             <div className="w-full space-y-3 pt-2">
               <Button
-                onClick={() => navigate('/login')}
+                onClick={onEnter}
                 className="w-full h-13 md:h-14 rounded-2xl shadow-2xl shadow-blue-600/40 hover:shadow-2xl hover:shadow-emerald-500/40 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white font-bold text-base transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] group"
               >
                 <span>Proceed to Portal Sign In</span>

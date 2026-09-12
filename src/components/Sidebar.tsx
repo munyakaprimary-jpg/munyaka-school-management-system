@@ -139,70 +139,79 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const filteredMenu = React.useMemo(() => {
-      const userObj = (user || {}) as any;
-      const role = userObj.role ?? userObj.systemRole ?? '';
+      const userObj = user || {};
+      const role = userObj.role ?? '';
       const roleLower = String(role).toLowerCase();
   
-      // ── Check localStorage for munyaka_nav_items fallback ───────────────────────
-      let storedNavItems: any[] = [];
-      try {
-        const rawNav = localStorage.getItem('munyaka_nav_items');
-        if (rawNav) {
-          storedNavItems = JSON.parse(rawNav);
-        }
-      } catch {}
-
-      if (Array.isArray(storedNavItems) && storedNavItems.length > 0) {
-        return storedNavItems;
-      }
-
-      if (userObj.permissions && Array.isArray(userObj.permissions) && userObj.permissions.length > 0) {
-        // Map permissions to menu items
-        const permitted = menuItems.filter(item => userObj.permissions.includes(item.path));
-        if (permitted.length > 0) return permitted;
-      }
-
+      // ── Dashboard is ALWAYS first for every authenticated user ─────────────────
+      // The Dashboard item is the single navigation entry point that routes
+      // to the user's role-specific view (/).  It must appear regardless of
+      // role so the owner always has a way to reach OwnerDashboard.
+      // The remaining items are then filtered by role below.
       const dashboardItem = menuItems.find(item => item.path === '/');
   
-      // ADMIN / HEAD TEACHER / SUPER_ADMIN
-      const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'head_teacher';
-      if (isAdminRole) {
-        const adminPaths = ['/', '/students', '/staff', '/staff/pre-registration', '/settings', '/grades', '/learning-areas', '/exam-types', '/attendance', '/assessments', '/fees', '/timetable', '/notices', '/study-corner', '/games'];
-        const items = menuItems.filter(item => adminPaths.includes(item.path));
-        return adminPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
-          ...item,
-          label: item?.path === '/' ? 'Admin Dashboard' : item?.label
-        }));
-      }
+      // ADMIN (and the legacy "super_admin" alias used by persisted sessions)
+      // always sees every sidebar item EXCEPT owner-only items (e.g. Payment & Subscriptions).
+      const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
+              if (isAdminRole) {
+                              return menuItems.filter(item => {
+                                // Bypass role filtering for Study Corner
+                                if (item.path === '/study-corner') {
+                                  return true;
+                                }
+                                // Exclude items that are strictly owner-only (roles = ['owner'] only).
+                                const itemRoles = item?.roles ?? [];
+                                if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
+                                  return false;
+                                }
+                                return true;
+                              }).map(item => {
+                  if (item.path === '/') return { ...item, label: 'Admin Dashboard' };
+                  return item;
+                });
+              }
 
-      // OWNER
+      // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
+            // Profile Settings, plus global items (Games Hub).
       if (roleLower === 'owner') {
-        const ownerPaths = ['/', '/payment-management', '/games', '/settings/profile', '/settings'];
-        const items = menuItems.filter(item => ownerPaths.includes(item.path));
-        return ownerPaths.map(path => items.find(item => item?.path === path)).filter(Boolean);
+              const roleFiltered = menuItems.filter(item => {
+                // Bypass role filtering for Study Corner
+                if (item.path === '/study-corner') {
+                  return true;
+                }
+                if (item?.global) return true;
+                return (item?.roles || []).map((r: string) => String(r).toLowerCase()).includes('owner');
+              });
+        // Ensure Dashboard is always present.
+        const withDashboard = dashboardItem && !roleFiltered.includes(dashboardItem)
+          ? [dashboardItem, ...roleFiltered]
+          : roleFiltered;
+        // Enforce the explicit owner render order:
+                //   1. Dashboard
+                //   2. Payment & Subscriptions
+                //   3. Games Hub (global)
+                                //   4. Profile Settings
+                                //   5. Settings (System Configuration)
+                                const order = [
+                                  '/',                       // Dashboard
+                                  '/payment-management',     // Payment & Subscriptions
+                                  '/games',                  // Games Hub (global)
+                                  '/settings/profile',       // Profile Settings
+                                  '/settings',               // System Configuration / Settings
+                                ];
+        const ordered: typeof withDashboard = [];
+        order.forEach(p => {
+          const found = withDashboard.find((i: any) => i?.path === p);
+          if (found) ordered.push(found);
+        });
+        // Append anything that wasn't in the explicit order (defensive).
+        withDashboard.forEach((i: any) => {
+          if (!ordered.includes(i)) ordered.push(i);
+        });
+        return ordered;
       }
 
-      // TEACHER role
-      if (roleLower === 'teacher' || roleLower === 'subject_teacher' || roleLower === 'class_teacher') {
-        const teacherPaths = ['/', '/students', '/attendance', '/assessments', '/assessments/marked-scripts', '/analysis', '/timetable', '/notices', '/study-corner', '/library', '/portfolio', '/digital-hub', '/digital-skills', '/practical-competencies', '/games'];
-        const items = menuItems.filter(item => teacherPaths.includes(item.path));
-        return teacherPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
-          ...item,
-          label: item?.path === '/' ? "Teacher's Dashboard" : item?.label
-        }));
-      }
-
-      // LIBRARIAN / SUPPORT role
-      if (roleLower === 'librarian' || roleLower === 'support' || roleLower === 'support_staff' || roleLower === 'bursar' || roleLower === 'accounts' || roleLower === 'secretariat') {
-        const supportPaths = ['/', '/library', '/fees', '/inventory', '/staff', '/notices', '/study-corner', '/games'];
-        const items = menuItems.filter(item => supportPaths.includes(item.path));
-        return supportPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
-          ...item,
-          label: item?.path === '/' ? "Dashboard" : item?.label
-        }));
-      }
-
-      // STUDENT / LEARNER role
+      // LEARNER / STUDENT role: show ONLY the 6 primary learner navigation links in exact order
       if (roleLower === 'student' || roleLower === 'learner') {
         const learnerPaths = ['/', '/attendance', '/reports', '/fees', '/study-corner', '/games'];
         const labels: Record<string, string> = {
@@ -214,24 +223,44 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           '/games': 'Games Hub',
         };
         const items = menuItems.filter(item => learnerPaths.includes(item.path));
+        // Sort items to match learnerPaths exact order
         return learnerPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
           ...item,
           label: labels[item?.path] || item?.label
         }));
       }
-
-      // ── Hardcoded robust default fallback for any other role ──
-      const defaultRolePaths = ['/', '/students', '/attendance', '/assessments', '/analysis', '/timetable', '/notices', '/study-corner', '/library', '/games'];
-      const defaultItems = menuItems.filter(item => defaultRolePaths.includes(item.path));
-      if (defaultItems.length > 0) {
-        return defaultItems;
+      if (roleLower === 'teacher') {
+              return menuItems.filter(item => {
+                // Bypass role filtering for Study Corner
+                if (item?.path === '/study-corner') {
+                  return true;
+                }
+                if (item?.global) return true;
+                if (!(item?.roles || []).map((r: string) => String(r).toLowerCase()).includes(roleLower)) return false;
+                return true;
+              }).map(item => {
+          if (item?.path === '/') {
+            return { ...item, label: "Teacher's Dashboard" };
+          }
+          return item;
+        });
       }
 
-      return [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-        { icon: BookOpen, label: 'Study Corner', path: '/study-corner' },
-        { icon: Gamepad2, label: 'Games Hub', path: '/games' }
-      ];
+      return menuItems.filter(item => {
+              // Bypass role filtering for Study Corner
+              if (item?.path === '/study-corner') {
+                return true;
+              }
+              // Global items are visible to every authenticated user.
+              if (item?.global) return true;
+              // Check if user has the required role.  Match either the literal role
+              // or the legacy "super_admin" alias so persisted sessions keep working.
+              const itemRoles = (item?.roles || []).map((r: string) => String(r).toLowerCase());
+              const roleMatches = itemRoles.includes(roleLower) ||
+                (roleLower === 'super_admin' && itemRoles.includes('admin'));
+              if (!roleMatches) return false;
+              return true;
+            });
     }, [user?.role]);
 
   // OWNER is BILLING-ONLY: gets Dashboard, Payments, Profile Settings,
@@ -352,14 +381,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 <div className="overflow-hidden flex-1">
                   {(() => {
                     const isLearnerRole = (user?.role || '').toLowerCase() === 'student' || (user?.role || '').toLowerCase() === 'learner';
-                    let displayName = user?.name || user?.staffName || user?.fullName || 'Staff Member';
-                    let displayRole = user?.role?.replace('_', ' ') || user?.systemRole || 'Staff';
+                    let displayName = user?.name || 'User';
+                    let displayRole = user?.role?.replace('_', ' ') || 'User';
                     let displayMeta = '';
                     if (isLearnerRole) {
                       try {
                         const studentsList = JSON.parse(localStorage.getItem('munyaka_registered_students') || localStorage.getItem('school_learners_data') || '[]');
                         const match = studentsList.find((s: any) =>
-                          ((user as any)?.admissionNumber && (s.admissionNo === (user as any).admissionNumber || s.admissionNumber === (user as any).admissionNumber)) ||
+                          (user?.admissionNumber && (s.admissionNo === user.admissionNumber || s.admissionNumber === user.admissionNumber)) ||
                           (user?.id && s.id === user.id) ||
                           (user?.name && s.name?.toLowerCase() === user.name?.toLowerCase())
                         ) || studentsList[0];

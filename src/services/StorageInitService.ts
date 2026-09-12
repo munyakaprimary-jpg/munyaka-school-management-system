@@ -43,9 +43,7 @@ export function initializeAppStorage(): void {
     if (!localStorage.getItem('school_learners_data')) {
       lsSet('school_learners_data', []);
     }
-    if (localStorage.getItem('munyaka_students') === null) {
-      lsSet('munyaka_students', []);
-    }
+    lsSet('munyaka_students', []);
 
     // Staff — also starts empty. Staff are added via pre-registration and
     // the Add Staff modal (stored in the staff master service, not here).

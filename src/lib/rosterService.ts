@@ -152,7 +152,7 @@ export function insertLearnerIntoRosters(
     name: learner.name,
     grade: learner.grade,
     stream: learner.stream,
-    gender: (learner.gender as any) as 'Male' | 'Female' | 'Other',
+    gender: learner.gender,
     enrolledAt: new Date().toISOString(),
     source,
   };
