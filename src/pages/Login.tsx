@@ -14,6 +14,7 @@ import {
   EyeOff,
   Settings2,
   Crown,
+  Laptop,
   ChevronLeft,
   ShieldAlert,
   Unlock,
@@ -59,18 +60,18 @@ const hasCustomAdminPassword = (): boolean => {
 
 // ─── Admin role configs ─────────────────────────────────────────────────────
 //
-// NOTE: Owner and Super Admin are TWO DISTINCT entities in this app:
-//   - owner        → BILLING-ONLY role.   Lands on Owner Dashboard. Only sees
-//                    subscription / payment / financial-health widgets.
+// NOTE: PlatformAdmin and Admin are TWO DISTINCT entities in this app:
+//   - platform_admin → PLATFORM-ONLY role.   Lands on Platform Dashboard. Only sees
+//                    platform management widgets (subscriptions, licenses, payments, devices).
 //                    No access to learners, attendance, settings, etc.
 //   - admin  → OPERATIONAL FULL ADMIN role.  Manages users, RBAC, ICT
-//                    systems, system settings, etc.  No special billing privs.
+//                    systems, system settings, etc.  No special platform privs.
 //
-// The owner and admin share the same ADMIN PIN override flow
+// The platform_admin and admin share the same ADMIN PIN override flow
 // so they can both authenticate when the lock screen is active, but they have
 // entirely separate permission matrices.
 
-type AdminRole = 'admin' | 'owner';
+type AdminRole = 'admin' | 'platform_admin';
 
 interface RoleConfig {
   id: AdminRole;
@@ -79,10 +80,10 @@ interface RoleConfig {
   fullDescription: string;
   email: string;
   userName: string;
-  userRole: 'owner' | 'admin';
+  userRole: 'platform_admin' | 'admin';
   redirectPath: string;
   icon: LucideIcon;
-  primaryColor: 'indigo' | 'amber';
+  primaryColor: 'indigo' | 'purple';
   defaultPassword: string;
 }
 
@@ -100,18 +101,18 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     primaryColor: 'indigo',
     defaultPassword: DEFAULT_ADMIN_PASSWORD,
   },
-  owner: {
-    id: 'owner',
-    label: 'School Owner',
-    description: 'Billing & Subscription Console — Owner Dashboard',
-    fullDescription: 'Dedicated access to subscriptions, payment management, financial health, and seat utilization. No access to operational routes (learners, attendance, settings).',
-    email: 'munyakaprimary@gmail.com',
-    userName: 'School Owner',
-    userRole: 'owner',
-    redirectPath: '/dashboard',
-    icon: Crown,
-    primaryColor: 'amber',
-    defaultPassword: 'munyaka2026',
+  platform_admin: {
+    id: 'platform_admin',
+    label: 'Platform Developer',
+    description: 'Platform Management Console — Platform Dashboard',
+    fullDescription: 'Dedicated access to platform subscriptions, license management, payment history, and connected devices. No access to operational routes (learners, attendance, settings).',
+    email: 'platform@munyaka.sc.ke',
+    userName: 'Platform Developer',
+    userRole: 'platform_admin',
+    redirectPath: '/platform/dashboard',
+    icon: Laptop,
+    primaryColor: 'purple',
+    defaultPassword: 'platform2026',
   },
 };
 
@@ -193,29 +194,34 @@ const Login: React.FC = () => {
   const [showCover, setShowCover] = useState(true);
 
   // ── Admin state ──────────────────────────────────────────────────────────
-  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
+  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>('platform_admin');
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminAuthError, setAdminAuthError] = useState('');
   const [isAdminVerifying, setIsAdminVerifying] = useState(false);
 
   // ── Staff state ──────────────────────────────────────────────────────────
-    const [staffId, setStaffId] = useState('');
-    const [staffPassword, setStaffPassword] = useState('');
-    const [showStaffPassword, setShowStaffPassword] = useState(false);
-    const [staffAuthError, setStaffAuthError] = useState('');
-    const [isStaffVerifying, setIsStaffVerifying] = useState(false);
-    const [selectedSupportRole, setSelectedSupportRole] = useState<string | null>(null);
+  const [staffId, setStaffId] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
+  const [staffAuthError, setStaffAuthError] = useState('');
+  const [isStaffVerifying, setIsStaffVerifying] = useState(false);
+  const [selectedSupportRole, setSelectedSupportRole] = useState<string | null>(null);
 
   // ── Forgot password modal ───────────────────────────────────────────────
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
-  // ── Redirect already-authenticated users straight to the dashboard ─────────
+  // ── Redirect already-authenticated users straight to their role dashboard ──
     useEffect(() => {
       if (isAuthenticated && user) {
-        // Bypass any secondary landing / role-selection screens: every
-        // authenticated user goes straight to the main dashboard.
-        navigate('/dashboard', { replace: true });
+        const role = String(user.role || '').toLowerCase();
+        if (role === 'platform_admin') {
+          navigate('/platform/dashboard', { replace: true });
+        } else if (role === 'admin') {
+          navigate('/admin-dashboard', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       }
     }, [isAuthenticated, user, navigate]);
 
@@ -281,24 +287,40 @@ const Login: React.FC = () => {
     }
 
     const success = await login(config.email, entered);
-            if (success) {
-              const adminSession = {
-                role: selectedAdminRole,
-                roleLabel: config.label,
-                roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
-                timestamp: Date.now(),
-              };
-          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-          showSuccess(`Welcome, ${config.userName}!`);
-          // Send every authenticated user straight to the main dashboard,
-          // bypassing any role-specific landing screens.
-          navigate('/dashboard', { replace: true });
-        } else {
-          setAdminAuthError('Login failed. Please try again.');
-          showError('Authentication failed');
-        }
-        setIsAdminVerifying(false);
-      };
+                if (success) {
+                  // Save PlatformAdmin user object to localStorage as specified
+                  if (selectedAdminRole === 'platform_admin') {
+                    const platformUser = {
+                      role: 'PlatformAdmin',
+                      name: 'Platform Developer',
+                      isAuthenticated: true
+                    };
+                    localStorage.setItem('munyaka_user', JSON.stringify(platformUser));
+                    // Also set AuthContext user for Sidebar rendering
+                    setUser(platformUser);
+                    localStorage.setItem('munyaka_session', JSON.stringify(platformUser));
+                  }
+                  
+                  const adminSession = {
+                    role: selectedAdminRole,
+                    roleLabel: config.label,
+                    roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+                    timestamp: Date.now(),
+                  };
+              localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+              showSuccess(`Welcome, ${config.userName}!`);
+              // Redirect based on role
+              if (selectedAdminRole === 'platform_admin') {
+                navigate('/platform/dashboard', { replace: true });
+              } else {
+                navigate('/admin-dashboard', { replace: true });
+              }
+            } else {
+              setAdminAuthError('Login failed. Please try again.');
+              showError('Authentication failed');
+            }
+            setIsAdminVerifying(false);
+          };
 
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
@@ -555,22 +577,22 @@ const Login: React.FC = () => {
           {/* ── Portal Access Tabs ── */}
           <Tabs defaultValue="staff" className="w-full">
             <TabsList className="grid w-full grid-cols-4 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
-                          <TabsTrigger
-                            value="admin"
-                            className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                          >
-                            <Settings2 size={12} className="mr-1 shrink-0" />
-                            <span className="hidden sm:inline">Admin</span>
-                            <span className="sm:hidden">Admin</span>
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="super"
-                            className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                          >
-                            <Crown size={12} className="mr-1 shrink-0" />
-                            <span className="hidden sm:inline">Owner</span>
-                            <span className="sm:hidden">Owner</span>
-                          </TabsTrigger>
+                                      <TabsTrigger
+                                        value="admin"
+                                        className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
+                                      >
+                                        <Settings2 size={12} className="mr-1 shrink-0" />
+                                        <span className="hidden sm:inline">Admin</span>
+                                        <span className="sm:hidden">Admin</span>
+                                      </TabsTrigger>
+                                      <TabsTrigger
+                                        value="platform"
+                                        className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
+                                      >
+                                        <Laptop size={12} className="mr-1 shrink-0" />
+                                        <span className="hidden sm:inline">Platform Developer</span>
+                                        <span className="sm:hidden">Platform Developer</span>
+                                      </TabsTrigger>
               <TabsTrigger
                 value="staff"
                 className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-slate-500 transition-all"

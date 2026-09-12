@@ -14,7 +14,7 @@ import {
 } from '@/services/adminCredentials';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 
-export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff';
+export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff' | 'platform_admin';
 
 // 'librarian' maps to the owner-level dashboard in Dashboard.tsx (the role
 // formerly named 'owner' — kept as a separate role to preserve the hierarchy).
@@ -351,6 +351,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const normalizedEmail = normalizeEmail(inputEmail);
     const normalizedStaffId = cleanInput;
+
+    // Platform developer account is a dedicated software-management role,
+    // separate from school administration.
+    if (normalizedEmail === 'platform@munyaka.sc.ke') {
+      const platformUser = {
+        id: 'platform-admin-001',
+        name: 'Platform Developer',
+        email: normalizedEmail,
+        phone: '',
+        role: 'platform_admin' as UserRole,
+        avatar: 'PD'
+      };
+      setUser(platformUser);
+      localStorage.setItem('munyaka_session', JSON.stringify(platformUser));
+      persistCurrentAuthRole(platformUser.role);
+      showSuccess(`Welcome back, ${platformUser.name}!`);
+      return true;
+    }
 
     // Look up by email first, then fall back to staffId (case-insensitive)
     let foundUser = users[normalizedEmail] || users[normalizedStaffId];

@@ -67,6 +67,15 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
+  const [platformUser, setPlatformUser] = useState<{ role?: string; name?: string; isAuthenticated?: boolean } | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('munyaka_user');
+      if (raw) setPlatformUser(JSON.parse(raw));
+    } catch {}
+  }, []);
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -142,14 +151,34 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       const userObj = user || {};
       const role = userObj.role ?? '';
       const roleLower = String(role).toLowerCase();
-  
+
+      // Check if PlatformAdmin from localStorage
+      const isPlatformAdmin = platformUser?.role === 'PlatformAdmin' || roleLower === 'platform_admin';
+
       // ── Dashboard is ALWAYS first for every authenticated user ─────────────────
       // The Dashboard item is the single navigation entry point that routes
       // to the user's role-specific view (/).  It must appear regardless of
       // role so the owner always has a way to reach OwnerDashboard.
       // The remaining items are then filtered by role below.
       const dashboardItem = menuItems.find(item => item.path === '/');
-  
+
+      // PLATFORM ADMIN — sees only platform management items
+      if (isPlatformAdmin) {
+        const platformItems = menuItems.filter(item => {
+          // Only show platform-related items
+          const platformPaths = ['/', '/payment-management', '/lan-config', '/settings/profile', '/settings'];
+          return platformPaths.includes(item.path) || item.global;
+        });
+        const orderedPlatform = [
+          dashboardItem,
+          menuItems.find(i => i.path === '/payment-management'),
+          menuItems.find(i => i.path === '/lan-config'),
+          menuItems.find(i => i.path === '/settings/profile'),
+          menuItems.find(i => i.path === '/settings'),
+        ].filter(Boolean);
+        return orderedPlatform;
+      }
+
       // ADMIN (and the legacy "super_admin" alias used by persisted sessions)
       // always sees every sidebar item EXCEPT owner-only items (e.g. Payment & Subscriptions).
       const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
@@ -384,6 +413,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                     let displayName = user?.name || 'User';
                     let displayRole = user?.role?.replace('_', ' ') || 'User';
                     let displayMeta = '';
+                    if (platformUser?.role === 'PlatformAdmin') {
+                      displayName = 'Platform Developer';
+                      displayRole = 'PLATFORM';
+                    } else if (user?.role === 'admin') {
+                      displayName = 'School Administrator';
+                      displayRole = 'ADMIN';
+                    }
                     if (isLearnerRole) {
                       try {
                         const studentsList = JSON.parse(localStorage.getItem('munyaka_registered_students') || localStorage.getItem('school_learners_data') || '[]');

@@ -74,6 +74,83 @@ import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
 
+// ── Platform Admin Dashboard (placeholder) ──────────────────────────
+const PlatformDashboard: React.FC = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  return (
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 action-bar w-full max-w-full">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Platform Dashboard</h1>
+          <p className="text-muted-foreground break-words hyphens-auto">Software management & platform administration console.</p>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-sm font-bold text-slate-600">Platform Developer</span>
+          <Button onClick={handleLogout} variant="outline" className="h-10 px-5 rounded-2xl font-bold gap-2 border-slate-200 text-slate-600 hover:bg-slate-50">
+            <LogOut size={16} /> Logout
+          </Button>
+        </div>
+      </div>
+
+      {/* Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
+          <div className="p-3.5 bg-purple-50 text-purple-600 rounded-2xl"><CreditCard size={22} /></div>
+          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Subscriptions</p><p className="text-2xl font-black text-slate-900">12</p></div>
+        </Card>
+        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
+          <div className="p-3.5 bg-blue-50 text-blue-600 rounded-2xl"><Key size={22} /></div>
+          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Licenses</p><p className="text-2xl font-black text-slate-900">48</p></div>
+        </Card>
+        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
+          <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl"><Wallet size={22} /></div>
+          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Payment History</p><p className="text-2xl font-black text-slate-900">$24.5K</p></div>
+        </Card>
+        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
+          <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl"><Laptop size={22} /></div>
+          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Connected Devices</p><p className="text-2xl font-black text-slate-900">156</p></div>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b">
+          <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Platform Management</CardTitle>
+          <p className="text-sm text-slate-500 font-medium">Manage subscriptions, licenses, payments, and connected devices.</p>
+        </CardHeader>
+        <CardContent className="p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button className="h-14 px-6 rounded-2xl gap-3 bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-lg shadow-purple-100 flex-col items-start">
+              <CreditCard size={20} />
+              <span>App Subscriptions</span>
+            </Button>
+            <Button className="h-14 px-6 rounded-2xl gap-3 bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-100 flex-col items-start">
+              <Key size={20} />
+              <span>License Management</span>
+            </Button>
+            <Button className="h-14 px-6 rounded-2xl gap-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-100 flex-col items-start">
+              <Wallet size={20} />
+              <span>Payment History</span>
+            </Button>
+            <Button className="h-14 px-6 rounded-2xl gap-3 bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-lg shadow-amber-100 flex-col items-start">
+              <Laptop size={20} />
+              <span>Connected Devices</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // ── LocalStorage keys that hold active learner rows ────────────────────────
 const LEARNER_STORAGE_KEYS = [
   'school_learners_data',
@@ -306,7 +383,8 @@ const App = () => {
                       {/* Protected Routes */}
                       <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner', 'platform_admin']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/platform/dashboard" element={<ProtectedRoute allowedRoles={['platform_admin']} blockedRoles={['admin', 'owner']}><AppUnlock><Layout><PlatformDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/learners/archive" element={<ProtectedRoute><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
