@@ -23,11 +23,20 @@ export default function DevDashboard() {
   const [autoRenew, setAutoRenew] = useState(true);
   const [selectedRow, setSelectedRow] = useState(false);
 
+  // Dynamic tenant state for multi-tenancy support
+  const [selectedTenant, setSelectedTenant] = useState<{ id: string; name: string } | null>({
+    id: 'SCH-01',
+    name: 'Munyaka Primary & Junior Secondary',
+  });
+
+  const licenseTitle = selectedTenant ? `${selectedTenant.name} License` : 'Tenant Subscription License';
+  const subtitleName = selectedTenant ? selectedTenant.name : 'Institutional Tenant';
+
   const handleExportReport = () => {
     showSuccess('Platform Developer report exported successfully.');
   };
 
-  // If path is /dev/subscriptions, render the exact requested subscriptions layout
+  // If path is /dev/subscriptions, render the exact requested subscriptions layout with dynamic tenant title
   if (path === '/dev/subscriptions') {
     return (
       <div className="space-y-8 animate-in fade-in duration-300 pb-16">
@@ -42,7 +51,7 @@ export default function DevDashboard() {
                 </div>
                 <div className="space-y-1">
                   <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white flex items-center gap-3 flex-wrap">
-                    Munyaka School License
+                    {licenseTitle}
                     <span className="text-sm font-bold text-purple-300 bg-purple-950/60 px-3 py-1 rounded-full border border-purple-700/50">
                       Enterprise Plan
                     </span>
@@ -64,9 +73,9 @@ export default function DevDashboard() {
               {/* Top Right Box ("CURRENT BILL") */}
               <div className="bg-purple-950/70 border border-purple-700/40 rounded-2xl p-5 backdrop-blur-md shadow-inner flex flex-col justify-center min-w-[240px] space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-widest text-purple-300">Current Bill</p>
-                <p className="text-2xl md:text-3xl font-black text-white">KES 20000 <span className="text-xs font-normal text-purple-300">/mo</span></p>
+                <p className="text-2xl md:text-3xl font-black text-white">KES 20,000 <span className="text-xs font-normal text-purple-300">/mo</span></p>
                 <div className="text-xs text-purple-200 space-y-0.5 pt-1 border-t border-purple-800/60">
-                  <p className="font-medium">Next billing: <strong className="text-white">Next: 2026-09-02</strong></p>
+                  <p className="font-medium">Next billing: <strong className="text-white">2026-09-02</strong></p>
                   <p className="font-medium">Seats: <strong className="text-white">1,000 institutional seats</strong></p>
                 </div>
               </div>
@@ -116,8 +125,8 @@ export default function DevDashboard() {
                 <Building2 size={24} />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900">Munyaka School License</h3>
-                <p className="text-xs text-slate-500 font-medium">Munyaka</p>
+                <h3 className="text-lg font-black text-slate-900">{licenseTitle}</h3>
+                <p className="text-xs text-slate-500 font-medium">{subtitleName}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -142,7 +151,7 @@ export default function DevDashboard() {
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Amount</span>
-              <span className="text-sm font-black text-slate-900">KES 20000</span>
+              <span className="text-sm font-black text-slate-900">KES 20,000</span>
             </div>
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Next Billing</span>
@@ -235,7 +244,7 @@ export default function DevDashboard() {
                   <td className="p-4 font-mono font-bold text-purple-600 text-xs">
                     MUNYAKA-2026-MF59-6CN5-NHGS-RWXU
                   </td>
-                  <td className="p-4 font-bold text-slate-900">School Owner</td>
+                  <td className="p-4 font-bold text-slate-900">School Operator</td>
                   <td className="p-4">
                     <code className="text-xs bg-slate-100 px-2 py-1 rounded font-mono text-slate-800">OFFICE-001</code>
                   </td>
@@ -268,7 +277,7 @@ export default function DevDashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300 pb-16">
-      {/* 1. DASHBOARD HEADER & BRANDING */}
+      {/* ── Top Header Banner ────────────────────────────────────────── */}
       <div className="bg-slate-900 rounded-3xl p-6 md:p-8 text-white shadow-2xl relative overflow-hidden border border-slate-800">
         <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -284,7 +293,7 @@ export default function DevDashboard() {
             </p>
           </div>
 
-          {/* 2. TOP ACTION BUTTONS */}
+          {/* ── Top Action Buttons ──────────────────────────────────────── */}
           <div className="flex flex-wrap items-center gap-3">
             <Button
               onClick={() => navigate('/lan-config')}
@@ -317,7 +326,7 @@ export default function DevDashboard() {
         </div>
       </div>
 
-      {/* 3. SUBSCRIPTION & LICENSING BANNER (Cyan Gradient Card) */}
+      {/* ── Subscription & Licensing Banner (Cyan Gradient Card) ───────── */}
       <div className="relative rounded-3xl p-6 md:p-8 bg-gradient-to-br from-cyan-600 via-teal-600 to-blue-700 text-white shadow-xl overflow-hidden">
         <div className="absolute right-0 bottom-0 translate-x-12 translate-y-12 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -344,7 +353,7 @@ export default function DevDashboard() {
         </div>
       </div>
 
-      {/* 4. CAPACITY & SEAT TRACKING CARDS */}
+      {/* ── Capacity & Seat Tracking Cards ───────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border-none shadow-xl rounded-3xl bg-white p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -391,7 +400,7 @@ export default function DevDashboard() {
         </Card>
       </div>
 
-      {/* 5. SIDEBAR MENU & FOOTER PROFILE SECTION */}
+      {/* ── Sidebar Menu & Footer Profile Section ─────────────────────── */}
       <Card className="border-none shadow-xl rounded-3xl bg-white p-6 md:p-8 space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-900 flex items-center justify-center font-bold">
