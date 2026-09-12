@@ -71,6 +71,7 @@ import MarkedScriptsPage from "./pages/MarkedScriptsPage";
 import Communication from "./pages/Communication";
 import Library from "./pages/Library";
 import Inventory from "./pages/Inventory";
+import TenantsPage from "./pages/Tenants";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
@@ -311,6 +312,7 @@ const App = () => {
                       <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['Admin', 'admin']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/dashboard" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/tenants" element={<ProtectedRoute><AppUnlock><Layout><TenantsPage /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/settings" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/schools" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/subscriptions" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
@@ -320,6 +322,7 @@ const App = () => {
                       <Route path="/dev/devices" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/logs" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/settings" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/tenants" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><TenantsPage /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/schools" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/subscriptions" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/licenses" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
