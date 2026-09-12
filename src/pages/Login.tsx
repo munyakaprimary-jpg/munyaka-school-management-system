@@ -125,18 +125,14 @@ function getStaffRedirectPath(_systemRole: string): string {
 
 // ─── Role card for admin tab ─────────────────────────────────────────────────
 
-interface RoleCardProps {
+const RoleCard: React.FC<{
   role: RoleConfig;
   onClick: () => void;
   bgColor: string;
   textColor: string;
   borderColor: string;
-  /** Whether a custom PIN has been set for this role. */
-  hasCustomPassword: boolean;
-}
-
-const RoleCard: React.FC<RoleCardProps> = ({
-  role, onClick, bgColor, textColor, borderColor, hasCustomPassword,
+}> = ({
+  role, onClick, bgColor, textColor, borderColor,
 }) => {
   const Icon = role.icon;
   return (
@@ -158,16 +154,7 @@ const RoleCard: React.FC<RoleCardProps> = ({
             <h3 className="text-lg md:text-xl font-black text-slate-900">{role.label}</h3>
             <ArrowRight size={18} className={cn("shrink-0 transition-transform group-hover:translate-x-1", textColor)} />
           </div>
-          <p className="text-xs md:text-sm text-slate-500 font-medium mb-3">{role.description}</p>
-          <Badge variant="outline" className={cn("font-bold text-[10px] border", borderColor, textColor)}>
-            {hasCustomPassword ? (
-              <span className="flex items-center gap-1">
-                <KeyRound size={9} /> Custom PIN set
-              </span>
-            ) : (
-              `Default PIN: ${role.defaultPassword}`
-            )}
-          </Badge>
+          <p className="text-xs md:text-sm text-slate-500 font-medium">{role.description}</p>
         </div>
       </div>
     </button>
@@ -599,7 +586,6 @@ const Login: React.FC = () => {
                                 bgColor="bg-indigo-50"
                                 textColor="text-indigo-700"
                                 borderColor="border-indigo-200"
-                                hasCustomPassword={hasCustomAdminPassword()}
                               />
                             </>
               ) : (
@@ -699,7 +685,6 @@ const Login: React.FC = () => {
                                 bgColor="bg-amber-50"
                                 textColor="text-amber-700"
                                 borderColor="border-amber-200"
-                                hasCustomPassword={hasCustomAdminPassword()}
                               />
                             </>
               ) : (
