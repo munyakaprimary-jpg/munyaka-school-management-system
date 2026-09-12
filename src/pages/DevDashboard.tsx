@@ -70,6 +70,40 @@ export default function DevDashboard() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'details' | 'configuration' | 'gateways'>('details');
 
+  // Gateways Local Payment state
+  const [paymentMode, setPaymentMode] = useState<'M-Pesa' | 'Cash' | 'Bank'>('M-Pesa');
+  const [localAmount, setLocalAmount] = useState('');
+  const [localCurrency, setLocalCurrency] = useState('KES — Kenyan Shilling');
+  const [localReference, setLocalReference] = useState('');
+  const [localNote, setLocalNote] = useState('');
+
+  const [paymentLogs, setPaymentLogs] = useState<Array<{
+    id: string;
+    date: string;
+    mode: 'M-Pesa' | 'Cash' | 'Bank';
+    reference: string;
+    amount: string;
+    note?: string;
+  }>>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_payment_logs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [
+      {
+        id: 'LOG-1',
+        date: '8/29/2026',
+        mode: 'M-Pesa',
+        reference: 'JEM01234',
+        amount: 'KES 2000',
+        note: 'School fees for April 2026, Class 4'
+      }
+    ];
+  });
+
   // Configuration Form State (Exact requirement with centralized subscription config state)
   const [config, setConfig] = useState(() => {
     const saved = localStorage.getItem('munyaka_subscription_config');
@@ -298,7 +332,7 @@ export default function DevDashboard() {
           <Button onClick={() => setActiveSubTab('configuration')} variant={activeSubTab === 'configuration' ? 'default' : 'ghost'} className={activeSubTab === 'configuration' ? "bg-indigo-600 text-white font-bold rounded-xl text-xs h-10 px-4 gap-2" : "text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2"}>
             <SettingsIcon size={14} /> Configuration
           </Button>
-          <Button onClick={() => { setActiveSubTab('gateways'); showSuccess('Payment gateways configured.'); }} variant={activeSubTab === 'gateways' ? 'default' : 'ghost'} className={activeSubTab === 'gateways' ? "bg-indigo-600 text-white font-bold rounded-xl text-xs h-10 px-4 gap-2" : "text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2"}>
+          <Button onClick={() => { setActiveSubTab('gateways'); }} variant={activeSubTab === 'gateways' ? 'default' : 'ghost'} className={activeSubTab === 'gateways' ? "bg-indigo-600 text-white font-bold rounded-xl text-xs h-10 px-4 gap-2" : "text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2"}>
             <Wifi size={14} /> Payment Gateways
           </Button>
           <Button onClick={() => setIsHistoryOpen(true)} variant="ghost" className="text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2">
@@ -307,7 +341,279 @@ export default function DevDashboard() {
         </div>
 
         {/* MAIN LICENSE DETAILS CARD OR CONFIGURATION TAB VIEW */}
-        {activeSubTab === 'configuration' ? (
+        {activeSubTab === 'gateways' ? (
+          <div className="space-y-8 animate-in fade-in duration-200">
+            {/* 1. SECTION HEADER CARD */}
+            <Card className="border-none shadow-xl rounded-3xl bg-white p-6 md:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-inner text-2xl font-bold">
+                    $
+                  </div>
+                  <div>
+                    <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Log a Local Payment</h2>
+                    <p className="text-xs md:text-sm text-slate-500 font-medium mt-0.5">Record cash, bank deposit, or M-Pesa payments manually — no API keys needed.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. PAYMENT MODE SELECTOR BUTTONS (3 Cards) */}
+              <div className="space-y-3 pt-2">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-700">
+                  PAYMENT MODE
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  
+                  {/* M-Pesa Card */}
+                  <div
+                    onClick={() => setPaymentMode('M-Pesa')}
+                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex items-center gap-3 ${
+                      paymentMode === 'M-Pesa'
+                        ? 'border-emerald-600 bg-emerald-50/70 shadow-md ring-2 ring-emerald-500/20'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${paymentMode === 'M-Pesa' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                      📱
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">M-Pesa</p>
+                      <p className="text-[11px] text-slate-500 font-medium">Mobile money transaction</p>
+                    </div>
+                  </div>
+
+                  {/* Cash Card */}
+                  <div
+                    onClick={() => setPaymentMode('Cash')}
+                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex items-center gap-3 ${
+                      paymentMode === 'Cash'
+                        ? 'border-emerald-600 bg-emerald-50/70 shadow-md ring-2 ring-emerald-500/20'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${paymentMode === 'Cash' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                      $
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">Cash</p>
+                      <p className="text-[11px] text-slate-500 font-medium">Physical cash payment</p>
+                    </div>
+                  </div>
+
+                  {/* Bank Card */}
+                  <div
+                    onClick={() => setPaymentMode('Bank')}
+                    className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex items-center gap-3 ${
+                      paymentMode === 'Bank'
+                        ? 'border-emerald-600 bg-emerald-50/70 shadow-md ring-2 ring-emerald-500/20'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${paymentMode === 'Bank' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                      🏛️
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">Bank</p>
+                      <p className="text-[11px] text-slate-500 font-medium">Bank transfer or deposit</p>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* 3. PAYMENT FORM FIELDS */}
+              <div className="space-y-6 pt-2">
+                
+                {/* ROW 1: Amount & Currency */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left Input: AMOUNT */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-700">
+                      AMOUNT
+                    </label>
+                    <div className="relative flex items-center">
+                      <span className="absolute left-3.5 text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">
+                        KES
+                      </span>
+                      <Input
+                        type="text"
+                        value={localAmount}
+                        onChange={(e) => setLocalAmount(e.target.value)}
+                        className="pl-16 h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50 focus:bg-white transition-all text-base"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Select Dropdown: CURRENCY */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-700">
+                      CURRENCY
+                    </label>
+                    <Select value={localCurrency} onValueChange={setLocalCurrency}>
+                      <SelectTrigger className="h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50">
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl">
+                        <SelectItem value="KES — Kenyan Shilling">KES — Kenyan Shilling</SelectItem>
+                        <SelectItem value="USD — US Dollar">USD — US Dollar</SelectItem>
+                        <SelectItem value="EUR — Euro">EUR — Euro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* ROW 2: TRANSACTION REFERENCE / RECEIPT NUMBER */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-700">
+                    TRANSACTION REFERENCE / RECEIPT NUMBER
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-slate-400 font-bold">
+                      #
+                    </span>
+                    <Input
+                      type="text"
+                      value={localReference}
+                      onChange={(e) => setLocalReference(e.target.value)}
+                      className="pl-11 h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50 focus:bg-white transition-all"
+                      placeholder="e.g. MG23K4R5HT"
+                    />
+                  </div>
+                </div>
+
+                {/* ROW 3: NOTE (OPTIONAL) */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-700">
+                    NOTE (OPTIONAL)
+                  </label>
+                  <Input
+                    type="text"
+                    value={localNote}
+                    onChange={(e) => setLocalNote(e.target.value)}
+                    className="h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50 focus:bg-white transition-all"
+                    placeholder="e.g. School fees for April 2026, Class 4"
+                  />
+                </div>
+
+                {/* PRIMARY ACTION BUTTON */}
+                <div className="pt-2">
+                  <Button
+                    onClick={() => {
+                      if (!localAmount.trim()) {
+                        alert('Please enter an amount');
+                        return;
+                      }
+                      const ref = localReference.trim() || ('REF-' + Math.floor(1000 + Math.random() * 9000));
+                      const currCode = localCurrency.split(' — ')[0] || 'KES';
+                      const newEntry = {
+                        id: 'LOG-' + Date.now(),
+                        date: new Date().toLocaleDateString(),
+                        mode: paymentMode,
+                        reference: ref,
+                        amount: `${currCode} ${localAmount}`,
+                        note: localNote.trim() || undefined
+                      };
+                      const next = [newEntry, ...paymentLogs];
+                      setPaymentLogs(next);
+                      try {
+                        localStorage.setItem('munyaka_payment_logs', JSON.stringify(next));
+                      } catch (e) {}
+
+                      // Clear form
+                      setLocalAmount('');
+                      setLocalReference('');
+                      setLocalNote('');
+                      showSuccess(`Payment of ${currCode} ${localAmount} logged successfully!`);
+                    }}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base rounded-2xl h-14 shadow-xl gap-2 transition-all transform active:scale-[0.99]"
+                  >
+                    <span>✓</span> Log Payment
+                  </Button>
+                </div>
+
+              </div>
+            </Card>
+
+            {/* 4. LOWER "PAYMENT LOG" SECTION */}
+            <Card className="border-none shadow-xl rounded-3xl bg-white p-6 md:p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">Payment Log</h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">All locally recorded payments — cash, bank, and M-Pesa.</p>
+                </div>
+                <Badge className="bg-emerald-100 text-emerald-800 border-none font-bold px-3 py-1 text-xs self-start sm:self-center">
+                  {paymentLogs.length} record(s) logged
+                </Badge>
+              </div>
+
+              {paymentLogs.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-xs font-medium border border-dashed border-slate-200 rounded-2xl">
+                  No payment records logged yet. Use the form above to record cash, bank or M-Pesa payments.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      <tr>
+                        <th className="px-5 py-4">DATE</th>
+                        <th className="px-5 py-4">MODE</th>
+                        <th className="px-5 py-4">REFERENCE</th>
+                        <th className="px-5 py-4">AMOUNT</th>
+                        <th className="px-5 py-4 text-right">ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {paymentLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="px-5 py-4 text-slate-700 whitespace-nowrap text-xs font-bold">
+                            {log.date}
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap">
+                            <Badge className={`font-bold text-xs px-2.5 py-1 border-none ${
+                              log.mode === 'M-Pesa'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : log.mode === 'Cash'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-purple-100 text-purple-800'
+                            }`}>
+                              {log.mode}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap">
+                            <span className="font-mono text-xs font-bold bg-slate-100 text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200/60">
+                              {log.reference}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap text-slate-900 font-black text-sm">
+                            {log.amount}
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const next = paymentLogs.filter(p => p.id !== log.id);
+                                setPaymentLogs(next);
+                                try {
+                                  localStorage.setItem('munyaka_payment_logs', JSON.stringify(next));
+                                } catch (e) {}
+                                showSuccess('Payment log deleted');
+                              }}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 font-bold text-xs h-8 px-3 rounded-lg"
+                            >
+                              Delete
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </div>
+        ) : activeSubTab === 'configuration' ? (
           <div className="space-y-6">
             {/* 1. SECTION HEADER CARD */}
             <Card className="border-none shadow-xl rounded-3xl bg-white p-6 md:p-8 space-y-4">
