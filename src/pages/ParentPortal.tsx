@@ -24,18 +24,8 @@ import {
   Users,
   BookOpen,
   Loader2,
-  X,
-  Gamepad2,
-  BookMarked
+  X
 } from "lucide-react";
-import BilingualMatch from "@/components/games/BilingualMatch";
-import MemoryMatch from "@/components/games/MemoryMatch";
-import PatternMemory from "@/components/games/PatternMemory";
-import SpeedMath from "@/components/games/SpeedMath";
-import SudokuMini from "@/components/games/SudokuMini";
-import TargetMath from "@/components/games/TargetMath";
-import WordScramble from "@/components/games/WordScramble";
-import StudyCorner from './StudyCorner';
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
 import { getStudents, getPaymentRecords, readStorage, STORAGE_KEYS } from '@/utils/storage';
@@ -165,6 +155,7 @@ const getFeesForStudent = (studentId: string): PaymentRecord[] => {
 const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => void; onClose: () => void }) => {
   const navigate = useNavigate();
   const [identifier, setIdentifier] = useState('');
+  const [dob, setDob] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
 
@@ -172,6 +163,14 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
   const normalizeIdentifier = (id: string): string => {
     if (!id) return '';
     return id.trim().toUpperCase().replace(/[\s-]/g, '');
+  };
+
+  // Normalize date for comparison (handles multiple formats)
+  const normalizeDate = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toISOString().split('T')[0];
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -182,64 +181,40 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
       setError('Please enter your Assessment Number or Birth Certificate Number');
       return;
     }
+    if (!dob.trim()) {
+      setError('Please enter your Date of Birth');
+      return;
+    }
 
     setIsSearching(true);
 
     // Simulate async verification
     setTimeout(() => {
       const students = getStudents();
-      const rawInput = identifier.trim();
-      const normalizedId = normalizeIdentifier(rawInput);
-
-      console.log('[Portal Login] Searching for identifier:', { rawInput, normalizedId });
-      console.log('[Portal Login] Available students pool:', students.map(s => ({
-        id: s.id,
-        name: s.name,
-        admNo: s.admNo,
-        admissionNo: (s as any).admissionNo,
-        assessmentNumber: (s as any).assessmentNumber,
-        assessment_no: (s as any).assessment_no,
-        assessmentNo: (s as any).assessmentNo,
-        assessment: (s as any).assessment,
-        birthCertificateNumber: (s as any).birthCertificateNumber,
-        birth_cert_no: (s as any).birth_cert_no,
-        birthCertificateNo: (s as any).birthCertificateNo,
-        birthCertNo: (s as any).birthCertNo
-      })));
+      const normalizedId = normalizeIdentifier(identifier);
+      const normalizedDob = normalizeDate(dob);
 
       const matchedStudent = students.find(s => {
+        // Check all possible identifier fields
         const studentAdm = normalizeIdentifier(s.admNo || '');
-        const studentAdmissionNo = normalizeIdentifier((s as any).admissionNo || '');
-        const studentAssessmentNumber = normalizeIdentifier((s as any).assessmentNumber || '');
-        const studentAssessmentNo = normalizeIdentifier((s as any).assessmentNo || '');
-        const studentAssessment_no = normalizeIdentifier((s as any).assessment_no || '');
-        const studentAssessment = normalizeIdentifier((s as any).assessment || '');
+        const studentAssessment = normalizeIdentifier((s as any).assessmentNumber || '');
+        const studentBirthCert = normalizeIdentifier((s as any).birthCertificateNo || '');
+        const studentDob = normalizeDate((s as any).dob || '');
         
-        const studentBirthCertNumber = normalizeIdentifier((s as any).birthCertificateNumber || '');
-        const studentBirthCertNo = normalizeIdentifier((s as any).birthCertificateNo || '');
-        const studentBirth_cert_no = normalizeIdentifier((s as any).birth_cert_no || '');
-        const studentBirthCert = normalizeIdentifier((s as any).birthCertNo || '');
-
+        // Match any of the identifiers AND DOB must match
         const idMatches =
           studentAdm === normalizedId ||
-          studentAdmissionNo === normalizedId ||
-          studentAssessmentNumber === normalizedId ||
-          studentAssessmentNo === normalizedId ||
-          studentAssessment_no === normalizedId ||
           studentAssessment === normalizedId ||
-          studentBirthCertNumber === normalizedId ||
-          studentBirthCertNo === normalizedId ||
-          studentBirth_cert_no === normalizedId ||
           studentBirthCert === normalizedId;
-
-        return idMatches;
+        
+        return idMatches && studentDob === normalizedDob;
       });
 
       if (matchedStudent) {
         const session: PortalSession = {
           studentId: matchedStudent.id,
           studentName: matchedStudent.name || 'Unknown',
-          admissionNo: matchedStudent.admNo || (matchedStudent as any).admissionNo || '',
+          admissionNo: matchedStudent.admNo || '',
           grade: matchedStudent.grade || '',
           stream: matchedStudent.stream || '',
           loggedInAt: new Date().toISOString(),
@@ -248,7 +223,7 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
         onLogin(session);
         showSuccess(`Welcome, ${matchedStudent.name}!`);
       } else {
-        setError('No matching record found. Please verify your Assessment Number or Birth Certificate Number.');
+        setError('No matching record found. Please verify your Assessment/Birth Certificate Number and Date of Birth.');
         setIsSearching(false);
       }
     }, 800);
@@ -309,6 +284,23 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="dob" className="text-slate-700 font-bold text-sm">
+                Date of Birth
+              </Label>
+              <Input
+                id="dob"
+                type="date"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 focus:ring-indigo-100"
+                autoComplete="off"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Enter the student's date of birth as registered with the school
+              </p>
+            </div>
+
             <Button
               type="submit"
               disabled={isSearching}
@@ -341,7 +333,7 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
-const Dashboard = ({
+const Dashboard = ({ 
   session,
   student,
   onLogout
@@ -351,7 +343,7 @@ const Dashboard = ({
   onLogout: () => void;
 }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'reports' | 'fees' | 'games' | 'study'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'reports' | 'fees'>('overview');
 
   const attendance = useMemo(() => getAttendanceForStudent(session.studentId), [session.studentId]);
   const assessments = useMemo(() => getAssessmentScoresForStudent(session.studentId), [session.studentId]);
@@ -376,82 +368,75 @@ const Dashboard = ({
     return { code: 'BE', label: 'Below', color: 'rose' };
   };
 
-  const navItems = [
+  const tabs = [
     { id: 'overview' as const, label: 'Overview', icon: User },
     { id: 'attendance' as const, label: 'Attendance', icon: Calendar },
     { id: 'reports' as const, label: 'Reports', icon: FileText },
     { id: 'fees' as const, label: 'Fees', icon: Receipt },
-    { id: 'games' as const, label: 'Games Hub', icon: Gamepad2 },
-    { id: 'study' as const, label: 'Study Corner', icon: BookMarked },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-72 bg-gradient-to-b from-indigo-900 via-indigo-800 to-purple-900 text-white flex flex-col shrink-0 shadow-xl">
-        {/* Profile Header */}
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0">
-              <GraduationCap size={24} className="text-white" />
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white">
+        <div className="max-w-4xl mx-auto px-4 py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                <GraduationCap size={28} />
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight">{session.studentName}</h1>
+                <p className="text-indigo-100 text-sm font-medium">
+                  {session.grade}{session.stream ? ` • ${session.stream}` : ''} • {session.admissionNo}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="font-black text-white text-base tracking-tight truncate">{session.studentName}</h1>
-              <p className="text-indigo-200 text-xs font-medium truncate">
-                {session.grade}{session.stream ? ` • ${session.stream}` : ''}
-              </p>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={onLogout}
+                variant="outline"
+                size="sm"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl"
+              >
+                <LogOut size={16} className="mr-2" />
+                Logout
+              </Button>
+              <button
+                onClick={() => navigate('/login')}
+                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-white/20"
+                title="Back to Staff Login"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
             </div>
           </div>
-          <div className="bg-white/10 rounded-xl p-2.5 text-xs text-indigo-100 font-mono text-center truncate">
-            ID: {session.admissionNo}
+
+          {/* Tabs */}
+          <div className="flex gap-1 mt-5 overflow-x-auto pb-1">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap",
+                  activeTab === tab.id
+                    ? "bg-white text-indigo-700 shadow-lg"
+                    : "bg-white/10 text-white/80 hover:bg-white/20"
+                )}
+              >
+                <tab.icon size={16} />
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
+      </div>
 
-        {/* Sidebar Links */}
-        <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto">
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all text-left",
-                activeTab === item.id
-                  ? "bg-white text-indigo-900 shadow-lg scale-[1.02]"
-                  : "text-indigo-100 hover:bg-white/10 hover:text-white"
-              )}
-            >
-              <item.icon size={18} />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        {/* Sidebar Footer Controls */}
-        <div className="p-4 border-t border-white/10 space-y-2">
-          <Button
-            onClick={onLogout}
-            variant="outline"
-            className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl justify-start font-bold"
-          >
-            <LogOut size={16} className="mr-2" />
-            Logout
-          </Button>
-          <Button
-            onClick={() => navigate('/login')}
-            variant="ghost"
-            className="w-full text-indigo-200 hover:text-white hover:bg-white/10 rounded-xl justify-start text-xs font-medium"
-          >
-            <X size={16} className="mr-2" />
-            Back to Staff Login
-          </Button>
-        </div>
-      </aside>
-
-      {/* Right-Side Main Content Area */}
-      <main className="flex-1 min-w-0 p-4 md:p-8 overflow-y-auto">
-        <div className="max-w-4xl mx-auto">
-          {/* Overview Tab */}
-          {activeTab === 'overview' && (
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
           <div className="space-y-4">
             {/* Attendance Summary Card */}
             <Card className="rounded-2xl border-0 shadow-sm overflow-hidden">
@@ -783,101 +768,8 @@ const Dashboard = ({
             </CardContent>
           </Card>
         )}
-
-        {/* Games Hub Tab */}
-        {activeTab === 'games' && (
-          <div className="space-y-6">
-            <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 rounded-3xl p-6 text-white shadow-xl">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-                  <Gamepad2 size={24} className="text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black tracking-tight">Learner Games Hub</h2>
-                  <p className="text-indigo-100 text-sm">Interactive educational games & brain exercises</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-bold">1</div>
-                    <h3 className="text-lg font-black text-slate-800">Speed Math</h3>
-                  </div>
-                  <p className="text-sm text-slate-500 mb-6">Test your arithmetic speed with rapid-fire math challenges.</p>
-                  <SpeedMath onBack={() => {}} />
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 font-bold">2</div>
-                    <h3 className="text-lg font-black text-slate-800">Target Math</h3>
-                  </div>
-                  <p className="text-sm text-slate-500 mb-6">Reach the target number using addition, subtraction, multiplication, and division.</p>
-                  <TargetMath onBack={() => {}} />
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 font-bold">3</div>
-                    <h3 className="text-lg font-black text-slate-800">Memory Match</h3>
-                  </div>
-                  <p className="text-sm text-slate-500 mb-6">Flip cards and match pairs to test your memory skills.</p>
-                  <MemoryMatch onBack={() => {}} />
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 font-bold">4</div>
-                    <h3 className="text-lg font-black text-slate-800">Word Scramble</h3>
-                  </div>
-                  <p className="text-sm text-slate-500 mb-6">Unscramble letters to find the correct vocabulary words.</p>
-                  <WordScramble onBack={() => {}} />
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center text-rose-600 font-bold">5</div>
-                    <h3 className="text-lg font-black text-slate-800">Pattern Memory</h3>
-                  </div>
-                  <p className="text-sm text-slate-500 mb-6">Remember and repeat the flashing pattern sequence.</p>
-                  <PatternMemory onBack={() => {}} />
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center text-teal-600 font-bold">6</div>
-                    <h3 className="text-lg font-black text-slate-800">Bilingual Match</h3>
-                  </div>
-                  <p className="text-sm text-slate-500 mb-6">Match words across languages to expand your vocabulary.</p>
-                  <BilingualMatch onBack={() => {}} />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Study Corner Tab */}
-        {activeTab === 'study' && (
-          <div className="space-y-6">
-            <StudyCorner />
-          </div>
-        )}
       </div>
-    </main>
-  </div>
+    </div>
   );
 };
 

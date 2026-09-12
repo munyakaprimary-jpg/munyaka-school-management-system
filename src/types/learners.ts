@@ -15,7 +15,7 @@ export interface Learner {
   name: string;
   grade: string;
   stream: string;
-  gender: string;
+  gender: 'Male' | 'Female' | 'Other';
   guardian: string;
   phone: string;
   birthCertificateNo?: string;
@@ -27,7 +27,7 @@ export interface Learner {
    *   • Graduated     — completed final grade
    *   • Suspended     — temporarily off the roster
    */
-  status?: string;
+  status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
 
   /** ISO date string. Optional so legacy rows still load. */
   dob?: string;

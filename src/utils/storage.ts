@@ -32,13 +32,9 @@ export { getLocalStorage };
 
 // ─── Storage Keys ────────────────────────────────────────────────────────────
 
-export const STORAGE_KEY = 'munyaka_students';
-export const LEARNERS_KEY = STORAGE_KEY;
-
 export const STORAGE_KEYS = {
-  LEARNERS: STORAGE_KEY,
   // Primary state stores
-  STUDENTS: STORAGE_KEY,
+  STUDENTS: 'school_learners_data',
   STUDENTS_LEGACY: 'munyaka_students',
   CBC_LEARNING_AREAS: 'munyaka_learning_areas',
   PAYMENT_RECORDS: 'munyaka_fees_records',
@@ -70,23 +66,17 @@ export const CURRENT_SCHEMA_VERSION = 'persistent-storage-v1';
 
 export interface Student {
   id: string;
-  admNo: string;
-  name: string;
-  grade: string;
-  stream: string;
-  gender: string;
-  guardian: string;
-  phone: string;
+  admNo?: string;
+  name?: string;
+  grade?: string;
+  stream?: string;
+  gender?: string;
+  guardian?: string;
+  phone?: string;
   status?: string;
   schoolId?: string;
   isArchived?: boolean;
   deletedAt?: string;
-  admissionNo?: string;
-  birthCertificateNo?: string;
-  dob?: string;
-  dateOfAdmission?: string;
-  admissionYear?: number;
-  assessmentNo?: string;
   [key: string]: unknown;
 }
 
@@ -475,22 +465,8 @@ export function hydrateAllStores(): HydrationReport {
 
 // ─── Typed store accessors (read) ───────────────────────────────────────────
 
-export const getStudents = (): Student[] => {
-  try {
-    const primary = readStorage<Student[] | null>(STORAGE_KEY, null);
-    if (primary && Array.isArray(primary) && primary.length > 0) return primary;
-
-    // Check legacy fallback keys
-    const legacyKeys = ['munyaka_registered_students', 'students', 'school_learners_data', 'learners', 'pupils', 'school_students', 'registered_students'];
-    for (const lKey of legacyKeys) {
-      const legacy = readStorage<Student[] | null>(lKey, null);
-      if (legacy && Array.isArray(legacy) && legacy.length > 0) return legacy;
-    }
-    return [];
-  } catch {
-    return [];
-  }
-};
+export const getStudents = (): Student[] =>
+  readStorage<Student[]>(STORAGE_KEYS.STUDENTS, []);
 
 export const getLearningAreas = (): LearningAreaCluster[] =>
   readStorage<LearningAreaCluster[]>(STORAGE_KEYS.CBC_LEARNING_AREAS, []);
@@ -509,56 +485,16 @@ export const getSubscriptions = (): Subscription[] =>
 
 // ─── Typed store mutators (write) ───────────────────────────────────────────
 
-// ─── Typed store mutators (write) ───────────────────────────────────────────
-
 /**
  * Replace the entire students array and persist immediately.
  */
 export function setStudents(students: Student[]): boolean {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-    window.dispatchEvent(new Event('students-updated'));
-    return true;
-  } catch {
-    return false;
+  const ok = writeStorage(STORAGE_KEYS.STUDENTS, students);
+  if (ok) {
+    // Keep legacy mirror in sync for any older code paths
+    writeStorage(STORAGE_KEYS.STUDENTS_LEGACY, students);
   }
-}
-
-export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: string })): Student {
-  try {
-    const existing = getStudents();
-    const studentId = student.id ?? generateId('stu');
-    const fullStudent: Student = {
-      admNo: String(student.admNo ?? student.admissionNo ?? 'ADM-001'),
-      name: String(student.name ?? 'Unnamed Student'),
-      grade: String(student.grade ?? 'Grade 1'),
-      stream: String(student.stream ?? 'North'),
-      gender: String(student.gender ?? 'Female'),
-      guardian: String(student.guardian ?? 'Parent'),
-      phone: String(student.phone ?? ''),
-      status: String(student.status ?? 'Active'),
-      ...student,
-      id: studentId,
-    };
-    const updated = [...existing.filter(s => s.id !== studentId), fullStudent];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    window.dispatchEvent(new Event('students-updated'));
-    return fullStudent;
-  } catch (err) {
-    console.error('[storage] saveStudent failed:', err);
-    const fallbackStudent: Student = {
-      id: student.id ?? generateId('stu'),
-      admNo: String(student.admNo ?? 'ADM-001'),
-      name: String(student.name ?? 'Unnamed'),
-      grade: String(student.grade ?? 'Grade 1'),
-      stream: String(student.stream ?? 'North'),
-      gender: String(student.gender ?? 'Female'),
-      guardian: String(student.guardian ?? 'Parent'),
-      phone: String(student.phone ?? ''),
-      ...student,
-    };
-    return fallbackStudent;
-  }
+  return ok;
 }
 
 /**

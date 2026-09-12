@@ -48,9 +48,6 @@ import {
   UsersRound,
   BookMarked,
   AlertCircle,
-  UserCircle,
-  Wallet,
-  Gamepad2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getNotices } from '@/utils/notice-board';
@@ -1177,193 +1174,6 @@ const TeacherDashboard: React.FC = () => {
   );
 };
 
-// ─── Learner Dashboard Component ────────────────────────────────────────────────
-const LearnerDashboard: React.FC = () => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const { activeTerm, activeYear } = useAcademicCalendar();
-  const termBadge = formatTermBadge(activeTerm, activeYear);
-
-  // Resolve the current learner's profile from the roster using the
-  // authenticated user's ID or admission number.
-  const learnerProfile = useMemo(() => {
-    if (!user) return null;
-
-    const raw = localStorage.getItem('school_learners_data');
-    if (!raw) return null;
-
-    try {
-      const learners = JSON.parse(raw) as any[];
-      const learnerId = user.id;
-      return learners.find(
-        (learner) =>
-          learner.id === learnerId ||
-          learner.admissionNumber === learnerId ||
-          learner.admNo === learnerId ||
-          learner.admissionNumber === user.email ||
-          learner.admNo === user.email
-      ) || null;
-    } catch {
-      return null;
-    }
-  }, [user]);
-
-  if (!learnerProfile) {
-    return (
-      <div className="space-y-6">
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
-              <AlertCircle size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-rose-900">Learner profile not found</h2>
-              <p className="mt-1 text-sm text-rose-700">
-                Your account is not linked to a learner record. Please contact the school administrator to complete your registration.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const learnerName = learnerProfile.name || user.name;
-  const learnerId = learnerProfile.admissionNumber || learnerProfile.admNo || learnerProfile.id || user.id;
-  const grade = learnerProfile.grade || '—';
-  const stream = learnerProfile.stream || '—';
-
-  return (
-    <div className="space-y-6">
-      {/* Learner identity */}
-      <div className="overflow-hidden rounded-3xl border border-indigo-100 bg-white shadow-sm">
-        <div className="bg-gradient-to-br from-indigo-500 to-violet-600 p-6 text-white">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
-              <UserCircle size={32} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-indigo-100">My Learner Profile</p>
-              <h2 className="truncate text-2xl font-black">{learnerName}</h2>
-              <p className="mt-1 text-sm text-indigo-100">Admission No. {learnerId}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-3">
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Grade</p>
-            <p className="mt-1 text-lg font-black text-slate-900">{grade}</p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Stream</p>
-            <p className="mt-1 text-lg font-black text-slate-900">{stream}</p>
-          </div>
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Academic Year</p>
-            <p className="mt-1 text-lg font-black text-slate-900">{activeYear}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Learner quick actions */}
-      <div>
-        <h3 className="mb-3 text-sm font-black uppercase tracking-widest text-slate-400">My Learning Hub</h3>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => navigate('/attendance')}
-            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-              <ClipboardCheck size={20} />
-            </div>
-            <h4 className="font-bold text-slate-900">My Attendance Log</h4>
-            <p className="mt-1 text-sm text-slate-500">Review your daily attendance record</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/reports')}
-            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-              <FileText size={20} />
-            </div>
-            <h4 className="font-bold text-slate-900">My CBC Report Cards</h4>
-            <p className="mt-1 text-sm text-slate-500">View your learning progress and results</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/fees')}
-            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-              <Wallet size={20} />
-            </div>
-            <h4 className="font-bold text-slate-900">My Fee Balance</h4>
-            <p className="mt-1 text-sm text-slate-500">Check your school fee status</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/study-corner')}
-            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-              <BookOpen size={20} />
-            </div>
-            <h4 className="font-bold text-slate-900">Study Corner</h4>
-            <p className="mt-1 text-sm text-slate-500">Revision and CBC learning tools</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/games')}
-            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
-              <Gamepad2 size={20} />
-            </div>
-            <h4 className="font-bold text-slate-900">Games Hub</h4>
-            <p className="mt-1 text-sm text-slate-500">Educational mini-games for fun learning</p>
-          </button>
-        </div>
-      </div>
-
-      {/* Term summary */}
-      <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h3 className="font-bold text-slate-900">Term Overview</h3>
-            <p className="text-sm text-slate-500">Your learning activity for {activeTerm} {activeYear}</p>
-          </div>
-          <Badge className="rounded-full bg-indigo-50 text-indigo-700">{termBadge}</Badge>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-xl bg-emerald-50 p-3">
-            <p className="text-xs font-medium text-emerald-700">Attendance</p>
-            <p className="mt-1 text-xl font-black text-emerald-800">—</p>
-          </div>
-          <div className="rounded-xl bg-indigo-50 p-3">
-            <p className="text-xs font-medium text-indigo-700">Assessments</p>
-            <p className="mt-1 text-xl font-black text-indigo-800">—</p>
-          </div>
-          <div className="rounded-xl bg-amber-50 p-3">
-            <p className="text-xs font-medium text-amber-700">Fee Balance</p>
-            <p className="mt-1 text-xl font-black text-amber-800">—</p>
-          </div>
-          <div className="rounded-xl bg-purple-50 p-3">
-            <p className="text-xs font-medium text-purple-700">Study Time</p>
-            <p className="mt-1 text-xl font-black text-purple-800">—</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
 /**
@@ -1373,8 +1183,8 @@ const LearnerDashboard: React.FC = () => {
  *   • owner    → OwnerDashboard (subscription / billing / licensing)
  *   • admin    → AdminDashboardComponent (operational system overview,
  *                 LAN status, management cards, notices)
- *   • teacher  → TeacherDashboard (quick action tiles + LAN sync + notices)
- *   • student/learner → LearnerDashboard (personal profile context)
+ *   • teacher  → quick action tiles (Enter Marks, Mark Attendance, Timetable)
+ *                 + LAN sync status + notice feed
  *
  * The 'admin' and 'owner' roles are STRICTLY SEPARATED. The admin role
  * never sees the OwnerDashboard, and the owner role never sees the
@@ -1385,7 +1195,6 @@ const LearnerDashboard: React.FC = () => {
  *   • "Owner Dashboard" for the owner role
  *   • "Admin Dashboard" for the admin role
  *   • "Teacher's Dashboard" for the teacher role
- *   • "Learner Dashboard" for the student/learner role
  *   • "Dashboard" for every other role
  */
 const Dashboard: React.FC = () => {
@@ -1395,7 +1204,7 @@ const Dashboard: React.FC = () => {
   const termBadge = formatTermBadge(activeTerm, activeYear);
 
   // Owner-level sees the full Owner Dashboard; no wrapper header needed there
-  if (role === 'owner' || role === 'librarian') {
+  if (role === 'owner' || role === 'super_admin' || role === 'librarian') {
     return <OwnerDashboard />;
   }
 
@@ -1404,65 +1213,8 @@ const Dashboard: React.FC = () => {
     return <AdminDashboardComponent />;
   }
 
-  // Teacher sees the dedicated Teacher Dashboard
-  if (role === 'teacher') {
-    return (
-      <div className="space-y-6">
-        {/* ── Dynamic Header ── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                Teacher's Dashboard
-              </h1>
-              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
-                {termBadge}
-              </span>
-            </div>
-            <p className="text-sm font-medium text-slate-500">
-              Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'User'}</span>
-            </p>
-          </div>
-          <LiveBadge label="TEACHER SYNC" />
-        </div>
+  const title = role === 'teacher' ? "Teacher's Dashboard" : "Dashboard";
 
-        {/* ── Teacher-only view ── */}
-        <TeacherDashboard />
-      </div>
-    );
-  }
-
-  // Learner sees the Learner Dashboard with personal profile context
-  const roleLower = (role ?? '').toLowerCase();
-  if (roleLower === 'student' || roleLower === 'learner') {
-    return (
-      <div className="space-y-6">
-        {/* ── Dynamic Header ── */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                Learner Dashboard
-              </h1>
-              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
-                {termBadge}
-              </span>
-            </div>
-            <p className="text-sm font-medium text-slate-500">
-              Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'User'}</span>
-            </p>
-          </div>
-          <LiveBadge label="LEARNER SYNC" />
-        </div>
-
-        {/* ── Learner-only view with personal profile context ── */}
-        <LearnerDashboard />
-      </div>
-    );
-  }
-
-  // Default dashboard for other roles (parent, etc.)
-  const title = "Dashboard";
   return (
     <div className="space-y-6">
       {/* ── Dynamic Header ── */}
@@ -1480,8 +1232,11 @@ const Dashboard: React.FC = () => {
             Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'User'}</span>
           </p>
         </div>
-        <LiveBadge label="LIVE SYNC" />
+        <LiveBadge label={role === 'teacher' ? 'TEACHER SYNC' : 'LIVE SYNC'} />
       </div>
+
+      {/* ── Teacher-only view ── */}
+      {role === 'teacher' && <TeacherDashboard />}
     </div>
   );
 };

@@ -97,35 +97,35 @@ const StudentProfile = () => {
             <div className="w-24 h-24 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-6">
               <UserCircle size={60} strokeWidth={1} />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">{student?.name}</h2>
+            <h2 className="text-xl font-bold text-slate-900">{student.name}</h2>
             <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-6">
-              {student?.admNo || student?.id}
+              {student.admNo || student.id}
             </p>
             <div className="flex justify-center gap-2 mb-8">
-              <Badge className="bg-indigo-600">{student?.grade}</Badge>
-              <Badge variant="outline">{student?.stream}</Badge>
+              <Badge className="bg-indigo-600">{student.grade}</Badge>
+              <Badge variant="outline">{student.stream}</Badge>
             </div>
             <div className="space-y-4 text-left border-t pt-8">
-              {student?.assessmentNo && (
+              {student.assessmentNo && (
                 <div className="flex items-center gap-3 text-sm text-slate-600">
                   <Hash size={16} className="text-slate-400" />
-                  <span>Assessment No: <strong>{student?.assessmentNo}</strong></span>
+                  <span>Assessment No: <strong>{student.assessmentNo}</strong></span>
                 </div>
               )}
-              {student?.birthCertificateNo && (
+              {student.birthCertificateNo && (
                 <div className="flex items-center gap-3 text-sm text-slate-600">
                   <Hash size={16} className="text-slate-400" />
-                  <span>Birth Cert No: <strong>{student?.birthCertificateNo}</strong></span>
+                  <span>Birth Cert No: <strong>{student.birthCertificateNo}</strong></span>
                 </div>
               )}
-              {student?.dob && (
+              {student.dob && (
                 <div className="flex items-center gap-3 text-sm text-slate-600">
                   <Calendar size={16} className="text-slate-400" />
-                  <span>Born: <strong>{student?.dob}</strong></span>
+                  <span>Born: <strong>{student.dob}</strong></span>
                 </div>
               )}
               <div className="flex items-center gap-3 text-sm text-slate-600">
-                <span>Gender: <strong>{student?.gender}</strong></span>
+                <span>Gender: <strong>{student.gender}</strong></span>
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <span>Guardian: <strong>{student.guardian}</strong></span>

@@ -67,15 +67,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
-  const [platformUser, setPlatformUser] = useState<{ role?: string; name?: string; isAuthenticated?: boolean } | null>(null);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('munyaka_user');
-      if (raw) setPlatformUser(JSON.parse(raw));
-    } catch {}
-  }, []);
-
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -148,37 +139,17 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const filteredMenu = React.useMemo(() => {
-      const userObj = user || {};
-      const role = userObj.role ?? '';
-      const roleLower = String(role).toLowerCase();
-
-      // Check if PlatformAdmin from localStorage
-      const isPlatformAdmin = platformUser?.role === 'PlatformAdmin' || roleLower === 'platform_admin';
-
+      if (!user) return [];
+      const role = user.role ?? '';
+      const roleLower = role.toLowerCase();
+  
       // ── Dashboard is ALWAYS first for every authenticated user ─────────────────
       // The Dashboard item is the single navigation entry point that routes
       // to the user's role-specific view (/).  It must appear regardless of
       // role so the owner always has a way to reach OwnerDashboard.
       // The remaining items are then filtered by role below.
       const dashboardItem = menuItems.find(item => item.path === '/');
-
-      // PLATFORM ADMIN — sees only platform management items
-      if (isPlatformAdmin) {
-        const platformItems = menuItems.filter(item => {
-          // Only show platform-related items
-          const platformPaths = ['/', '/payment-management', '/lan-config', '/settings/profile', '/settings'];
-          return platformPaths.includes(item.path) || item.global;
-        });
-        const orderedPlatform = [
-          dashboardItem,
-          menuItems.find(i => i.path === '/payment-management'),
-          menuItems.find(i => i.path === '/lan-config'),
-          menuItems.find(i => i.path === '/settings/profile'),
-          menuItems.find(i => i.path === '/settings'),
-        ].filter(Boolean);
-        return orderedPlatform;
-      }
-
+  
       // ADMIN (and the legacy "super_admin" alias used by persisted sessions)
       // always sees every sidebar item EXCEPT owner-only items (e.g. Payment & Subscriptions).
       const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
@@ -189,7 +160,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                                   return true;
                                 }
                                 // Exclude items that are strictly owner-only (roles = ['owner'] only).
-                                const itemRoles = item?.roles ?? [];
+                                const itemRoles = item.roles ?? [];
                                 if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
                                   return false;
                                 }
@@ -208,8 +179,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 if (item.path === '/study-corner') {
                   return true;
                 }
-                if (item?.global) return true;
-                return (item?.roles || []).map((r: string) => String(r).toLowerCase()).includes('owner');
+                if (item.global) return true;
+                return item.roles.map(r => r.toLowerCase()).includes('owner');
               });
         // Ensure Dashboard is always present.
         const withDashboard = dashboardItem && !roleFiltered.includes(dashboardItem)
@@ -230,7 +201,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                                 ];
         const ordered: typeof withDashboard = [];
         order.forEach(p => {
-          const found = withDashboard.find((i: any) => i?.path === p);
+          const found = withDashboard.find((i: any) => i.path === p);
           if (found) ordered.push(found);
         });
         // Append anything that wasn't in the explicit order (defensive).
@@ -240,35 +211,18 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         return ordered;
       }
 
-      // LEARNER / STUDENT role: show ONLY the 6 primary learner navigation links in exact order
-      if (roleLower === 'student' || roleLower === 'learner') {
-        const learnerPaths = ['/', '/attendance', '/reports', '/fees', '/study-corner', '/games'];
-        const labels: Record<string, string> = {
-          '/': 'Overview',
-          '/attendance': 'Attendance',
-          '/reports': 'Reports & Marksheets',
-          '/fees': 'Fees',
-          '/study-corner': 'Study Corner',
-          '/games': 'Games Hub',
-        };
-        const items = menuItems.filter(item => learnerPaths.includes(item.path));
-        // Sort items to match learnerPaths exact order
-        return learnerPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
-          ...item,
-          label: labels[item?.path] || item?.label
-        }));
-      }
+      // For teacher role, show "Teacher's Dashboard" label
       if (roleLower === 'teacher') {
               return menuItems.filter(item => {
                 // Bypass role filtering for Study Corner
-                if (item?.path === '/study-corner') {
+                if (item.path === '/study-corner') {
                   return true;
                 }
-                if (item?.global) return true;
-                if (!(item?.roles || []).map((r: string) => String(r).toLowerCase()).includes(roleLower)) return false;
+                if (item.global) return true;
+                if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
                 return true;
               }).map(item => {
-          if (item?.path === '/') {
+          if (item.path === '/') {
             return { ...item, label: "Teacher's Dashboard" };
           }
           return item;
@@ -277,14 +231,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
       return menuItems.filter(item => {
               // Bypass role filtering for Study Corner
-              if (item?.path === '/study-corner') {
+              if (item.path === '/study-corner') {
                 return true;
               }
               // Global items are visible to every authenticated user.
-              if (item?.global) return true;
+              if (item.global) return true;
               // Check if user has the required role.  Match either the literal role
               // or the legacy "super_admin" alias so persisted sessions keep working.
-              const itemRoles = (item?.roles || []).map((r: string) => String(r).toLowerCase());
+              const itemRoles = item.roles.map(r => r.toLowerCase());
               const roleMatches = itemRoles.includes(roleLower) ||
                 (roleLower === 'super_admin' && itemRoles.includes('admin'));
               if (!roleMatches) return false;
@@ -403,56 +357,25 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                         <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                           <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <Link to="/" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
+              <Link to="/profile" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
                 <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">{user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}</div>
               </Link>
-              {!isCollapsed && (
-                <div className="overflow-hidden flex-1">
-                  {(() => {
-                    const isLearnerRole = (user?.role || '').toLowerCase() === 'student' || (user?.role || '').toLowerCase() === 'learner';
-                    let displayName = user?.name || 'User';
-                    let displayRole = user?.role?.replace('_', ' ') || 'User';
-                    let displayMeta = '';
-                    if (platformUser?.role === 'PlatformAdmin') {
-                      displayName = 'Platform Developer';
-                      displayRole = 'PLATFORM';
-                    } else if (user?.role === 'admin') {
-                      displayName = 'School Administrator';
-                      displayRole = 'ADMIN';
-                    }
-                    if (isLearnerRole) {
-                      try {
-                        const studentsList = JSON.parse(localStorage.getItem('munyaka_registered_students') || localStorage.getItem('school_learners_data') || '[]');
-                        const match = studentsList.find((s: any) =>
-                          (user?.admissionNumber && (s.admissionNo === user.admissionNumber || s.admissionNumber === user.admissionNumber)) ||
-                          (user?.id && s.id === user.id) ||
-                          (user?.name && s.name?.toLowerCase() === user.name?.toLowerCase())
-                        ) || studentsList[0];
-                        if (match) {
-                          displayName = match.fullName || match.name || displayName;
-                          displayRole = `${match.grade || 'Grade'} • ${match.stream || 'Stream'}`;
-                          displayMeta = match.admissionNo || match.admissionNumber || match.id || '';
-                        }
-                      } catch {}
-                    }
-                    return (
-                      <>
-                        <Link to="/" onClick={() => setIsOpen(false)}>
-                          <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{displayName}</p>
-                        </Link>
-                        <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{displayRole} {displayMeta ? `• ${displayMeta}` : ''}</p>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
+              {!isCollapsed && <div className="overflow-hidden flex-1"><Link to="/profile" onClick={() => setIsOpen(false)}><p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p></Link><p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p></div>}
             </div>
             {!isCollapsed && (
               <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
                 <button
                   type="button"
+                  onClick={() => navigate('/settings/profile')}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 hover:text-indigo-600 transition-colors py-1.5 px-2 rounded-md hover:bg-gray-100"
+                >
+                  <Settings className="w-4 h-4"/>
+                  <span>Settings</span>
+                </button>
+                <button
+                  type="button"
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors py-1.5 px-2 rounded-md hover:bg-red-50"
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors py-1.5 px-2 rounded-md hover:bg-red-50"
                 >
                   <LogOut className="w-4 h-4"/>
                   <span>Log Out</span>

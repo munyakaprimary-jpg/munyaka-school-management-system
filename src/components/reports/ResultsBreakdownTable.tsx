@@ -108,7 +108,7 @@ const ResultsBreakdownTable: React.FC<ResultsBreakdownTableProps> = ({
                     </td>
                     <td className="px-6 py-4 border-r">
                       <p className="font-bold text-slate-900">{student.name}</p>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Admin No: {student?.assessmentNo}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Admin No: {student.assessmentNo}</p>
                     </td>
                     {showStreamColumn && (
                       <td className="px-4 py-4 text-center font-bold text-slate-600 border-r">

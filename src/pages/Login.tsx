@@ -14,7 +14,6 @@ import {
   EyeOff,
   Settings2,
   Crown,
-  Laptop,
   ChevronLeft,
   ShieldAlert,
   Unlock,
@@ -60,18 +59,18 @@ const hasCustomAdminPassword = (): boolean => {
 
 // ─── Admin role configs ─────────────────────────────────────────────────────
 //
-// NOTE: PlatformAdmin and Admin are TWO DISTINCT entities in this app:
-//   - platform_admin → PLATFORM-ONLY role.   Lands on Platform Dashboard. Only sees
-//                    platform management widgets (subscriptions, licenses, payments, devices).
+// NOTE: Owner and Super Admin are TWO DISTINCT entities in this app:
+//   - owner        → BILLING-ONLY role.   Lands on Owner Dashboard. Only sees
+//                    subscription / payment / financial-health widgets.
 //                    No access to learners, attendance, settings, etc.
 //   - admin  → OPERATIONAL FULL ADMIN role.  Manages users, RBAC, ICT
-//                    systems, system settings, etc.  No special platform privs.
+//                    systems, system settings, etc.  No special billing privs.
 //
-// The platform_admin and admin share the same ADMIN PIN override flow
+// The owner and admin share the same ADMIN PIN override flow
 // so they can both authenticate when the lock screen is active, but they have
 // entirely separate permission matrices.
 
-type AdminRole = 'admin' | 'platform_admin';
+type AdminRole = 'admin' | 'owner';
 
 interface RoleConfig {
   id: AdminRole;
@@ -80,10 +79,10 @@ interface RoleConfig {
   fullDescription: string;
   email: string;
   userName: string;
-  userRole: 'platform_admin' | 'admin';
+  userRole: 'owner' | 'admin';
   redirectPath: string;
   icon: LucideIcon;
-  primaryColor: 'indigo' | 'purple';
+  primaryColor: 'indigo' | 'amber';
   defaultPassword: string;
 }
 
@@ -101,18 +100,18 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     primaryColor: 'indigo',
     defaultPassword: DEFAULT_ADMIN_PASSWORD,
   },
-  platform_admin: {
-    id: 'platform_admin',
-    label: 'Platform Developer',
-    description: 'Platform Management Console — Platform Dashboard',
-    fullDescription: 'Dedicated access to platform subscriptions, license management, payment history, and connected devices. No access to operational routes (learners, attendance, settings).',
-    email: 'platform@munyaka.sc.ke',
-    userName: 'Platform Developer',
-    userRole: 'platform_admin',
-    redirectPath: '/platform/dashboard',
-    icon: Laptop,
-    primaryColor: 'purple',
-    defaultPassword: 'platform2026',
+  owner: {
+    id: 'owner',
+    label: 'School Owner',
+    description: 'Billing & Subscription Console — Owner Dashboard',
+    fullDescription: 'Dedicated access to subscriptions, payment management, financial health, and seat utilization. No access to operational routes (learners, attendance, settings).',
+    email: 'munyakaprimary@gmail.com',
+    userName: 'School Owner',
+    userRole: 'owner',
+    redirectPath: '/dashboard',
+    icon: Crown,
+    primaryColor: 'amber',
+    defaultPassword: 'munyaka2026',
   },
 };
 
@@ -194,34 +193,29 @@ const Login: React.FC = () => {
   const [showCover, setShowCover] = useState(true);
 
   // ── Admin state ──────────────────────────────────────────────────────────
-  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>('platform_admin');
+  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminAuthError, setAdminAuthError] = useState('');
   const [isAdminVerifying, setIsAdminVerifying] = useState(false);
 
   // ── Staff state ──────────────────────────────────────────────────────────
-  const [staffId, setStaffId] = useState('');
-  const [staffPassword, setStaffPassword] = useState('');
-  const [showStaffPassword, setShowStaffPassword] = useState(false);
-  const [staffAuthError, setStaffAuthError] = useState('');
-  const [isStaffVerifying, setIsStaffVerifying] = useState(false);
-  const [selectedSupportRole, setSelectedSupportRole] = useState<string | null>(null);
+    const [staffId, setStaffId] = useState('');
+    const [staffPassword, setStaffPassword] = useState('');
+    const [showStaffPassword, setShowStaffPassword] = useState(false);
+    const [staffAuthError, setStaffAuthError] = useState('');
+    const [isStaffVerifying, setIsStaffVerifying] = useState(false);
+    const [selectedSupportRole, setSelectedSupportRole] = useState<string | null>(null);
 
   // ── Forgot password modal ───────────────────────────────────────────────
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
-  // ── Redirect already-authenticated users straight to their role dashboard ──
+  // ── Redirect already-authenticated users straight to the dashboard ─────────
     useEffect(() => {
       if (isAuthenticated && user) {
-        const role = String(user.role || '').toLowerCase();
-        if (role === 'platform_admin') {
-          navigate('/platform/dashboard', { replace: true });
-        } else if (role === 'admin') {
-          navigate('/admin-dashboard', { replace: true });
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
+        // Bypass any secondary landing / role-selection screens: every
+        // authenticated user goes straight to the main dashboard.
+        navigate('/dashboard', { replace: true });
       }
     }, [isAuthenticated, user, navigate]);
 
@@ -287,38 +281,24 @@ const Login: React.FC = () => {
     }
 
     const success = await login(config.email, entered);
-                if (success) {
-                  // Save PlatformAdmin user object to localStorage as specified
-                  if (selectedAdminRole === ('platform_admin' as unknown as AdminRole)) {
-                    const platformUser = {
-                      role: 'PlatformAdmin',
-                      name: 'Platform Developer',
-                      isAuthenticated: true
-                    };
-                    localStorage.setItem('munyaka_user', JSON.stringify(platformUser));
-                    localStorage.setItem('munyaka_session', JSON.stringify(platformUser));
-                  }
-                  
-                  const adminSession = {
-                    role: selectedAdminRole,
-                    roleLabel: config.label,
-                    roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
-                    timestamp: Date.now(),
-                  };
-              localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-              showSuccess(`Welcome, ${config.userName}!`);
-              // Redirect based on role
-              if (selectedAdminRole === 'platform_admin') {
-                navigate('/platform/dashboard', { replace: true });
-              } else {
-                navigate('/admin-dashboard', { replace: true });
-              }
-            } else {
-              setAdminAuthError('Login failed. Please try again.');
-              showError('Authentication failed');
-            }
-            setIsAdminVerifying(false);
-          };
+            if (success) {
+              const adminSession = {
+                role: selectedAdminRole,
+                roleLabel: config.label,
+                roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+                timestamp: Date.now(),
+              };
+          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+          showSuccess(`Welcome, ${config.userName}!`);
+          // Send every authenticated user straight to the main dashboard,
+          // bypassing any role-specific landing screens.
+          navigate('/dashboard', { replace: true });
+        } else {
+          setAdminAuthError('Login failed. Please try again.');
+          showError('Authentication failed');
+        }
+        setIsAdminVerifying(false);
+      };
 
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
@@ -573,24 +553,24 @@ const Login: React.FC = () => {
                       </div>
 
           {/* ── Portal Access Tabs ── */}
-          <Tabs defaultValue="Dev" className="w-full">
-            <TabsList className="flex w-full flex-wrap h-12 rounded-2xl bg-slate-100 p-1 gap-1">
-                                      <TabsTrigger
-                                        value="admin"
-                                        className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                                      >
-                                        <Settings2 size={12} className="mr-1 shrink-0" />
-                                        <span className="hidden sm:inline">Admin</span>
-                                        <span className="sm:hidden">Admin</span>
-                                      </TabsTrigger>
-                                      <TabsTrigger
-                                        value="Dev"
-                                        className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                                      >
-                                        <Laptop size={12} className="mr-1 shrink-0" />
-                                        <span className="hidden sm:inline">DEV</span>
-                                        <span className="sm:hidden">DEV</span>
-                                      </TabsTrigger>
+          <Tabs defaultValue="staff" className="w-full">
+            <TabsList className="grid w-full grid-cols-4 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
+                          <TabsTrigger
+                            value="admin"
+                            className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
+                          >
+                            <Settings2 size={12} className="mr-1 shrink-0" />
+                            <span className="hidden sm:inline">Admin</span>
+                            <span className="sm:hidden">Admin</span>
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="super"
+                            className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
+                          >
+                            <Crown size={12} className="mr-1 shrink-0" />
+                            <span className="hidden sm:inline">Owner</span>
+                            <span className="sm:hidden">Owner</span>
+                          </TabsTrigger>
               <TabsTrigger
                 value="staff"
                 className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
@@ -600,22 +580,14 @@ const Login: React.FC = () => {
                 <span className="sm:hidden">Staff</span>
               </TabsTrigger>
               <TabsTrigger
-                              value="support"
-                              className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                            >
-                              <Briefcase size={12} className="mr-1 shrink-0" />
-                              <span className="hidden sm:inline">Support</span>
-                              <span className="sm:hidden">Support</span>
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="parent"
-                              className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                            >
-                              <GraduationCap size={12} className="mr-1 shrink-0" />
-                              <span className="hidden sm:inline">Parent</span>
-                              <span className="sm:hidden">Parent</span>
-                            </TabsTrigger>
-                          </TabsList>
+                value="support"
+                className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
+              >
+                <Briefcase size={12} className="mr-1 shrink-0" />
+                <span className="hidden sm:inline">Support</span>
+                <span className="sm:hidden">Support</span>
+              </TabsTrigger>
+            </TabsList>
 
             {/* ── ADMIN TAB ── */}
                         <TabsContent value="admin" className="mt-4 space-y-4">
@@ -722,70 +694,6 @@ const Login: React.FC = () => {
               )}
             </TabsContent>
 
-            {/* ── DEV TAB ── */}
-            <TabsContent value="Dev" className="mt-4 space-y-4">
-              <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
-                <CardContent className="p-6 md:p-8 space-y-6">
-                  <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-purple-50 text-purple-600 shadow-purple-100 mb-4">
-                      <Laptop size={32} />
-                    </div>
-                    <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Platform Developer</h2>
-                    <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
-                      Dedicated access to platform subscriptions, license management, payment history, and connected devices.
-                    </p>
-                  </div>
-                  <form onSubmit={handleAdminLogin} className="space-y-5">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
-                      <div className="relative">
-                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <Input
-                          type={showAdminPassword ? 'text' : 'password'}
-                          value={adminPassword}
-                          onChange={e => { setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
-                          placeholder="Enter your password"
-                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowAdminPassword(!showAdminPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium pt-1">
-                        {hasCustomAdminPassword() ? (
-                          <span className="flex items-center gap-1">
-                            <KeyRound size={9} />
-                            Custom PIN — set via Configuration &rarr; Owner Security
-                          </span>
-                        ) : (
-                          <>
-                            Default PIN:{' '}
-                            <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={isAdminVerifying || !String(adminPassword || '').trim()}
-                      className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-purple-600 hover:bg-purple-700 shadow-purple-100"
-                    >
-                      {isAdminVerifying ? (
-                        <><Loader2 className="animate-spin" size={20} /> Verifying...</>
-                      ) : (
-                        <><Unlock size={20} /> Sign In as Platform Developer</>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
             {/* ── OWNER TAB ── */}
                         <TabsContent value="super" className="mt-4 space-y-4">
                           {!selectedAdminRole ? (
@@ -800,8 +708,8 @@ const Login: React.FC = () => {
                                 Choose Your Role
                               </p>
                               <RoleCard
-                                role={ROLE_CONFIGS.platform_admin}
-                                onClick={() => handleRoleSelect('platform_admin')}
+                                role={ROLE_CONFIGS.owner}
+                                onClick={() => handleRoleSelect('owner')}
                                 bgColor="bg-amber-50"
                                 textColor="text-amber-700"
                                 borderColor="border-amber-200"
@@ -1175,27 +1083,6 @@ const Login: React.FC = () => {
               </div>
             </TabsContent>
           </Tabs>
-
-            {/* ── PARENT TAB ── */}
-            <TabsContent value="parent" className="mt-4">
-              <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
-                <CardContent className="p-6 md:p-8 space-y-6 text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-indigo-50 text-indigo-600 shadow-indigo-100 mb-4">
-                    <GraduationCap size={32} />
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Parent & Student Portal</h2>
-                  <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
-                    View attendance, reports, fees, and academic progress for your child.
-                  </p>
-                  <Button
-                    onClick={() => navigate('/portal')}
-                    className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
-                  >
-                    <ArrowRight size={20} /> Go to Parent Portal
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
           {/* ── Parent & Student Portal Link ── */}
           <div className="mt-4">
