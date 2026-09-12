@@ -131,13 +131,12 @@ interface RoleCardProps {
   bgColor: string;
   textColor: string;
   borderColor: string;
-  featureIcons: { Icon: LucideIcon; label: string }[];
   /** Whether a custom PIN has been set for this role. */
   hasCustomPassword: boolean;
 }
 
 const RoleCard: React.FC<RoleCardProps> = ({
-  role, onClick, bgColor, textColor, borderColor, featureIcons, hasCustomPassword,
+  role, onClick, bgColor, textColor, borderColor, hasCustomPassword,
 }) => {
   const Icon = role.icon;
   return (
@@ -160,14 +159,6 @@ const RoleCard: React.FC<RoleCardProps> = ({
             <ArrowRight size={18} className={cn("shrink-0 transition-transform group-hover:translate-x-1", textColor)} />
           </div>
           <p className="text-xs md:text-sm text-slate-500 font-medium mb-3">{role.description}</p>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {featureIcons.map(({ Icon: FeatureIcon, label }, idx) => (
-              <div key={idx} className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold", bgColor, textColor)}>
-                <FeatureIcon size={10} />
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
           <Badge variant="outline" className={cn("font-bold text-[10px] border", borderColor, textColor)}>
             {hasCustomPassword ? (
               <span className="flex items-center gap-1">
@@ -608,11 +599,6 @@ const Login: React.FC = () => {
                                 bgColor="bg-indigo-50"
                                 textColor="text-indigo-700"
                                 borderColor="border-indigo-200"
-                                featureIcons={[
-                                  { Icon: Users, label: 'Users' },
-                                  { Icon: Settings2, label: 'Settings' },
-                                  { Icon: Shield, label: 'RBAC' },
-                                ]}
                                 hasCustomPassword={hasCustomAdminPassword()}
                               />
                             </>
@@ -713,11 +699,6 @@ const Login: React.FC = () => {
                                 bgColor="bg-amber-50"
                                 textColor="text-amber-700"
                                 borderColor="border-amber-200"
-                                featureIcons={[
-                                  { Icon: CreditCard, label: 'Payments' },
-                                  { Icon: Crown, label: 'Owner' },
-                                  { Icon: Shield, label: 'Billing' },
-                                ]}
                                 hasCustomPassword={hasCustomAdminPassword()}
                               />
                             </>
