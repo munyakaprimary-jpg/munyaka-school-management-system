@@ -99,16 +99,28 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     navigate('/login');
   };
 
-  const roleLower = String(user?.role || '').toLowerCase();
-  const isPlatformAdmin = roleLower === 'platformadmin' || roleLower === 'owner';
+  let storedUserSession: { role?: string } = {};
+  try {
+    storedUserSession = JSON.parse(localStorage.getItem('munyaka_user') || '{}');
+  } catch { /* ignore */ }
+  const activeRoleSession = storedUserSession.role || user?.role || '';
+  const roleLower = String(activeRoleSession).toLowerCase();
+  const isDev = roleLower === 'dev' || roleLower === 'platformadmin' || roleLower === 'owner';
   const isAdmin = roleLower === 'admin';
 
-  const menuItems = isPlatformAdmin ? [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/platform/dashboard' },
-    { icon: CreditCard, label: 'App Subscriptions', path: '/payment-management' },
-    { icon: Shield, label: 'License Management', path: '/platform/dashboard' },
-    { icon: CreditCard, label: 'Payment History', path: '/payment-management' },
-    { icon: Wifi, label: 'Connected Devices (LAN/Printers/Nodes)', path: '/lan-config' },
+  const menuItems: Array<{
+    icon: any;
+    label: string;
+    path: string;
+    roles?: string[];
+    global?: boolean;
+    subItems?: Array<{ label: string; path: string }>;
+  }> = isDev ? [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dev/dashboard' },
+    { icon: CreditCard, label: 'Subscriptions & Payments', path: '/payment-management' },
+    { icon: Shield, label: 'License Management', path: '/dev/dashboard' },
+    { icon: Wifi, label: 'LAN & Offline Sync', path: '/lan-config' },
+    { icon: Box, label: 'Connected Devices', path: '/lan-config' },
   ] : isAdmin ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin-dashboard' },
     { icon: Users, label: 'Staff Access Master', path: '/admin/control-center' },
@@ -117,9 +129,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Calendar, label: 'Timetable', path: '/timetable' },
     { icon: ClipboardCheck, label: 'Attendance', path: '/attendance' },
   ] : [
-    // ── Dashboard — position #1 for ALL roles; the Dashboard component
-    // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
-    // based on the user's session role.  Only one Dashboard entry exists.
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
@@ -150,8 +159,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
-        { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
-        { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
+    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
@@ -159,25 +168,28 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const filteredMenu = React.useMemo(() => {
-      const userObj = user || {};
-      const role = userObj.role ?? '';
-      const roleLower = String(role).toLowerCase();
-      const isPlatformAdmin = roleLower === 'platformadmin' || roleLower === 'owner';
+      let storedUserSession: { role?: string } = {};
+      try {
+        storedUserSession = JSON.parse(localStorage.getItem('munyaka_user') || '{}');
+      } catch { /* ignore */ }
+      const activeRoleSession = storedUserSession.role || user?.role || '';
+      const roleLower = String(activeRoleSession).toLowerCase();
+      const isDev = roleLower === 'dev' || roleLower === 'platformadmin' || roleLower === 'owner';
       const isAdmin = roleLower === 'admin';
 
-      if (isPlatformAdmin) {
+      if (isDev) {
         return [
-          { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-          { icon: CreditCard, label: 'App Subscriptions', path: '/payment-management' },
-          { icon: Shield, label: 'License Management', path: '/dashboard' },
-          { icon: CreditCard, label: 'Payment History', path: '/payment-management' },
-          { icon: Wifi, label: 'Connected Devices (LAN/Printers/Nodes)', path: '/lan-config' },
+          { icon: LayoutDashboard, label: 'Dashboard', path: '/dev/dashboard' },
+          { icon: CreditCard, label: 'Subscriptions & Payments', path: '/payment-management' },
+          { icon: Shield, label: 'License Management', path: '/dev/dashboard' },
+          { icon: Wifi, label: 'LAN & Offline Sync', path: '/lan-config' },
+          { icon: Box, label: 'Connected Devices', path: '/lan-config' },
         ];
       }
 
       if (isAdmin) {
         return [
-          { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+          { icon: LayoutDashboard, label: 'Dashboard', path: '/admin-dashboard' },
           { icon: Users, label: 'Staff Access Master', path: '/admin/control-center' },
           { icon: UserCheck, label: 'Student Directory', path: '/students' },
           { icon: BookOpen, label: 'CBC Assessment', path: '/central-data' },
