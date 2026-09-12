@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { showError } from "@/utils/toast";
 
-const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 const ACTIVITY_EVENTS: (keyof DocumentEventMap)[] = [
   "mousemove",
   "keydown",
@@ -35,10 +35,10 @@ const readIsAuthenticated = (): boolean => {
 
 /**
  * useInactivityTimeout
-  *
-  * Watches for user activity across the document. After 10 minutes of
-  * continuous inactivity, the user is automatically logged out, shown a
-  * notification, and redirected to the /login page.
+ *
+ * Watches for user activity across the document. After 15 minutes of
+ * continuous inactivity, the user is automatically logged out, shown a
+ * notification, and redirected to the /login page.
  *
  * - The timer is bootstrapped once on mount and only re-armed when the
  *   user is currently authenticated. We re-read the auth flag from
@@ -77,7 +77,7 @@ export const useInactivityTimeout = (): void => {
       } catch {
         /* storage may be unavailable in private mode — best effort */
       }
-      showError("You have been logged out due to 10 minutes of inactivity.");
+      showError("You have been logged out due to 15 minutes of inactivity.");
       navigate("/login", { replace: true });
     };
 

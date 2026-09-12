@@ -52,16 +52,16 @@ const ExamTypes = () => {
 
   const handleAddExamType = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(name || '').trim() || !String(code || '').trim()) return;
-    
-        const newExam: ExamType = {
-          id: `et-${Date.now()}`,
-          name: String(name || '').trim(),
-          code: String(code || '').trim().toUpperCase(),
-          weight: parseInt(weight) || 0,
-          category,
-          description: String(description || '').trim() || undefined
-        };
+    if (!name.trim() || !code.trim()) return;
+
+    const newExam: ExamType = {
+      id: `et-${Date.now()}`,
+      name: name.trim(),
+      code: code.trim().toUpperCase(),
+      weight: parseInt(weight) || 0,
+      category,
+      description: description.trim() || undefined
+    };
 
     setExamTypes([...examTypes, newExam]);
     setIsOpen(false);
@@ -82,10 +82,10 @@ const ExamTypes = () => {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
-          <BackButton parentPath="/" />
+          <BackButton fallback="/" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Exam Types</h1>
             <p className="text-muted-foreground">Configure and manage assessed exam types and their grading weights.</p>

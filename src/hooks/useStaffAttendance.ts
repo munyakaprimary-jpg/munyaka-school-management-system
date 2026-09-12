@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { AttendanceStatus, StudentAttendance } from '@/types/attendance';
 import { isWithinGeofence } from '@/lib/geofence';
 import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff } from '@/types/staff-access';
 import { startOfWeek, addDays, format, isAfter } from 'date-fns';
-import { lsSet, lsRead } from '@/utils/storage';
-import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 
 const PERSONAL_STORAGE_PREFIX = 'munyaka_staff_attendance_';
 const MASTER_REGISTER_PREFIX = 'munyaka_master_staff_register_';
@@ -14,8 +13,6 @@ const MASTER_REGISTER_PREFIX = 'munyaka_master_staff_register_';
 export interface StaffAttendanceRecord {
   staffId: string;
   staffName: string;
-  /** Alias of staffName used by some pages. */
-  name?: string;
   role: string;
   morning?: { status: AttendanceStatus; time: string; verifiedLat?: number; verifiedLng?: number };
   afternoon?: { status: AttendanceStatus; time: string; verifiedLat?: number; verifiedLng?: number };
@@ -42,10 +39,10 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
 
   // 1. Fetch Personal Attendance History
   const fetchPersonalAttendance = useCallback(() => {
-    const saved = lsRead<unknown>(personalKey, null);
-    if (saved && typeof saved === 'object') {
+    const saved = localStorage.getItem(personalKey);
+    if (saved) {
       try {
-        setPersonalRecords(saved as Record<string, StudentAttendance>);
+        setPersonalRecords(JSON.parse(saved));
       } catch (e) {
         console.error('Error parsing personal staff attendance:', e);
       }
@@ -55,21 +52,28 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
   // 2. Fetch Master Register for All Staff & Calculate Trends
   const fetchMasterData = useCallback(() => {
     // A. Fetch Today's Master Register
-    const savedMaster = lsRead<Record<string, StaffAttendanceRecord>>(masterKey, {});
-    let currentMaster: Record<string, StaffAttendanceRecord> = savedMaster;
+    const savedMaster = localStorage.getItem(masterKey);
+    let currentMaster: Record<string, StaffAttendanceRecord> = {};
 
-    // Dynamic Fetch: Populate register from staffMasterService (single source of truth)
-    initializeStaffMaster();
-    const staffLedger = getStaffMaster();
+    if (savedMaster) {
+      try {
+        currentMaster = JSON.parse(savedMaster);
+      } catch (e) {
+        console.error('Error parsing master staff register:', e);
+      }
+    }
+
+    // Dynamic Fetch: Populate register from the actual staff ledger
+    const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
+    const staffLedger: PreRegisteredStaff[] = savedLedgerJson ? JSON.parse(savedLedgerJson) : [];
     const totalActiveStaff = staffLedger.length;
 
     staffLedger.forEach(staff => {
       if (!currentMaster[staff.id]) {
         currentMaster[staff.id] = {
           staffId: staff.id,
-          staffName: staff.name || '',
-          name: staff.name || '',
-          role: (staff.systemRole || '').replace('_', ' '),
+          staffName: staff.fullName,
+          role: staff.systemRole.replace('_', ' '),
           date: todayStr,
         };
       }
@@ -89,12 +93,10 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
       
       let rate = 0;
       if (!isFuture) {
-        const history = lsRead<Record<string, StaffAttendanceRecord>>(
-          `${MASTER_REGISTER_PREFIX}${dayKey}`,
-          {}
-        );
-        if (history && totalActiveStaff > 0 && Object.keys(history).length > 0) {
+        const historyJson = localStorage.getItem(`${MASTER_REGISTER_PREFIX}${dayKey}`);
+        if (historyJson && totalActiveStaff > 0) {
           try {
+            const history: Record<string, StaffAttendanceRecord> = JSON.parse(historyJson);
             const presentCount = Object.values(history).filter(
               s => s.morning?.status === 'present' || s.afternoon?.status === 'present'
             ).length;
@@ -152,13 +154,12 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
       }
     };
     setPersonalRecords(updatedPersonal);
-    lsSet(personalKey, updatedPersonal);
+    localStorage.setItem(personalKey, JSON.stringify(updatedPersonal));
 
     const currentMaster = { ...masterRegister };
     const staffRecord = currentMaster[user.id] || {
       staffId: user.id,
       staffName: user.name,
-      name: user.name,
       role: user.role,
       date,
     };
@@ -171,7 +172,7 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
 
     currentMaster[user.id] = staffRecord;
     setMasterRegister(currentMaster);
-    lsSet(masterKey, currentMaster);
+    localStorage.setItem(masterKey, JSON.stringify(currentMaster));
 
     showSuccess(`Successfully Recorded at ${currentTimeStr}`);
     setLoading(false);
@@ -194,7 +195,7 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
         currentMaster[staffId].afternoon = { status, time: currentTimeStr };
       }
       setMasterRegister(currentMaster);
-      lsSet(masterKey, currentMaster);
+      localStorage.setItem(masterKey, JSON.stringify(currentMaster));
       showSuccess(`Updated attendance for ${currentMaster[staffId].staffName}`);
       fetchMasterData(); // Trigger trend refresh
     }

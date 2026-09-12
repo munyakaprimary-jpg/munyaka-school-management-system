@@ -2,10 +2,15 @@ import { test, expect } from "@playwright/test";
 
 /**
  * Verify the rebuilt Dashboard Overview renders every required
- * section for the ADMIN role.
+ * section for the ADMIN role. The test seeds the same data shape
+ * the Dashboard hook reads (school_learners_data, munyaka_staff,
+ * munyaka_transactions, munyaka_attendance_records, munyaka_grades)
+ * so the cards display real numbers instead of zeros.
  *
- * Sign-in path: the School Administrator tab uses the password
- * "ownerpass2026", which resolves to user.role === "admin".
+ * Sign-in path: the Super Admin / Owner tab uses the password
+ * "ownerpass2026", which resolves to user.role === "owner".
+ * The Dashboard's admin gate treats "owner" (a super_admin alias)
+ * as ADMIN, so all admin-only sections render.
  */
 
 const ADMIN_PASSWORD = "ownerpass2026";
@@ -39,6 +44,14 @@ const seedAdminData = async (page: import("@playwright/test").Page) => {
     ];
     localStorage.setItem("munyaka_transactions", JSON.stringify(transactions));
 
+    const attendance = {
+      "Grade 1_all_morning": {
+        savedAt: new Date().toISOString(),
+        date: new Date().toISOString().slice(0, 10),
+      },
+    };
+    localStorage.setItem("munyaka_attendance_records", JSON.stringify(attendance));
+
     const grades = [
       { id: "g1", name: "Grade 1" },
       { id: "g2", name: "Grade 2" },
@@ -55,18 +68,20 @@ const signInAsAdmin = async (page: import("@playwright/test").Page) => {
   });
   await page.goto("/login");
 
-  const adminTab = page.getByRole("tab", { name: /School Administrator/i });
-  await expect(adminTab).toBeVisible();
-  await adminTab.click();
+  const superTab = page.getByRole("tab", { name: /Super Admin/i });
+  await expect(superTab).toBeVisible();
+  await superTab.click();
 
-  const adminCard = page.getByRole("button", { name: /School Administrator/i });
-  await adminCard.click();
+  const superCard = page.getByRole("button", { name: /Super Admin \(Owner\)/i });
+  await superCard.click();
 
   const passwordInput = page.getByPlaceholder(/Enter your password/i);
   await passwordInput.fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: /^Sign In$/i }).click();
 
-  await page.waitForURL("**/dashboard", { timeout: 10_000 });
+  // Owner is routed to /payment-management after sign-in; navigate to /
+  await page.waitForURL("**/payment-management", { timeout: 10_000 });
+  await page.goto("/");
 };
 
 test("ADMIN sees Dashboard Overview with all required sections", async ({ page }) => {
@@ -78,72 +93,72 @@ test("ADMIN sees Dashboard Overview with all required sections", async ({ page }
   await expect(page.getByRole("heading", { name: /Dashboard Overview/i })).toBeVisible();
   await expect(page.getByText(/System vitals for Munyaka Primary and Junior School/i)).toBeVisible();
 
-  // Live sync banner
-  await expect(page.getByText(/LIVE FACTUAL SYNC/i).first()).toBeVisible();
+  // LIVE FACTUAL SYNC banner — header + Recent Alerts
+  const liveBadges = page.getByText("LIVE FACTUAL SYNC");
+  await expect(liveBadges.first()).toBeVisible();
 
-  // System vitals
-  await expect(page.getByText(/Total Students/i)).toBeVisible();
-  await expect(page.getByText(/Total Teachers/i)).toBeVisible();
-  await expect(page.getByText(/Today's Attendance/i)).toBeVisible();
-  await expect(page.getByText(/Junior School/i)).toBeVisible();
-  await expect(page.getByText(/System Status/i)).toBeVisible();
-  await expect(page.getByText(/Live/i).first()).toBeVisible();
+  // System vitals cards
+  await expect(page.getByText("Total Students")).toBeVisible();
+  await expect(page.getByText("Total Teachers")).toBeVisible();
+  await expect(page.getByText("Today's Attendance")).toBeVisible();
+  await expect(page.getByText("Junior School")).toBeVisible();
+  await expect(page.getByText("System Status")).toBeVisible();
 
-  // Attendance trends chart
-  await expect(page.getByText(/Attendance Trends/i)).toBeVisible();
-  await expect(page.getByText(/Real-time Data/i)).toBeVisible();
+  // System Status value
+  await expect(page.getByText("Live").first()).toBeVisible();
 
-  // Recent alerts + simulation buttons
+  // Fees collected card
+  await expect(page.getByText("Fees Collected")).toBeVisible();
+
+  // Attendance Trends (Weekly)
+  await expect(page.getByRole("heading", { name: /Attendance Trends \(Weekly\)/i })).toBeVisible();
+  await expect(page.getByText("Real-time Data")).toBeVisible();
+
+  // Recent Alerts section
   await expect(page.getByRole("heading", { name: /Recent Alerts/i })).toBeVisible();
-  await expect(page.getByTestId("simulate-fee-button")).toBeVisible();
-  await expect(page.getByTestId("simulate-reg-button")).toBeVisible();
-  await expect(page.getByTestId("simulate-attendance-button")).toBeVisible();
 
-  // Class participation table
-  await expect(page.getByText(/Current School Enrollment/i)).toBeVisible();
-  await expect(page.getByText(/CLASS NAME/i)).toBeVisible();
-  await expect(page.getByText(/BOYS/i)).toBeVisible();
-  await expect(page.getByText(/GIRLS/i)).toBeVisible();
-  await expect(page.getByText(/TOTAL/i)).toBeVisible();
+  // Simulation buttons
+  await expect(page.getByRole("button", { name: /Simulate Fee/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Simulate Reg/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Simulate Attendance/i })).toBeVisible();
+
+  // Factual Class Participation table
+  await expect(page.getByRole("heading", { name: /Factual Class Participation/i })).toBeVisible();
+  await expect(page.getByText("CLASS NAME", { exact: false })).toBeVisible();
+  await expect(page.getByText("ENROLLMENT", { exact: false })).toBeVisible();
 });
 
-test("Simulation buttons append a new alert to the Recent Alerts timeline", async ({ page }) => {
+test("ADMIN Simulate Fee button appends an alert to the timeline", async ({ page }) => {
   await signInAsAdmin(page);
-  await page.evaluate(() => localStorage.removeItem("munyaka_activity_log"));
+  await seedAdminData(page);
   await page.reload();
 
-  // Click the "SIMULATE FEE" button
-  await page.getByTestId("simulate-fee-button").click();
+  const simulateFee = page.getByRole("button", { name: /Simulate Fee/i });
+  await expect(simulateFee).toBeVisible();
+  await simulateFee.click();
 
-  // The new alert should appear with the exact text pattern
-  await expect(page.getByText(/Fee payment: AUTO-GEN \(KES 300\)/i)).toBeVisible();
+  // After clicking, a fee-payment alert should appear in the timeline
+  await expect(page.getByText(/Fee payment: AUTO-GEN/i).first()).toBeVisible();
 });
 
-test("OWNER is redirected to Owner Dashboard and does NOT see admin overview sections", async ({ page }) => {
-  await page.goto("/login");
-  await page.evaluate(() => {
-    localStorage.removeItem("munyaka_session");
-  });
-  await page.goto("/login");
+test("ADMIN Simulate Reg button appends a registration alert", async ({ page }) => {
+  await signInAsAdmin(page);
+  await seedAdminData(page);
+  await page.reload();
 
-  const ownerTab = page.getByRole("tab", { name: /School Owner/i });
-  await expect(ownerTab).toBeVisible();
-  await ownerTab.click();
+  const simulateReg = page.getByRole("button", { name: /Simulate Reg/i });
+  await simulateReg.click();
 
-  const ownerCard = page.getByRole("button", { name: /School Owner/i });
-  await ownerCard.click();
+  await expect(page.getByText(/New student registered/i).first()).toBeVisible();
+});
 
-  const passwordInput = page.getByPlaceholder(/Enter your password/i);
-  await passwordInput.fill(ADMIN_PASSWORD);
-  await page.getByRole("button", { name: /^Sign In$/i }).click();
+test("ADMIN Simulate Attendance button appends an attendance alert", async ({ page }) => {
+  await signInAsAdmin(page);
+  await seedAdminData(page);
+  await page.reload();
 
-  await page.waitForURL("**/dashboard", { timeout: 10_000 });
+  const simulateAttn = page.getByRole("button", { name: /Simulate Attendance/i });
+  await simulateAttn.click();
 
-  // Owner Dashboard sections are visible
-  await expect(page.getByRole("heading", { name: /Owner Dashboard/i })).toBeVisible();
-  await expect(page.getByText(/Subscription/i)).toBeVisible();
-
-  // Admin overview sections (not in scope for owner) are absent
-  await expect(page.getByText(/Current School Enrollment/i)).not.toBeVisible();
-  await expect(page.getByText(/Junior School/i)).not.toBeVisible();
+  await expect(page.getByText(/Attendance marked/i).first()).toBeVisible();
 });

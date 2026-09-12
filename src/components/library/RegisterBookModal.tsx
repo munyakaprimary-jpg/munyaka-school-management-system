@@ -12,7 +12,7 @@ import { Book } from '@/types/library';
 interface RegisterBookModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRegisterBook: (bookData: Partial<Omit<Book, 'id'>>) => void;
+  onRegisterBook: (bookData: Omit<Book, 'id' | 'borrowed'>) => void;
 }
 
 export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
@@ -40,26 +40,26 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(title || '').trim()) {
-          setErrorMsg("Book title is required.");
-          return;
-        }
-        if (!String(author || '').trim()) {
-          setErrorMsg("Author name is required.");
-          return;
-        }
-        const numStock = parseInt(stock, 10);
-        if (isNaN(numStock) || numStock <= 0) {
-          setErrorMsg("Please enter a valid stock quantity.");
-          return;
-        }
-    
-        const generatedIsbn = String(isbn || '').trim() || `978-${Math.floor(1000 + Math.random() * 9000)}`;
-    
-        onRegisterBook({
-          title: String(title || '').trim(),
-          author: String(author || '').trim(),
-          isbn: generatedIsbn,
+    if (!title.trim()) {
+      setErrorMsg("Book title is required.");
+      return;
+    }
+    if (!author.trim()) {
+      setErrorMsg("Author name is required.");
+      return;
+    }
+    const numStock = parseInt(stock, 10);
+    if (isNaN(numStock) || numStock <= 0) {
+      setErrorMsg("Please enter a valid stock quantity.");
+      return;
+    }
+
+    const generatedIsbn = isbn.trim() || `978-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    onRegisterBook({
+      title: title.trim(),
+      author: author.trim(),
+      isbn: generatedIsbn,
       category,
       stock: numStock,
     });

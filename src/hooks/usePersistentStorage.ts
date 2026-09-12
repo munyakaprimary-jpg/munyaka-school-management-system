@@ -40,8 +40,6 @@ import {
   deleteSubscription as _deleteSubscription,
   // Notifications
   notifyDataChanged,
-  lsSet,
-  lsRead,
   STORAGE_KEYS,
   type Student,
   type PaymentRecord,
@@ -83,14 +81,15 @@ function createPersistentHook<T>(
   return function usePersistentStore() {
     const [state, setState] = useState<T>(() => {
       try {
-        const parsed = lsRead<unknown>(storageKey, null);
-        if (parsed != null) {
-          return selector ? selector(parsed as T) : (parsed as T);
+        const raw = localStorage.getItem(storageKey);
+        if (raw != null) {
+          const parsed = JSON.parse(raw) as T;
+          return selector ? selector(parsed) : parsed;
         }
-        return initialValue;
       } catch {
-        return initialValue;
+        /* ignore parse errors — fall through to initial */
       }
+      return initialValue;
     });
 
     const isInternalUpdate = useRef(false);
@@ -100,10 +99,11 @@ function createPersistentHook<T>(
       const handleStorage = (e: StorageEvent) => {
         if (e.key === storageKey || e.key === null) {
           try {
-            const value = lsRead<unknown>(storageKey, initialValue as unknown) as T;
+            const raw = localStorage.getItem(storageKey);
+            const value = raw != null ? (JSON.parse(raw) as T) : initialValue;
             setState(selector ? selector(value) : value);
           } catch {
-            setState(initialValue);
+            /* ignore */
           }
         }
       };
@@ -112,10 +112,11 @@ function createPersistentHook<T>(
         const detail = (e as CustomEvent).detail;
         if (!detail?.key || detail.key === storageKey) {
           try {
-            const value = lsRead<unknown>(storageKey, initialValue as unknown) as T;
+            const raw = localStorage.getItem(storageKey);
+            const value = raw != null ? (JSON.parse(raw) as T) : initialValue;
             setState(selector ? selector(value) : value);
           } catch {
-            setState(initialValue);
+            /* ignore */
           }
         }
       };
@@ -134,8 +135,12 @@ function createPersistentHook<T>(
         isInternalUpdate.current = true;
         setState((prev) => {
           const resolved = typeof next === 'function' ? (next as (prev: T) => T)(prev) : next;
-          // lsSet handles quota errors + fires notifyDataChanged internally
-          lsSet(storageKey, resolved);
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(resolved));
+            notifyDataChanged(storageKey);
+          } catch (err) {
+            console.error(`[usePersistentStorage] Failed to persist "${storageKey}":`, err);
+          }
           return resolved;
         });
       },
@@ -240,43 +245,27 @@ export interface PersistentStorage {
 
 export function usePersistentStorage(): PersistentStorage {
   // ── Individual reactive slices ──
-  const [students, setStudentsRaw] = useState<Student[]>(() => {
-    try { return getStudents(); } catch { return []; }
-  });
-  const [learningAreas, setLearningAreasRaw] = useState<LearningAreaCluster[]>(() => {
-    try { return getLearningAreas(); } catch { return []; }
-  });
-  const [paymentRecords, setPaymentRecordsRaw] = useState<PaymentRecord[]>(() => {
-    try { return getPaymentRecords(); } catch { return []; }
-  });
-  const [transactions, setTransactionsRaw] = useState<PaymentRecord[]>(() => {
-    try { return getTransactions(); } catch { return []; }
-  });
-  const [userSettings, setUserSettingsRaw] = useState<UserSettings>(() => {
-    try { return getUserSettings(); } catch { return {} as UserSettings; }
-  });
-  const [subscriptions, setSubscriptionsRaw] = useState<Subscription[]>(() => {
-    try { return getSubscriptions(); } catch { return []; }
-  });
+  const [students, setStudentsRaw] = useState<Student[]>(getStudents);
+  const [learningAreas, setLearningAreasRaw] = useState<LearningAreaCluster[]>(getLearningAreas);
+  const [paymentRecords, setPaymentRecordsRaw] = useState<PaymentRecord[]>(getPaymentRecords);
+  const [transactions, setTransactionsRaw] = useState<PaymentRecord[]>(getTransactions);
+  const [userSettings, setUserSettingsRaw] = useState<UserSettings>(getUserSettings);
+  const [subscriptions, setSubscriptionsRaw] = useState<Subscription[]>(getSubscriptions);
 
   // ── Re-read from localStorage on external change ──
   const refreshAll = useCallback(() => {
-    try { setStudentsRaw(getStudents()); } catch { setStudentsRaw([]); }
-    try { setLearningAreasRaw(getLearningAreas()); } catch { setLearningAreasRaw([]); }
-    try { setPaymentRecordsRaw(getPaymentRecords()); } catch { setPaymentRecordsRaw([]); }
-    try { setTransactionsRaw(getTransactions()); } catch { setTransactionsRaw([]); }
-    try { setUserSettingsRaw(getUserSettings()); } catch { setUserSettingsRaw({} as UserSettings); }
-    try { setSubscriptionsRaw(getSubscriptions()); } catch { setSubscriptionsRaw([]); }
+    setStudentsRaw(getStudents());
+    setLearningAreasRaw(getLearningAreas());
+    setPaymentRecordsRaw(getPaymentRecords());
+    setTransactionsRaw(getTransactions());
+    setUserSettingsRaw(getUserSettings());
+    setSubscriptionsRaw(getSubscriptions());
   }, []);
 
   useEffect(() => {
     const handleCustom = () => refreshAll();
     window.addEventListener('munyaka:data-changed', handleCustom);
-    window.addEventListener('students-updated', handleCustom);
-    return () => {
-      window.removeEventListener('munyaka:data-changed', handleCustom);
-      window.removeEventListener('students-updated', handleCustom);
-    };
+    return () => window.removeEventListener('munyaka:data-changed', handleCustom);
   }, [refreshAll]);
 
   return {

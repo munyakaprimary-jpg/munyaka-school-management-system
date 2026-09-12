@@ -44,21 +44,19 @@ test('Super Admin (Owner) tab still works', async ({ page }) => {
 
   await page.goto('/login');
 
-  // Click the "School Owner" tab — owner is a separate BILLING-ONLY role
-    const ownerTab = page.getByRole('tab', { name: /School Owner/i });
-    await expect(ownerTab).toBeVisible();
-    await ownerTab.click();
-  
-    const ownerCard = page.getByRole('button', { name: /School Owner/i });
-    await expect(ownerCard).toBeVisible();
-    await ownerCard.click();
-  
-    const passwordInput = page.getByPlaceholder(/Enter your password/i);
-    await expect(passwordInput).toBeVisible();
-    await passwordInput.fill('ownerpass2026');
-    await page.getByRole('button', { name: /^Sign In$/i }).click();
-  
-    // Owner is routed to /dashboard → Owner Dashboard
-    await page.waitForURL('**/dashboard', { timeout: 10_000 });
-    expect(page.url()).toContain('/dashboard');
+  const superTab = page.getByRole('tab', { name: /Super Admin/i });
+  await expect(superTab).toBeVisible();
+  await superTab.click();
+
+  const superCard = page.getByRole('button', { name: /Super Admin \(Owner\)/i });
+  await expect(superCard).toBeVisible();
+  await superCard.click();
+
+  const passwordInput = page.getByPlaceholder(/Enter your password/i);
+  await expect(passwordInput).toBeVisible();
+  await passwordInput.fill('ownerpass2026');
+  await page.getByRole('button', { name: /^Sign In$/i }).click();
+
+  await page.waitForURL('**/payment-management', { timeout: 10_000 });
+  expect(page.url()).toContain('/payment-management');
 });

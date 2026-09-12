@@ -412,7 +412,7 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
     Capacitor.getPlatform() === 'android' &&
     (fileType === 'csv' || mimeType.includes('csv'));
 
-  const pendingToastId = await showPendingToast(
+  const pendingToastId = showPendingToast(
     pendingMessage ?? (isAndroidCsv ? 'Saving to Downloads…' : `Downloading ${label} report…`)
   );
 
@@ -500,7 +500,7 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
     // ALWAYS dismiss the loading toast, no matter what happened above.
     // This is the single source of truth for clearing the loading state.
     // ============================================
-    await dismissPendingToast(await pendingToastId);
+    await dismissPendingToast(pendingToastId);
 
     // Show success or error toast after dismissing the loading one.
     // The success/error toasts get explicit finite durations so they

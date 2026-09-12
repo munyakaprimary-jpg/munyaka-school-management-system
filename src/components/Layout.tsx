@@ -13,7 +13,6 @@ import {
   Megaphone,
   Calendar,
   ClipboardCheck,
-  ClipboardList,
   Clock,
   FileSpreadsheet,
   BarChart3,
@@ -38,22 +37,22 @@ import {
   LogIn,
   MoreHorizontal,
   Laptop,
-  Monitor,
-  UserCog,
-  Keyboard,
-  Target,
-  Database,
-  CreditCard,
-  Archive,
-  Gamepad2,
-  Server,
-  Wifi,
-  Home,
-} from 'lucide-react';
+    Monitor,
+    UserCog,
+    Keyboard,
+    Target,
+    Database,
+    CreditCard,
+    Archive,
+    Gamepad2,
+        Server,
+        Wifi
+      } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useLanSync } from '@/hooks/useLanSync';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -65,10 +64,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
+    const { canAccessSystemManagement } = usePermissions();
     const { connectionStatus, isConnected } = useLanSync();
     const location = useLocation();
     const navigate = useNavigate();
-
+  
     // Attach Hardware Back Button Handling for Capacitor/Android
     useMobileBackButton(isOpen, () => setIsOpen(false));
 
@@ -124,12 +124,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   }, [location.pathname]);
 
   const menuItems = [
-    // ── Dashboard — position #1 for ALL roles; the Dashboard component
-    // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
-    // based on the user's session role.  Only one Dashboard entry exists.
+    // ── Dashboard — position #1 for ALL roles; router delegates to their view ──
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
-    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
     { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin', 'head_teacher'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
@@ -137,10 +135,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
-    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
-                    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
-        { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
-        { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
+    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin', 'ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
+    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['admin', 'owner'] },
+            { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin', 'owner', 'super_admin'] },
+        { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
@@ -151,13 +150,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // Academic Assessment & Analysis
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    // Assessments & Exams
-    { icon: ClipboardList, label: 'Assessments & Exams', path: '', roles: ['admin', 'head_teacher', 'teacher', 'student'], section: true },
-    { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['admin', 'head_teacher', 'teacher'] },
-    { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['admin', 'head_teacher', 'teacher'] },
-    { icon: ClipboardList, label: 'Take Assessment', path: '/assessments/student', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
-    { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['admin', 'head_teacher', 'teacher'] },
-    { icon: ClipboardList, label: 'All Set Exams', path: '/assessments/list', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     // Digital Hub & ICT
     { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher'] },
@@ -165,69 +157,56 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
-        { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
-        { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
+    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
-        { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['admin', 'head_teacher'] },
-      ];
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+    { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['admin', 'head_teacher'] },
+  ];
 
   // Route-level role denylist: these roles are blocked even if listed in item.roles.
   // Used to enforce that OWNER cannot access administrative routes like /fees.
   // ADMIN is NEVER in a BLOCKED_ROUTES list — it is always allowed.
   const BLOCKED_ROUTES: Record<string, string[]> = {
-      '/fees': ['owner', 'parent', 'student', 'teacher'],
-      '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
-      '/admin/control-center': ['owner'], // operational route — owner is billing-only
-      '/admin-dashboard': ['owner', 'teacher', 'head_teacher', 'bursar', 'parent', 'student'],
-            '/students': ['owner'],              // operational — owner cannot manage learners
-      '/attendance': ['owner'],            // operational — owner cannot take roll call
-            // '/settings': ['owner'],            // operational — owner has its own profile settings — REMOVED so owner can access Settings
-                  '/central-data': ['owner'],          // operational — owner cannot access central data service
-                  '/payment-management': ['admin'],     // billing-only — admin cannot access billing console
-                };
+    '/fees': ['owner', 'parent', 'student', 'teacher'],
+    '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
+  };
 
   const filteredMenu = menuItems.filter(item => {
-        if (!user) return false;
-        const role = user.role ?? '';
-        const roleLower = role.toLowerCase();
-  
-        // Bypass role filtering for Study Corner
-        if (item.path === '/study-corner') {
-          return true;
-        }
-  
-        // Global items are visible to every authenticated user.
-        if (item.global) return true;
-  
-        // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item
-        // EXCEPT owner-only items (e.g. Payment & Subscriptions).
-        const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
-            if (isAdminRole) {
-          // Exclude items that are strictly owner-only (roles = ['owner'] only).
-          const itemRoles = item.roles ?? [];
-          if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
-            return false;
-          }
-          return true;
-        }
+    if (!user) return false;
+    const role = user.role ?? '';
+    const roleLower = role.toLowerCase();
 
-      // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
-                  // plus global items (Games Hub).
-      if (roleLower === 'owner') {
-        return item.roles.map(r => r.toLowerCase()).includes('owner');
-      }
+    // Global items are visible to every authenticated user.
+    if (item.global) return true;
 
-      // Check if user has the required role
-      if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
-
-      // Route-level denylist guard
-      const blocked = BLOCKED_ROUTES[item.path];
-      if (blocked && blocked.includes(role)) return false;
-
+    // ADMIN (and legacy super_admin alias) always sees every sidebar item.
+    if (roleLower === 'admin' || roleLower === 'super_admin') {
+      if (item.requiresPermission) return canAccessSystemManagement();
       return true;
-    });
+    }
+
+    // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
+    // Central Data, plus global items (Games Hub).
+    if (roleLower === 'owner') {
+      if (item.requiresPermission) return canAccessSystemManagement();
+      return item.roles.map(r => r.toLowerCase()).includes('owner');
+    }
+
+    // Check if user has the required role
+    if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
+
+    // Route-level denylist guard
+    const blocked = BLOCKED_ROUTES[item.path];
+    if (blocked && blocked.includes(role)) return false;
+
+    // Check if item requires a specific permission
+    if (item.requiresPermission) {
+      // ICT_TEACHER and ICT_TECHNICIAN checked via permission hook
+      return canAccessSystemManagement();
+    }
+    return true;
+  });
 
   // ── Dashboard enforcement for the OWNER role ───────────────────────────────
   // Guarantee that the owner always sees Dashboard as the first menu item,
@@ -242,55 +221,39 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       ? [menuItems.find((i) => i.path === '/dashboard')!, ...filteredMenu]
       : filteredMenu;
 
-  // Relabel Dashboard for admin users — the Dashboard component internally
-  // routes to AdminDashboard, but the sidebar label should reflect that.
-  const isAdminRole = (user?.role ?? '').toLowerCase() === 'admin' || (user?.role ?? '').toLowerCase() === 'super_admin';
-  const navMenu = isAdminRole
-    ? finalMenu.map(item => item.path === '/dashboard' ? { ...item, label: 'Admin Dashboard' } : item)
-    : finalMenu;
-
-  // Bottom Navigation Bar Quick Links - Filtered by user role.
-    // OWNER is BILLING-ONLY — gets Dashboard + Payments only (plus global Games Hub).
-        // OWNER explicitly does NOT see: Learners, Roll Call, Fees, Server (control center),
-        // Settings, Promote — those are operational routes. LAN Config is now nested
-        // inside the Admin Control Center for elevated roles only.
-    const bottomQuickNav = [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-      { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
-      { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
-      { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
-      { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
-          { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
-      { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-            { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-            { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
-            { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-                        { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
-                        { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['owner'] },
-    ].filter(item => {
-          if (!user) return false;
-          if (item.global) return true;
-          // Bypass role filtering for Study Corner
-          if (item.path === '/study-corner') return true;
-          const roleLower = user.role?.toLowerCase() ?? '';
-          // Treat super_admin as admin for bottom-nav role matching
-          const effectiveRole = roleLower === 'super_admin' ? 'admin' : roleLower;
-          return item.roles.map(r => r.toLowerCase()).includes(effectiveRole);
-            });
+  // Bottom Navigation Bar Quick Links - Filtered by user role
+  // ADMIN has full access to all bottom-nav items.
+  const bottomQuickNav = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'owner', 'head_teacher', 'teacher'] },
+    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
+    { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
+        { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin', 'owner'] },
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+    { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
+    { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
+    { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+  ].filter(item => {
+    if (!user) return false;
+    if (item.global) return true;
+    return item.roles.includes(user.role);
+  });
 
   return (
     <div className={cn("flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
       {/* Mobile Sidebar Overlay Backdrop */}
       {isOpen && (
-        <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] lg:hidden transition-opacity duration-300"
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 lg:hidden transition-opacity duration-300" 
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar Drawer */}
       <aside className={cn(
-        "fixed left-0 top-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-[70] transform transition-all duration-300 ease-in-out flex flex-col pt-safe pb-safe shadow-2xl lg:shadow-none",
+        "fixed left-0 top-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 transform transition-all duration-300 ease-in-out flex flex-col pt-safe pb-safe shadow-2xl lg:shadow-none",
         isCollapsed ? "w-20" : "w-72 md:w-64",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
@@ -331,95 +294,64 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         {/* Navigation List */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 8px' }}>
-          <Link to="/dev/dashboard" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#4f46e5', fontWeight: 'bold', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-indigo-50 dark:hover:bg-indigo-950/40">
-            <span>📊</span>
-            <span>Dashboard</span>
-          </Link>
-          <Link to="/dev/tenants" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>🏫</span>
-            <span>Tenants / Campuses</span>
-          </Link>
-          <Link to="/dev/games" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>🎮</span>
-            <span>Games Hub</span>
-          </Link>
-          <Link to="/dev/subscriptions" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>💳</span>
-            <span>Payment & Subscriptions</span>
-          </Link>
-          <Link to="/dev/lan-sync" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>📶</span>
-            <span>LAN Server Config</span>
-          </Link>
-          <Link to="/dev/study-corner" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>📖</span>
-            <span>Study Corner</span>
-          </Link>
-          <Link to="/dev/settings" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>⚙️</span>
-            <span>Settings</span>
-          </Link>
-        </div>
-
-            {/* User Account Footer */}
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
-              <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  {(() => {
-                    let storedUser: { role?: string; name?: string } = {};
-                    try {
-                      storedUser = JSON.parse(localStorage.getItem('munyaka_user') || '{}');
-                    } catch { /* ignore */ }
-                    const activeRole = storedUser.role || user?.role || 'Admin';
-                    const isDev = activeRole === 'Dev' || activeRole === 'PlatformAdmin';
-                    const avatarText = isDev ? 'PD' : 'AD';
-                    const userNameLabel = isDev ? 'Platform Developer' : (user?.name || 'Admin');
-                    const subtitleLabel = isDev ? 'DEVELOPER' : 'ADMINISTRATOR';
-
-                    return (
-                      <>
-                        <Link to="/profile" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
-                          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">
-                            {avatarText}
-                          </div>
-                        </Link>
-                        {!isCollapsed && (
-                          <div className="overflow-hidden flex-1">
-                            <Link to="/profile" onClick={() => setIsOpen(false)}>
-                              <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">
-                                {userNameLabel}
-                              </p>
-                            </Link>
-                            <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
-                              {subtitleLabel}
-                            </p>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-                
-                {!isCollapsed && (
-                  <div className="flex gap-2 pt-1 border-t border-slate-200/50 dark:border-slate-700">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        localStorage.removeItem('munyaka_user');
-                        localStorage.removeItem('munyaka_admin_session');
-                        logout();
-                        window.location.hash = '/login';
-                      }}
-                      className="w-full justify-center gap-2 rounded-xl h-9 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                    >
-                      <LogOut size={14} /> Log Out
-                    </Button>
-                  </div>
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
+          {finalMenu.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link 
+                key={item.path} 
+                to={item.path}
+                onClick={() => setIsOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
+                  isActive 
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none" 
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
                 )}
-              </div>
+              >
+                <item.icon size={20} className={cn(
+                  "shrink-0",
+                  isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                )} />
+                {!isCollapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* User Account Footer */}
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <Link to="/profile" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">
+                  {user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}
+                </div>
+              </Link>
+              {!isCollapsed && (
+                <div className="overflow-hidden flex-1">
+                  <Link to="/profile" onClick={() => setIsOpen(false)}>
+                    <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p>
+                  </Link>
+                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p>
+                </div>
+              )}
             </div>
+            
+            {!isCollapsed && (
+              <div className="flex gap-2 pt-1 border-t border-slate-200/50 dark:border-slate-700">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={logout}
+                  className="w-full justify-center gap-2 rounded-xl h-9 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                >
+                  <LogOut size={14} /> Log Out
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
       </aside>
 
       {/* Main Content Area - Updated with responsive margins to account for fixed sidebar */}
@@ -427,96 +359,81 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         "flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300",
         isCollapsed ? "lg:ml-20" : "lg:ml-72 md:lg:ml-64"
       )}>
-        {/* Mobile & Desktop Header Bar - stacks on mobile, row on sm+ */}
-                <header className="min-h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 lg:px-8 py-3 shrink-0 z-50 print:hidden relative">
-                  <div className="flex items-center gap-3">
-                    {/* Hamburger Button for Mobile */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="lg:hidden rounded-2xl h-11 w-11 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 active:scale-95"
-                      onClick={() => setIsOpen(true)}
-                      aria-label="Open menu"
-                    >
-                      <Menu size={22} />
-                    </Button>
-        
-                    {/* Title / Search */}
-                    <div className="flex items-center gap-2">
-                      <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-md shadow-indigo-100">
-                        M
-                      </div>
-                      <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight flex-1 min-w-0 truncate">Munyaka Portal</span>
-                      {location.pathname !== '/' && (
-                        <button
-                          onClick={() => navigate('/')}
-                          className="px-3 py-1.5 text-sm font-medium rounded-lg text-slate-600 hover:text-purple-600 hover:bg-purple-50 flex items-center gap-2 transition-colors"
-                          aria-label="Go to home"
-                        >
-                          <Home size={16} />
-                          <span>Home</span>
-                        </button>
-                      )}
-                    </div>
-        
-                    <div className="relative hidden md:block flex-1 min-w-0 max-w-md ml-4">
-                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                      <input
-                        type="text"
-                        placeholder="Search learners, staff, grades..."
-                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm font-medium focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white whitespace-normal break-words"
-                      />
-                    </div>
-                  </div>
-        
-                  <div className="flex items-center gap-2">
-                    <NotificationBell />
-                    <button
-                      onClick={() => setIsDarkMode(!isDarkMode)}
-                      className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors h-11 w-11 flex items-center justify-center active:scale-95"
-                      aria-label="Toggle theme"
-                    >
-                      {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
-                    </button>
-                    {/* LAN Server Connection Indicator - Visible only for owner; navigates to /lan-config */}
-                    {(user?.role ?? '').toLowerCase() === 'owner' ? (
-                      <Link
-                        to="/lan-config"
-                        className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                      >
-                        {isConnected ? (
-                          <>
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-emerald-600 dark:text-emerald-400">LAN Connected</span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-2 h-2 rounded-full bg-slate-300" />
-                            <span className="text-slate-400">Offline</span>
-                          </>
-                        )}
-                      </Link>
-                    ) : null}
-                  </div>
-                </header>
+        {/* Mobile & Desktop Header Bar */}
+        <header className="h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-50 print:hidden relative">
+          <div className="flex items-center gap-3">
+            {/* Hamburger Button for Mobile */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="lg:hidden rounded-2xl h-11 w-11 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 active:scale-95"
+              onClick={() => setIsOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu size={22} />
+            </Button>
 
-        {/* Dynamic Main Viewport - prevent horizontal clipping */}
-        <div
+            {/* Title / Search */}
+            <div className="flex items-center gap-2">
+              <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-md shadow-indigo-100">
+                M
+              </div>
+              <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight flex-1 min-w-0 truncate">Munyaka Portal</span>
+            </div>
+
+            <div className="relative hidden md:block flex-1 min-w-0 max-w-md ml-4">
+                                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                      <input
+                                        type="text"
+                                        placeholder="Search learners, staff, grades..."
+                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm font-medium focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white whitespace-normal break-words"
+                                      />
+                                    </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+                        <button
+                          onClick={() => setIsDarkMode(!isDarkMode)}
+                          className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors h-11 w-11 flex items-center justify-center active:scale-95"
+                          aria-label="Toggle theme"
+                        >
+                          {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
+                        </button>
+                        {/* LAN Server Connection Indicator */}
+                        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold">
+                          {isConnected ? (
+                            <>
+                              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-emerald-600 dark:text-emerald-400">LAN Connected</span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-2 h-2 rounded-full bg-slate-300" />
+                              <span className="text-slate-400">Offline</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </header>
+
+        {/* Dynamic Main Viewport */}
+        <div 
           ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar"
+          className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar"
         >
-          <div className="max-w-7xl mx-auto w-full max-w-full overflow-x-hidden px-0 table-scroll-viewport">
+          <div className="max-w-7xl mx-auto w-full table-scroll-viewport">
             {children}
           </div>
         </div>
 
-        {/* Mobile Bottom Quick Navigation Bar (Role-Based One-Thumb Nav) - horizontally scrollable */}
+        {/* Mobile Bottom Quick Navigation Bar (Role-Based One-Thumb Nav) */}
         <div className={cn(
           "lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-1 pb-safe pt-2 z-40 shadow-2xl transition-transform duration-300 ease-in-out print:hidden",
           showBottomNav ? "translate-y-0" : "translate-y-full"
         )}>
           {bottomQuickNav.length > 0 ? (
-            <div className="flex items-stretch justify-start gap-1 px-1 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
+            <div className="flex items-stretch justify-between gap-1 px-1">
               {bottomQuickNav.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
@@ -524,14 +441,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     key={item.path}
                     to={item.path}
                     className={cn(
-                      "flex flex-col items-center justify-center py-2 px-2 rounded-2xl min-h-[52px] min-w-[64px] shrink-0 snap-start touch-active transition-all duration-200 ease-out",
+                      "flex flex-col items-center justify-center py-2 px-1 rounded-2xl flex-1 min-h-[52px] max-w-[80px] touch-active transition-all duration-200 ease-out",
                       isActive
                         ? "text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50 dark:bg-indigo-950/40"
                         : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50"
                     )}
                   >
-                    <item.icon size={20} className={cn("shrink-0 transition-transform duration-200", isActive && "scale-110")} />
-                    <span className="text-[10px] xs:text-xs mt-1 tracking-tight leading-tight text-center whitespace-normal break-words line-clamp-2 max-w-full px-0.5">{item.label}</span>
+                    <item.icon size={20} className={cn("transition-transform duration-200", isActive && "scale-110")} />
+                    <span className="text-[9px] mt-1 tracking-tight leading-tight text-center line-clamp-1">{item.label}</span>
                   </Link>
                 );
               })}

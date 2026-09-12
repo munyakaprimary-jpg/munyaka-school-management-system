@@ -38,16 +38,13 @@ import {
   CreditCard,
   Crown,
   Settings2,
-  ArrowLeft,
-  Database,
-  Download,
-  Upload
+  ArrowLeft
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { notifyDataChanged, downloadDatabaseBackup } from '@/utils/storage';
+import { notifyDataChanged } from '@/utils/storage';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getGeofenceConfig, setGeofenceConfig as persistGeofenceConfig, GeofenceConfig, calculateDistance } from '@/lib/geofence';
-import { localData } from '@/services/localDataService';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import AdminLocationPicker from '@/components/AdminLocationPicker';
 import {
@@ -63,7 +60,7 @@ const SETTINGS_ROW_ID = 'default';
 // Session persistence keys
 const SESSION_KEY = 'munyaka_admin_session';
 
-type AdminRole = 'admin' | 'owner';
+type AdminRole = 'system_admin' | 'super_admin';
 
 interface AdminSession {
   role: AdminRole;
@@ -81,36 +78,15 @@ const MODULES = [
   { id: 'student_records', title: 'Student & Guardian Records', desc: 'Enrollment, Bio Data, Attendance' },
   { id: 'finance_fees', title: 'Fee Management & Finance', desc: 'Billing, Invoices, Payment Collections' },
   { id: 'payment_subscriptions', title: 'Payment & Subscriptions', desc: 'Software Payments, Subscriptions, Financial Gateway' },
-  { id: 'staff_mgmt', title: 'Staff Management & Geofence', desc: 'Staff Profiles, Compound GPS Tracking' },
-  // Support Staff Modules
-  { id: 'library_catalog', title: 'Library Catalog', desc: 'Book catalog, search, and classification' },
-  { id: 'book_operations', title: 'Book Checkout & Returns', desc: 'Circulation, returns, and overdue tracking' },
-  { id: 'library_inventory', title: 'Library Inventory Logs', desc: 'Stock tracking, damaged books, acquisitions' },
-  { id: 'stock_requisitions', title: 'Stock Requisitions', desc: 'Request supplies from central store' },
-  { id: 'inventory_audits', title: 'Inventory Audits', desc: 'Stock counts and audit trails' },
-  { id: 'supply_requests', title: 'Supply Requests', desc: 'Requisition workflow and approvals' },
-  { id: 'science_lab_inventory', title: 'Science Lab Inventory', desc: 'Equipment, materials, and consumables' },
-  { id: 'reagent_logs', title: 'Reagent & Equipment Logs', desc: 'Chemical tracking and equipment maintenance' },
-  { id: 'lab_maintenance', title: 'Lab Maintenance Requests', desc: 'Equipment repair and service requests' },
-  { id: 'computer_lab_assets', title: 'Computer Lab Assets', desc: 'Hardware inventory and software licensing' },
-  { id: 'it_tickets', title: 'IT Maintenance Tickets', desc: 'Support requests and troubleshooting' },
-  { id: 'device_assignment', title: 'Device Assignment', desc: 'Assign devices to users and locations' },
-  { id: 'duty_roster', title: 'General Duty Roster', desc: 'Staff duty schedules and assignments' },
-  { id: 'internal_messaging', title: 'Internal Messaging', desc: 'Staff communication and announcements' },
-  { id: 'staff_attendance', title: 'Staff Attendance', desc: 'Check-in, check-out, and attendance reports' }
+  { id: 'staff_mgmt', title: 'Staff Management & Geofence', desc: 'Staff Profiles, Compound GPS Tracking' }
 ];
 
 const ROLES = [
-  { id: 'owner', label: 'School Owner' },
-  { id: 'admin', label: 'School Administrator' },
+  { id: 'owner', label: 'Super Admin / Owner' },
+  { id: 'super_admin', label: 'System Administrator' },
   { id: 'head_teacher', label: 'Principal / Head' },
   { id: 'bursar', label: 'Bursar / Accountant' },
   { id: 'teacher', label: 'Class Teacher' },
-  { id: 'librarian', label: 'Librarian' },
-  { id: 'storekeeper', label: 'Storekeeper' },
-  { id: 'lab_assistant', label: 'Lab Assistant' },
-  { id: 'ict_tech', label: 'ICT Lab Technician' },
-  { id: 'non_teaching_staff', label: 'Non-Teaching Staff' },
   { id: 'parent', label: 'Parent / Guardian' },
   { id: 'student', label: 'Learner' }
 ];
@@ -142,157 +118,21 @@ const buildDefaultPermissions = (): Record<string, PermissionState> => {
     initialState[role.id] = {};
     MODULES.forEach(mod => {
       initialState[role.id][mod.id] = {
-              read: true,
-              create: role.id === 'owner' || role.id === 'admin' || role.id === 'head_teacher',
-              edit: role.id === 'owner' || role.id === 'admin' || role.id === 'head_teacher',
-              delete: role.id === 'owner' || role.id === 'admin'
-            };
+        read: true,
+        create: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
+        edit: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
+        delete: role.id === 'owner' || role.id === 'super_admin'
+      };
     });
   });
   if (initialState['owner']) {
     initialState['owner']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
   }
-  ['admin', 'head_teacher', 'bursar', 'teacher', 'parent', 'student'].forEach(roleId => {
-      if (initialState[roleId]) {
-        initialState[roleId]['payment_subscriptions'] = { read: false, create: false, edit: false, delete: false };
-      }
-    });
-
-  // Librarian role defaults - Library focus, no academic access
-  if (initialState['librarian']) {
-    initialState['librarian'] = {
-      sys_config: { read: false, create: false, edit: false, delete: false },
-      academic_grading: { read: false, create: false, edit: false, delete: false },
-      student_records: { read: false, create: false, edit: false, delete: false },
-      finance_fees: { read: false, create: false, edit: false, delete: false },
-      payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-      staff_mgmt: { read: false, create: false, edit: false, delete: false },
-      library_catalog: { read: true, create: true, edit: true, delete: false },
-      book_operations: { read: true, create: true, edit: true, delete: false },
-      library_inventory: { read: true, create: true, edit: true, delete: false },
-      stock_requisitions: { read: false, create: false, edit: false, delete: false },
-      inventory_audits: { read: false, create: false, edit: false, delete: false },
-      supply_requests: { read: false, create: false, edit: false, delete: false },
-      science_lab_inventory: { read: false, create: false, edit: false, delete: false },
-      reagent_logs: { read: false, create: false, edit: false, delete: false },
-      lab_maintenance: { read: false, create: false, edit: false, delete: false },
-      computer_lab_assets: { read: false, create: false, edit: false, delete: false },
-      it_tickets: { read: false, create: false, edit: false, delete: false },
-      device_assignment: { read: false, create: false, edit: false, delete: false },
-      duty_roster: { read: true, create: false, edit: false, delete: false },
-      internal_messaging: { read: true, create: true, edit: false, delete: false },
-      staff_attendance: { read: true, create: true, edit: true, delete: false }
-    };
-  }
-
-  // Storekeeper role defaults - Inventory focus, no academic access
-  if (initialState['storekeeper']) {
-    initialState['storekeeper'] = {
-      sys_config: { read: false, create: false, edit: false, delete: false },
-      academic_grading: { read: false, create: false, edit: false, delete: false },
-      student_records: { read: false, create: false, edit: false, delete: false },
-      finance_fees: { read: false, create: false, edit: false, delete: false },
-      payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-      staff_mgmt: { read: false, create: false, edit: false, delete: false },
-      library_catalog: { read: false, create: false, edit: false, delete: false },
-      book_operations: { read: false, create: false, edit: false, delete: false },
-      library_inventory: { read: false, create: false, edit: false, delete: false },
-      stock_requisitions: { read: true, create: true, edit: true, delete: false },
-      inventory_audits: { read: true, create: true, edit: true, delete: false },
-      supply_requests: { read: true, create: true, edit: true, delete: false },
-      science_lab_inventory: { read: false, create: false, edit: false, delete: false },
-      reagent_logs: { read: false, create: false, edit: false, delete: false },
-      lab_maintenance: { read: false, create: false, edit: false, delete: false },
-      computer_lab_assets: { read: false, create: false, edit: false, delete: false },
-      it_tickets: { read: false, create: false, edit: false, delete: false },
-      device_assignment: { read: false, create: false, edit: false, delete: false },
-      duty_roster: { read: true, create: false, edit: false, delete: false },
-      internal_messaging: { read: true, create: true, edit: false, delete: false },
-      staff_attendance: { read: true, create: true, edit: true, delete: false }
-    };
-  }
-
-  // Lab Assistant role defaults - Science Lab focus, no academic access
-  if (initialState['lab_assistant']) {
-    initialState['lab_assistant'] = {
-      sys_config: { read: false, create: false, edit: false, delete: false },
-      academic_grading: { read: false, create: false, edit: false, delete: false },
-      student_records: { read: false, create: false, edit: false, delete: false },
-      finance_fees: { read: false, create: false, edit: false, delete: false },
-      payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-      staff_mgmt: { read: false, create: false, edit: false, delete: false },
-      library_catalog: { read: false, create: false, edit: false, delete: false },
-      book_operations: { read: false, create: false, edit: false, delete: false },
-      library_inventory: { read: false, create: false, edit: false, delete: false },
-      stock_requisitions: { read: false, create: false, edit: false, delete: false },
-      inventory_audits: { read: false, create: false, edit: false, delete: false },
-      supply_requests: { read: false, create: false, edit: false, delete: false },
-      science_lab_inventory: { read: true, create: true, edit: true, delete: false },
-      reagent_logs: { read: true, create: true, edit: true, delete: false },
-      lab_maintenance: { read: true, create: true, edit: true, delete: false },
-      computer_lab_assets: { read: false, create: false, edit: false, delete: false },
-      it_tickets: { read: false, create: false, edit: false, delete: false },
-      device_assignment: { read: false, create: false, edit: false, delete: false },
-      duty_roster: { read: true, create: false, edit: false, delete: false },
-      internal_messaging: { read: true, create: true, edit: false, delete: false },
-      staff_attendance: { read: true, create: true, edit: true, delete: false }
-    };
-  }
-
-  // ICT Lab Technician role defaults - IT focus, no academic access
-  if (initialState['ict_tech']) {
-    initialState['ict_tech'] = {
-      sys_config: { read: false, create: false, edit: false, delete: false },
-      academic_grading: { read: false, create: false, edit: false, delete: false },
-      student_records: { read: false, create: false, edit: false, delete: false },
-      finance_fees: { read: false, create: false, edit: false, delete: false },
-      payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-      staff_mgmt: { read: false, create: false, edit: false, delete: false },
-      library_catalog: { read: false, create: false, edit: false, delete: false },
-      book_operations: { read: false, create: false, edit: false, delete: false },
-      library_inventory: { read: false, create: false, edit: false, delete: false },
-      stock_requisitions: { read: false, create: false, edit: false, delete: false },
-      inventory_audits: { read: false, create: false, edit: false, delete: false },
-      supply_requests: { read: false, create: false, edit: false, delete: false },
-      science_lab_inventory: { read: false, create: false, edit: false, delete: false },
-      reagent_logs: { read: false, create: false, edit: false, delete: false },
-      lab_maintenance: { read: false, create: false, edit: false, delete: false },
-      computer_lab_assets: { read: true, create: true, edit: true, delete: false },
-      it_tickets: { read: true, create: true, edit: true, delete: false },
-      device_assignment: { read: true, create: true, edit: true, delete: false },
-      duty_roster: { read: true, create: false, edit: false, delete: false },
-      internal_messaging: { read: true, create: true, edit: false, delete: false },
-      staff_attendance: { read: true, create: true, edit: true, delete: false }
-    };
-  }
-
-  // Non-Teaching Staff role defaults - General support, no academic access
-  if (initialState['non_teaching_staff']) {
-    initialState['non_teaching_staff'] = {
-      sys_config: { read: false, create: false, edit: false, delete: false },
-      academic_grading: { read: false, create: false, edit: false, delete: false },
-      student_records: { read: false, create: false, edit: false, delete: false },
-      finance_fees: { read: false, create: false, edit: false, delete: false },
-      payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-      staff_mgmt: { read: false, create: false, edit: false, delete: false },
-      library_catalog: { read: false, create: false, edit: false, delete: false },
-      book_operations: { read: false, create: false, edit: false, delete: false },
-      library_inventory: { read: false, create: false, edit: false, delete: false },
-      stock_requisitions: { read: false, create: false, edit: false, delete: false },
-      inventory_audits: { read: false, create: false, edit: false, delete: false },
-      supply_requests: { read: false, create: false, edit: false, delete: false },
-      science_lab_inventory: { read: false, create: false, edit: false, delete: false },
-      reagent_logs: { read: false, create: false, edit: false, delete: false },
-      lab_maintenance: { read: false, create: false, edit: false, delete: false },
-      computer_lab_assets: { read: false, create: false, edit: false, delete: false },
-      it_tickets: { read: false, create: false, edit: false, delete: false },
-      device_assignment: { read: false, create: false, edit: false, delete: false },
-      duty_roster: { read: true, create: true, edit: true, delete: false },
-      internal_messaging: { read: true, create: true, edit: true, delete: false },
-      staff_attendance: { read: true, create: true, edit: true, delete: false }
-    };
-  }
-
+  ['super_admin', 'head_teacher', 'bursar', 'teacher', 'parent', 'student'].forEach(roleId => {
+    if (initialState[roleId]) {
+      initialState[roleId]['payment_subscriptions'] = { read: false, create: false, edit: false, delete: false };
+    }
+  });
   return initialState;
 };
 
@@ -388,7 +228,7 @@ const Settings = () => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab');
-      if (['general', 'academic', 'roles', 'security', 'database'].includes(tab ?? '')) return tab as string;
+      if (['general', 'academic', 'roles', 'security'].includes(tab ?? '')) return tab as string;
     }
     return 'roles';
   });
@@ -453,52 +293,52 @@ const Settings = () => {
 
   // Login handlers
   const handleLogin = async (role: AdminRole, password: string) => {
-    if (!String(password || '').trim()) {
-          setAuthError("Please enter your password.");
-          return;
-        }
-    
-        setIsVerifyingAuth(true);
-        setAuthError("");
-    
-        await new Promise(r => setTimeout(r, 600));
-    
-        const storedPassword = getCredential();
-        const isValid = String(password || '').trim() === storedPassword || String(password || '').trim() === DEFAULT_ADMIN_PASSWORD;
+    if (!password.trim()) {
+      setAuthError("Please enter your password.");
+      return;
+    }
+
+    setIsVerifyingAuth(true);
+    setAuthError("");
+
+    await new Promise(r => setTimeout(r, 600));
+
+    const storedPassword = getCredential();
+    const isValid = password.trim() === storedPassword || password.trim() === DEFAULT_ADMIN_PASSWORD;
 
     if (isValid) {
-          const roleInfo = {
-            admin: { label: 'School Administrator', icon: 'settings' },
-            owner: { label: 'School Owner', icon: 'crown' }
-          }[role];
-    
-          const newSession: AdminSession = {
-            role,
-            roleLabel: roleInfo.label,
-            roleIcon: roleInfo.icon,
-            timestamp: Date.now()
-          };
-    
-          setSession(newSession);
-          saveSession(role, roleInfo.label, roleInfo.icon);
-          setAuthPassword("");
-          setIsSwitchingRole(false);
-    
-          // Role-specific success message
-          if (role === 'admin') {
-            showSuccess(`Welcome, School Administrator! Full system access granted.`);
-          } else {
-            showSuccess(`Welcome, School Owner! Payment module unlocked.`);
-          }
-        } else {
-          setAuthError(`Invalid password for the selected role.`);
-          showError("Authentication failed");
-        }
-        setIsVerifyingAuth(false);
+      const roleInfo = {
+        system_admin: { label: 'System Administrator', icon: 'settings' },
+        super_admin: { label: 'Super Admin (Owner)', icon: 'crown' }
+      }[role];
+      
+      const newSession: AdminSession = {
+        role,
+        roleLabel: roleInfo.label,
+        roleIcon: roleInfo.icon,
+        timestamp: Date.now()
       };
-    
-      // State for selected login role
-      const [selectedLoginRole, setSelectedLoginRole] = useState<AdminRole>('admin');
+      
+      setSession(newSession);
+      saveSession(role, roleInfo.label, roleInfo.icon);
+      setAuthPassword("");
+      setIsSwitchingRole(false);
+      
+      // Role-specific success message
+      if (role === 'system_admin') {
+        showSuccess(`Welcome, System Administrator! Full system access granted.`);
+      } else {
+        showSuccess(`Welcome, Super Admin (Owner)! Payment module unlocked.`);
+      }
+    } else {
+      setAuthError(`Invalid password for the selected role.`);
+      showError("Authentication failed");
+    }
+    setIsVerifyingAuth(false);
+  };
+
+  // State for selected login role
+  const [selectedLoginRole, setSelectedLoginRole] = useState<AdminRole>('system_admin');
 
   const handleLogout = () => {
     clearSession();
@@ -522,7 +362,7 @@ const Settings = () => {
 
     // Normalise the entered "current" password and the stored value so
     // a stray whitespace / newline never blocks a legitimate update.
-    const enteredCurrent = String(passwordForm.currentPassword || '').trim();
+    const enteredCurrent = passwordForm.currentPassword.trim();
     if (!enteredCurrent) {
       showError("Please enter your current password.");
       return;
@@ -591,25 +431,65 @@ const Settings = () => {
 
   const fetchSettingsFromDatabase = useCallback(async () => {
     setIsLoadingSettings(true);
-    try {
-      const data = localData.settings.get<Record<string, unknown>>();
 
-      if (data && Object.keys(data).length > 0) {
-        if (data.general) setGeneralConfig(data.general as any);
-        if (data.academic) setAcademicConfig(data.academic as any);
-        if (data.permissions) setPermissions(mergePermissions(data.permissions as any));
-        if (data.geofence) setGeofenceState(data.geofence as any);
-        if (data.geofenceEnabled !== undefined) setGeofenceEnabled(!!data.geofenceEnabled);
-        if (data.devBypass !== undefined) setDevBypass(!!data.devBypass);
-        if (data.sessionSecurity) setSessionSecurity(data.sessionSecurity as any);
-        if (data.auditLogs) setAuditLogs(data.auditLogs as any);
+    try {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*')
+        .eq('id', SETTINGS_ROW_ID)
+        .single();
+
+      if (!error && data) {
+        setGeneralConfig({
+          schoolName: data.school_name || "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+          motto: data.motto || "KNOWLEDGE IS POWER",
+          postalAddress: data.postal_address || "P.O. BOX 5239-30100 ELDORET",
+          phone: data.phone || "+254 712 345 678",
+          email: data.email || "info@munyaka.sc.ke",
+          location: data.location || "Munyaka, Eldoret East, Uasin Gishu County",
+          maintenanceMode: !!data.maintenance_mode
+        });
+
+        setAcademicConfig({
+          activeYear: data.active_year || "2026",
+          activeTerm: data.active_term || "term1",
+          termStartDate: data.term_start_date || "2026-01-05",
+          termEndDate: data.term_end_date || "2026-04-10",
+          gradingScale: data.grading_scale || academicConfig.gradingScale
+        });
+
+        if (data.rbac_permissions) setPermissions(mergePermissions(data.rbac_permissions));
+        if (data.geofence_lat !== undefined && data.geofence_lng !== undefined) {
+          setGeofenceState({
+            lat: data.geofence_lat,
+            lng: data.geofence_lng,
+            radius: data.geofence_radius || 50
+          });
+        }
+        if (data.geofence_enabled !== undefined) setGeofenceEnabled(!!data.geofence_enabled);
+        if (data.dev_bypass !== undefined) setDevBypass(!!data.dev_bypass);
+        if (data.session_security) setSessionSecurity(data.session_security);
+        if (data.audit_logs) setAuditLogs(data.audit_logs);
+
       } else {
-        // First launch — use defaults from geofence
-        const geoConf = getGeofenceConfig();
-        setGeofenceState(geoConf);
+        const savedMaster = localStorage.getItem(SETTINGS_MASTER_KEY);
+        if (savedMaster) {
+          const parsed = JSON.parse(savedMaster);
+          if (parsed.general) setGeneralConfig(parsed.general);
+          if (parsed.academic) setAcademicConfig(parsed.academic);
+          if (parsed.permissions) setPermissions(mergePermissions(parsed.permissions));
+          if (parsed.geofence) setGeofenceState(parsed.geofence);
+          if (parsed.geofenceEnabled !== undefined) setGeofenceEnabled(parsed.geofenceEnabled);
+          if (parsed.devBypass !== undefined) setDevBypass(parsed.devBypass);
+          if (parsed.sessionSecurity) setSessionSecurity(parsed.sessionSecurity);
+          if (parsed.auditLogs) setAuditLogs(parsed.auditLogs);
+        } else {
+          const geoConf = getGeofenceConfig();
+          setGeofenceState(geoConf);
+        }
       }
     } catch (err) {
-      console.warn("[Settings] Error loading local settings:", err);
+      console.warn("Supabase fetch fallback to local state:", err);
     } finally {
       setIsLoadingSettings(false);
       setHasUnsavedChanges(false);
@@ -659,6 +539,14 @@ const Settings = () => {
     };
 
     try {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert(payload, { onConflict: 'id' });
+
+      if (error) {
+        console.warn("Supabase upsert warning:", error.message);
+      }
+
       const masterLocal = {
         general: generalConfig,
         academic: academicConfig,
@@ -669,11 +557,14 @@ const Settings = () => {
         sessionSecurity,
         auditLogs
       };
-      await localData.settings.save(masterLocal);
+      localStorage.setItem(SETTINGS_MASTER_KEY, JSON.stringify(masterLocal));
+      notifyDataChanged('munyaka_system_settings_v3');
       persistGeofenceConfig(geofenceConfig);
+
       setHasUnsavedChanges(false);
+      showSuccess("System settings saved successfully!");
     } catch (err: any) {
-      showError(`Failed to save settings: ${err.message || 'Unknown error'}`);
+      showError(`Failed to save settings: ${err.message || 'Network error'}`);
     } finally {
       setIsSaving(false);
     }
@@ -774,12 +665,12 @@ const Settings = () => {
     return (
       <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in zoom-in-95 duration-500">
         <div className="flex items-center gap-3 mb-6">
-                  <BackButton parentPath="/" />
-                  <div>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">System Configuration</h1>
-                    <p className="text-xs text-slate-500 font-medium">Restricted Administrative Settings</p>
-                  </div>
-                </div>
+          <BackButton fallback="/" />
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">System Configuration</h1>
+            <p className="text-xs text-slate-500 font-medium">Restricted Administrative Settings</p>
+          </div>
+        </div>
 
         <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden p-2">
           <CardContent className="p-6 md:p-8 sm:p-10">
@@ -807,61 +698,61 @@ const Settings = () => {
               
               <div className="grid grid-cols-1 gap-3">
                 <button
-                                  type="button"
-                                  onClick={() => setSelectedLoginRole('admin')}
-                                  disabled={isVerifyingAuth}
-                                  className={cn(
-                                    "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
-                                    selectedLoginRole === 'admin'
-                                      ? "border-indigo-300 bg-indigo-50/30 ring-2 ring-indigo-200"
-                                      : "border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30"
-                                  )}
-                                >
-                                  <div className={cn(
-                                    "p-3 rounded-xl transition-colors",
-                                    selectedLoginRole === 'admin' ? "bg-indigo-200 text-indigo-700" : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200"
-                                  )}>
-                                    <Settings2 size={24} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-slate-900">School Administrator</p>
-                                    <p className="text-xs text-slate-500">Full access: Settings, Users, Fees, Academics, RBAC, Security</p>
-                                  </div>
-                                  <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-600 font-bold text-[10px]">
-                                    PIN: sysadmin2026
-                                  </Badge>
-                                </button>
-                
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedLoginRole('owner')}
-                                  disabled={isVerifyingAuth}
-                                  className={cn(
-                                    "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
-                                    selectedLoginRole === 'owner'
-                                      ? "border-amber-300 bg-amber-50/30 ring-2 ring-amber-200"
-                                      : "border-slate-100 hover:border-amber-200 hover:bg-amber-50/30"
-                                  )}
-                                >
-                                  <div className={cn(
-                                    "p-3 rounded-xl transition-colors",
-                                    selectedLoginRole === 'owner' ? "bg-amber-200 text-amber-700" : "bg-amber-100 text-amber-600 group-hover:bg-amber-200"
-                                  )}>
-                                    <Crown size={24} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-slate-900">School Owner</p>
-                                    <p className="text-xs text-slate-500">Exclusive access to Payment &amp; Subscriptions module</p>
-                                  </div>
-                                  <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-600 font-bold text-[10px]">
-                                    PIN: ownerpass2026
-                                  </Badge>
-                                </button>
+                  type="button"
+                  onClick={() => setSelectedLoginRole('system_admin')}
+                  disabled={isVerifyingAuth}
+                  className={cn(
+                    "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
+                    selectedLoginRole === 'system_admin'
+                      ? "border-indigo-300 bg-indigo-50/30 ring-2 ring-indigo-200"
+                      : "border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30"
+                  )}
+                >
+                  <div className={cn(
+                    "p-3 rounded-xl transition-colors",
+                    selectedLoginRole === 'system_admin' ? "bg-indigo-200 text-indigo-700" : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200"
+                  )}>
+                    <Settings2 size={24} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-900">System Administrator</p>
+                    <p className="text-xs text-slate-500">Full access: Settings, Users, Fees, Academics, RBAC, Security</p>
+                  </div>
+                  <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-600 font-bold text-[10px]">
+                    PIN: sysadmin2026
+                  </Badge>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedLoginRole('super_admin')}
+                  disabled={isVerifyingAuth}
+                  className={cn(
+                    "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
+                    selectedLoginRole === 'super_admin'
+                      ? "border-amber-300 bg-amber-50/30 ring-2 ring-amber-200"
+                      : "border-slate-100 hover:border-amber-200 hover:bg-amber-50/30"
+                  )}
+                >
+                  <div className={cn(
+                    "p-3 rounded-xl transition-colors",
+                    selectedLoginRole === 'super_admin' ? "bg-amber-200 text-amber-700" : "bg-amber-100 text-amber-600 group-hover:bg-amber-200"
+                  )}>
+                    <Crown size={24} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-900">Super Admin (Owner)</p>
+                    <p className="text-xs text-slate-500">Exclusive access to Payment &amp; Subscriptions module</p>
+                  </div>
+                  <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-600 font-bold text-[10px]">
+                    PIN: ownerpass2026
+                  </Badge>
+                </button>
               </div>
             </div>
 
             {/* Password Input */}
-            <form onSubmit={(e) => { e.preventDefault(); handleLogin(selectedLoginRole as AdminRole, authPassword); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(selectedLoginRole, authPassword); }} className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
                 <div className="relative">
@@ -885,21 +776,21 @@ const Settings = () => {
                   </button>
                 </div>
               </div>
-              
-                            <Button
-                              type="submit"
-                              disabled={isVerifyingAuth || !String(authPassword || '').trim()}
-                              className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
-                            >
-                              {isVerifyingAuth ? (
-                                <>
-                                  <Loader2 className="animate-spin" size={20} />
-                                  Verifying...
-                                </>
-                              ) : (
-                                <>
-                                  <Unlock size={20} />
-                                  Authorize Access
+
+              <Button 
+                type="submit" 
+                disabled={isVerifyingAuth || !authPassword.trim()}
+                className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
+              >
+                {isVerifyingAuth ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <Unlock size={20} />
+                    Authorize Access
                   </>
                 )}
               </Button>
@@ -955,53 +846,53 @@ const Settings = () => {
 
             <div className="space-y-3 mb-6">
               <button
-                              type="button"
-                              onClick={() => handleLogin('admin', authPassword)}
-                              className={cn(
-                                "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
-                                session.role === 'admin'
-                                  ? "border-indigo-300 bg-indigo-50/30 cursor-not-allowed opacity-60"
-                                  : "border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30"
-                              )}
-                              disabled={session.role === 'admin' || isVerifyingAuth}
-                            >
-                              <div className={cn("p-3 rounded-xl transition-colors", session.role === 'admin' ? "bg-indigo-200 text-indigo-600" : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200")}>
-                                <Settings2 size={24} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-900">School Administrator</p>
-                                <p className="text-xs text-slate-500">Full access: Settings, Users, Fees, Academics, RBAC, Security</p>
-                              </div>
-                              {session.role === 'admin' && (
-                                <Badge className="bg-indigo-100 text-indigo-600 font-bold text-[10px]">Current</Badge>
-                              )}
-                            </button>
-              
-                            <button
-                              type="button"
-                              onClick={() => handleLogin('owner', authPassword)}
-                              className={cn(
-                                "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
-                                session.role === 'owner'
-                                  ? "border-amber-300 bg-amber-50/30 cursor-not-allowed opacity-60"
-                                  : "border-slate-100 hover:border-amber-200 hover:bg-amber-50/30"
-                              )}
-                              disabled={session.role === 'owner' || isVerifyingAuth}
-                            >
-                              <div className={cn("p-3 rounded-xl transition-colors", session.role === 'owner' ? "bg-amber-200 text-amber-600" : "bg-amber-100 text-amber-600 group-hover:bg-amber-200")}>
-                                <Crown size={24} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-900">School Owner</p>
-                                <p className="text-xs text-slate-500">Exclusive access to Payment &amp; Subscriptions module</p>
-                              </div>
-                              {session.role === 'owner' && (
-                                <Badge className="bg-amber-100 text-amber-600 font-bold text-[10px]">Current</Badge>
-                              )}
-                            </button>
+                type="button"
+                onClick={() => handleLogin('system_admin', authPassword)}
+                className={cn(
+                  "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
+                  session.role === 'system_admin' 
+                    ? "border-indigo-300 bg-indigo-50/30 cursor-not-allowed opacity-60" 
+                    : "border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30"
+                )}
+                disabled={session.role === 'system_admin' || isVerifyingAuth}
+              >
+                <div className={cn("p-3 rounded-xl transition-colors", session.role === 'system_admin' ? "bg-indigo-200 text-indigo-600" : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200")}>
+                  <Settings2 size={24} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-900">System Administrator</p>
+                  <p className="text-xs text-slate-500">Full access: Settings, Users, Fees, Academics, RBAC, Security</p>
+                </div>
+                {session.role === 'system_admin' && (
+                  <Badge className="bg-indigo-100 text-indigo-600 font-bold text-[10px]">Current</Badge>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleLogin('super_admin', authPassword)}
+                className={cn(
+                  "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
+                  session.role === 'super_admin'
+                    ? "border-amber-300 bg-amber-50/30 cursor-not-allowed opacity-60"
+                    : "border-slate-100 hover:border-amber-200 hover:bg-amber-50/30"
+                )}
+                disabled={session.role === 'super_admin' || isVerifyingAuth}
+              >
+                <div className={cn("p-3 rounded-xl transition-colors", session.role === 'super_admin' ? "bg-amber-200 text-amber-600" : "bg-amber-100 text-amber-600 group-hover:bg-amber-200")}>
+                  <Crown size={24} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-900">Super Admin (Owner)</p>
+                  <p className="text-xs text-slate-500">Exclusive access to Payment &amp; Subscriptions module</p>
+                </div>
+                {session.role === 'super_admin' && (
+                  <Badge className="bg-amber-100 text-amber-600 font-bold text-[10px]">Current</Badge>
+                )}
+              </button>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); handleLogin(session.role === 'owner' ? 'admin' : 'owner', authPassword); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(session.role === 'super_admin' ? 'system_admin' : 'super_admin', authPassword); }} className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password for Selected Role</Label>
                 <div className="relative">
@@ -1025,21 +916,21 @@ const Settings = () => {
                   </button>
                 </div>
               </div>
-              
-                            <Button
-                              type="submit"
-                              disabled={isVerifyingAuth || !String(authPassword || '').trim()}
-                              className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
-                            >
-                              {isVerifyingAuth ? (
-                                <>
-                                  <Loader2 className="animate-spin" size={20} />
-                                  Switching...
-                                </>
-                              ) : (
-                                <>
-                                  <Unlock size={20} />
-                                  Switch Role
+
+              <Button 
+                type="submit" 
+                disabled={isVerifyingAuth || !authPassword.trim()}
+                className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
+              >
+                {isVerifyingAuth ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    Switching...
+                  </>
+                ) : (
+                  <>
+                    <Unlock size={20} />
+                    Switch Role
                   </>
                 )}
               </Button>
@@ -1069,21 +960,21 @@ const Settings = () => {
   }
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 max-w-7xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-
-      {/* Header - stacks on mobile */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 action-bar w-full max-w-full">
-              <div className="flex items-center gap-3">
-                <BackButton parentPath="/" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h1 style={{ fontSize: 'clamp(1.25rem, 4.5vw, 1.875rem)' }} className="font-black tracking-tight text-slate-900">System Configuration</h1>
+    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 style={{ fontSize: 'clamp(1.25rem, 4.5vw, 1.875rem)' }} className="font-black tracking-tight text-slate-900">System Configuration</h1>
               <Badge className={cn(
-                              "border-none font-bold text-[10px] px-2.5 py-0.5",
-                              session.role === 'owner' ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
-                            )}>
-                              <ShieldCheck size={12} className="mr-1 inline" /> {session.roleLabel}
-                            </Badge>
+                "border-none font-bold text-[10px] px-2.5 py-0.5",
+                session.role === 'super_admin' ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
+              )}>
+                <ShieldCheck size={12} className="mr-1 inline" /> {session.roleLabel}
+              </Badge>
             </div>
             <p className="text-muted-foreground text-sm md:text-base">Master console for institutional policy, RBAC roles, and security parameters.</p>
           </div>
@@ -1096,27 +987,27 @@ const Settings = () => {
             </Badge>
           )}
 
-          {/* Quick Navigation - Owner gets Payment link, Admin gets System Management link */}
-                    {session.role === 'owner' && (
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate('/payment-management')}
-                        className="rounded-xl border-amber-200 text-amber-600 hover:bg-amber-50 font-bold h-10 px-3 gap-1.5 text-sm shrink-0"
-                      >
-                        <CreditCard size={16} />
-                        <span className="hidden sm:inline">Payments</span>
-                      </Button>
-                    )}
-                    {session.role === 'admin' && (
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate('/ict-lab')}
-                        className="rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold h-10 px-3 gap-1.5 text-sm shrink-0"
-                      >
-                        <Settings2 size={16} />
-                        <span className="hidden sm:inline">ICT Lab & Devices</span>
-                      </Button>
-                    )}
+          {/* Quick Navigation - Super Admin gets Payment link, System Admin gets System Management link */}
+          {session.role === 'super_admin' && (
+            <Button
+              variant="outline"
+              onClick={() => navigate('/payment-management')}
+              className="rounded-xl border-amber-200 text-amber-600 hover:bg-amber-50 font-bold h-10 px-3 gap-1.5 text-sm shrink-0"
+            >
+              <CreditCard size={16} />
+              <span className="hidden sm:inline">Payments</span>
+            </Button>
+          )}
+          {session.role === 'system_admin' && (
+            <Button
+              variant="outline"
+              onClick={() => navigate('/system-management')}
+              className="rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold h-10 px-3 gap-1.5 text-sm shrink-0"
+            >
+              <Settings2 size={16} />
+              <span className="hidden sm:inline">System Mgmt</span>
+            </Button>
+          )}
 
           {/* Switch Role Button */}
           <Button
@@ -1270,27 +1161,11 @@ const Settings = () => {
         url.searchParams.set('tab', tab);
         window.history.replaceState({}, '', url.toString());
       }} className="w-full">
-        <TabsList className="bg-white p-1 rounded-xl md:rounded-2xl shadow-sm border h-auto md:h-14 mb-6 md:mb-8 flex overflow-x-auto scrollbar-hide gap-1">
-          <TabsTrigger value="general" className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap">
-            <Settings2 size={18} className="shrink-0" />
-            <span>School Profile</span>
-          </TabsTrigger>
-          <TabsTrigger value="academic" className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap">
-            <ShieldCheck size={18} className="shrink-0" />
-            <span>Academic Setup</span>
-          </TabsTrigger>
-          <TabsTrigger value="roles" className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap">
-            <Users size={18} className="shrink-0" />
-            <span>RBAC Roles</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap">
-            <Key size={18} className="shrink-0" />
-            <span>Security & Auth</span>
-          </TabsTrigger>
-          <TabsTrigger value="database" className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap">
-            <Database size={18} className="shrink-0" />
-            <span>Database & Backup</span>
-          </TabsTrigger>
+        <TabsList className="bg-white p-1 rounded-xl md:rounded-2xl shadow-sm border h-12 md:h-14 mb-6 md:mb-8 flex overflow-x-auto scrollbar-hide gap-1">
+          <TabsTrigger value="general" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">General</TabsTrigger>
+          <TabsTrigger value="academic" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">Academic Setup</TabsTrigger>
+          <TabsTrigger value="roles" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">Users & Roles</TabsTrigger>
+          <TabsTrigger value="security" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">Security</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
@@ -1518,60 +1393,76 @@ const Settings = () => {
                 </div>
               </div>
               <Badge variant="outline" className={cn(
-                              "font-bold px-3 py-1 shrink-0",
-                              session.role === 'owner' ? "border-amber-200 bg-amber-50 text-amber-700" : "border-indigo-200 bg-indigo-50 text-indigo-700"
-                            )}>
-                              {session.roleLabel}
-                            </Badge>
+                "font-bold px-3 py-1 shrink-0",
+                session.role === 'super_admin' ? "border-amber-200 bg-amber-50 text-amber-700" : "border-indigo-200 bg-indigo-50 text-indigo-700"
+              )}>
+                {session.roleLabel}
+              </Badge>
             </CardHeader>
 
             <CardContent className="px-0 pt-4 md:pt-6 space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                {/* Admin Credentials */}
-                                <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl">
-                                  <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
-                                      <Settings2 size={18} />
-                                    </div>
-                                    <div>
-                                      <p className="font-bold text-slate-900">School Administrator</p>
-                                      <p className="text-xs text-slate-500">Controls system settings, users, academics</p>
-                                    </div>
-                                  </div>
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                                      setIsPasswordModalOpen(true);
-                                    }}
-                                    className="w-full h-10 rounded-xl gap-2 font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-100"
-                                  >
-                                    <Key size={14} /> Update Admin Password
-                                  </Button>
-                                </div>
-                
-                                {/* Owner Credentials */}
-                                <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
-                                  <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
-                                      <Crown size={18} />
-                                    </div>
-                                    <div>
-                                      <p className="font-bold text-slate-900">School Owner</p>
-                                      <p className="text-xs text-slate-500">Full access including payment module</p>
-                                    </div>
-                                  </div>
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                                      setIsPasswordModalOpen(true);
-                                    }}
-                                    className="w-full h-10 rounded-xl gap-2 font-bold border-amber-200 text-amber-600 hover:bg-amber-100"
-                                  >
-                                    <Key size={14} /> Update Owner Password
-                                  </Button>
-                                </div>
+                {/* System Admin Credentials */}
+                <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                      <Settings2 size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">System Administrator</p>
+                      <p className="text-xs text-slate-500">Controls system settings, users, academics</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                      if (session.role === 'system_admin') {
+                        setIsPasswordModalOpen(true);
+                      } else {
+                        showError("Switch to System Administrator role to update this password.");
+                      }
+                    }}
+                    disabled={session.role !== 'system_admin'}
+                    className={cn(
+                      "w-full h-10 rounded-xl gap-2 font-bold",
+                      session.role !== 'system_admin' ? "opacity-50 cursor-not-allowed" : "border-indigo-200 text-indigo-600 hover:bg-indigo-100"
+                    )}
+                  >
+                    <Key size={14} /> Update System Admin Password
+                  </Button>
+                </div>
+
+                {/* Super Admin Credentials */}
+                <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
+                      <Crown size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">Super Admin (Owner)</p>
+                      <p className="text-xs text-slate-500">Full access including payment module</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                      if (session.role === 'super_admin') {
+                        setIsPasswordModalOpen(true);
+                      } else {
+                        showError("Switch to Super Admin (Owner) role to update this password.");
+                      }
+                    }}
+                    disabled={session.role !== 'super_admin'}
+                    className={cn(
+                      "w-full h-10 rounded-xl gap-2 font-bold",
+                      session.role !== 'super_admin' ? "opacity-50 cursor-not-allowed" : "border-amber-200 text-amber-600 hover:bg-amber-100"
+                    )}
+                  >
+                    <Key size={14} /> Update Super Admin Password
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1699,135 +1590,6 @@ const Settings = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Database Backup / Restore — quick access from System Configuration */}
-          <Card className="border-none shadow-sm rounded-2xl md:rounded-[2.5rem] bg-white p-4 md:p-8 overflow-hidden">
-            <CardHeader className="px-0 pt-0 pb-4 md:pb-6 border-b flex flex-col sm:flex-row sm:items-start gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 md:p-3 bg-emerald-50 text-emerald-600 rounded-xl md:rounded-2xl shrink-0">
-                  <Database size={18} className="md:hidden" />
-                  <Database size={24} className="hidden md:inline" />
-                </div>
-                <div className="min-w-0">
-                  <CardTitle className="text-lg md:text-2xl font-black text-slate-900">Database Backup &amp; Restore</CardTitle>
-                  <CardDescription className="text-xs md:text-sm">Export all school data to a JSON file, or import a backup to move data between the web app and the Android APK.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="px-0 pt-4 md:pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
-                      <Download size={18} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900">Backup / Export Database (JSON)</p>
-                      <p className="text-xs text-slate-500">Download a complete JSON snapshot of all local data.</p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      try {
-                        downloadDatabaseBackup();
-                        showSuccess('Database backup downloaded successfully!');
-                      } catch {
-                        showError('Failed to export database.');
-                      }
-                    }}
-                    className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2"
-                  >
-                    <Download size={14} /> Export Database (JSON)
-                  </Button>
-                </div>
-
-                <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
-                      <Upload size={18} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900">Restore / Import Database (JSON)</p>
-                      <p className="text-xs text-slate-500">Replace local data with a previously exported backup.</p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => navigate('/system-management')}
-                    variant="outline"
-                    className="w-full h-10 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-100 font-bold gap-2"
-                  >
-                    <Upload size={14} /> Open Restore Wizard
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="database" className="space-y-6">
-          <Card className="border-none shadow-sm rounded-2xl md:rounded-[2.5rem] bg-white p-4 md:p-8 overflow-hidden">
-            <CardHeader className="px-0 pt-0 pb-4 md:pb-6 border-b flex flex-col sm:flex-row sm:items-start gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 md:p-3 bg-emerald-50 text-emerald-600 rounded-xl md:rounded-2xl shrink-0">
-                  <Database size={18} className="md:hidden" />
-                  <Database size={24} className="hidden md:inline" />
-                </div>
-                <div className="min-w-0">
-                  <CardTitle className="text-lg md:text-2xl font-black text-slate-900">Database Backup &amp; Restore</CardTitle>
-                  <CardDescription className="text-xs md:text-sm">Export all school data to a JSON file, or import a backup to move data between the web app and the Android APK.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="px-0 pt-4 md:pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
-                      <Download size={18} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900">Backup / Export Database (JSON)</p>
-                      <p className="text-xs text-slate-500">Download a complete JSON snapshot of all local data.</p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      try {
-                        downloadDatabaseBackup();
-                        showSuccess('Database backup downloaded successfully!');
-                      } catch {
-                        showError('Failed to export database.');
-                      }
-                    }}
-                    className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2"
-                  >
-                    <Download size={14} /> Export Database (JSON)
-                  </Button>
-                </div>
-
-                <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
-                      <Upload size={18} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900">Restore / Import Database (JSON)</p>
-                      <p className="text-xs text-slate-500">Replace local data with a previously exported backup.</p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => navigate('/system-management')}
-                    variant="outline"
-                    className="w-full h-10 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-100 font-bold gap-2"
-                  >
-                    <Upload size={14} /> Open Restore Wizard
-                  </Button>
-                </div>
               </div>
             </CardContent>
           </Card>

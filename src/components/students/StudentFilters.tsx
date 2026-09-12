@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search, X } from "lucide-react";
-import { useGradesStreamsConfig } from "@/hooks/useGradesStreams";
+import { GRADES_DATA } from "@/lib/mock-data";
+import { sortGrades } from "@/utils/gradeSort";
 
 interface StudentFiltersProps {
   searchTerm: string;
@@ -28,8 +29,6 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
   setFilterStream,
   onClearFilters
 }) => {
-  const config = useGradesStreamsConfig();
-  
   // Precompute the numeric string from the filterGrade for efficient comparison
   const filterGradeNumber = React.useMemo(() => {
     if (filterGrade === "all" || !filterGrade) return null;
@@ -37,64 +36,16 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
     return match ? match[0] : null;
   }, [filterGrade]);
 
-  // Compute available streams dynamically from the grades/streams configuration
   const availableStreams = React.useMemo(() => {
     if (filterGrade === "all" || !filterGrade) {
-      // When no specific grade is selected, show all unique streams
-      return config.streams.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      const streams = new Set<string>();
+      GRADES_DATA.forEach((g) => g.streams.forEach((s) => streams.add(s.name)));
+      return Array.from(streams).sort();
     }
-    
-    // Find the matching grade key in the configuration
-    const matchKey = filterGrade.toLowerCase().replace(/\s+/g, '');
-    
-    // Try exact match first
-    let streams = config.gradeStreamMap[filterGrade] || config.gradeStreamMap[matchKey];
-    
-    // If not found, try partial match
-    if (!streams) {
-      for (const key of Object.keys(config.gradeStreamMap)) {
-        if (key.toLowerCase().includes(filterGrade.toLowerCase()) ||
-            filterGrade.toLowerCase().includes(key.toLowerCase())) {
-          streams = config.gradeStreamMap[key];
-          break;
-        }
-      }
-    }
-    
-    // Handle numeric grade matching (e.g., "Grade 4" -> "grade4")
-    if (!streams) {
-      const gradeMatch = filterGrade.match(/(\d+)/);
-      if (gradeMatch) {
-        const numericKey = `grade${gradeMatch[1]}`;
-        streams = config.gradeStreamMap[numericKey];
-      }
-    }
-    
-    return (streams || []).slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  }, [filterGrade, config]);
-  
-  // Reset stream selection when grade changes
-  React.useEffect(() => {
-    if (filterGrade === "all" || !filterGrade) {
-      if (filterStream !== "all") {
-        setFilterStream("all");
-      }
-      return;
-    }
-    
-    // Check if current stream exists for the new grade
-    const normalizedStream = filterStream?.toLowerCase().trim();
-    const streamExists = availableStreams.some(
-      s => s.toLowerCase() === normalizedStream
-    );
-    
-    // Reset to first available stream or "all" if no streams exist for this grade
-    if (filterStream && !streamExists && availableStreams.length > 0) {
-      setFilterStream(availableStreams[0]);
-    } else if (availableStreams.length === 0 && filterStream && filterStream !== "all") {
-      setFilterStream("all");
-    }
-  }, [filterGrade, availableStreams]);
+    // Find the grade object by its full name
+    const gradeObj = GRADES_DATA.find((g) => g.name === filterGrade);
+    return gradeObj ? gradeObj.streams.map((s) => s.name) : [];
+  }, [filterGrade]);
 
   return (
     <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4 sm:p-6">
@@ -119,9 +70,9 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
               <SelectItem value="all">All Grade Levels</SelectItem>
-              {config.grades.map((g) => (
-                <SelectItem key={g} value={g}>
-                  {g}
+              {sortGrades(GRADES_DATA).map((g) => (
+                <SelectItem key={g.id} value={g.name}>
+                  {g.name}
                 </SelectItem>
               ))}
             </SelectContent>

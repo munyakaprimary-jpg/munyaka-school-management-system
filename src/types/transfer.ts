@@ -16,8 +16,6 @@ export interface StudentTransferInfo {
   id: string;
   name: string;
   assessment: string;
-  /** Admission / assessment number — mirrors `assessment`. */
-  admNo?: string;
   grade: string;
   stream: string;
   gender: string;

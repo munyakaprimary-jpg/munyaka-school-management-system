@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import Modal from "@/components/ui/Modal";
+import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -21,15 +21,9 @@ export interface License {
   issuedTo: string;
   deviceId: string;
   status: LicenseStatus;
-  /** License plan type, e.g. "trial" | "standard" | "premium" */
-  type?: string;
-  /** Display name of the active plan, e.g. "Munyaka Starter" */
-  planName?: string;
   validityDays: ValidityDuration;
   issuedAt: string;     // ISO date string
   expiresAt: string;   // ISO date string
-  /** When the last payment was received (ISO string). */
-  paidAt?: string;
   payment: LicensePaymentDetails;
   /** Auto-renew flag — if true, system will extend on next renewal */
   autoRenew: boolean;

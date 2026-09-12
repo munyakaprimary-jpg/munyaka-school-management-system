@@ -116,9 +116,9 @@ const WordScramble: React.FC<WordScrambleProps> = ({ onBack }) => {
   }, [currentIdx, wordList, score, skipped]);
 
   const checkAnswer = useCallback(() => {
-    if (String(input || '').trim() === "") return;
-        const isCorrect =
-          String(input || '').trim().toLowerCase() === currentWord.word.toLowerCase();
+    if (input.trim() === "") return;
+    const isCorrect =
+      input.trim().toLowerCase() === currentWord.word.toLowerCase();
     if (isCorrect) {
       const bonus = showHint ? 0 : 1; // no bonus if hint was used
       setScore((s) => s + 1 + bonus);

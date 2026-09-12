@@ -303,7 +303,7 @@ const ScienceLab = () => {
     const newBooking: LabBooking = {
       id: `LBK-${Date.now().toString().slice(-4)}`,
       ...bookingForm,
-      itemsRequested: bookingForm.itemsRequested.split(',').map(i => String(i || '').trim()).filter(Boolean)
+      itemsRequested: bookingForm.itemsRequested.split(',').map(i => i.trim()).filter(Boolean)
     };
     setBookings([newBooking, ...bookings]);
     setIsAddBookingOpen(false);
@@ -323,7 +323,7 @@ const ScienceLab = () => {
 
   const handleSaveBookingEdit = () => {
     if (!editingBooking) return;
-    setBookings(prev => prev.map(b => b.id === editingBooking.id ? { ...b, ...bookingForm, itemsRequested: bookingForm.itemsRequested.split(',').map(i => String(i || '').trim()).filter(Boolean) } : b));
+    setBookings(prev => prev.map(b => b.id === editingBooking.id ? { ...b, ...bookingForm, itemsRequested: bookingForm.itemsRequested.split(',').map(i => i.trim()).filter(Boolean) } : b));
     setEditingBooking(null);
     setIsAddBookingOpen(false);
     resetBookingForm();
@@ -505,10 +505,10 @@ const ScienceLab = () => {
   );
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
-          <BackButton parentPath="/" />
+          <BackButton fallback="/" />
           <div>
             <h1 className="text-3xl font-black tracking-tight text-slate-900">Science Lab Management</h1>
             <p className="text-muted-foreground font-medium">Chemicals, equipment, lab bookings, and breakage tracking.</p>
@@ -561,7 +561,7 @@ const ScienceLab = () => {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab as (value: string) => void} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex w-fit">
           <TabsTrigger value="chemicals" className="rounded-xl px-6 h-full font-bold text-xs gap-2"><FlaskConical size={16} /> Chemicals</TabsTrigger>
           <TabsTrigger value="equipment" className="rounded-xl px-6 h-full font-bold text-xs gap-2"><Microscope size={16} /> Equipment</TabsTrigger>

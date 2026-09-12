@@ -11,17 +11,12 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuration — hardcoded for LAN operation; 0.0.0.0 accepts connections
-// from any device on the local network.
-const PORT = 5000;
-const HOST = '0.0.0.0';
-const JWT_SECRET = process.env.JWT_SECRET || 'munyaka-lan-jwt-secret-2026';
+// Configuration
+const PORT = process.env.PORT || 5000;
 const DB_PATH = path.join(__dirname, 'data', 'school.db');
 
 // Ensure data directory exists
@@ -38,9 +33,9 @@ const app = express();
 // file://, http://10.x.x.x:port) which the default CORS middleware blocks.
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['*'],
+  exposedHeaders: ['*'],
   credentials: false,
   maxAge: 86400, // cache preflight for 24h
 }));
@@ -49,32 +44,11 @@ app.use(cors({
 // global CORS middleware (e.g. legacy browsers, native HTTP clients).
 app.options('*', cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['*'],
 }));
 
 app.use(express.json({ limit: '50mb' }));
-
-// ============================================
-// JWT Authentication Middleware
-// ============================================
-
-const signToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
-
-const verifyToken = (req, res, next) => {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, error: 'No token provided' });
-  }
-  const token = header.slice(7);
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
-  }
-};
 
 // ============================================
 // SQLite Database Setup using sql.js
@@ -229,20 +203,16 @@ const initDB = () => {
     CREATE TABLE IF NOT EXISTS teachers (
       id TEXT PRIMARY KEY,
       staff_id TEXT UNIQUE NOT NULL,
-      full_name TEXT,
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
-      role TEXT DEFAULT 'TEACHER',
       email TEXT UNIQUE,
       phone TEXT,
       gender TEXT,
       id_number TEXT,
-      tsc_number TEXT,
       subject_specialization TEXT,
       grade_assigned TEXT,
       stream_assigned TEXT,
       is_active INTEGER DEFAULT 1,
-      status TEXT DEFAULT 'active',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
@@ -329,156 +299,13 @@ const initDB = () => {
 
   dbExec(schema);
 
-  // Fallback: Add missing columns to teachers table for older database files
-  const migrateTeachersTable = () => {
-    try {
-      const tableInfo = dbAll("PRAGMA table_info(teachers)");
-      const columnNames = tableInfo.map(col => col.name);
-
-      if (!columnNames.includes('full_name')) {
-        dbRun("ALTER TABLE teachers ADD COLUMN full_name TEXT");
-        console.log('  → Added full_name column to teachers table');
-      }
-      if (!columnNames.includes('role')) {
-        dbRun("ALTER TABLE teachers ADD COLUMN role TEXT DEFAULT 'TEACHER'");
-        console.log('  → Added role column to teachers table');
-      }
-      if (!columnNames.includes('tsc_number')) {
-        dbRun("ALTER TABLE teachers ADD COLUMN tsc_number TEXT");
-        console.log('  → Added tsc_number column to teachers table');
-      }
-      if (!columnNames.includes('status')) {
-        dbRun("ALTER TABLE teachers ADD COLUMN status TEXT DEFAULT 'active'");
-        console.log('  → Added status column to teachers table');
-        // Migrate existing pre-registered teachers to active
-        dbRun("UPDATE teachers SET status = 'active', is_active = 1 WHERE status IS NULL OR status = 'Pre-Registered'");
-        console.log('  → Migrated existing pre-registered teachers to active');
-      }
-      // Add password column for teacher authentication (bcrypt hash)
-      if (!columnNames.includes('password')) {
-        dbRun("ALTER TABLE teachers ADD COLUMN password TEXT");
-        console.log('  → Added password column to teachers table');
-      }
-    } catch (err) {
-      console.warn('Migration note:', err.message);
-    }
-  };
-  migrateTeachersTable();
-
-  // ── Seed default teacher accounts (only if no teachers exist yet) ─────────────
-  const teacherCount = dbGet('SELECT COUNT(*) as c FROM teachers')?.c ?? 0;
-  if (teacherCount === 0) {
-    // Default teacher accounts — passwords hashed with bcryptjs (cost factor 10)
-    // Default password for all seed teachers: Teacher@123
-    const defaultTeacherPass = 'Teacher@123';
-    const hashedTeacher = bcrypt.hashSync(defaultTeacherPass, 10);
-
-    const seedTeachers = [
-      {
-        id: 'teacher-001',
-        staff_id: 'TSC12345',
-        full_name: 'Jane Mwangi',
-        first_name: 'Jane',
-        last_name: 'Mwangi',
-        role: 'TEACHER',
-        email: 'jane.mwangi@munyaka.sc.ke',
-        phone: '+254 712 345 678',
-        gender: 'F',
-        id_number: 'ID-001',
-        tsc_number: 'TSC12345',
-        subject_specialization: 'Mathematics',
-        grade_assigned: 'Grade 8',
-        stream_assigned: '8 East',
-        is_active: 1,
-        status: 'active',
-        password: hashedTeacher,
-      },
-      {
-        id: 'teacher-002',
-        staff_id: 'TSC67890',
-        full_name: 'John Ochieng',
-        first_name: 'John',
-        last_name: 'Ochieng',
-        role: 'HEAD_TEACHER',
-        email: 'john.ochieng@munyaka.sc.ke',
-        phone: '+254 723 456 789',
-        gender: 'M',
-        id_number: 'ID-002',
-        tsc_number: 'TSC67890',
-        subject_specialization: 'English',
-        grade_assigned: 'Grade 7',
-        stream_assigned: '7 West',
-        is_active: 1,
-        status: 'active',
-        password: hashedTeacher,
-      },
-      {
-        id: 'teacher-003',
-        staff_id: 'TSC11223',
-        full_name: 'Grace Wanjiku',
-        first_name: 'Grace',
-        last_name: 'Wanjiku',
-        role: 'TEACHER',
-        email: 'grace.wanjiku@munyaka.sc.ke',
-        phone: '+254 734 567 890',
-        gender: 'F',
-        id_number: 'ID-003',
-        tsc_number: 'TSC11223',
-        subject_specialization: 'Science',
-        grade_assigned: 'Grade 7',
-        stream_assigned: '7 East',
-        is_active: 0,
-        status: 'Pre-Registered',
-        password: hashedTeacher,
-      },
-      {
-        id: 'teacher-004',
-        staff_id: 'TSC44556',
-        full_name: 'Peter Kimani',
-        first_name: 'Peter',
-        last_name: 'Kimani',
-        role: 'TEACHER',
-        email: 'peter.kimani@munyaka.sc.ke',
-        phone: '+254 745 678 901',
-        gender: 'M',
-        id_number: 'ID-004',
-        tsc_number: 'TSC44556',
-        subject_specialization: 'Social Studies',
-        grade_assigned: 'Grade 8',
-        stream_assigned: '8 West',
-        is_active: 0,
-        status: 'Pre-Registered',
-        password: hashedTeacher,
-      },
-    ];
-
-    for (const t of seedTeachers) {
-      dbRun(
-        `INSERT INTO teachers
-          (id, staff_id, full_name, first_name, last_name, role, email, phone,
-           gender, id_number, tsc_number, subject_specialization, grade_assigned,
-           stream_assigned, is_active, status, password)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [t.id, t.staff_id, t.full_name, t.first_name, t.last_name, t.role,
-         t.email, t.phone, t.gender, t.id_number, t.tsc_number,
-         t.subject_specialization, t.grade_assigned, t.stream_assigned,
-         t.is_active, t.status, t.password]
-      );
-      console.log(`  → Seeded teacher: ${t.staff_id} — "${t.full_name}" (status: ${t.status})`);
-    }
-    console.log(`  → Default teacher password: "${defaultTeacherPass}"`);
-    console.log('  → Seed complete — run "npm run reset-server" to re-seed from scratch');
-  }
-
-  // Insert default admin user if not exists — password stored as bcrypt hash
+  // Insert default admin user if not exists
   const adminExists = dbGet('SELECT id FROM users WHERE role = ?', ['admin']);
   if (!adminExists) {
-    const hashedAdmin = bcrypt.hashSync('admin123', 10);
     dbRun(
       `INSERT INTO users (id, name, email, phone, role, password) VALUES (?, ?, ?, ?, ?, ?)`,
-      ['admin-001', 'School Administrator', 'admin@munyaka.local', '+254 700 000 000', 'admin', hashedAdmin]
+      ['admin-001', 'School Administrator', 'admin@munyaka.local', '+254 700 000 000', 'admin', 'admin123']
     );
-    console.log('  → Seeded default admin: admin@munyaka.local / admin123');
   }
 
   saveDatabase();
@@ -624,9 +451,6 @@ app.delete('/api/students/:id', (req, res) => {
 // ============================================
 
 // Get all teachers
-// Accepts optional query params:
-//   ?search=keyword        — full-text search on name / staff_id
-//   ?active=true|false    — filter by is_active (omit to return ALL teachers)
 app.get('/api/teachers', (req, res) => {
   try {
     const { search, active } = req.query;
@@ -638,26 +462,14 @@ app.get('/api/teachers', (req, res) => {
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
-    // Only filter by active when explicitly requested;
-    // omitting the param returns ALL teachers so the dashboard
-    // and APK show the complete registered roster.
-    if (active === 'true') {
-      query += ' AND is_active = 1';
-    } else if (active === 'false') {
-      query += ' AND (is_active = 0 OR is_active IS NULL)';
+    if (active !== undefined) {
+      query += ' AND is_active = ?';
+      params.push(active === 'true' ? 1 : 0);
     }
 
     query += ' ORDER BY last_name, first_name';
     const teachers = dbAll(query, params);
-
-    // Derive a human-readable `status` field from `is_active` so
-    // the frontend doesn't need to know about the integer column.
-    const enriched = teachers.map(t => ({
-      ...t,
-      status: t.is_active ? 'Active' : 'Pre-Registered',
-    }));
-
-    res.json({ success: true, data: enriched });
+    res.json({ success: true, data: teachers });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -670,219 +482,50 @@ app.get('/api/teachers/:id', (req, res) => {
     if (!teacher) {
       return res.status(404).json({ success: false, error: 'Teacher not found' });
     }
-    res.json({
-      success: true,
-      data: { ...teacher, status: teacher.is_active ? 'Active' : 'Pre-Registered' }
-    });
+    res.json({ success: true, data: teacher });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
-// ─── Bulk Activate Teachers ────────────────────────────────────────────────────
-// POST /api/teachers/bulk-activate
-// Body: { ids: string[] }   — array of teacher record IDs
-// Returns: { success, activated, notFound[] }
-app.post('/api/teachers/bulk-activate', (req, res) => {
-  try {
-    const { ids } = req.body;
-
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ success: false, error: 'ids must be a non-empty array' });
-    }
-
-    let activated = 0;
-    const notFound = [];
-
-    for (const id of ids) {
-      const existing = dbGet('SELECT id FROM teachers WHERE id = ?', [id]);
-      if (!existing) {
-        notFound.push(id);
-        continue;
-      }
-      dbRun(
-        `UPDATE teachers SET is_active = 1, status = 'active', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        [id]
-      );
-      activated++;
-    }
-
-    saveDatabase();
-
-    res.json({
-      success: true,
-      activated,
-      notFound: notFound.length > 0 ? notFound : undefined,
-      message: `Activated ${activated} teacher(s).`,
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// POST /api/teachers/activate-all
-// Activates every pre-registered / inactive teacher in one shot.
-// Useful for first-time onboarding or after importing a roster.
-// Also accepts PATCH so clients that prefer PATCH semantics can call it.
-app.post('/api/teachers/activate-all', activateAllTeachers);
-app.patch('/api/teachers/activate-all', activateAllTeachers);
-
-function activateAllTeachers(req, res) {
-  try {
-    const result = dbRun(
-      `UPDATE teachers SET is_active = 1, status = 'active', updated_at = CURRENT_TIMESTAMP
-       WHERE is_active = 0 OR is_active IS NULL OR LOWER(status) IN ('pre-registered', 'pre_registered', 'pending', 'inactive')`
-    );
-    saveDatabase();
-    const activatedCount = result.changes || 0;
-    console.log(`[activate-all] Activated ${activatedCount} teacher(s).`);
-    res.json({
-      success: true,
-      activated: activatedCount,
-      count: activatedCount,
-      message: `Activated ${activatedCount} teacher(s).`,
-    });
-  } catch (error) {
-    console.error('[activate-all] Failed:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-}
 
 // Create teacher
 app.post('/api/teachers', (req, res) => {
   try {
     const id = generateId();
     const {
-      staff_id,
-      full_name,
-      first_name: req_first_name,
-      last_name: req_last_name,
-      role,
-      email,
-      phone,
-      gender,
-      id_number,
-      tsc_number,
-      subject_specialization,
-      grade_assigned,
-      stream_assigned
+      staff_id, first_name, last_name, email, phone, gender,
+      id_number, subject_specialization, grade_assigned, stream_assigned
     } = req.body;
 
-    // Handle full_name: either use it directly or combine first_name + last_name
-    let firstName = req_first_name || 'Staff';
-    let lastName = req_last_name || 'Member';
-
-    if (full_name) {
-      const nameParts = full_name.trim().split(/\s+/);
-      if (nameParts.length > 0) firstName = nameParts[0];
-      if (nameParts.length > 1) lastName = nameParts.slice(1).join(' ');
-    }
-
-    // Generate staff_id if not provided
-    const finalStaffId = staff_id || `STF-${Date.now()}`;
-    const finalIdNumber = id_number || `ID-${Date.now()}`;
-
-    // Default role to TEACHER if not specified
-    const finalRole = role || 'TEACHER';
-
-    // Auto-activate: a newly created teacher is active by default.
-    // Admin approval is only required when the client explicitly
-    // sends is_active=false / status='pre-registered'.
-    const finalIsActive = is_active !== undefined
-      ? (is_active ? 1 : 0)
-      : 1;
-    const finalStatus = finalIsActive ? 'active' : 'pre-registered';
-
-    // If email is empty string, make it null so unique constraint doesn't fail on multiple nulls/empty strings
-    const cleanEmail = email && email.trim() !== '' ? email.trim() : null;
-    const cleanPhone = phone && phone.trim() !== '' ? phone.trim() : null;
-    const cleanTsc = tsc_number && tsc_number.trim() !== '' ? tsc_number.trim() : null;
-
-    // If email already exists in teachers table, set cleanEmail to null to prevent UNIQUE constraint failure
-    let finalEmail = cleanEmail;
-    if (finalEmail) {
-      const existing = dbGet('SELECT id FROM teachers WHERE email = ?', [finalEmail]);
-      if (existing) {
-        finalEmail = null;
-      }
-    }
-
     dbRun(
-      `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned, is_active, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        finalStaffId,
-        full_name || `${firstName} ${lastName}`.trim(),
-        firstName,
-        lastName,
-        finalRole,
-        finalEmail,
-        cleanPhone,
-        gender || null,
-        finalIdNumber,
-        cleanTsc,
-        subject_specialization || null,
-        grade_assigned || null,
-        stream_assigned || null,
-        finalIsActive,
-        finalStatus
-      ]
+      `INSERT INTO teachers (id, staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned]
     );
 
     saveDatabase();
     const teacher = dbGet('SELECT * FROM teachers WHERE id = ?', [id]);
     res.status(201).json({ success: true, data: teacher });
-  } catch (err) {
-    console.error('POST /api/teachers error details:', err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // Update teacher
 app.put('/api/teachers/:id', (req, res) => {
   try {
-    const {
-      staff_id, full_name, first_name, last_name, role,
-      email, phone, gender, id_number, tsc_number,
-      subject_specialization, grade_assigned, stream_assigned, is_active, status
-    } = req.body;
-
-    // Handle full_name: split into first/last if provided and they aren't
-    let firstName = first_name || '';
-    let lastName = last_name || '';
-    if (full_name && !firstName && !lastName) {
-      const nameParts = full_name.trim().split(/\s+/);
-      firstName = nameParts[0] || '';
-      lastName = nameParts.slice(1).join(' ') || '';
-    }
-
-    // Derive is_active from either the boolean or the status string
-    let computedIsActive;
-    if (typeof is_active === 'boolean' || typeof is_active === 'number') {
-      computedIsActive = is_active ? 1 : 0;
-    } else if (typeof status === 'string') {
-      computedIsActive = status.toLowerCase() === 'active' ? 1 : 0;
-    } else {
-      computedIsActive = 1;
-    }
-    const computedStatus = computedIsActive ? 'active' : 'pre-registered';
+    const { staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned, is_active } = req.body;
 
     dbRun(
-      `UPDATE teachers SET staff_id=?, full_name=?, first_name=?, last_name=?, role=?, email=?, phone=?, gender=?, id_number=?, tsc_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
-      [staff_id, full_name || `${firstName} ${lastName}`.trim(), firstName, lastName, role || 'TEACHER', email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned, computedIsActive, computedStatus, req.params.id]
+      `UPDATE teachers SET staff_id=?, first_name=?, last_name=?, email=?, phone=?, gender=?, id_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned, is_active, req.params.id]
     );
 
     saveDatabase();
     const teacher = dbGet('SELECT * FROM teachers WHERE id = ?', [req.params.id]);
-    // Enrich with derived status field
-    if (teacher) {
-      teacher.status = teacher.is_active ? 'Active' : 'Pre-Registered';
-    }
     res.json({ success: true, data: teacher });
-  } catch (err) {
-    console.error('PUT /api/teachers/:id error:', err.message);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -1250,67 +893,6 @@ app.post('/api/sync', (req, res) => {
               results.push({ id: data.id, status: 'created' });
             }
           }
-        } else if (type === 'teacher') {
-          // Teacher sync: upsert so the dashboard sees every record
-          // pushed from the mobile APK, even when is_active differs
-          // from the server default.
-          const teacherId = data.id || generateId();
-          const existing = dbGet('SELECT id FROM teachers WHERE id = ?', [teacherId]);
-          const finalStaffId = data.staff_id || `STF-${Date.now()}`;
-          const finalIdNumber = data.id_number || `ID-${Date.now()}`;
-          const finalRole = data.role || 'TEACHER';
-          const cleanEmail = data.email && String(data.email).trim() !== '' ? String(data.email).trim() : null;
-          const cleanPhone = data.phone && String(data.phone).trim() !== '' ? String(data.phone).trim() : null;
-          const cleanTsc = data.tsc_number && String(data.tsc_number).trim() !== '' ? String(data.tsc_number).trim() : null;
-
-          if (existing) {
-            dbRun(
-              `UPDATE teachers SET staff_id=?, full_name=?, first_name=?, last_name=?, role=?, email=?, phone=?, gender=?, id_number=?, tsc_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
-              [
-                data.staff_id || finalStaffId,
-                data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim(),
-                data.first_name || '',
-                data.last_name || '',
-                finalRole,
-                cleanEmail,
-                cleanPhone,
-                data.gender || null,
-                data.id_number || finalIdNumber,
-                cleanTsc,
-                data.subject_specialization || null,
-                data.grade_assigned || null,
-                data.stream_assigned || null,
-                data.is_active !== undefined ? (data.is_active ? 1 : 0) : 1,
-                teacherId
-              ]
-            );
-            results.push({ id: teacherId, status: 'updated' });
-          } else {
-            const finalSyncActive = data.is_active !== undefined ? (data.is_active ? 1 : 0) : 1;
-            dbRun(
-              `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned, is_active, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [
-                teacherId,
-                data.staff_id || finalStaffId,
-                data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim(),
-                data.first_name || '',
-                data.last_name || '',
-                finalRole,
-                cleanEmail,
-                cleanPhone,
-                data.gender || null,
-                data.id_number || finalIdNumber,
-                cleanTsc,
-                data.subject_specialization || null,
-                data.grade_assigned || null,
-                data.stream_assigned || null,
-                finalSyncActive,
-                finalSyncActive ? 'active' : 'pre-registered'
-              ]
-            );
-            results.push({ id: teacherId, status: 'created' });
-          }
         }
       } catch (err) {
         results.push({ id: data.id, status: 'error', error: err.message });
@@ -1337,28 +919,9 @@ app.post('/api/sync', (req, res) => {
 // Get database stats
 app.get('/api/stats', (req, res) => {
   try {
-    // Unified teacher breakdown: total + active + inactive (pending/suspended)
-    // Do NOT hard-filter by is_active so the dashboard reflects every
-    // registered teacher regardless of their verification status.
-    const teacherTotals = dbGet(`
-      SELECT
-        COUNT(*) AS total,
-        SUM(CASE WHEN LOWER(COALESCE(role, '')) = 'teacher' THEN 1 ELSE 0 END) AS role_teacher,
-        SUM(CASE WHEN COALESCE(is_active, 0) = 1 THEN 1 ELSE 0 END) AS active,
-        SUM(CASE WHEN COALESCE(is_active, 0) = 0 OR is_active IS NULL THEN 1 ELSE 0 END) AS pending
-      FROM teachers
-    `) || { total: 0, role_teacher: 0, active: 0, pending: 0 };
-
     const stats = {
       students: dbGet('SELECT COUNT(*) as count FROM students WHERE is_active = 1')?.count || 0,
-      // Backwards-compatible: keep the `teachers` key returning the
-      // TOTAL registered count (not just active) so the dashboard
-      // matches the mobile APK's view of the world.
-      teachers: teacherTotals.total || 0,
-      teachers_total: teacherTotals.total || 0,
-      teachers_active: teacherTotals.active || 0,
-      teachers_pending: teacherTotals.pending || 0,
-      teachers_role_teacher: teacherTotals.role_teacher || 0,
+      teachers: dbGet('SELECT COUNT(*) as count FROM teachers WHERE is_active = 1')?.count || 0,
       attendance_today: dbGet(`SELECT COUNT(*) as count FROM attendance WHERE date = date('now')`)?.count || 0,
       pending_fees: dbGet(`SELECT COUNT(*) as count FROM fees WHERE status IN ('pending', 'partial', 'overdue')`)?.count || 0,
       connected_devices: dbGet(`SELECT COUNT(*) as count FROM connected_devices WHERE datetime(last_seen) > datetime('now', '-5 minutes')`)?.count || 0,
@@ -1448,332 +1011,6 @@ app.post('/api/backup/restore', (req, res) => {
     saveDatabase();
     res.json({ success: true, message: 'Backup restored successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ============================================
-// AUTHENTICATION API
-// ============================================
-
-// Login endpoint — bcrypt verification + JWT issuance
-// Accepts both 'admin' and 'teacher' (and 'staff') roles, case-insensitive.
-// Falls back to plaintext comparison if a stored password is not bcrypt-hashed,
-// so existing seed data continues to work.
-// ── Password verification helper (shared by all auth routes) ─────────────────
-const verifyPassword = (inputPassword: string, storedPassword: string): boolean => {
-  if (!inputPassword || !storedPassword) return false;
-  const isBcrypt = typeof storedPassword === 'string' && /^\$2[aby]\$/.test(storedPassword);
-  if (isBcrypt) {
-    try {
-      return bcrypt.compareSync(inputPassword, storedPassword);
-    } catch {
-      return false;
-    }
-  }
-  // Legacy plaintext comparison
-  return storedPassword === inputPassword;
-};
-
-// ── POST /api/auth/login ───────────────────────────────────────────────────────────
-// Accepts credentials from teachers, admins, bursars, and owners. The "identifier"
-// can be an email, TSC number, staff ID, or username — all looked up
-// case-insensitively in the appropriate table. Returns a signed JWT.
-app.post('/api/auth/login', (req, res) => {
-  // ── Log every incoming login attempt (helps diagnose APK field issues) ──────
-  const identifierIn = req.body.identifier || req.body.tscNumber || req.body.email || req.body.staff_id || req.body.username || '';
-  console.log(`[AUTH LOG] Login attempt for: ${identifierIn || '(empty)'}`);
-
-  try {
-    const { email, password, staff_id, identifier: bodyIdentifier, tscNumber } = req.body;
-
-    if (!password) {
-      console.log(`[AUTH LOG] Rejected — no password supplied for "${identifierIn}"`);
-      return res.status(400).json({ success: false, error: 'Password is required' });
-    }
-
-    // Accept any of: identifier / tscNumber / email / staff_id / username
-    const identifier = (bodyIdentifier || tscNumber || email || staff_id || '').trim().toLowerCase();
-    if (!identifier) {
-      console.log('[AUTH LOG] Rejected — no identifier supplied');
-      return res.status(400).json({ success: false, error: 'Email, TSC Number, or Staff ID is required' });
-    }
-
-    // ── 1. Try teachers table (email, staff_id, OR tsc_number) ─────────────────
-    const teacher = dbGet(
-      `SELECT id, full_name AS name, first_name, last_name, email, phone,
-              staff_id, tsc_number, role, status, is_active, password
-       FROM teachers
-       WHERE LOWER(email) = LOWER(?)
-          OR LOWER(staff_id) = LOWER(?)
-          OR LOWER(tsc_number) = LOWER(?)`,
-      [identifier, identifier, identifier]
-    );
-
-    if (teacher) {
-      const passwordValid = verifyPassword(password, teacher.password || '');
-      if (!passwordValid) {
-        console.log(`[AUTH LOG] Teacher "${identifier}" — invalid password`);
-        return res.status(401).json({ success: false, error: 'Invalid credentials' });
-      }
-
-      const role = (teacher.role || 'teacher').toLowerCase();
-      if (role !== 'teacher' && role !== 'head_teacher' && role !== 'ict_teacher'
-        && role !== 'senior_teacher' && role !== 'class_teacher' && role !== 'admin') {
-        console.log(`[AUTH LOG] Teacher "${identifier}" — role "${teacher.role}" not authorized`);
-        return res.status(403).json({ success: false, error: 'Role not authorized to login' });
-      }
-
-      const displayName = teacher.name || `${teacher.first_name} ${teacher.last_name}`.trim();
-      const token = signToken({
-        id: teacher.id,
-        name: displayName,
-        role: teacher.role || 'teacher',
-        type: 'teacher'
-      });
-
-      console.log(`[AUTH LOG] Teacher "${identifier}" logged in successfully (role: ${teacher.role})`);
-      return res.json({
-        success: true,
-        token,
-        user: {
-          id: teacher.id,
-          name: displayName,
-          email: teacher.email || '',
-          phone: teacher.phone || '',
-          role: teacher.role || 'teacher',
-          tscNumber: teacher.tsc_number || '',
-          staff_id: teacher.staff_id || '',
-          tsc_number: teacher.tsc_number || '',
-          status: teacher.status,
-        }
-      });
-    }
-
-    // ── 2. Try users table (admin / bursar accounts) ─────────────────────────
-    const user = dbGet(
-      `SELECT id, name, email, phone, role, password
-       FROM users
-       WHERE LOWER(email) = LOWER(?)`,
-      [identifier]
-    );
-
-    if (user) {
-      const passwordValid = verifyPassword(password, user.password || '');
-      if (!passwordValid) {
-        console.log(`[AUTH LOG] User "${identifier}" — invalid password`);
-        return res.status(401).json({ success: false, error: 'Invalid credentials' });
-      }
-
-      const role = (user.role || '').toLowerCase();
-      if (role !== 'admin' && role !== 'owner' && role !== 'staff' && role !== 'bursar') {
-        console.log(`[AUTH LOG] User "${identifier}" — role "${user.role}" not authorized`);
-        return res.status(403).json({ success: false, error: 'Role not authorized to login' });
-      }
-
-      const token = signToken({
-        id: user.id,
-        name: user.name || identifier,
-        role: user.role || role,
-        type: 'user'
-      });
-
-      console.log(`[AUTH LOG] User "${identifier}" (role: ${user.role}) logged in successfully`);
-      return res.json({
-        success: true,
-        token,
-        user: {
-          id: user.id,
-          name: user.name || identifier,
-          email: user.email || '',
-          phone: user.phone || '',
-          role: user.role || role,
-        }
-      });
-    }
-
-    // ── 3. No matching record found ──────────────────────────────────────────
-    console.log(`[AUTH LOG] No record found for identifier: "${identifier}"`);
-    return res.status(401).json({ success: false, error: 'Invalid credentials' });
-
-  } catch (error) {
-    console.error('[AUTH LOG] Unhandled error during login:', error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ============================================
-// DASHBOARD API (replaces PocketBase dashboard queries)
-// ============================================
-// Unified endpoint that returns everything the admin dashboard needs
-// in a single round-trip, with no external service dependencies.
-
-const getTodayDate = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
-app.get('/api/dashboard/stats', (req, res) => {
-  try {
-    const today = getTodayDate();
-
-    // 1. Total active students
-    const totalActiveStudents =
-      dbGet('SELECT COUNT(*) as c FROM students WHERE COALESCE(is_active, 0) = 1')?.c || 0;
-
-    // 2. Total teachers (case-insensitive role match)
-    const totalActiveTeachers = dbGet(`
-      SELECT COUNT(*) as c FROM teachers
-      WHERE LOWER(COALESCE(role, '')) LIKE '%teacher%'
-    `)?.c || 0;
-
-    // 3. Today's attendance %
-    const presentToday = dbGet(`
-      SELECT COUNT(DISTINCT student_id) as c FROM attendance
-      WHERE date = ? AND LOWER(COALESCE(status, '')) IN ('present', 'late') AND LOWER(COALESCE(type, '')) = 'student'
-    `, [today])?.c || 0;
-
-    const todayAttendancePercentage = totalActiveStudents > 0
-      ? Math.round((presentToday / totalActiveStudents) * 100)
-      : 0;
-
-    // 4. Weekly attendance trend (Mon–Fri)
-    const dayOfWeek = new Date().getDay();
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date();
-    monday.setDate(monday.getDate() + mondayOffset);
-    monday.setHours(0, 0, 0, 0);
-    const friday = new Date(monday);
-    friday.setDate(monday.getDate() + 4);
-    friday.setHours(23, 59, 59, 999);
-    const mondayISO = monday.toISOString().split('T')[0];
-    const fridayISO = friday.toISOString().split('T')[0];
-    const todayISO = getTodayDate();
-
-    const weeklyRows = dbAll(`
-      SELECT date, student_id FROM attendance
-      WHERE date >= ? AND date <= ?
-        AND LOWER(COALESCE(status, '')) IN ('present', 'late')
-        AND LOWER(COALESCE(type, '')) = 'student'
-    `, [mondayISO, fridayISO]);
-
-    const byDate = new Map();
-    weeklyRows.forEach(r => {
-      if (!byDate.has(r.date)) byDate.set(r.date, new Set());
-      byDate.get(r.date).add(r.student_id);
-    });
-
-    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    const weeklyAttendanceTrend = dayNames.map((day, i) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const dateStr = d.toISOString().split('T')[0];
-      const presentCount = byDate.get(dateStr)?.size || 0;
-      const rate = totalActiveStudents > 0
-        ? Math.round((presentCount / totalActiveStudents) * 100)
-        : 0;
-      return { day, date: dateStr, rate, isToday: dateStr === todayISO };
-    });
-
-    // 5. Class participation (per grade)
-    const classRows = dbAll(`
-      SELECT grade, COUNT(*) as enrolled FROM students
-      WHERE COALESCE(is_active, 0) = 1
-      GROUP BY grade
-      ORDER BY grade
-    `);
-
-    const classParticipation = classRows.map(c => {
-      const studentsInClass = dbAll(
-        'SELECT id FROM students WHERE grade = ? AND COALESCE(is_active, 0) = 1',
-        [c.grade]
-      ).map(s => s.id);
-
-      let presentToday = 0;
-      if (studentsInClass.length > 0) {
-        const placeholders = studentsInClass.map(() => '?').join(',');
-        presentToday = dbGet(`
-          SELECT COUNT(DISTINCT student_id) as c FROM attendance
-          WHERE date = ?
-            AND student_id IN (${placeholders})
-            AND LOWER(COALESCE(status, '')) IN ('present', 'late')
-            AND LOWER(COALESCE(type, '')) = 'student'
-        `, [today, ...studentsInClass])?.c || 0;
-      }
-
-      const attendanceRate = c.enrolled > 0
-        ? Math.round((presentToday / c.enrolled) * 100)
-        : 0;
-
-      return {
-        className: c.grade,
-        totalEnrolled: c.enrolled,
-        presentToday,
-        attendanceRate
-      };
-    });
-
-    // 6. Recent alerts — last 5 activity items combined
-    const recentAlerts = [];
-
-    const recentFees = dbAll(`
-      SELECT id, amount, receipt_no, created_at FROM fee_payments
-      ORDER BY created_at DESC LIMIT 5
-    `);
-    recentFees.forEach(p => recentAlerts.push({
-      id: `fee_${p.id}`,
-      type: 'fee_receipt',
-      message: `Fee payment received: ${p.receipt_no} (KES ${p.amount})`,
-      createdAt: p.created_at,
-      relatedId: p.id,
-      relatedType: 'fee_payment'
-    }));
-
-    const recentStudents = dbAll(`
-      SELECT id, first_name, last_name, admission_no, created_at FROM students
-      WHERE COALESCE(is_active, 0) = 1
-      ORDER BY created_at DESC LIMIT 5
-    `);
-    recentStudents.forEach(s => recentAlerts.push({
-      id: `student_${s.id}`,
-      type: 'student_registration',
-      message: `New student registered: ${s.first_name} ${s.last_name} (${s.admission_no})`,
-      createdAt: s.created_at,
-      relatedId: s.id,
-      relatedType: 'student'
-    }));
-
-    const recentStaffAttendance = dbAll(`
-      SELECT id, teacher_id, status, created_at FROM attendance
-      WHERE LOWER(COALESCE(type, '')) = 'teacher'
-      ORDER BY created_at DESC LIMIT 5
-    `);
-    recentStaffAttendance.forEach(r => recentAlerts.push({
-      id: `staff_${r.id}`,
-      type: 'staff_attendance',
-      message: `Staff marked ${r.status}`,
-      createdAt: r.created_at,
-      relatedId: r.id,
-      relatedType: 'staff_attendance'
-    }));
-
-    const top5 = recentAlerts
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5);
-
-    res.json({
-      success: true,
-      data: {
-        totalActiveStudents,
-        totalActiveTeachers,
-        todayAttendancePercentage,
-        weeklyAttendanceTrend,
-        classParticipation,
-        recentAlerts: top5
-      }
-    });
-  } catch (error) {
-    console.error('dashboard/stats error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1896,47 +1133,32 @@ const startServer = async () => {
     await loadDatabase();
     initDB();
 
-    app.listen(PORT, HOST, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       const localIP = getLocalIP();
       console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║           MUNYAKA LAN SCHOOL MANAGEMENT SERVER                ║
 ╠══════════════════════════════════════════════════════════════╣
-║  Server binding:  http://${HOST}:${PORT}
-║  Local access:     http://localhost:${PORT}
-║  Network access:   http://${localIP}:${PORT}
-║  Database:         ${DB_PATH}
-║  Auth:             JWT (bcryptjs) — no external provider
+║  Server running on: http://${localIP}:${PORT}                  
+║  Local access:    http://localhost:${PORT}                     
+║  Database:        ${DB_PATH}   
+║  Engine:          sql.js (Pure JavaScript SQLite - WASM)
 ╠══════════════════════════════════════════════════════════════╣
-║  Default Seed Accounts (bcrypt-hashed passwords):            ║
-║                                                            ║
-║  Teacher login — TSC Number: TSC12345 | Password: Teacher@123║
-║  Teacher login — TSC Number: TSC67890 | Password: Teacher@123║
-║  Admin login   — Email: admin@munyaka.local | Password: admin123║
-║                                                            ║
-║  POST /api/auth/login  body:                               ║
-║    { email, password }  OR  { staff_id, password }          ║
-║    { tscNumber, password }  OR  { identifier, password }   ║
-╠══════════════════════════════════════════════════════════════╣
-║  Endpoints:                                                 ║
-║  • POST /api/auth/login       - Authenticate (returns JWT)   ║
-║  • GET  /api/teachers        - List all teachers            ║
-║  • POST /api/teachers        - Create teacher               ║
-║  • POST /api/teachers/bulk-activate                        ║
-║  • POST/PATCH /api/teachers/activate-all                   ║
-║  • GET  /api/students        - List all students            ║
-║  • POST /api/students        - Create student               ║
-║  • GET  /api/attendance      - Get / record attendance       ║
-║  • POST /api/attendance/bulk - Bulk record attendance        ║
-║  • GET  /api/fees            - Get / create fee records      ║
-║  • GET  /api/devices         - List connected devices        ║
-║  • POST /api/sync             - Sync offline data            ║
-║  • GET  /api/dashboard/stats - Dashboard stats (unified)     ║
-║  • GET  /api/stats           - Database statistics         ║
-║  • GET  /api/health          - Health check                 ║
-║  • GET  /api/backup          - Export database (JSON)       ║
-║  • GET  /api/backup/db       - Export SQLite file            ║
-║  • GET  /api/server/info     - Server connection info         ║
+║  API Endpoints:                                                ║
+║  • GET  /api/students     - List all students                 ║
+║  • POST /api/students     - Create student                    ║
+║  • GET  /api/teachers     - List all teachers                 ║
+║  • POST /api/teachers     - Create teacher                    ║
+║  • GET  /api/attendance   - Get attendance records            ║
+║  • POST /api/attendance   - Record attendance                 ║
+║  • GET  /api/fees         - Get fee records                  ║
+║  • POST /api/fees         - Create fee record                 ║
+║  • GET  /api/devices      - List connected devices            ║
+║  • POST /api/sync         - Sync offline data                ║
+║  • GET  /api/stats        - Database statistics              ║
+║  • GET  /api/backup       - Export database backup (JSON)    ║
+║  • GET  /api/backup/db    - Export SQLite file               ║
+║  • GET  /api/server/info   - Server connection info           ║
 ╚══════════════════════════════════════════════════════════════╝
       `);
     });

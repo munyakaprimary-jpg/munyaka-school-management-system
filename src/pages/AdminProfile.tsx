@@ -113,9 +113,9 @@ const AdminProfile = () => {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex items-center gap-3">
-        <BackButton parentPath="/" />
+        <BackButton fallback="/" />
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Account</h1>
           <p className="text-muted-foreground">Manage system administrator credentials and security settings.</p>

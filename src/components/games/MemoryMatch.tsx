@@ -15,7 +15,6 @@ import {
   RotateCcw,
   Clock,
   Zap,
-  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +31,7 @@ import {
 
 type CardSymbol = {
   id: string;
-  Icon: LucideIcon;
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
   colorClass: string;
   bgClass: string;
 };
@@ -51,7 +50,7 @@ const CARD_POOL: CardSymbol[] = [
 interface Card {
   uid: string; // unique per slot (even pairs have different uids)
   symbolId: string;
-  Icon: LucideIcon;
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
   colorClass: string;
   bgClass: string;
   flipped: boolean;

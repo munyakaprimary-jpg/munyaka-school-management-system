@@ -82,7 +82,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(borrowerName || '').trim()) {
+    if (!borrowerName.trim()) {
       setErrorMsg("Please enter the name of the borrower.");
       return;
     }
@@ -101,7 +101,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     setErrorMsg("");
 
     try {
-      await onIssueBook(book.id, String(borrowerName || '').trim(), borrowerType, dueDate, quantity, selectedGrade, selectedStream);
+      await onIssueBook(book.id, borrowerName.trim(), borrowerType, dueDate, quantity, selectedGrade, selectedStream);
       onClose();
     } catch (err) {
       setErrorMsg("Failed to process book checkout.");

@@ -17,8 +17,6 @@ interface NotificationContextType {
   setIsOpen: (open: boolean) => void;
   markAllAsRead: () => void;
   refreshNotices: () => void;
-  /** Append a new notice to the in-memory store. */
-  addNotification?: (notice: Omit<Notice, 'id' | 'date'> & { id?: string; date?: string }) => Notice;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);

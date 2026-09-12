@@ -11,12 +11,6 @@
   "dependencies": {
     "express": "^4.21.0",
     "sql.js": "^1.10.3",
-    "cors": "^2.8.5",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2"
-  },
-  "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/jsonwebtoken": "^9.0.9"
+    "cors": "^2.8.5"
   }
 }

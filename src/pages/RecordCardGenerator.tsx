@@ -35,8 +35,7 @@ const RecordCardGenerator = () => {
   const [preview, setPreview] = useState<RecordCardData | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -66,7 +65,7 @@ const RecordCardGenerator = () => {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Record Card Generator</h1>
@@ -114,10 +113,11 @@ const RecordCardGenerator = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="grade">Grade</Label>
-                <Select
+                <Select 
+                  id="grade"
                   name="grade"
                   value={formData.grade}
-                  onValueChange={(val) => setFormData(prev => ({ ...prev, grade: val }))}
+                  onChange={handleChange}
                 >
                   <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none">
                     <SelectValue placeholder="Select grade" />
@@ -133,10 +133,11 @@ const RecordCardGenerator = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stream">Stream</Label>
-                <Select
+                <Select 
+                  id="stream"
                   name="stream"
                   value={formData.stream}
-                  onValueChange={(val) => setFormData(prev => ({ ...prev, stream: val }))}
+                  onChange={handleChange}
                 >
                   <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none">
                     <SelectValue placeholder="Select stream" />

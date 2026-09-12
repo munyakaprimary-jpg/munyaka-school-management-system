@@ -42,7 +42,7 @@ const IssueAssetModal = ({ isOpen, onClose, onIssue, assets }: IssueAssetModalPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAssetId) return setError("Please select an asset.");
-    if (!String(issuedTo || '').trim()) return setError("Please specify who the asset is being issued to.");
+    if (!issuedTo.trim()) return setError("Please specify who the asset is being issued to.");
     
     const numQty = parseInt(qty);
     if (isNaN(numQty) || numQty <= 0) return setError("Please enter a valid quantity.");

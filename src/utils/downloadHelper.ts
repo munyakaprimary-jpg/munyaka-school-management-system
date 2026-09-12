@@ -1,8 +1,7 @@
-import clsx from "clsx";
+import { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { downloadFile as nativeDownloadFile } from "./fileDownloader";
 
-export function cn(...inputs: Parameters<typeof clsx>[0][]) {
+export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
@@ -146,7 +145,8 @@ export async function downloadCSV(csvContent: string, fileName: string) {
   // already provided it themselves.
   const withHeader = withMunyakaHeader(csvContent);
 
-  return nativeDownloadFile({
+  const { downloadFile } = await import('./fileDownloader');
+  return downloadFile({
     filename: fileName,
     data: withHeader,
     mimeType: 'text/csv;charset=utf-8;',
@@ -160,7 +160,8 @@ export async function downloadCSV(csvContent: string, fileName: string) {
  * the institutional header is always applied.
  */
 export async function downloadText(textContent: string, fileName: string) {
-  return nativeDownloadFile({
+  const { downloadFile } = await import('./fileDownloader');
+  return downloadFile({
     filename: fileName,
     data: textContent,
     mimeType: 'text/plain;charset=utf-8',
@@ -174,6 +175,7 @@ export async function downloadText(textContent: string, fileName: string) {
  * already been produced elsewhere.)
  */
 export async function downloadFromUrl(url: string, fileName: string, _mimeType: string = 'application/octet-stream') {
+  const { downloadFile } = await import('./fileDownloader');
   // We don't have raw data for arbitrary URLs, so we fetch and re-route
   // through the unified pipeline so the user gets a consistent toast.
   try {
@@ -188,14 +190,15 @@ export async function downloadFromUrl(url: string, fileName: string, _mimeType: 
       reader.readAsDataURL(blob);
     });
     const base64 = data.split(',')[1] || data;
-    return nativeDownloadFile({
+    return downloadFile({
       filename: fileName,
       data: base64,
       mimeType,
       isBase64: true,
     });
   } catch (err) {
-    return nativeDownloadFile({
+    const { downloadFile: df } = await import('./fileDownloader');
+    return df({
       filename: fileName,
       data: '',
       mimeType: 'text/plain',
@@ -209,7 +212,8 @@ export async function downloadFromUrl(url: string, fileName: string, _mimeType: 
  * unified file downloader.
  */
 export async function downloadFile(content: string, fileName: string, mimeType: string = 'application/json') {
-  return nativeDownloadFile({
+  const { downloadFile: df } = await import('./fileDownloader');
+  return df({
     filename: fileName,
     data: content,
     mimeType,

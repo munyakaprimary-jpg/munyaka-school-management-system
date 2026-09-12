@@ -20,16 +20,18 @@ function Calendar({
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
+        month_caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
         nav: "space-x-1 flex items-center",
-        nav_button_previous: cn(
+        button_previous: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute left-1",
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+          "absolute left-1",
         ),
-        nav_button_next: cn(
+        button_next: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute right-1",
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+          "absolute right-1",
         ),
         month_grid: "w-full border-collapse space-y-1",
         weekdays: "flex",
@@ -52,15 +54,15 @@ function Calendar({
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         hidden: "invisible",
         ...classNames,
-      } as any}
+      }}
       components={{
-        Chevron: ({ orientation }: { orientation?: string }) =>
+        Chevron: ({ orientation }) =>
           orientation === "left" ? (
             <ChevronLeft className="h-4 w-4" />
           ) : (
             <ChevronRight className="h-4 w-4" />
           ),
-      } as any}
+      }}
       {...props}
     />
   );

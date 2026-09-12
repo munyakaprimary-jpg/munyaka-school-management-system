@@ -8,14 +8,10 @@
 export interface Learner {
   id: string;
   admNo: string;
-  /** Alias for admNo — used by some result analysis views. */
-  admissionNumber?: string;
-  /** School-issued admission number (distinct from the assessment / NEMIS number). */
-  admissionNo?: string;
   name: string;
   grade: string;
   stream: string;
-  gender: string;
+  gender: 'Male' | 'Female' | 'Other';
   guardian: string;
   phone: string;
   birthCertificateNo?: string;
@@ -27,7 +23,7 @@ export interface Learner {
    *   • Graduated     — completed final grade
    *   • Suspended     — temporarily off the roster
    */
-  status?: string;
+  status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
 
   /** ISO date string. Optional so legacy rows still load. */
   dob?: string;
@@ -41,28 +37,4 @@ export interface Learner {
   previousSchoolClearanceRef?: string;
   /** Free-form reason captured at registration or transfer-in. */
   transferReason?: string;
-
-  // ── Optional enrichment fields used by dashboard/analysis pages ──
-  email?: string;
-  health?: string;
-  needs?: string;
-  feeBalance?: number;
-  /** Total invoiced / billed for the current term — 0 until a fee structure is configured. */
-  totalBilled?: number;
-  /** Total amount paid by the learner across all recorded transactions. */
-  totalPaid?: number;
-  /** Remaining balance: totalBilled - totalPaid. Clamped to ≥ 0. */
-  balance?: number;
-  /** History of individual fee payments. */
-  feeHistory?: unknown[];
-  coCurricularActivities?: string;
-  examType?: string;
-  /** Optional assessment / notes field. */
-  assessment?: string;
-  /**
-   * KNEC / NEMIS / UPI assessment number. Distinct from `admNo`
-   * (the school-issued admission number) and from `nemisUpi`.
-   * Empty string means the field has not been captured yet.
-   */
-  assessmentNo?: string;
 }

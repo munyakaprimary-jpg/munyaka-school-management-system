@@ -29,11 +29,3 @@ dist-ssr
 /playwright/.cache/
 .last-run.json
 .dyad/
-
-# SQLite / SQLite-based database files
-*.db
-*.sqlite
-*.sqlite3
-
-# Server-side database directory (local runtime data)
-server/data/

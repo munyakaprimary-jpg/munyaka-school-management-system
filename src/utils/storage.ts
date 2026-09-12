@@ -19,26 +19,12 @@
 
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { buildDefaultClusters } from '@/data/defaultCbcLearningAreas';
-import { safeParse, isQuotaExceeded, handleQuotaError, getLocalStorage } from './storageUtils';
-import { initializeStaffMaster } from '@/services/staffMasterService';
-
-/**
- * Re-export the safe localStorage accessor so existing imports of
- * `getLocalStorage` from `@/utils/storage` keep working. The canonical
- * implementation lives in `./storageUtils` — this file re-exports it
- * as a convenience for callers that already depend on `@/utils/storage`.
- */
-export { getLocalStorage };
 
 // ─── Storage Keys ────────────────────────────────────────────────────────────
 
-export const STORAGE_KEY = 'munyaka_students';
-export const LEARNERS_KEY = STORAGE_KEY;
-
 export const STORAGE_KEYS = {
-  LEARNERS: STORAGE_KEY,
   // Primary state stores
-  STUDENTS: STORAGE_KEY,
+  STUDENTS: 'school_learners_data',
   STUDENTS_LEGACY: 'munyaka_students',
   CBC_LEARNING_AREAS: 'munyaka_learning_areas',
   PAYMENT_RECORDS: 'munyaka_fees_records',
@@ -70,23 +56,17 @@ export const CURRENT_SCHEMA_VERSION = 'persistent-storage-v1';
 
 export interface Student {
   id: string;
-  admNo: string;
-  name: string;
-  grade: string;
-  stream: string;
-  gender: string;
-  guardian: string;
-  phone: string;
+  admNo?: string;
+  name?: string;
+  grade?: string;
+  stream?: string;
+  gender?: string;
+  guardian?: string;
+  phone?: string;
   status?: string;
   schoolId?: string;
   isArchived?: boolean;
   deletedAt?: string;
-  admissionNo?: string;
-  birthCertificateNo?: string;
-  dob?: string;
-  dateOfAdmission?: string;
-  admissionYear?: number;
-  assessmentNo?: string;
   [key: string]: unknown;
 }
 
@@ -94,7 +74,7 @@ export interface PaymentRecord {
   id: string;
   studentId?: string;
   studentName?: string;
-  amount?: number;
+  amount: number;
   paid?: number;
   total?: number;
   method?: string;
@@ -157,6 +137,26 @@ export interface LearningAreaCluster {
   }>;
 }
 
+// ─── Safe localStorage helpers ──────────────────────────────────────────────
+
+function safeLocalStorage(): Storage | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function safeParse<T>(raw: string | null): T | null {
+  if (raw == null) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Read / Write primitives ────────────────────────────────────────────────
 
 /**
@@ -164,59 +164,29 @@ export interface LearningAreaCluster {
  * missing, unparseable, or the value is null/undefined.
  */
 export function readStorage<T>(key: string, fallback: T): T {
-  const ls = getLocalStorage();
+  const ls = safeLocalStorage();
   if (!ls) return fallback;
   const raw = ls.getItem(key);
   if (raw == null) return fallback;
-  const parsed = safeParse<T>(raw, fallback);
+  const parsed = safeParse<T>(raw);
   return parsed == null ? fallback : parsed;
-}
-
-/**
- * Convenience wrapper around `readStorage` for strings.
- * Returns `''` on any failure rather than null.
- */
-export function lsRead<T>(key: string, fallback: T): T {
-  return readStorage<T>(key, fallback);
-}
-
-/**
- * Variant that returns `null` on parse error so callers can distinguish
- * "no data" from "fallback default".
- */
-export function tryParse<T>(key: string): T | null {
-  const ls = getLocalStorage();
-  if (!ls) return null;
-  const raw = ls.getItem(key);
-  if (raw == null) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed as T;
-  } catch {
-    return null;
-  }
 }
 
 /**
  * Persist a JSON value to localStorage. Returns `true` on success.
  * Emits a `storage` event + custom `munyaka:data-changed` event so all
  * React subscribers refresh.
- *
- * QuotaExceededError is caught and surfaced to the user via a toast.
  */
 export function writeStorage<T>(key: string, value: T): boolean {
-  const ls = getLocalStorage();
+  const ls = safeLocalStorage();
   if (!ls) return false;
   try {
-    ls.setItem(key, JSON.stringify(value));
+    const serialized = JSON.stringify(value);
+    ls.setItem(key, serialized);
     notifyDataChanged(key);
     return true;
   } catch (err) {
-    if (isQuotaExceeded(err)) {
-      handleQuotaError(key);
-    } else {
-      console.error(`[storage] Failed to write "${key}":`, err);
-    }
+    console.error(`[storage] Failed to write "${key}":`, err);
     return false;
   }
 }
@@ -225,7 +195,7 @@ export function writeStorage<T>(key: string, value: T): boolean {
  * Remove a key from localStorage and notify subscribers.
  */
 export function removeStorage(key: string): boolean {
-  const ls = getLocalStorage();
+  const ls = safeLocalStorage();
   if (!ls) return false;
   try {
     ls.removeItem(key);
@@ -241,7 +211,7 @@ export function removeStorage(key: string): boolean {
  * Wipe ALL app data from localStorage. Use with care.
  */
 export function clearAllStorage(): void {
-  const ls = getLocalStorage();
+  const ls = safeLocalStorage();
   if (!ls) return;
   try {
     ls.clear();
@@ -260,18 +230,14 @@ export function clearAllStorage(): void {
  *   lsSet('my_key', myObject);
  */
 export function lsSet(key: string, value: unknown): boolean {
-  const ls = getLocalStorage();
+  const ls = safeLocalStorage();
   if (!ls) return false;
   try {
     ls.setItem(key, JSON.stringify(value));
     notifyDataChanged(key);
     return true;
   } catch (err) {
-    if (isQuotaExceeded(err)) {
-      handleQuotaError(key);
-    } else {
-      console.error(`[storage] lsSet failed for key "${key}":`, err);
-    }
+    console.error(`[storage] lsSet failed for key "${key}":`, err);
     return false;
   }
 }
@@ -321,7 +287,7 @@ export interface HydrationReport {
  * Returns a report describing which keys were touched.
  */
 export function hydrateAllStores(): HydrationReport {
-  const ls = getLocalStorage();
+  const ls = safeLocalStorage();
   const report: HydrationReport = {
     hydrated: false,
     schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -331,143 +297,133 @@ export function hydrateAllStores(): HydrationReport {
 
   if (!ls) return report;
 
-  // ── Helper: write one key only if absent, catch every write individually ─
-  // This ensures a quota error on one key does NOT abort seeding of others.
-  const seedIfAbsent = (key: string, value: unknown): void => {
-    try {
-      if (ls.getItem(key) !== null) return;
-      ls.setItem(key, JSON.stringify(value));
-      report.restoredFromSeed.push(key);
-    } catch (err) {
-      if (isQuotaExceeded(err)) {
-        handleQuotaError(key, 'seed');
-      } else {
-        console.error(`[storage] hydrate failed to write "${key}":`, err);
-      }
-    }
-  };
-
   try {
     // 1. Students
-    if (Array.isArray(INITIAL_SEED_DATA?.students) && INITIAL_SEED_DATA.students.length > 0) {
-      seedIfAbsent(STORAGE_KEYS.STUDENTS, INITIAL_SEED_DATA.students);
-      seedIfAbsent(STORAGE_KEYS.STUDENTS_LEGACY, INITIAL_SEED_DATA.students);
+    const existingStudents = ls.getItem(STORAGE_KEYS.STUDENTS);
+    if (!existingStudents && Array.isArray(INITIAL_SEED_DATA.students)) {
+      ls.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_SEED_DATA.students));
+      ls.setItem(STORAGE_KEYS.STUDENTS_LEGACY, JSON.stringify(INITIAL_SEED_DATA.students));
+      report.restoredFromSeed.push(STORAGE_KEYS.STUDENTS);
     }
     report.keys.push(STORAGE_KEYS.STUDENTS);
 
-    // 1b. Staff directory
-    if (Array.isArray(INITIAL_SEED_DATA?.staff) && INITIAL_SEED_DATA.staff.length > 0) {
-      seedIfAbsent(STORAGE_KEYS.STAFF, INITIAL_SEED_DATA.staff);
-      seedIfAbsent('munyaka_staff', INITIAL_SEED_DATA.staff);
+    // 1b. Staff directory (from seed)
+    if (!ls.getItem(STORAGE_KEYS.STAFF) && Array.isArray(INITIAL_SEED_DATA.staff)) {
+      ls.setItem(STORAGE_KEYS.STAFF, JSON.stringify(INITIAL_SEED_DATA.staff));
+      ls.setItem('munyaka_staff', JSON.stringify(INITIAL_SEED_DATA.staff));
+      report.restoredFromSeed.push(STORAGE_KEYS.STAFF);
     }
     report.keys.push(STORAGE_KEYS.STAFF);
 
-    // 1b'. Unified Staff Master ledger — single source of truth for ALL
-    //       staff records. Seeds with the merged pre-reg + directory set
-    //       and writes the legacy keys for backwards compatibility.
-    try {
-      initializeStaffMaster();
-      report.keys.push('munyaka_staff_master');
-    } catch (err) {
-      console.error('[storage] staff-master seed failed:', err);
-    }
-
     // 1c. Staff pre-registration
-    if (Array.isArray(INITIAL_SEED_DATA?.staffPrereg)) {
-      seedIfAbsent(STORAGE_KEYS.STAFF_PREREG, INITIAL_SEED_DATA.staffPrereg);
+    if (!ls.getItem(STORAGE_KEYS.STAFF_PREREG) && Array.isArray(INITIAL_SEED_DATA.staffPrereg)) {
+      ls.setItem(STORAGE_KEYS.STAFF_PREREG, JSON.stringify(INITIAL_SEED_DATA.staffPrereg));
+      report.restoredFromSeed.push(STORAGE_KEYS.STAFF_PREREG);
     }
     report.keys.push(STORAGE_KEYS.STAFF_PREREG);
 
     // 1d. Grades / Classes
-    if (Array.isArray(INITIAL_SEED_DATA?.grades)) {
-      seedIfAbsent(STORAGE_KEYS.GRADES, INITIAL_SEED_DATA.grades);
+    if (!ls.getItem(STORAGE_KEYS.GRADES) && Array.isArray(INITIAL_SEED_DATA.grades)) {
+      ls.setItem(STORAGE_KEYS.GRADES, JSON.stringify(INITIAL_SEED_DATA.grades));
+      report.restoredFromSeed.push(STORAGE_KEYS.GRADES);
     }
     report.keys.push(STORAGE_KEYS.GRADES);
 
     // 1e. Exam types
-    if (Array.isArray(INITIAL_SEED_DATA?.examTypes)) {
-      seedIfAbsent(STORAGE_KEYS.EXAM_TYPES, INITIAL_SEED_DATA.examTypes);
+    if (!ls.getItem(STORAGE_KEYS.EXAM_TYPES) && Array.isArray(INITIAL_SEED_DATA.examTypes)) {
+      ls.setItem(STORAGE_KEYS.EXAM_TYPES, JSON.stringify(INITIAL_SEED_DATA.examTypes));
+      report.restoredFromSeed.push(STORAGE_KEYS.EXAM_TYPES);
     }
     report.keys.push(STORAGE_KEYS.EXAM_TYPES);
 
     // 1f. Assessment scores
-    if (INITIAL_SEED_DATA?.assessmentScores) {
-      seedIfAbsent(STORAGE_KEYS.ASSESSMENT_SCORES, INITIAL_SEED_DATA.assessmentScores);
+    if (!ls.getItem(STORAGE_KEYS.ASSESSMENT_SCORES) && INITIAL_SEED_DATA.assessmentScores) {
+      ls.setItem(STORAGE_KEYS.ASSESSMENT_SCORES, JSON.stringify(INITIAL_SEED_DATA.assessmentScores));
+      report.restoredFromSeed.push(STORAGE_KEYS.ASSESSMENT_SCORES);
     }
     report.keys.push(STORAGE_KEYS.ASSESSMENT_SCORES);
 
     // 1g. Library books
-    if (Array.isArray(INITIAL_SEED_DATA?.libraryBooks)) {
-      seedIfAbsent(STORAGE_KEYS.LIBRARY_BOOKS, INITIAL_SEED_DATA.libraryBooks);
+    if (!ls.getItem(STORAGE_KEYS.LIBRARY_BOOKS) && Array.isArray(INITIAL_SEED_DATA.libraryBooks)) {
+      ls.setItem(STORAGE_KEYS.LIBRARY_BOOKS, JSON.stringify(INITIAL_SEED_DATA.libraryBooks));
+      report.restoredFromSeed.push(STORAGE_KEYS.LIBRARY_BOOKS);
     }
     report.keys.push(STORAGE_KEYS.LIBRARY_BOOKS);
 
     // 1h. ICT assets
-    if (Array.isArray(INITIAL_SEED_DATA?.ictAssets)) {
-      seedIfAbsent(STORAGE_KEYS.ICT_ASSETS, INITIAL_SEED_DATA.ictAssets);
+    if (!ls.getItem(STORAGE_KEYS.ICT_ASSETS) && Array.isArray(INITIAL_SEED_DATA.ictAssets)) {
+      ls.setItem(STORAGE_KEYS.ICT_ASSETS, JSON.stringify(INITIAL_SEED_DATA.ictAssets));
+      report.restoredFromSeed.push(STORAGE_KEYS.ICT_ASSETS);
     }
     report.keys.push(STORAGE_KEYS.ICT_ASSETS);
 
     // 1i. Attendance
-    if (INITIAL_SEED_DATA?.attendance) {
-      seedIfAbsent(STORAGE_KEYS.ATTENDANCE, INITIAL_SEED_DATA.attendance);
+    if (!ls.getItem(STORAGE_KEYS.ATTENDANCE) && INITIAL_SEED_DATA.attendance) {
+      ls.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(INITIAL_SEED_DATA.attendance));
+      report.restoredFromSeed.push(STORAGE_KEYS.ATTENDANCE);
     }
     report.keys.push(STORAGE_KEYS.ATTENDANCE);
 
-    // 2. CBC Learning Areas
+    // 2. CBC Learning Areas (from canonical defaults)
     const existingClusters = ls.getItem(STORAGE_KEYS.CBC_LEARNING_AREAS);
     if (!existingClusters) {
-      const seedAreas = Array.isArray(INITIAL_SEED_DATA?.learningAreas)
+      // Prefer the seed-defined learning areas if present, otherwise build defaults
+      const seedAreas = Array.isArray(INITIAL_SEED_DATA.learningAreas)
         ? INITIAL_SEED_DATA.learningAreas
         : null;
-      const value =
-        seedAreas && seedAreas.length > 0 ? seedAreas : buildDefaultClusters();
-      seedIfAbsent(STORAGE_KEYS.CBC_LEARNING_AREAS, value);
+      const value = seedAreas && seedAreas.length > 0 ? seedAreas : buildDefaultClusters();
+      ls.setItem(STORAGE_KEYS.CBC_LEARNING_AREAS, JSON.stringify(value));
+      report.restoredFromSeed.push(STORAGE_KEYS.CBC_LEARNING_AREAS);
     }
     report.keys.push(STORAGE_KEYS.CBC_LEARNING_AREAS);
 
-    // 3. Payment Records
-    if (ls.getItem(STORAGE_KEYS.PAYMENT_RECORDS) === null) {
-      seedIfAbsent(
-        STORAGE_KEYS.PAYMENT_RECORDS,
-        Array.isArray(INITIAL_SEED_DATA?.fees) ? INITIAL_SEED_DATA.fees : []
-      );
+    // 3. Payment Records / Fee Ledgers
+    if (!ls.getItem(STORAGE_KEYS.PAYMENT_RECORDS)) {
+      const seedFees = Array.isArray(INITIAL_SEED_DATA.fees)
+        ? INITIAL_SEED_DATA.fees
+        : [];
+      ls.setItem(STORAGE_KEYS.PAYMENT_RECORDS, JSON.stringify(seedFees));
+      report.restoredFromSeed.push(STORAGE_KEYS.PAYMENT_RECORDS);
     }
     report.keys.push(STORAGE_KEYS.PAYMENT_RECORDS);
 
     // 3b. Transactions
-    if (ls.getItem(STORAGE_KEYS.TRANSACTIONS) === null) {
-      seedIfAbsent(
-        STORAGE_KEYS.TRANSACTIONS,
-        Array.isArray(INITIAL_SEED_DATA?.transactions) ? INITIAL_SEED_DATA.transactions : []
-      );
+    if (!ls.getItem(STORAGE_KEYS.TRANSACTIONS)) {
+      const seedTx = Array.isArray(INITIAL_SEED_DATA.transactions)
+        ? INITIAL_SEED_DATA.transactions
+        : [];
+      ls.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(seedTx));
+      report.restoredFromSeed.push(STORAGE_KEYS.TRANSACTIONS);
     }
     report.keys.push(STORAGE_KEYS.TRANSACTIONS);
 
     // 4. User Settings
-    if (ls.getItem(STORAGE_KEYS.USER_SETTINGS) === null) {
-      seedIfAbsent(STORAGE_KEYS.USER_SETTINGS, INITIAL_SEED_DATA?.settings ?? {});
+    if (!ls.getItem(STORAGE_KEYS.USER_SETTINGS)) {
+      const seedSettings = INITIAL_SEED_DATA.settings ?? {};
+      ls.setItem(STORAGE_KEYS.USER_SETTINGS, JSON.stringify(seedSettings));
+      report.restoredFromSeed.push(STORAGE_KEYS.USER_SETTINGS);
     }
     report.keys.push(STORAGE_KEYS.USER_SETTINGS);
 
-    // 5. Subscriptions
-    if (ls.getItem(STORAGE_KEYS.SUBSCRIPTIONS) === null) {
-      seedIfAbsent(STORAGE_KEYS.SUBSCRIPTIONS, []);
+    // 5. Subscriptions (start with empty list if missing)
+    if (!ls.getItem(STORAGE_KEYS.SUBSCRIPTIONS)) {
+      ls.setItem(STORAGE_KEYS.SUBSCRIPTIONS, JSON.stringify([]));
+      report.restoredFromSeed.push(STORAGE_KEYS.SUBSCRIPTIONS);
     }
     report.keys.push(STORAGE_KEYS.SUBSCRIPTIONS);
 
     // 5b. Billing settings
-    if (ls.getItem(STORAGE_KEYS.BILLING_SETTINGS) === null) {
-      seedIfAbsent(STORAGE_KEYS.BILLING_SETTINGS, {});
+    if (!ls.getItem(STORAGE_KEYS.BILLING_SETTINGS)) {
+      ls.setItem(STORAGE_KEYS.BILLING_SETTINGS, JSON.stringify({}));
     }
     report.keys.push(STORAGE_KEYS.BILLING_SETTINGS);
 
-    // Mark hydration complete
+    // Mark hydration complete and bump schema version
     ls.setItem(STORAGE_KEYS.HYDRATION_DONE, 'true');
     ls.setItem(STORAGE_KEYS.SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
     report.hydrated = true;
   } catch (err) {
-    console.error('[storage] Hydration outer block failed:', err);
+    console.error('[storage] Hydration failed:', err);
   }
 
   return report;
@@ -475,22 +431,8 @@ export function hydrateAllStores(): HydrationReport {
 
 // ─── Typed store accessors (read) ───────────────────────────────────────────
 
-export const getStudents = (): Student[] => {
-  try {
-    const primary = readStorage<Student[] | null>(STORAGE_KEY, null);
-    if (primary && Array.isArray(primary) && primary.length > 0) return primary;
-
-    // Check legacy fallback keys
-    const legacyKeys = ['munyaka_registered_students', 'students', 'school_learners_data', 'learners', 'pupils', 'school_students', 'registered_students'];
-    for (const lKey of legacyKeys) {
-      const legacy = readStorage<Student[] | null>(lKey, null);
-      if (legacy && Array.isArray(legacy) && legacy.length > 0) return legacy;
-    }
-    return [];
-  } catch {
-    return [];
-  }
-};
+export const getStudents = (): Student[] =>
+  readStorage<Student[]>(STORAGE_KEYS.STUDENTS, []);
 
 export const getLearningAreas = (): LearningAreaCluster[] =>
   readStorage<LearningAreaCluster[]>(STORAGE_KEYS.CBC_LEARNING_AREAS, []);
@@ -509,56 +451,16 @@ export const getSubscriptions = (): Subscription[] =>
 
 // ─── Typed store mutators (write) ───────────────────────────────────────────
 
-// ─── Typed store mutators (write) ───────────────────────────────────────────
-
 /**
  * Replace the entire students array and persist immediately.
  */
 export function setStudents(students: Student[]): boolean {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-    window.dispatchEvent(new Event('students-updated'));
-    return true;
-  } catch {
-    return false;
+  const ok = writeStorage(STORAGE_KEYS.STUDENTS, students);
+  if (ok) {
+    // Keep legacy mirror in sync for any older code paths
+    writeStorage(STORAGE_KEYS.STUDENTS_LEGACY, students);
   }
-}
-
-export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: string })): Student {
-  try {
-    const existing = getStudents();
-    const studentId = student.id ?? generateId('stu');
-    const fullStudent: Student = {
-      admNo: String(student.admNo ?? student.admissionNo ?? 'ADM-001'),
-      name: String(student.name ?? 'Unnamed Student'),
-      grade: String(student.grade ?? 'Grade 1'),
-      stream: String(student.stream ?? 'North'),
-      gender: String(student.gender ?? 'Female'),
-      guardian: String(student.guardian ?? 'Parent'),
-      phone: String(student.phone ?? ''),
-      status: String(student.status ?? 'Active'),
-      ...student,
-      id: studentId,
-    };
-    const updated = [...existing.filter(s => s.id !== studentId), fullStudent];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    window.dispatchEvent(new Event('students-updated'));
-    return fullStudent;
-  } catch (err) {
-    console.error('[storage] saveStudent failed:', err);
-    const fallbackStudent: Student = {
-      id: student.id ?? generateId('stu'),
-      admNo: String(student.admNo ?? 'ADM-001'),
-      name: String(student.name ?? 'Unnamed'),
-      grade: String(student.grade ?? 'Grade 1'),
-      stream: String(student.stream ?? 'North'),
-      gender: String(student.gender ?? 'Female'),
-      guardian: String(student.guardian ?? 'Parent'),
-      phone: String(student.phone ?? ''),
-      ...student,
-    };
-    return fallbackStudent;
-  }
+  return ok;
 }
 
 /**
@@ -705,7 +607,7 @@ export function deleteLearningArea(clusterId: string, areaId: string): boolean {
 
 // ── Payment Records ─────────────────────────────────────────────────────────
 export function createPaymentRecord(input: Omit<PaymentRecord, 'id'> & { id?: string }): PaymentRecord {
-  const newRec = { ...input, id: input.id ?? generateId('pay') } as PaymentRecord;
+  const newRec: PaymentRecord = { ...input, id: input.id ?? generateId('pay') };
   const next = [...getPaymentRecords(), newRec];
   setPaymentRecords(next);
   return newRec;
@@ -764,7 +666,7 @@ export function deleteSubscription(id: string): boolean {
  * Useful for the Central Data Service screen.
  */
 export function getStorageSizes(): Record<string, number> {
-  const ls = getLocalStorage();
+  const ls = safeLocalStorage();
   if (!ls) return {};
   const out: Record<string, number> = {};
   for (let i = 0; i < ls.length; i++) {
@@ -780,174 +682,7 @@ export function getStorageSizes(): Record<string, number> {
  * True if localStorage already has a hydrated dataset.
  */
 export function isHydrated(): boolean {
-  const ls = getLocalStorage();
+  const ls = safeLocalStorage();
   if (!ls) return false;
   return ls.getItem(STORAGE_KEYS.HYDRATION_DONE) === 'true';
-}
-
-// ─── Full Database Export / Import ─────────────────────────────────────────
-
-export interface DatabaseBackup {
-  version: string;
-  exportDate: string;
-  school: string;
-  students: unknown;
-  staff: unknown;
-  staffPrereg: unknown;
-  fees: unknown;
-  feeStructures: unknown;
-  transactions: unknown;
-  attendance: unknown;
-  grades: unknown;
-  examTypes: unknown;
-  learningAreas: unknown;
-  assessmentScores: unknown;
-  libraryBooks: unknown;
-  ictAssets: unknown;
-  notices: unknown;
-  userSettings: unknown;
-  subscriptions: unknown;
-  billingSettings: unknown;
-}
-
-/**
- * Read ALL known localStorage keys and return a serialisable backup object.
- * Safe: every read is wrapped in a try-catch so a corrupted key never aborts
- * the entire export.
- */
-export function exportAllData(): DatabaseBackup {
-  const ls = getLocalStorage() ?? {} as Storage;
-
-  const safeRead = (key: string): unknown => {
-    try {
-      const raw = ls.getItem(key);
-      if (raw == null) return undefined;
-      return JSON.parse(raw);
-    } catch {
-      return undefined;
-    }
-  };
-
-  return {
-    version: CURRENT_SCHEMA_VERSION,
-    exportDate: new Date().toISOString(),
-    school: 'MUNYAKA PRIMARY AND JUNIOR SCHOOL',
-    students:           safeRead(STORAGE_KEYS.STUDENTS),
-    staff:             safeRead(STORAGE_KEYS.STAFF),
-    staffPrereg:       safeRead(STORAGE_KEYS.STAFF_PREREG),
-    fees:              safeRead(STORAGE_KEYS.PAYMENT_RECORDS),
-    feeStructures:     safeRead('munyaka_fee_structures'),
-    transactions:      safeRead(STORAGE_KEYS.TRANSACTIONS),
-    attendance:        safeRead(STORAGE_KEYS.ATTENDANCE),
-    grades:            safeRead(STORAGE_KEYS.GRADES),
-    examTypes:         safeRead(STORAGE_KEYS.EXAM_TYPES),
-    learningAreas:     safeRead(STORAGE_KEYS.CBC_LEARNING_AREAS),
-    assessmentScores:  safeRead(STORAGE_KEYS.ASSESSMENT_SCORES),
-    libraryBooks:      safeRead(STORAGE_KEYS.LIBRARY_BOOKS),
-    ictAssets:         safeRead(STORAGE_KEYS.ICT_ASSETS),
-    notices:           safeRead('munyaka_notices'),
-    userSettings:      safeRead(STORAGE_KEYS.USER_SETTINGS),
-    subscriptions:     safeRead(STORAGE_KEYS.SUBSCRIPTIONS),
-    billingSettings:   safeRead(STORAGE_KEYS.BILLING_SETTINGS),
-  };
-}
-
-/**
- * Download the full database as a JSON file using a browser Blob + anchor trick.
- * Falls back gracefully when Blob download is not supported.
- */
-export function downloadDatabaseBackup(): void {
-  try {
-    const backup = exportAllData();
-    const json = JSON.stringify(backup, null, 2);
-    const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    const date = new Date().toISOString().slice(0, 10);
-    link.download = `munyaka_db_backup_${date}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('[storage] downloadDatabaseBackup failed:', err);
-    throw err;
-  }
-}
-
-export interface ImportResult {
-  success: boolean;
-  keysRestored: string[];
-  errors: string[];
-}
-
-/**
- * Write every key present in a DatabaseBackup object into localStorage.
- * Each key is written independently so a corrupt value for one key does NOT
- * prevent other keys from being restored.
- *
- * Returns a report describing what was restored and any errors encountered.
- */
-export function importAllData(backup: DatabaseBackup): ImportResult {
-  const result: ImportResult = { success: true, keysRestored: [], errors: [] };
-  const ls = getLocalStorage();
-
-  const safeWrite = (key: string, value: unknown, label: string): void => {
-    if (value === undefined) return;
-    try {
-      if (ls) {
-        ls.setItem(key, JSON.stringify(value));
-        result.keysRestored.push(label);
-      }
-    } catch (err) {
-      result.errors.push(`Failed to write "${label}" (${key}): ${err instanceof Error ? err.message : String(err)}`);
-      result.success = false;
-    }
-  };
-
-  if (backup.students)         safeWrite(STORAGE_KEYS.STUDENTS,         backup.students,         'Students');
-  if (backup.students)         safeWrite(STORAGE_KEYS.STUDENTS_LEGACY,   backup.students,         'Students (legacy)');
-  if (backup.staff)           safeWrite(STORAGE_KEYS.STAFF,             backup.staff,            'Staff');
-  if (backup.staffPrereg)     safeWrite(STORAGE_KEYS.STAFF_PREREG,     backup.staffPrereg,      'Staff Pre-registration');
-  if (backup.fees)            safeWrite(STORAGE_KEYS.PAYMENT_RECORDS,   backup.fees,             'Fee Records');
-  if (backup.feeStructures)   safeWrite('munyaka_fee_structures',      backup.feeStructures,    'Fee Structures');
-  if (backup.transactions)    safeWrite(STORAGE_KEYS.TRANSACTIONS,      backup.transactions,     'Transactions');
-  if (backup.attendance)      safeWrite(STORAGE_KEYS.ATTENDANCE,        backup.attendance,       'Attendance');
-  if (backup.grades)          safeWrite(STORAGE_KEYS.GRADES,            backup.grades,           'Grades / Classes');
-  if (backup.examTypes)       safeWrite(STORAGE_KEYS.EXAM_TYPES,        backup.examTypes,        'Exam Types');
-  if (backup.learningAreas)   safeWrite(STORAGE_KEYS.CBC_LEARNING_AREAS,backup.learningAreas,    'Learning Areas');
-  if (backup.assessmentScores)safeWrite(STORAGE_KEYS.ASSESSMENT_SCORES, backup.assessmentScores, 'Assessment Scores');
-  if (backup.libraryBooks)     safeWrite(STORAGE_KEYS.LIBRARY_BOOKS,    backup.libraryBooks,     'Library Books');
-  if (backup.ictAssets)       safeWrite(STORAGE_KEYS.ICT_ASSETS,        backup.ictAssets,        'ICT Assets');
-  if (backup.notices)         safeWrite('munyaka_notices',              backup.notices,          'Notices');
-  if (backup.userSettings)    safeWrite(STORAGE_KEYS.USER_SETTINGS,     backup.userSettings,     'System Settings');
-  if (backup.subscriptions)    safeWrite(STORAGE_KEYS.SUBSCRIPTIONS,    backup.subscriptions,    'Subscriptions');
-  if (backup.billingSettings) safeWrite(STORAGE_KEYS.BILLING_SETTINGS,  backup.billingSettings, 'Billing Settings');
-
-  if (result.keysRestored.length > 0) {
-    notifyDataChanged();
-  }
-
-  return result;
-}
-
-/**
- * Parse a raw JSON string into a DatabaseBackup and import it.
- * Used by the file-input handler on the System Configuration page.
- */
-export function parseAndImportBackup(jsonString: string): ImportResult {
-  try {
-    const parsed = JSON.parse(jsonString) as DatabaseBackup;
-    if (!parsed || typeof parsed !== 'object') {
-      return { success: false, keysRestored: [], errors: ['Invalid backup file: root must be a JSON object.'] };
-    }
-    return importAllData(parsed);
-  } catch (err) {
-    return {
-      success: false,
-      keysRestored: [],
-      errors: [`JSON parse error: ${err instanceof Error ? err.message : String(err)}`],
-    };
-  }
 }

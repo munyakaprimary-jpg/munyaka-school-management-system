@@ -44,24 +44,10 @@ export const PortfolioCard: React.FC<PortfolioCardProps> = ({
           onClick={() => onSelect(art)}
         >
           {art.fileUrl && art.type === 'Image' ? (
-                      <img src={art.fileUrl} alt={art.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : art.fileUrl && art.type === 'Video' ? (
-                      // Render a still thumbnail instead of auto-playing the video —
-                      // autoplay-on-load is unreliable on mobile WebViews, blocks
-                      // images from loading with bandwidth contention, and forces
-                      // the user into a player they didn't ask for. The modal
-                      // opens the real SafeVideoPlayer when the user taps "View".
-                      <div className="w-full h-full bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center relative">
-                        <Video size={48} className="text-white/40 group-hover:text-white/60 group-hover:scale-110 transition-all duration-300" />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/30">
-                          <div className="w-12 h-12 rounded-full bg-white/95 flex items-center justify-center text-indigo-600 shadow-lg">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="ml-0.5">
-                              <polygon points="5 3 19 12 5 21 5 3" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                    ) : art.fileUrl && art.type === 'Audio' ? (
+            <img src={art.fileUrl} alt={art.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          ) : art.fileUrl && art.type === 'Video' ? (
+            <video src={art.fileUrl} className="w-full h-full object-cover" />
+          ) : art.fileUrl && art.type === 'Audio' ? (
             <div className="p-4 w-full flex flex-col items-center gap-2">
               <Music size={32} className="text-purple-500 animate-pulse" />
               <audio controls src={art.fileUrl} className="w-11/12 h-8" onClick={(e) => e.stopPropagation()} />

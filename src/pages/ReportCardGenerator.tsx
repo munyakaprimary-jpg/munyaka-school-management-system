@@ -31,7 +31,7 @@ const gradeOrder = [
 ];
 
 const getGradeRank = (gradeName: string) => {
-  const normalized = String(gradeName || '').toLowerCase().trim();
+  const normalized = gradeName.toLowerCase().trim();
   const index = gradeOrder.findIndex((g) => normalized.includes(g));
   return index !== -1 ? index : 999;
 };
@@ -134,7 +134,7 @@ const ReportCardGenerator = () => {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Record Card Generator</h1>

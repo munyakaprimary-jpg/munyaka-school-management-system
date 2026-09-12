@@ -8,7 +8,6 @@ import { Check, X, Clock, Lock, MapPin, AlertCircle, Download, Loader2 } from 'l
 import { useStaffAttendance } from '@/hooks/useStaffAttendance';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { format } from "date-fns";
-import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 interface StaffAttendanceProps {
   staffId: string;
@@ -17,15 +16,15 @@ interface StaffAttendanceProps {
 
 const StaffAttendance = ({ staffId, staffName }: StaffAttendanceProps) => {
   const { location, accuracy, error, isLoading: geoLoading } = useGeolocation();
-  const { personalRecords, loading, selfMarkAttendance } = useStaffAttendance(location);
+  const { attendanceRecords, loading, markAttendance, getAttendanceForDate } = useStaffAttendance(location);
   const [isExporting, setIsExporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   const currentDate = format(new Date(), "yyyy-MM-dd");
-  const attendanceData = personalRecords[currentDate] || {};
+  const attendanceData = getAttendanceForDate(currentDate);
 
-  const handleMarkAttendance = async (session: 'morning' | 'afternoon', status: any) => {
-    const success = await selfMarkAttendance(session, status, currentDate);
+  const handleMarkAttendance = async (session: 'morning' | 'afternoon', status: string) => {
+    const success = await markAttendance(currentDate, session, status);
     if (success) {
       setIsEditing(false);
     }
@@ -209,9 +208,8 @@ const StaffAttendance = ({ staffId, staffName }: StaffAttendanceProps) => {
       {/* Attendance Table */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
         <CardContent className="p-0">
-          <div className="p-2">
-            <DualScrollContainer>
-              <table className="w-full text-sm text-left min-w-[800px]">
+          <div className="relative w-full overflow-auto custom-scrollbar" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #f1f5f9' }}>
+            <table className="w-full text-sm text-left min-w-[800px]">
               <thead className="text-slate-500 border-b bg-slate-50/50">
                 <tr>
                   <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 sticky left-0 bg-slate-50/50 z-10">Staff Details</th>
@@ -230,7 +228,6 @@ const StaffAttendance = ({ staffId, staffName }: StaffAttendanceProps) => {
                 </tr>
               </tbody>
             </table>
-            </DualScrollContainer>
           </div>
         </CardContent>
       </Card>

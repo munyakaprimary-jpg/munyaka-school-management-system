@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableRow } from '@/components/ui/table';
+import { Card, CardContent, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@/components/ui';
 
 type Book = {
   id: string;
@@ -33,31 +31,33 @@ export const BookAllocationTable: React.FC<Props> = ({ books }) => {
     <Card>
       <CardContent>
         <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Title</TableCell>
-              <TableCell>Author</TableCell>
-              <TableCell>Allocated To</TableCell>
-              <TableCell>Action</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {books.map((book) => (
-              <TableRow key={book.id}>
-                <TableCell>{book.title}</TableCell>
-                <TableCell>{book.author}</TableCell>
-                <TableCell>{allocation[book.id] || '—'}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="secondary"
-                    onClick={() => handleAllocate(book.id, 'user1')}
-                  >
-                    Allocate
-                  </Button>
-                </TableCell>
+          <TableContainer>
+            <TableHead>
+              <TableRow>
+                <TableCell>Title</TableCell>
+                <TableCell>Author</TableCell>
+                <TableCell>Allocated To</TableCell>
+                <TableCell>Action</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
+            </TableHead>
+            <TableBody>
+              {books.map((book) => (
+                <TableRow key={book.id}>
+                  <TableCell>{book.title}</TableCell>
+                  <TableCell>{book.author}</TableCell>
+                  <TableCell>{allocation[book.id] || '—'}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleAllocate(book.id, 'user1')}
+                    >
+                      Allocate
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </TableContainer>
         </Table>
       </CardContent>
     </Card>

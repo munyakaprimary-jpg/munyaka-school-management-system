@@ -170,7 +170,7 @@ const Promote = () => {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Success Message */}
       <SuccessMessage visible={showSuccessMessage} />
 
@@ -181,8 +181,8 @@ const Promote = () => {
       <WarningBanner />
 
       {/* Tabs for Preview and History */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-full overflow-x-hidden">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8 flex-wrap">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
           <TabsTrigger value="preview" className="rounded-xl px-8 h-full font-bold text-xs">Promotion Preview</TabsTrigger>
           <TabsTrigger value="history" className="rounded-xl px-8 h-full font-bold text-xs">Promotion History</TabsTrigger>
         </TabsList>

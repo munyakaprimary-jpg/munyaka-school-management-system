@@ -1,36 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
-import { useAuth } from '@/context/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Download, Printer, Save, Loader2, Calendar, CheckCircle2,
+import { 
+  Download, Printer, Save, Loader2, Calendar, CheckCircle2, 
   XCircle, Clock, ShieldCheck, UserCheck, Users, AlertCircle,
-  Search, Sun, Moon, Lock, Unlock, Info,
-  LockKeyhole, ShieldAlert, Shield, BarChart3, TrendingUp,
-  ClipboardList, Eye, Edit3, Layers, Sparkles, Activity,
-  RefreshCw, ChevronLeft, ChevronRight
+  FileDown, Search, Sun, Moon, Lock, Unlock, Info, 
+  LockKeyhole, ShieldAlert, Shield
 } from "lucide-react";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { cn } from "@/lib/utils";
-import { logActivity } from '@/services/activityLog';
-import { useLiveStreamAttendance } from '@/hooks/useLiveStreamAttendance';
-import { useGradesStreamsConfig, useStreamsForGrade } from '@/hooks/useGradesStreams';
-import { getStreamsForGrade } from '@/services/gradesStreamsConfig';
-import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 type AttendanceStatus = 'P' | 'A' | 'L' | 'E'; // Present, Absent, Late, Excused
 type SessionType = 'morning' | 'afternoon';
-type ViewMode = 'marking' | 'oversight';
 
 interface Learner {
-  id: string;
+  id: number;
   name: string;
   assessment: string;
   gender?: 'M' | 'F';
@@ -70,51 +61,6 @@ interface SessionWindow {
   description: string;
 }
 
-const ATTENDANCE_CUTOFF_CONFIG_KEY = 'munyaka_attendance_cutoffs';
-
-interface CutoffConfig {
-  morning: { hour: number; minute: number }; // Default: 8:00 AM
-  afternoon: { hour: number; minute: number }; // Default: 2:00 PM
-  enabled: boolean;
-}
-
-const DEFAULT_CUTOFFS: CutoffConfig = {
-  morning: { hour: 8, minute: 0 },  // 8:00 AM cutoff - register locks after this time
-  afternoon: { hour: 14, minute: 0 }, // 2:00 PM cutoff
-  enabled: true,
-};
-
-const getCutoffConfig = (): CutoffConfig => {
-  if (typeof window === 'undefined') return DEFAULT_CUTOFFS;
-  try {
-    const raw = localStorage.getItem(ATTENDANCE_CUTOFF_CONFIG_KEY);
-    if (!raw) return DEFAULT_CUTOFFS;
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object') return parsed as CutoffConfig;
-    return DEFAULT_CUTOFFS;
-  } catch {
-    return DEFAULT_CUTOFFS;
-  }
-};
-
-const saveCutoffConfig = (config: CutoffConfig): void => {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(ATTENDANCE_CUTOFF_CONFIG_KEY, JSON.stringify(config));
-    notifyDataChanged(ATTENDANCE_CUTOFF_CONFIG_KEY);
-  } catch (e) {
-    console.error('Error saving cutoff config:', e);
-  }
-};
-
-const isPastCutoff = (session: SessionType, now: Date, config: CutoffConfig): boolean => {
-  if (!config.enabled) return false;
-  const cutoff = session === 'morning' ? config.morning : config.afternoon;
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const cutoffMinutes = cutoff.hour * 60 + cutoff.minute;
-  return nowMinutes >= cutoffMinutes;
-};
-
 const SESSION_WINDOWS: Record<SessionType, SessionWindow> = {
   morning: {
     startHour: 6,
@@ -137,7 +83,25 @@ const SESSION_WINDOWS: Record<SessionType, SessionWindow> = {
 const ATTENDANCE_ADMIN_BYPASS_KEY = 'munyaka_attendance_admin_bypass';
 const ATTENDANCE_LOCKS_KEY = 'munyaka_attendance_locks';
 const ATTENDANCE_DEFAULT_PASSWORD = 'munyaka5239';
-const STUDENTS_STORAGE_KEY = 'school_learners_data';
+
+// Mock data — in real implementation, this comes from useStudents() or localStorage
+const MOCK_LEARNERS: Learner[] = [
+  { id: 1, name: "BRIAN KIPTOO", assessment: "MPS/2025/005", gender: "M", grade: "Grade 6", stream: "YELLOW" },
+  { id: 2, name: "MARY ATIENO", assessment: "MPS/2025/012", gender: "F", grade: "Grade 6", stream: "YELLOW" },
+  { id: 3, name: "EMMANUEL MAINA", assessment: "MPS/2025/018", gender: "M", grade: "Grade 6", stream: "YELLOW" },
+  { id: 4, name: "SHEILA CHEPKOECH", assessment: "MPS/2025/023", gender: "F", grade: "Grade 6", stream: "YELLOW" },
+  { id: 5, name: "DAVID MUTUA", assessment: "MPS/2025/031", gender: "M", grade: "Grade 6", stream: "YELLOW" },
+  { id: 6, name: "GRACE WANJIKU", assessment: "MPS/2025/037", gender: "F", grade: "Grade 6", stream: "YELLOW" },
+  { id: 7, name: "JOSEPH KARIUKI", assessment: "MPS/2025/042", gender: "M", grade: "Grade 6", stream: "YELLOW" },
+  { id: 8, name: "FAITH NJERI", assessment: "MPS/2025/048", gender: "F", grade: "Grade 6", stream: "YELLOW" },
+  { id: 9, name: "GEORGE OCHIENG", assessment: "MPS/2025/054", gender: "M", grade: "Grade 6", stream: "YELLOW" },
+  { id: 10, name: "HELEN MORAA", assessment: "MPS/2025/061", gender: "F", grade: "Grade 6", stream: "YELLOW" },
+  { id: 11, name: "SAMUEL KAMAU", assessment: "MPS/2025/068", gender: "M", grade: "Grade 6", stream: "YELLOW" },
+  { id: 12, name: "WINNIE ACHIENG", assessment: "MPS/2025/073", gender: "F", grade: "Grade 6", stream: "YELLOW" },
+  { id: 13, name: "PETER ODHIAMBO", assessment: "MPS/2025/081", gender: "M", grade: "Grade 6", stream: "YELLOW" },
+  { id: 14, name: "JANE MWANGI", assessment: "MPS/2025/089", gender: "F", grade: "Grade 6", stream: "YELLOW" },
+  { id: 15, name: "DAVID MAINA", assessment: "MPS/2025/094", gender: "M", grade: "Grade 6", stream: "YELLOW" },
+];
 
 /**
  * ============================================
@@ -145,8 +109,17 @@ const STUDENTS_STORAGE_KEY = 'school_learners_data';
  * ============================================
  */
 
+/**
+ * Convert a time window into a single number of minutes since midnight
+ * so the windows can be compared in O(1) time.
+ */
 const toMinutes = (hours: number, minutes: number): number => hours * 60 + minutes;
 
+/**
+ * Build a human-readable 12-hour clock label for the system clock,
+ * e.g. "2:34 PM" or "7:05 AM". We render this in the session header
+ * so teachers can see the live time of day alongside the window.
+ */
 const format12h = (date: Date): string => {
   const hours24 = date.getHours();
   const minutes = date.getMinutes();
@@ -156,6 +129,11 @@ const format12h = (date: Date): string => {
   return `${hours12}:${mm} ${ampm}`;
 };
 
+/**
+ * Determine which session — if any — is currently "live" given a
+ * specific Date object. A session is live when the current time-of-day
+ * falls within the session's [start, end] window.
+ */
 const getActiveSession = (date: Date): SessionType | null => {
   const nowMinutes = toMinutes(date.getHours(), date.getMinutes());
   const morning = SESSION_WINDOWS.morning;
@@ -170,9 +148,18 @@ const getActiveSession = (date: Date): SessionType | null => {
   return null;
 };
 
+/**
+ * Compose the per-class/stream/date/session storage key for the lock
+ * state. The session segment is included so the Morning and Afternoon
+ * sessions can be locked/unlocked independently.
+ */
 const buildLockKey = (grade: string, stream: string, date: string, session: SessionType): string =>
   `${grade}__${stream}__${date}__${session}`;
 
+/**
+ * Read the master map of session locks from localStorage. Returns an
+ * empty object on any failure so the rest of the page still renders.
+ */
 const readLocksMap = (): Record<string, SessionLock> => {
   if (typeof window === 'undefined') return {};
   try {
@@ -187,6 +174,11 @@ const readLocksMap = (): Record<string, SessionLock> => {
   }
 };
 
+/**
+ * Persist the full lock map back to localStorage. We write the entire
+ * map at once so a single setter governs all keys and there is no risk
+ * of partial writes leaving a stale entry in the localStorage cache.
+ */
 const writeLocksMap = (next: Record<string, SessionLock>): void => {
   if (typeof window === 'undefined') return;
   try {
@@ -197,6 +189,12 @@ const writeLocksMap = (next: Record<string, SessionLock>): void => {
   }
 };
 
+/**
+ * Format a "locked at" ISO timestamp as a human-readable string like
+ * "Aug 28, 2026 at 8:32 AM". Returns "Just now" for very recent
+ * timestamps, since the auto-lock usually happens seconds before the
+ * teacher looks at the page.
+ */
 const formatLockedAt = (iso: string | undefined): string => {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -212,90 +210,37 @@ const formatLockedAt = (iso: string | undefined): string => {
   });
 };
 
-const formatCutoffTime = (cutoff: { hour: number; minute: number }): string => {
-  const ampm = cutoff.hour >= 12 ? 'PM' : 'AM';
-  const hour12 = cutoff.hour % 12 || 12;
-  const min = String(cutoff.minute).padStart(2, '0');
-  return `${hour12}:${min} ${ampm}`;
-};
-
 const Attendance = () => {
-  // ── Auth & Role ────────────────────────────────────────────
-  const { user } = useAuth();
-  const userRole = user?.role ?? '';
-  const userId = user?.id ?? '';
-  const isAdminRole = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'super_admin' || userRole.toLowerCase() === 'owner';
-  const isTeacherRole = userRole.toLowerCase() === 'teacher';
-
-  // ============================================
-  // Role-adaptive view state
-  // ============================================
-  // Admins default to the oversight dashboard (roll call completion
-  // metrics, class-wide summaries, aggregate stats). Teachers default
-  // directly to the interactive marking register for their assigned
-  // streams. Admins can flip into the marking view via the prominent
-  // "Manual Register Override" / "Edit Attendance" button.
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (isTeacherRole) return 'marking';
-    return 'oversight';
-  });
-
-  // Filters state — used in the marking register view
+  // Filters state
   const [filters, setFilters] = useState<Filters>({
-    date: (() => {
-      const t = new Date();
-      return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-    })(),
+    date: '2026-08-28',
     grade: 'Grade 6',
     stream: 'YELLOW',
   });
 
-  // ── Oversight view filters (admin roll call dashboard) ──────
-  const [ovGrade, setOvGrade] = useState<string>('all');
-  const [ovStream, setOvStream] = useState<string>('all');
-  const [ovSearch, setOvSearch] = useState<string>('');
-
-  // ── Historical date selection for oversight view ──────────────
-  const getTodayDateStr = (): string => {
-    const t = new Date();
-    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-  };
-  const [ovDate, setOvDate] = useState<string>(getTodayDateStr);
-
-  // Whether the selected oversight date is today
-  const isOversightToday = useMemo(() => {
-    return ovDate === getTodayDateStr();
-  }, [ovDate]);
-
-  // Navigate one day back
-  const ovGoToPrevDay = () => {
-    const d = new Date(ovDate + 'T00:00:00');
-    d.setDate(d.getDate() - 1);
-    setOvDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-  };
-
-  // Navigate one day forward
-  const ovGoToNextDay = () => {
-    const d = new Date(ovDate + 'T00:00:00');
-    d.setDate(d.getDate() + 1);
-    setOvDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-  };
-
-  // Jump back to today
-  const ovGoToToday = () => setOvDate(getTodayDateStr());
-
   // Attendance state — keyed by student id, then session type
-  const [attendance, setAttendance] = useState<Record<string, StudentAttendance>>({});
+  const [attendance, setAttendance] = useState<Record<number, StudentAttendance>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // ============================================
   // Per-session lock state
+  // ============================================
+  // `locksMap` is the master persisted map of
+  // {compositeKey (grade__stream__date__session) -> SessionLock}.
+  // The morning and afternoon sessions each have their own lock
+  // entry, so they can be locked and unlocked independently.
   const [locksMap, setLocksMap] = useState<Record<string, SessionLock>>(() => readLocksMap());
 
+  // Whenever the lock map changes, mirror it to localStorage so the
+  // lock state survives a page refresh.
   useEffect(() => {
     writeLocksMap(locksMap);
   }, [locksMap]);
 
+  // Compute the current session locks by looking up the composite keys
+  // in the master map. If the entry doesn't exist the session is
+  // considered unlocked.
   const morningLockKey = buildLockKey(filters.grade, filters.stream, filters.date, 'morning');
   const afternoonLockKey = buildLockKey(filters.grade, filters.stream, filters.date, 'afternoon');
 
@@ -310,7 +255,9 @@ const Attendance = () => {
   const isMorningLocked = morningLock.locked;
   const isAfternoonLocked = afternoonLock.locked;
 
+  // ============================================
   // Lock / unlock confirmation modal state
+  // ============================================
   const [lockAuthOpen, setLockAuthOpen] = useState<boolean>(false);
   const [lockAction, setLockAction] = useState<'lock' | 'unlock' | null>(null);
   const [lockTargetSession, setLockTargetSession] = useState<SessionType | null>(null);
@@ -319,18 +266,16 @@ const Attendance = () => {
   const [isAdminAuthVerifying, setIsAdminAuthVerifying] = useState<boolean>(false);
   const [lockReason, setLockReason] = useState<string>('');
 
+  // ============================================
   // Time-window state
+  // ============================================
+  // `currentTime` ticks every minute so the live clock and active-session
+  // indicator stay in sync with the wall clock.
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
 
-  // Cutoff configuration state
-  const [cutoffConfig, setCutoffConfig] = useState<CutoffConfig>(() => getCutoffConfig());
-  const [showCutoffSettings, setShowCutoffSettings] = useState(false);
-
-  // Derive whether a session is past its cutoff time
-  const isMorningPastCutoff = useMemo(() => isPastCutoff('morning', currentTime, cutoffConfig), [currentTime, cutoffConfig]);
-  const isAfternoonPastCutoff = useMemo(() => isPastCutoff('afternoon', currentTime, cutoffConfig), [currentTime, cutoffConfig]);
-
-  // Admin override persisted to localStorage so it survives page reloads.
+  // Local override that lets a teacher (or admin) "open" a session that
+  // would otherwise be locked outside its time window. Persisted to
+  // localStorage so the override survives page reloads.
   const [adminBypass, setAdminBypass] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem(ATTENDANCE_ADMIN_BYPASS_KEY) === 'true';
@@ -338,33 +283,26 @@ const Attendance = () => {
 
   useEffect(() => {
     const id = setInterval(() => setCurrentTime(new Date()), 60_000);
+    // Run an immediate tick on mount to avoid waiting a minute for the
+    // first render to reflect the right time.
     setCurrentTime(new Date());
     return () => clearInterval(id);
   }, []);
 
-  // RBAC guard: if a non-admin (teacher/staff) is currently viewing
-  // the page, force adminBypass off and prevent it from being toggled
-  // on. This ensures stale localStorage state from a previous admin
-  // session can never elevate a teacher's permissions.
-  useEffect(() => {
-    if (!isAdminRole && adminBypass) {
-      setAdminBypass(false);
-    }
-  }, [isAdminRole, adminBypass]);
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!isAdminRole) {
-      localStorage.setItem(ATTENDANCE_ADMIN_BYPASS_KEY, 'false');
-      return;
-    }
     localStorage.setItem(ATTENDANCE_ADMIN_BYPASS_KEY, adminBypass ? 'true' : 'false');
     notifyDataChanged('munyaka_attendance_admin_bypass');
-  }, [adminBypass, isAdminRole]);
+  }, [adminBypass]);
 
-  // Unified file-download state for CSV export
+  // ====== Unified file-download state for CSV export ======
   const csvExport = useFileDownload();
 
+  /**
+   * Selected-date helper: turn the YYYY-MM-DD string from the date
+   * input into a Date object that represents that day in the local
+   * timezone (avoiding UTC rollover bugs).
+   */
   const selectedDateObj = useMemo(() => {
     const [y, m, d] = filters.date.split('-').map(Number);
     if (!y || !m || !d) return new Date();
@@ -380,219 +318,35 @@ const Attendance = () => {
     );
   }, [selectedDateObj]);
 
+  /**
+   * ============================================
+   * Per-session accessibility logic
+   * ============================================
+   *
+   * A session is "editable" when ALL of the following are true:
+   *   1. The session is NOT locked.
+   *   2. Either the admin override is on, OR
+   *      the selected date is today AND the live clock falls inside
+   *      the session's time window.
+   *
+   * For dates in the past, the session is "read-only" unless the
+   * admin override is enabled. For dates in the future, the session
+   * is also locked. The session lock always wins — even if admin
+   * override is on, a locked session cannot be edited (but the
+   * admin can unlock it from the "Unlock Session" button).
+   */
   const isSessionEditable = (session: SessionType): boolean => {
     const sessionLock = session === 'morning' ? morningLock : afternoonLock;
-    // Explicit admin lock always blocks editing (unless admin bypass is on)
     if (sessionLock.locked) return false;
-    // Admin bypass can override both time windows and cutoff restrictions
     if (adminBypass) return true;
-    // Only allow editing for today's date
     if (!isSelectedDateToday) return false;
-    // Check if current time is within the active session window
-    if (getActiveSession(currentTime) !== session) return false;
-    // Check if past the cutoff time for this session
-    const isPastCutoff = session === 'morning' ? isMorningPastCutoff : isAfternoonPastCutoff;
-    if (isPastCutoff && !adminBypass) return false;
-    return true;
+    return getActiveSession(currentTime) === session;
   };
 
   const isMorningEditable = isSessionEditable('morning');
   const isAfternoonEditable = isSessionEditable('afternoon');
 
-  // Determine lock reason for display purposes
-  const getMorningLockReason = (): string | null => {
-    if (morningLock.locked) return morningLock.reason || 'Manually sealed';
-    if (!isSelectedDateToday) return 'Viewing past date';
-    if (!getActiveSession(currentTime) && !adminBypass) return 'Morning session not active';
-    if (isMorningPastCutoff && !adminBypass) return `Cutoff time (${formatCutoffTime(cutoffConfig.morning)}) exceeded`;
-    return null;
-  };
-
-  const getAfternoonLockReason = (): string | null => {
-    if (afternoonLock.locked) return afternoonLock.reason || 'Manually sealed';
-    if (!isSelectedDateToday) return 'Viewing past date';
-    if (!getActiveSession(currentTime) && !adminBypass) return 'Afternoon session not active';
-    if (isAfternoonPastCutoff && !adminBypass) return `Cutoff time (${formatCutoffTime(cutoffConfig.afternoon)}) exceeded`;
-    return null;
-  };
-
   const activeSession = isSelectedDateToday ? getActiveSession(currentTime) : null;
-
-  // ── Live student records ────────────────────────────────────────────────
-    const [liveStudents, setLiveStudents] = useState<Learner[]>([]);
-    const [allStudents, setAllStudents] = useState<Learner[]>([]);
-
-  // Normalize grade comparison: handles case differences and extracts numeric portion
-  const normalizeGrade = (grade: string | null | undefined): string => {
-    if (!grade) return '';
-    // Extract numeric portion (e.g., "Grade 6" -> "6", "grade 6" -> "6")
-    const numericMatch = String(grade).replace(/\D/g, '');
-    return numericMatch || String(grade).toLowerCase().trim();
-  };
-
-  // Normalize stream comparison: case-insensitive, trimmed
-  const normalizeStream = (stream: string | null | undefined): string => {
-    return String(stream || '').toLowerCase().trim();
-  };
-
-  // Helper to match grade with flexible comparison
-  const matchGrade = (studentGrade: string | undefined, selectedGrade: string): boolean => {
-    if (!studentGrade && !selectedGrade) return true;
-    if (!studentGrade || !selectedGrade) return false;
-    const normStudent = normalizeGrade(studentGrade);
-    const normSelected = normalizeGrade(selectedGrade);
-    // Direct lowercase match
-    if (normStudent === normSelected) return true;
-    // Numeric-only match (e.g., "6" matches "Grade 6")
-    if (normStudent === normSelected && /^\d+$/.test(normStudent)) return true;
-    // Check if numeric portions match
-    const studentNumeric = normalizeGrade(studentGrade);
-    const selectedNumeric = normalizeGrade(selectedGrade);
-    if (studentNumeric && selectedNumeric && studentNumeric === selectedNumeric) return true;
-    return false;
-  };
-
-  // Helper to match stream with case-insensitive comparison
-  const matchStream = (studentStream: string | undefined, selectedStream: string): boolean => {
-    if (!studentStream && !selectedStream) return true;
-    if (!studentStream || !selectedStream) return false;
-    return normalizeStream(studentStream) === normalizeStream(selectedStream);
-  };
-
-  const loadLiveStudents = useCallback(() => {
-    // Define possible storage keys for offline/local storage fallback
-    const storageKeys = [
-      'school_learners_data',
-      'students',
-      'learners',
-      'pupils',
-      'school_students',
-      'registered_students',
-    ];
-
-    try {
-      let raw: string | null = null;
-      let parsedData: Array<{
-        id: string;
-        name?: string;
-        grade?: string;
-        stream?: string;
-        class?: string; // Alternative to grade
-        status?: string;
-        admNo?: string;
-        gender?: string;
-      }> | null = null;
-
-      // Try each storage key until we find data
-      for (const key of storageKeys) {
-        try {
-          const data = localStorage.getItem(key);
-          if (data) {
-            const parsed = JSON.parse(data);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              raw = data;
-              parsedData = parsed;
-              break;
-            }
-          }
-        } catch {
-          // Continue to next key if parsing fails
-          continue;
-        }
-      }
-
-      if (!parsedData) {
-              setLiveStudents([]);
-              setAllStudents([]);
-              return;
-            }
-      
-            // Normalize all students from storage for downstream use
-            const normalized: Learner[] = parsedData
-              .filter(s => !!s)
-              .map(s => ({
-                id: String(s.id),
-                name: s.name || 'Unknown',
-                assessment: s.admNo || s.id || '',
-                grade: s.grade || s.class || '',
-                stream: s.stream || '',
-                gender: (s.gender || 'M') as 'M' | 'F',
-              }));
-      
-            setAllStudents(normalized);
-      
-            // Filter to active students matching the selected grade+stream
-            // Using case-insensitive and normalized comparison
-            const filtered = parsedData
-              .filter(s => {
-                if (!s) return false;
-                // Skip inactive students
-                if (s.status && s.status !== 'Active' && s.status !== 'active') return false;
-                // Match grade (check both grade and class fields)
-                const studentGrade = s.grade || s.class || '';
-                if (!matchGrade(studentGrade, filters.grade)) return false;
-                // Match stream with case-insensitive comparison
-                if (!matchStream(s.stream, filters.stream)) return false;
-                return true;
-              })
-              .map(s => ({
-                id: String(s.id),
-                name: s.name || 'Unknown',
-                assessment: s.admNo || s.id || '',
-                grade: s.grade || s.class || '',
-                stream: s.stream || '',
-                gender: (s.gender || 'M') as 'M' | 'F',
-              }));
-            setLiveStudents(filtered);
-          } catch (e) {
-            console.error('[Attendance] Error loading live students:', e);
-            setLiveStudents([]);
-            setAllStudents([]);
-          }
-        }, [filters.grade, filters.stream]);
-
-  useEffect(() => {
-    loadLiveStudents();
-    const onStorage = (e: StorageEvent) => {
-      const storageKeys = [
-        'school_learners_data',
-        'students',
-        'learners',
-        'pupils',
-        'school_students',
-        'registered_students',
-      ];
-      if (e.key && storageKeys.includes(e.key)) loadLiveStudents();
-    };
-    const onCustom = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      const storageKeys = [
-        'school_learners_data',
-        'students',
-        'learners',
-        'pupils',
-        'school_students',
-        'registered_students',
-      ];
-      if (detail?.key && storageKeys.includes(detail.key)) loadLiveStudents();
-    };
-    window.addEventListener('storage', onStorage);
-    window.addEventListener('munyaka:data-changed', onCustom as EventListener);
-    const interval = window.setInterval(loadLiveStudents, 5000);
-    return () => {
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener('munyaka:data-changed', onCustom as EventListener);
-      window.clearInterval(interval);
-    };
-  }, [loadLiveStudents]);
-
-  // ── Live stream attendance summaries (admin oversight) ─────────────────
-  const liveStreamData = useLiveStreamAttendance(
-    ovDate,
-    ovGrade,
-    ovStream,
-    ovSearch,
-  );
 
   // Load attendance from localStorage on mount and when filters change
   useEffect(() => {
@@ -602,7 +356,7 @@ const Attendance = () => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (typeof parsed === 'object' && parsed !== null) {
-          setAttendance(parsed as Record<string, StudentAttendance>);
+          setAttendance(parsed as Record<number, StudentAttendance>);
         } else {
           setAttendance({});
         }
@@ -615,60 +369,22 @@ const Attendance = () => {
     }
   }, [filters.grade, filters.stream, filters.date]);
 
-  // ============================================
-    // ============================================
-    // Dynamic stream options — sourced from the GradesStreamsConfig
-    // and filtered to only show streams assigned to the selected grade.
-    // ============================================
-  
-    // Read the centralized grades/streams configuration from localStorage
-    const gradesConfig = useGradesStreamsConfig();
-  
-    // Get grade-specific streams; if no grade is selected, fall back to all configured streams
-    const gradeSpecificStreams = useMemo(() => {
-      if (!filters.grade || filters.grade === 'all') {
-        // No grade selected — return all unique streams from the config
-        return gradesConfig.streams.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-      }
-      return getStreamsForGrade(filters.grade, gradesConfig);
-    }, [filters.grade, gradesConfig]);
-  
-    // Also gather any streams that actually appear in the student roster for the selected grade
-    const rosterStreams = useMemo(() => {
-      return Array.from(
-        new Set(
-          allStudents
-            .filter(s => matchGrade(s.grade, filters.grade))
-            .map(s => String(s.stream || '').trim())
-            .filter(Boolean)
-        )
-      ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    }, [allStudents, filters.grade]);
-  
-    // Merge configured streams with roster-derived streams, then add "All Streams" as default
-    const availableStreams = useMemo(() => {
-      const merged = Array.from(new Set([...gradeSpecificStreams, ...rosterStreams]));
-      return merged;
-    }, [gradeSpecificStreams, rosterStreams]);
-  
-    // Whether the Stream dropdown should be disabled (no grade selected)
-    const isStreamDisabled = !filters.grade || filters.grade === 'all';
-  
-    // Reset the Stream selection back to "All Streams" whenever the Grade changes
-    useEffect(() => {
-      // Always reset to "All Streams" (empty string means "all") when grade changes
-      setFilters(prev => ({ ...prev, stream: '' }));
-    }, [filters.grade]);
-  
-    const filteredLearners = useMemo(() => {
-      if (!String(searchTerm || '').trim()) return liveStudents;
-      const term = searchTerm.toLowerCase();
-      return liveStudents.filter(
-        s => s.name.toLowerCase().includes(term) ||
-             s.assessment.toLowerCase().includes(term)
-      );
-    }, [liveStudents, searchTerm]);
+  // Filtered students by search
+  const filteredLearners = useMemo(() => {
+    if (!searchTerm.trim()) return MOCK_LEARNERS;
+    const term = searchTerm.toLowerCase();
+    return MOCK_LEARNERS.filter(
+      s => s.name.toLowerCase().includes(term) || 
+           s.assessment.toLowerCase().includes(term)
+    );
+  }, [searchTerm]);
 
+  /**
+   * Per-session "all learners fully marked" check. Returns true when
+   * every filtered learner has a non-empty status for the given
+   * session — this is the trigger for auto-locking when the teacher
+   * saves attendance with no gaps left in the register.
+   */
   const isSessionFullyMarked = (session: SessionType): boolean => {
     if (filteredLearners.length === 0) return false;
     return filteredLearners.every(s => {
@@ -704,6 +420,7 @@ const Attendance = () => {
       if (record.afternoon?.status === 'E') excusedAfternoon++;
     });
 
+    // Combined totals
     const present = presentMorning + presentAfternoon;
     const absent = absentMorning + absentAfternoon;
     const late = lateMorning + lateAfternoon;
@@ -711,12 +428,12 @@ const Attendance = () => {
     const totalMarks = present + absent + late + excused;
     const rate = totalMarks > 0 ? Math.round((present / totalMarks) * 100) : 0;
 
-    return {
-      total,
-      present,
-      absent,
-      late,
-      excused,
+    return { 
+      total, 
+      present, 
+      absent, 
+      late, 
+      excused, 
       rate,
       presentMorning,
       absentMorning,
@@ -730,70 +447,14 @@ const Attendance = () => {
   }, [filteredLearners, attendance]);
 
   // ============================================
-  // Aggregate oversight metrics (admin only) — derived from LIVE data
-  // ============================================
-  // `liveStreamData` is provided by useLiveStreamAttendance() which reads
-  // directly from localStorage. It returns:
-  //   - streams: the filtered list of StreamAttendanceRecord
-  //   - totalLearners, streamsTotal, morningCompletedStreams,
-  //     afternoonCompletedStreams, fullyCompletedStreams, averageRate
-  const filteredStreamSummaries = liveStreamData.streams;
-  const oversightMetrics = {
-    totalLearners: liveStreamData.totalLearners,
-    streamsTotal: liveStreamData.streamsTotal,
-    morningCompletedStreams: liveStreamData.morningCompletedStreams,
-    afternoonCompletedStreams: liveStreamData.afternoonCompletedStreams,
-    fullyCompletedStreams: liveStreamData.fullyCompletedStreams,
-    averageRate: liveStreamData.averageRate,
-  };
-
-  // ── Dynamic section title & subtitle for the oversight view ────────────
-  const selectedGradeLabel = ovGrade !== 'all' ? ovGrade : null;
-  const selectedStreamLabel = ovStream !== 'all' ? ovStream : null;
-
-  const sectionTitle = (() => {
-    if (selectedGradeLabel && selectedStreamLabel) {
-      return `Roll Call Completion — ${selectedGradeLabel} ${selectedStreamLabel}`;
-    }
-    if (selectedGradeLabel) {
-      return `Roll Call Completion — ${selectedGradeLabel} (All Streams)`;
-    }
-    if (selectedStreamLabel) {
-      return `Roll Call Completion — All ${selectedStreamLabel} Streams`;
-    }
-    return 'Roll Call Completion — All Streams';
-  })();
-
-  const sectionSubtitle = (() => {
-    const dateFormatted = new Date(ovDate + 'T00:00:00').toLocaleDateString(undefined, {
-      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-    });
-    const isHistorical = !isOversightToday;
-    if (isHistorical) {
-      if (selectedGradeLabel && selectedStreamLabel) {
-        return `Historical view of ${selectedGradeLabel} ${selectedStreamLabel} attendance submissions for ${dateFormatted}.`;
-      }
-      if (selectedGradeLabel) {
-        return `Historical view of ${selectedGradeLabel} attendance submissions for ${dateFormatted}.`;
-      }
-      if (selectedStreamLabel) {
-        return `Historical view of all ${selectedStreamLabel} streams across all grades for ${dateFormatted}.`;
-      }
-      return `Historical view of morning and afternoon attendance submissions for ${dateFormatted}.`;
-    }
-    if (selectedGradeLabel && selectedStreamLabel) {
-      return `Live overview for ${selectedGradeLabel} ${selectedStreamLabel} attendance submissions for ${dateFormatted}.`;
-    }
-    if (selectedGradeLabel) {
-      return `Live overview for ${selectedGradeLabel} attendance submissions for ${dateFormatted}.`;
-    }
-    if (selectedStreamLabel) {
-      return `Live overview for all ${selectedStreamLabel} streams across all grades — ${dateFormatted}.`;
-    }
-    return `Live overview of morning and afternoon attendance submissions across every class — ${dateFormatted}.`;
-  })();
-
   // Per-session lock handlers
+  // ============================================
+
+  /**
+   * Open the admin auth modal in either "lock" or "unlock" mode for
+   * a specific session. Clearing the form state here guarantees a
+   * fresh modal every time.
+   */
   const openLockAuthModal = (action: 'lock' | 'unlock', session: SessionType) => {
     setLockAction(action);
     setLockTargetSession(session);
@@ -803,6 +464,10 @@ const Attendance = () => {
     setLockAuthOpen(true);
   };
 
+  /**
+   * Close the auth modal and wipe any sensitive fields from state so
+   * the password doesn't linger in memory after the modal closes.
+   */
   const closeLockAuthModal = () => {
     setLockAuthOpen(false);
     setAdminAuthPassword('');
@@ -813,99 +478,28 @@ const Attendance = () => {
     setLockTargetSession(null);
   };
 
-  // Helper to build a lock object
-  const buildLockObject = (opts: { reason: string }): SessionLock => ({
-    locked: true,
-    lockedAt: new Date().toISOString(),
-    lockedBy: isAdminRole ? 'Administrator' : 'Class Teacher',
-    reason: String(opts?.reason || '').trim() || 'Auto-locked after saving attendance',
-  });
-
-  // Lock a single stream for a given session and date
-  const lockStreamSession = (grade: string, stream: string, date: string, session: SessionType, lock: SessionLock) => {
-    const streamLockKey = `munyaka_attendance_lock_${grade}_${stream}_${date}_${session}`;
-    localStorage.setItem(streamLockKey, JSON.stringify(lock));
-    notifyDataChanged(streamLockKey);
-  };
-
-  // Unlock a single stream for a given session and date
-  const unlockStreamSession = (grade: string, stream: string, date: string, session: SessionType) => {
-    const streamLockKey = `munyaka_attendance_lock_${grade}_${stream}_${date}_${session}`;
-    localStorage.removeItem(streamLockKey);
-    notifyDataChanged(streamLockKey);
-  };
-
-  // Check if "All Grades" is selected
-  const isAllGrades = !filters.grade || filters.grade === 'all';
-  // Check if "All Streams" is selected
-  const isAllStreams = !filters.stream;
-
-  // Lock/unlock all streams under the selected grade (for "All Streams" scope)
-  const applyLockToAllStreams = (session: SessionType, lock: SessionLock) => {
-    const grades = isAllGrades ? gradesConfig.grades : [filters.grade];
-    let totalLocked = 0;
-    
-    grades.forEach(grade => {
-      const gradeStreams = getStreamsForGrade(grade, gradesConfig);
-      const streamsToLock = isAllStreams ? gradeStreams : [filters.stream];
-      
-      streamsToLock.forEach(stream => {
-        if (stream) {
-          lockStreamSession(grade, stream, filters.date, session, lock);
-          totalLocked++;
-        }
-      });
-    });
-
-    // Also update in-memory locks map for current stream
-    const targetKey = session === 'morning' ? morningLockKey : afternoonLockKey;
-    setLocksMap(prev => ({ ...prev, [targetKey]: lock }));
-    
-    return totalLocked;
-  };
-
-  const applyUnlockToAllStreams = (session: SessionType) => {
-    const grades = isAllGrades ? gradesConfig.grades : [filters.grade];
-    let totalUnlocked = 0;
-    
-    grades.forEach(grade => {
-      const gradeStreams = getStreamsForGrade(grade, gradesConfig);
-      const streamsToUnlock = isAllStreams ? gradeStreams : [filters.stream];
-      
-      streamsToUnlock.forEach(stream => {
-        if (stream) {
-          unlockStreamSession(grade, stream, filters.date, session);
-          totalUnlocked++;
-        }
-      });
-    });
-
-    // Also update in-memory locks map for current stream
-    const targetKey = session === 'morning' ? morningLockKey : afternoonLockKey;
-    setLocksMap(prev => {
-      const updated = { ...prev };
-      delete updated[targetKey];
-      return updated;
-    });
-    
-    return totalUnlocked;
-  };
-
+  /**
+   * Build a `SessionLock` for the given session, persist it to the
+   * master map, and return the lock object so the caller can show
+   * the locked-at timestamp in a toast.
+   */
   const buildAndPersistLock = (session: SessionType, opts: { reason: string }): SessionLock => {
-    const lock = buildLockObject(opts);
-    const isAllStreams = !filters.stream;
-    
-    if (isAllStreams && availableStreams.length > 0) {
-      // Apply lock to all streams under the selected grade
-      applyLockToAllStreams(session, lock);
-    } else {
-      // Single stream lock (current behavior)
-      const targetKey = session === 'morning' ? morningLockKey : afternoonLockKey;
-      setLocksMap(prev => ({ ...prev, [targetKey]: lock }));
-    }
-    return lock;
+    const next: SessionLock = {
+      locked: true,
+      lockedAt: new Date().toISOString(),
+      lockedBy: 'Class Teacher',
+      reason: opts.reason.trim() || 'Auto-locked after saving attendance',
+    };
+    const targetKey = session === 'morning' ? morningLockKey : afternoonLockKey;
+    setLocksMap(prev => ({ ...prev, [targetKey]: next }));
+    return next;
   };
 
+  /**
+   * Apply a session lock directly (bypassing the admin password
+   * modal). Used internally by the auto-lock path triggered when
+   * the teacher saves attendance with a fully-marked register.
+   */
   const applySessionLock = (session: SessionType) => {
     const lock = buildAndPersistLock(session, { reason: 'Auto-locked after saving attendance' });
     const sessionLabel = SESSION_WINDOWS[session].label;
@@ -914,9 +508,18 @@ const Attendance = () => {
     );
   };
 
+  /**
+   * Verify the supplied admin password against the value in
+   * `localStorage.munyaka_admin_pass` (with a hardcoded default
+   * fallback) and then either lock or unlock the targeted session.
+   *
+   * Locking persists a `SessionLock` with the current timestamp and
+   * an optional reason string. Unlocking simply clears the lock
+   * entry from the master map.
+   */
   const handleConfirmLockAction = async () => {
     if (!lockAction || !lockTargetSession) return;
-    if (!String(adminAuthPassword || '').trim()) {
+    if (!adminAuthPassword.trim()) {
       setAdminAuthError('Please enter the admin password to continue.');
       return;
     }
@@ -924,6 +527,8 @@ const Attendance = () => {
     setIsAdminAuthVerifying(true);
     setAdminAuthError('');
 
+    // Simulate a quick auth round-trip so the spinner is visible
+    // even when the password check is instant.
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const storedPass = (typeof window !== 'undefined'
@@ -936,41 +541,21 @@ const Attendance = () => {
       return;
     }
 
+    const targetLockKey = lockTargetSession === 'morning' ? morningLockKey : afternoonLockKey;
     const sessionLabel = SESSION_WINDOWS[lockTargetSession].label;
-    const isAllStreams = !filters.stream;
 
     if (lockAction === 'lock') {
-      if (isAllStreams && availableStreams.length > 0) {
-        // Lock ALL streams under the selected grade
-        const lock = buildLockObject({ reason: lockReason });
-        applyLockToAllStreams(lockTargetSession, lock);
-        showSuccess(
-          `${sessionLabel} session locked across ${availableStreams.length} stream${availableStreams.length > 1 ? 's' : ''} (${availableStreams.slice(0, 3).join(', ')}${availableStreams.length > 3 ? '...' : ''}) in ${filters.grade} at ${formatLockedAt(lock.lockedAt)}.`
-        );
-      } else {
-        // Single stream lock (current behavior)
-        const lock = buildLockObject({ reason: lockReason });
-        const targetKey = lockTargetSession === 'morning' ? morningLockKey : afternoonLockKey;
-        setLocksMap(prev => ({ ...prev, [targetKey]: lock }));
-        showSuccess(`${sessionLabel} session locked at ${formatLockedAt(lock.lockedAt)}.`);
-      }
+      const lock = buildAndPersistLock(lockTargetSession, { reason: lockReason });
+      showSuccess(
+        `${sessionLabel} session locked at ${formatLockedAt(lock.lockedAt)}.`
+      );
     } else {
-      if (isAllStreams && availableStreams.length > 0) {
-        // Unlock ALL streams under the selected grade
-        applyUnlockToAllStreams(lockTargetSession);
-        showSuccess(
-          `${sessionLabel} session unlocked across ${availableStreams.length} stream${availableStreams.length > 1 ? 's' : ''} (${availableStreams.slice(0, 3).join(', ')}${availableStreams.length > 3 ? '...' : ''}) in ${filters.grade}. You may make corrections now.`
-        );
-      } else {
-        // Single stream unlock
-        const targetKey = lockTargetSession === 'morning' ? morningLockKey : afternoonLockKey;
-        setLocksMap(prev => {
-          const updated = { ...prev };
-          delete updated[targetKey];
-          return updated;
-        });
-        showSuccess(`${sessionLabel} session unlocked. You may make corrections now.`);
-      }
+      setLocksMap(prev => {
+        const updated = { ...prev };
+        delete updated[targetLockKey];
+        return updated;
+      });
+      showSuccess(`${sessionLabel} session unlocked. You may make corrections now.`);
     }
 
     setIsAdminAuthVerifying(false);
@@ -978,7 +563,8 @@ const Attendance = () => {
   };
 
   // Toggle individual student session status
-  const setSessionStatus = (studentId: string, session: SessionType, status: AttendanceStatus) => {
+  const setSessionStatus = (studentId: number, session: SessionType, status: AttendanceStatus) => {
+    // Guard: silently ignore the click if the targeted session is locked.
     const sessionLock = session === 'morning' ? morningLock : afternoonLock;
     if (sessionLock.locked) {
       showError(
@@ -986,6 +572,7 @@ const Attendance = () => {
       );
       return;
     }
+    // Guard: silently ignore the click if the session is time-locked.
     if (!isSessionEditable(session)) {
       showError(
         `The ${SESSION_WINDOWS[session].label} session is outside its recording window. Enable admin override to edit past or future sessions.`
@@ -996,7 +583,8 @@ const Attendance = () => {
     setAttendance(prev => {
       const currentRecord = prev[studentId] || {};
       const currentSession = currentRecord[session];
-
+      
+      // Click the active button again to deselect (clear status)
       if (currentSession?.status === status) {
         const { [session]: _, ...rest } = currentRecord;
         const updated = { ...prev };
@@ -1033,93 +621,30 @@ const Attendance = () => {
       return;
     }
 
+    const bulk: Record<number, StudentAttendance> = {};
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    filteredLearners.forEach(s => {
+      const existing = attendance[s.id] || {};
+      bulk[s.id] = {
+        ...existing,
+        [session]: { status, time: timestamp }
+      };
+    });
+    setAttendance(prev => ({ ...prev, ...bulk }));
     const labels = { P: 'Present', A: 'Absent', L: 'Late', E: 'Excused' } as const;
     const sessionLabel = session === 'morning' ? 'morning' : 'afternoon';
-    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-    // Check if "All Streams" is selected (empty string means "all")
-    const isAllStreams = !filters.stream;
-
-    if (isAllStreams && availableStreams.length > 0) {
-      // Apply to ALL streams under the selected grade
-      let totalMarked = 0;
-      const streamsApplied: string[] = [];
-
-      availableStreams.forEach(stream => {
-        // Get students for this specific stream
-        const streamStudents = allStudents.filter(s => {
-          if (!matchGrade(s.grade, filters.grade)) return false;
-          if (!matchStream(s.stream, stream)) return false;
-          return true;
-        });
-
-        if (streamStudents.length === 0) return;
-
-        // Create attendance entries for this stream
-        const streamBulk: Record<string, StudentAttendance> = {};
-        const streamStorageKey = `munyaka_attendance_v2_${filters.grade}_${stream}_${filters.date}`;
-        
-        streamStudents.forEach(s => {
-          const existingStreamAttendance = (() => {
-            try {
-              const raw = localStorage.getItem(streamStorageKey);
-              return raw ? JSON.parse(raw) : {};
-            } catch { return {}; }
-          })();
-          const existing = existingStreamAttendance[s.id] || {};
-          streamBulk[s.id] = {
-            ...existing,
-            [session]: { status, time: timestamp }
-          };
-        });
-
-        // Save to localStorage for this stream
-        localStorage.setItem(streamStorageKey, JSON.stringify(streamBulk));
-        notifyDataChanged(streamStorageKey);
-        totalMarked += streamStudents.length;
-        streamsApplied.push(stream);
-      });
-
-      // Update master records
-      const masterRaw = localStorage.getItem('munyaka_attendance_records') || '{}';
-      const master = JSON.parse(masterRaw);
-      availableStreams.forEach(stream => {
-        const masterKey = `${filters.grade}_${stream}_${filters.date}`;
-        master[masterKey] = {
-          class: filters.grade,
-          stream: stream,
-          date: filters.date,
-          savedAt: new Date().toISOString()
-        };
-      });
-      localStorage.setItem('munyaka_attendance_records', JSON.stringify(master));
-      notifyDataChanged('munyaka_attendance_records');
-
-      showSuccess(
-        `Marked all ${totalMarked} learners across ${streamsApplied.length} stream${streamsApplied.length > 1 ? 's' : ''} (${streamsApplied.slice(0, 3).join(', ')}${streamsApplied.length > 3 ? '...' : ''}) as ${labels[status]} in the ${sessionLabel} session.`
-      );
-
-      // Refresh the current view
-      loadLiveStudents();
-    } else {
-      // Apply to single stream (current behavior)
-      const bulk: Record<string, StudentAttendance> = {};
-      filteredLearners.forEach(s => {
-        const existing = attendance[s.id] || {};
-        bulk[s.id] = {
-          ...existing,
-          [session]: { status, time: timestamp }
-        };
-      });
-      setAttendance(prev => ({ ...prev, ...bulk }));
-      showSuccess(`Marked all ${filteredLearners.length} learners as ${labels[status]} in the ${sessionLabel} session.`);
-    }
+    showSuccess(`Marked all ${filteredLearners.length} learners as ${labels[status]} in the ${sessionLabel} session.`);
   };
 
   /**
-   * Save attendance to localStorage, write an audit log entry capturing
-   * the active session user ID and role, then trigger the auto-lock
-   * for any fully-marked session.
+   * Save attendance to localStorage AND trigger the auto-lock:
+   *   1. Persist the attendance matrix to localStorage.
+   *   2. For each session that is fully marked, auto-lock it (no
+   *      admin password required — this is a teacher-driven action).
+   *   3. Show a confirmation toast.
+   *
+   * Sessions that are not yet fully marked are left in their current
+   * state (locked or unlocked) so the teacher can come back to them.
    */
   const handleSaveAttendance = async () => {
     if (filteredLearners.length === 0) {
@@ -1129,6 +654,7 @@ const Attendance = () => {
     setIsSaving(true);
     try {
       const storageKey = `munyaka_attendance_v2_${filters.grade}_${filters.stream}_${filters.date}`;
+      // Persist as {studentId: {morning: {...}, afternoon: {...}}}
       localStorage.setItem(storageKey, JSON.stringify(attendance));
       notifyDataChanged(storageKey);
 
@@ -1145,48 +671,15 @@ const Attendance = () => {
       localStorage.setItem('munyaka_attendance_records', JSON.stringify(master));
       notifyDataChanged('munyaka_attendance_records');
 
-      // ============================================
-      // AUDIT TRAIL: log every save action with the
-      // active session user ID and role for proper
-      // auditing. The dashboard "Recent Alerts" feed
-      // surfaces this entry in real time.
-      // ============================================
-      const presentCount = metrics.present;
-      const absentCount = metrics.absent;
-      const lateCount = metrics.late;
-      const excusedCount = metrics.excused;
-      const auditTitle = isAdminRole
-        ? 'Administrator saved attendance register'
-        : 'Teacher saved attendance register';
-
-      logActivity({
-        type: 'attendance',
-        title: auditTitle,
-        metadata: {
-          action: 'save_attendance',
-          userId: userId || 'unknown',
-          userName: user?.name || 'Unknown user',
-          userRole: userRole || 'unknown',
-          grade: filters.grade,
-          stream: filters.stream,
-          date: filters.date,
-          totalLearners: filteredLearners.length,
-          present: presentCount,
-          absent: absentCount,
-          late: lateCount,
-          excused: excusedCount,
-          sessionsLockedMorning: isMorningFullyMarked,
-          sessionsLockedAfternoon: isAfternoonFullyMarked,
-          overrideUsed: adminBypass,
-        },
-      });
-
       setIsSaving(false);
 
-      // AUTO-LOCK: After saving, if every learner has a status for a
-      // given session, that session is auto-locked to prevent further
-      // changes. Teachers can still unlock via the "Unlock Session"
-      // button (which requires an admin password).
+      // ============================================
+      // AUTO-LOCK: After saving, if every learner has a status
+      // for a given session, that session is auto-locked to prevent
+      // any further changes. The teacher can still unlock via
+      // the "Unlock Session" button (which requires an admin
+      // password).
+      // ============================================
       const sessionsLocked: SessionType[] = [];
       if (isMorningFullyMarked && !isMorningLocked) {
         applySessionLock('morning');
@@ -1197,16 +690,20 @@ const Attendance = () => {
         sessionsLocked.push('afternoon');
       }
 
+      // Build the save confirmation message
       let msg = 'Attendance saved successfully.';
       if (sessionsLocked.length === 2) {
         msg = 'Attendance saved and both sessions successfully locked.';
       } else if (sessionsLocked.length === 1) {
         msg = `Attendance saved and ${sessionsLocked[0]} session successfully locked.`;
       } else if (isMorningFullyMarked && isMorningLocked && isAfternoonFullyMarked && isAfternoonLocked) {
+        // Both sessions were already locked (re-save case)
         msg = 'Attendance updated. Both sessions remain locked.';
       } else if (!isMorningFullyMarked && !isAfternoonFullyMarked) {
+        // No session is fully marked yet
         msg = 'Attendance saved. Complete all learners to auto-lock sessions.';
       } else {
+        // One session is fully marked, the other is not
         const pending = !isMorningFullyMarked ? 'morning' : 'afternoon';
         const locked = isMorningFullyMarked ? 'morning' : 'afternoon';
         msg = `Attendance saved. ${locked.charAt(0).toUpperCase() + locked.slice(1)} session auto-locked. Complete ${pending} to lock it too.`;
@@ -1225,7 +722,7 @@ const Attendance = () => {
     }
   };
 
-  // Unified CSV export — works for both admin and teacher
+  // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
   const handleExportCSV = async () => {
     if (filteredLearners.length === 0) {
       showError('No students available to export.');
@@ -1233,12 +730,10 @@ const Attendance = () => {
     }
 
     const currentDateStr = filters.date;
-    const roleTag = isAdminRole ? 'ADMINISTRATOR OVERSIGHT' : 'TEACHER REGISTER';
     const row1 = 'MUNYAKA PRIMARY AND JUNIOR SCHOOL';
     const row2 = 'P.O. BOX 5239-30100, ELDORET';
     const row3 = 'MOTTO: KNOWLEDGE POWER';
     const row4 = `ATTENDANCE REGISTER - ${filters.grade.toUpperCase()} ${filters.stream.toUpperCase()} - DATE: ${currentDateStr}`;
-    const row5 = `EXPORTED BY: ${user?.name ?? 'Unknown'} (${userRole || 'unknown'}) — ${roleTag}`;
 
     const headers = ['#', 'Learner Name', 'Admission/ID', 'Gender', 'Morning Status', 'Morning Time', 'Afternoon Status', 'Afternoon Time'];
 
@@ -1264,6 +759,7 @@ const Attendance = () => {
       ];
     });
 
+    // Summary rows
     const summaryRows = [
       ['', '', '', 'Morning Present', metrics.presentMorning, '', 'Afternoon Present', metrics.presentAfternoon],
       ['', '', '', 'Morning Absent', metrics.absentMorning, '', 'Afternoon Absent', metrics.absentAfternoon],
@@ -1277,7 +773,6 @@ const Attendance = () => {
       row2,
       row3,
       row4,
-      row5,
       '',
       headers.join(','),
       ...rows.map(r => r.join(',')),
@@ -1297,20 +792,21 @@ const Attendance = () => {
   // ============================================
   // Render helpers
   // ============================================
+
+  /**
+   * The session column header with the LIVE / LOCKED / SEALED badge
+   * and a "Locked at" timestamp when the session is auto-locked.
+   * Extracted to a small component so both the Morning and Afternoon
+   * columns render consistently.
+   */
   const SessionHeader: React.FC<{ session: SessionType; label: string }> = ({ session, label }) => {
     const sessionLock = session === 'morning' ? morningLock : afternoonLock;
     const isEditable = session === 'morning' ? isMorningEditable : isAfternoonEditable;
     const isLocked = sessionLock.locked;
-    const isPastCutoff = session === 'morning' ? isMorningPastCutoff : isAfternoonPastCutoff;
     const sessionColor = session === 'morning'
       ? { dot: 'bg-amber-500', tint: 'bg-amber-50', text: 'text-amber-700', sub: 'text-amber-600/80' }
       : { dot: 'bg-indigo-500', tint: 'bg-indigo-50', text: 'text-indigo-700', sub: 'text-indigo-600/80' };
     const isLive = !isLocked && activeSession === session;
-
-    // Determine lock reason for tooltip
-    const lockReason = session === 'morning' ? getMorningLockReason() : getAfternoonLockReason();
-    const showLockedBadge = !isEditable && !isLocked;
-    const showSealedBadge = isLocked;
 
     return (
       <div className="flex flex-col items-center justify-center gap-0.5">
@@ -1320,24 +816,13 @@ const Attendance = () => {
           {isLive && !isLocked && (
             <span className="ml-1 px-1.5 py-0.5 rounded-md bg-emerald-500 text-white text-[9px] font-black tracking-widest animate-pulse">LIVE</span>
           )}
-          {/* Register Locked Badge - shows when outside time window OR past cutoff */}
-          {showLockedBadge && (
-            <span
-              className={cn(
-                "ml-1 px-1.5 py-0.5 rounded-md text-white text-[9px] font-black tracking-widest flex items-center gap-1",
-                isPastCutoff ? "bg-orange-500" : "bg-slate-300 text-slate-700"
-              )}
-              title={lockReason || 'Register locked'}
-            >
-              <Lock size={9} /> {isPastCutoff ? 'CUTOFF' : 'LOCKED'}
+          {!isEditable && !isLocked && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-slate-300 text-slate-700 text-[9px] font-black tracking-widest flex items-center gap-1">
+              <Lock size={9} /> LOCKED
             </span>
           )}
-          {/* Admin Sealed Badge - shows when explicitly sealed by admin */}
-          {showSealedBadge && (
-            <span
-              className="ml-1 px-1.5 py-0.5 rounded-md bg-rose-500 text-white text-[9px] font-black tracking-widest flex items-center gap-1"
-              title={lockReason || 'Manually sealed by admin'}
-            >
+          {isLocked && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-rose-500 text-white text-[9px] font-black tracking-widest flex items-center gap-1">
               <Lock size={9} /> SEALED
             </span>
           )}
@@ -1345,15 +830,15 @@ const Attendance = () => {
         <span className={`text-[9px] font-black tracking-widest ${sessionColor.sub}`}>
           {SESSION_WINDOWS[session].description}
         </span>
-        {isPastCutoff && cutoffConfig.enabled && !adminBypass && (
-          <span className="text-[8px] font-medium text-orange-500 mt-0.5">
-            Cutoff: {formatCutoffTime(session === 'morning' ? cutoffConfig.morning : cutoffConfig.afternoon)}
-          </span>
-        )}
       </div>
     );
   };
 
+  // Determine which session label to show in the bulk-actions section.
+  // When admin override is on, we show "All Sessions" so the teacher
+  // knows bulk actions are not session-locked. Otherwise we lock the
+  // bulk actions to whichever session is currently live (or fallback
+  // to the morning label if no session is currently live).
   const bulkSessionLabel = adminBypass
     ? 'All Sessions'
     : (activeSession === 'afternoon'
@@ -1365,108 +850,23 @@ const Attendance = () => {
   // ============================================
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full">
+      
       {/* ============================================
-          1. HEADER SECTION - stacks on mobile
+          1. HEADER SECTION
           ============================================ */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 action-bar w-full max-w-full">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100 shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
             <Calendar size={24} />
           </div>
-          <div className="min-w-0">
-            <h1 className="text-3xl font-black tracking-tight text-slate-900 whitespace-normal break-words">Attendance</h1>
-            <p className="text-sm text-slate-500 font-medium break-words hyphens-auto">
-              {isTeacherRole
-                ? 'Mark daily attendance for each class.'
-                : viewMode === 'marking'
-                  ? 'Manual register override — editing attendance.'
-                  : 'Class-wide attendance oversight and roll call completion.'}
-            </p>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">Attendance</h1>
+            <p className="text-sm text-slate-500 font-medium">Mark daily attendance for each class.</p>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
-          {/* Admin: Lock/Unlock Register Toggle */}
-          {isAdminRole && viewMode === 'marking' && (
-            <Button
-              onClick={() => {
-                // Quick toggle: if any session is locked, unlock it; otherwise lock morning
-                if (morningLock.locked || afternoonLock.locked) {
-                  // Show unlock options
-                  if (morningLock.locked) openLockAuthModal('unlock', 'morning');
-                  else if (afternoonLock.locked) openLockAuthModal('unlock', 'afternoon');
-                } else {
-                  // Lock morning register
-                  openLockAuthModal('lock', 'morning');
-                }
-              }}
-              className={cn(
-                "rounded-xl gap-2 text-sm font-bold h-11 px-4 shadow-lg transition-all",
-                (morningLock.locked || afternoonLock.locked)
-                  ? "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-100"
-                  : "bg-slate-600 hover:bg-slate-700 text-white shadow-slate-100"
-              )}
-              title={(morningLock.locked || afternoonLock.locked) ? "Unlock Register" : "Lock Register"}
-            >
-              {(morningLock.locked || afternoonLock.locked) ? (
-                <>
-                  <Unlock size={16} />
-                  Unlock
-                </>
-              ) : (
-                <>
-                  <Lock size={16} />
-                  Lock Register
-                </>
-              )}
-            </Button>
-          )}
-
-          {/* Admin: Cutoff Settings Button */}
-          {isAdminRole && viewMode === 'marking' && (
-            <Button
-              variant="outline"
-              onClick={() => setShowCutoffSettings(true)}
-              className="rounded-xl border-slate-200 bg-white gap-2 text-sm font-bold h-11 px-4 hover:bg-slate-50"
-              title="Configure Register Cutoff Times"
-            >
-              <Clock size={16} />
-              Cutoff Settings
-            </Button>
-          )}
-
-          {/* Admin: prominent Manual Register Override / Edit Attendance toggle */}
-          {isAdminRole && (
-            <Button
-              onClick={() => setViewMode(viewMode === 'marking' ? 'oversight' : 'marking')}
-              className={cn(
-                "rounded-xl gap-2 text-sm font-bold h-11 px-5 shadow-lg gap-2 transition-all",
-                viewMode === 'marking'
-                  ? "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-100"
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100"
-              )}
-              title={
-                viewMode === 'marking'
-                  ? 'Return to oversight dashboard'
-                  : 'Open the interactive register to enter or correct attendance'
-              }
-            >
-              {viewMode === 'marking' ? (
-                <>
-                  <Eye size={16} />
-                  Back to Oversight
-                </>
-              ) : (
-                <>
-                  <Edit3 size={16} />
-                  Manual Register Override
-                </>
-              )}
-            </Button>
-          )}
-          {/* Shared tools — always visible to admins and teachers */}
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             onClick={handleExportCSV}
@@ -1474,7 +874,7 @@ const Attendance = () => {
             className="rounded-xl border-slate-200 bg-white gap-2 text-sm font-bold h-11 px-4 hover:bg-slate-50"
           >
             {csvExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-            CSV Export
+            CSV
           </Button>
           <Button
             variant="outline"
@@ -1484,32 +884,28 @@ const Attendance = () => {
             <Printer size={16} />
             Print
           </Button>
-          {/* Save button is only visible inside the marking register */}
-          {viewMode === 'marking' && (
-            <Button
-              onClick={handleSaveAttendance}
-              disabled={isSaving || (isMorningLocked && isAfternoonLocked)}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-emerald-100 disabled:opacity-50"
-              title={
-                (isMorningLocked && isAfternoonLocked)
-                  ? 'Both sessions are already locked. Unlock a session to make changes.'
-                  : 'Save attendance and auto-lock any fully-marked sessions.'
-              }
-            >
-              {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-              Save Attendance
-            </Button>
-          )}
+          <Button
+            onClick={handleSaveAttendance}
+            disabled={isSaving || (isMorningLocked && isAfternoonLocked)}
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-indigo-100 disabled:opacity-50"
+            title={
+              (isMorningLocked && isAfternoonLocked)
+                ? 'Both sessions are already locked. Unlock a session to make changes.'
+                : 'Save attendance and auto-lock any fully-marked sessions.'
+            }
+          >
+            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+            Save Attendance
+          </Button>
         </div>
       </div>
 
       {/* ============================================
-          2. FILTERS & GLOBAL ACTIONS (only in marking mode)
+          2. FILTERS & GLOBAL ACTIONS
           ============================================ */}
-      {viewMode === 'marking' && (
       <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-
+          
           {/* Date Picker */}
           <div className="md:col-span-3 space-y-1.5">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
@@ -1527,90 +923,61 @@ const Attendance = () => {
           </div>
 
           {/* Grade Dropdown */}
-                    <div className="md:col-span-3 space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-                        Grade
-                      </label>
-                      <Select
-                        value={filters.grade}
-                        onValueChange={(val) => setFilters(prev => ({ ...prev, grade: val, stream: '' }))}
-                      >
-                        <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold text-slate-700">
-                          <SelectValue placeholder="Select Grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Grades</SelectItem>
-                          <SelectItem value="PP1">PP1</SelectItem>
-                          <SelectItem value="PP2">PP2</SelectItem>
-                          <SelectItem value="Grade 1">Grade 1</SelectItem>
-                          <SelectItem value="Grade 2">Grade 2</SelectItem>
-                          <SelectItem value="Grade 3">Grade 3</SelectItem>
-                          <SelectItem value="Grade 4">Grade 4</SelectItem>
-                          <SelectItem value="Grade 5">Grade 5</SelectItem>
-                          <SelectItem value="Grade 6">Grade 6</SelectItem>
-                          <SelectItem value="Grade 7">Grade 7</SelectItem>
-                          <SelectItem value="Grade 8">Grade 8</SelectItem>
-                          <SelectItem value="Grade 9">Grade 9</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-          
-                    {/* Stream Dropdown — dynamically filtered by selected Grade */}
-                    <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-                        Stream
-                      </label>
-                      <Select
-                        value={filters.stream || 'all'}
-                        onValueChange={(val) => setFilters(prev => ({ ...prev, stream: val === 'all' ? '' : val }))}
-                        disabled={isStreamDisabled}
-                      >
-                        <SelectTrigger
-                          className={cn(
-                            "h-11 rounded-xl border-slate-200 font-bold text-slate-700",
-                            isStreamDisabled
-                              ? "bg-slate-100 opacity-60 cursor-not-allowed"
-                              : "bg-slate-50"
-                          )}
-                        >
-                          <SelectValue placeholder={isStreamDisabled ? "Select a grade first" : "All Streams"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Streams</SelectItem>
-                          {availableStreams.map(stream => (
-                            <SelectItem key={stream} value={stream}>
-                              {stream}
-                            </SelectItem>
-                          ))}
-                          {availableStreams.length === 0 && !isStreamDisabled && (
-                            <SelectItem value="__none__" disabled>
-                              No streams configured for this grade
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
+          <div className="md:col-span-3 space-y-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+              Grade
+            </label>
+            <Select value={filters.grade} onValueChange={(val) => setFilters({...filters, grade: val})}>
+              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold text-slate-700">
+                <SelectValue placeholder="Select Grade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PP1">PP1</SelectItem>
+                <SelectItem value="PP2">PP2</SelectItem>
+                <SelectItem value="Grade 1">Grade 1</SelectItem>
+                <SelectItem value="Grade 2">Grade 2</SelectItem>
+                <SelectItem value="Grade 3">Grade 3</SelectItem>
+                <SelectItem value="Grade 4">Grade 4</SelectItem>
+                <SelectItem value="Grade 5">Grade 5</SelectItem>
+                <SelectItem value="Grade 6">Grade 6</SelectItem>
+                <SelectItem value="Grade 7">Grade 7</SelectItem>
+                <SelectItem value="Grade 8">Grade 8</SelectItem>
+                <SelectItem value="Grade 9">Grade 9</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Stream Dropdown */}
+          <div className="md:col-span-2 space-y-1.5">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+              Stream
+            </label>
+            <Select value={filters.stream} onValueChange={(val) => setFilters({...filters, stream: val})}>
+              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold text-slate-700">
+                <SelectValue placeholder="Select Stream" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="YELLOW">YELLOW</SelectItem>
+                <SelectItem value="BLUE">BLUE</SelectItem>
+                <SelectItem value="GREEN">GREEN</SelectItem>
+                <SelectItem value="RED">RED</SelectItem>
+                <SelectItem value="ALPHA">ALPHA</SelectItem>
+                <SelectItem value="BETA">BETA</SelectItem>
+                <SelectItem value="MERCURY">MERCURY</SelectItem>
+                <SelectItem value="VENUS">VENUS</SelectItem>
+                <SelectItem value="JUPITER">JUPITER</SelectItem>
+                <SelectItem value="NEPTUNE">NEPTUNE</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Global bulk action buttons */}
           <div className="md:col-span-4 space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1 flex items-center justify-between flex-wrap gap-1">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1 flex items-center justify-between">
               <span>Bulk Actions ({bulkSessionLabel})</span>
-              <div className="flex items-center gap-2">
-                {adminBypass && (
-                  <span className="text-emerald-600 normal-case font-bold tracking-normal">Override on</span>
-                )}
-                {/* All Streams visual indicator */}
-                {!filters.stream && filters.grade && filters.grade !== 'all' && availableStreams.length > 0 && (
-                  <span className="bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full border border-indigo-200">
-                    All {availableStreams.length} Streams in {filters.grade}
-                  </span>
-                )}
-                {!filters.stream && (!filters.grade || filters.grade === 'all') && (
-                  <span className="bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full border border-amber-200">
-                    ALL GRADES × ALL STREAMS
-                  </span>
-                )}
-              </div>
+              {adminBypass && (
+                <span className="text-emerald-600 normal-case font-bold tracking-normal">Override on</span>
+              )}
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
               <button
@@ -1653,720 +1020,157 @@ const Attendance = () => {
           </div>
         </div>
       </Card>
-      )}
 
       {/* ============================================
-          2a. REGISTER STATUS BANNER (Locked / Sealed / Cutoff)
-          ============================================ */}
-      {viewMode === 'marking' && (
-        <>
-          {/* Sealed Sessions Banner (manually locked) */}
-          {(isMorningLocked || isAfternoonLocked) && (
-            <div className="rounded-3xl p-5 bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 ring-2 ring-white/30">
-                  <LockKeyhole size={24} className="text-white animate-pulse" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="bg-white/25 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/30">
-                      {isMorningLocked && isAfternoonLocked
-                        ? 'Both Sessions Sealed'
-                        : isMorningLocked
-                        ? 'Morning Sealed'
-                        : 'Afternoon Sealed'}
-                    </span>
-                    <span className="text-xs font-medium text-rose-100 truncate">
-                      {isMorningLocked && isAfternoonLocked
-                        ? `Morning locked at ${formatLockedAt(morningLock.lockedAt)} • Afternoon locked at ${formatLockedAt(afternoonLock.lockedAt)}`
-                        : isMorningLocked
-                        ? `Locked at ${formatLockedAt(morningLock.lockedAt)}`
-                        : `Locked at ${formatLockedAt(afternoonLock.lockedAt)}`}
-                    </span>
-                  </div>
-                  <p className="font-bold text-sm sm:text-base mt-0.5 truncate">
-                    Attendance saved. Status toggles and bulk actions are read-only for sealed sessions.
-                    {(morningLock.reason || afternoonLock.reason) && (morningLock.reason || afternoonLock.reason) !== 'Auto-locked after saving attendance' && (
-                      <span className="font-medium text-rose-100/80 ml-2">Reason: {morningLock.reason || afternoonLock.reason}</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {isMorningLocked && (
-                  <Button
-                    onClick={() => openLockAuthModal('unlock', 'morning')}
-                    className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
-                  >
-                    <Unlock size={14} />
-                    Unlock Morning
-                  </Button>
-                )}
-                {isAfternoonLocked && (
-                  <Button
-                    onClick={() => openLockAuthModal('unlock', 'afternoon')}
-                    className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
-                  >
-                    <Unlock size={14} />
-                    Unlock Afternoon
-                  </Button>
-                )}
-              </div>
+          2a. PER-SESSION AUTO-LOCK BANNER (when applicable)
+          ============================================
+          Shows a single banner when one or both sessions are
+          auto-locked after a save. We display the per-session
+          "locked at" timestamp in the banner so the teacher
+          knows exactly when the register was sealed.
+      */}
+      {(isMorningLocked || isAfternoonLocked) && (
+        <div className="rounded-3xl p-5 bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 ring-2 ring-white/30">
+              <LockKeyhole size={24} className="text-white animate-pulse" />
             </div>
-          )}
-
-          {/* Cutoff Warning Banner (past cutoff but not manually locked) */}
-          {(() => {
-            const isPastCutoff = (isMorningPastCutoff || isAfternoonPastCutoff) && cutoffConfig.enabled;
-            const showBanner = !isMorningLocked && !isAfternoonLocked && !adminBypass && isSelectedDateToday && isPastCutoff;
-            if (!showBanner) return null;
-            return (
-              <div className="rounded-3xl p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-                    <Lock size={20} className="text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm">Register Cutoff {isMorningPastCutoff && isAfternoonPastCutoff ? 'Exceeded' : 'Reached'}</p>
-                    <p className="text-xs text-orange-100">
-                      {isMorningPastCutoff && isAfternoonPastCutoff
-                        ? `Morning (${formatCutoffTime(cutoffConfig.morning)}) and Afternoon (${formatCutoffTime(cutoffConfig.afternoon)}) cutoffs have passed`
-                        : isMorningPastCutoff
-                        ? `Morning cutoff (${formatCutoffTime(cutoffConfig.morning)}) has passed`
-                        : `Afternoon cutoff (${formatCutoffTime(cutoffConfig.afternoon)}) has passed`}
-                      {'. '}Contact admin to unlock.
-                    </p>
-                  </div>
-                </div>
-                {isAdminRole && (
-                  <Button
-                    onClick={() => setAdminBypass(true)}
-                    className="bg-white text-orange-600 hover:bg-orange-50 rounded-xl font-bold text-xs h-9 px-4 gap-1.5 shrink-0"
-                  >
-                    <Unlock size={14} />
-                    Enable Override
-                  </Button>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-white/25 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/30">
+                  {isMorningLocked && isAfternoonLocked
+                    ? 'Both Sessions Sealed'
+                    : isMorningLocked
+                    ? 'Morning Sealed'
+                    : 'Afternoon Sealed'}
+                </span>
+                <span className="text-xs font-medium text-rose-100 truncate">
+                  {isMorningLocked && isAfternoonLocked
+                    ? `Morning locked at ${formatLockedAt(morningLock.lockedAt)} • Afternoon locked at ${formatLockedAt(afternoonLock.lockedAt)}`
+                    : isMorningLocked
+                    ? `Locked at ${formatLockedAt(morningLock.lockedAt)}`
+                    : `Locked at ${formatLockedAt(afternoonLock.lockedAt)}`}
+                </span>
+              </div>
+              <p className="font-bold text-sm sm:text-base mt-0.5 truncate">
+                Attendance saved. Status toggles and bulk actions are read-only for sealed sessions.
+                {(morningLock.reason || afternoonLock.reason) && (morningLock.reason || afternoonLock.reason) !== 'Auto-locked after saving attendance' && (
+                  <span className="font-medium text-rose-100/80 ml-2">Reason: {morningLock.reason || afternoonLock.reason}</span>
                 )}
-              </div>
-            );
-          })()}
-
-          {/* Admin Override Active Banner */}
-          {adminBypass && isAdminRole && !isMorningLocked && !isAfternoonLocked && (
-            <div className="rounded-3xl p-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-                  <Unlock size={20} className="text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-sm">Admin Override Active</p>
-                  <p className="text-xs text-emerald-100">
-                    You can edit all sessions regardless of time windows or cutoff settings.
-                    Disable the toggle above to return to normal restrictions.
-                  </p>
-                </div>
-              </div>
+              </p>
+            </div>
+          </div>
+          {/* Quick unlock shortcuts: one button per locked session */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {isMorningLocked && (
               <Button
-                onClick={() => setAdminBypass(false)}
-                className="bg-white text-emerald-600 hover:bg-emerald-50 rounded-xl font-bold text-xs h-9 px-4 gap-1.5 shrink-0"
+                onClick={() => openLockAuthModal('unlock', 'morning')}
+                className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
               >
-                <Lock size={14} />
-                Disable Override
+                <Unlock size={14} />
+                Unlock Morning
               </Button>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ============================================
-                2b. TIME WINDOW BANNER + ADMIN OVERRIDE (RBAC-gated)
-                ============================================ */}
-      {viewMode === 'marking' && (
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-200">
-                      <Clock size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Live System Clock
-                      </p>
-                      <p className="text-xl font-black font-mono text-slate-900 tracking-tight tabular-nums">
-                        {format12h(currentTime)}
-                      </p>
-                      <p className="text-[11px] font-bold text-slate-500 mt-0.5">
-                        {activeSession === 'morning' ? (
-                          <span className="text-amber-700">🌅 Morning session is live now (6:00 AM – 11:59 AM)</span>
-                        ) : activeSession === 'afternoon' ? (
-                          <span className="text-indigo-700">🌇 Afternoon session is live now (12:00 PM – 6:00 PM)</span>
-                        ) : activeSession === null && isSelectedDateToday ? (
-                          <span className="text-rose-600">⏰ No session is currently active. Morning begins at 6:00 AM.</span>
-                        ) : (
-                          <span className="text-slate-500">📅 Viewing {selectedDateObj.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {adminBypass && (
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-                        <Unlock size={14} className="text-emerald-600" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 whitespace-nowrap">
-                          Override Active
-                        </span>
-                      </div>
-                    )}
-                    {isAdminRole ? (
-                      <>
-                        <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-100">
-                          <Info size={14} className="text-slate-400" />
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 max-w-[200px] leading-tight">
-                            Time windows enforce recording schedule
-                          </p>
-                        </div>
-                        <label
-                          htmlFor="admin-bypass-toggle"
-                          className={cn(
-                            "flex items-center gap-2.5 px-4 h-11 rounded-2xl border-2 cursor-pointer transition-all select-none",
-                            adminBypass
-                              ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                              : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                          )}
-                          title="Override time windows to edit past or future sessions"
-                        >
-                          {adminBypass ? <Unlock size={16} /> : <Lock size={16} />}
-                          <span className="text-xs font-black uppercase tracking-widest whitespace-nowrap">
-                            Admin Override
-                          </span>
-                          <span
-                            className={cn(
-                              "relative inline-flex w-9 h-5 rounded-full transition-colors",
-                              adminBypass ? "bg-emerald-500" : "bg-slate-300"
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform",
-                                adminBypass && "translate-x-4"
-                              )}
-                            />
-                          </span>
-                          <input
-                            id="admin-bypass-toggle"
-                            type="checkbox"
-                            className="sr-only"
-                            checked={adminBypass}
-                            onChange={(e) => setAdminBypass(e.target.checked)}
-                            aria-label="Admin override of session time windows"
-                          />
-                        </label>
-                      </>
-                    ) : (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-100 border border-slate-200">
-                        <Lock size={14} className="text-slate-400" />
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
-                          Read-Only (Past Session)
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-      )}
-
-      {/* ============================================
-          3a. SUMMARY METRICS CARDS — Overshight aggregate (admin)
-          ============================================ */}
-      {viewMode === 'oversight' && isAdminRole && (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="border-none shadow-sm rounded-2xl bg-indigo-50 p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Total Learners</p>
-                  <h3 className="text-3xl font-black text-indigo-700 mt-1">{oversightMetrics.totalLearners}</h3>
-                  <p className="text-[10px] font-bold text-indigo-600 mt-1">across all streams</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                  <Users size={22} />
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-2xl bg-emerald-50 p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Streams Complete</p>
-                  <h3 className="text-3xl font-black text-emerald-700 mt-1">
-                    {oversightMetrics.fullyCompletedStreams}
-                    <span className="text-base text-emerald-600/80">/{oversightMetrics.streamsTotal}</span>
-                  </h3>
-                  <p className="text-[10px] font-bold text-emerald-600 mt-1">morning + afternoon sealed</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                  <ClipboardList size={22} />
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-2xl bg-amber-50 p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Roll Call Pending</p>
-                  <h3 className="text-3xl font-black text-amber-700 mt-1">
-                    {oversightMetrics.streamsTotal - oversightMetrics.fullyCompletedStreams}
-                  </h3>
-                  <p className="text-[10px] font-bold text-amber-600 mt-1">streams awaiting teachers</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
-                  <AlertCircle size={22} />
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-2xl bg-purple-50 p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">Avg Attendance</p>
-                  <h3 className="text-3xl font-black text-purple-700 mt-1">{oversightMetrics.averageRate}%</h3>
-                  <p className="text-[10px] font-bold text-purple-600 mt-1">school-wide rate</p>
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
-                  <TrendingUp size={22} />
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* ============================================
-              3b. ROLL CALL COMPLETION TABLE (per stream)
-              ============================================ */}
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-            {/* Filter Bar — controls for Grade, Stream, and free-text search */}
-            <div className="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/40">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                {/* Grade Select */}
-                <div className="md:col-span-3 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-                    Grade
-                  </label>
-                  <Select value={ovGrade} onValueChange={setOvGrade}>
-                    <SelectTrigger className="h-11 rounded-xl bg-white border-slate-200 font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500">
-                      <SelectValue placeholder="All Grades" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Grades</SelectItem>
-                      <SelectItem value="PP1">PP1</SelectItem>
-                      <SelectItem value="PP2">PP2</SelectItem>
-                      <SelectItem value="Grade 1">Grade 1</SelectItem>
-                      <SelectItem value="Grade 2">Grade 2</SelectItem>
-                      <SelectItem value="Grade 3">Grade 3</SelectItem>
-                      <SelectItem value="Grade 4">Grade 4</SelectItem>
-                      <SelectItem value="Grade 5">Grade 5</SelectItem>
-                      <SelectItem value="Grade 6">Grade 6</SelectItem>
-                      <SelectItem value="Grade 7">Grade 7</SelectItem>
-                      <SelectItem value="Grade 8">Grade 8</SelectItem>
-                      <SelectItem value="Grade 9">Grade 9</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Stream Select */}
-                <div className="md:col-span-3 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-                    Stream
-                  </label>
-                  <Select value={ovStream} onValueChange={setOvStream}>
-                    <SelectTrigger className="h-11 rounded-xl bg-white border-slate-200 font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500">
-                      <SelectValue placeholder="All Streams" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Streams</SelectItem>
-                      <SelectItem value="YELLOW">Yellow</SelectItem>
-                      <SelectItem value="BLUE">Blue</SelectItem>
-                      <SelectItem value="GREEN">Green</SelectItem>
-                      <SelectItem value="RED">Red</SelectItem>
-                      <SelectItem value="ALPHA">Alpha</SelectItem>
-                      <SelectItem value="BETA">Beta</SelectItem>
-                      <SelectItem value="MERCURY">Mercury</SelectItem>
-                      <SelectItem value="VENUS">Venus</SelectItem>
-                      <SelectItem value="JUPITER">Jupiter</SelectItem>
-                      <SelectItem value="NEPTUNE">Neptune</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Search Input */}
-                <div className="md:col-span-4 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-                    Search
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <Input
-                      type="text"
-                      placeholder="Search Grade, Stream, or Teacher..."
-                      value={ovSearch}
-                      onChange={(e) => setOvSearch(e.target.value)}
-                      className="pl-10 h-11 rounded-xl bg-white border-slate-200 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Reset Filters Button */}
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-                    &nbsp;
-                  </label>
-                  <Button
-                    onClick={() => {
-                      setOvGrade('all');
-                      setOvStream('all');
-                      setOvSearch('');
-                      setOvDate(getTodayDateStr());
-                    }}
-                    variant="outline"
-                    className="w-full h-11 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm gap-2 focus:ring-2 focus:ring-indigo-100"
-                  >
-                    <RefreshCw size={14} />
-                    Reset Filters
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-600 shrink-0">
-                  <BarChart3 size={22} />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                    {sectionTitle}
-                  </h2>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {sectionSubtitle}
-                  </p>
-                </div>
-              </div>
-              {/* Date navigation controls */}
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {isOversightToday ? (
-                  <Badge variant="outline" className="rounded-xl bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[10px] uppercase tracking-widest px-2.5 py-1">
-                    <Sparkles size={12} className="mr-1" />
-                    Today — Live
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="rounded-xl bg-amber-50 text-amber-700 border-amber-200 font-black text-[10px] uppercase tracking-widest px-2.5 py-1">
-                    <Lock size={12} className="mr-1" />
-                    Historical View
-                  </Badge>
-                )}
-                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-50 border border-slate-200">
-                  <Button
-                    onClick={ovGoToPrevDay}
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 w-9 p-0 rounded-lg hover:bg-white text-slate-600"
-                    title="Previous day"
-                    aria-label="Previous day"
-                  >
-                    <ChevronLeft size={16} />
-                  </Button>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={ovDate}
-                      onChange={(e) => setOvDate(e.target.value)}
-                      className="h-9 px-3 pr-9 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 tabular-nums"
-                      aria-label="Select date for roll call review"
-                    />
-                    <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
-                  </div>
-                  <Button
-                    onClick={ovGoToNextDay}
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 w-9 p-0 rounded-lg hover:bg-white text-slate-600"
-                    title="Next day"
-                    aria-label="Next day"
-                  >
-                    <ChevronRight size={16} />
-                  </Button>
-                </div>
-                <Button
-                  onClick={ovGoToToday}
-                  disabled={isOversightToday}
-                  variant="outline"
-                  size="sm"
-                  className="h-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[10px] uppercase tracking-widest px-3 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Today
-                </Button>
-              </div>
-            </div>
-
-            {/* Historical Read-Only banner shown when viewing a past date */}
-            {!isOversightToday && (
-              <div className={cn(
-                "mx-6 sm:mx-8 mt-5 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border",
-                adminBypass
-                  ? "bg-emerald-50 border-emerald-200"
-                  : "bg-amber-50 border-amber-200"
-              )}>
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                    adminBypass ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
-                  )}>
-                    {adminBypass ? <Unlock size={18} /> : <Lock size={18} />}
-                  </div>
-                  <div className="min-w-0">
-                    <p className={cn(
-                      "text-sm font-black tracking-tight",
-                      adminBypass ? "text-emerald-900" : "text-amber-900"
-                    )}>
-                      {adminBypass
-                        ? 'Historical Edit Mode Active'
-                        : 'Historical View — Read-Only'}
-                    </p>
-                    <p className={cn(
-                      "text-[11px] font-medium",
-                      adminBypass ? "text-emerald-700" : "text-amber-700"
-                    )}>
-                      {adminBypass
-                        ? 'Admin Override is enabled. Register rows below are editable for corrections.'
-                        : 'You are viewing a past date. Register rows are read-only. Use Manual Register Override to make corrections.'}
-                    </p>
-                  </div>
-                </div>
-                {isAdminRole && !adminBypass && (
-                  <Button
-                    onClick={() => {
-                      setViewMode('marking');
-                      setAdminBypass(true);
-                      setFilters(prev => ({ ...prev, date: ovDate }));
-                    }}
-                    className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-9 px-4 gap-1.5 shadow-sm whitespace-nowrap"
-                  >
-                    <Edit3 size={14} />
-                    Manual Register Override
-                  </Button>
-                )}
-              </div>
             )}
-
-            <div className="p-2">
-              <DualScrollContainer>
-              <table className="w-full text-sm text-left border-collapse min-w-[800px]">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-6 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500">Class / Stream</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Learners</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-amber-600 text-center">Morning Roll</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-amber-600 text-center">Morning Present</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center">Afternoon Roll</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center">Afternoon Present</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Rate</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredStreamSummaries.length > 0 ? filteredStreamSummaries.map((s) => (
-                    <tr key={`${s.grade}-${s.stream}`} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0">
-                            <Layers size={16} />
-                          </div>
-                          <div>
-                            <p className="font-bold text-slate-900 text-sm">{s.grade}</p>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{s.stream}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-center font-bold text-slate-700">{s.totalLearners}</td>
-                      <td className="px-4 py-4 text-center">
-                        {s.morningCompleted ? (
-                          <Badge variant="outline" className="rounded-lg bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[10px] uppercase tracking-widest">
-                            <CheckCircle2 size={11} className="mr-1" /> Submitted
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="rounded-lg bg-amber-50 text-amber-700 border-amber-200 font-black text-[10px] uppercase tracking-widest">
-                            <Clock size={11} className="mr-1" /> Pending
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-4 text-center font-bold text-slate-700">
-                        {s.morningCompleted ? `${s.morningPresent}/${s.totalLearners}` : '—'}
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        {s.afternoonCompleted ? (
-                          <Badge variant="outline" className="rounded-lg bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[10px] uppercase tracking-widest">
-                            <CheckCircle2 size={11} className="mr-1" /> Submitted
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="rounded-lg bg-amber-50 text-amber-700 border-amber-200 font-black text-[10px] uppercase tracking-widest">
-                            <Clock size={11} className="mr-1" /> Pending
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-4 text-center font-bold text-slate-700">
-                        {s.afternoonCompleted ? `${s.afternoonPresent}/${s.totalLearners}` : '—'}
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <div className="flex items-center gap-2 justify-center">
-                          <div className="w-20 bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className={cn(
-                                "h-full rounded-full transition-all",
-                                s.rate >= 90 ? "bg-emerald-500" : s.rate >= 70 ? "bg-amber-500" : "bg-rose-500"
-                              )}
-                              style={{ width: `${s.rate}%` }}
-                            />
-                          </div>
-                          <span className={cn(
-                            "text-xs font-black tabular-nums",
-                            s.rate >= 90 ? "text-emerald-700" : s.rate >= 70 ? "text-amber-700" : "text-rose-700"
-                          )}>
-                            {s.rate}%
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={7} className="px-8 py-20 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="p-4 bg-slate-50 rounded-full text-slate-300">
-                            <Search size={32} />
-                          </div>
-                          <p className="text-slate-800 font-bold">No streams match your filters.</p>
-                          <p className="text-xs text-slate-400 max-w-sm">
-                            Try adjusting the grade, stream, or search term — or reset to view all streams.
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-              </DualScrollContainer>
-            </div>
-
-            <div className="px-6 sm:px-8 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
-              <p className="text-xs font-bold text-slate-500 flex items-center gap-2">
-                <Activity size={12} className="text-indigo-500" />
-                Showing <span className="text-slate-900 font-black">{filteredStreamSummaries.length}</span> stream{filteredStreamSummaries.length !== 1 ? 's' : ''} across <span className="text-slate-900 font-black">{oversightMetrics.totalLearners}</span> learners
-              </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                Updated {format12h(currentTime)} • Auto-syncs every minute
-              </p>
-            </div>
-          </Card>
-
-          {/* ============================================
-              3c. AGGREGATE ATTENDANCE STATISTICS ACROSS GRADES
-              ============================================ */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2.5 rounded-xl bg-purple-100 text-purple-600">
-                  <Layers size={22} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Grade-Level Summary</h2>
-                  <p className="text-xs text-slate-500 font-medium">Average attendance rate per grade level today.</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {filteredStreamSummaries.slice(0, 6).map((s) => (
-                  <div key={`grade-${s.grade}-${s.stream}`} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-700">{s.grade} <span className="text-slate-400 font-medium">— {s.stream}</span></span>
-                      <span className="font-black text-slate-900 tabular-nums">{s.rate}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all duration-500",
-                          s.rate >= 90 ? "bg-gradient-to-r from-emerald-500 to-emerald-600" : s.rate >= 70 ? "bg-gradient-to-r from-amber-500 to-amber-600" : "bg-gradient-to-r from-rose-500 to-rose-600"
-                        )}
-                        style={{ width: `${s.rate}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2.5 rounded-xl bg-amber-100 text-amber-600">
-                  <Clock size={22} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Session Completion</h2>
-                  <p className="text-xs text-slate-500 font-medium">Morning vs afternoon roll call coverage today.</p>
-                </div>
-              </div>
-              <div className="space-y-5">
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <span className="font-black uppercase tracking-widest text-amber-700">Morning</span>
-                    <span className="font-black text-slate-900 tabular-nums">
-                      {oversightMetrics.morningCompletedStreams}/{oversightMetrics.streamsTotal}
-                    </span>
-                  </div>
-                  <div className="w-full bg-amber-100 h-3 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-700"
-                      style={{ width: `${oversightMetrics.streamsTotal > 0 ? (oversightMetrics.morningCompletedStreams / oversightMetrics.streamsTotal) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <p className="text-[11px] font-bold text-slate-500 mt-1">
-                    {oversightMetrics.streamsTotal > 0
-                      ? `${Math.round((oversightMetrics.morningCompletedStreams / oversightMetrics.streamsTotal) * 100)}% of streams submitted`
-                      : 'No streams to evaluate'}
-                  </p>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <span className="font-black uppercase tracking-widest text-indigo-700">Afternoon</span>
-                    <span className="font-black text-slate-900 tabular-nums">
-                      {oversightMetrics.afternoonCompletedStreams}/{oversightMetrics.streamsTotal}
-                    </span>
-                  </div>
-                  <div className="w-full bg-indigo-100 h-3 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-700"
-                      style={{ width: `${oversightMetrics.streamsTotal > 0 ? (oversightMetrics.afternoonCompletedStreams / oversightMetrics.streamsTotal) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <p className="text-[11px] font-bold text-slate-500 mt-1">
-                    {oversightMetrics.streamsTotal > 0
-                      ? `${Math.round((oversightMetrics.afternoonCompletedStreams / oversightMetrics.streamsTotal) * 100)}% of streams submitted`
-                      : 'No streams to evaluate'}
-                  </p>
-                </div>
-                <div className="pt-3 border-t border-slate-100 flex items-center gap-3 text-xs text-slate-600 font-medium">
-                  <Info size={14} className="text-indigo-500 shrink-0" />
-                  <p>
-                    Use <span className="font-black text-indigo-700">Manual Register Override</span> to correct any submitted register.
-                  </p>
-                </div>
-              </div>
-            </Card>
+            {isAfternoonLocked && (
+              <Button
+                onClick={() => openLockAuthModal('unlock', 'afternoon')}
+                className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
+              >
+                <Unlock size={14} />
+                Unlock Afternoon
+              </Button>
+            )}
           </div>
-        </>
+        </div>
       )}
 
       {/* ============================================
-          3b. SUMMARY METRICS CARDS (marking mode)
+          2b. TIME WINDOW BANNER + ADMIN OVERRIDE
           ============================================ */}
-      {viewMode === 'marking' && (
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Left: Live clock + active session indicator */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-200">
+                <Clock size={20} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Live System Clock
+                </p>
+                <p className="text-xl font-black font-mono text-slate-900 tracking-tight tabular-nums">
+                  {format12h(currentTime)}
+                </p>
+                <p className="text-[11px] font-bold text-slate-500 mt-0.5">
+                  {activeSession === 'morning' ? (
+                    <span className="text-amber-700">🌅 Morning session is live now (6:00 AM – 11:59 AM)</span>
+                  ) : activeSession === 'afternoon' ? (
+                    <span className="text-indigo-700">🌇 Afternoon session is live now (12:00 PM – 6:00 PM)</span>
+                  ) : activeSession === null && isSelectedDateToday ? (
+                    <span className="text-rose-600">⏰ No session is currently active. Morning begins at 6:00 AM.</span>
+                  ) : (
+                    <span className="text-slate-500">📅 Viewing {selectedDateObj.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} — sessions are read-only unless admin override is enabled.</span>
+                  )}
+                </p>
+              </div>
+            </div>
 
+            {/* Right: Admin override toggle + info */}
+            <div className="flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-100">
+                <Info size={14} className="text-slate-400" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 max-w-[200px] leading-tight">
+                  Time windows enforce recording schedule
+                </p>
+              </div>
+              <label
+                htmlFor="admin-bypass-toggle"
+                className={cn(
+                  "flex items-center gap-2.5 px-4 h-11 rounded-2xl border-2 cursor-pointer transition-all select-none",
+                  adminBypass
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                )}
+                title="Override time windows to edit past or future sessions"
+              >
+                {adminBypass ? <Unlock size={16} /> : <Lock size={16} />}
+                <span className="text-xs font-black uppercase tracking-widest whitespace-nowrap">
+                  Admin Override
+                </span>
+                <span
+                  className={cn(
+                    "relative inline-flex w-9 h-5 rounded-full transition-colors",
+                    adminBypass ? "bg-emerald-500" : "bg-slate-300"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform",
+                      adminBypass && "translate-x-4"
+                    )}
+                  />
+                </span>
+                <input
+                  id="admin-bypass-toggle"
+                  type="checkbox"
+                  className="sr-only"
+                  checked={adminBypass}
+                  onChange={(e) => setAdminBypass(e.target.checked)}
+                  aria-label="Admin override of session time windows"
+                />
+              </label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ============================================
+          3. SUMMARY METRICS CARDS (Combined totals)
+          ============================================ */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        
+        {/* Total Card */}
         <Card className="border-none shadow-sm rounded-2xl bg-slate-50 p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -2380,6 +1184,7 @@ const Attendance = () => {
           </div>
         </Card>
 
+        {/* Present Card */}
         <Card className="border-none shadow-sm rounded-2xl bg-emerald-50 p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -2393,6 +1198,7 @@ const Attendance = () => {
           </div>
         </Card>
 
+        {/* Absent Card */}
         <Card className="border-none shadow-sm rounded-2xl bg-rose-50 p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -2406,6 +1212,7 @@ const Attendance = () => {
           </div>
         </Card>
 
+        {/* Late Card */}
         <Card className="border-none shadow-sm rounded-2xl bg-amber-50 p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -2419,6 +1226,7 @@ const Attendance = () => {
           </div>
         </Card>
 
+        {/* Rate Card with Progress Bar */}
         <Card className="border-none shadow-sm rounded-2xl bg-indigo-50 p-5">
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -2431,8 +1239,8 @@ const Attendance = () => {
               </div>
             </div>
             <div className="w-full bg-indigo-200 h-2 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-500 ease-out"
+              <div 
+                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-500 ease-out" 
                 style={{ width: `${metrics.rate}%` }}
               />
             </div>
@@ -2440,17 +1248,16 @@ const Attendance = () => {
           </div>
         </Card>
       </div>
-      )}
 
       {/* ============================================
           4. STUDENT ATTENDANCE TABLE (Morning & Afternoon)
           ============================================ */}
-      {viewMode === 'marking' && (
       <Card className={cn(
         "border-none shadow-sm rounded-[2rem] bg-white overflow-hidden transition-all",
         (isMorningLocked || isAfternoonLocked) && "ring-2 ring-rose-200/60"
       )}>
-
+        
+        {/* Section header */}
         <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className={cn(
@@ -2483,6 +1290,7 @@ const Attendance = () => {
             </div>
           </div>
 
+          {/* Search box */}
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <Input
@@ -2494,13 +1302,14 @@ const Attendance = () => {
           </div>
         </div>
 
-        <div className="p-2">
-          <DualScrollContainer>
+        {/* Structured Table with Morning/Afternoon sub-rows */}
+        <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border-collapse min-w-[900px]">
             <thead>
+              {/* Group header */}
               <tr className="bg-slate-100/80 border-b border-slate-200">
-                <th
-                  rowSpan={2}
+                <th 
+                  rowSpan={2} 
                   className="px-6 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 border-r border-slate-200 align-bottom min-w-[260px]"
                 >
                   Learners
@@ -2512,15 +1321,32 @@ const Attendance = () => {
                   <SessionHeader session="afternoon" label="Afternoon Session" />
                 </th>
               </tr>
+              {/* Sub-header row with status column names */}
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-emerald-600 text-center border-r border-slate-200 min-w-[80px]">Present</th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-rose-600 text-center border-r border-slate-200 min-w-[80px]">Absent</th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-amber-600 text-center border-r border-slate-200 min-w-[80px]">Late</th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-sky-600 text-center border-r border-slate-200 min-w-[80px]">Excused</th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-emerald-600 text-center border-r border-slate-200 min-w-[80px]">Present</th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-rose-600 text-center border-r border-slate-200 min-w-[80px]">Absent</th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-amber-600 text-center border-r border-slate-200 min-w-[80px]">Late</th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-sky-600 text-center min-w-[80px]">Excused</th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-emerald-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Present
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-rose-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Absent
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-amber-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Late
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-sky-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Excused
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-emerald-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Present
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-rose-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Absent
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-amber-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Late
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-sky-600 text-center min-w-[80px]">
+                  Excused
+                </th>
               </tr>
             </thead>
             <tbody className={cn("divide-y divide-slate-100", (isMorningLocked && isAfternoonLocked) && "opacity-95")}>
@@ -2531,6 +1357,7 @@ const Attendance = () => {
                   const afternoonStatus = record.afternoon?.status;
                   return (
                     <tr key={learner.id} className="hover:bg-slate-50/50 transition-colors">
+                      {/* Learners column: index, name, ID, gender */}
                       <td className="px-6 py-4 border-r border-slate-100 min-w-[260px]">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">
@@ -2543,12 +1370,12 @@ const Attendance = () => {
                                 {learner.assessment}
                               </p>
                               <span className="text-slate-300">•</span>
-                              <Badge
-                                variant="outline"
+                              <Badge 
+                                variant="outline" 
                                 className={cn(
                                   "rounded-md font-black text-[9px] uppercase tracking-widest px-1.5 py-0 leading-tight",
-                                  learner.gender === 'M'
-                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  learner.gender === 'M' 
+                                    ? "bg-blue-50 text-blue-700 border-blue-200" 
                                     : "bg-pink-50 text-pink-700 border-pink-200"
                                 )}
                               >
@@ -2559,6 +1386,7 @@ const Attendance = () => {
                         </div>
                       </td>
 
+                      {/* Morning session — Present */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="P"
@@ -2574,6 +1402,7 @@ const Attendance = () => {
                         />
                       </td>
 
+                      {/* Morning session — Absent */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="A"
@@ -2589,6 +1418,7 @@ const Attendance = () => {
                         />
                       </td>
 
+                      {/* Morning session — Late */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="L"
@@ -2604,6 +1434,7 @@ const Attendance = () => {
                         />
                       </td>
 
+                      {/* Morning session — Excused */}
                       <td className="px-2 py-3 border-r border-slate-200 text-center">
                         <SessionStatusButton
                           status="E"
@@ -2619,6 +1450,7 @@ const Attendance = () => {
                         />
                       </td>
 
+                      {/* Afternoon session — Present */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="P"
@@ -2634,6 +1466,7 @@ const Attendance = () => {
                         />
                       </td>
 
+                      {/* Afternoon session — Absent */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="A"
@@ -2649,6 +1482,7 @@ const Attendance = () => {
                         />
                       </td>
 
+                      {/* Afternoon session — Late */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="L"
@@ -2664,6 +1498,7 @@ const Attendance = () => {
                         />
                       </td>
 
+                      {/* Afternoon session — Excused */}
                       <td className="px-2 py-3 text-center">
                         <SessionStatusButton
                           status="E"
@@ -2682,60 +1517,25 @@ const Attendance = () => {
                   );
                 })
               ) : (
-                              <tr>
-                                <td colSpan={9} className="px-8 py-16 text-center">
-                                  <div className="flex flex-col items-center gap-4">
-                                    <div className="p-5 bg-gradient-to-br from-amber-50 to-amber-100 rounded-full text-amber-500 shadow-inner">
-                                      <Users size={36} />
-                                    </div>
-                                    <div className="space-y-1.5 max-w-md">
-                                      {String(searchTerm || '').trim() ? (
-                                                                              <>
-                                                                                <p className="text-slate-900 font-black text-base">
-                                                                                  No learners match "{searchTerm}"
-                                                                                </p>
-                                                                                <p className="text-xs text-slate-500 font-medium">
-                                                                                  Try searching with a different name or admission number. {liveStudents.length === 0 && `No students are registered for ${filters.grade} ${filters.stream}.`}
-                                                                                </p>
-                                                                              </>
-                                                                            ) : (
-                                        <>
-                                          <p className="text-slate-900 font-black text-base">
-                                            No learners registered under {filters.grade} {filters.stream}
-                                          </p>
-                                          <p className="text-xs text-slate-500 font-medium">
-                                            There are currently no active students assigned to this class and stream. Add learners to start marking attendance.
-                                          </p>
-                                        </>
-                                      )}
-                                    </div>
-                                    {liveStudents.length === 0 && (
-                                      <a
-                                        href="/registration"
-                                        className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-10 px-5 shadow-lg shadow-indigo-100 transition-colors"
-                                      >
-                                        <Sparkles size={14} />
-                                        Add Learners
-                                      </a>
-                                    )}
-                                    {String(searchTerm || '').trim() && liveStudents.length > 0 && (
-                                      <button
-                                        onClick={() => setSearchTerm('')}
-                                        className="inline-flex items-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs h-10 px-5 transition-colors"
-                                      >
-                                        <RefreshCw size={14} />
-                                        Clear Search
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
+                <tr>
+                  <td colSpan={9} className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-slate-50 rounded-full text-slate-300">
+                        <Search size={32} />
+                      </div>
+                      <p className="text-slate-800 font-bold">No learners match your search.</p>
+                      <p className="text-xs text-slate-400 max-w-sm">
+                        Try a different name or admission number above.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
-          </DualScrollContainer>
         </div>
 
+        {/* Footer summary */}
         {filteredLearners.length > 0 && (
           <div className={cn(
             "px-6 sm:px-8 py-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2",
@@ -2754,158 +1554,6 @@ const Attendance = () => {
           </div>
         )}
       </Card>
-      )}
-
-      {/* ============================================
-          4b. CUTOFF TIME SETTINGS MODAL (Admin Only)
-          ============================================ */}
-      {showCutoffSettings && isAdminRole && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowCutoffSettings(false);
-          }}
-        >
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b bg-indigo-50 border-indigo-100 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                  <Clock size={24} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-slate-900 tracking-tight">
-                    Register Cutoff Times
-                  </h3>
-                  <p className="text-xs font-bold text-slate-500 mt-0.5">
-                    Configure when each session becomes locked (non-editable) for teachers.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-5 overflow-y-auto flex-1">
-              {/* Enable/Disable Cutoff Toggle */}
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center",
-                    cutoffConfig.enabled ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-400"
-                  )}>
-                    <Lock size={18} />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900">Enable Cutoff Enforcement</p>
-                    <p className="text-xs text-slate-500">When enabled, registers auto-lock after cutoff time</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    const next = { ...cutoffConfig, enabled: !cutoffConfig.enabled };
-                    setCutoffConfig(next);
-                    saveCutoffConfig(next);
-                  }}
-                  className={cn(
-                    "relative w-12 h-7 rounded-full transition-colors",
-                    cutoffConfig.enabled ? "bg-emerald-500" : "bg-slate-300"
-                  )}
-                  aria-label="Toggle cutoff enforcement"
-                >
-                  <span
-                    className={cn(
-                      "absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform",
-                      cutoffConfig.enabled ? "translate-x-5" : "translate-x-0.5"
-                    )}
-                  />
-                </button>
-              </div>
-
-              {/* Morning Cutoff Time */}
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                  <Sun size={14} className="text-amber-500" />
-                  Morning Session Cutoff
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="time"
-                    value={`${String(cutoffConfig.morning.hour).padStart(2, '0')}:${String(cutoffConfig.morning.minute).padStart(2, '0')}`}
-                    onChange={(e) => {
-                      const [h, m] = e.target.value.split(':').map(Number);
-                      const next = { ...cutoffConfig, morning: { hour: h, minute: m } };
-                      setCutoffConfig(next);
-                      saveCutoffConfig(next);
-                    }}
-                    className="flex-1 h-12 px-4 rounded-xl bg-amber-50 border border-amber-200 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-100"
-                  />
-                  <span className="text-sm font-medium text-slate-500">
-                    {formatCutoffTime(cutoffConfig.morning)}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  After this time, the morning register becomes locked for teachers.
-                </p>
-              </div>
-
-              {/* Afternoon Cutoff Time */}
-              <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                  <Moon size={14} className="text-indigo-500" />
-                  Afternoon Session Cutoff
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="time"
-                    value={`${String(cutoffConfig.afternoon.hour).padStart(2, '0')}:${String(cutoffConfig.afternoon.minute).padStart(2, '0')}`}
-                    onChange={(e) => {
-                      const [h, m] = e.target.value.split(':').map(Number);
-                      const next = { ...cutoffConfig, afternoon: { hour: h, minute: m } };
-                      setCutoffConfig(next);
-                      saveCutoffConfig(next);
-                    }}
-                    className="flex-1 h-12 px-4 rounded-xl bg-indigo-50 border border-indigo-200 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                  />
-                  <span className="text-sm font-medium text-slate-500">
-                    {formatCutoffTime(cutoffConfig.afternoon)}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500">
-                  After this time, the afternoon register becomes locked for teachers.
-                </p>
-              </div>
-
-              {/* Info Box */}
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-2">
-                <Info size={14} className="text-blue-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-800 font-medium">
-                  Admins with <strong>Admin Override</strong> enabled can always edit registers regardless of cutoff times.
-                  Sessions can also be manually locked/unlocked from the header or session banner.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-5 border-t bg-white border-slate-100 flex gap-2 justify-end shrink-0">
-              <Button
-                variant="ghost"
-                onClick={() => setShowCutoffSettings(false)}
-                className="rounded-xl font-bold h-11 px-5"
-              >
-                Close
-              </Button>
-              <Button
-                onClick={() => {
-                  saveCutoffConfig(cutoffConfig);
-                  setShowCutoffSettings(false);
-                  showSuccess('Cutoff settings saved successfully');
-                }}
-                className="rounded-xl font-bold h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg gap-2"
-              >
-                <Save size={16} />
-                Save Settings
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ============================================
           5. ADMIN AUTHORIZATION MODAL (LOCK / UNLOCK)
@@ -2914,10 +1562,12 @@ const Attendance = () => {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
           onClick={(e) => {
+            // Close on backdrop click
             if (e.target === e.currentTarget) closeLockAuthModal();
           }}
         >
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            {/* Header */}
             <div className={cn(
               "p-6 border-b",
               lockAction === 'lock' ? "bg-rose-50 border-rose-100" : "bg-amber-50 border-amber-100"
@@ -2944,7 +1594,9 @@ const Attendance = () => {
               </div>
             </div>
 
+            {/* Body */}
             <div className="p-6 space-y-4">
+              {/* Context card showing the register that will be locked/unlocked */}
               <div className="p-3 rounded-2xl border border-slate-200 bg-slate-50 space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Register</p>
                 <p className="text-sm font-bold text-slate-900">
@@ -2971,6 +1623,9 @@ const Attendance = () => {
                 </div>
               )}
 
+              {/* Optional reason field — only shown when locking, since
+                  we want a short justification that gets stored in the
+                  persistent lock entry for audit purposes. */}
               {lockAction === 'lock' && (
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -2985,6 +1640,7 @@ const Attendance = () => {
                 </div>
               )}
 
+              {/* Admin password field */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Admin Password / PIN
@@ -3012,6 +1668,7 @@ const Attendance = () => {
               </div>
             </div>
 
+            {/* Footer */}
             <div className={cn(
               "p-5 border-t flex gap-2 justify-end",
               lockAction === 'lock' ? "bg-rose-50/30 border-rose-100" : "bg-amber-50/30 border-amber-100"
@@ -3029,8 +1686,8 @@ const Attendance = () => {
                 disabled={isAdminAuthVerifying}
                 className={cn(
                   "rounded-xl font-bold h-11 px-6 text-white shadow-lg gap-2",
-                  lockAction === 'lock'
-                    ? "bg-rose-600 hover:bg-rose-700 shadow-rose-100"
+                  lockAction === 'lock' 
+                    ? "bg-rose-600 hover:bg-rose-700 shadow-rose-100" 
                     : "bg-amber-600 hover:bg-amber-700 shadow-amber-100"
                 )}
               >
@@ -3057,30 +1714,31 @@ const Attendance = () => {
 interface SessionStatusButtonProps {
   status: AttendanceStatus;
   session: SessionType;
-  studentId: string;
+  studentId: number;
   currentStatus?: AttendanceStatus;
   currentTime?: string;
-  onSetStatus: (studentId: string, session: SessionType, status: AttendanceStatus) => void;
+  onSetStatus: (studentId: number, session: SessionType, status: AttendanceStatus) => void;
   isEditable: boolean;
   isLocked: boolean;
   activeClass: string;
   inactiveClass: string;
 }
 
-const SessionStatusButton: React.FC<SessionStatusButtonProps> = ({
-  status,
-  session,
-  studentId,
-  currentStatus,
+const SessionStatusButton: React.FC<SessionStatusButtonProps> = ({ 
+  status, 
+  session, 
+  studentId, 
+  currentStatus, 
   isEditable,
   isLocked,
   onSetStatus,
-  activeClass,
-  inactiveClass
+  activeClass, 
+  inactiveClass 
 }) => {
   const isActive = currentStatus === status;
   const labels = { P: 'Present', A: 'Absent', L: 'Late', E: 'Excused' };
-
+  
+  // Build a contextual tooltip that explains why the button is disabled
   const disabledReason = isLocked
     ? `${labels[status]} (${session}) — session is locked. Tap "Unlock Session" to make corrections.`
     : !isEditable

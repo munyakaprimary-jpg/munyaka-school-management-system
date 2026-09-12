@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getLocalStorage, tryParse } from '@/utils/storageUtils';
-import { STAFF_MASTER_KEY, getStaffMaster } from '@/services/staffMasterService';
+import { INITIAL_SEED_DATA } from '../data/initialSeedData';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,15 +45,22 @@ interface DashboardStats {
 
 const STORAGE_KEYS = {
   LEARNERS:             'school_learners_data',
-  TEACHERS:             STAFF_MASTER_KEY,          // single source of truth
-  TEACHERS_LEGACY:      'munyaka_staff_directory',  // legacy, still written by mutations
+  TEACHERS:             'munyaka_staff_directory',
   TEACHERS_FALLBACK:    'munyaka_staff',
-  TEACHERS_PREREG:      'munyaka_staff_prereg',
   ATTENDANCE:           'school_attendance_logs',
   ATTENDANCE_V2_PREFIX: 'munyaka_attendance_v2_',
   ACTIVE_SCHOOL_ID:     'munyaka_active_school_id',
   SCHOOL_PROFILE:       'munyaka_school_profile',
 } as const;
+
+const safeParse = <T,>(raw: string | null): T | null => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+};
 
 const getTodayDate = (): string => {
   const today = new Date();
@@ -71,11 +77,9 @@ const getTodayDate = (): string => {
  */
 const getActiveSchoolId = (): string | null => {
   try {
-    const ls = getLocalStorage();
-    const direct = ls?.getItem(STORAGE_KEYS.ACTIVE_SCHOOL_ID) ?? null;
+    const direct = localStorage.getItem(STORAGE_KEYS.ACTIVE_SCHOOL_ID);
     if (direct) return direct;
-    const profileRaw = ls?.getItem(STORAGE_KEYS.SCHOOL_PROFILE) ?? null;
-    const profile = tryParse<{ schoolId?: string }>(profileRaw);
+    const profile = safeParse<{ schoolId?: string }>(localStorage.getItem(STORAGE_KEYS.SCHOOL_PROFILE));
     return profile?.schoolId ?? null;
   } catch {
     return null;
@@ -130,10 +134,13 @@ const computeStats = (): DashboardStats => {
     const todayStr = getTodayDate();
 
     // ── 1. Learners ─────────────────────────────────────────────────────────
-    const lsForRead = getLocalStorage();
-    const learnersFromLS = tryParse<Learner[]>(lsForRead?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
-    // Pure localStorage read — no seed fallback. Empty array = zero learners.
-    const learners: Learner[] = Array.isArray(learnersFromLS) ? learnersFromLS : [];
+    const learnersFromLS = safeParse<Learner[]>(localStorage.getItem(STORAGE_KEYS.LEARNERS));
+    let learners: Learner[] = [];
+    if (Array.isArray(learnersFromLS) && learnersFromLS.length > 0) {
+      learners = learnersFromLS;
+    } else if (Array.isArray(INITIAL_SEED_DATA.students) && INITIAL_SEED_DATA.students.length > 0) {
+      learners = INITIAL_SEED_DATA.students as unknown as Learner[];
+    }
 
     const totalStudents = learners.filter((l) => {
       if (!l) return false;
@@ -143,26 +150,29 @@ const computeStats = (): DashboardStats => {
     }).length;
 
     // ── 2. Teachers ─────────────────────────────────────────────────────────
-        // Read from the single master ledger — no more merging pre-reg + directory
-        // since the master already contains all staff in one place.
-        const master = getStaffMaster();
-        const teachers: Teacher[] = master as unknown as Teacher[];
+    let teachers: Teacher[] = [];
+    const teachersFromLS = safeParse<Teacher[]>(localStorage.getItem(STORAGE_KEYS.TEACHERS));
+    if (Array.isArray(teachersFromLS) && teachersFromLS.length > 0) {
+      teachers = teachersFromLS;
+    } else {
+      const teachersFromFallback = safeParse<Teacher[]>(localStorage.getItem(STORAGE_KEYS.TEACHERS_FALLBACK));
+      if (Array.isArray(teachersFromFallback) && teachersFromFallback.length > 0) {
+        teachers = teachersFromFallback;
+      } else if (Array.isArray(INITIAL_SEED_DATA.staff) && INITIAL_SEED_DATA.staff.length > 0) {
+        teachers = INITIAL_SEED_DATA.staff as unknown as Teacher[];
+      }
+    }
 
     const totalTeachers = teachers.filter((t) => {
       if (!t) return false;
       if (!matchesActiveSchool(t, activeSchoolId)) return false;
-      // Count every teacher-classified record regardless of status.
-      // The previous version dropped records whose status was not
-      // exactly "Active" (e.g. missing, "Pending", "Verified"), which
-      // caused the dashboard to show 1 instead of 7. The dashboard
-      // should reflect the full registered roster.
+      if (t.status && t.status !== 'Active' && t.status !== 'active') return false;
       return isTeacherRecord(t);
     }).length;
 
     // ── 3. Today's attendance % — deduplicated by studentId, capped at 100% ─
-    const flatAttendance = tryParse<AttendanceLog[]>(lsForRead?.getItem(STORAGE_KEYS.ATTENDANCE) ?? null) ?? [];
+    const flatAttendance = safeParse<AttendanceLog[]>(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) ?? [];
     const presentStudentIds = new Set<string>();
-    const ls = getLocalStorage();
 
     if (Array.isArray(flatAttendance) && flatAttendance.length > 0) {
       flatAttendance.forEach((a) => {
@@ -173,29 +183,26 @@ const computeStats = (): DashboardStats => {
           if (a.studentId) presentStudentIds.add(a.studentId);
         }
       });
-    } else if (ls) {
+    } else {
       // Walk all v2 per-grade registers
-      try {
-        Object.keys(ls).forEach((key) => {
-          if (!key?.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) return;
-          try {
-            const raw = ls.getItem(key);
-            if (!raw) return;
-            // Parse the raw string directly (avoid re-keying safeParse)
-            const record = JSON.parse(raw) as Record<string, any> | null;
-            if (!record || typeof record !== 'object') return;
-            Object.values(record).forEach((entry: any) => {
-              if (!entry || typeof entry !== 'object') return;
-              if (entry?.date && entry?.date !== todayStr) return;
-              const morning = entry?.morning?.status || entry?.morning;
-              const afternoon = entry?.afternoon?.status || entry?.afternoon;
-              if (morning === 'P' || afternoon === 'P') {
-                if (entry?.studentId) presentStudentIds.add(entry.studentId);
-              }
-            });
-          } catch { /* ignore individual records */ }
-        });
-      } catch { /* ignore outer loop */ }
+      Object.keys(localStorage).forEach((key) => {
+        if (!key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) return;
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
+          const record = safeParse<Record<string, any>>(raw);
+          if (!record) return;
+          Object.values(record).forEach((entry: any) => {
+            if (!entry || typeof entry !== 'object') return;
+            if (entry.date && entry.date !== todayStr) return;
+            const morning = entry.morning?.status || entry.morning;
+            const afternoon = entry.afternoon?.status || entry.afternoon;
+            if (morning === 'P' || afternoon === 'P') {
+              if (entry.studentId) presentStudentIds.add(entry.studentId);
+            }
+          });
+        } catch { /* ignore individual records */ }
+      });
     }
 
     // Deduplicated count — each student counted at most once
@@ -214,10 +221,17 @@ const computeStats = (): DashboardStats => {
     };
   } catch (err) {
     console.error('useDashboardData compute error:', err);
-    // On error, return zero counts — never fall back to seed data.
+
+    let fallbackStudents = 0;
+    let fallbackTeachers = 0;
+    try {
+      if (Array.isArray(INITIAL_SEED_DATA.students)) fallbackStudents = INITIAL_SEED_DATA.students.length;
+      if (Array.isArray(INITIAL_SEED_DATA.staff))    fallbackTeachers  = INITIAL_SEED_DATA.staff.length;
+    } catch { /* ignore */ }
+
     return {
-      totalStudents: 0,
-      totalTeachers: 0,
+      totalStudents: fallbackStudents,
+      totalTeachers: fallbackTeachers,
       todayAttendanceRate: 0,
       isLoading: false,
     };
@@ -259,15 +273,13 @@ export const useDashboardData = (): DashboardStats => {
   // For same-tab updates we expose a CustomEvent below.
   useEffect(() => {
     const watchedKeys = [
-          STORAGE_KEYS.LEARNERS,
-          STORAGE_KEYS.TEACHERS,          // munyaka_staff_master (primary)
-          STORAGE_KEYS.TEACHERS_LEGACY,   // munyaka_staff_directory (legacy, still written)
-          STORAGE_KEYS.TEACHERS_FALLBACK,
-          STORAGE_KEYS.TEACHERS_PREREG,
-          STORAGE_KEYS.ATTENDANCE,
-          STORAGE_KEYS.ACTIVE_SCHOOL_ID,
-          STORAGE_KEYS.SCHOOL_PROFILE,
-        ];
+      STORAGE_KEYS.LEARNERS,
+      STORAGE_KEYS.TEACHERS,
+      STORAGE_KEYS.TEACHERS_FALLBACK,
+      STORAGE_KEYS.ATTENDANCE,
+      STORAGE_KEYS.ACTIVE_SCHOOL_ID,
+      STORAGE_KEYS.SCHOOL_PROFILE,
+    ];
 
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
@@ -289,15 +301,13 @@ export const useDashboardData = (): DashboardStats => {
       // If a specific key changed, only refresh when relevant
       if (detail?.key) {
         const watched = [
-                  STORAGE_KEYS.LEARNERS,
-                  STORAGE_KEYS.TEACHERS,
-                  STORAGE_KEYS.TEACHERS_LEGACY,
-                  STORAGE_KEYS.TEACHERS_FALLBACK,
-                  STORAGE_KEYS.TEACHERS_PREREG,
-                  STORAGE_KEYS.ATTENDANCE,
-                  STORAGE_KEYS.ACTIVE_SCHOOL_ID,
-                  STORAGE_KEYS.SCHOOL_PROFILE,
-                ];
+          STORAGE_KEYS.LEARNERS,
+          STORAGE_KEYS.TEACHERS,
+          STORAGE_KEYS.TEACHERS_FALLBACK,
+          STORAGE_KEYS.ATTENDANCE,
+          STORAGE_KEYS.ACTIVE_SCHOOL_ID,
+          STORAGE_KEYS.SCHOOL_PROFILE,
+        ];
         if (!watched.includes(detail.key) && !detail.key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) {
           return;
         }

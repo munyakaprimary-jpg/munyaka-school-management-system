@@ -7,13 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileDown, FileText, Save, Loader2, Search, CheckCircle2, ClipboardCheck, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { FileDown, FileText, Save, Loader2, Search, CheckCircle2 } from "lucide-react";
+import { STUDENTS } from "@/lib/mock-data";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
-import { saveTeacherInputResult } from "@/utils/assessmentResults";
-import { useBackToAssessmentsMenu } from "@/hooks/useBackToAssessmentsMenu";
 
 // Educational Tier Subject Mappings & Parsing Logic
 const TIER_SUBJECTS: Record<string, string[]> = {
@@ -77,19 +75,6 @@ const getLevelNameForGrade = (gradeName: string): string => {
   return "Lower Primary";
 };
 
-interface Student {
-  id?: string;
-  admissionNumber?: string;
-  assessment?: string;
-  grade?: string;
-  gradeLevel?: string;
-  class?: string;
-  stream?: string;
-  classStream?: string;
-  section?: string;
-  name?: string;
-}
-
 const Assessments = () => {
   // Control States bound to localStorage / defaults
   const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
@@ -109,16 +94,6 @@ const Assessments = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
 
-  // ====== Navigation ======
-  const navigate = useNavigate();
-
-  // Returns the user to the parent Assessments menu. Local selection state
-  // is reset so re-entry starts clean, but persisted marks remain intact.
-  const handleBackToParent = useBackToAssessmentsMenu(
-    {}, // no module-style setters in this route — falls back to navigate()
-    { resets: [() => setSearchTerm("")] }
-  );
-
   // ====== Unified file-download state for CSV & PDF ======
   const csvExport = useFileDownload();
   const pdfExport = useFileDownload();
@@ -129,28 +104,17 @@ const Assessments = () => {
   const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
 
   // 1. Retrieve Students Directory from localStorage with school_learners_data (unified Learner Management state) and fallbacks
-  // Cold start: returns [] when localStorage is empty — no mock data.
-  const studentsList = useMemo((): Student[] => {
+  const studentsList = useMemo(() => {
     try {
-      const stored =
-        localStorage.getItem("school_learners_data") ||
-        localStorage.getItem("munyaka_students") ||
-        localStorage.getItem("students_directory") ||
-        localStorage.getItem("learners") ||
-        localStorage.getItem("munyaka_students_master");
+      const stored = localStorage.getItem("school_learners_data") || localStorage.getItem("munyaka_students") || localStorage.getItem("students_directory") || localStorage.getItem("learners") || localStorage.getItem("munyaka_students_master");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          // Filter to plain objects so downstream .name / .grade accesses don't crash.
-          return parsed.filter((item): item is Student =>
-            item !== null && typeof item === "object"
-          );
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
       console.error("Error loading school_learners_data / learners:", e);
     }
-    return [];
+    return STUDENTS;
   }, []);
 
   // 2. Grades & Streams from munyaka_grades with fallback protection
@@ -191,25 +155,28 @@ const Assessments = () => {
     }
 
     // Sort according to cbcOrder with normalization
-        const sorted = [...rawGrades].sort((a, b) => {
-          const itemA = typeof a === 'object' && a !== null ? a.name : a;
-          const itemB = typeof b === 'object' && b !== null ? b.name : b;
-    
-          const nameA = String(itemA ?? '').trim();
-          const nameB = String(itemB ?? '').trim();
-    
-          const indexA = cbcOrder.indexOf(nameA);
-          const indexB = cbcOrder.indexOf(nameB);
-    
-          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-          if (indexA !== -1) return -1;
-          if (indexB !== -1) return 1;
-          return nameA.localeCompare(nameB);
-        });
+    const sorted = [...rawGrades].sort((a, b) => {
+      const nameA = (a.name || a).toString().trim().toLowerCase();
+      const nameB = (b.name || b).toString().trim().toLowerCase();
+      
+      const indexA = cbcOrder.indexOf(nameA);
+      const indexB = cbcOrder.indexOf(nameB);
+
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+
+      // Extract numeric value if any for ascending order fallback
+      const numA = parseInt(nameA.replace(/[^0-9]/g, ""), 10) || 999;
+      const numB = parseInt(nameB.replace(/[^0-9]/g, ""), 10) || 999;
+      if (numA !== numB) return numA - numB;
+
+      return nameA.localeCompare(nameB);
+    });
 
     // Display Standardization: Format nicely (e.g. capitalize "grade 5" -> "Grade 5")
     return sorted.map((g: any) => {
-      const str = String(g.name || g || '').trim();
+      const str = (g.name || g).toString().trim();
       // If it starts with grade in lowercase, capitalize Grade
       if (str.toLowerCase().startsWith("grade ")) {
         const numPart = str.substring(6);
@@ -353,7 +320,7 @@ const Assessments = () => {
   // FILTERED STUDENTS - DECLARED BEFORE USE EFFECT
   // ============================================
   const filteredStudents = useMemo(() => {
-    const selectedGradeNormalized = String(currentGrade || '').trim().toLowerCase();
+    const selectedGradeNormalized = currentGrade.trim().toLowerCase();
 
     return studentsList.filter(s => {
       // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
@@ -368,16 +335,16 @@ const Assessments = () => {
       // 2. Stream Filtering Flexibility (if Stream selection is set to "All Streams" or empty, ignore stream matching)
       const rawStudentStream = s.stream || s.classStream || s.section || "";
       const studentStreamNormalized = String(rawStudentStream).trim().toLowerCase();
-      const selectedStreamNormalized = String(stream || '').trim().toLowerCase();
+      const selectedStreamNormalized = stream.trim().toLowerCase();
 
       const isAllStreams = !stream || selectedStreamNormalized === "all streams" || selectedStreamNormalized === "";
       const matchesStream = isAllStreams || !studentStreamNormalized || studentStreamNormalized === selectedStreamNormalized;
 
-      const matchesSearch = !String(searchTerm || '').trim() ||
-              (s.name && s.name.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.admissionNumber && s.admissionNumber.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.assessment && s.assessment.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.id && s.id.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim()));
+      const matchesSearch = !searchTerm.trim() ||
+        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
     });
@@ -433,77 +400,49 @@ const Assessments = () => {
   }, [targetKey, filteredStudents, allTierSubjects]);
 
   // ============================================
-    // IMMEDIATE LOCALSTORAGE AUTOSAVE & HISTORY PRESERVATION
-    // Uses strict 5-part targetKey for isolation
-    // Also persists an AssessmentResult record linked to student/class/subject/term.
-    // ============================================
-    const handleMarkChange = useCallback((studentId: string, subj: string, value: string) => {
-      let clean = value.replace(/[^0-9]/g, "");
-      if (clean !== "" && parseInt(clean, 10) > 100) clean = "100";
-  
-      setMarksMatrix(prev => {
-        const updated = {
-          ...prev,
-          [studentId]: {
-            ...(prev[studentId] || {}),
-            [subj]: clean
-          }
-        };
-  
-        // 3. History Preservation & Merging: Save into specific targetKey
-        try {
-          localStorage.setItem(targetKey, JSON.stringify(updated));
-          notifyDataChanged(targetKey);
-  
-          const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
-          let masterObj: Record<string, any> = {};
-          if (existingMasterStr) {
-            try {
-              masterObj = JSON.parse(existingMasterStr);
-            } catch (err) {
-              masterObj = {};
-            }
-          }
-          masterObj[targetKey] = updated;
-          localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
-          notifyDataChanged("munyaka_assessment_scores");
-  
-          // Also write an AssessmentResult record linked to student/class/subject/term
-          if (clean !== "") {
-            const score = parseInt(clean, 10);
-            if (!isNaN(score)) {
-              const student = filteredStudents.find(
-                (s) => (s.id || s.admissionNumber) === studentId
-              );
-              if (student) {
-                saveTeacherInputResult(score, {
-                  studentId,
-                  studentName: student.name,
-                  classId: student.grade || student.gradeLevel || currentGrade,
-                  className: student.grade || student.gradeLevel || currentGrade,
-                  stream: student.stream || student.classStream,
-                }, {
-                  academicYear,
-                  term,
-                  examType,
-                  subjectId: subj,
-                  subjectName: subj,
-                  assessmentTitle: `${subj} – ${examType}`,
-                  maxScore: 100,
-                });
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Autosave/History preservation error:", e);
+  // IMMEDIATE LOCALSTORAGE AUTOSAVE & HISTORY PRESERVATION
+  // Uses strict 5-part targetKey for isolation
+  // ============================================
+  const handleMarkChange = useCallback((studentId: string, subj: string, value: string) => {
+    let clean = value.replace(/[^0-9]/g, "");
+    if (clean !== "" && parseInt(clean, 10) > 100) clean = "100";
+
+    setMarksMatrix(prev => {
+      const updated = {
+        ...prev,
+        [studentId]: {
+          ...(prev[studentId] || {}),
+          [subj]: clean
         }
-  
-        return updated;
-      });
-  
-      setShowSavedBadge(true);
-      setTimeout(() => setShowSavedBadge(false), 2000);
-    }, [targetKey, filteredStudents, academicYear, term, examType, currentGrade]);
+      };
+
+      // 3. History Preservation & Merging: Save into specific targetKey
+      try {
+        localStorage.setItem(targetKey, JSON.stringify(updated));
+        notifyDataChanged(targetKey);
+
+        const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
+        let masterObj: Record<string, any> = {};
+        if (existingMasterStr) {
+          try {
+            masterObj = JSON.parse(existingMasterStr);
+          } catch (err) {
+            masterObj = {};
+          }
+        }
+        masterObj[targetKey] = updated;
+        localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
+        notifyDataChanged("munyaka_assessment_scores");
+      } catch (e) {
+        console.error("Autosave/History preservation error:", e);
+      }
+
+      return updated;
+    });
+
+    setShowSavedBadge(true);
+    setTimeout(() => setShowSavedBadge(false), 2000);
+  }, [targetKey]);
 
   // Calculations for Totals, Subject Totals, Subject MSS, Class Average
   const studentTotals = useMemo(() => {
@@ -603,63 +542,33 @@ const Assessments = () => {
   }, [filteredStudents, marksMatrix, allTierSubjects]);
 
   // Save All Marks explicitly commits to localStorage under targetKey
-    // Also writes AssessmentResult records for every entered mark
-    const handleSaveAll = async () => {
-      setIsSaving(true);
-      await new Promise(r => setTimeout(r, 600));
-      try {
-        localStorage.setItem(targetKey, JSON.stringify(marksMatrix));
-        notifyDataChanged(targetKey);
-  
-        const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
-        let masterObj: Record<string, any> = {};
-        if (existingMasterStr) {
-          try {
-            masterObj = JSON.parse(existingMasterStr);
-          } catch (err) {
-            masterObj = {};
-          }
+  const handleSaveAll = async () => {
+    setIsSaving(true);
+    await new Promise(r => setTimeout(r, 600));
+    try {
+      localStorage.setItem(targetKey, JSON.stringify(marksMatrix));
+      notifyDataChanged(targetKey);
+
+      const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
+      let masterObj: Record<string, any> = {};
+      if (existingMasterStr) {
+        try {
+          masterObj = JSON.parse(existingMasterStr);
+        } catch (err) {
+          masterObj = {};
         }
-        masterObj[targetKey] = marksMatrix;
-        localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
-        notifyDataChanged("munyaka_assessment_scores");
-  
-        // Bulk write AssessmentResult records for every entered mark
-        filteredStudents.forEach((student) => {
-          const studentId = student.id || student.admissionNumber;
-          const studentMarks = marksMatrix[studentId] || {};
-          Object.entries(studentMarks).forEach(([subj, rawScore]) => {
-            const scoreStr = String(rawScore || "").trim();
-            if (scoreStr !== "") {
-              const score = parseInt(scoreStr, 10);
-              if (!isNaN(score)) {
-                saveTeacherInputResult(score, {
-                  studentId,
-                  studentName: student.name,
-                  classId: student.grade || student.gradeLevel || currentGrade,
-                  className: student.grade || student.gradeLevel || currentGrade,
-                  stream: student.stream || student.classStream,
-                }, {
-                  academicYear,
-                  term,
-                  examType,
-                  subjectId: subj,
-                  subjectName: subj,
-                  assessmentTitle: `${subj} – ${examType}`,
-                  maxScore: 100,
-                });
-              }
-            }
-          });
-        });
-  
-        setIsSaving(false);
-        showSuccess("All marks successfully committed to localStorage!");
-      } catch (e) {
-        setIsSaving(false);
-        showError("Error saving marks: " + (e instanceof Error ? e.message : String(e)));
       }
-    };
+      masterObj[targetKey] = marksMatrix;
+      localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
+      notifyDataChanged("munyaka_assessment_scores");
+
+      setIsSaving(false);
+      showSuccess("All marks successfully committed to localStorage!");
+    } catch (e) {
+      setIsSaving(false);
+      showError("Error saving marks: " + (e instanceof Error ? e.message : String(e)));
+    }
+  };
 
   // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
   // Builds the CSV with EXACTLY these first rows in order:
@@ -785,55 +694,41 @@ ${filteredStudents.length} learner(s) included.
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* 1. Header & Quick Actions Layout - stacks on mobile, row on sm+ */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 w-full max-w-full overflow-hidden">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              onClick={handleBackToParent}
-              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center justify-center shrink-0"
-              title="Back to Assessments Menu"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900 whitespace-normal break-words">Marks Entry & CBC Assessment</h1>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full">
+      {/* 1. Header & Quick Actions Layout */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">Marks Entry & CBC Assessment</h1>
             {showSavedBadge && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
                 <CheckCircle2 size={12} /> Saved to LocalStorage
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-1 break-words hyphens-auto">
+          <p className="text-sm text-slate-500 mt-1">
             Enter class marks for one subject or switch to All Subjects to fill a full matrix. Valid scores autosave to localStorage; use Save All for bulk commit.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
-            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
             onClick={handleDownloadCSV}
             disabled={csvExport.isDownloading}
           >
             {csvExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />} Download CSV
           </Button>
           <Button
-                      variant="outline"
-                      className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
-                      onClick={handleDownloadPDF}
-                      disabled={pdfExport.isDownloading}
-                    >
-                      {pdfExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download PDF
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="rounded-xl h-11 px-4 border-indigo-200 bg-indigo-50 gap-2 text-sm font-bold shadow-sm hover:bg-indigo-100 text-indigo-700 w-full sm:w-auto"
-                      onClick={() => navigate("/grading")}
-                    >
-                      <ClipboardCheck size={16} /> Grading Review
-                    </Button>
+            variant="outline"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+            onClick={handleDownloadPDF}
+            disabled={pdfExport.isDownloading}
+          >
+            {pdfExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download PDF
+          </Button>
           <Button
-            className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2 w-full sm:w-auto"
+            className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2"
             onClick={handleSaveAll}
             disabled={isSaving}
           >
@@ -842,9 +737,9 @@ ${filteredStudents.length} learner(s) included.
         </div>
       </div>
 
-      {/* 3. Dynamic Filter Bar & Controls (Responsive Grid Card Container) */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 w-full max-w-full overflow-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 3. Dynamic Filter Bar & Controls (Grid Card Container) */}
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
           
           {/* 1. Academic Year */}
           <div className="space-y-1.5">
@@ -1004,7 +899,7 @@ ${filteredStudents.length} learner(s) included.
                         </td>
 
                         {activeSubjects.map(subj => (
-                          <td key={subj} className="px-2 py-3 border-r text-center min-w-[100px] max-w-[140px]">
+                          <td key={subj} className="px-2 py-3 border-r text-center min-w-[120px] max-w-[160px]">
                             <Input
                               type="number"
                               min="0"
@@ -1012,7 +907,7 @@ ${filteredStudents.length} learner(s) included.
                               value={studentMarks[subj] !== undefined ? studentMarks[subj] : ""}
                               onChange={e => handleMarkChange(studentId, subj, e.target.value)}
                               placeholder="—"
-                              className="w-16 sm:w-20 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
+                              className="w-20 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
                             />
                           </td>
                         ))}

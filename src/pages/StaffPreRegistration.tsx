@@ -1,479 +1,396 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, Loader2, X, Trash2, AlertCircle, Copy, ShieldCheck, Sparkles, Users, Mail, Eye, Edit, UserCheck, ExternalLink } from 'lucide-react';
+import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send, Key, ShieldCheck } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { PreRegisteredStaff, AccessStatus, SystemRole, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
-import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
-import {
-  getStaffMaster,
-  addStaffMaster,
-  updateStaffMaster,
-  deleteStaffMaster,
-  activateStaffMaster,
-  initializeStaffMaster,
-  STAFF_MASTER_KEY,
-  type MasterStaffRecord,
-} from '@/services/staffMasterService';
 import { notifyDataChanged } from '@/utils/storage';
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-const toTitleCase = (str: string): string => {
-  if (!str) return '';
-  return str
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-};
-
-const initialsOf = (name: string): string =>
-  name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'ST';
-
-/** Maps a MasterStaffRecord to the PreRegisteredStaff shape used by the UI */
-function toPreReg(record: MasterStaffRecord): PreRegisteredStaff {
-  return {
-    id: record.id,
-    staffId: record.staffId || record.id,
-    fullName: record.name,
-    nationalId: record.nationalId,
-    email: record.email,
-    phone: record.phone,
-    tscNumber: record.tscNumber,
-    systemRole: record.systemRole as SystemRole,
-    department: record.department,
-    assignedGrade: record.assignedGrade,
-    assignedStream: record.assignedStream,
-    assignedSubjects: record.assignedSubjects,
-    gender: record.gender,
-    salary: record.salary,
-    joinedDate: record.joinedDate,
-    emergencyContact: record.emergencyContact,
-    emergencyName: record.emergencyName,
-    schoolId: record.schoolId,
-    tempAccessCode: record.tempAccessCode,
-    status: record.status as AccessStatus,
-    datePreRegistered: record.datePreRegistered,
-    profileComplete: record.profileComplete,
-  };
-}
+import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
+import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
+import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
 
 const StaffPreRegistration = () => {
-  const navigate = useNavigate();
-
-  // ── Staff list sourced exclusively from staffMasterService ─────────────────
-  const [staffList, setStaffList] = useState<PreRegisteredStaff[]>([]);
-
-  // ── Boot: load from staffMasterService ─────────────────────────────────────
-  useEffect(() => {
-    initializeStaffMaster(); // safe to call multiple times — idempotent
-    const records = getStaffMaster();
-    setStaffList(records.map(toPreReg));
-  }, []);
-
-  // ── Listen for external changes broadcast by staffMasterService mutations ──
-  useEffect(() => {
-    const refresh = () => {
-      const records = getStaffMaster();
-      setStaffList(records.map(toPreReg));
-    };
-    window.addEventListener('staff-changed', refresh);
-    window.addEventListener('munyaka:staff-directory-changed', refresh);
-    return () => {
-      window.removeEventListener('staff-changed', refresh);
-      window.removeEventListener('munyaka:staff-directory-changed', refresh);
-    };
-  }, []);
-
-  // ── UI State ───────────────────────────────────────────────────────────────
+  const [staffList, setStaffList] = useState<PreRegisteredStaff[]>(() => {
+    const saved = localStorage.getItem('munyaka_staff_prereg');
+    return saved ? JSON.parse(saved) : INITIAL_PRE_REGISTERED_STAFF;
+  });
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [isDeleteAuthOpen, setIsDeleteAuthOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  
+  // Auth state for deletion
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // ── Pre-computed lookup sets for AddPreRegModal ─────────────────────────────
-  const existingNatIds = useMemo(() => new Set(staffList.map(s => s.nationalId)), [staffList]);
-  const existingEmails = useMemo(() => new Set(staffList.map(s => (s.email || '').toLowerCase())), [staffList]);
-
-  // ── Filter ─────────────────────────────────────────────────────────────────
   const filteredStaff = useMemo(() => {
     return staffList.filter(s => {
-      const term = searchTerm.toLowerCase();
-      const matchName  = s.fullName.toLowerCase().includes(term);
-      const matchEmail = (s.email || '').toLowerCase().includes(term);
-      const matchNatId = (s.nationalId || '').toLowerCase().includes(term);
-      const matchKey   = (s.tempAccessCode || '').toLowerCase().includes(term);
-      if (!matchName && !matchEmail && !matchNatId && !matchKey) return false;
-
-      if (roleFilter !== 'all' && s.systemRole !== roleFilter) return false;
-      if (statusFilter !== 'all' && s.status !== statusFilter) return false;
-
-      return true;
+      const matchesSearch = s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           s.nationalId.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           s.tempAccessCode.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           s.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === "all" || s.systemRole === roleFilter;
+      const matchesStatus = statusFilter === "all" || s.status === statusFilter;
+      return matchesSearch && matchesRole && matchesStatus;
     });
   }, [staffList, searchTerm, roleFilter, statusFilter]);
 
-  // ── CRUD handlers ───────────────────────────────────────────────────────────
-  const handleAddStaff = useCallback((formData: Partial<PreRegisteredStaff>) => {
-    const name = (formData.fullName || '').trim();
-    if (!name || !(formData.email || '').trim()) {
-      showError('Full name and email are required.');
-      return;
-    }
-    try {
-      const record = addStaffMaster({
-        name,
-        nationalId: formData.nationalId || '',
-        email: formData.email || '',
-        phone: formData.phone || '',
-        tscNumber: formData.tscNumber,
-        systemRole: (formData.systemRole as MasterStaffRecord['systemRole']) || 'subject_teacher',
-        department: formData.department || 'School Administration',
-        assignedGrade: formData.assignedGrade,
-        assignedStream: formData.assignedStream,
-        assignedSubjects: formData.assignedSubjects || [],
-        gender: formData.gender,
-        salary: formData.salary,
-        joinedDate: formData.joinedDate || new Date().toISOString().split('T')[0],
-        emergencyContact: formData.emergencyContact,
-        emergencyName: formData.emergencyName,
-        schoolId: formData.schoolId || 'munyaka-sc',
-        tempAccessCode: formData.tempAccessCode || '',
-        status: 'Pre-Registered',
-        datePreRegistered: formData.datePreRegistered || new Date().toISOString().split('T')[0],
-        profileComplete: false,
-      });
-      // staffMasterService already called broadcast() — no extra notify needed
-      showSuccess(`${name} pre-registered with access key ${record.tempAccessCode}`);
-      setIsAddModalOpen(false);
-    } catch (err) {
-      showError('Failed to add staff. Please try again.');
-      console.error('[StaffPreRegistration] handleAddStaff:', err);
-    }
-  }, []);
+  const handleAddStaff = (staffData: Partial<PreRegisteredStaff>) => {
+    const newStaff: PreRegisteredStaff = {
+      id: `PR-${Date.now()}`,
+      staffId: staffData.staffId || `T${String(staffList.length + 7).padStart(3, '0')}`,
+      fullName: staffData.fullName || "",
+      nationalId: staffData.nationalId || "",
+      tscNumber: staffData.tscNumber,
+      email: staffData.email || "",
+      phone: staffData.phone || "",
+      systemRole: staffData.systemRole || "subject_teacher",
+      department: staffData.department || "",
+      assignedGrade: staffData.assignedGrade,
+      assignedStream: staffData.assignedStream,
+      assignedSubjects: staffData.assignedSubjects || [],
+      tempAccessCode: staffData.tempAccessCode || "",
+      status: "Pre-Registered" as AccessStatus,
+      datePreRegistered: new Date().toISOString().split('T')[0],
+    };
 
-  const handleDeleteStaff = useCallback((id: string) => {
-    try {
-      const ok = deleteStaffMaster(id);
-      if (ok) {
-        showSuccess('Staff record deleted.');
-      }
-    } catch (err) {
-      showError('Failed to delete staff.');
-      console.error('[StaffPreRegistration] handleDeleteStaff:', err);
-    }
-  }, []);
+    const updatedList = [newStaff, ...staffList];
+    setStaffList(updatedList);
+    localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
+    notifyDataChanged('munyaka_staff_prereg');
+    setIsAddModalOpen(false);
+    showSuccess(`Staff member "${newStaff.fullName}" pre-registered successfully!`);
+  };
 
-  const handleActivateStaff = useCallback((id: string) => {
-    try {
-      const updated = activateStaffMaster(id);
-      if (updated) {
-        showSuccess('Staff activated successfully.');
-      }
-    } catch (err) {
-      showError('Failed to activate staff.');
-      console.error('[StaffPreRegistration] handleActivateStaff:', err);
-    }
-  }, []);
-
-  // ── Auth guard for deletion ────────────────────────────────────────────────
-  const openDeleteAuth = (id: string, name: string) => {
-    setDeleteTarget({ id, name });
-    setAuthPassword('');
-    setAuthError('');
+  const requestDelete = (staff: PreRegisteredStaff) => {
+    setDeleteTarget({ id: staff.id, name: staff.fullName });
+    setAuthPassword("");
+    setAuthError("");
     setIsDeleteAuthOpen(true);
   };
 
-  const confirmDelete = async () => {
-    setIsVerifying(true);
-    setAuthError('');
-    try {
-      const inputTrimmed = authPassword.trim();
-      const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka2026';
-      const ownerPass = localStorage.getItem('munyaka_owner_pass') || 'munyaka2026';
-      const sysAdminPass = localStorage.getItem('munyaka_sysadmin_pass') || 'munyaka2026';
-
-      const isValid =
-        inputTrimmed === currentAdminPass ||
-        inputTrimmed === ownerPass ||
-        inputTrimmed === sysAdminPass ||
-        inputTrimmed === 'munyaka2026' ||
-        inputTrimmed === 'munyaka5239';
-
-      if (isValid) {
-        setIsDeleteAuthOpen(false);
-        if (deleteTarget) handleDeleteStaff(deleteTarget.id);
-      } else {
-        setAuthError('Incorrect password. Access denied.');
-      }
-    } catch {
-      setAuthError('Verification failed. Try again.');
-    } finally {
-      setIsVerifying(false);
+  const handleVerifyAuth = async () => {
+    if (!authPassword.trim()) {
+      setAuthError("Password is required");
+      return;
     }
+
+    setIsVerifying(true);
+    setAuthError("");
+    
+    await new Promise(r => setTimeout(r, 600));
+
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+
+    if (authPassword === currentAdminPass) {
+      if (deleteTarget) {
+        const updatedList = staffList.filter(s => s.id !== deleteTarget.id);
+        setStaffList(updatedList);
+        localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
+        notifyDataChanged('munyaka_staff_prereg');
+        showSuccess(`Staff "${deleteTarget.name}" deleted successfully.`);
+      }
+      setIsDeleteAuthOpen(false);
+      setDeleteTarget(null);
+      setAuthPassword("");
+    } else {
+      setAuthError("Invalid admin password");
+      showError("Authorization failed");
+      setAuthPassword("");
+    }
+    setIsVerifying(false);
   };
 
-  // ── Render helpers ─────────────────────────────────────────────────────────
-  const getStatusBadge = (status: string) => {
-    const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
-      'Pre-Registered': { variant: 'secondary', className: 'bg-amber-100 text-amber-800 border-amber-200 rounded-full' },
-      'Active':        { variant: 'default',   className: 'bg-emerald-100 text-emerald-800 border-emerald-200 rounded-full' },
-      'Inactive':      { variant: 'destructive', className: 'bg-red-100 text-red-800 border-red-200 rounded-full' },
-    };
-    const cfg = map[status] || { variant: 'secondary' as const, className: 'rounded-full' };
-    return <Badge variant={cfg.variant} className={cfg.className}>{status}</Badge>;
+  const handleExportCSV = () => {
+    if (filteredStaff.length === 0) {
+      showSuccess("No records found for the current filters.");
+      return;
+    }
+
+    setIsExporting(true);
+    
+    setTimeout(() => {
+      const headers = ["Staff Ref ID", "Full Name", "National ID", "Email", "Role", "Access Key", "Status"];
+      const rows = filteredStaff.map(s => [
+        s.id,
+        s.fullName,
+        s.nationalId,
+        s.email,
+        s.systemRole,
+        s.tempAccessCode,
+        s.status
+      ]);
+
+      const csvContent = [
+        "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+        "P.O. BOX 5239-30100,ELDORET",
+        "MOTTO: KNOWLEDGE POWER",
+        "",
+        headers.join(","),
+        ...rows.map(r => r.join(","))
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `staff_access_master_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setIsExporting(false);
+      showSuccess(`Exported ${filteredStaff.length} staff records to CSV`);
+    }, 800);
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-      .then(() => showSuccess('Copied to clipboard!'))
-      .catch(() => showError('Copy failed.'));
+  const clearFilters = () => {
+    setSearchTerm("");
+    setRoleFilter("all");
+    setStatusFilter("all");
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-sky-50/30 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
-          <BackButton parentPath="/staff" />
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/staff" />
           <div>
-            <h1 className="text-3xl font-black text-slate-900">Staff Access Master</h1>
-            <p className="text-sm text-slate-500 mt-1">Manage pre-registration and system access keys</p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Staff Pre-Registration</h1>
+            <p className="text-muted-foreground">Pre-authorize teacher system access credentials and manage activation keys.</p>
           </div>
         </div>
-
-        {/* Counter cards — always reflect staffMasterService counts */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="rounded-2xl border border-amber-200 bg-amber-50/60 shadow-sm">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-amber-700">Pre-Registered</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-black text-amber-600">{staffList.filter(s => s.status === 'Pre-Registered').length}</p></CardContent>
-          </Card>
-          <Card className="rounded-2xl border border-emerald-200 bg-emerald-50/60 shadow-sm">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-emerald-700">Active</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-black text-emerald-600">{staffList.filter(s => s.status === 'Active').length}</p></CardContent>
-          </Card>
-          <Card className="rounded-2xl border border-slate-200 bg-slate-50/60 shadow-sm">
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-slate-600">Total</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-black text-slate-500">{staffList.length}</p></CardContent>
-          </Card>
-        </div>
-
-        {/* Search & Filters */}
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input
-              placeholder="Search by name, email, national ID, or access key…"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-10 rounded-xl border-slate-200 bg-white h-11 shadow-sm"
-            />
-            {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                <X size={16} />
-              </button>
-            )}
-          </div>
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-full md:w-44 rounded-xl h-11 shadow-sm"><SelectValue placeholder="All Roles" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {Object.entries(SYSTEM_ROLE_LABELS).map(([val, { label }]) => (
-                <SelectItem key={val} value={val}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-44 rounded-xl h-11 shadow-sm"><SelectValue placeholder="All Statuses" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Pre-Registered">Pre-Registered</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-center gap-2">
           <Button
-            onClick={() => setIsAddModalOpen(true)}
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold h-11 px-6 gap-2 shadow-lg shadow-indigo-100"
+            variant="outline"
+            className="h-11 px-5 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
+            onClick={handleExportCSV}
+            disabled={isExporting}
           >
-            <Plus size={18} /> Pre-Register
+            {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+            Export CSV
+          </Button>
+          
+          <Button
+            variant="default"
+            className="h-11 px-6 rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold gap-2 transition-all active:scale-95"
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            <Plus size={18} /> Onboard Staff
           </Button>
         </div>
-
-        {/* Table — outer card: w-full, no overflow-hidden; scroll wrapper: w-full overflow-x-auto */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm w-full">
-          {filteredStaff.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-              <Users size={48} className="mb-3 opacity-40" />
-              <p className="font-bold">No staff found</p>
-              <p className="text-sm mt-1">Try adjusting your search or filter criteria</p>
-            </div>
-          ) : (
-            <div className="w-full overflow-x-auto block clear-both">
-              <table className="w-full min-w-[850px] table-auto text-sm">
-                <thead className="text-slate-500 bg-slate-50/50 border-b">
-                  <tr>
-                    <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
-                      <Checkbox checked={false} onCheckedChange={() => {}} aria-label="Select all staff" />
-                    </th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff Name</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">System Role</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Registered Email</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Temp Access Code</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredStaff.map(s => {
-                    const canActivate = s.status === 'Pre-Registered';
-                    const roleLabel = SYSTEM_ROLE_LABELS[s.systemRole]?.label ?? s.systemRole;
-                    const roleCfg = SYSTEM_ROLE_LABELS[s.systemRole] ?? SYSTEM_ROLE_LABELS.subject_teacher;
-
-                    return (
-                      <tr key={s.id} className="hover:bg-slate-50/60 transition-colors group">
-                        <td className="px-4 py-5 w-12">
-                          <Checkbox checked={false} onCheckedChange={() => {}} aria-label={`Select ${s.fullName}`} />
-                        </td>
-                        <td className="px-8 py-5 min-w-[200px]">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                              {initialsOf(s.fullName)}
-                            </div>
-                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{toTitleCase(s.fullName)}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 min-w-[140px]">
-                                                  <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
-                                                    {(() => {
-                                                      // Priority: tscNumber (actual TSC) > nationalId (ID) — do NOT use staffId/login placeholder
-                                                      const tscNumber = (s as any).tscNo || s.tscNumber;
-                                                      const nationalId = (s as any).nationalId;
-                                                      const validId = tscNumber || nationalId;
-                                                      if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
-                                                        return validId;
-                                                      }
-                                                      return '—';
-                                                    })()}
-                                                  </span>
-                                                </td>
-                        <td className="px-8 py-5 min-w-[180px]">
-                          <p className="font-bold text-slate-800 whitespace-nowrap">{toTitleCase(roleLabel)}</p>
-                          <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{s.department}</p>
-                        </td>
-                        <td className="px-8 py-5 min-w-[220px]">
-                          <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{s.email || 'No Email Provided'}</span>
-                        </td>
-                        <td className="px-8 py-5 min-w-[140px]">
-                          <span className="font-mono text-xs font-bold text-amber-600 whitespace-nowrap">
-                            {s.tempAccessCode || '—'}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5 text-right min-w-[120px]">
-                          <div className="flex items-center gap-2 justify-end">
-                            {canActivate ? (
-                              <button
-                                onClick={() => handleActivateStaff(s.id)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 hover:text-emerald-800 text-xs font-bold transition-colors"
-                              >
-                                <ShieldCheck size={13} />
-                                Activate
-                              </button>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold">
-                                <ShieldCheck size={13} />
-                                Active
-                              </span>
-                            )}
-                            <button
-                              onClick={() => openDeleteAuth(s.id, s.fullName)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-slate-200 hover:border-red-200 text-slate-500 hover:text-red-600 text-xs font-bold transition-colors"
-                            >
-                              <Trash2 size={13} />
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        <p className="text-xs text-slate-400 text-center">
-          Records sourced from <code className="bg-slate-100 px-1 rounded">{STAFF_MASTER_KEY}</code> — the single source of truth
-        </p>
       </div>
 
-      {/* Add Pre-Registration Modal */}
+      {/* Filters Card */}
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="relative md:col-span-2">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Input 
+              placeholder="Search by name/ID..." 
+              className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium" 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+            />
+          </div>
+          
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Role</Label>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="all">All System Roles</SelectItem>
+                {Object.keys(SYSTEM_ROLE_LABELS).map(role => (
+                  <SelectItem key={role} value={role}>
+                    {SYSTEM_ROLE_LABELS[role as keyof typeof SYSTEM_ROLE_LABELS].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Status</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="Pre-Registered">Pre-Registered</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button 
+            variant="ghost" 
+            className="h-12 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 gap-2 font-bold transition-colors"
+            onClick={clearFilters}
+          >
+            <X size={18} /> Clear Filters
+          </Button>
+        </div>
+      </Card>
+
+      {/* Staff Table Section */}
+      <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Access Master Ledger</CardTitle>
+            <p className="text-sm text-slate-500 font-medium">Pre-approved staff credentials and activation keys.</p>
+          </div>
+          <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold px-4 py-1.5 rounded-xl">
+            {filteredStaff.length} Active Records
+          </Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-slate-500 bg-slate-50/50 border-b">
+                <tr>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Staff Credentials</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">System Role</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Registered Email</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Temp Access Key</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filteredStaff.map((staff) => {
+                  const roleInfo = SYSTEM_ROLE_LABELS[staff.systemRole] || SYSTEM_ROLE_LABELS.subject_teacher;
+                  return (
+                    <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-8 py-5">
+                        <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{staff.fullName}</p>
+                        <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {staff.nationalId}</p>
+                      </td>
+                      <td className="px-8 py-5">
+                        <Badge className={`rounded-xl font-bold border text-xs px-3 py-1 ${roleInfo.badgeBg} ${roleInfo.color}`}>{roleInfo.label}</Badge>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <Mail size={14} className="text-slate-400 shrink-0" />
+                          <span className="font-medium truncate max-w-[200px]">{staff.email}</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-center">
+                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => {
+                          navigator.clipboard.writeText(staff.tempAccessCode);
+                          showSuccess(`Copied Key: ${staff.tempAccessCode}`);
+                        }}>
+                          <code className="font-bold text-slate-800 text-xs">{staff.tempAccessCode}</code>
+                          <Copy size={13} className="text-slate-400" />
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-center">
+                        <Badge className={`rounded-xl border-none font-bold text-xs px-3 py-1 ${staff.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{staff.status}</Badge>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-9 px-3 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 gap-1.5"
+                            onClick={() => showSuccess(`Access key ${staff.tempAccessCode} dispatched to ${staff.email}`)}
+                          >
+                            <Send size={14} /> Send Key
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                            onClick={() => requestDelete(staff)}
+                            title="Delete Pre-Registration"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredStaff.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-8 py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <Search size={32} className="text-slate-200" />
+                        <p className="text-slate-500 font-bold">No pre-registration records match the current criteria.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Add Staff Modal */}
       <AddPreRegModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddStaff}
         existingPreRegistered={staffList}
-        existingNatIds={existingNatIds}
-        existingEmails={existingEmails}
       />
 
-      {/* Delete Auth Modal */}
+      {/* Admin Auth Modal for Deletion */}
       <Modal
         isOpen={isDeleteAuthOpen}
         onClose={() => setIsDeleteAuthOpen(false)}
-        title="Confirm Deletion"
-        maxWidth="max-w-md"
+        title="Admin Authorization Required"
+        description={`Enter your admin password to delete "${deleteTarget?.name}".`}
         footer={
-          <div className="flex gap-3 justify-end w-full">
-            <Button variant="ghost" onClick={() => setIsDeleteAuthOpen(false)} className="rounded-xl font-bold h-11 px-6">Cancel</Button>
-            <Button
-              onClick={confirmDelete}
-              disabled={isVerifying || !authPassword}
-              className="rounded-xl bg-red-600 hover:bg-red-700 font-bold h-11 px-6 gap-2"
+          <>
+            <Button variant="ghost" className="rounded-xl font-bold flex-1" onClick={() => setIsDeleteAuthOpen(false)}>Cancel</Button>
+            <Button 
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold flex-1" 
+              onClick={handleVerifyAuth}
+              disabled={isVerifying}
             >
-              {isVerifying ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-              Delete
+              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              Authorize Delete
             </Button>
-          </div>
+          </>
         }
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-3 p-4 bg-red-50 rounded-xl border border-red-100">
-            <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={18} />
-            <div>
-              <p className="font-bold text-red-800">You are about to delete a staff record.</p>
-              <p className="text-sm text-red-600 mt-1">
-                This action cannot be undone. All data for <strong>{deleteTarget?.name}</strong> will be permanently removed.
-              </p>
+          {authError && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-top-2">
+              <AlertCircle size={14} /> {authError}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Input 
+                type="password" 
+                value={authPassword} 
+                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
+                placeholder="••••••••" 
+                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
+                autoFocus
+              />
             </div>
           </div>
-          <div>
-            <Label className="text-xs font-black uppercase text-slate-500 tracking-widest mb-2 block">Admin Password</Label>
-            <Input
-              type="password"
-              value={authPassword}
-              onChange={e => setAuthPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && authPassword && confirmDelete()}
-              placeholder="Enter admin password"
-              className="rounded-xl h-12"
-            />
-          </div>
-          {authError && <p className="text-sm text-red-600 font-medium">{authError}</p>}
         </div>
       </Modal>
     </div>

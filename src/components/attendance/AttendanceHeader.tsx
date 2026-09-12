@@ -3,6 +3,8 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Loader2, Edit3, Check, Calendar } from "lucide-react";
+import { GRADES_DATA } from '@/lib/mock-data';
+
 interface AttendanceHeaderProps {
   selectedClass: string;
   setSelectedClass: (val: string) => void;

@@ -10,27 +10,22 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Munyaka School Portal</title>
-    <!-- Use relative paths so assets resolve correctly under Capacitor's file:// URL -->
-    <link rel="manifest" href="./manifest.json" />
+    <link rel="manifest" href="/manifest.json" />
   </head>
 
   <body class="overflow-x-hidden antialiased select-none touch-manipulation">
-    <div id="root">
-      <h1 style="font-family:system-ui,-apple-system,sans-serif;padding:20px;color:#2563eb;">Loading Munyaka Portal...</h1>
-    </div>
-    <!-- Inline error handler — inject BEFORE any module script so uncaught
-         JS exceptions in older Android WebViews (Chrome 60–80) surface visibly
-         instead of silently failing. -->
-    <script>
-      window.onerror = function(msg, url, lineNo, columnNo, error) {
-        var div = document.createElement('div');
-        div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;color:red;padding:20px;z-index:999999;font-family:monospace;font-size:12px;overflow:auto;';
-        div.innerHTML = '<h3>App Mount Failure</h3><p><b>Error:</b> ' + msg + '</p><p><b>File:</b> ' + url + ':' + lineNo + ':' + columnNo + '</p><pre>' + (error && error.stack ? error.stack : '') + '</pre>';
-        document.body.appendChild(div);
-        return false;
-      };
-    </script>
-    <!-- Module path resolves correctly in both dev server and file:// Android WebView -->
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('SW registered: ', registration);
+          }).catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

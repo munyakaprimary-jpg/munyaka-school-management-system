@@ -13,23 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { MessageSquare, Mail, Send, History, UserCheck } from 'lucide-react';
-// Messages are managed through the app's communication flow.
-interface MessageRecord {
-  id: string;
-  recipient: string;
-  subject: string;
-  type: string;
-  date: string;
-  status: string;
-}
-const initialMessages: MessageRecord[] = [];
+import { MESSAGES as initialMessages } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
 import { useNotifications } from '@/components/ui/notification-provider'; // Import the notification hook
 
 const Communication = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("outreach");
-  const [messagesList, setMessagesList] = useState<MessageRecord[]>(initialMessages);
+  const [messagesList, setMessagesList] = useState(initialMessages);
   const [isOpen, setIsOpen] = useState(false);
   const [msgType, setMsgType] = useState<'SMS' | 'Email'>('Email');
   const [recipient, setRecipient] = useState("All Parents");
@@ -37,8 +28,8 @@ const Communication = () => {
   const [body, setBody] = useState("");
   const { addNotification } = useNotifications(); // Get the addNotification function
 
-  // STRICT ACCESS CONTROL: Only admin can access the Dyad communication interface
-  if (user?.role !== 'admin') {
+  // STRICT ACCESS CONTROL: Only super_admin can access the Dyad communication interface
+  if (user?.role !== 'super_admin') {
     return <Navigate to="/" replace />;
   }
 
@@ -49,7 +40,7 @@ const Communication = () => {
   };
 
   const handleSend = () => {
-    if (!String(subject || '').trim() || !String(body || '').trim()) return;
+    if (!subject.trim() || !body.trim()) return;
     const newMsg = { id: Date.now().toString(), recipient, subject, type: msgType, date: "Just now", status: msgType === 'SMS' ? "Delivered" : "Opened" };
     setMessagesList([newMsg, ...messagesList]);
     setIsOpen(false);
@@ -57,14 +48,15 @@ const Communication = () => {
     showSuccess(`${msgType} message broadcasted successfully!`);
 
     // Add a notification for the sent message
-    (addNotification as any)({
+    addNotification({
       title: `New ${msgType} Message Sent`,
       message: `Sent to ${recipient}: ${subject}`,
+      type: 'message', // We can use this to customize the icon in the bell if needed
     });
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Communication Center</h1>
@@ -92,16 +84,14 @@ const Communication = () => {
           </Card>
         </TabsContent>
         <TabsContent value="logs">
-                  <Card className="rounded-3xl bg-white overflow-hidden">
-                    <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                      <table className="w-full text-sm min-w-max">
+          <Card className="rounded-3xl bg-white overflow-hidden">
+            <CardContent className="p-0">
+              <table className="w-full text-sm">
                 <thead><tr className="bg-slate-50/50 border-b"><th className="px-8 py-5 text-left font-black text-slate-400 text-[10px]">Recipient</th><th className="px-8 py-5 text-left font-black text-slate-400 text-[10px]">Subject</th><th className="px-8 py-5 text-center font-black text-slate-400 text-[10px]">Type</th><th className="px-8 py-5 text-right font-black text-slate-400 text-[10px]">Status</th></tr></thead>
                 <tbody className="divide-y">{messagesList.map((msg) => (
                   <tr key={msg.id} className="hover:bg-slate-50 transition-colors"><td className="px-8 py-6 font-bold">{msg.recipient}</td><td className="px-8 py-6 font-medium">{msg.subject}</td><td className="px-8 py-6 text-center"><Badge variant="outline">{msg.type}</Badge></td><td className="px-8 py-6 text-right"><Badge><UserCheck size={12} className="mr-1.5" /> {msg.status}</Badge></td></tr>
                 ))}</tbody>
               </table>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

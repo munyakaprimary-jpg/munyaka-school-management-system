@@ -6,17 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { lsSet, notifyDataChanged as fireDataChanged, lsRead } from '@/utils/storage';
-import { getLocalStorage, tryParse } from '@/utils/storageUtils';
-import {
-  STAFF_MASTER_KEY,
-  initializeStaffMaster,
-  getStaffMasterCount,
-  getStaffMetrics,
-  getCategorizedMetrics,
-  getStaffMaster,
-  type CategorizedStaffMetrics,
-} from '@/services/staffMasterService';
+import { INITIAL_SEED_DATA } from '../data/initialSeedData';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,7 +36,6 @@ export interface Teacher {
   department?: string;
   isArchived?: boolean;
   deletedAt?: string;
-  is_active?: boolean | number | string;
 }
 
 export interface AttendanceLog {
@@ -60,22 +49,6 @@ export interface AttendanceLog {
 export interface CentralDataStats {
   totalStudents: number;
   totalTeachers: number;
-  /**
-   * Sub-count of teachers whose status is "Active" / "Verified".
-   * Optional because not every consumer needs it; when absent
-   * the consumer should treat `totalTeachers` as the canonical count.
-   */
-  activeTeacherCount?: number;
-  /**
-   * Sub-count of teachers whose status is "Pre-Registered".
-   * Used for Dashboard/Hub pending breakdown display.
-   */
-  pendingTeacherCount?: number;
-  /**
-   * Categorized staff metrics for Teaching vs Non-Teaching breakdown.
-   * Use this for displaying separate Teaching Staff and Support/Admin counts.
-   */
-  categorizedMetrics?: CategorizedStaffMetrics;
   todayAttendanceRate: number;
   isLoading: boolean;
 }
@@ -84,15 +57,22 @@ export interface CentralDataStats {
 
 const STORAGE_KEYS = {
   LEARNERS:             'school_learners_data',
-  TEACHERS:             STAFF_MASTER_KEY,         // single source of truth
-  TEACHERS_LEGACY:      'munyaka_staff_directory',
+  TEACHERS:             'munyaka_staff_directory',
   TEACHERS_FALLBACK:    'munyaka_staff',
-  TEACHERS_PREREG:      'munyaka_staff_prereg',
   ATTENDANCE:           'school_attendance_logs',
   ATTENDANCE_V2_PREFIX: 'munyaka_attendance_v2_',
   ACTIVE_SCHOOL_ID:     'munyaka_active_school_id',
   SCHOOL_PROFILE:       'munyaka_school_profile',
 } as const;
+
+const safeParse = <T,>(raw: string | null): T | null => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+};
 
 const getTodayDate = (): string => {
   const today = new Date();
@@ -104,9 +84,9 @@ const getTodayDate = (): string => {
 
 const getActiveSchoolId = (): string | null => {
   try {
-    const direct = lsRead<string>(STORAGE_KEYS.ACTIVE_SCHOOL_ID, '');
+    const direct = localStorage.getItem(STORAGE_KEYS.ACTIVE_SCHOOL_ID);
     if (direct) return direct;
-    const profile = lsRead<{ schoolId?: string }>(STORAGE_KEYS.SCHOOL_PROFILE, {});
+    const profile = safeParse<{ schoolId?: string }>(localStorage.getItem(STORAGE_KEYS.SCHOOL_PROFILE));
     return profile?.schoolId ?? null;
   } catch {
     return null;
@@ -120,23 +100,10 @@ const TEACHER_SYSTEM_ROLES = new Set([
   'subject_teacher', 'senior_teacher', 'class_teacher', 'head_teacher', 'ict_teacher', 'teacher',
 ]);
 
-// Non-teaching keywords to explicitly exclude from teacher classification
-const NON_TEACHING_KEYWORDS = /(librarian|bursar|storekeeper|lab assistant|support staff|ict technician|admin)/i;
-
 const isTeacherRecord = (t: Teacher): boolean => {
   if (!t) return false;
   if (t.isTeacher === true) return true;
-  
   const systemRole = (t.systemRole || '').toLowerCase().trim();
-  const role = (t.role || '').toUpperCase().trim();
-  
-  // Explicitly exclude librarian and non-teaching roles
-  if (systemRole === 'librarian') return false;
-  if (role === 'LIBRARIAN') return false;
-  
-  // Check if designation suggests non-teaching role
-  if (NON_TEACHING_KEYWORDS.test(t.role || '')) return false;
-  
   if (systemRole && TEACHER_SYSTEM_ROLES.has(systemRole)) return true;
   if (TEACHER_KEYWORDS.test(t.role || '')) return true;
   return false;
@@ -157,26 +124,22 @@ const isActiveRecord = (row: { isArchived?: boolean; deletedAt?: string }): bool
 // ─── Core data selectors (memoized) ───────────────────────────────────────────
 
 const getLearners = (): Learner[] => {
-  const ls = getLocalStorage();
-  const fromLS = tryParse<Learner[]>(ls?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
-  // Pure localStorage read — no seed fallback. The empty array is the
-  // authoritative answer when the store has never been written to.
-  return Array.isArray(fromLS) ? fromLS : [];
+  const fromLS = safeParse<Learner[]>(localStorage.getItem(STORAGE_KEYS.LEARNERS));
+  if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
+  if (Array.isArray(INITIAL_SEED_DATA.students) && INITIAL_SEED_DATA.students.length > 0) {
+    return INITIAL_SEED_DATA.students as unknown as Learner[];
+  }
+  return [];
 };
 
 const getTeachers = (): Teacher[] => {
-  // Primary: read from the unified staff master ledger
-  const master = getStaffMaster();
-  if (master.length > 0) {
-    return master as unknown as Teacher[];
-  }
-  // Fallback: legacy keys (for apps that haven't been seeded yet)
-  const ls = getLocalStorage();
-  const fromLS = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_LEGACY) ?? null);
+  const fromLS = safeParse<Teacher[]>(localStorage.getItem(STORAGE_KEYS.TEACHERS));
   if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
-  const fromFallback = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
+  const fromFallback = safeParse<Teacher[]>(localStorage.getItem(STORAGE_KEYS.TEACHERS_FALLBACK));
   if (Array.isArray(fromFallback) && fromFallback.length > 0) return fromFallback;
-  // Pure localStorage read — no seed fallback.
+  if (Array.isArray(INITIAL_SEED_DATA.staff) && INITIAL_SEED_DATA.staff.length > 0) {
+    return INITIAL_SEED_DATA.staff as unknown as Teacher[];
+  }
   return [];
 };
 
@@ -185,9 +148,7 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
   const activeSchoolId = getActiveSchoolId();
 
   // 1. Flat attendance log
-  const flat = tryParse<AttendanceLog[]>(
-    getLocalStorage()?.getItem(STORAGE_KEYS.ATTENDANCE) ?? null
-  );
+  const flat = safeParse<AttendanceLog[]>(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) ?? [];
   if (Array.isArray(flat) && flat.length > 0) {
     return flat.filter((a) => {
       if (!a) return false;
@@ -199,28 +160,24 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
 
   // 2. Per-grade v2 registers
   const logs: AttendanceLog[] = [];
-  const ls = getLocalStorage();
-  if (!ls) return logs;
-  try {
-    Object.keys(ls).forEach((key) => {
-      if (!key?.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) return;
-      try {
-        const raw = ls.getItem(key);
-        if (!raw) return;
-        const record = tryParse<Record<string, any>>(raw);
-        if (!record || typeof record !== 'object') return;
-        Object.values(record).forEach((entry: any) => {
-          if (!entry || typeof entry !== 'object') return;
-          if (entry?.date && entry?.date !== todayStr) return;
-          const morning = entry?.morning?.status ?? entry?.morning;
-          const afternoon = entry?.afternoon?.status ?? entry?.afternoon;
-          if (morning === 'P' || afternoon === 'P') {
-            logs.push({ studentId: entry?.studentId || '', date: todayStr, status: 'present' });
-          }
-        });
-      } catch { /* ignore */ }
-    });
-  } catch { /* ignore */ }
+  Object.keys(localStorage).forEach((key) => {
+    if (!key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) return;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const record = safeParse<Record<string, any>>(raw);
+      if (!record) return;
+      Object.values(record).forEach((entry: any) => {
+        if (!entry || typeof entry !== 'object') return;
+        if (entry.date && entry.date !== todayStr) return;
+        const morning = entry.morning?.status || entry.morning;
+        const afternoon = entry.afternoon?.status || entry.afternoon;
+        if (morning === 'P' || afternoon === 'P') {
+          logs.push({ studentId: entry.studentId || '', date: todayStr, status: 'present' });
+        }
+      });
+    } catch { /* ignore */ }
+  });
   return logs;
 };
 
@@ -243,27 +200,15 @@ const computeStats = (): CentralDataStats => {
     const totalStudents = activeLearners.length;
 
     // ── Teachers ──
-        // Use centralized getCategorizedMetrics() for consistent counts across all views.
-        // This ensures Dashboard, Central Hub, and APK menus all show identical totals
-        // with Teaching vs Non-Teaching breakdown.
-        const categorizedMetrics = getCategorizedMetrics(activeSchoolId);
-        const staffMetrics = getStaffMetrics(activeSchoolId);
-
-        // For display purposes, we still need teacher-role filtering.
-        // Apply same filtering as staffMasterService but capture metrics.
-        const allTeachers: Teacher[] = getTeachers();
-        const teacherRecords = allTeachers.filter((t) => {
-          if (!t) return false;
-          if (!matchesActiveSchool(t, activeSchoolId)) return false;
-          if (!isActiveRecord(t)) return false;
-          return isTeacherRecord(t);
-        });
-
-        // Use staffMasterService counts as source of truth for staff metrics,
-        // then filter by teacher role for display-specific counts.
-        const totalTeachers = staffMetrics.total;
-        const activeTeacherCount = staffMetrics.active;
-        const pendingTeacherCount = staffMetrics.pending;
+    const allTeachers = getTeachers();
+    const activeTeachers = allTeachers.filter((t) => {
+      if (!t) return false;
+      if (!matchesActiveSchool(t, activeSchoolId)) return false;
+      if (!isActiveRecord(t)) return false;
+      if (t.status && t.status !== 'Active' && t.status !== 'active') return false;
+      return isTeacherRecord(t);
+    });
+    const totalTeachers = activeTeachers.length;
 
     // ── Today's attendance — deduplicated by studentId ──
     const todayLogs = getTodayAttendanceLogs();
@@ -278,22 +223,20 @@ const computeStats = (): CentralDataStats => {
     return {
       totalStudents,
       totalTeachers,
-      activeTeacherCount,
-      pendingTeacherCount,
-      categorizedMetrics,
       todayAttendanceRate,
       isLoading: false,
     };
   } catch (err) {
     console.error('useCentralData compute error:', err);
-    // On error, fall back to zero counts. We never read the seed dataset
-    // for fallback metrics — the app must reflect real localStorage state.
+    let fallbackStudents = 0;
+    let fallbackTeachers = 0;
+    try {
+      if (Array.isArray(INITIAL_SEED_DATA.students)) fallbackStudents = INITIAL_SEED_DATA.students.length;
+      if (Array.isArray(INITIAL_SEED_DATA.staff))    fallbackTeachers  = INITIAL_SEED_DATA.staff.length;
+    } catch { /* ignore */ }
     return {
-      totalStudents: 0,
-      totalTeachers: 0,
-      activeTeacherCount: 0,
-      pendingTeacherCount: 0,
-      categorizedMetrics: undefined,
+      totalStudents: fallbackStudents,
+      totalTeachers: fallbackTeachers,
       todayAttendanceRate: 0,
       isLoading: false,
     };
@@ -305,16 +248,12 @@ const computeStats = (): CentralDataStats => {
 export const useCentralData = (): CentralDataStats => {
   const [stats, setStats] = useState<CentralDataStats>(() => {
     if (typeof window === 'undefined') {
-      return { totalStudents: 0, totalTeachers: 0, activeTeacherCount: 0, pendingTeacherCount: 0, todayAttendanceRate: 0, isLoading: true };
+      return { totalStudents: 0, totalTeachers: 0, todayAttendanceRate: 0, isLoading: true };
     }
     return computeStats();
   });
 
   const refresh = useCallback(() => {
-    // Defensive: ensure the master ledger has been seeded. Safe to call
-    // multiple times — `initializeStaffMaster` is a no-op if the key
-    // already exists.
-    initializeStaffMaster();
     setStats(computeStats());
   }, []);
 
@@ -333,15 +272,13 @@ export const useCentralData = (): CentralDataStats => {
   // Cross-tab storage events
   useEffect(() => {
     const watchedKeys = [
-          STORAGE_KEYS.LEARNERS,
-          STORAGE_KEYS.TEACHERS,         // munyaka_staff_master
-          STORAGE_KEYS.TEACHERS_LEGACY,  // munyaka_staff_directory
-          STORAGE_KEYS.TEACHERS_FALLBACK,
-          STORAGE_KEYS.TEACHERS_PREREG,
-          STORAGE_KEYS.ATTENDANCE,
-          STORAGE_KEYS.ACTIVE_SCHOOL_ID,
-          STORAGE_KEYS.SCHOOL_PROFILE,
-        ];
+      STORAGE_KEYS.LEARNERS,
+      STORAGE_KEYS.TEACHERS,
+      STORAGE_KEYS.TEACHERS_FALLBACK,
+      STORAGE_KEYS.ATTENDANCE,
+      STORAGE_KEYS.ACTIVE_SCHOOL_ID,
+      STORAGE_KEYS.SCHOOL_PROFILE,
+    ];
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
       if (watchedKeys.includes(e.key as any) || e.key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) {
@@ -358,15 +295,13 @@ export const useCentralData = (): CentralDataStats => {
       const detail = (e as CustomEvent).detail;
       if (detail?.key) {
         const watched = [
-                  STORAGE_KEYS.LEARNERS,
-                  STORAGE_KEYS.TEACHERS,
-                  STORAGE_KEYS.TEACHERS_LEGACY,
-                  STORAGE_KEYS.TEACHERS_FALLBACK,
-                  STORAGE_KEYS.TEACHERS_PREREG,
-                  STORAGE_KEYS.ATTENDANCE,
-                  STORAGE_KEYS.ACTIVE_SCHOOL_ID,
-                  STORAGE_KEYS.SCHOOL_PROFILE,
-                ];
+          STORAGE_KEYS.LEARNERS,
+          STORAGE_KEYS.TEACHERS,
+          STORAGE_KEYS.TEACHERS_FALLBACK,
+          STORAGE_KEYS.ATTENDANCE,
+          STORAGE_KEYS.ACTIVE_SCHOOL_ID,
+          STORAGE_KEYS.SCHOOL_PROFILE,
+        ];
         if (!watched.includes(detail.key) && !detail.key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) {
           return;
         }

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 
 export interface TimeSlot {
   id: string;
@@ -50,6 +49,7 @@ const getCategoryColor = (category: string | null): { bg: string; text: string; 
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
 const STORAGE_KEY = 'school-timetable-data';
+const GRADES_KEY = 'school-timetable-grades';
 
 const SUBJECT_COLORS = [
   'bg-indigo-100 text-indigo-700 border border-indigo-200',
@@ -62,6 +62,12 @@ const SUBJECT_COLORS = [
   'bg-teal-100 text-teal-700 border border-teal-200',
   'bg-orange-100 text-orange-700 border border-orange-200',
   'bg-sky-100 text-sky-700 border border-sky-200',
+];
+
+const DEFAULT_GRADES = [
+  { id: 'grade4', name: 'Grade 4 - Blue' },
+  { id: 'grade5', name: 'Grade 5 - Green' },
+  { id: 'grade6', name: 'Grade 6 - Alpha' },
 ];
 
 const getDefaultTimeSlots = (): TimeSlot[] => [
@@ -90,54 +96,28 @@ const getDefaultEntries = (timeSlots: TimeSlot[]): TimetableEntry[] =>
   timeSlots.map(makeEntryForSlot);
 
 export function useTimetable() {
-  const config = readGradesAndStreams();
-  const configGrades = config.grades;
-  const configStreamsMap = config.gradeStreamMap;
+  const [grades, setGrades] = useState<{ id: string; name: string }[]>(() => {
+    if (typeof window === 'undefined') return DEFAULT_GRADES;
+    const stored = localStorage.getItem(GRADES_KEY);
+    if (stored) return JSON.parse(stored);
+    localStorage.setItem(GRADES_KEY, JSON.stringify(DEFAULT_GRADES));
+    return DEFAULT_GRADES;
+  });
 
-  // Generate grades list dynamically from Grades & Streams menu
-  const grades = (() => {
-    const list: { id: string; name: string }[] = [];
-    configGrades.forEach(g => {
-      const matchKey = g.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const streamsForGrade = configStreamsMap[matchKey] || [];
-      if (streamsForGrade.length > 0) {
-        streamsForGrade.forEach(s => {
-          const name = `${g} - ${s}`;
-          const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-          list.push({ id, name });
-        });
-      } else {
-        const id = g.toLowerCase().replace(/[^a-z0-9]/g, '-');
-        list.push({ id, name: g });
-      }
-    });
-    if (list.length === 0) {
-      return [
-        { id: 'grade-4-blue', name: 'Grade 4 - Blue' },
-        { id: 'grade-5-blue', name: 'Grade 5 - Blue' },
-      ];
+  const [selectedGrade, setSelectedGrade] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'grade4';
+    const stored = localStorage.getItem(GRADES_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed[0]?.id || 'grade4';
     }
-    return list;
-  })();
-
-  const [selectedGrade, setSelectedGrade] = useState<string>(() => grades[0]?.id || 'grade-4-blue');
-
-  // Ensure selectedGrade is valid when grades change
-  useEffect(() => {
-    if (!grades.some(g => g.id === selectedGrade) && grades.length > 0) {
-      setSelectedGrade(grades[0].id);
-    }
-  }, [grades, selectedGrade]);
+    return 'grade4';
+  });
 
   const [timetables, setTimetables] = useState<Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>>(() => {
-    try {
-      const ls = window.localStorage;
-      const stored = ls?.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === 'object') return parsed;
-      }
-    } catch { /* ignore corrupt data */ }
+    if (typeof window === 'undefined') return {};
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
     return {};
   });
 
@@ -148,11 +128,7 @@ export function useTimetable() {
       const entries = getDefaultEntries(timeSlots);
       setTimetables(prev => {
         const updated = { ...prev, [gradeId]: { timeSlots, entries } };
-        try {
-          window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-        } catch (err) {
-          console.error('[useTimetable] Failed to persist timetable:', err);
-        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
         return updated;
       });
     }
@@ -205,11 +181,7 @@ export function useTimetable() {
         entries: paired.map(p => p.entry),
       };
       const updated = { ...prev, [selectedGrade]: updatedTimetable };
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (err) {
-        console.error('[useTimetable] Failed to persist addTimeSlot:', err);
-      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, [selectedGrade]);
@@ -232,11 +204,7 @@ export function useTimetable() {
         return original;
       });
       const updated = { ...prev, [selectedGrade]: result };
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (err) {
-        console.error('[useTimetable] Failed to persist updateTimeSlot:', err);
-      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, [selectedGrade]);
@@ -261,11 +229,7 @@ export function useTimetable() {
         return original;
       });
       const updated = { ...prev, [selectedGrade]: result };
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (err) {
-        console.error('[useTimetable] Failed to persist updateSlotTimes:', err);
-      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, [selectedGrade]);
@@ -283,11 +247,7 @@ export function useTimetable() {
           entries: current.entries.filter((_, i) => i !== slotIndex),
         },
       };
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (err) {
-        console.error('[useTimetable] Failed to persist deleteTimeSlot:', err);
-      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, [selectedGrade]);
@@ -306,11 +266,7 @@ export function useTimetable() {
         return entry;
       });
       const updated = { ...prev, [selectedGrade]: { ...current, entries: updatedEntries } };
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (err) {
-        console.error('[useTimetable] Failed to persist setLesson:', err);
-      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, [selectedGrade]);
@@ -321,12 +277,31 @@ export function useTimetable() {
 
   // Grade Management
   const addGrade = useCallback((id: string, name: string) => {
-    // Handled in Grades & Streams menu
-  }, []);
+    const newGrade = { id, name };
+    setGrades(prev => {
+      const updated = [...prev, newGrade];
+      localStorage.setItem(GRADES_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    initializeGradeTimetable(id);
+  }, [initializeGradeTimetable]);
 
   const deleteGrade = useCallback((gradeId: string) => {
-    // Handled in Grades & Streams menu
-  }, []);
+    setGrades(prev => {
+      const updated = prev.filter(g => g.id !== gradeId);
+      localStorage.setItem(GRADES_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    setTimetables(prev => {
+      const updated = { ...prev };
+      delete updated[gradeId];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    if (selectedGrade === gradeId && grades.length > 1) {
+      setSelectedGrade(grades.find(g => g.id !== gradeId)?.id || 'grade4');
+    }
+  }, [selectedGrade, grades]);
 
   return {
     grades: currentGrades,

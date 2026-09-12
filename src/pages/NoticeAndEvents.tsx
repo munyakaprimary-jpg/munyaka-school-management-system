@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import Modal from '@/components/ui/Modal';
 import {
   Bell,
@@ -165,7 +165,8 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   // creator of the notice may delete it. All other roles see no action menu.
   const canDeleteNotice = (notice: Notice): boolean => {
     if (!user) return false;
-    const isAdmin = user.role === 'admin';
+    const isAdmin =
+      user.role === 'super_admin' || user.role === 'head_teacher';
     const isCreator = notice.createdBy === user.id;
     return isAdmin || isCreator;
   };
@@ -173,7 +174,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   // Permission helper for deleting events. Same RBAC logic as notices for consistency.
   const canDeleteEvent = (): boolean => {
     if (!user) return false;
-    return user.role === 'admin' || user.role === 'accountant';
+    return user.role === 'super_admin' || user.role === 'head_teacher' || user.role === 'bursar';
   };
   // LocalStorage Persistence for Notices and Events
   const [notices, setNotices] = useState<Notice[]>(() => {
@@ -290,7 +291,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   const handlePublishNotice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(noticeTitle || '').trim() || !String(noticeContent || '').trim()) return;
+    if (!noticeTitle.trim() || !noticeContent.trim()) return;
     
     let badgeColor = 'bg-indigo-50 text-indigo-600 border-indigo-200';
     if (noticePriority === 'Urgent Alert') badgeColor = 'bg-rose-50 text-rose-600 border-rose-200';
@@ -309,11 +310,11 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
     const newNotice: Notice = {
       id: Date.now().toString(),
-      title: String(noticeTitle || '').trim(),
-            content: String(noticeContent || '').trim(),
-            description: String(noticeContent || '').trim().substring(0, 120) + '...',
+      title: noticeTitle.trim(),
+      content: noticeContent.trim(),
+      description: noticeContent.trim().substring(0, 120) + '...',
       date: 'Just now',
-      category: noticePriority as any,
+      category: noticePriority,
       pinned: noticePriority === 'Urgent Alert',
       color: badgeColor,
       attachmentName: noticeAttachment?.name || undefined,
@@ -334,14 +335,14 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(eventTitle || '').trim() || !eventDate || !eventTime) return;
-    
-        const newEvent: SchoolEvent = {
-          id: Date.now(),
-          title: String(eventTitle || '').trim(),
-          date: eventDate,
-          time: eventTime,
-          location: String(eventLocation || '').trim() || 'School Grounds',
+    if (!eventTitle.trim() || !eventDate || !eventTime) return;
+
+    const newEvent: SchoolEvent = {
+      id: Date.now(),
+      title: eventTitle.trim(),
+      date: eventDate,
+      time: eventTime,
+      location: eventLocation.trim() || 'School Grounds',
       type: eventType
     };
 
@@ -413,7 +414,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   }, [events]);
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

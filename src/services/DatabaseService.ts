@@ -1,15 +1,6 @@
-// @ts-nocheck — Capacitor native plugins are conditionally loaded only in native builds
-
-// ─────────────────────────────────────────────────────────────────────────────
-// NOTE: The @capacitor-community/sqlite plugin is NOT installed in this build.
-// All SQLite references are guarded with Capacitor.isNative() checks so this
-// file NEVER throws at runtime in the browser.  The native path is a stub
-// kept as documentation for future mobile builds that opt into SQLite storage.
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Placeholder type for when the plugin is installed (avoids TS errors without
-// adding a compile-time dependency)
-type SQLiteConnection = any;
+import { Capacitor } from '@capacitor/core';
+import { SQLiteConnection, SQLiteValues, SQLiteResult } from '@capacitor-community/sqlite';
+import { Network } from '@capacitor/network';
 
 const DB_NAME = 'school_management';
 const DB_VERSION = 1;
@@ -19,35 +10,19 @@ class DatabaseService {
   private connection: SQLiteConnection | null = null;
 
   async initialize(): Promise<void> {
-    if (this._isCapacitorNative()) {
-      // NOTE: @capacitor-community/sqlite is not installed.
-      // When installed, uncomment and import the plugin:
-      //
-      //   import { SQLiteConnection } from '@capacitor-community/sqlite';
-      //   this.connection = new SQLiteConnection();
-      //   this.db = await this.connection.createConnection({
-      //     name: DB_NAME,
-      //     version: DB_VERSION,
-      //   });
-      //   await this.db.open();
-      console.info('[DatabaseService] Native SQLite not configured — using web fallback.');
+    if (Capacitor.isNative()) {
+      this.connection = new SQLiteConnection('school_management');
+      this.db = await this.connection.createConnection(DB_NAME, DB_VERSION, 'no-encryption', 0);
+      await this.db.open();
+    } else {
+      // Web fallback using IndexedDB/localStorage
+      await this.initWebDB();
     }
-    await this.initWebDB();
     await this.createSyncQueueTable();
   }
 
-  /** True only when running as a native Capacitor build with the sqlite plugin. */
-  private _isCapacitorNative(): boolean {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { Capacitor } = require('@capacitor/core');
-      return Capacitor.isNative?.() === true;
-    } catch {
-      return false;
-    }
-  }
-
   private async initWebDB(): Promise<void> {
+    // Web fallback using localStorage
     if (!window.schoolDB) {
       window.schoolDB = {
         syncQueue: JSON.parse(localStorage.getItem('sync_queue') || '[]'),
@@ -61,71 +36,127 @@ class DatabaseService {
   }
 
   private async createSyncQueueTable(): Promise<void> {
-    // Web fallback: table structure lives in JS objects, not SQL.
-    // No-op — the syncQueue array in schoolDB is ready immediately.
-    console.debug('[DatabaseService] Sync queue table ready (web mode)');
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS sync_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        payload_type TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        status TEXT DEFAULT 'PENDING',
+        retry_count INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    if (this.db) {
+      await this.db.run(createTableSQL);
+    } else {
+      // Web fallback - table already exists in localStorage structure
+      console.log('Sync queue table ready (web mode)');
+    }
   }
 
   async enqueue(payloadType: string, payload: any): Promise<number> {
     const payloadStr = JSON.stringify(payload);
     const now = new Date().toISOString();
 
-    const queue = window.schoolDB.syncQueue;
-    const newId = queue.length > 0 ? Math.max(...queue.map((q: any) => q.id)) + 1 : 1;
-    queue.push({
-      id: newId,
-      payload_type: payloadType,
-      payload: payloadStr,
-      device_id: null,
-      status: 'PENDING',
-      retry_count: 0,
-      created_at: now,
-    });
-    localStorage.setItem('sync_queue', JSON.stringify(queue));
-    return newId;
+    if (this.db) {
+      const result = await this.db.run(
+        'INSERT INTO sync_queue (payload_type, payload, status, retry_count, created_at) VALUES (?, ?, ?, ?, ?)',
+        [payloadType, payloadStr, 'PENDING', 0, now]
+      );
+      return result.insertId;
+    } else {
+      const queue = window.schoolDB.syncQueue;
+      const newId = queue.length > 0 ? Math.max(...queue.map((q: any) => q.id)) + 1 : 1;
+      queue.push({
+        id: newId,
+        payload_type: payloadType,
+        payload: payloadStr,
+        status: 'PENDING',
+        retry_count: 0,
+        created_at: now,
+      });
+      localStorage.setItem('sync_queue', JSON.stringify(queue));
+      return newId;
+    }
   }
 
   async getPendingQueue(limit: number = 50): Promise<any[]> {
-    return window.schoolDB.syncQueue
-      .filter((q: any) => q.status === 'PENDING')
-      .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-      .slice(0, limit);
+    if (this.db) {
+      const result = await this.db.query(
+        'SELECT * FROM sync_queue WHERE status = ? ORDER BY created_at ASC LIMIT ?',
+        ['PENDING', limit]
+      );
+      return result.values;
+    } else {
+      return window.schoolDB.syncQueue
+        .filter((q: any) => q.status === 'PENDING')
+        .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        .slice(0, limit);
+    }
   }
 
   async getPendingCount(): Promise<number> {
-    return window.schoolDB.syncQueue.filter((q: any) => q.status === 'PENDING').length;
+    if (this.db) {
+      const result = await this.db.query('SELECT COUNT(*) as count FROM sync_queue WHERE status = ?', ['PENDING']);
+      return result.values[0].count;
+    } else {
+      return window.schoolDB.syncQueue.filter((q: any) => q.status === 'PENDING').length;
+    }
   }
 
   async deleteSyncedItems(ids: number[]): Promise<void> {
     if (ids.length === 0) return;
-    window.schoolDB.syncQueue = window.schoolDB.syncQueue.filter((q: any) => !ids.includes(q.id));
-    localStorage.setItem('sync_queue', JSON.stringify(window.schoolDB.syncQueue));
+
+    if (this.db) {
+      const placeholders = ids.map(() => '?').join(',');
+      await this.db.run(`DELETE FROM sync_queue WHERE id IN (${placeholders})`, ids);
+    } else {
+      window.schoolDB.syncQueue = window.schoolDB.syncQueue.filter(
+        (q: any) => !ids.includes(q.id)
+      );
+      localStorage.setItem('sync_queue', JSON.stringify(window.schoolDB.syncQueue));
+    }
   }
 
   async updateRetryCount(id: number, count: number): Promise<void> {
-    const queue = window.schoolDB.syncQueue;
-    const item = queue.find((q: any) => q.id === id);
-    if (item) {
-      item.retry_count = count;
-      localStorage.setItem('sync_queue', JSON.stringify(queue));
+      if (this.db) {
+        await this.db.run('UPDATE sync_queue SET retry_count = ? WHERE id = ?', [count, id]);
+      } else {
+        const queue = window.schoolDB.syncQueue;
+        const item = queue.find((q: any) => q.id === id);
+        if (item) {
+          item.retry_count = count;
+          localStorage.setItem('sync_queue', JSON.stringify(queue));
+        }
+      }
     }
-  }
-
-  async updateStatus(id: number, status: string): Promise<void> {
-    const queue = window.schoolDB.syncQueue;
-    const item = queue.find((q: any) => q.id === id);
-    if (item) {
-      item.status = status;
-      localStorage.setItem('sync_queue', JSON.stringify(queue));
+  
+    async updateStatus(id: number, status: string): Promise<void> {
+      if (this.db) {
+        await this.db.run('UPDATE sync_queue SET status = ? WHERE id = ?', [status, id]);
+      } else {
+        const queue = window.schoolDB.syncQueue;
+        const item = queue.find((q: any) => q.id === id);
+        if (item) {
+          item.status = status;
+          localStorage.setItem('sync_queue', JSON.stringify(queue));
+        }
+      }
     }
-  }
 
   async isOnline(): Promise<boolean> {
+    if (Capacitor.isNative()) {
+      const status = await Network.getStatus();
+      return status.connected;
+    }
     return navigator.onLine;
   }
 
   async close(): Promise<void> {
-    // No-op for web storage
+    if (this.db) {
+      await this.db.close();
+    }
   }
 }
 

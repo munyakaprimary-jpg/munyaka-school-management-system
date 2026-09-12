@@ -10,29 +10,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { Megaphone, Calendar, Pin, Plus, Send } from 'lucide-react';
-// Notices are managed through the app's notice board flow.
-interface NoticeRecord {
-  id: string;
-  title: string;
-  content: string;
-  description?: string;
-  date: string;
-  category: string;
-  color: string;
-}
-const initialNotices: NoticeRecord[] = [];
+import { NOTICES as initialNotices } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
 
 const Notices = () => {
-  const [noticesList, setNoticesList] = useState<NoticeRecord[]>(initialNotices);
+  const [noticesList, setNoticesList] = useState(initialNotices);
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Notice");
   const [content, setContent] = useState("");
 
   const handlePostNotice = () => {
-    if (!String(title || '').trim() || !String(content || '').trim()) return;
-    const newNotice = { id: Date.now().toString(), title, content, date: "Just now", category, color: "bg-emerald-50 text-emerald-600" };
+    if (!title.trim() || !content.trim()) return;
+    const newNotice = { id: Date.now().toString(), title, content, description: content, date: "Just now", category, color: "bg-emerald-50 text-emerald-600" };
     setNoticesList([newNotice, ...noticesList]);
     setIsOpen(false);
     setTitle(""); setContent("");
@@ -40,7 +30,7 @@ const Notices = () => {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div><h1 className="text-3xl font-bold text-slate-900">Notice Board</h1><p className="text-muted-foreground">Stay updated with official school communications.</p></div>
         <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg bg-indigo-600 hover:bg-indigo-700" onClick={() => setIsOpen(true)}><Plus size={18} /> Post New Notice</Button>

@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import { showSuccess, showError } from "@/utils/toast";
-import { BookAllocationTable } from '@/components/library/BookAllocationTable';
-import { BookReturnModal } from '@/components/library/BookReturnModal';
-import PromotionHeader from '@/components/promote/PromotionHeader';
+import BookAllocationTable from '@/components/library/BookAllocationTable';
+import BookReturnModal from '@/components/library/BookReturnModal';
+import { PromotionHeader } from '@/components/promote/PromotionHeader';
 import { cn } from '@/lib/utils';
 import { FileDown, Loader2, X } from 'lucide-react';
 import { BookAllocation, ConditionReturnStatus } from '@/types/library';
@@ -23,14 +23,15 @@ const BookAllocation = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [selectedLogId, setSelectedLogId] = useState<string>('');
-  const [isProcessingReturn, setIsProcessingReturn] = useState(false);
 
   // Data
   const [allLogs, setAllLogs] = useState<BookAllocation[]>([]);
+  const [filteredLogs, setFilteredLogs] = useState<BookAllocation[]>([]);
 
   // Load data
   useEffect(() => {
     setAllLogs(MOCK_BOOK_ALLOCATIONS);
+    setFilteredLogs(MOCK_BOOK_ALLOCATIONS);
   }, []);
 
   // Filtering
@@ -81,16 +82,16 @@ const BookAllocation = () => {
 
   // Get unique grades and streams for filters
   const grades = useMemo(() => {
-    return [...new Set(allLogs.map(l => l.grade))].sort();
+    return [...new Set(allLogs.map(l => log.grade))].sort();
   }, [allLogs]);
 
   const streams = useMemo(() => {
-    return [...new Set(allLogs.map(l => l.stream))].sort();
+    return [...new Set(allLogs.map(l => log.stream))].sort();
   }, [allLogs]);
 
   // Render
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <PromotionHeader onPromoteClick={() => setIsProcessingReturn(true)} />
 
       {/* Filter Controls */}
@@ -141,7 +142,15 @@ const BookAllocation = () => {
 
       {/* Table */}
       <BookAllocationTable
-        books={filteredLogs as unknown as any[]}
+        gradeFilter={gradeFilter}
+        streamFilter={streamFilter}
+        searchTerm={searchTerm}
+        onGradeChange={setGradeFilter}
+        onStreamChange={setStreamFilter}
+        onSearchChange={setSearchTerm}
+        onClearFilters={handleClearFilters}
+        grades={grades}
+        streams={streams}
       />
 
       {/* Action Buttons */}

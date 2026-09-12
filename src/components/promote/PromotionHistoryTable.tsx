@@ -24,8 +24,7 @@ const PromotionHistoryTable: React.FC<PromotionHistoryTableProps> = ({ history }
   return (
     <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left min-w-max">
+        <table className="w-full text-sm text-left">
           <thead className="bg-slate-50/50 border-b">
             <tr>
               <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Promotion ID</th>
@@ -51,7 +50,6 @@ const PromotionHistoryTable: React.FC<PromotionHistoryTableProps> = ({ history }
             ))}
           </tbody>
         </table>
-        </div>
       </CardContent>
     </Card>
   );

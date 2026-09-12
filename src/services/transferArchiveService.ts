@@ -156,8 +156,8 @@ export function removeArchivedLearner(id: string): TransferredLearnerRecord | nu
  * Search the archive by name, admission number, or certificate number.
  */
 export function searchArchive(query: string): TransferredLearnerRecord[] {
-  if (!String(query || '').trim()) return getArchivedLearners();
-  const q = String(query || '').trim().toLowerCase();
+  if (!query.trim()) return getArchivedLearners();
+  const q = query.trim().toLowerCase();
   return getArchivedLearners().filter((r) => {
     return (
       r.name?.toLowerCase().includes(q) ||

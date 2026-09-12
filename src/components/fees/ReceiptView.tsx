@@ -3,22 +3,19 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Printer,
-  Download,
-  School,
-  CheckCircle2,
-  CreditCard,
-  Calendar,
-  Hash,
+import { 
+  Printer, 
+  Download, 
+  School, 
+  CheckCircle2, 
+  CreditCard, 
+  Calendar, 
+  Hash, 
   DollarSign,
   X,
   Check,
   FileText,
-  Building2,
-  AlertCircle,
-  XCircle,
-  RefreshCw
+  Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Transaction } from '@/types/fees';

@@ -11,19 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import BackButton from '@/components/ui/BackButton';
 import Modal from '@/components/ui/Modal';
-import {
-  Users,
-  Wifi,
-  Calendar,
-  ShieldCheck,
-  UserPlus,
-  Key,
-  Lock,
-  Search,
-  Cpu,
-  Activity,
-  Globe,
-  Clock,
+import { 
+  Users, 
+  Wifi, 
+  Calendar, 
+  ShieldCheck, 
+  UserPlus, 
+  Key, 
+  Lock, 
+  Search, 
+  Cpu, 
+  Activity, 
+  Globe, 
+  Clock, 
   MoreVertical,
   Ban,
   RefreshCw,
@@ -32,17 +32,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Monitor,
-  Plus,
-  Download,
-  Upload,
-  Database,
-  FileJson,
-  CheckCircle,
-  XCircle,
-  Info
+  Plus
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { notifyDataChanged, downloadDatabaseBackup, parseAndImportBackup } from '@/utils/storage';
+import { notifyDataChanged } from '@/utils/storage';
 import { cn } from '@/lib/utils';
 
 // --- Types ---
@@ -161,17 +154,6 @@ const SystemAndAccountManagement = () => {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isReserveOpen, setIsReserveOpen] = useState(false);
 
-  // ── Database Backup State ───────────────────────────────────────────────────
-  const [isRestoreOpen, setIsRestoreOpen] = useState(false);
-  const [restoreFile, setRestoreFile] = useState<File | null>(null);
-  const [restoreResult, setRestoreResult] = useState<{
-    success: boolean;
-    keysRestored: string[];
-    errors: string[];
-  } | null>(null);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-
   // --- Summary Calculations ---
   const userStats = {
     total: users.length,
@@ -226,10 +208,10 @@ const SystemAndAccountManagement = () => {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
-          <BackButton parentPath="/" />
+          <BackButton fallback="/" />
           <div>
             <h1 className="text-3xl font-black tracking-tight text-slate-900">System Management</h1>
             <p className="text-muted-foreground font-medium">Manage portal security, network access, and ICT infrastructure.</p>
@@ -247,9 +229,6 @@ const SystemAndAccountManagement = () => {
           </TabsTrigger>
           <TabsTrigger value="lab" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
             <Monitor size={16} /> Lab Schedules
-          </TabsTrigger>
-          <TabsTrigger value="backup" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
-            <Database size={16} /> Database Backup
           </TabsTrigger>
         </TabsList>
 
@@ -544,125 +523,6 @@ const SystemAndAccountManagement = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* --- TAB 4: DATABASE BACKUP --- */}
-        <TabsContent value="backup" className="space-y-8">
-          {/* Page header */}
-          <div className="flex items-center gap-4">
-            <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl">
-              <Database size={28} />
-            </div>
-            <div>
-              <h3 className="text-xl font-black text-slate-900">Database Backup &amp; Restore</h3>
-              <p className="text-sm text-slate-400 font-medium">
-                Export all school data as a JSON file or restore from a previously saved backup.
-              </p>
-            </div>
-          </div>
-
-          {/* Export Card */}
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-                    <Download size={20} />
-                  </div>
-                  <h4 className="font-black text-slate-900 text-lg">Export / Backup Database</h4>
-                </div>
-                <p className="text-sm text-slate-500 leading-relaxed">
-                  Downloads a complete JSON snapshot of all local data — students, staff, fees, attendance,
-                  grades, settings, and more. Save this file to transfer data between the web app and
-                  the Android APK.
-                </p>
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {['Students', 'Staff', 'Fees', 'Attendance', 'Grades', 'Settings'].map((tag) => (
-                    <Badge key={tag} className="rounded-lg bg-slate-100 text-slate-500 font-bold text-[10px] border-none px-2.5 py-0.5">
-                      {tag}
-                    </Badge>
-                  ))}
-                  <Badge className="rounded-lg bg-indigo-50 text-indigo-600 font-bold text-[10px] border-none px-2.5 py-0.5">
-                    + more
-                  </Badge>
-                </div>
-              </div>
-              <Button
-                className="shrink-0 h-14 px-8 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 shadow-lg shadow-emerald-100"
-                onClick={() => {
-                  setIsExporting(true);
-                  try {
-                    downloadDatabaseBackup();
-                    showSuccess('Database backup downloaded successfully!');
-                  } catch {
-                    showError('Failed to export database. Please try again.');
-                  } finally {
-                    setIsExporting(false);
-                  }
-                }}
-                disabled={isExporting}
-              >
-                {isExporting ? (
-                  <RefreshCw size={18} className="animate-spin" />
-                ) : (
-                  <Download size={18} />
-                )}
-                {isExporting ? 'Preparing...' : 'Export JSON Backup'}
-              </Button>
-            </div>
-          </Card>
-
-          {/* Import Card */}
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-                    <Upload size={20} />
-                  </div>
-                  <h4 className="font-black text-slate-900 text-lg">Restore / Import Database</h4>
-                </div>
-                <p className="text-sm text-slate-500 leading-relaxed">
-                  Replaces all local data with the contents of a previously exported JSON backup file.
-                  This action <strong>overwrites</strong> existing data — use with caution.
-                </p>
-                <div className="flex items-center gap-2 mt-4 p-3 bg-amber-50 rounded-xl">
-                  <AlertCircle size={16} className="text-amber-500 shrink-0" />
-                  <p className="text-xs text-amber-700 font-medium">
-                    Importing a backup will replace all current records. Make sure to export your current data first.
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                className="shrink-0 h-14 px-8 rounded-2xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold gap-2"
-                onClick={() => {
-                  setRestoreResult(null);
-                  setIsRestoreOpen(true);
-                }}
-              >
-                <Upload size={18} />
-                Import from JSON
-              </Button>
-            </div>
-          </Card>
-
-          {/* Format info */}
-          <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 p-6">
-            <div className="flex gap-4">
-              <div className="p-2.5 bg-white text-indigo-500 rounded-xl h-fit">
-                <FileJson size={20} />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-800 text-sm mb-1">Backup File Format</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  The exported JSON file contains all localStorage data serialised as a single portable bundle.
-                  It is a plain-text file that can be opened in any text editor or JSON viewer.
-                  To restore, select the same file using the Import button above.
-                </p>
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* --- MODALS --- */}
@@ -705,191 +565,6 @@ const SystemAndAccountManagement = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Grade Level</Label><Input placeholder="e.g. Grade 5" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
             <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Subject / Purpose</Label><Input placeholder="e.g. Mathematics" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Restore / Import Database Modal */}
-      <Modal
-        isOpen={isRestoreOpen}
-        onClose={() => {
-          setIsRestoreOpen(false);
-          setRestoreResult(null);
-          setRestoreFile(null);
-        }}
-        title="Restore Database from Backup"
-        description="Select a previously exported JSON backup file to restore all school data."
-        footer={
-          <div className="flex gap-2 justify-end w-full">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setIsRestoreOpen(false);
-                setRestoreResult(null);
-                setRestoreFile(null);
-              }}
-              className="rounded-xl font-bold h-12 px-6"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!restoreFile) {
-                  showError('Please select a JSON backup file first.');
-                  return;
-                }
-                setIsRestoring(true);
-                setRestoreResult(null);
-                try {
-                  const text = await restoreFile.text();
-                  const result = parseAndImportBackup(text);
-                  setRestoreResult(result);
-                  if (result.success) {
-                    showSuccess(
-                      `Database restored! ${result.keysRestored.length} data areas restored.`
-                    );
-                  } else {
-                    showError('Database restore completed with some errors.');
-                  }
-                } catch {
-                  showError('Failed to read the selected file.');
-                } finally {
-                  setIsRestoring(false);
-                }
-              }}
-              disabled={!restoreFile || isRestoring}
-              className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold h-12 px-8 gap-2"
-            >
-              {isRestoring ? (
-                <><RefreshCw size={16} className="animate-spin" /> Restoring...</>
-              ) : (
-                <><Upload size={16} /> Restore Backup</>
-              )}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-5">
-          {/* File picker */}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400">
-              Backup File (.json)
-            </Label>
-            <label
-              htmlFor="restore-file-input"
-              className={cn(
-                "flex flex-col items-center justify-center gap-3 cursor-pointer rounded-2xl border-2 border-dashed h-32 transition-colors",
-                restoreFile
-                  ? "border-emerald-400 bg-emerald-50"
-                  : "border-slate-200 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50"
-              )}
-            >
-              {restoreFile ? (
-                <>
-                  <FileJson size={28} className="text-emerald-500" />
-                  <div className="text-center">
-                    <p className="font-bold text-emerald-700 text-sm">{restoreFile.name}</p>
-                    <p className="text-xs text-emerald-500 font-medium">
-                      {(restoreFile.size / 1024).toFixed(1)} KB · Click to change
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Upload size={28} className="text-slate-400" />
-                  <div className="text-center">
-                    <p className="font-bold text-slate-600 text-sm">Click to select a backup file</p>
-                    <p className="text-xs text-slate-400 font-medium">
-                      Must be a .json file exported from this app
-                    </p>
-                  </div>
-                </>
-              )}
-              <input
-                id="restore-file-input"
-                type="file"
-                accept=".json,application/json"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  setRestoreFile(file);
-                  setRestoreResult(null);
-                }}
-              />
-            </label>
-          </div>
-
-          {/* Result banner */}
-          {restoreResult && (
-            <div
-              className={cn(
-                "rounded-2xl p-4 space-y-3",
-                restoreResult.success
-                  ? "bg-emerald-50 border border-emerald-200"
-                  : "bg-rose-50 border border-rose-200"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                {restoreResult.success ? (
-                  <CheckCircle size={18} className="text-emerald-500" />
-                ) : (
-                  <XCircle size={18} className="text-rose-500" />
-                )}
-                <p
-                  className={cn(
-                    "font-black text-sm",
-                    restoreResult.success ? "text-emerald-700" : "text-rose-700"
-                  )}
-                >
-                  {restoreResult.success
-                    ? 'Restore completed successfully'
-                    : 'Restore completed with errors'}
-                </p>
-              </div>
-
-              {restoreResult.keysRestored.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-black uppercase text-slate-400 tracking-wide">
-                    Restored data areas
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {restoreResult.keysRestored.map((key) => (
-                      <Badge
-                        key={key}
-                        className="rounded-lg bg-emerald-100 text-emerald-700 font-bold text-[10px] border-none px-2 py-0.5"
-                      >
-                        <CheckCircle2 size={10} className="mr-1" />
-                        {key}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {restoreResult.errors.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-black uppercase text-slate-400 tracking-wide">
-                    Errors encountered
-                  </p>
-                  {restoreResult.errors.map((err, i) => (
-                    <p key={i} className="text-xs text-rose-600 font-medium flex items-start gap-1.5">
-                      <XCircle size={12} className="mt-0.5 shrink-0" />
-                      {err}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Warning */}
-          <div className="flex gap-2.5 p-3 bg-amber-50 rounded-xl">
-            <Info size={16} className="text-amber-500 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-700 font-medium leading-relaxed">
-              Restoring a backup will <strong>permanently replace</strong> all current local data
-              with the contents of the selected file. If you have unsaved data, export your current
-              database first.
-            </p>
           </div>
         </div>
       </Modal>
