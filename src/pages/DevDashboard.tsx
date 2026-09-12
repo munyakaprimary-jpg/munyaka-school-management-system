@@ -47,6 +47,22 @@ export default function DevDashboard() {
   ]);
 
   // ── LAN Nodes State ──
+  const [lanConfig, setLanConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_lan_config');
+      if (saved) return JSON.parse(saved);
+    } catch { /* fallback */ }
+    return {
+      hostIp: 'http://192.168.1.100',
+      port: '8080',
+      subnet: '192.168.1.255',
+      syncInterval: '30',
+      wifiMesh: true,
+      autoConnect: true,
+    };
+  });
+  const [isTestingLan, setIsTestingLan] = useState(false);
+
   const [meshNodes, setMeshNodes] = useState([
     { ip: '192.168.1.100', name: 'Master LAN Hub Server', role: 'Gateway', ping: '1.2ms', status: 'Online' },
     { ip: '192.168.1.104', name: 'Admin Office POS / Cashier', role: 'Peer Node', ping: '2.4ms', status: 'Online' },
