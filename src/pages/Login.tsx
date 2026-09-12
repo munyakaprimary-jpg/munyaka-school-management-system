@@ -70,7 +70,7 @@ const hasCustomAdminPassword = (): boolean => {
 // so they can both authenticate when the lock screen is active, but they have
 // entirely separate permission matrices.
 
-type AdminRole = 'admin' | 'owner';
+type AdminRole = 'admin' | 'owner' | 'dev';
 
 interface RoleConfig {
   id: AdminRole;
@@ -95,7 +95,7 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     email: 'sysadmin@munyaka.sc.ke',
     userName: 'School Administrator',
     userRole: 'admin',
-    redirectPath: '/system-management',
+    redirectPath: '/admin/dashboard',
     icon: Settings2,
     primaryColor: 'indigo',
     defaultPassword: DEFAULT_ADMIN_PASSWORD,
@@ -112,6 +112,19 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     icon: Crown,
     primaryColor: 'amber',
     defaultPassword: 'munyaka2026',
+  },
+  dev: {
+    id: 'dev',
+    label: 'Platform Developer',
+    description: 'Full platform debugging, API access, and system logs',
+    fullDescription: 'Developer console for system monitoring, logs, diagnostics, and API diagnostics.',
+    email: 'dev@munyaka.sc.ke',
+    userName: 'Platform Developer',
+    userRole: 'admin',
+    redirectPath: '/dev/dashboard',
+    icon: Shield,
+    primaryColor: 'indigo',
+    defaultPassword: 'dev2026',
   },
 };
 
