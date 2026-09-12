@@ -306,8 +306,9 @@ const App = () => {
                       <Route path="/portal" element={<ParentPortal />} />
 
                       {/* Protected Routes */}
-                      <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/" element={<Login />} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['Admin', 'admin']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/dashboard" element={<ProtectedRoute allowedRoles={['Dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
