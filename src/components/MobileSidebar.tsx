@@ -41,42 +41,42 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, setIsOpen 
         </div>
 
         <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-          <a href="#/dev/dashboard" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50">
+          <Link to="/dev/dashboard" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50">
             <span className="font-bold">📊</span>
             <span>Dashboard</span>
-          </a>
-          <a href="#/dev/settings" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
+          </Link>
+          <Link to="/dev/settings" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
             <span className="font-bold">⚙️</span>
             <span>Platform Settings</span>
-          </a>
-          <a href="#/dev/schools" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
+          </Link>
+          <Link to="/dev/schools" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
             <span className="font-bold">🏫</span>
             <span>School Management</span>
-          </a>
-          <a href="#/dev/subscriptions" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
+          </Link>
+          <Link to="/dev/subscriptions" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
             <span className="font-bold">💳</span>
             <span>App Subscriptions</span>
-          </a>
-          <a href="#/dev/licenses" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
+          </Link>
+          <Link to="/dev/licenses" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
             <span className="font-bold">🔑</span>
             <span>License Management</span>
-          </a>
-          <a href="#/dev/payments" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
+          </Link>
+          <Link to="/dev/payments" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
             <span className="font-bold">🧾</span>
             <span>Payment History</span>
-          </a>
-          <a href="#/dev/lan-sync" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
+          </Link>
+          <Link to="/dev/lan-sync" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
             <span className="font-bold">📶</span>
             <span>LAN & Offline Sync</span>
-          </a>
-          <a href="#/dev/devices" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
+          </Link>
+          <Link to="/dev/devices" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
             <span className="font-bold">🖥️</span>
             <span>Connected Devices</span>
-          </a>
-          <a href="#/dev/logs" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
+          </Link>
+          <Link to="/dev/logs" onClick={() => setIsOpen(false)} className="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
             <span className="font-bold">📁</span>
             <span>System Logs & Metrics</span>
-          </a>
+          </Link>
         </nav>
 
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">

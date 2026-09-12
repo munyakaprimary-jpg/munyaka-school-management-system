@@ -332,15 +332,42 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Navigation List */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 8px' }}>
-          <a href="#/dev/dashboard" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#4f46e5', fontWeight: 'bold' }}>📊 Dashboard</a>
-          <a href="#/dev/settings" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>⚙️ Platform Settings</a>
-          <a href="#/dev/schools" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>🏫 School Management</a>
-          <a href="#/dev/subscriptions" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>💳 App Subscriptions</a>
-          <a href="#/dev/licenses" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>🔑 License Management</a>
-          <a href="#/dev/payments" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>🧾 Payment History</a>
-          <a href="#/dev/lan-sync" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>📶 LAN & Offline Sync</a>
-          <a href="#/dev/devices" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>🖥️ Connected Devices</a>
-          <a href="#/dev/logs" style={{ display: 'block', padding: '10px', marginBottom: '4px', color: '#374151' }}>📁 System Logs & Metrics</a>
+          <Link to="/dev/dashboard" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#4f46e5', fontWeight: 'bold', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-indigo-50 dark:hover:bg-indigo-950/40">
+            <span>📊</span>
+            <span>Dashboard</span>
+          </Link>
+          <Link to="/dev/settings" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>⚙️</span>
+            <span>Platform Settings</span>
+          </Link>
+          <Link to="/dev/schools" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>🏫</span>
+            <span>School Management</span>
+          </Link>
+          <Link to="/dev/subscriptions" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>💳</span>
+            <span>App Subscriptions</span>
+          </Link>
+          <Link to="/dev/licenses" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>🔑</span>
+            <span>License Management</span>
+          </Link>
+          <Link to="/dev/payments" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>🧾</span>
+            <span>Payment History</span>
+          </Link>
+          <Link to="/dev/lan-sync" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>📶</span>
+            <span>LAN & Offline Sync</span>
+          </Link>
+          <Link to="/dev/devices" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>🖥️</span>
+            <span>Connected Devices</span>
+          </Link>
+          <Link to="/dev/logs" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>📁</span>
+            <span>System Logs & Metrics</span>
+          </Link>
         </div>
 
             {/* User Account Footer */}
