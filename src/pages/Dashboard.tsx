@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
-import DevDashboard from '@/components/dashboards/OwnerDashboard';
+import DevDashboard from '@/pages/DevDashboard';
 import AdminDashboardComponent from '@/components/dashboards/AdminDashboard';
 import type { LucideIcon } from 'lucide-react';
 import { useAcademicCalendar, formatTermBadge } from '@/hooks/useAcademicCalendar';
@@ -1394,13 +1394,14 @@ const Dashboard: React.FC = () => {
   const { activeTerm, activeYear } = useAcademicCalendar();
   const termBadge = formatTermBadge(activeTerm, activeYear);
 
-  // Owner-level sees the full Owner Dashboard; no wrapper header needed there
-  if (role === 'owner' || role === 'librarian') {
+  // Developer or platform-level sees the dedicated Dev Dashboard
+  const normalizedRole = String(role || '').toLowerCase();
+  if (normalizedRole === 'dev' || normalizedRole === 'platformadmin' || normalizedRole === 'owner') {
     return <DevDashboard />;
   }
 
   // Admin sees the dedicated Admin Dashboard (operational full admin)
-  if (role === 'admin') {
+  if (normalizedRole === 'admin') {
     return <AdminDashboardComponent />;
   }
 
