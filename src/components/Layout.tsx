@@ -336,6 +336,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <span>📊</span>
             <span>Dashboard</span>
           </Link>
+          <Link to="/dev/tenants" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>🏫</span>
+            <span>Tenants / Campuses</span>
+          </Link>
           <Link to="/dev/games" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
             <span>🎮</span>
             <span>Games Hub</span>

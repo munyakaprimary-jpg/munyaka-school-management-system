@@ -313,6 +313,7 @@ const App = () => {
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/dashboard" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/tenants" element={<ProtectedRoute><AppUnlock><Layout><TenantsPage /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/tenants" element={<ProtectedRoute><AppUnlock><Layout><TenantsPage /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/settings" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/schools" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/subscriptions" element={<ProtectedRoute><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
