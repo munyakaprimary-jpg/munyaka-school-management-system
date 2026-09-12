@@ -336,37 +336,25 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <span>📊</span>
             <span>Dashboard</span>
           </Link>
-          <Link to="/dev/settings" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>⚙️</span>
-            <span>Platform Settings</span>
-          </Link>
-          <Link to="/dev/schools" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>🏫</span>
-            <span>School Management</span>
+          <Link to="/dev/games" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>🎮</span>
+            <span>Games Hub</span>
           </Link>
           <Link to="/dev/subscriptions" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
             <span>💳</span>
-            <span>App Subscriptions</span>
-          </Link>
-          <Link to="/dev/licenses" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>🔑</span>
-            <span>License Management</span>
-          </Link>
-          <Link to="/dev/payments" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>🧾</span>
-            <span>Payment History</span>
+            <span>Payment & Subscriptions</span>
           </Link>
           <Link to="/dev/lan-sync" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
             <span>📶</span>
-            <span>LAN & Offline Sync</span>
+            <span>LAN Server Config</span>
           </Link>
-          <Link to="/dev/devices" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>🖥️</span>
-            <span>Connected Devices</span>
+          <Link to="/dev/study-corner" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>📖</span>
+            <span>Study Corner</span>
           </Link>
-          <Link to="/dev/logs" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
-            <span>📁</span>
-            <span>System Logs & Metrics</span>
+          <Link to="/dev/settings" onClick={() => setIsOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', marginBottom: '4px', color: '#374151', textDecoration: 'none', borderRadius: '12px' }} className="hover:bg-gray-100 dark:hover:bg-slate-800 dark:text-gray-300">
+            <span>⚙️</span>
+            <span>Settings</span>
           </Link>
         </div>
 
@@ -381,7 +369,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     } catch { /* ignore */ }
                     const activeRole = storedUser.role || user?.role || 'Admin';
                     const isDev = activeRole === 'Dev' || activeRole === 'PlatformAdmin';
-                    const avatarText = isDev ? 'DV' : 'AD';
+                    const avatarText = isDev ? 'PD' : 'AD';
                     const userNameLabel = isDev ? 'Platform Developer' : (user?.name || 'Admin');
                     const subtitleLabel = isDev ? 'DEVELOPER' : 'ADMINISTRATOR';
 
