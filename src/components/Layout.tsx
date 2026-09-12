@@ -379,64 +379,64 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           })}
         </nav>
 
-        {/* User Account Footer */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
-          <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
-            <div className="flex items-center justify-between gap-2 mb-2">
-              {(() => {
-                let storedUser: { role?: string; name?: string } = {};
-                try {
-                  storedUser = JSON.parse(localStorage.getItem('munyaka_user') || '{}');
-                } catch { /* ignore */ }
-                const activeRole = storedUser.role || user?.role || 'Admin';
-                const isDev = activeRole === 'Dev' || activeRole === 'PlatformAdmin';
-                const avatarText = isDev ? 'DV' : 'AD';
-                const userNameLabel = isDev ? 'Platform Developer' : (user?.name || 'Admin');
-                const subtitleLabel = isDev ? 'DEVELOPER' : 'ADMINISTRATOR';
+            {/* User Account Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  {(() => {
+                    let storedUser: { role?: string; name?: string } = {};
+                    try {
+                      storedUser = JSON.parse(localStorage.getItem('munyaka_user') || '{}');
+                    } catch { /* ignore */ }
+                    const activeRole = storedUser.role || user?.role || 'Admin';
+                    const isDev = activeRole === 'Dev' || activeRole === 'PlatformAdmin';
+                    const avatarText = isDev ? 'DV' : 'AD';
+                    const userNameLabel = isDev ? 'Platform Developer' : (user?.name || 'Admin');
+                    const subtitleLabel = isDev ? 'DEVELOPER' : 'ADMINISTRATOR';
 
-                return (
-                  <>
-                    <Link to="/profile" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">
-                        {avatarText}
-                      </div>
-                    </Link>
-                    {!isCollapsed && (
-                      <div className="overflow-hidden flex-1">
-                        <Link to="/profile" onClick={() => setIsOpen(false)}>
-                          <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">
-                            {userNameLabel}
-                          </p>
+                    return (
+                      <>
+                        <Link to="/profile" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">
+                            {avatarText}
+                          </div>
                         </Link>
-                        <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
-                          {subtitleLabel}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-            
-            {!isCollapsed && (
-              <div className="flex gap-2 pt-1 border-t border-slate-200/50 dark:border-slate-700">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    localStorage.removeItem('munyaka_user');
-                    localStorage.removeItem('munyaka_admin_session');
-                    logout();
-                    window.location.hash = '/login';
-                  }}
-                  className="w-full justify-center gap-2 rounded-xl h-9 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                >
-                  <LogOut size={14} /> Log Out
-                </Button>
+                        {!isCollapsed && (
+                          <div className="overflow-hidden flex-1">
+                            <Link to="/profile" onClick={() => setIsOpen(false)}>
+                              <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">
+                                {userNameLabel}
+                              </p>
+                            </Link>
+                            <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">
+                              {subtitleLabel}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+                
+                {!isCollapsed && (
+                  <div className="flex gap-2 pt-1 border-t border-slate-200/50 dark:border-slate-700">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        localStorage.removeItem('munyaka_user');
+                        localStorage.removeItem('munyaka_admin_session');
+                        logout();
+                        window.location.hash = '/login';
+                      }}
+                      className="w-full justify-center gap-2 rounded-xl h-9 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                    >
+                      <LogOut size={14} /> Log Out
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
       </aside>
 
       {/* Main Content Area - Updated with responsive margins to account for fixed sidebar */}
