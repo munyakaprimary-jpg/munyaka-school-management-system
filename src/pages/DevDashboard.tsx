@@ -68,6 +68,16 @@ export default function DevDashboard() {
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [isGenerateKeyOpen, setIsGenerateKeyOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<'details' | 'configuration' | 'gateways'>('details');
+
+  // Configuration Form State (Exact requirement)
+  const [configPlanName, setConfigPlanName] = useState('Munyaka School License');
+  const [configPlanLabel, setConfigPlanLabel] = useState('Enterprise Plan');
+  const [configAmount, setConfigAmount] = useState('20000');
+  const [configCurrency, setConfigCurrency] = useState('KES — Kenyan Shilling');
+  const [configBillingDate, setConfigBillingDate] = useState('02/09/2026');
+  const [configSeats, setConfigSeats] = useState('1000');
+  const [configTier, setConfigTier] = useState('Starter');
 
   // Dynamic tenant state
   const [selectedTenant, setSelectedTenant] = useState<{ id: string; name: string } | null>({
@@ -266,13 +276,13 @@ export default function DevDashboard() {
 
         {/* TOP NAVIGATION TABS BAR */}
         <div className="bg-white rounded-2xl p-2 shadow-sm border border-slate-100 flex flex-wrap items-center gap-2">
-          <Button variant="default" className="bg-indigo-600 text-white font-bold rounded-xl text-xs h-10 px-4 gap-2">
-            <RefreshCw size={14} /> License Details (Active)
+          <Button onClick={() => setActiveSubTab('details')} variant={activeSubTab === 'details' ? 'default' : 'ghost'} className={activeSubTab === 'details' ? "bg-indigo-600 text-white font-bold rounded-xl text-xs h-10 px-4 gap-2" : "text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2"}>
+            <RefreshCw size={14} /> License Details ({activeSubTab === 'details' ? 'Active' : ''})
           </Button>
-          <Button onClick={() => navigate('/dev/settings')} variant="ghost" className="text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2">
+          <Button onClick={() => setActiveSubTab('configuration')} variant={activeSubTab === 'configuration' ? 'default' : 'ghost'} className={activeSubTab === 'configuration' ? "bg-indigo-600 text-white font-bold rounded-xl text-xs h-10 px-4 gap-2" : "text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2"}>
             <SettingsIcon size={14} /> Configuration
           </Button>
-          <Button onClick={() => showSuccess('Payment gateways configured.')} variant="ghost" className="text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2">
+          <Button onClick={() => { setActiveSubTab('gateways'); showSuccess('Payment gateways configured.'); }} variant={activeSubTab === 'gateways' ? 'default' : 'ghost'} className={activeSubTab === 'gateways' ? "bg-indigo-600 text-white font-bold rounded-xl text-xs h-10 px-4 gap-2" : "text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2"}>
             <Wifi size={14} /> Payment Gateways
           </Button>
           <Button onClick={() => setIsHistoryOpen(true)} variant="ghost" className="text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs h-10 px-4 gap-2">
@@ -280,7 +290,238 @@ export default function DevDashboard() {
           </Button>
         </div>
 
-        {/* MAIN LICENSE DETAILS CARD */}
+        {/* MAIN LICENSE DETAILS CARD OR CONFIGURATION TAB VIEW */}
+        {activeSubTab === 'configuration' ? (
+          <div className="space-y-6">
+            {/* 1. SECTION HEADER CARD */}
+            <Card className="border-none shadow-xl rounded-3xl bg-white p-6 md:p-8 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center shadow-inner">
+                  <span className="text-2xl">⚙️</span>
+                </div>
+                <div>
+                  <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Subscription Configuration</h2>
+                  <p className="text-xs md:text-sm text-slate-500 font-medium mt-0.5">Configure the institutional plan details, billing, and seat limits.</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* 2. FORM GRID LAYOUT (2 Columns) */}
+            <Card className="border-none shadow-xl rounded-3xl bg-white p-6 md:p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* ROW 1: Left Input: SUBSCRIPTION PLAN NAME */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    SUBSCRIPTION PLAN NAME
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-slate-400">
+                      <Building2 size={18} />
+                    </span>
+                    <Input
+                      type="text"
+                      value={configPlanName}
+                      onChange={(e) => setConfigPlanName(e.target.value)}
+                      className="pl-11 h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50 focus:bg-white transition-all"
+                      placeholder="Munyaka School License"
+                    />
+                  </div>
+                </div>
+
+                {/* ROW 1: Right Input: PLAN LABEL (TIER) */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    PLAN LABEL (TIER)
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-purple-600">
+                      ✨
+                    </span>
+                    <Input
+                      type="text"
+                      value={configPlanLabel}
+                      onChange={(e) => setConfigPlanLabel(e.target.value)}
+                      className="pl-11 h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50 focus:bg-white transition-all"
+                      placeholder="Enterprise Plan"
+                    />
+                  </div>
+                </div>
+
+                {/* ROW 2: Left Input: AMOUNT */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    AMOUNT
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-slate-400 font-bold text-base">
+                      $
+                    </span>
+                    <Input
+                      type="text"
+                      value={configAmount}
+                      onChange={(e) => setConfigAmount(e.target.value)}
+                      className="pl-11 h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50 focus:bg-white transition-all"
+                      placeholder="20000"
+                    />
+                  </div>
+                </div>
+
+                {/* ROW 2: Right Select Dropdown: CURRENCY */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    CURRENCY
+                  </label>
+                  <Select value={configCurrency} onValueChange={setConfigCurrency}>
+                    <SelectTrigger className="h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl">
+                      <SelectItem value="KES — Kenyan Shilling">KES — Kenyan Shilling</SelectItem>
+                      <SelectItem value="USD — US Dollar">USD — US Dollar</SelectItem>
+                      <SelectItem value="EUR — Euro">EUR — Euro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* ROW 3: Left Input: NEXT BILLING DATE */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    NEXT BILLING DATE
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-slate-400">
+                      📅
+                    </span>
+                    <Input
+                      type="text"
+                      value={configBillingDate}
+                      onChange={(e) => setConfigBillingDate(e.target.value)}
+                      className="pl-11 h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50 focus:bg-white transition-all"
+                      placeholder="02/09/2026"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium px-1">
+                    When the next payment will be debited. Leave blank to use +30 days from today.
+                  </p>
+                </div>
+
+                {/* ROW 3: Right Input: INSTITUTIONAL SEATS */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    INSTITUTIONAL SEATS
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-slate-400">
+                      👥
+                    </span>
+                    <Input
+                      type="text"
+                      value={configSeats}
+                      onChange={(e) => setConfigSeats(e.target.value)}
+                      className="pl-11 h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50 focus:bg-white transition-all"
+                      placeholder="1000"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium px-1">
+                    Maximum number of users (staff + learners) allowed under this license.
+                  </p>
+                </div>
+
+              </div>
+
+              {/* ROW 4 (Full Width): SUBSCRIPTION TIER */}
+              <div className="space-y-2 pt-2">
+                <label className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  SUBSCRIPTION TIER
+                </label>
+                <Select value={configTier} onValueChange={setConfigTier}>
+                  <SelectTrigger className="h-12 rounded-2xl border-slate-200 font-bold text-slate-900 bg-slate-50/50">
+                    <SelectValue placeholder="Select tier" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    <SelectItem value="Starter">Starter</SelectItem>
+                    <SelectItem value="Enterprise">Enterprise</SelectItem>
+                    <SelectItem value="Custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+            </Card>
+
+            {/* 3. LIVE PREVIEW CARD (LIVE PREVIEW) */}
+            <div className="bg-gradient-to-br from-indigo-50/95 via-purple-50/90 to-blue-50/95 border border-indigo-200/80 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                  ✓
+                </span>
+                <h3 className="text-xs font-black uppercase tracking-widest text-indigo-900">LIVE PREVIEW</h3>
+              </div>
+
+              {/* Data Grid (4 Columns) */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-indigo-100 shadow-sm space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-400">PLAN</span>
+                  <p className="text-sm font-black text-slate-900 truncate">{configPlanLabel || 'Enterprise Plan'}</p>
+                </div>
+                <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-indigo-100 shadow-sm space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-400">AMOUNT</span>
+                  <p className="text-sm font-black text-slate-900 truncate">
+                    {configCurrency.split(' — ')[0]} {configAmount || '20000'}
+                  </p>
+                </div>
+                <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-indigo-100 shadow-sm space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-400">NEXT BILLING</span>
+                  <p className="text-sm font-black text-slate-900 truncate">
+                    {configBillingDate ? (() => {
+                      // Normalize date format if entered as DD/MM/YYYY to show M/D/YYYY or similar if needed, or keep exact
+                      const parts = configBillingDate.split('/');
+                      if (parts.length === 3) {
+                        return `${parseInt(parts[1])}/${parseInt(parts[0])}/${parts[2]}`;
+                      }
+                      return configBillingDate;
+                    })() : '9/2/2026'}
+                  </p>
+                </div>
+                <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-indigo-100 shadow-sm space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-400">SEATS</span>
+                  <p className="text-sm font-black text-slate-900 truncate">
+                    {Number(configSeats || 1000).toLocaleString()} seats
+                  </p>
+                </div>
+              </div>
+
+              {/* Sub-row */}
+              <div className="bg-white/60 backdrop-blur-sm px-5 py-3 rounded-2xl border border-indigo-100/60 flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-500">TIER</span>
+                <span className="text-xs font-black text-slate-900">{configTier}</span>
+              </div>
+            </div>
+
+            {/* 4. PRIMARY ACTION BUTTON */}
+            <div>
+              <Button
+                onClick={() => {
+                  try {
+                    localStorage.setItem('munyaka_sub_config', JSON.stringify({
+                      planName: configPlanName,
+                      planLabel: configPlanLabel,
+                      amount: configAmount,
+                      currency: configCurrency,
+                      billingDate: configBillingDate,
+                      seats: configSeats,
+                      tier: configTier
+                    }));
+                  } catch (e) {}
+                  showSuccess('Configuration saved and persisted successfully!');
+                }}
+                className="w-full bg-purple-700 hover:bg-purple-800 text-white font-black text-base rounded-2xl h-14 shadow-xl gap-2 transition-all transform active:scale-[0.99]"
+              >
+                <span>💾</span> Save Configuration
+              </Button>
+            </div>
+          </div>
+        ) : (
         <Card className="border-none shadow-xl rounded-3xl bg-white p-6 md:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -369,6 +610,7 @@ export default function DevDashboard() {
             </Button>
           </div>
         </Card>
+        )}
 
         {/* LICENSE HISTORY & ACTIVATION KEYS TABLE CARD */}
         <Card className="border-none shadow-xl rounded-3xl bg-white p-6 md:p-8 space-y-6">
