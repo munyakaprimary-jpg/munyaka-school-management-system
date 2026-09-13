@@ -40,7 +40,16 @@ import {
   type ClearanceCertificateRef,
 } from '@/utils/pdfDownloader';
 
-const LEARNERS_STORAGE_KEY = 'school_learners_data';
+const LEARNERS_STORAGE_KEYS = [
+  'school_learners_data',
+  'munyaka_students',
+  'students',
+  'learners',
+  'pupils',
+  'school_students',
+  'registered_students',
+  'munyaka_registered_students',
+];
 const TRANSACTIONS_KEY = 'munyaka_transactions';
 const PAYMENT_RECORDS_KEY = 'munyaka_payment_records';
 const FEE_STRUCTURES_KEY = 'munyaka_fee_structures';
@@ -80,13 +89,7 @@ interface ProfileLearner {
 const StudentProfile = () => {
   const { id } = useParams<{ id: string }>();
 
-  // ── FIX 1: Look up the ACTIVE learner from localStorage using the URL param.
-  // The previous version always fell back to `INITIAL_SEED_DATA.students[0]`
-  // (MUTWIKA KILONZO) when no real ID was provided. Now we resolve the learner
-  // from the school_learners_data localStorage key, and only fall back to
-  // the seed if the localStorage lookup truly returns nothing (e.g. on
-  // first run before any learners have been registered). The first seed
-  // student is the most natural default in that case.
+  // ── FIX 1: Look up the ACTIVE learner from localStorage checking ALL learner keys + fallback.
   const [activeLearner, setActiveLearner] = useState<ProfileLearner | null>(null);
 
   useEffect(() => {
@@ -96,18 +99,26 @@ const StudentProfile = () => {
     }
 
     try {
-      const saved = localStorage.getItem(LEARNERS_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Try to find the learner by id, then by admNo (in case the URL
-          // uses the human-readable identifier instead of the internal row id)
-          const match = parsed.find((l: any) => l.id === id || l.admNo === id);
-          if (match) {
-            setActiveLearner(match as ProfileLearner);
-            return;
+      let found: any = null;
+      for (const k of LEARNERS_STORAGE_KEYS) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const match = parsed.find((l: any) =>
+              String(l.id ?? '').trim().toLowerCase() === String(id ?? '').trim().toLowerCase() ||
+              String(l.admNo ?? l.admissionNo ?? '').trim().toLowerCase() === String(id ?? '').trim().toLowerCase()
+            );
+            if (match) {
+              found = match;
+              break;
+            }
           }
         }
+      }
+      if (found) {
+        setActiveLearner(found as ProfileLearner);
+        return;
       }
     } catch (e) {
       console.error('Failed to resolve learner from localStorage', e);
