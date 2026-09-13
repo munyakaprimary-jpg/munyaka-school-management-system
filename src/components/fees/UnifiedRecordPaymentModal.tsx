@@ -442,7 +442,13 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
             ? `${String(subscriptionName || '').trim()} — ${String(issuedTo || '').trim() || selectedStudent?.name || 'Subscription'}`
             : `Payment for ${selectedStudent?.name ?? String(issuedTo || '').trim() ?? 'Subscription'}`;
 
-    return {
+    const learnersRaw = localStorage.getItem('munyaka_learners_db');
+    const allLearners = learnersRaw ? JSON.parse(learnersRaw) : studentsData;
+    const resolvedLearner = allLearners.find((l: any) => l.id === selectedStudentId || l.admNo === selectedStudentId) || selectedStudent;
+    const resolvedLearnerName = resolvedLearner?.fullName || resolvedLearner?.name || resolvedLearner?.learnerName || `${resolvedLearner?.firstName || ''} ${resolvedLearner?.lastName || ''}`.trim() || String(issuedTo || '').trim() || 'Learner';
+    const resolvedAdmissionNo = resolvedLearner?.admissionNo || resolvedLearner?.admNo || resolvedLearner?.admissionNumber || resolvedLearner?.id || selectedStudentId || '';
+
+    return ({
       id: `TX-${Date.now()}`,
       date,
       amount: parseFloat(amount),
@@ -450,8 +456,10 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
       ref,
       category: 'Subscription',
       studentId: selectedStudentId || undefined,
-      grade: selectedStudent?.grade ?? '',
-      stream: selectedStudent?.stream ?? '',
+      learnerName: resolvedLearnerName,
+      admNo: resolvedAdmissionNo,
+      grade: resolvedLearner?.grade ?? selectedGradeObj?.name ?? '',
+      stream: resolvedLearner?.stream ?? '',
       invoiceId: `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`,
       description: txDescription,
       currency,
@@ -459,7 +467,7 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
       paymentMethod,
       paymentDetails: details,
       paidAt: date,
-    };
+    } as unknown) as Transaction;
   };
 
   // ─────────────────────────────────────────────

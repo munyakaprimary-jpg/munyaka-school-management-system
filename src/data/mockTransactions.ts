@@ -11,7 +11,17 @@ export interface Transaction {
   ref: string;
   category: string;
   studentId?: string;
+  learnerName?: string;
+  admNo?: string;
   grade?: string;
+  stream?: string;
+  invoiceId?: string;
+  description?: string;
+  currency?: string;
+  status?: string;
+  paymentMethod?: string;
+  paymentDetails?: any;
+  paidAt?: string;
 }
 
 export const transactions: Transaction[] = [

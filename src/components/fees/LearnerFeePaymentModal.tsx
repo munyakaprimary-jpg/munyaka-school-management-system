@@ -324,11 +324,17 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
 
     await new Promise(r => setTimeout(r, 300));
 
+    const learnersRaw = localStorage.getItem('munyaka_learners_db');
+    const allLearners = learnersRaw ? JSON.parse(learnersRaw) : learnersList;
+    const resolvedLearner = allLearners.find((l: any) => l.id === selectedStudentId || l.admNo === selectedStudentId) || selectedLearner;
+    const resolvedLearnerName = resolvedLearner?.fullName || resolvedLearner?.name || `${resolvedLearner?.firstName || ''} ${resolvedLearner?.lastName || ''}`.trim() || 'Learner';
+    const resolvedAdmissionNo = resolvedLearner?.admissionNo || resolvedLearner?.admNo || resolvedLearner?.admissionNumber || resolvedLearner?.id || selectedStudentId;
+
     const amountNum = parseFloat(amount);
     const methodLabel = PAYMENT_METHODS.find(m => m.value === paymentMethod)?.label || paymentMethod;
     const cleanRef = refCode.trim() || `${paymentMethod.toUpperCase()}-${Date.now().toString().slice(-6)}`;
 
-    const transaction: Transaction & { learnerName?: string; admNo?: string } = {
+    const transaction: Transaction & { learnerName?: string; admNo?: string; admissionNo?: string; learnerId?: string } = {
       id: `TX-${Date.now()}`,
       date: paymentDate,
       amount: amountNum,
@@ -336,10 +342,12 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
       ref: cleanRef,
       category: feeCategory,
       studentId: selectedStudentId,
-      learnerName: (selectedLearner?.name || 'Learner').toUpperCase(),
-      admNo: selectedLearner?.admNo || selectedLearner?.id || '',
-      grade: selectedLearner?.grade || '',
-      stream: selectedLearner?.stream || '',
+      learnerId: selectedStudentId,
+      learnerName: resolvedLearnerName,
+      admNo: resolvedAdmissionNo,
+      admissionNo: resolvedAdmissionNo,
+      grade: resolvedLearner?.grade || '',
+      stream: resolvedLearner?.stream || '',
       invoiceId: `INV-${academicYear}-${Date.now().toString().slice(-6)}`,
       description: `${feeCategory} — ${selectedLearner?.name || 'Learner'} (${academicYear}, ${term})`,
       currency: 'KES',
