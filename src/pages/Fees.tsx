@@ -554,35 +554,58 @@ const Fees = () => {
     const amountNum = parseFloat(configAmount);
     if (isNaN(amountNum)) return;
 
+    // Get all grades from GRADES_DATA or gradesConfig
+    const allGradeIds = GRADES_DATA.map(g => g.id);
+
+    // Build unified fee structures database map: `${year}_${term}_${gradeId}` -> amount
+    const existingStructuresRaw = localStorage.getItem('munyaka_fee_structures_db');
+    let structuresMap: Record<string, number> = {};
+    try {
+      if (existingStructuresRaw) {
+        structuresMap = JSON.parse(existingStructuresRaw) || {};
+      }
+    } catch {}
+
     if (configGrade === "all") {
       setFeeStructures(prev => {
         let updated = [...prev];
-        GRADES_DATA.forEach(g => {
-          const idx = updated.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === g.id);
+        allGradeIds.forEach(gradeId => {
+          const idx = updated.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === gradeId);
           if (idx > -1) {
             updated[idx] = { ...updated[idx], amount: amountNum };
           } else {
-            updated.push({ year: selectedYear, term: selectedTerm, gradeId: g.id, amount: amountNum });
+            updated.push({ year: selectedYear, term: selectedTerm, gradeId, amount: amountNum });
           }
+          structuresMap[`${selectedYear}_${selectedTerm}_${gradeId}`] = amountNum;
         });
+        structuresMap[`${selectedYear}_${selectedTerm}_ALL`] = amountNum;
+        localStorage.setItem('munyaka_fee_structures_db', JSON.stringify(structuresMap));
+        localStorage.setItem('munyaka_fee_structures', JSON.stringify(updated));
         return updated;
       });
     } else {
       setFeeStructures(prev => {
         const idx = prev.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === configGrade);
+        let next = [...prev];
         if (idx > -1) {
-          const updated = [...prev];
-          updated[idx] = { ...updated[idx], amount: amountNum };
-          return updated;
+          next[idx] = { ...next[idx], amount: amountNum };
         } else {
-          return [...prev, { year: selectedYear, term: selectedTerm, gradeId: configGrade, amount: amountNum }];
+          next.push({ year: selectedYear, term: selectedTerm, gradeId: configGrade, amount: amountNum });
         }
+        structuresMap[`${selectedYear}_${selectedTerm}_${configGrade}`] = amountNum;
+        localStorage.setItem('munyaka_fee_structures_db', JSON.stringify(structuresMap));
+        localStorage.setItem('munyaka_fee_structures', JSON.stringify(next));
+        return next;
       });
     }
 
+    // Trigger update events
+    window.dispatchEvent(new Event('fees-updated'));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_fee_structures_db' } }));
+
     setIsConfigOpen(false);
-    const targetLabel = configGrade === "all" ? "all grades" : GRADES_DATA.find(g => g.id === configGrade)?.name || "selected grade";
-    showSuccess(`Fee structure updated for ${targetLabel}`);
+    const targetLabel = configGrade === "all" ? "all grade levels" : GRADES_DATA.find(g => g.id === configGrade)?.name || "selected grade";
+    showSuccess(`Successfully set term fee to KES ${amountNum.toLocaleString()} for ${targetLabel} (${selectedTerm}, ${selectedYear})!`);
   };
 
   const handleRecordPayment = (result: { transaction: Transaction; activationKey?: string; issuedTo?: string; deviceId?: string; expiresAt?: string } | Transaction) => {

@@ -27,6 +27,7 @@ import {
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
 import { getStoredLearners, saveStoredLearner, removeStoredLearner, PersistentLearner } from '@/utils/learnersStore';
+import { Student } from '@/utils/storage';
 import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 /**

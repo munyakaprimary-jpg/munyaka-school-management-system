@@ -573,10 +573,6 @@ export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: str
       academicYear: String(student.academicYear ?? activeYear),
       ...student,
       id: studentId,
-      status: String(student.status ?? 'Active'),
-      term: String(student.term ?? activeTerm),
-      activeTermId: String((student as any).activeTermId ?? student.term ?? activeTerm),
-      academicYear: String(student.academicYear ?? activeYear),
     };
     const updated = [...existing.filter(s => s.id !== studentId), fullStudent];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -688,10 +684,6 @@ export function createStudent(input: Omit<Student, 'id'> & { id?: string }): Stu
     academicYear: activeYear,
     ...input,
     id: input.id ?? generateId('stu'),
-    status: input.status ?? 'Active',
-    term: input.term ?? activeTerm,
-    activeTermId: (input as any).activeTermId ?? input.term ?? activeTerm,
-    academicYear: input.academicYear ?? activeYear,
   };
   const next = [...getStudents(), newStudent];
   setStudents(next);
