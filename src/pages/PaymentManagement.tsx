@@ -62,7 +62,7 @@ import { lsSet } from '@/utils/storage';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Navigate } from 'react-router-dom';
-import UnifiedRecordPaymentModal from '@/components/fees/UnifiedRecordPaymentModal';
+import LearnerFeePaymentModal from '@/components/fees/LearnerFeePaymentModal';
 import ReceiptModal from '@/components/fees/ReceiptModal';
 import InvoiceHistoryTable from '@/components/fees/InvoiceHistoryTable';
 import ReceiptView from '@/components/fees/ReceiptView';

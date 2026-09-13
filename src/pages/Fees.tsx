@@ -1274,13 +1274,18 @@ const Fees = () => {
       </Modal>
 
       {/* Record Payment Modal */}
-      <UnifiedRecordPaymentModal
+      <LearnerFeePaymentModal
         isOpen={isRecordOpen}
         onClose={() => setIsRecordOpen(false)}
-        onSubmitPayment={handleRecordPayment as any}
-        gradesData={GRADES_DATA}
-        studentsData={studentsFromStore}
-        hideActivationKey={true}
+        onSubmitPayment={(transaction) => {
+          setIsRecordOpen(false);
+          loadFeesData();
+          if (typeof handleRecordPayment === 'function') {
+            try { handleRecordPayment(transaction); } catch {}
+          }
+        }}
+        activeAcademicYear={activeAcademicYear}
+        activeTerm={activeTerm}
       />
 
       {/* Receipt Modal */}

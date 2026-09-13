@@ -30,7 +30,7 @@ import {
 import { useParams } from 'react-router-dom';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
-import UnifiedRecordPaymentModal from '@/components/fees/UnifiedRecordPaymentModal';
+import LearnerFeePaymentModal from '@/components/fees/LearnerFeePaymentModal';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { StudentTransferInfo } from '@/types/transfer';
@@ -1024,21 +1024,13 @@ const StudentProfile = () => {
               />
             )}
 
-      <UnifiedRecordPaymentModal
+      <LearnerFeePaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        onSubmitPayment={handleRecordPayment}
-        gradesData={[]}
-        studentsData={[
-          {
-            id: student.id,
-            name: student.name,
-            assessment: student.admNo,
-            grade: student.grade,
-            stream: student.stream,
-          },
-        ]}
-        hideActivationKey={true}
+        onSubmitPayment={(tx) => {
+          setIsPaymentModalOpen(false);
+          handleRecordPayment(tx);
+        }}
       />
     </div>
   );
