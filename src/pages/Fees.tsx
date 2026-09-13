@@ -163,20 +163,71 @@ const Fees = () => {
   // ── Dynamic data from hooks ────────────────────────────────────────────────
   const { state: studentsFromHook } = useStudentsStore();
   const { state: transactionsFromHook } = useTransactionsStore();
+
+  // Direct Data Hydration Hook for Learners DB
+  const [learners, setLearners] = useState<any[]>(() => {
+    const keys = ['munyaka_learners_db', 'school_learners_data', 'munyaka_students', 'students', 'learners'];
+    for (const key of keys) {
+      const storedRaw = localStorage.getItem(key);
+      if (storedRaw) {
+        try {
+          const parsed = JSON.parse(storedRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (e) {
+          console.error(`Failed to parse ${key}`, e);
+        }
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    const loadRoster = () => {
+      const keys = ['munyaka_learners_db', 'school_learners_data', 'munyaka_students', 'students', 'learners'];
+      for (const key of keys) {
+        const storedRaw = localStorage.getItem(key);
+        if (storedRaw) {
+          try {
+            const parsed = JSON.parse(storedRaw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setLearners(parsed);
+              return;
+            }
+          } catch (e) {
+            console.error(`Failed to parse ${key}`, e);
+          }
+        }
+      }
+      if (studentsFromHook && studentsFromHook.length > 0) {
+        setLearners(studentsFromHook);
+      }
+    };
+
+    loadRoster();
+    window.addEventListener('storage', loadRoster);
+    window.addEventListener('munyaka:data-changed', loadRoster);
+    window.addEventListener('munyaka_learners_updated', loadRoster);
+    return () => {
+      window.removeEventListener('storage', loadRoster);
+      window.removeEventListener('munyaka:data-changed', loadRoster);
+      window.removeEventListener('munyaka_learners_updated', loadRoster);
+    };
+  }, [studentsFromHook]);
   
-  // Normalize students from hook to match Learner interface
+  // Normalize students from hook or direct learners DB to match Learner interface
   const studentsFromStore: Learner[] = useMemo(() => {
-    return studentsFromHook.map(s => ({
-      id: s.id || '',
-      admNo: s.admNo || s.id || '',
-      name: s.name || 'Unknown',
+    const activeList = learners.length > 0 ? learners : studentsFromHook;
+    return activeList.map(s => ({
+      id: s.id || s.admNo || s.admissionNo || '',
+      admNo: s.admNo || s.admissionNo || s.id || '',
+      name: s.fullName || s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown',
       grade: normalizeGradeName(s.grade || ''),
       stream: normalizeStreamName(s.stream || ''),
       gender: (s.gender as 'Male' | 'Female' | 'Other') || 'Other',
-      guardian: s.guardian || '',
-      phone: s.phone || '',
+      guardian: s.guardian || s.parentName || '',
+      phone: s.phone || s.parentPhone || '',
     }));
-  }, [studentsFromHook]);
+  }, [learners, studentsFromHook]);
   
   // Normalize transactions from hook to ExtendedTransaction
   const transactionsFromStore: ExtendedTransaction[] = useMemo(() => {
@@ -914,7 +965,7 @@ const Fees = () => {
 
         {/* Fee Records Table */}
         <TabsContent value="balances" className="m-0">
-          {studentsFromStore.length === 0 ? (
+          {(studentsFromStore.length === 0 && learners.length === 0) ? (
             <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm p-12 text-center">
               <div className="flex flex-col items-center gap-3 max-w-md mx-auto">
                 <div className="p-4 bg-amber-50 rounded-full">
