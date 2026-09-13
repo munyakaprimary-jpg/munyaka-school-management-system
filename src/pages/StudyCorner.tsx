@@ -837,6 +837,13 @@ function FilterPills({
   );
 }
 
+// ─── Constants & Types ───────────────────────────────────────────────────────
+const CBC_LEVELS = [
+  { id: "lower-primary", label: "Lower Primary [G1-G3]", range: [1, 3] },
+  { id: "upper-primary", label: "Upper Primary [G4-G6]", range: [4, 6] },
+  { id: "junior-secondary", label: "Junior Secondary [G7-G9]", range: [7, 9] },
+] as const;
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function StudyCorner() {
   const { user } = useAuth();
@@ -844,7 +851,7 @@ export default function StudyCorner() {
     user?.role === "admin" ||
     user?.role === "teacher";
 
-  const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
+  const [selectedGrade, setSelectedGrade] = useState<number | string | null>(null);
   const [selectedStrands, setSelectedStrands] = useState<StrandCategory[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeItem, setActiveItem] = useState<ContentItem | null>(null);
@@ -857,6 +864,31 @@ export default function StudyCorner() {
   const [preSelectedStrand, setPreSelectedStrand] = useState<StrandCategory | undefined>(undefined);
   const [isDownloading, setIsDownloading] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Filtered strand categories based on selected grade
+  const visibleStrandCategories = useMemo(() => {
+    return strandCategories
+      .map((cat) => {
+        const count = allContent.filter((i) => {
+          const matchesCategory =
+            cat === "Assessments & Quizzes" ? isAssessmentItem(i) : i.strand === cat;
+          return matchesCategory && matchesGrade(i.grade);
+        }).length;
+        return { cat, count };
+      })
+      .filter((item) => item.count > 0);
+  }, [allContent, matchesGrade]);
+
+  // Clear selected strands if they are no longer visible due to grade filter
+  useEffect(() => {
+    if (selectedStrands.length > 0) {
+      const visibleCats = visibleStrandCategories.map((v) => v.cat);
+      const stillVisible = selectedStrands.filter((s) => visibleCats.includes(s));
+      if (stillVisible.length !== selectedStrands.length) {
+        setSelectedStrands(stillVisible);
+      }
+    }
+  }, [visibleStrandCategories, selectedStrands]);
 
   // Custom materials loaded from localStorage.
   // Listen to both:
@@ -975,8 +1007,18 @@ export default function StudyCorner() {
   const isAssessmentItem = (item: ContentItem): boolean =>
     itemCategory(item) === "Assessments & Quizzes";
 
+  const matchesGrade = useCallback((itemGrade: number) => {
+    if (selectedGrade === null) return true;
+    if (typeof selectedGrade === "number") return itemGrade === selectedGrade;
+    const level = CBC_LEVELS.find((l) => l.id === selectedGrade);
+    if (level) {
+      return itemGrade >= level.range[0] && itemGrade <= level.range[1];
+    }
+    return true;
+  }, [selectedGrade]);
+
   const filtered = allContent.filter((item) => {
-    if (selectedGrade !== null && item.grade !== selectedGrade) return false;
+    if (!matchesGrade(item.grade)) return false;
 
     // Handle strand + subject filter
     if (selectedStrands.length > 0) {
@@ -1161,20 +1203,13 @@ export default function StudyCorner() {
                 <BookOpen size={13} />
                 All
               </button>
-              {strandCategories.map((cat) => {
+              {visibleStrandCategories.map(({ cat, count }) => {
                 const meta = getStrandMeta(cat);
                 const active = selectedStrands.length === 1 && selectedStrands[0] === cat;
-                // Use itemCategory so that assessment items (whose strand may differ
-                // from "Assessments & Quizzes") are counted under the correct tab.
-                const count = allContent.filter(
-                  (i) => (cat === "Assessments & Quizzes" ? isAssessmentItem(i) : i.strand === cat)
-                ).length;
                 return (
                   <button
                     key={cat}
-                    onClick={() =>
-                      setSelectedStrands(active ? [] : [cat])
-                    }
+                    onClick={() => setSelectedStrands(active ? [] : [cat])}
                     className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap ${
                       active
                         ? `${meta.bg} ${meta.color} border-current`
@@ -1183,17 +1218,15 @@ export default function StudyCorner() {
                   >
                     {meta.icon}
                     {cat}
-                    {count > 0 && (
-                      <span
-                        className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-full ${
-                          active
-                            ? "bg-white/70 text-current"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {count}
-                      </span>
-                    )}
+                    <span
+                      className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-full ${
+                        active
+                          ? "bg-white/70 text-current"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {count}
+                    </span>
                   </button>
                 );
               })}
@@ -1217,7 +1250,7 @@ export default function StudyCorner() {
             </span>
           </div>
 
-          {/* Download All for Grade — shown only when a specific grade is selected */}
+          {/* Download All for Grade — shown only when a specific grade or level is selected */}
           {selectedGrade !== null && filtered.length > 0 && (
             <button
               onClick={handleDownloadAllForGrade}
@@ -1229,7 +1262,10 @@ export default function StudyCorner() {
               ) : (
                 <Download size={13} />
               )}
-              Download All for Grade {selectedGrade}
+              Download All for{" "}
+              {typeof selectedGrade === "number"
+                ? `Grade ${selectedGrade}`
+                : CBC_LEVELS.find((l) => l.id === selectedGrade)?.label || "Level"}
             </button>
           )}
         </div>
@@ -1266,21 +1302,35 @@ export default function StudyCorner() {
           <div className="relative">
             <select
               value={selectedGrade ?? ""}
-              onChange={(e) =>
-                setSelectedGrade(e.target.value ? Number(e.target.value) : null)
-              }
-              className="appearance-none pl-3 pr-8 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) setSelectedGrade(null);
+                else if (!isNaN(Number(val))) setSelectedGrade(Number(val));
+                else setSelectedGrade(val);
+              }}
+              className="appearance-none pl-3 pr-10 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all hover:border-gray-300"
             >
               <option value="">All Grades</option>
-              {gradeLevels.map((g) => (
-                <option key={g} value={g}>
-                  Grade {g}
-                </option>
-              ))}
+              
+              <optgroup label="Educational Levels">
+                {CBC_LEVELS.map((level) => (
+                  <option key={level.id} value={level.id}>
+                    {level.label}
+                  </option>
+                ))}
+              </optgroup>
+
+              <optgroup label="Specific Grades">
+                {gradeLevels.map((g) => (
+                  <option key={g} value={g}>
+                    Grade {g}
+                  </option>
+                ))}
+              </optgroup>
             </select>
             <ChevronDown
               size={14}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
             />
           </div>
 
@@ -1347,7 +1397,7 @@ export default function StudyCorner() {
               Filter by Strand
             </p>
             <FilterPills
-              categories={strandCategories}
+              categories={visibleStrandCategories.map(v => v.cat)}
               selected={selectedStrands}
               onToggle={toggleStrand}
             />
