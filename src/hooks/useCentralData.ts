@@ -158,10 +158,24 @@ const isActiveRecord = (row: { isArchived?: boolean; deletedAt?: string }): bool
 
 const getLearners = (): Learner[] => {
   const ls = getLocalStorage();
-  const fromLS = tryParse<Learner[]>(ls?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
-  // Pure localStorage read — no seed fallback. The empty array is the
-  // authoritative answer when the store has never been written to.
-  return Array.isArray(fromLS) ? fromLS : [];
+  const keys = [
+    STORAGE_KEYS.LEARNERS,
+    'munyaka_registered_students',
+    'students',
+    'school_learners_data',
+    'learners',
+    'pupils',
+    'school_students',
+    'registered_students',
+  ];
+  let maxList: Learner[] = [];
+  for (const key of keys) {
+    const fromLS = tryParse<Learner[]>(ls?.getItem(key) ?? null);
+    if (fromLS && Array.isArray(fromLS) && fromLS.length > maxList.length) {
+      maxList = fromLS;
+    }
+  }
+  return maxList;
 };
 
 const getTeachers = (): Teacher[] => {

@@ -63,7 +63,17 @@ export default function CentralDataService() {
         version: "5.0", // v5.0: includes munyaka_master_staff_list
         exportDate: new Date().toISOString(),
         school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-        students: lsRead<unknown>('school_learners_data', lsRead<unknown>('munyaka_students', [])),
+        students: ((): any[] => {
+          const keys = ['school_learners_data', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
+          for (const k of keys) {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              const parsed = tryParse<any[]>(raw);
+              if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+          }
+          return [];
+        })(),
         staff: lsRead<unknown>('munyaka_staff_directory', []),
         staffPrereg: lsRead<unknown>('munyaka_staff_prereg', []),
         staffMaster: lsRead<unknown>(STAFF_MASTER_KEY, []),   // canonical master ledger
