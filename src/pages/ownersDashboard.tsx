@@ -9,11 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
+import { TenantConfigModal, TenantFormData } from '@/components/TenantConfigModal';
 
 export interface Tenant {
   id: string;
@@ -120,16 +119,6 @@ export default function OwnersDashboard() {
   const [isProvisionModalOpen, setIsProvisionModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState<Tenant | null>(null);
 
-  // New Tenant Form state
-  const [formName, setFormName] = useState('');
-  const [formCode, setFormCode] = useState('');
-  const [formLocation, setFormLocation] = useState('');
-  const [formPlan, setFormPlan] = useState<'Starter' | 'Enterprise' | 'Custom'>('Starter');
-  const [formMaxSeats, setFormMaxSeats] = useState<number>(500);
-  const [formDbMode, setFormDbMode] = useState<'Isolated SQLite' | 'Shared Local Storage' | 'Cloud PostgreSQL'>('Isolated SQLite');
-  const [formAdminEmail, setFormAdminEmail] = useState('');
-  const [formAdminPhone, setFormAdminPhone] = useState('');
-
   // Persist tenants and active tenant
   useEffect(() => {
     try {
@@ -172,68 +161,58 @@ export default function OwnersDashboard() {
   const handleOpenProvisionModal = (tenantToEdit?: Tenant) => {
     if (tenantToEdit) {
       setIsEditing(tenantToEdit);
-      setFormName(tenantToEdit.name);
-      setFormCode(tenantToEdit.code);
-      setFormLocation(tenantToEdit.location || '');
-      setFormPlan(tenantToEdit.plan);
-      setFormMaxSeats(tenantToEdit.maxSeats);
-      setFormDbMode(tenantToEdit.dbMode);
-      setFormAdminEmail(tenantToEdit.adminEmail || '');
-      setFormAdminPhone(tenantToEdit.adminPhone || '');
     } else {
       setIsEditing(null);
-      setFormName('');
-      const randomCode = 'SCH-' + Math.floor(100 + Math.random() * 900);
-      setFormCode(randomCode);
-      setFormLocation('Nairobi, Kenya');
-      setFormPlan('Starter');
-      setFormMaxSeats(500);
-      setFormDbMode('Isolated SQLite');
-      setFormAdminEmail('');
-      setFormAdminPhone('');
     }
     setIsProvisionModalOpen(true);
   };
 
-  const handleSaveTenant = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formName.trim() || !formCode.trim()) {
+  const handleModalSubmit = (data: TenantFormData) => {
+    if (!data.schoolName.trim() || !data.tenantCode.trim()) {
       toast.error('School name and tenant code are required.');
       return;
+    }
+
+    // Map database strategy string to Tenant dbMode
+    let mappedDbMode: 'Isolated SQLite' | 'Shared Local Storage' | 'Cloud PostgreSQL' = 'Isolated SQLite';
+    if (data.databaseStrategy.includes('Cloud PostgreSQL')) {
+      mappedDbMode = 'Cloud PostgreSQL';
+    } else if (data.databaseStrategy.includes('Shared Local Storage')) {
+      mappedDbMode = 'Shared Local Storage';
     }
 
     if (isEditing) {
       setTenants(tenants.map(t => t.id === isEditing.id ? {
         ...t,
-        name: formName,
-        code: formCode.toUpperCase(),
-        location: formLocation,
-        plan: formPlan,
-        maxSeats: formMaxSeats,
-        dbMode: formDbMode,
-        adminEmail: formAdminEmail,
-        adminPhone: formAdminPhone,
+        name: data.schoolName,
+        code: data.tenantCode.toUpperCase(),
+        location: data.location,
+        plan: data.subscriptionPlan,
+        maxSeats: data.allocatedSeats,
+        dbMode: mappedDbMode,
+        adminEmail: data.adminEmail,
+        adminPhone: data.adminPhone,
         lastSynced: 'Just now'
       } : t));
-      toast.success(`Tenant "${formName}" updated successfully.`);
+      toast.success(`Tenant "${data.schoolName}" updated successfully.`);
     } else {
       const newTenant: Tenant = {
         id: 'tenant-' + Date.now(),
-        name: formName,
-        code: formCode.toUpperCase(),
-        location: formLocation || 'Kenya',
-        plan: formPlan,
+        name: data.schoolName,
+        code: data.tenantCode.toUpperCase(),
+        location: data.location || 'Kenya',
+        plan: data.subscriptionPlan,
         status: 'Active',
         studentCount: 0,
-        maxSeats: formMaxSeats,
-        dbMode: formDbMode,
+        maxSeats: data.allocatedSeats,
+        dbMode: mappedDbMode,
         lastSynced: 'Just now',
-        adminEmail: formAdminEmail || 'admin@' + formCode.toLowerCase() + '.ac.ke',
-        adminPhone: formAdminPhone || '+254 700 000000'
+        adminEmail: data.adminEmail || 'admin@' + data.tenantCode.toLowerCase() + '.ac.ke',
+        adminPhone: data.adminPhone || '+254 700 000000'
       };
       setTenants([newTenant, ...tenants]);
       setActiveTenantId(newTenant.id);
-      toast.success(`School instance "${formName}" provisioned successfully!`);
+      toast.success(`School instance "${data.schoolName}" provisioned successfully!`);
     }
 
     setIsProvisionModalOpen(false);
@@ -269,6 +248,26 @@ export default function OwnersDashboard() {
   const handleSyncAll = () => {
     setTenants(tenants.map(t => ({ ...t, lastSynced: 'Just now' })));
     toast.success('All tenant databases and sync states updated successfully.');
+  };
+
+  // Prepare initial data for modal if editing
+  const modalInitialData: Partial<TenantFormData> | undefined = isEditing ? {
+    schoolName: isEditing.name,
+    tenantCode: isEditing.code,
+    location: isEditing.location || 'Nairobi, Kenya',
+    subscriptionPlan: isEditing.plan,
+    allocatedSeats: isEditing.maxSeats,
+    databaseStrategy: isEditing.dbMode === 'Cloud PostgreSQL' ? 'Cloud PostgreSQL (Isolated Schema)' : isEditing.dbMode === 'Shared Local Storage' ? 'Shared Local Storage' : 'Isolated SQLite (File Sandbox)',
+    adminEmail: isEditing.adminEmail || 'admin@school.ac.ke',
+    adminPhone: isEditing.adminPhone || '+254 700 000000'
+  } : {
+    tenantCode: 'SCH-' + Math.floor(100 + Math.random() * 900),
+    location: 'Nairobi, Kenya',
+    subscriptionPlan: 'Starter',
+    allocatedSeats: 500,
+    databaseStrategy: 'Isolated SQLite (File Sandbox)',
+    adminEmail: 'admin@school.ac.ke',
+    adminPhone: '+254 700 000000'
   };
 
   return (
@@ -578,136 +577,14 @@ export default function OwnersDashboard() {
         </CardContent>
       </Card>
 
-      {/* PROVISION / EDIT TENANT MODAL */}
-      <Dialog open={isProvisionModalOpen} onOpenChange={setIsProvisionModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-indigo-600" />
-              {isEditing ? `Edit Tenant: ${isEditing.name}` : 'Provision New School Tenant Instance'}
-            </DialogTitle>
-            <DialogDescription>
-              Configure school name, tenant code, isolation database strategy, and license limits.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSaveTenant} className="space-y-4 py-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="schoolName">School Name *</Label>
-                <Input
-                  id="schoolName"
-                  placeholder="e.g. St. Teresa Primary"
-                  value={formName}
-                  onChange={e => setFormName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tenantCode">Tenant Code / Slug *</Label>
-                <Input
-                  id="tenantCode"
-                  placeholder="e.g. STTERESA-005"
-                  value={formCode}
-                  onChange={e => setFormCode(e.target.value)}
-                  required
-                  className="font-mono uppercase"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="location">Location / Region</Label>
-                <Input
-                  id="location"
-                  placeholder="e.g. Nairobi, Kenya"
-                  value={formLocation}
-                  onChange={e => setFormLocation(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="plan">Subscription Plan</Label>
-                <Select value={formPlan} onValueChange={(v: any) => setFormPlan(v)}>
-                  <SelectTrigger id="plan">
-                    <SelectValue placeholder="Select Plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Starter">Starter (Up to 500 seats)</SelectItem>
-                    <SelectItem value="Enterprise">Enterprise (Up to 1000 seats)</SelectItem>
-                    <SelectItem value="Custom">Custom (Unlimited)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="maxSeats">Allocated Student Seats Limit</Label>
-                <Select value={formMaxSeats.toString()} onValueChange={(v) => setFormMaxSeats(Number(v))}>
-                  <SelectTrigger id="maxSeats">
-                    <SelectValue placeholder="Select max seats" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="300">300 Seats</SelectItem>
-                    <SelectItem value="500">500 Seats</SelectItem>
-                    <SelectItem value="1000">1000 Seats</SelectItem>
-                    <SelectItem value="2500">2,500 Seats (Custom)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dbMode">Database / Isolation Strategy</Label>
-                <Select value={formDbMode} onValueChange={(v: any) => setFormDbMode(v)}>
-                  <SelectTrigger id="dbMode">
-                    <SelectValue placeholder="Select isolation strategy" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Isolated SQLite">Isolated SQLite (File Sandbox)</SelectItem>
-                    <SelectItem value="Cloud PostgreSQL">Cloud PostgreSQL (Isolated Schema)</SelectItem>
-                    <SelectItem value="Shared Local Storage">Shared Local Storage</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
-              <div className="space-y-2">
-                <Label htmlFor="adminEmail">Administrator Contact Email</Label>
-                <Input
-                  id="adminEmail"
-                  type="email"
-                  placeholder="admin@school.ac.ke"
-                  value={formAdminEmail}
-                  onChange={e => setFormAdminEmail(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="adminPhone">Administrator Phone</Label>
-                <Input
-                  id="adminPhone"
-                  placeholder="+254 700 000000"
-                  value={formAdminPhone}
-                  onChange={e => setFormAdminPhone(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsProvisionModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white">
-                {isEditing ? 'Save Changes' : 'Provision School Instance'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* DYNAMIC TENANT CONFIG MODAL */}
+      <TenantConfigModal
+        isOpen={isProvisionModalOpen}
+        onClose={() => setIsProvisionModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        initialData={modalInitialData}
+        title={isEditing ? `Edit Tenant: ${isEditing.name}` : 'Provision New School Tenant Instance'}
+      />
     </div>
   );
 }
