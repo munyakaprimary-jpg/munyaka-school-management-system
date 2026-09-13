@@ -36,12 +36,25 @@ export default function CentralDataService() {
 
   const loadStats = () => {
     try {
-      const students = getActiveLearners();
+      const studentKeys = ['school_learners_data', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
+      let studentsCount = centralStats.totalStudents;
+      if (studentsCount === 0) {
+        for (const k of studentKeys) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = tryParse<any[]>(raw);
+            if (Array.isArray(parsed) && parsed.length > studentsCount) {
+              studentsCount = parsed.length;
+            }
+          }
+        }
+      }
+
       const attendance = lsRead<Record<string, unknown>>('munyaka_attendance_records', {});
       const fees = lsRead<Record<string, unknown>>('munyaka_fees_records', {});
 
       setStats({
-        studentsCount: Array.isArray(students) ? students.length : 0,
+        studentsCount,
         attendanceCount: Object.keys(attendance ?? {}).length,
         feesCount: Object.keys(fees ?? {}).length,
         lastExportDate: lsRead<string>('munyaka_last_export_date', '') || 'Never'
