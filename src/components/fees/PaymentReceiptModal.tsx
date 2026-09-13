@@ -106,6 +106,42 @@ const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   // ============================================
   if (!isOpen || !receiptData) return null;
 
+  // Dynamic Learner Lookup & Property Mapping from receiptData / localStorage
+  const lookupLearner = () => {
+    try {
+      const keys = ['school_learners_data', 'munyaka_learners_db', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
+      const studentId = (receiptData as any).studentId;
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const found = parsed.find((s: any) =>
+              (studentId && (s.id === studentId || s.admNo === studentId || s.admissionNo === studentId)) ||
+              (receiptData.admNo && (s.admNo === receiptData.admNo || s.admissionNo === receiptData.admNo)) ||
+              (receiptData.studentName && s.name?.toLowerCase() === receiptData.studentName.toLowerCase())
+            );
+            if (found) return found;
+          }
+        }
+      }
+    } catch {}
+    return null;
+  };
+
+  const dynamicLearner = lookupLearner();
+  const rawStudentName = (receiptData as any).learnerName || receiptData.studentName || dynamicLearner?.fullName || dynamicLearner?.name || 'Learner';
+  const formattedStudentName = String(rawStudentName).toUpperCase();
+
+  const rawAdmNo = (receiptData as any).admNo || dynamicLearner?.admissionNo || dynamicLearner?.admNo || dynamicLearner?.admissionNumber || dynamicLearner?.id || 'N/A';
+  const formattedAdmNo = String(rawAdmNo);
+
+  const enrichedReceiptData = {
+    ...receiptData,
+    studentName: formattedStudentName,
+    admNo: formattedAdmNo,
+  };
+
   // ============================================
   // HANDLERS
   // ============================================
@@ -147,7 +183,7 @@ const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
-  <title>Receipt - ${receiptData.receiptNumber}</title>
+  <title>Receipt - ${enrichedReceiptData.receiptNumber}</title>
   <style>
     @media print {
       @page { size: A4; margin: 15mm; }
@@ -200,7 +236,7 @@ const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
-  <title>Receipt - ${receiptData.receiptNumber}</title>
+  <title>Receipt - ${enrichedReceiptData.receiptNumber}</title>
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f5f5f5; }
     .receipt-container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -234,7 +270,7 @@ const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Receipt_${receiptData.receiptNumber}.html`;
+    link.download = `Receipt_${enrichedReceiptData.receiptNumber}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -317,7 +353,7 @@ const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           <div className="flex justify-center mb-6">
             <Badge className="px-4 py-2 text-sm font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
               <CheckCircle2 size={16} className="mr-2" />
-              {receiptData.status === 'Cleared' || receiptData.status === 'Paid' ? 'PAID' : receiptData.status}
+              {enrichedReceiptData.status === 'Cleared' || enrichedReceiptData.status === 'Paid' ? 'PAID' : enrichedReceiptData.status}
             </Badge>
           </div>
 
@@ -325,26 +361,26 @@ const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           <div className="receipt-meta grid grid-cols-2 gap-4 mb-6">
             <div className="meta-item">
               <div className="meta-label">Receipt Number</div>
-              <div className="meta-value font-mono">{receiptData.receiptNumber}</div>
+              <div className="meta-value font-mono">{enrichedReceiptData.receiptNumber}</div>
             </div>
             <div className="meta-item">
               <div className="meta-label">Invoice Number</div>
-              <div className="meta-value font-mono">{receiptData.invoiceNumber}</div>
+              <div className="meta-value font-mono">{enrichedReceiptData.invoiceNumber}</div>
             </div>
             <div className="meta-item">
               <div className="meta-label">Date & Time</div>
-              <div className="meta-value">{receiptData.date}</div>
+              <div className="meta-value">{enrichedReceiptData.date}</div>
             </div>
             <div className="meta-item">
               <div className="meta-label">Term / Year</div>
-              <div className="meta-value">{receiptData.term} / {receiptData.year}</div>
+              <div className="meta-value">{enrichedReceiptData.term} / {enrichedReceiptData.year}</div>
             </div>
           </div>
 
           {/* Amount box */}
           <div className="amount-box">
             <div className="amount-label">Amount Paid</div>
-            <div className="amount-value">{receiptData.currency} {receiptData.amount.toLocaleString()}</div>
+            <div className="amount-value">{enrichedReceiptData.currency} {enrichedReceiptData.amount.toLocaleString()}</div>
           </div>
 
           {/* Details table */}
@@ -357,33 +393,33 @@ const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             </thead>
             <tbody>
               <tr>
-                <td>Student / Payer Name</td>
-                <td>{receiptData.studentName}</td>
+                <td>Learner Name</td>
+                <td><strong>{enrichedReceiptData.studentName}</strong></td>
               </tr>
               <tr>
-                <td>Reference / ID</td>
-                <td>{receiptData.admNo}</td>
+                <td>Admission No.</td>
+                <td><strong className="font-mono">{enrichedReceiptData.admNo}</strong></td>
               </tr>
               <tr>
                 <td>Grade / Stream</td>
-                <td>{receiptData.grade} {receiptData.stream ? `· ${receiptData.stream}` : ''}</td>
+                <td>{enrichedReceiptData.grade} {enrichedReceiptData.stream ? `· ${enrichedReceiptData.stream}` : ''}</td>
               </tr>
               <tr>
                 <td>Plan / Subscription</td>
-                <td>{receiptData.term} {receiptData.year}</td>
+                <td>{enrichedReceiptData.term} {enrichedReceiptData.year}</td>
               </tr>
               <tr>
                 <td>Payment Method</td>
-                <td>{receiptData.paymentMethod}</td>
+                <td>{enrichedReceiptData.paymentMethod}</td>
               </tr>
               <tr>
                 <td>Transaction Reference</td>
-                <td className="font-mono">{receiptData.transactionRef}</td>
+                <td className="font-mono">{enrichedReceiptData.transactionRef}</td>
               </tr>
-              {receiptData.receivedBy && (
+              {enrichedReceiptData.receivedBy && (
                 <tr>
                   <td>Received By</td>
-                  <td>{receiptData.receivedBy}</td>
+                  <td>{enrichedReceiptData.receivedBy}</td>
                 </tr>
               )}
             </tbody>

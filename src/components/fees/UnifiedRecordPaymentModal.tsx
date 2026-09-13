@@ -40,8 +40,23 @@ interface StudentItem {
   name: string;
   assessment?: string;
   grade: string;
+  gradeId?: string;
   stream: string;
+  streamId?: string;
   admNo?: string;
+  admissionNo?: string;
+}
+
+interface StreamItem {
+  id: string;
+  name: string;
+}
+
+interface GradeItem {
+  id: string;
+  name: string;
+  streams: StreamItem[];
+  category?: string;
 }
 
 export interface UnifiedRecordPaymentModalProps {
@@ -297,7 +312,7 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
   const isGradeMatch = (studentGrade: unknown, gradeObj: Grade): boolean => {
     if (!studentGrade) return false;
     const sg = String(studentGrade).toLowerCase().trim();
-    const gName = String(gradeObj.name || "").toLowerCase().trim();
+    const gName = String((gradeObj as any).name || "").toLowerCase().trim();
     const gId = String(gradeObj.id || "").toLowerCase().trim();
     
     // Extract numbers if any (e.g. "grade 6" -> "6")
@@ -346,8 +361,8 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
     const streamObj = availableStreams.find(s => s.id === selectedStreamId);
     if (!streamObj) return [];
     return studentsData.filter(s => {
-      const matchesGrade = isGradeMatch(s.grade || s.gradeId, selectedGradeObj);
-      const matchesStream = isStreamMatch(s.stream || s.streamId, streamObj.name);
+      const matchesGrade = isGradeMatch(s.grade || (s as any).gradeId, selectedGradeObj);
+      const matchesStream = isStreamMatch(s.stream || (s as any).streamId, streamObj.name);
       return matchesGrade && matchesStream;
     });
   }, [selectedGradeObj, selectedStreamId, availableStreams, studentsData]);

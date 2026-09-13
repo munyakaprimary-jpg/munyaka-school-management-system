@@ -328,7 +328,7 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
     const methodLabel = PAYMENT_METHODS.find(m => m.value === paymentMethod)?.label || paymentMethod;
     const cleanRef = refCode.trim() || `${paymentMethod.toUpperCase()}-${Date.now().toString().slice(-6)}`;
 
-    const transaction: Transaction = {
+    const transaction: Transaction & { learnerName?: string; admNo?: string } = {
       id: `TX-${Date.now()}`,
       date: paymentDate,
       amount: amountNum,
@@ -336,6 +336,8 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
       ref: cleanRef,
       category: feeCategory,
       studentId: selectedStudentId,
+      learnerName: (selectedLearner?.name || 'Learner').toUpperCase(),
+      admNo: selectedLearner?.admNo || selectedLearner?.id || '',
       grade: selectedLearner?.grade || '',
       stream: selectedLearner?.stream || '',
       invoiceId: `INV-${academicYear}-${Date.now().toString().slice(-6)}`,

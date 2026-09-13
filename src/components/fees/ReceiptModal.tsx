@@ -210,6 +210,42 @@ body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f5f5f5; 
   // of Hooks are not violated.
   if (!isOpen || !receiptData) return null;
 
+  // Dynamic Learner Lookup & Property Mapping from receiptData / localStorage
+  const lookupLearner = () => {
+    try {
+      const keys = ['school_learners_data', 'munyaka_learners_db', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
+      const studentId = (receiptData as any).studentId;
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const found = parsed.find((s: any) =>
+              (studentId && (s.id === studentId || s.admNo === studentId || s.admissionNo === studentId)) ||
+              (receiptData.admNo && (s.admNo === receiptData.admNo || s.admissionNo === receiptData.admNo)) ||
+              (receiptData.studentName && s.name?.toLowerCase() === receiptData.studentName.toLowerCase())
+            );
+            if (found) return found;
+          }
+        }
+      }
+    } catch {}
+    return null;
+  };
+
+  const dynamicLearner = lookupLearner();
+  const rawStudentName = (receiptData as any).learnerName || receiptData.studentName || dynamicLearner?.fullName || dynamicLearner?.name || 'Learner';
+  const formattedStudentName = String(rawStudentName).toUpperCase();
+
+  const rawAdmNo = (receiptData as any).admNo || dynamicLearner?.admissionNo || dynamicLearner?.admNo || dynamicLearner?.admissionNumber || dynamicLearner?.id || 'N/A';
+  const formattedAdmNo = String(rawAdmNo);
+
+  const enrichedReceiptData = {
+    ...receiptData,
+    studentName: formattedStudentName,
+    admNo: formattedAdmNo,
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in pointer-events-auto"
@@ -325,32 +361,32 @@ body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f5f5f5; 
             <tbody>
               <tr>
                 <td>Student / Payer Name</td>
-                <td>{receiptData.studentName}</td>
+                <td><strong>{enrichedReceiptData.studentName}</strong></td>
               </tr>
               <tr>
-                <td>Reference / ID</td>
-                <td>{receiptData.admNo}</td>
+                <td>Admission No. / Ref</td>
+                <td className="font-mono"><strong>{enrichedReceiptData.admNo}</strong></td>
               </tr>
               <tr>
                 <td>Grade / Stream</td>
-                <td>{receiptData.grade} {receiptData.stream ? `· ${receiptData.stream}` : ''}</td>
+                <td>{enrichedReceiptData.grade} {enrichedReceiptData.stream ? `· ${enrichedReceiptData.stream}` : ''}</td>
               </tr>
               <tr>
                 <td>Plan / Subscription</td>
-                <td>{receiptData.term} {receiptData.year}</td>
+                <td>{enrichedReceiptData.term} {enrichedReceiptData.year}</td>
               </tr>
               <tr>
                 <td>Payment Method</td>
-                <td>{receiptData.paymentMethod}</td>
+                <td>{enrichedReceiptData.paymentMethod}</td>
               </tr>
               <tr>
                 <td>Transaction Reference</td>
-                <td className="font-mono">{receiptData.transactionRef}</td>
+                <td className="font-mono">{enrichedReceiptData.transactionRef}</td>
               </tr>
-              {receiptData.receivedBy && (
+              {enrichedReceiptData.receivedBy && (
                 <tr>
                   <td>Received By</td>
-                  <td>{receiptData.receivedBy}</td>
+                  <td>{enrichedReceiptData.receivedBy}</td>
                 </tr>
               )}
             </tbody>
