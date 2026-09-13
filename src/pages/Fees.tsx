@@ -198,6 +198,8 @@ const Fees = () => {
   // ── State ──────────────────────────────────────────────────────────────────
   const [selectedYear, setSelectedYear] = useState(() => deriveDefaultYear() || currentYear);
   const [selectedTerm, setSelectedTerm] = useState(() => readAcademicContext().term || "term1");
+  const activeAcademicYear = selectedYear || "2026";
+  const activeTerm = selectedTerm || "term1";
   const [selectedGrade, setSelectedGrade] = useState(GRADES_DATA[0].id);
   const [tabGradeFilter, setTabGradeFilter] = useState<string>("all");
 

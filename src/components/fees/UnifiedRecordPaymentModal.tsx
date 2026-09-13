@@ -127,9 +127,9 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
   defaultSubscriptionName = '',
   hideLearnerSelection = false,
   hideActivationKey = false,
-  activeAcademicYear,
+  activeAcademicYear = "2026",
 }) => {
-  const currentAcademicYear = activeAcademicYear || "2026";
+  const currentAcademicYear = activeAcademicYear;
   // Learner selection (hidden for license-only flows)
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
   const [selectedStreamId, setSelectedStreamId] = useState<string>("");
