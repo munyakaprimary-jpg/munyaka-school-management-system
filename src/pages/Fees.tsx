@@ -201,7 +201,7 @@ const Fees = () => {
   const activeAcademicYear = selectedYear || "2026";
   const activeTerm = selectedTerm || "term1";
   const [selectedGrade, setSelectedGrade] = useState("all");
-  const [tabGradeFilter, setTabGradeFilter] = useState<string>("all");
+  const [tabGradeFilter, setTabGradeFilter] = useState<string>("ALL");
 
   // Fee structures (managed locally with persistence)
   const [feeStructures, setFeeStructures] = useState<any[]>(() => {
@@ -925,18 +925,7 @@ const Fees = () => {
             </TabsList>
 
             {/* Grade Level Dropdown Filter */}
-            <Select value={tabGradeFilter} onValueChange={setTabGradeFilter}>
-              <SelectTrigger className="w-[180px] rounded-lg h-10 px-3 bg-white border border-slate-200 text-sm font-medium text-slate-800 shadow-sm focus:ring-1 ring-slate-200">
-                <SelectValue placeholder="Grade Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                {GRADE_LEVEL_OPTIONS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Removed redundant dropdown as requested */}
           </div>
 
           <Button 
@@ -1280,6 +1269,9 @@ const Fees = () => {
       <LearnerFeePaymentModal
         isOpen={isRecordOpen}
         onClose={() => setIsRecordOpen(false)}
+        initialGrade={selectedGrade !== "all" ? selectedGrade : undefined}
+        initialTerm={selectedTerm}
+        initialYear={selectedYear}
         onSubmitPayment={(transaction) => {
           setIsRecordOpen(false);
           setLocalTransactions(readStorage<ExtendedTransaction[]>(TX_KEY, []));

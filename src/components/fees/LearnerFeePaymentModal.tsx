@@ -48,6 +48,9 @@ export interface LearnerFeePaymentModalProps {
   onSubmitPayment: (transaction: Transaction) => void;
   activeAcademicYear?: string;
   activeTerm?: string;
+  initialGrade?: string;
+  initialTerm?: string;
+  initialYear?: string;
 }
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType; color: string; bg: string }[] = [
@@ -102,9 +105,12 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
   onSubmitPayment,
   activeAcademicYear,
   activeTerm,
+  initialGrade,
+  initialTerm,
+  initialYear,
 }) => {
-  const [academicYear, setAcademicYear] = useState<string>(activeAcademicYear || new Date().getFullYear().toString());
-  const [term, setTerm] = useState<string>(activeTerm || 'term1');
+  const [academicYear, setAcademicYear] = useState<string>(initialYear || activeAcademicYear || new Date().getFullYear().toString());
+  const [term, setTerm] = useState<string>(initialTerm || activeTerm || 'term1');
 
   // Grades & Streams configuration
   const [gradesData] = useState<GradeItem[]>(() => {
@@ -119,10 +125,18 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
   });
 
   // Filter states
-  const [selectedGradeFilter, setSelectedGradeFilter] = useState<string>("all");
+  const [selectedGradeFilter, setSelectedGradeFilter] = useState<string>(initialGrade || "all");
   const [selectedStreamFilter, setSelectedStreamFilter] = useState<string>("all");
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialGrade) setSelectedGradeFilter(initialGrade);
+      if (initialTerm) setTerm(initialTerm);
+      if (initialYear) setAcademicYear(initialYear);
+    }
+  }, [isOpen, initialGrade, initialTerm, initialYear]);
 
   // Payment form state
   const [feeCategory, setFeeCategory] = useState<string>("Tuition Fee");
