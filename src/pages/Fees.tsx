@@ -200,7 +200,7 @@ const Fees = () => {
   const [selectedTerm, setSelectedTerm] = useState(() => readAcademicContext().term || "term1");
   const activeAcademicYear = selectedYear || "2026";
   const activeTerm = selectedTerm || "term1";
-  const [selectedGrade, setSelectedGrade] = useState(GRADES_DATA[0].id);
+  const [selectedGrade, setSelectedGrade] = useState("all");
   const [tabGradeFilter, setTabGradeFilter] = useState<string>("all");
 
   // Fee structures (managed locally with persistence)
