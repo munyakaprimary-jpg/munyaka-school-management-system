@@ -880,74 +880,74 @@ export default function StudyCorner() {
   }, [refreshCustomItems]);
 
   const allContent: ContentItem[] = [
-      {
-        id: 'cbc-gen-math-1',
-        grade: 7,
-        subject: 'Mathematics',
-        strand: 'Numbers' as StrandCategory,
-        subStrand: 'Whole Numbers',
-        title: 'Advanced Operations on Whole Numbers & Integers',
-        summary: 'Comprehensive revision notes and practice problems covering place value, operations, and integer arithmetic for Junior Secondary learners.',
-        fullNotes: [
-          'Whole numbers follow the base-10 numeration system.',
-          'Integers include positive numbers, negative numbers, and zero.',
-          'Order of Operations (BODMAS / PEMDAS): Brackets, Orders, Division & Multiplication (left to right), Addition & Subtraction (left to right).'
-        ],
-        keyTerms: ['Integer', 'Place Value', 'BODMAS', 'Prime Factorization'],
-        practiceQuestions: [
-          { question: 'Evaluate: -15 + 24 - (-6)', options: ['15', '13', '9', '-15'], answer: '15' },
-          { question: 'What is the LCM of 12, 18, and 24?', options: ['36', '48', '72', '96'], answer: '72' }
-        ],
-        category: 'Mathematics',
-        difficulty: 'intermediate',
-        readTimeMin: 10
-      },
-      {
-        id: 'cbc-gen-cre-1',
-        grade: 7,
-        subject: 'Christian Religious Education',
-        strand: 'Creation' as StrandCategory,
-        subStrand: 'Stewardship',
-        title: 'Christian Stewardship & Environmental Care',
-        summary: 'Explores the biblical mandate given to human beings to take care of God's creation responsibly and sustainably.',
-        fullNotes: [
-          'God placed human beings in the Garden of Eden to tend and keep it (Genesis 2:15).',
-          'Stewardship involves managing God's resources wisely, including wildlife, water, and soil.',
-          'Modern conservation practices align with Christian responsibility to protect the environment.'
-        ],
-        keyTerms: ['Stewardship', 'Conservation', 'Creation', 'Accountability'],
-        practiceQuestions: [
-          { question: 'Which biblical passage highlights human responsibility over creation?', options: ['Genesis 2:15', 'John 3:16', 'Psalm 23', 'Exodus 20'], answer: 'Genesis 2:15' },
-          { question: 'Give one way students can practice environmental stewardship in school.', options: ['Planting trees', 'Littering', 'Wasting water', 'Burning plastics'], answer: 'Planting trees' }
-        ],
-        category: 'Christian Religious Education',
-        difficulty: 'beginner',
-        readTimeMin: 8
-      },
-      {
-        id: 'cbc-gen-eng-1',
-        grade: 7,
-        subject: 'English',
-        strand: 'Grammar & Communication' as StrandCategory,
-        subStrand: 'Parts of Speech',
-        title: 'Mastering Nouns, Pronouns, and Verbs in Context',
-        summary: 'Enhance writing skills by understanding active vs passive voice, pronoun agreement, and descriptive adjectives.',
-        fullNotes: [
-          'A noun is a naming word (proper, common, abstract, collective).',
-          'Verbs express action or state of being.',
-          'Subject-verb agreement ensures singular subjects take singular verbs.'
-        ],
-        keyTerms: ['Noun', 'Verb', 'Agreement', 'Active Voice'],
-        practiceQuestions: [
-          { question: 'Identify the verb in: "The clever learners answered all questions correctly."', options: ['clever', 'answered', 'questions', 'correctly'], answer: 'answered' }
-        ],
-        category: 'English',
-        difficulty: 'intermediate',
-        readTimeMin: 7
-      },
-      ...cbcStudyContent,
-      ...customItems
-    ];
+    {
+      id: 'cbc-gen-math-1',
+      grade: 'Grade 7',
+      subject: 'Mathematics',
+      strand: 'Numbers',
+      subStrand: 'Whole Numbers',
+      title: 'Advanced Operations on Whole Numbers & Integers',
+      summary: 'Comprehensive revision notes and practice problems covering place value, operations, and integer arithmetic for Junior Secondary learners.',
+      fullNotes: [
+        'Whole numbers follow the base-10 numeration system.',
+        'Integers include positive numbers, negative numbers, and zero.',
+        'Order of Operations (BODMAS / PEMDAS): Brackets, Orders, Division & Multiplication (left to right), Addition & Subtraction (left to right).'
+      ],
+      keyTerms: ['Integer', 'Place Value', 'BODMAS', 'Prime Factorization'],
+      practiceQuestions: [
+        { question: 'Evaluate: -15 + 24 - (-6)', options: ['15', '13', '9', '-15'], answer: '15' },
+        { question: 'What is the LCM of 12, 18, and 24?', options: ['36', '48', '72', '96'], answer: '72' }
+      ],
+      category: 'Mathematics',
+      difficulty: 'Intermediate',
+      readTimeMin: 10
+    },
+    {
+      id: 'cbc-gen-cre-1',
+      grade: 'Grade 7',
+      subject: 'Christian Religious Education',
+      strand: 'Creation',
+      subStrand: 'Stewardship',
+      title: 'Christian Stewardship & Environmental Care',
+      summary: 'Explores the biblical mandate given to human beings to take care of God’s creation responsibly and sustainably.',
+      fullNotes: [
+        'God placed human beings in the Garden of Eden to tend and keep it (Genesis 2:15).',
+        'Stewardship involves managing God’s resources wisely, including wildlife, water, and soil.',
+        'Modern conservation practices align with Christian responsibility to protect the environment.'
+      ],
+      keyTerms: ['Stewardship', 'Conservation', 'Creation', 'Accountability'],
+      practiceQuestions: [
+        { question: 'Which biblical passage highlights human responsibility over creation?', options: ['Genesis 2:15', 'John 3:16', 'Psalm 23', 'Exodus 20'], answer: 'Genesis 2:15' },
+        { question: 'Give one way students can practice environmental stewardship in school.', options: ['Planting trees', 'Littering', 'Wasting water', 'Burning plastics'], answer: 'Planting trees' }
+      ],
+      category: 'Christian Religious Education',
+      difficulty: 'Beginner',
+      readTimeMin: 8
+    },
+    {
+      id: 'cbc-gen-eng-1',
+      grade: 'Grade 7',
+      subject: 'English',
+      strand: 'Grammar & Communication',
+      subStrand: 'Parts of Speech',
+      title: 'Mastering Nouns, Pronouns, and Verbs in Context',
+      summary: 'Enhance writing skills by understanding active vs passive voice, pronoun agreement, and descriptive adjectives.',
+      fullNotes: [
+        'A noun is a naming word (proper, common, abstract, collective).',
+        'Verbs express action or state of being.',
+        'Subject-verb agreement ensures singular subjects take singular verbs.'
+      ],
+      keyTerms: ['Noun', 'Verb', 'Agreement', 'Active Voice'],
+      practiceQuestions: [
+        { question: 'Identify the verb in: "The clever learners answered all questions correctly."', options: ['clever', 'answered', 'questions', 'correctly'], answer: 'answered' }
+      ],
+      category: 'English',
+      difficulty: 'Intermediate',
+      readTimeMin: 7
+    },
+    ...cbcStudyContent,
+    ...customItems
+  ];
 
   // Persist bookmarks
   useEffect(() => {
