@@ -320,12 +320,37 @@ const Fees = () => {
 
   // ── Dynamic fee calculations ───────────────────────────────────────────────
   
-  /** Get term fee for a specific grade */
+  /** Get term fee for a specific grade with fallback to ALL / bulk */
   const getTermFeeForGrade = useCallback((gradeId: string): number => {
-    const config = feeStructures.find(f => 
+    // 1. Check exact grade configuration in state
+    const exact = feeStructures.find(f =>
       f.year === selectedYear && f.term === selectedTerm && f.gradeId === gradeId
     );
-    return config ? config.amount : 0;
+    if (exact && exact.amount > 0) return exact.amount;
+
+    // 2. Check munyaka_fee_structures_db in localStorage for exact grade or ALL
+    try {
+      const raw = localStorage.getItem('munyaka_fee_structures_db');
+      if (raw) {
+        const structuresMap = JSON.parse(raw);
+        const exactKey = `${selectedYear}_${selectedTerm}_${gradeId}`;
+        if (structuresMap[exactKey] !== undefined) {
+          return Number(structuresMap[exactKey]);
+        }
+        const bulkKey = `${selectedYear}_${selectedTerm}_ALL`;
+        if (structuresMap[bulkKey] !== undefined) {
+          return Number(structuresMap[bulkKey]);
+        }
+      }
+    } catch {}
+
+    // 3. Fallback to ALL in feeStructures state
+    const bulkConfig = feeStructures.find(f =>
+      f.year === selectedYear && f.term === selectedTerm && (f.gradeId === "ALL" || f.gradeId === "all")
+    );
+    if (bulkConfig && bulkConfig.amount > 0) return bulkConfig.amount;
+
+    return exact ? exact.amount : 0;
   }, [selectedYear, selectedTerm, feeStructures]);
 
   /** Calculate total paid for a student from transactions */
@@ -456,13 +481,10 @@ const Fees = () => {
     };
   }, [filteredCalculatedFees]);
 
-  /** Current term fee for selected grade */
+  /** Current term fee for selected grade with comprehensive fallback */
   const currentTermFee = useMemo(() => {
-    const config = feeStructures.find(f => 
-      f.year === selectedYear && f.term === selectedTerm && f.gradeId === selectedGrade
-    );
-    return config ? config.amount : 0;
-  }, [selectedYear, selectedTerm, selectedGrade, feeStructures]);
+    return getTermFeeForGrade(selectedGrade);
+  }, [selectedGrade, getTermFeeForGrade]);
 
   // ── Event Handlers ─────────────────────────────────────────────────────────
   
@@ -554,8 +576,9 @@ const Fees = () => {
     const amountNum = parseFloat(configAmount);
     if (isNaN(amountNum)) return;
 
-    // Get all grades from GRADES_DATA or gradesConfig
+    // Get all grades from GRADES_DATA
     const allGradeIds = GRADES_DATA.map(g => g.id);
+    const isBulk = configGrade === "all" || configGrade === "ALL" || configGrade === "All Grades (Bulk Set)";
 
     // Build unified fee structures database map: `${year}_${term}_${gradeId}` -> amount
     const existingStructuresRaw = localStorage.getItem('munyaka_fee_structures_db');
@@ -566,45 +589,86 @@ const Fees = () => {
       }
     } catch {}
 
-    if (configGrade === "all") {
-      setFeeStructures(prev => {
-        let updated = [...prev];
-        allGradeIds.forEach(gradeId => {
-          const idx = updated.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === gradeId);
-          if (idx > -1) {
-            updated[idx] = { ...updated[idx], amount: amountNum };
-          } else {
-            updated.push({ year: selectedYear, term: selectedTerm, gradeId, amount: amountNum });
-          }
-          structuresMap[`${selectedYear}_${selectedTerm}_${gradeId}`] = amountNum;
-        });
-        structuresMap[`${selectedYear}_${selectedTerm}_ALL`] = amountNum;
-        localStorage.setItem('munyaka_fee_structures_db', JSON.stringify(structuresMap));
-        localStorage.setItem('munyaka_fee_structures', JSON.stringify(updated));
-        return updated;
-      });
-    } else {
-      setFeeStructures(prev => {
-        const idx = prev.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === configGrade);
-        let next = [...prev];
+    const targetGrades = isBulk ? allGradeIds : [configGrade];
+
+    setFeeStructures(prev => {
+      let updated = [...prev];
+      targetGrades.forEach(gradeId => {
+        const idx = updated.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === gradeId);
         if (idx > -1) {
-          next[idx] = { ...next[idx], amount: amountNum };
+          updated[idx] = { ...updated[idx], amount: amountNum };
         } else {
-          next.push({ year: selectedYear, term: selectedTerm, gradeId: configGrade, amount: amountNum });
+          updated.push({ year: selectedYear, term: selectedTerm, gradeId, amount: amountNum });
         }
-        structuresMap[`${selectedYear}_${selectedTerm}_${configGrade}`] = amountNum;
-        localStorage.setItem('munyaka_fee_structures_db', JSON.stringify(structuresMap));
-        localStorage.setItem('munyaka_fee_structures', JSON.stringify(next));
-        return next;
+        structuresMap[`${selectedYear}_${selectedTerm}_${gradeId}`] = amountNum;
       });
+
+      if (isBulk) {
+        structuresMap[`${selectedYear}_${selectedTerm}_ALL`] = amountNum;
+        // Also ensure ALL is present in feeStructures array if needed
+        const allIdx = updated.findIndex(f => f.year === selectedYear && f.term === selectedTerm && (f.gradeId === "ALL" || f.gradeId === "all"));
+        if (allIdx > -1) {
+          updated[allIdx] = { ...updated[allIdx], amount: amountNum };
+        } else {
+          updated.push({ year: selectedYear, term: selectedTerm, gradeId: "ALL", amount: amountNum });
+        }
+      }
+
+      localStorage.setItem('munyaka_fee_structures_db', JSON.stringify(structuresMap));
+      localStorage.setItem('munyaka_fee_structures', JSON.stringify(updated));
+      return updated;
+    });
+
+    // Also update existing student ledger balances in munyaka_learners_db matching those grades / terms
+    try {
+      const learnersRaw = localStorage.getItem('munyaka_learners_db');
+      if (learnersRaw) {
+        const learners = JSON.parse(learnersRaw);
+        if (Array.isArray(learners)) {
+          let updatedLearners = learners.map((learner: any) => {
+            const learnerGradeId = learner.gradeId || learner.grade;
+            const matchesGrade = isBulk || targetGrades.includes(learnerGradeId);
+            if (matchesGrade) {
+              // Update fee structure or total term fee in learner record if applicable
+              const ledgers = Array.isArray(learner.feeHistory) ? [...learner.feeHistory] : [];
+              const termLedgerIdx = ledgers.findIndex((l: any) => l.year === selectedYear && l.term === selectedTerm);
+              if (termLedgerIdx > -1) {
+                ledgers[termLedgerIdx] = {
+                  ...ledgers[termLedgerIdx],
+                  totalFee: amountNum,
+                };
+              } else {
+                ledgers.push({
+                  year: selectedYear,
+                  term: selectedTerm,
+                  totalFee: amountNum,
+                  paid: 0,
+                  balance: amountNum,
+                });
+              }
+              return {
+                ...learner,
+                feeHistory: ledgers,
+                termFee: amountNum,
+              };
+            }
+            return learner;
+          });
+          localStorage.setItem('munyaka_learners_db', JSON.stringify(updatedLearners));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update student ledger balances for fee structure change:", err);
     }
 
-    // Trigger update events
+    // Trigger global update events and data rehydration
     window.dispatchEvent(new Event('fees-updated'));
     window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_fee_structures_db' } }));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners_db' } }));
+    window.dispatchEvent(new CustomEvent('storage', { key: 'munyaka_fee_structures_db' }));
 
     setIsConfigOpen(false);
-    const targetLabel = configGrade === "all" ? "all grade levels" : GRADES_DATA.find(g => g.id === configGrade)?.name || "selected grade";
+    const targetLabel = isBulk ? "all grade levels" : GRADES_DATA.find(g => g.id === configGrade)?.name || configGrade;
     showSuccess(`Successfully set term fee to KES ${amountNum.toLocaleString()} for ${targetLabel} (${selectedTerm}, ${selectedYear})!`);
   };
 
