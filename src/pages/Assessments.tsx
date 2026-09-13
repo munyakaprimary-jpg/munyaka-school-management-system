@@ -998,19 +998,32 @@ ${filteredStudents.length} learner(s) included.
 
       {/* 4. Educational Tier-Based Mark Sheet Table Matrix */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-sm text-left border-collapse min-w-max">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-72 min-w-[240px]">
+                <th className="px-4 py-3 font-semibold text-[11px] uppercase tracking-normal text-slate-600 border-r w-64 min-w-[220px]">
                   Learner Details ({filteredStudents.length})
                 </th>
-                {activeSubjects.map(subj => (
-                  <th key={subj} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-600 text-center border-r min-w-[120px] max-w-[160px]">
-                    {subj}
-                  </th>
-                ))}
-                <th className="bg-indigo-50 px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center min-w-[100px] border-l">
+                {activeSubjects.map(subj => {
+                  // Abbreviate or split long subject titles for clean presentation
+                  let mainSubj = subj;
+                  let subLabel = "";
+                  if (subj.includes("(") && subj.includes(")")) {
+                    const match = subj.match(/^(.*?)\s*\((.*?)\)$/);
+                    if (match) {
+                      mainSubj = match[1].trim();
+                      subLabel = match[2].trim();
+                    }
+                  }
+                  return (
+                    <th key={subj} className="py-2 px-2 text-[11px] font-semibold tracking-normal text-slate-600 uppercase text-center border-r min-w-[90px] max-w-[110px] leading-tight">
+                      <div className="truncate" title={subj}>{mainSubj}</div>
+                      {subLabel && <div className="text-[9px] text-slate-400 font-normal truncate">({subLabel})</div>}
+                    </th>
+                  );
+                })}
+                <th className="bg-indigo-50 py-2 px-3 text-[11px] font-semibold tracking-normal text-indigo-700 uppercase text-center min-w-[90px] max-w-[100px] border-l">
                   TOTAL
                 </th>
               </tr>
