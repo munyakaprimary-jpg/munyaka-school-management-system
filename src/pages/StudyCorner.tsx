@@ -89,10 +89,15 @@ const strandMeta: Record<
     bg: "bg-teal-50 border-teal-200",
     icon: <Languages size={16} />,
   },
-  "STEM & Agriculture": {
+  "Mathematics & STEM": {
+    color: "text-indigo-700",
+    bg: "bg-indigo-50 border-indigo-200",
+    icon: <Calculator size={16} />,
+  },
+  "Agriculture & Nutrition": {
     color: "text-emerald-700",
     bg: "bg-emerald-50 border-emerald-200",
-    icon: <FlaskConical size={16} />,
+    icon: <Sprout size={16} />,
   },
   "Social Studies & Arts": {
     color: "text-blue-700",

@@ -438,13 +438,13 @@ const languages: ContentItem[] = [
   },
 ];
 
-// ─── STEM & Agriculture ───────────────────────────────────────────────────────
-const stemAgriculture: ContentItem[] = [
+// ─── Mathematics & STEM and Agriculture & Nutrition ───────────────────────────
+const mathematicsStem: ContentItem[] = [
   // Grade 1 — Math
   {
     id: "stem-1-math-tables",
     grade: g(1),
-    strand: "STEM & Agriculture",
+    strand: "Mathematics & STEM",
     subStrand: "Mathematics",
     topic: "Addition Tables 1–5",
     summary: "Practice addition facts for numbers 1 through 5.",
@@ -468,7 +468,7 @@ const stemAgriculture: ContentItem[] = [
   {
     id: "stem-3-science-diagrams",
     grade: g(3),
-    strand: "STEM & Agriculture",
+    strand: "Mathematics & STEM",
     subStrand: "Science",
     topic: "Parts of a Plant",
     summary: "Learn the functions of each part of a plant with a labelled diagram.",
@@ -487,34 +487,11 @@ const stemAgriculture: ContentItem[] = [
     difficulty: "intermediate",
     tags: ["science", "plant", "parts", "diagram", "photosynthesis"],
   },
-  // Grade 5 — Agriculture
-  {
-    id: "stem-5-agriculture",
-    grade: g(5),
-    strand: "STEM & Agriculture",
-    subStrand: "Agriculture",
-    topic: "Crop Production: Planting Maize",
-    summary: "Step-by-step guide to planting and caring for a maize crop.",
-    notes: [
-      "Step 1: Prepare the seedbed by clearing weeds and tilling the soil.",
-      "Step 2: Dig holes about 20–30 cm deep and 75 cm apart.",
-      "Step 3: Plant 2–3 maize seeds per hole and cover lightly with soil.",
-      "Step 4: Water immediately after planting.",
-      "Step 5: Thin seedlings after 2 weeks, leaving the strongest plant.",
-      "Step 6: Apply top-dressing fertiliser after 4–6 weeks.",
-      "Step 7: Harvest when the maize cobs are dry and the husks turn yellow.",
-    ],
-    revisionQuestions: [
-      { question: "Why should seedlings be thinned after 2 weeks?", answer: "To leave only the strongest plant so it can grow well", rubric: "2 marks" },
-    ],
-    difficulty: "intermediate",
-    tags: ["agriculture", "maize", "crop", "planting", "farming"],
-  },
   // Grade 7 — Math
   {
     id: "stem-7-math-algebra",
     grade: g(7),
-    strand: "STEM & Agriculture",
+    strand: "Mathematics & STEM",
     subStrand: "Mathematics",
     topic: "Introduction to Algebra",
     summary: "Use letters to represent unknown numbers in equations.",
@@ -537,7 +514,7 @@ const stemAgriculture: ContentItem[] = [
   {
     id: "stem-9-science-motion",
     grade: g(9),
-    strand: "STEM & Agriculture",
+    strand: "Mathematics & STEM",
     subStrand: "Science",
     topic: "Linear Motion and Speed",
     summary: "Understand distance, displacement, speed, velocity, and acceleration.",
@@ -555,6 +532,52 @@ const stemAgriculture: ContentItem[] = [
     ],
     difficulty: "advanced",
     tags: ["science", "physics", "motion", "speed", "velocity"],
+  },
+];
+
+const agricultureNutrition: ContentItem[] = [
+  // Grade 5 — Agriculture
+  {
+    id: "stem-5-agriculture",
+    grade: g(5),
+    strand: "Agriculture & Nutrition",
+    subStrand: "Agriculture",
+    topic: "Crop Production: Planting Maize",
+    summary: "Step-by-step guide to planting and caring for a maize crop.",
+    notes: [
+      "Step 1: Prepare the seedbed by clearing weeds and tilling the soil.",
+      "Step 2: Dig holes about 20–30 cm deep and 75 cm apart.",
+      "Step 3: Plant 2–3 maize seeds per hole and cover lightly with soil.",
+      "Step 4: Water immediately after planting.",
+      "Step 5: Thin seedlings after 2 weeks, leaving the strongest plant.",
+      "Step 6: Apply top-dressing fertiliser after 4–6 weeks.",
+      "Step 7: Harvest when the maize cobs are dry and the husks turn yellow.",
+    ],
+    revisionQuestions: [
+      { question: "Why should seedlings be thinned after 2 weeks?", answer: "To leave only the strongest plant so it can grow well", rubric: "2 marks" },
+    ],
+    difficulty: "intermediate",
+    tags: ["agriculture", "maize", "crop", "planting", "farming"],
+  },
+  // Grade 6 — Agriculture & Nutrition (Livestock/Nutrition example)
+  {
+    id: "agri-6-nutrition",
+    grade: g(6),
+    strand: "Agriculture & Nutrition",
+    subStrand: "Nutrition",
+    topic: "Balanced Diet and Food Preservation",
+    summary: "Learn how to preserve food safely and plan a balanced family meal.",
+    notes: [
+      "A balanced diet contains all seven classes of food in correct proportions.",
+      "Food preservation methods: drying, freezing, salting, canning, and smoking.",
+      "Preservation prevents food spoilage by microorganisms like bacteria and fungi.",
+      "Hygiene during food handling prevents foodborne diseases.",
+    ],
+    revisionQuestions: [
+      { question: "State two traditional methods of food preservation.", answer: "Sun drying, smoking, or salting", rubric: "2 marks" },
+    ],
+    difficulty: "beginner",
+    tags: ["agriculture", "nutrition", "diet", "preservation"],
   },
 ];
 
@@ -2951,7 +2974,8 @@ const lowerPrimary: ContentItem[] = [
 export const cbcStudyContent: ContentItem[] = [
   ...creValues,
   ...languages,
-  ...stemAgriculture,
+  ...mathematicsStem,
+  ...agricultureNutrition,
   ...socialStudiesArts,
   ...kicdRevision,
   ...assessmentsQuizzes,
@@ -2963,7 +2987,8 @@ export const cbcStudyContent: ContentItem[] = [
 export const strandCategories: StrandCategory[] = [
   "CRE & Values",
   "Languages",
-  "STEM & Agriculture",
+  "Mathematics & STEM",
+  "Agriculture & Nutrition",
   "Social Studies & Arts",
   "KICD Revision Bank",
   "Assessments & Quizzes",
