@@ -313,7 +313,7 @@ const PaymentManagement = () => {
       name: 'Munyaka School License',
       provider: 'Munyaka Primary & Junior School',
       plan: 'Enterprise Plan',
-      tier: 'starter',
+      tier: 'STARTER',
       interval: 'monthly',
       amount: '20000',
       currency: 'KES',
