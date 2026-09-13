@@ -109,37 +109,26 @@ const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   // Dynamic Learner Lookup & Property Mapping from receiptData / localStorage
   const lookupLearner = () => {
     try {
-      const keys = ['school_learners_data', 'munyaka_learners_db', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
-      const studentId = (receiptData as any).studentId;
-      for (const k of keys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            const found = parsed.find((s: any) =>
-              (studentId && (s.id === studentId || s.admNo === studentId || s.admissionNo === studentId)) ||
-              (receiptData.admNo && (s.admNo === receiptData.admNo || s.admissionNo === receiptData.admNo)) ||
-              (receiptData.studentName && s.name?.toLowerCase() === receiptData.studentName.toLowerCase())
-            );
-            if (found) return found;
-          }
-        }
-      }
+      const allLearners = JSON.parse(localStorage.getItem('munyaka_learners_db') || '[]');
+      const studentId = (receiptData as any).studentId || (receiptData as any).learnerId;
+      const found = allLearners.find((l: any) =>
+        (studentId && (l.id === studentId || l.admNo === studentId || l.admissionNo === studentId)) ||
+        (receiptData.admNo && (l.admNo === receiptData.admNo || l.admissionNo === receiptData.admNo)) ||
+        (receiptData.studentName && l.name?.toLowerCase() === receiptData.studentName.toLowerCase())
+      );
+      if (found) return found;
     } catch {}
     return null;
   };
 
-  const dynamicLearner = lookupLearner();
-  const rawStudentName = (receiptData as any).learnerName || receiptData.studentName || dynamicLearner?.fullName || dynamicLearner?.name || 'Learner';
-  const formattedStudentName = String(rawStudentName).toUpperCase();
-
-  const rawAdmNo = (receiptData as any).admNo || dynamicLearner?.admissionNo || dynamicLearner?.admNo || dynamicLearner?.admissionNumber || dynamicLearner?.id || 'N/A';
-  const formattedAdmNo = String(rawAdmNo);
+  const matchedLearner = lookupLearner();
+  const displayName = (receiptData as any).learnerName || receiptData.studentName || matchedLearner?.fullName || matchedLearner?.name || `${matchedLearner?.firstName || ''} ${matchedLearner?.lastName || ''}`.trim() || "N/A";
+  const displayAdm = (receiptData as any).admissionNo || receiptData.admNo || matchedLearner?.admissionNo || matchedLearner?.admNo || matchedLearner?.admissionNumber || matchedLearner?.id || "N/A";
 
   const enrichedReceiptData = {
     ...receiptData,
-    studentName: formattedStudentName,
-    admNo: formattedAdmNo,
+    studentName: String(displayName).toUpperCase(),
+    admNo: String(displayAdm),
   };
 
   // ============================================
