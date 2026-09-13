@@ -140,9 +140,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const filteredMenu = React.useMemo(() => {
-      const userObj = (user || {}) as any;
-      const role = userObj.role ?? '';
-      const roleLower = String(role).toLowerCase();
+        const userObj = (user || {}) as any;
+        const role = (userObj as any).role ?? '';
+        const roleLower = String(role).toLowerCase();
   
       // ── Dashboard is ALWAYS first for every authenticated user ─────────────────
       // The Dashboard item is the single navigation entry point that routes
