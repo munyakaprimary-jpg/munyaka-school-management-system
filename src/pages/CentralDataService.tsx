@@ -41,6 +41,9 @@ export default function CentralDataService() {
       let studentsCount = stored.length;
       if (studentsCount === 0 && centralStats.totalStudents > 0) {
         studentsCount = centralStats.totalStudents;
+      } else if (centralStats.totalStudents > 0 && studentsCount !== centralStats.totalStudents) {
+        // Keep in sync with centralStats
+        studentsCount = centralStats.totalStudents;
       }
 
       const attendance = lsRead<Record<string, unknown>>('munyaka_attendance_records', {});
@@ -61,6 +64,19 @@ export default function CentralDataService() {
   useEffect(() => {
     loadStats();
   }, [centralStats.totalStudents, centralStats.totalTeachers]);
+
+  // Listen to cross-tab storage and same-tab custom data change events to re-render instantly
+  useEffect(() => {
+    const handleDataChange = () => {
+      loadStats();
+    };
+    window.addEventListener('storage', handleDataChange);
+    window.addEventListener('munyaka:data-changed', handleDataChange as EventListener);
+    return () => {
+      window.removeEventListener('storage', handleDataChange);
+      window.removeEventListener('munyaka:data-changed', handleDataChange as EventListener);
+    };
+  }, []);
 
   // ====== UNIFIED EXPORT: Central database as initialSeedData.ts ======
   const handleExportDatabase = async () => {
