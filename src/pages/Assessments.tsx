@@ -855,27 +855,20 @@ ${filteredStudents.length} learner(s) included.
             {csvExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />} Download CSV
           </Button>
           <Button
-                      variant="outline"
-                      className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
-                      onClick={handleDownloadPDF}
-                      disabled={pdfExport.isDownloading}
-                    >
-                      {pdfExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download PDF
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="rounded-xl h-11 px-4 border-indigo-200 bg-indigo-50 gap-2 text-sm font-bold shadow-sm hover:bg-indigo-100 text-indigo-700 w-full sm:w-auto"
-                      onClick={() => navigate("/grading")}
-                    >
-                      <ClipboardCheck size={16} /> Grading Review
-                    </Button>
-          <Button
-            className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2 w-full sm:w-auto"
-            onClick={handleSaveAll}
-            disabled={isSaving}
+            variant="outline"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
+            onClick={handleDownloadPDF}
+            disabled={pdfExport.isDownloading}
           >
-            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All Marks
+            {pdfExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download PDF
           </Button>
+<Button
+  className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2 w-full sm:w-auto"
+  onClick={handleSaveAll}
+  disabled={isSaving}
+>
+  {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All Marks
+</Button>
         </div>
       </div>
 

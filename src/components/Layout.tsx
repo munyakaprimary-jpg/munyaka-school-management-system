@@ -154,6 +154,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     // Assessments & Exams
     { icon: ClipboardList, label: 'Assessments & Exams', path: '', roles: ['admin', 'head_teacher', 'teacher', 'student'], section: true },
+    { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: ClipboardList, label: 'Take Assessment', path: '/assessments/student', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
