@@ -307,25 +307,7 @@ const PaymentManagement = () => {
     };
   });
 
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([
-    {
-      id: 'sub-munyaka-enterprise',
-      name: 'Munyaka School License',
-      provider: 'Munyaka Primary & Junior School',
-      plan: 'Enterprise Plan',
-      tier: 'STARTER',
-      interval: 'monthly',
-      amount: '20000',
-      currency: 'KES',
-      status: 'active',
-      autoRenew: true,
-      billingCycleAnchor: 1,
-      nextBilling: '2026-09-02',
-      seats: 1000,
-      features: ['Unlimited Students', 'Advanced Analytics', 'Priority Support', 'Offline Activation Codes'],
-    }
-  ]);
-
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>(DEFAULT_SUBSCRIPTIONS);
   const [editingSubscriptionId, setEditingSubscriptionId] = useState<string | null>(null);
   const [subscriptionForm, setSubscriptionForm] = useState<Partial<Subscription>>({});
 
@@ -337,25 +319,25 @@ const PaymentManagement = () => {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
           return {
-            name: parsed.name ?? 'Munyaka School License',
-            plan: parsed.plan ?? 'Enterprise Plan',
-            amount: parsed.amount ?? '20000',
-            currency: parsed.currency ?? 'KES',
-            nextBilling: parsed.nextBilling ?? '2026-09-02',
-            seats: String(parsed.seats ?? '1000'),
-            tier: parsed.tier ?? 'starter',
+            name: parsed.name ?? '',
+            plan: parsed.plan ?? '',
+            amount: parsed.amount ?? '',
+            currency: parsed.currency ?? 'USD',
+            nextBilling: parsed.nextBilling ?? '',
+            seats: String(parsed.seats ?? ''),
+            tier: parsed.tier ?? 'enterprise',
           };
         }
       }
     } catch { /* ignore */ }
     return {
-      name: 'Munyaka School License',
-      plan: 'Enterprise Plan',
-      amount: '20000',
-      currency: 'KES',
-      nextBilling: '2026-09-02',
-      seats: '1000',
-      tier: 'starter',
+      name: '',
+      plan: '',
+      amount: '',
+      currency: 'USD',
+      nextBilling: '',
+      seats: '',
+      tier: 'enterprise',
     };
   });
   const [configError, setConfigError] = useState('');
