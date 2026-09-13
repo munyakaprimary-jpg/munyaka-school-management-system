@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useAcademicCalendar } from "@/hooks/useAcademicCalendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -109,8 +110,14 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
   initialTerm,
   initialYear,
 }) => {
-  const [academicYear, setAcademicYear] = useState<string>(initialYear || activeAcademicYear || new Date().getFullYear().toString());
-  const [term, setTerm] = useState<string>(initialTerm || activeTerm || 'term1');
+  const academicCalendar = useAcademicCalendar();
+
+  const [academicYear, setAcademicYear] = useState<string>(() => {
+    return initialYear || activeAcademicYear || academicCalendar.activeYear || new Date().getFullYear().toString();
+  });
+  const [term, setTerm] = useState<string>(() => {
+    return initialTerm || activeTerm || academicCalendar.activeTerm || 'term1';
+  });
 
   // Grades & Streams configuration
   const [gradesData] = useState<GradeItem[]>(() => {
@@ -133,10 +140,27 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (initialGrade) setSelectedGradeFilter(initialGrade);
-      if (initialTerm) setTerm(initialTerm);
-      if (initialYear) setAcademicYear(initialYear);
+      
+      const resolvedYear = initialYear || activeAcademicYear || academicCalendar.activeYear;
+      const resolvedTerm = initialTerm || activeTerm || academicCalendar.activeTerm;
+
+      if (resolvedYear) setAcademicYear(String(resolvedYear));
+      if (resolvedTerm) setTerm(String(resolvedTerm));
+
+      try {
+        const userSettingsRaw = localStorage.getItem('munyaka_user_settings');
+        if (userSettingsRaw) {
+          const parsed = JSON.parse(userSettingsRaw);
+          if (parsed?.academic?.activeYear && !initialYear && !activeAcademicYear) {
+            setAcademicYear(String(parsed.academic.activeYear));
+          }
+          if (parsed?.academic?.activeTerm && !initialTerm && !activeTerm) {
+            setTerm(String(parsed.academic.activeTerm));
+          }
+        }
+      } catch {}
     }
-  }, [isOpen, initialGrade, initialTerm, initialYear]);
+  }, [isOpen, initialGrade, initialTerm, initialYear, activeAcademicYear, activeTerm, academicCalendar.activeYear, academicCalendar.activeTerm]);
 
   // Payment form state
   const [feeCategory, setFeeCategory] = useState<string>("Tuition Fee");
