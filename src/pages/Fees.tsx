@@ -797,7 +797,6 @@ const Fees = () => {
           <Button
             className="h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium gap-2 shadow-sm w-full sm:w-auto"
             onClick={() => setIsRecordOpen(true)}
-            disabled={isSubmitting}
           >
             <CreditCard size={16} /> Record Payment
           </Button>
