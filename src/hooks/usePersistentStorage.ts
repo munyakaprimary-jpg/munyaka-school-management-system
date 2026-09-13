@@ -241,7 +241,22 @@ export interface PersistentStorage {
 export function usePersistentStorage(): PersistentStorage {
   // ── Individual reactive slices ──
   const [students, setStudentsRaw] = useState<Student[]>(() => {
-    try { return getStudents(); } catch { return []; }
+    try {
+      const initial = getStudents();
+      if (initial && initial.length > 0) return initial;
+      // Check legacy if initial is empty
+      const legacyKeys = ['munyaka_registered_students', 'students', 'school_learners_data', 'learners', 'pupils', 'school_students', 'registered_students'];
+      for (const lKey of legacyKeys) {
+        try {
+          const raw = localStorage.getItem(lKey);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          }
+        } catch {}
+      }
+      return initial;
+    } catch { return []; }
   });
   const [learningAreas, setLearningAreasRaw] = useState<LearningAreaCluster[]>(() => {
     try { return getLearningAreas(); } catch { return []; }

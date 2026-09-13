@@ -230,58 +230,17 @@ export default function Students() {
     [learners]
   );
 
-  // 6. Filters state — initialized from localStorage if available
-  const [searchTerm, setSearchTerm] = useState(() => {
-    try {
-      const saved = localStorage.getItem(FILTER_STATE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.searchTerm || '';
-      }
-    } catch (e) {
-      return '';
-    }
-    return '';
-  });
+  // 6. Filters state — initialized fresh (not persistent) so entering Learners Management resets search, grade, and stream filter states to "All" upon returning
+  const [searchTerm, setSearchTerm] = useState('');
+  const [gradeFilter, setGradeFilter] = useState('All');
+  const [streamFilter, setStreamFilter] = useState('All');
 
-  const [gradeFilter, setGradeFilter] = useState(() => {
-    try {
-      const saved = localStorage.getItem(FILTER_STATE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.gradeFilter || 'All';
-      }
-    } catch (e) {
-      return 'All';
-    }
-    return 'All';
-  });
-
-  const [streamFilter, setStreamFilter] = useState(() => {
-    try {
-      const saved = localStorage.getItem(FILTER_STATE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.streamFilter || 'All';
-      }
-    } catch (e) {
-      return 'All';
-    }
-    return 'All';
-  });
-
-  // Persist filter states to localStorage whenever they change
+  // Clear or update filter state on mount / navigation return
   useEffect(() => {
     try {
-      localStorage.setItem(FILTER_STATE_KEY, JSON.stringify({
-        searchTerm,
-        gradeFilter,
-        streamFilter,
-      }));
-    } catch (e) {
-      console.error('Error saving filter state to localStorage', e);
-          }
-        }, [searchTerm, gradeFilter, streamFilter]);
+      localStorage.removeItem(FILTER_STATE_KEY);
+    } catch (e) {}
+  }, []);
       
         // 7. Compute the list of streams available for the currently selected grade.
     // All streams are sourced exclusively from the live Grades & Streams configuration
@@ -754,19 +713,11 @@ export default function Students() {
     
           saveStudentStorage(newLearner as unknown as Student);
     
-          // Update the active React state immediately so the table re-renders
-          // without requiring a page reload (with relaxed deduplication)
-          setStudents((prev) => {
-            const filteredPrev = prev.filter(l => {
-              if (!l) return false;
-              const lId = l.id;
-              const lAdm = String(l.admissionNo || (l as any).admNo || '').trim();
-              if (lId && lId === newLearner.id) return false;
-              if (lAdm && newLearner.admissionNo && lAdm.toUpperCase() === String(newLearner.admissionNo).trim().toUpperCase()) return false;
-              return true;
-            });
-            return [newLearner, ...filteredPrev];
-          });
+          // Update the active React state immediately and trigger refetch / sync events
+          const freshList = getStudents() as unknown as Student[];
+          setStudents(freshList);
+          window.dispatchEvent(new Event('students-updated'));
+          window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_students' } }));
     
           console.log('[Registration Success] New learner registered:', {
             id: newLearner.id,

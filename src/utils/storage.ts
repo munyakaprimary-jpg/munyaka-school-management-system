@@ -478,13 +478,33 @@ export function hydrateAllStores(): HydrationReport {
 export const getStudents = (): Student[] => {
   try {
     const primary = readStorage<Student[] | null>(STORAGE_KEY, null);
-    if (primary && Array.isArray(primary) && primary.length > 0) return primary;
+    if (primary && Array.isArray(primary)) {
+      // If primary exists (even if empty array from valid state), we can return it. But if it's strictly null or undefined, check legacy.
+      // Wait, requirement 1 states: "Verify that state re-hydration on component mount does not overwrite or wipe existing records with empty default arrays."
+      // If primary is empty [] but legacy has records, or if primary has items, let's merge or fallback safely!
+      const legacyKeys = ['munyaka_registered_students', 'students', 'school_learners_data', 'learners', 'pupils', 'school_students', 'registered_students'];
+      let maxRecords: Student[] = primary;
+      for (const lKey of legacyKeys) {
+        const legacy = readStorage<Student[] | null>(lKey, null);
+        if (legacy && Array.isArray(legacy) && legacy.length > maxRecords.length) {
+          maxRecords = legacy;
+        }
+      }
+      if (maxRecords.length > 0 && primary.length === 0) {
+        // Sync back to primary to heal storage
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(maxRecords)); } catch {}
+      }
+      return maxRecords;
+    }
 
-    // Check legacy fallback keys
+    // Check legacy fallback keys if primary is null/invalid
     const legacyKeys = ['munyaka_registered_students', 'students', 'school_learners_data', 'learners', 'pupils', 'school_students', 'registered_students'];
     for (const lKey of legacyKeys) {
       const legacy = readStorage<Student[] | null>(lKey, null);
-      if (legacy && Array.isArray(legacy) && legacy.length > 0) return legacy;
+      if (legacy && Array.isArray(legacy) && legacy.length > 0) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy)); } catch {}
+        return legacy;
+      }
     }
     return [];
   } catch {
@@ -528,6 +548,17 @@ export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: str
   try {
     const existing = getStudents();
     const studentId = student.id ?? generateId('stu');
+    const academicCalendarRaw = localStorage.getItem('munyaka_academic_calendar') || localStorage.getItem('munyaka_owner_academic') || localStorage.getItem('school_academic_settings');
+    let activeTerm = 'Term 1';
+    let activeYear = '2026';
+    try {
+      if (academicCalendarRaw) {
+        const parsed = JSON.parse(academicCalendarRaw);
+        if (parsed.activeTerm) activeTerm = parsed.activeTerm;
+        if (parsed.activeYear) activeYear = String(parsed.activeYear);
+      }
+    } catch {}
+
     const fullStudent: Student = {
       admNo: String(student.admNo ?? student.admissionNo ?? 'ADM-001'),
       name: String(student.name ?? 'Unnamed Student'),
@@ -537,8 +568,15 @@ export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: str
       guardian: String(student.guardian ?? 'Parent'),
       phone: String(student.phone ?? ''),
       status: String(student.status ?? 'Active'),
+      term: String(student.term ?? activeTerm),
+      activeTermId: String((student as any).activeTermId ?? student.term ?? activeTerm),
+      academicYear: String(student.academicYear ?? activeYear),
       ...student,
       id: studentId,
+      status: String(student.status ?? 'Active'),
+      term: String(student.term ?? activeTerm),
+      activeTermId: String((student as any).activeTermId ?? student.term ?? activeTerm),
+      academicYear: String(student.academicYear ?? activeYear),
     };
     const updated = [...existing.filter(s => s.id !== studentId), fullStudent];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -632,7 +670,29 @@ export function generateId(prefix: string = 'id'): string {
 
 // ── Students ────────────────────────────────────────────────────────────────
 export function createStudent(input: Omit<Student, 'id'> & { id?: string }): Student {
-  const newStudent: Student = { ...input, id: input.id ?? generateId('stu') };
+  const academicCalendarRaw = localStorage.getItem('munyaka_academic_calendar') || localStorage.getItem('munyaka_owner_academic') || localStorage.getItem('school_academic_settings');
+  let activeTerm = 'Term 1';
+  let activeYear = '2026';
+  try {
+    if (academicCalendarRaw) {
+      const parsed = JSON.parse(academicCalendarRaw);
+      if (parsed.activeTerm) activeTerm = parsed.activeTerm;
+      if (parsed.activeYear) activeYear = String(parsed.activeYear);
+    }
+  } catch {}
+
+  const newStudent: Student = {
+    status: 'Active',
+    term: activeTerm,
+    activeTermId: activeTerm,
+    academicYear: activeYear,
+    ...input,
+    id: input.id ?? generateId('stu'),
+    status: input.status ?? 'Active',
+    term: input.term ?? activeTerm,
+    activeTermId: (input as any).activeTermId ?? input.term ?? activeTerm,
+    academicYear: input.academicYear ?? activeYear,
+  };
   const next = [...getStudents(), newStudent];
   setStudents(next);
   return newStudent;
