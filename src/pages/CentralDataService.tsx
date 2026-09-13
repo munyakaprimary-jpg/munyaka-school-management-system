@@ -7,6 +7,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
 import { useFileDownload } from '@/utils/fileDownloader';
 import { useCentralData, notifyDataChanged, getActiveLearners, getActiveTeachers } from '@/hooks/useCentralData';
+import { getStoredLearners, LEARNERS_DB_KEY } from '@/utils/learnersStore';
 import { lsSet, lsRead } from '@/utils/storage';
 import { STAFF_MASTER_KEY, getCategorizedMetrics, isTeachingRole, getStaffMaster } from '@/services/staffMasterService';
 import { tryParse } from '@/utils/storageUtils';
@@ -36,18 +37,10 @@ export default function CentralDataService() {
 
   const loadStats = () => {
     try {
-      const studentKeys = ['school_learners_data', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
-      let studentsCount = centralStats.totalStudents;
-      if (studentsCount === 0) {
-        for (const k of studentKeys) {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = tryParse<any[]>(raw);
-            if (Array.isArray(parsed) && parsed.length > studentsCount) {
-              studentsCount = parsed.length;
-            }
-          }
-        }
+      const stored = getStoredLearners();
+      let studentsCount = stored.length;
+      if (studentsCount === 0 && centralStats.totalStudents > 0) {
+        studentsCount = centralStats.totalStudents;
       }
 
       const attendance = lsRead<Record<string, unknown>>('munyaka_attendance_records', {});
@@ -76,17 +69,7 @@ export default function CentralDataService() {
         version: "5.0", // v5.0: includes munyaka_master_staff_list
         exportDate: new Date().toISOString(),
         school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-        students: ((): any[] => {
-          const keys = ['school_learners_data', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
-          for (const k of keys) {
-            const raw = localStorage.getItem(k);
-            if (raw) {
-              const parsed = tryParse<any[]>(raw);
-              if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-            }
-          }
-          return [];
-        })(),
+        students: getStoredLearners(),
         staff: lsRead<unknown>('munyaka_staff_directory', []),
         staffPrereg: lsRead<unknown>('munyaka_staff_prereg', []),
         staffMaster: lsRead<unknown>(STAFF_MASTER_KEY, []),   // canonical master ledger

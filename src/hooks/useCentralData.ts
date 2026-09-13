@@ -156,26 +156,10 @@ const isActiveRecord = (row: { isArchived?: boolean; deletedAt?: string }): bool
 
 // ─── Core data selectors (memoized) ───────────────────────────────────────────
 
+import { getStoredLearners } from '@/utils/learnersStore';
+
 const getLearners = (): Learner[] => {
-  const ls = getLocalStorage();
-  const keys = [
-    STORAGE_KEYS.LEARNERS,
-    'munyaka_registered_students',
-    'students',
-    'school_learners_data',
-    'learners',
-    'pupils',
-    'school_students',
-    'registered_students',
-  ];
-  let maxList: Learner[] = [];
-  for (const key of keys) {
-    const fromLS = tryParse<Learner[]>(ls?.getItem(key) ?? null);
-    if (fromLS && Array.isArray(fromLS) && fromLS.length > maxList.length) {
-      maxList = fromLS;
-    }
-  }
-  return maxList;
+  return getStoredLearners() as unknown as Learner[];
 };
 
 const getTeachers = (): Teacher[] => {

@@ -40,16 +40,7 @@ import {
   type ClearanceCertificateRef,
 } from '@/utils/pdfDownloader';
 
-const LEARNERS_STORAGE_KEYS = [
-  'school_learners_data',
-  'munyaka_students',
-  'students',
-  'learners',
-  'pupils',
-  'school_students',
-  'registered_students',
-  'munyaka_registered_students',
-];
+import { getStoredLearners, LEARNERS_DB_KEY } from '@/utils/learnersStore';
 const TRANSACTIONS_KEY = 'munyaka_transactions';
 const PAYMENT_RECORDS_KEY = 'munyaka_payment_records';
 const FEE_STRUCTURES_KEY = 'munyaka_fee_structures';
@@ -99,29 +90,19 @@ const StudentProfile = () => {
     }
 
     try {
-      let found: any = null;
-      for (const k of LEARNERS_STORAGE_KEYS) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const match = parsed.find((l: any) =>
-              String(l.id ?? '').trim().toLowerCase() === String(id ?? '').trim().toLowerCase() ||
-              String(l.admNo ?? l.admissionNo ?? '').trim().toLowerCase() === String(id ?? '').trim().toLowerCase()
-            );
-            if (match) {
-              found = match;
-              break;
-            }
-          }
+      const stored = getStoredLearners();
+      if (stored && stored.length > 0) {
+        const match = stored.find((l: any) =>
+          String(l.id ?? '').trim().toLowerCase() === String(id ?? '').trim().toLowerCase() ||
+          String(l.admNo ?? l.admissionNo ?? '').trim().toLowerCase() === String(id ?? '').trim().toLowerCase()
+        );
+        if (match) {
+          setActiveLearner(match as ProfileLearner);
+          return;
         }
       }
-      if (found) {
-        setActiveLearner(found as ProfileLearner);
-        return;
-      }
     } catch (e) {
-      console.error('Failed to resolve learner from localStorage', e);
+      console.error('Failed to resolve learner from munyaka_learners_db', e);
     }
 
     setActiveLearner(null);

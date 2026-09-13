@@ -26,7 +26,7 @@ import {
   getStreamsForGrade,
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
-import { getStudents, saveStudent as saveStudentStorage, Student } from '@/utils/storage';
+import { getStoredLearners, saveStoredLearner, removeStoredLearner, PersistentLearner } from '@/utils/learnersStore';
 import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 /**
@@ -127,8 +127,8 @@ const getGradeMatchKey = (name: string): string => {
 };
 
 export default function Students() {
-  // 1. LocalStorage Persistence Setup for Learners with Lazy Initialization
-  const [students, setStudents] = useState<Student[]>(() => getStudents());
+  // 1. Unified LocalStorage Persistence Setup with munyaka_learners_db
+  const [students, setStudents] = useState<Student[]>(() => getStoredLearners() as unknown as Student[]);
 
   // 2. Use the academic calendar hook for dynamic term/year
     const { activeTerm, activeYear, isLoading } = useAcademicCalendar();
@@ -139,9 +139,13 @@ export default function Students() {
 
   // Add event listener to refresh UI instantly when a student is saved
   useEffect(() => {
-    const syncStudents = () => setStudents(getStudents() as unknown as Student[]);
+    const syncStudents = () => setStudents(getStoredLearners() as unknown as Student[]);
     window.addEventListener('students-updated', syncStudents);
-    return () => window.removeEventListener('students-updated', syncStudents);
+    window.addEventListener('munyaka:data-changed', syncStudents);
+    return () => {
+      window.removeEventListener('students-updated', syncStudents);
+      window.removeEventListener('munyaka:data-changed', syncStudents);
+    };
   }, []);
 
   // Backwards compatibility alias for learners array
@@ -166,11 +170,10 @@ export default function Students() {
     ];
     const isLearnerKey = (key: string | null) => !!key && LEARNER_KEYS.includes(key);
 
-    const reload = (key: string | null) => {
-      if (!isLearnerKey(key) && key !== undefined) return;
+    const reload = (_key: string | null) => {
       try {
-        const fresh = getStudents();
-        if (fresh && fresh.length > 0) {
+        const fresh = getStoredLearners();
+        if (fresh) {
           setStudents(fresh as unknown as Student[]);
         }
       } catch (e) {
@@ -711,13 +714,12 @@ export default function Students() {
             feeHistory: [],
           };
     
-          saveStudentStorage(newLearner as unknown as Student);
+          saveStoredLearner(newLearner as any);
     
           // Update the active React state immediately and trigger refetch / sync events
-          const freshList = getStudents() as unknown as Student[];
+          const freshList = getStoredLearners() as unknown as Student[];
           setStudents(freshList);
           window.dispatchEvent(new Event('students-updated'));
-          window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_students' } }));
     
           console.log('[Registration Success] New learner registered:', {
             id: newLearner.id,
