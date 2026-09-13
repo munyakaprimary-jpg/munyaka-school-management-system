@@ -381,10 +381,10 @@ const Fees = () => {
   const calculatedFees: FeeRecord[] = useMemo(() => {
     try {
       const rawLearners = JSON.parse(localStorage.getItem('munyaka_learners_db') || '[]');
-      const allLearners = Array.isArray(rawLearners) ? rawLearners : studentsFromStore;
+      const allLearners = Array.isArray(rawLearners) && rawLearners.length > 0 ? rawLearners : studentsFromStore;
 
       return allLearners.map((learner: any) => {
-        const studentId = learner.id || learner.admNo;
+        const studentId = learner.id || learner.admNo || String(Math.random());
         const studentName = learner.fullName || learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || 'Learner';
         const admNo = learner.admissionNo || learner.admNo || learner.admissionNumber || studentId;
         const grade = learner.grade || '';
@@ -431,29 +431,6 @@ const Fees = () => {
       return feeGradeKey === filterKey || fee.studentGradeId === selectedGrade || fee.grade?.toLowerCase().trim() === selectedGrade?.toLowerCase().trim();
     });
   }, [calculatedFees, selectedGrade]);
-      };
-    });
-  }, [
-    studentsFromStore,
-    transactionsList,
-    feeStructures,
-    selectedYear,
-    selectedTerm,
-    getTermFeeForGrade,
-    getTotalPaidForStudent,
-    findGradeIdForLearner,
-    deriveStatus,
-  ]);
-
-  /** Filter fee records by grade level */
-  const filteredCalculatedFees: FeeRecord[] = useMemo(() => {
-    if (!tabGradeFilter || tabGradeFilter === "all" || tabGradeFilter === "ALL" || tabGradeFilter === "") return calculatedFees;
-    return calculatedFees.filter(fee => {
-      const feeGradeKey = getGradeMatchKey(fee.grade);
-      const filterKey = getGradeMatchKey(tabGradeFilter);
-      return feeGradeKey === filterKey || fee.studentGradeId === tabGradeFilter || fee.grade?.toLowerCase().trim() === tabGradeFilter?.toLowerCase().trim();
-    });
-  }, [calculatedFees, tabGradeFilter]);
 
   /** Filter transactions by grade level */
   const filteredTransactions: ExtendedTransaction[] = useMemo(() => {
