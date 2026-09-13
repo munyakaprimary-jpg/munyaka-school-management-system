@@ -128,11 +128,12 @@ const Assessments = () => {
   const tierKey = useMemo(() => getTierKey(currentGrade), [currentGrade]);
   const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
 
-  // 1. Retrieve Students Directory from localStorage with school_learners_data (unified Learner Management state) and fallbacks
+  // 1. Retrieve Students Directory from localStorage with munyaka_learners_db and school_learners_data (unified Learner Management state) and fallbacks
   // Cold start: returns [] when localStorage is empty — no mock data.
-  const studentsList = useMemo((): Student[] => {
+  const [studentsList, setStudentsList] = useState<Student[]>(() => {
     try {
       const stored =
+        localStorage.getItem("munyaka_learners_db") ||
         localStorage.getItem("school_learners_data") ||
         localStorage.getItem("munyaka_students") ||
         localStorage.getItem("students_directory") ||
@@ -141,16 +142,49 @@ const Assessments = () => {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          // Filter to plain objects so downstream .name / .grade accesses don't crash.
           return parsed.filter((item): item is Student =>
             item !== null && typeof item === "object"
           );
         }
       }
     } catch (e) {
-      console.error("Error loading school_learners_data / learners:", e);
+      console.error("Error loading munyaka_learners_db / school_learners_data:", e);
     }
     return [];
+  });
+
+  // State listener for dynamic updates to student profiles / localStorage changes
+  useEffect(() => {
+    const loadLearners = () => {
+      try {
+        const stored =
+          localStorage.getItem("munyaka_learners_db") ||
+          localStorage.getItem("school_learners_data") ||
+          localStorage.getItem("munyaka_students") ||
+          localStorage.getItem("students_directory") ||
+          localStorage.getItem("learners") ||
+          localStorage.getItem("munyaka_students_master");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setStudentsList(
+              parsed.filter((item): item is Student =>
+                item !== null && typeof item === "object"
+              )
+            );
+          }
+        }
+      } catch (e) {
+        console.error("Error reloading learners in event listener:", e);
+      }
+    };
+
+    window.addEventListener("storage", loadLearners);
+    window.addEventListener("munyaka:data-changed" as any, loadLearners);
+    return () => {
+      window.removeEventListener("storage", loadLearners);
+      window.removeEventListener("munyaka:data-changed" as any, loadLearners);
+    };
   }, []);
 
   // 2. Grades & Streams from munyaka_grades with fallback protection
@@ -350,36 +384,39 @@ const Assessments = () => {
   }, [academicYear, term, grade, subject, examType]);
 
   // ============================================
-  // FILTERED STUDENTS - DECLARED BEFORE USE EFFECT
+  // FILTERED STUDENTS - ROBUST GRADE & STREAM MATCHER
   // ============================================
   const filteredStudents = useMemo(() => {
-    const selectedGradeNormalized = String(currentGrade || '').trim().toLowerCase();
+    return studentsList.filter((learner: any) => {
+      // Grade matching with robust normalization
+      if (!grade || grade === 'ALL' || grade === 'All Grades') {
+        // match all
+      } else {
+        const cleanSelected = grade.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanLearnerGrade = (learner.grade || learner.gradeLevel || learner.class || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const matchesGrade = cleanLearnerGrade.includes(cleanSelected) || cleanSelected.includes(cleanLearnerGrade);
+        if (!matchesGrade) return false;
+      }
 
-    return studentsList.filter(s => {
-      // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
-      const rawStudentGrade = s.grade || s.gradeLevel || s.class || "";
-      const studentGradeNormalized = String(rawStudentGrade).trim().toLowerCase();
+      // Stream matching
+      if (!stream || stream === 'ALL' || stream === 'All Streams') {
+        // match all streams
+      } else {
+        const cleanSelectedStream = stream.toString().toLowerCase().trim();
+        const cleanLearnerStream = (learner.stream || learner.classStream || learner.section || '').toString().toLowerCase().trim();
+        if (cleanLearnerStream && cleanSelectedStream && cleanLearnerStream !== cleanSelectedStream) {
+          return false;
+        }
+      }
 
-      // 1. String Normalization & Sanitization for Grade (handling "9", "Grade 9", "GRADE 9", "grade 9")
-      const matchesGrade = !studentGradeNormalized ||
-        studentGradeNormalized === selectedGradeNormalized ||
-        studentGradeNormalized.replace(/[^0-9]/g, "") === selectedGradeNormalized.replace(/[^0-9]/g, "") && selectedGradeNormalized.replace(/[^0-9]/g, "") !== "";
-
-      // 2. Stream Filtering Flexibility (if Stream selection is set to "All Streams" or empty, ignore stream matching)
-      const rawStudentStream = s.stream || s.classStream || s.section || "";
-      const studentStreamNormalized = String(rawStudentStream).trim().toLowerCase();
-      const selectedStreamNormalized = String(stream || '').trim().toLowerCase();
-
-      const isAllStreams = !stream || selectedStreamNormalized === "all streams" || selectedStreamNormalized === "";
-      const matchesStream = isAllStreams || !studentStreamNormalized || studentStreamNormalized === selectedStreamNormalized;
-
+      // Search term matching
       const matchesSearch = !String(searchTerm || '').trim() ||
-              (s.name && s.name.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.admissionNumber && s.admissionNumber.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.assessment && s.assessment.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.id && s.id.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim()));
+              (learner.name && learner.name.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (learner.admissionNumber && learner.admissionNumber.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (learner.assessment && learner.assessment.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (learner.id && learner.id.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim()));
 
-      return matchesGrade && matchesStream && matchesSearch;
+      return matchesSearch;
     });
   }, [studentsList, grade, stream, searchTerm]);
 
