@@ -613,7 +613,7 @@ export function printAssessment(item: ContentItem): void {
 
 export interface BulkExportOptions {
   items: ContentItem[];
-  grade: number | string;
+  grade: number;
   subject?: string;
   /** HTML or text — defaults to HTML. */
   format?: "html" | "txt";
@@ -627,7 +627,7 @@ export interface BulkExportResult {
 }
 
 export function buildBulkFilename(
-  grade: number | string,
+  grade: number,
   subject: string | undefined,
   extension: "html" | "txt"
 ): string {
@@ -642,7 +642,7 @@ export function buildBulkFilename(
  */
 export function buildBulkAssessmentHtml(
   items: ContentItem[],
-  grade: number | string
+  grade: number
 ): string {
   const subjectLine = items.length
     ? Array.from(new Set(items.map((i) => i.strand))).join(" · ")
@@ -694,7 +694,7 @@ export function buildBulkAssessmentHtml(
 
 export function buildBulkAssessmentText(
   items: ContentItem[],
-  grade: number | string
+  grade: number
 ): string {
   const banner = [
     "=".repeat(72),
