@@ -140,7 +140,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const filteredMenu = React.useMemo(() => {
-      const userObj = user || {};
+      const userObj = (user || {}) as any;
       const role = userObj.role ?? '';
       const roleLower = String(role).toLowerCase();
   
@@ -391,7 +391,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                       try {
                         const studentsList = JSON.parse(localStorage.getItem('munyaka_registered_students') || localStorage.getItem('school_learners_data') || '[]');
                         const match = studentsList.find((s: any) =>
-                          (user?.admissionNumber && (s.admissionNo === user.admissionNumber || s.admissionNumber === user.admissionNumber)) ||
+                          ((user as any)?.admissionNumber && (s.admissionNo === (user as any).admissionNumber || s.admissionNumber === (user as any).admissionNumber)) ||
                           (user?.id && s.id === user.id) ||
                           (user?.name && s.name?.toLowerCase() === user.name?.toLowerCase())
                         ) || studentsList[0];
