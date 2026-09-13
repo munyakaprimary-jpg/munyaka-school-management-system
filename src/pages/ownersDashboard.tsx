@@ -250,7 +250,6 @@ export default function OwnersDashboard() {
     toast.success('All tenant databases and sync states updated successfully.');
   };
 
-  // Prepare initial data for modal if editing
   const modalInitialData: Partial<TenantFormData> | undefined = isEditing ? {
     schoolName: isEditing.name,
     tenantCode: isEditing.code,
@@ -261,7 +260,7 @@ export default function OwnersDashboard() {
     adminEmail: isEditing.adminEmail || 'admin@school.ac.ke',
     adminPhone: isEditing.adminPhone || '+254 700 000000'
   } : {
-    tenantCode: 'SCH-' + Math.floor(100 + Math.random() * 900),
+    tenantCode: 'SCH-710',
     location: 'Nairobi, Kenya',
     subscriptionPlan: 'Starter',
     allocatedSeats: 500,

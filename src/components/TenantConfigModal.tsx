@@ -34,7 +34,7 @@ export function TenantConfigModal({
 }: TenantModalProps) {
   const [formData, setFormData] = useState<TenantFormData>({
     schoolName: initialData?.schoolName || '',
-    tenantCode: initialData?.tenantCode || 'SCH-375',
+    tenantCode: initialData?.tenantCode || 'SCH-710',
     location: initialData?.location || 'Nairobi, Kenya',
     subscriptionPlan: initialData?.subscriptionPlan || 'Starter',
     allocatedSeats: initialData?.allocatedSeats || 500,
@@ -216,19 +216,19 @@ export function TenantConfigModal({
           </div>
 
           <DialogFooter className="pt-4 gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={onClose}
               className="rounded-xl border-slate-200 dark:border-slate-700"
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30"
             >
-              Save Configuration
+              Provision Tenant
             </Button>
           </DialogFooter>
         </form>
