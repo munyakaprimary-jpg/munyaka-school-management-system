@@ -379,65 +379,58 @@ const Fees = () => {
 
   /** Build fee records dynamically from students */
   const calculatedFees: FeeRecord[] = useMemo(() => {
-    return studentsFromStore.map(student => {
-      // Check for manual override from Edit Fee Modal
-      const overrideKey = `${FEE_OVERRIDES_KEY_PREFIX}${student.id}`;
-      const overrideSaved = localStorage.getItem(overrideKey);
-      
-      if (overrideSaved) {
-        try {
-          const overrideData = JSON.parse(overrideSaved);
-          if (overrideData && (
-            overrideData.termFee !== undefined ||
-            overrideData.feePaid !== undefined ||
-            overrideData.total !== undefined ||
-            overrideData.paid !== undefined
-          )) {
-            const termFee = overrideData.termFee !== undefined
-              ? overrideData.termFee
-              : (overrideData.total !== undefined ? overrideData.total : 0);
-            const feePaid = overrideData.feePaid !== undefined
-              ? overrideData.feePaid
-              : (overrideData.paid !== undefined ? overrideData.paid : 0);
-            const balance = Math.max(0, termFee - feePaid);
-            const status = deriveStatus(termFee, feePaid);
-            
-            return {
-              id: student.id,
-              student: student.name,
-              total: termFee,
-              paid: feePaid,
-              balance,
-              status,
-              admNo: student.admNo,
-              grade: student.grade,
-              stream: student.stream,
-              studentGradeId: findGradeIdForLearner(student.grade),
-            };
-          }
-        } catch (e) {
-          // Fall through to dynamic calculation
-        }
-      }
+    try {
+      const rawLearners = JSON.parse(localStorage.getItem('munyaka_learners_db') || '[]');
+      const allLearners = Array.isArray(rawLearners) ? rawLearners : studentsFromStore;
 
-      // Dynamically compute fee from grade configuration
-      const studentGradeId = findGradeIdForLearner(student.grade);
-      const termFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : 0;
-      const totalPaid = getTotalPaidForStudent(student.id);
-      const balance = Math.max(0, termFee - totalPaid);
-      const status = deriveStatus(termFee, totalPaid);
-      
-      return {
-        id: student.id,
-        student: student.name,
-        total: termFee,
-        paid: totalPaid,
-        balance,
-        status,
-        admNo: student.admNo,
-        grade: student.grade,
-        stream: student.stream,
-        studentGradeId,
+      return allLearners.map((learner: any) => {
+        const studentId = learner.id || learner.admNo;
+        const studentName = learner.fullName || learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || 'Learner';
+        const admNo = learner.admissionNo || learner.admNo || learner.admissionNumber || studentId;
+        const grade = learner.grade || '';
+        const stream = learner.stream || '';
+        const studentGradeId = findGradeIdForLearner(grade);
+
+        const termFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : Number(learner.termFee || 5000);
+        const totalPaid = getTotalPaidForStudent(studentId);
+        const balance = Math.max(0, termFee - totalPaid);
+        const status = deriveStatus(termFee, totalPaid);
+
+        return {
+          id: studentId,
+          student: studentName,
+          total: termFee,
+          paid: totalPaid,
+          balance,
+          status,
+          admNo,
+          grade,
+          stream,
+          studentGradeId,
+        };
+      });
+    } catch (err) {
+      console.error("Failed to compute calculatedFees from munyaka_learners_db:", err);
+      return [];
+    }
+  }, [studentsFromStore, getTotalPaidForStudent, getTermFeeForGrade, findGradeIdForLearner, selectedYear, selectedTerm]);
+
+  /** Filter fee records by grade level */
+  const filteredCalculatedFees: FeeRecord[] = useMemo(() => {
+    let rawLearners = [];
+    try {
+      rawLearners = JSON.parse(localStorage.getItem('munyaka_learners_db') || '[]');
+    } catch {}
+
+    if (!selectedGrade || selectedGrade === "all" || selectedGrade === "ALL" || selectedGrade === "") {
+      return calculatedFees;
+    }
+    return calculatedFees.filter(fee => {
+      const feeGradeKey = getGradeMatchKey(fee.grade);
+      const filterKey = getGradeMatchKey(selectedGrade);
+      return feeGradeKey === filterKey || fee.studentGradeId === selectedGrade || fee.grade?.toLowerCase().trim() === selectedGrade?.toLowerCase().trim();
+    });
+  }, [calculatedFees, selectedGrade]);
       };
     });
   }, [
