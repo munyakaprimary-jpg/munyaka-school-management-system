@@ -1,0 +1,488 @@
+"use client";
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import Modal from '@/components/ui/Modal';
+import {
+  CreditCard,
+  AlertCircle,
+  Banknote,
+  Landmark,
+  Smartphone,
+  Receipt,
+  Calendar,
+  Hash,
+  Search,
+} from 'lucide-react';
+import { showSuccess } from '@/utils/toast';
+import { PaymentMethod, PaymentDetails, Transaction } from '@/types/fees';
+
+interface Learner {
+  id: string;
+  admNo?: string;
+  name: string;
+  grade?: string;
+  stream?: string;
+  gender?: string;
+  guardian?: string;
+  phone?: string;
+}
+
+export interface LearnerFeePaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmitPayment: (transaction: Transaction) => void;
+  activeAcademicYear?: string;
+  activeTerm?: string;
+}
+
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType; color: string; bg: string }[] = [
+  { value: 'cash',   label: 'Cash',                icon: Banknote,   color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  { value: 'bank',   label: 'Bank Transfer / EFT', icon: Landmark,   color: 'text-blue-600',    bg: 'bg-blue-50' },
+  { value: 'cheque', label: 'Cheque',              icon: Receipt,    color: 'text-amber-600',   bg: 'bg-amber-50' },
+  { value: 'mpesa',  label: 'M-Pesa',              icon: Smartphone, color: 'text-violet-600',  bg: 'bg-violet-50' },
+];
+
+const FEE_CATEGORIES = [
+  "Tuition Fee",
+  "Activity Fee",
+  "Boarding Fee",
+  "Transport Fee",
+  "Uniform & Books",
+  "Development Fund",
+  "Examination Fee",
+  "Other Fee",
+];
+
+const LEARNER_STORAGE_KEYS = [
+  'munyaka_learners_db',
+  'school_learners_data',
+  'munyaka_students',
+  'students',
+  'learners',
+  'pupils',
+  'school_students',
+  'registered_students',
+  'munyaka_registered_students',
+];
+
+const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
+  isOpen,
+  onClose,
+  onSubmitPayment,
+  activeAcademicYear,
+  activeTerm,
+}) => {
+  // Read active academic year / term from settings or props if not provided
+  const [academicYear, setAcademicYear] = useState<string>(activeAcademicYear || new Date().getFullYear().toString());
+  const [term, setTerm] = useState<string>(activeTerm || 'term1');
+
+  // Form state
+  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [feeCategory, setFeeCategory] = useState<string>("Tuition Fee");
+  const [amount, setAmount] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mpesa');
+  const [refCode, setRefCode] = useState<string>("");
+  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [notes, setNotes] = useState<string>("");
+  const [errorMsg, setErrorMsg] = useState<string>("");
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Learners from localStorage
+  const [learnersList, setLearnersList] = useState<Learner[]>([]);
+
+  // Load learners when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Read active academic context from munyaka_user_settings if present
+    try {
+      const userSettingsRaw = localStorage.getItem('munyaka_user_settings');
+      if (userSettingsRaw) {
+        const parsed = JSON.parse(userSettingsRaw);
+        if (parsed?.academic?.activeYear) setAcademicYear(String(parsed.academic.activeYear));
+        if (parsed?.academic?.activeTerm) setTerm(String(parsed.academic.activeTerm));
+      }
+    } catch {}
+
+    // Load learners
+    let loaded: Learner[] = [];
+    for (const key of LEARNER_STORAGE_KEYS) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            loaded = parsed.map((item: any) => ({
+              id: item.id || item.admNo || `STU-${Math.random()}`,
+              admNo: item.admNo || item.id || '',
+              name: item.name || item.studentName || 'Unknown Learner',
+              grade: item.grade || item.gradeLevel || '',
+              stream: item.stream || '',
+              gender: item.gender || 'Other',
+              guardian: item.guardian || item.parentName || '',
+              phone: item.phone || item.parentPhone || '',
+            }));
+            break;
+          }
+        }
+      } catch {}
+    }
+    setLearnersList(loaded);
+
+    // Reset form fields
+    setSelectedStudentId("");
+    setSearchQuery("");
+    setFeeCategory("Tuition Fee");
+    setAmount("");
+    setPaymentMethod('mpesa');
+    setRefCode("");
+    setPaymentDate(new Date().toISOString().slice(0, 10));
+    setNotes("");
+    setErrorMsg("");
+    setIsSaving(false);
+  }, [isOpen, activeAcademicYear, activeTerm]);
+
+  // Filter learners based on search query
+  const filteredLearners = useMemo(() => {
+    if (!searchQuery.trim()) return learnersList.slice(0, 50); // limit for performance
+    const q = searchQuery.toLowerCase();
+    return learnersList.filter(l => 
+      l.name.toLowerCase().includes(q) ||
+      (l.admNo && l.admNo.toLowerCase().includes(q)) ||
+      (l.grade && l.grade.toLowerCase().includes(q))
+    );
+  }, [learnersList, searchQuery]);
+
+  const selectedLearner = useMemo(() => {
+    return learnersList.find(l => l.id === selectedStudentId);
+  }, [learnersList, selectedStudentId]);
+
+  // Validation
+  const validate = (): string => {
+    if (!selectedStudentId) return "Please select a learner from the dropdown.";
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) return "Please enter a valid payment amount in KES.";
+    if (!paymentMethod) return "Please select a payment method.";
+    if (paymentMethod === 'mpesa' && !refCode.trim()) return "Please enter the M-Pesa transaction reference code.";
+    if (paymentMethod === 'bank' && !refCode.trim()) return "Please enter the bank transaction reference number.";
+    if (paymentMethod === 'cheque' && !refCode.trim()) return "Please enter the cheque number / reference.";
+    return "";
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const err = validate();
+    if (err) {
+      setErrorMsg(err);
+      return;
+    }
+
+    setIsSaving(true);
+    setErrorMsg("");
+
+    await new Promise(r => setTimeout(r, 300));
+
+    const amountNum = parseFloat(amount);
+    const methodLabel = PAYMENT_METHODS.find(m => m.value === paymentMethod)?.label || paymentMethod;
+    const cleanRef = refCode.trim() || `${paymentMethod.toUpperCase()}-${Date.now().toString().slice(-6)}`;
+
+    const transaction: Transaction = {
+      id: `TX-${Date.now()}`,
+      date: paymentDate,
+      amount: amountNum,
+      method: methodLabel,
+      ref: cleanRef,
+      category: feeCategory,
+      studentId: selectedStudentId,
+      grade: selectedLearner?.grade || '',
+      stream: selectedLearner?.stream || '',
+      invoiceId: `INV-${academicYear}-${Date.now().toString().slice(-6)}`,
+      description: `${feeCategory} — ${selectedLearner?.name || 'Learner'} (${academicYear}, ${term})`,
+      currency: 'KES',
+      status: 'paid',
+      paymentMethod,
+      paymentDetails: {
+        receiptNumber: paymentMethod === 'mpesa' ? cleanRef : undefined,
+        transactionRef: cleanRef,
+        bankName: paymentMethod === 'bank' ? 'Bank Transfer' : undefined,
+        chequeNumber: paymentMethod === 'cheque' ? cleanRef : undefined,
+      },
+      paidAt: paymentDate,
+    };
+
+    // 1. Save into munyaka_fee_payments_db and munyaka_transactions in localStorage
+    try {
+      const existingTxRaw = localStorage.getItem('munyaka_transactions');
+      const txList = existingTxRaw ? JSON.parse(existingTxRaw) : [];
+      const updatedTxList = [transaction, ...(Array.isArray(txList) ? txList : [])];
+      localStorage.setItem('munyaka_transactions', JSON.stringify(updatedTxList));
+    } catch {}
+
+    try {
+      const existingPaymentsRaw = localStorage.getItem('munyaka_fee_payments_db');
+      const paymentsList = existingPaymentsRaw ? JSON.parse(existingPaymentsRaw) : [];
+      const updatedPaymentsList = [transaction, ...(Array.isArray(paymentsList) ? paymentsList : [])];
+      localStorage.setItem('munyaka_fee_payments_db', JSON.stringify(updatedPaymentsList));
+    } catch {}
+
+    // 2. Update student's transaction array / fee record in munyaka_learners_db
+    try {
+      for (const key of LEARNER_STORAGE_KEYS) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const updatedLearners = parsed.map((learner: any) => {
+              const lid = learner.id || learner.admNo;
+              if (lid === selectedStudentId || learner.name === selectedLearner?.name) {
+                const txs = Array.isArray(learner.transactions) ? [...learner.transactions, transaction] : [transaction];
+                const totalPaidSoFar = txs.reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0);
+                const termFeeVal = Number(learner.termFee || learner.totalFee || 15000);
+                const newBalance = Math.max(0, termFeeVal - totalPaidSoFar);
+                const newStatus = newBalance <= 0 ? 'Cleared' : totalPaidSoFar > 0 ? 'Partial' : 'Pending';
+
+                return {
+                  ...learner,
+                  transactions: txs,
+                  paid: totalPaidSoFar,
+                  balance: newBalance,
+                  status: newStatus,
+                };
+              }
+              return learner;
+            });
+            localStorage.setItem(key, JSON.stringify(updatedLearners));
+          }
+        }
+      }
+    } catch {}
+
+    // 3. Also update munyaka_fee_override_{studentId} if present
+    try {
+      const overrideKey = `munyaka_fee_${selectedStudentId}`;
+      const existingOverride = localStorage.getItem(overrideKey);
+      if (existingOverride) {
+        const parsed = JSON.parse(existingOverride);
+        const prevPaid = Number(parsed.feePaid || parsed.paid || 0);
+        const termFeeVal = Number(parsed.termFee || parsed.total || 15000);
+        const newPaid = prevPaid + amountNum;
+        const newBal = Math.max(0, termFeeVal - newPaid);
+        localStorage.setItem(overrideKey, JSON.stringify({
+          ...parsed,
+          feePaid: newPaid,
+          paid: newPaid,
+          balance: newBal,
+          status: newBal <= 0 ? 'Cleared' : 'Partial',
+        }));
+      }
+    } catch {}
+
+    // Notify app of data change
+    window.dispatchEvent(new Event('munyaka_fees_updated'));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_transactions' } }));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_fee_payments_db' } }));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners_db' } }));
+
+    showSuccess(`Successfully posted KES ${amountNum.toLocaleString()} payment for ${selectedLearner?.name || 'Learner'}!`);
+    setIsSaving(false);
+    onSubmitPayment(transaction);
+    onClose();
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Record Learner Fee Payment"
+      description="Post fee payment for a learner and update account balances."
+      maxWidth="max-w-2xl"
+      footer={
+        <div className="flex gap-3 justify-end w-full">
+          <Button variant="ghost" onClick={onClose} className="rounded-xl font-bold h-11 px-6">
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSaving}
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold h-11 px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
+          >
+            <CreditCard size={18} /> {isSaving ? 'Posting Payment...' : 'Post Payment'}
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {errorMsg && (
+          <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2.5 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+            <AlertCircle size={16} className="shrink-0" /> {errorMsg}
+          </div>
+        )}
+
+        {/* Academic Year & Term (Pre-filled banner) */}
+        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700">
+          <div className="flex items-center gap-2">
+            <Calendar size={15} className="text-indigo-600" />
+            <span>Academic Context: <strong className="text-indigo-700">{term.toUpperCase()} {academicYear}</strong></span>
+          </div>
+          <span className="text-[10px] text-slate-400 uppercase tracking-widest bg-white px-2.5 py-1 rounded-lg border border-slate-200">Pre-filtered</span>
+        </div>
+
+        {/* Searchable Learner Selection */}
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Select Learner *
+          </Label>
+          <div className="space-y-2">
+            <div className="relative">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search learner by name or admission number..."
+                className="pl-10 rounded-xl h-11 bg-slate-50 border-none font-medium text-sm"
+              />
+            </div>
+
+            <Select value={selectedStudentId} onValueChange={v => { setSelectedStudentId(v); setErrorMsg(""); }}>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+                <SelectValue placeholder={
+                  learnersList.length === 0
+                    ? "No learners found in database"
+                    : selectedLearner
+                    ? `${selectedLearner.name} (Adm: ${selectedLearner.admNo || selectedLearner.id}) — ${selectedLearner.grade || 'No Grade'}`
+                    : "Choose learner from database..."
+                } />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {filteredLearners.length > 0 ? (
+                  filteredLearners.map(l => (
+                    <SelectItem key={l.id} value={l.id} className="py-2.5">
+                      <div className="flex items-center justify-between w-full gap-4">
+                        <span className="font-bold text-slate-900">{l.name}</span>
+                        <span className="text-xs text-slate-400 font-mono">Adm: {l.admNo || l.id} {l.grade ? `• ${l.grade}` : ''}</span>
+                      </div>
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="py-6 text-center text-xs text-slate-400">
+                    No matching learners found.
+                  </div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Fee Type / Payment Category */}
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Fee Type / Payment Category *
+          </Label>
+          <Select value={feeCategory} onValueChange={setFeeCategory}>
+            <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FEE_CATEGORIES.map(cat => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Amount Paid (KES) */}
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Amount Paid (KES) *
+          </Label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-sm">KES</span>
+            <Input
+              type="number"
+              min="1"
+              value={amount}
+              onChange={e => { setAmount(e.target.value); setErrorMsg(""); }}
+              placeholder="e.g. 5000"
+              className="pl-14 rounded-xl h-12 bg-slate-50 border-none font-black text-lg text-slate-900"
+            />
+          </div>
+        </div>
+
+        {/* Payment Method Options */}
+        <div className="space-y-2">
+          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Payment Method *
+          </Label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {PAYMENT_METHODS.map(({ value, label, icon: Icon, color, bg }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => { setPaymentMethod(value); setErrorMsg(""); }}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all cursor-pointer
+                  ${paymentMethod === value
+                    ? `${bg} border-current ${color} shadow-sm`
+                    : "bg-slate-50 border-transparent text-slate-400 hover:border-slate-200"
+                  }`}
+              >
+                <Icon size={20} />
+                <span className="text-[10px] font-black uppercase tracking-wide text-center leading-tight">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Transaction / Reference Code & Date */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Hash size={13} className="text-indigo-600" />
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {paymentMethod === 'mpesa' ? 'M-Pesa Reference No *' : 'Transaction / Ref Code'}
+              </Label>
+            </div>
+            <Input
+              value={refCode}
+              onChange={e => { setRefCode(e.target.value.toUpperCase()); setErrorMsg(""); }}
+              placeholder={paymentMethod === 'mpesa' ? 'e.g. QG7XXXXXXX' : 'e.g. REF-123456'}
+              className="rounded-xl h-11 bg-slate-50 border-none font-mono font-bold text-sm tracking-wider uppercase"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Calendar size={13} className="text-indigo-600" />
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Payment Date *</Label>
+            </div>
+            <Input
+              type="date"
+              value={paymentDate}
+              onChange={e => setPaymentDate(e.target.value)}
+              className="rounded-xl h-11 bg-slate-50 border-none font-bold text-sm text-slate-800"
+            />
+          </div>
+        </div>
+
+        {/* Optional Notes */}
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Notes (Optional)</Label>
+          <Textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Add payment notes or remarks..."
+            rows={2}
+            className="rounded-xl bg-slate-50 border-none font-medium text-sm resize-none"
+          />
+        </div>
+      </form>
+    </Modal>
+  );
+};
+
+export default LearnerFeePaymentModal;

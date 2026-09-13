@@ -23,7 +23,7 @@ import { useStudentsStore, useTransactionsStore } from '@/hooks/usePersistentSto
 import FeeStats from '@/components/fees/FeeStats';
 import FeeFilters from '@/components/fees/FeeFilters';
 import FeeStatement from '@/components/fees/FeeStatement';
-import UnifiedRecordPaymentModal from '@/components/fees/UnifiedRecordPaymentModal';
+import LearnerFeePaymentModal from '@/components/fees/LearnerFeePaymentModal';
 import EditFeeModal from '@/components/fees/EditFeeModal';
 import FeeReceipt from '@/components/fees/FeeReceipt';
 import { Transaction, PaymentMethod, PaymentDetails } from '@/types/fees';
