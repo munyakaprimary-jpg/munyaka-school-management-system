@@ -454,10 +454,11 @@ const Fees = () => {
 
   /** Filter fee records by grade level */
   const filteredCalculatedFees: FeeRecord[] = useMemo(() => {
-    if (tabGradeFilter === "all") return calculatedFees;
+    if (!tabGradeFilter || tabGradeFilter === "all" || tabGradeFilter === "ALL" || tabGradeFilter === "") return calculatedFees;
     return calculatedFees.filter(fee => {
       const feeGradeKey = getGradeMatchKey(fee.grade);
-      return feeGradeKey === getGradeMatchKey(tabGradeFilter) || fee.studentGradeId === tabGradeFilter;
+      const filterKey = getGradeMatchKey(tabGradeFilter);
+      return feeGradeKey === filterKey || fee.studentGradeId === tabGradeFilter || fee.grade?.toLowerCase().trim() === tabGradeFilter?.toLowerCase().trim();
     });
   }, [calculatedFees, tabGradeFilter]);
 
@@ -666,7 +667,7 @@ const Fees = () => {
     // Trigger global update events and data rehydration
     window.dispatchEvent(new Event('fees-updated'));
     window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_fee_structures_db' } }));
-    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners_db' } }));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
     window.dispatchEvent(new CustomEvent('storage', { key: 'munyaka_fee_structures_db' }));
 
     setIsConfigOpen(false);
