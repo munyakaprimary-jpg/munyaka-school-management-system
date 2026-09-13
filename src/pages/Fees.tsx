@@ -689,7 +689,7 @@ const Fees = () => {
     window.dispatchEvent(new Event('fees-updated'));
     window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_fee_structures_db' } }));
     window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
-    window.dispatchEvent(new CustomEvent('storage', { detail: { key: 'munyaka_fee_structures_db' } } as any));
+    window.dispatchEvent(new CustomEvent('storage', { detail: { key: 'munyaka_fee_structures_db' } }));
 
     setIsConfigOpen(false);
     const targetLabel = isBulk ? "all grade levels" : GRADES_DATA.find(g => g.id === configGrade)?.name || configGrade;

@@ -148,14 +148,14 @@ export function insertLearnerIntoRosters(
 
   const entry: RosterEntry = {
     id: learner.id,
-    admNo: learner.admNo,
-    name: learner.name,
-    grade: learner.grade,
-    stream: learner.stream,
-    gender: (learner.gender || 'Other') as any,
-    enrolledAt: new Date().toISOString(),
-    source,
-  };
+        admNo: learner.admNo,
+        name: learner.name,
+        grade: learner.grade,
+        stream: learner.stream,
+        gender: (learner.gender || 'Other') as 'Female' | 'Male' | 'Other',
+        enrolledAt: new Date().toISOString(),
+        source,
+      };
 
   const bucket = classKey(learner.grade, learner.stream);
   let updatedBuckets = 0;
