@@ -5,7 +5,8 @@
 export type StrandCategory =
   | "CRE & Values"
   | "Languages"
-  | "STEM & Agriculture"
+  | "Mathematics & STEM"
+  | "Agriculture & Nutrition"
   | "Social Studies & Arts"
   | "KICD Revision Bank"
   | "Assessments & Quizzes"
