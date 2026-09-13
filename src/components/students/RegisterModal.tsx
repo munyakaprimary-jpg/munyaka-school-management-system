@@ -82,9 +82,17 @@ export default function RegisterModal({
   currentUserEmail,
   isCurrentUserAdmin = false,
 }: RegisterModalProps) {
-  // Generate enrollment year options (current year + next 2 years)
+  // Generate enrollment year options: from 2010 (or 15 years in the past) up to currentYear + 2
   const currentYear = new Date().getFullYear();
-  const yearOptions = [currentYear, currentYear + 1, currentYear + 2];
+  const startYear = Math.min(2010, currentYear - 15);
+  const endYear = currentYear + 2;
+  const yearOptions = useMemo(() => {
+    const list: number[] = [];
+    for (let y = endYear; y >= startYear; y--) {
+      list.push(y);
+    }
+    return list;
+  }, [startYear, endYear]);
   const [gradesConfig, setGradesConfig] = useState<GradesStreamsConfig>(() =>
     readGradesAndStreams()
   );
