@@ -264,17 +264,69 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
   const selectedGradeObj = useMemo(() =>
     gradesData.find(g => g.id === selectedGradeId), [selectedGradeId, gradesData]);
 
-  const availableStreams = useMemo(() =>
-    selectedGradeObj ? selectedGradeObj.streams : [], [selectedGradeObj]);
+  // Helper to normalize and match grade/stream names
+  const normalizeStr = (str: unknown): string => {
+    if (!str) return "";
+    return String(str)
+      .toLowerCase()
+      .replace(/\s*\([^)]*\)/g, "") // remove parentheses like (Primary), (Junior)
+      .replace(/[^a-z0-9]/g, ""); // keep only alphanumeric
+  };
+
+  const isGradeMatch = (studentGrade: unknown, gradeObj: Grade): boolean => {
+    if (!studentGrade) return false;
+    const sg = String(studentGrade).toLowerCase().trim();
+    const gName = String(gradeObj.name || "").toLowerCase().trim();
+    const gId = String(gradeObj.id || "").toLowerCase().trim();
+    
+    // Extract numbers if any (e.g. "grade 6" -> "6")
+    const sgNum = sg.replace(/[^0-9]/g, "");
+    const gNameNum = gName.replace(/[^0-9]/g, "");
+
+    if (sg === gName || sg === gId || sg.includes(gName) || gName.includes(sg)) return true;
+    if (sgNum && sgNum === gNameNum) return true;
+    
+    // Also check normalized
+    const normSg = normalizeStr(sg);
+    const normGName = normalizeStr(gName);
+    const normGId = normalizeStr(gId);
+    if (normSg && (normSg === normGName || normSg === normGId)) return true;
+
+    return false;
+  };
+
+  const isStreamMatch = (studentStream: unknown, streamName: unknown): boolean => {
+    if (!studentStream || !streamName) return false;
+    const ss = String(studentStream).toLowerCase().trim();
+    const sn = String(streamName).toLowerCase().trim();
+    if (ss === sn || ss.includes(sn) || sn.includes(ss)) return true;
+    return normalizeStr(ss) === normalizeStr(sn);
+  };
+
+  const derivedStreamsWithCounts = useMemo(() => {
+    if (!selectedGradeObj) return [];
+    return selectedGradeObj.streams.map(stream => {
+      const count = studentsData.filter(s => {
+        const matchesG = isGradeMatch(s.grade || s.gradeId, selectedGradeObj);
+        const matchesS = isStreamMatch(s.stream || s.streamId, stream.name);
+        return matchesG && matchesS;
+      }).length;
+      return {
+        ...stream,
+        computedCount: count > 0 ? count : (stream.studentsCount || 0),
+      };
+    });
+  }, [selectedGradeObj, studentsData]);
+
+  const availableStreams = derivedStreamsWithCounts;
 
   const filteredStudents = useMemo(() => {
     if (!selectedGradeObj || !selectedStreamId) return [];
     const streamObj = availableStreams.find(s => s.id === selectedStreamId);
     if (!streamObj) return [];
     return studentsData.filter(s => {
-      const gradeNum = selectedGradeObj.name?.replace(/[^0-9]/g, '') ?? '';
-      const matchesGrade = s.grade === gradeNum || s.grade === selectedGradeObj?.name;
-      const matchesStream = s.stream.toLowerCase() === streamObj.name?.toLowerCase();
+      const matchesGrade = isGradeMatch(s.grade || s.gradeId, selectedGradeObj);
+      const matchesStream = isStreamMatch(s.stream || s.streamId, streamObj.name);
       return matchesGrade && matchesStream;
     });
   }, [selectedGradeObj, selectedStreamId, availableStreams, studentsData]);
@@ -632,7 +684,7 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {availableStreams.map(s => (
-                    <SelectItem key={s.id} value={s.id}>Stream {s?.name ?? ''} ({s?.studentsCount ?? 0} learners)</SelectItem>
+                    <SelectItem key={s.id} value={s.id}>Stream {s?.name ?? ''} ({s?.computedCount ?? 0} learners)</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
