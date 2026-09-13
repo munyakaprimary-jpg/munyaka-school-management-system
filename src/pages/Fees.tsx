@@ -1281,7 +1281,8 @@ const Fees = () => {
         onClose={() => setIsRecordOpen(false)}
         onSubmitPayment={(transaction) => {
           setIsRecordOpen(false);
-          loadFeesData();
+          setLocalTransactions(readStorage<ExtendedTransaction[]>(TX_KEY, []));
+          setAuditLogs(readStorage<AuditLogEntry[]>(AUDIT_LOGS_KEY, []));
           if (typeof handleRecordPayment === 'function') {
             try { handleRecordPayment(transaction); } catch {}
           }
