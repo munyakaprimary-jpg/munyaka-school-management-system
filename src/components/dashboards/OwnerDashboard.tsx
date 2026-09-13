@@ -1179,7 +1179,16 @@ const OwnerDashboard: React.FC = () => {
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
                   <BadgeDollarSign size={18} className="text-emerald-600" />
                 </div>
-                <ArrowUpRight size={14} className="text-emerald-500" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.hash = '#/payment-management';
+                  }}
+                  aria-label="View billing history and invoices"
+                  className="hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-full p-1.5 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <ArrowUpRight size={14} className="text-emerald-500" />
+                </button>
               </div>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Total Platform Billing Paid
@@ -1207,7 +1216,16 @@ const OwnerDashboard: React.FC = () => {
                 <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
                   <RefreshCcw size={18} className="text-amber-600" />
                 </div>
-                <ArrowUpRight size={14} className="text-amber-500" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.hash = '#/payment-management';
+                  }}
+                  aria-label="Manage subscription renewal settings"
+                  className="hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-full p-1.5 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <ArrowUpRight size={14} className="text-amber-500" />
+                </button>
               </div>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Next Renewal
