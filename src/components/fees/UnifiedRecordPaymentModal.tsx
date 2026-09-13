@@ -69,6 +69,8 @@ export interface UnifiedRecordPaymentModalProps {
   hideLearnerSelection?: boolean;
   /** When true, hides the activation-key generation block */
   hideActivationKey?: boolean;
+  /** Optional active academic year for academic fee transactions */
+  activeAcademicYear?: string;
 }
 
 // ─────────────────────────────────────────────
@@ -125,7 +127,9 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
   defaultSubscriptionName = '',
   hideLearnerSelection = false,
   hideActivationKey = false,
+  activeAcademicYear,
 }) => {
+  const currentAcademicYear = activeAcademicYear || "2026";
   // Learner selection (hidden for license-only flows)
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
   const [selectedStreamId, setSelectedStreamId] = useState<string>("");

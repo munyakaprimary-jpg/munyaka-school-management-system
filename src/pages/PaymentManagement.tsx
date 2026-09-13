@@ -2468,6 +2468,7 @@ const PaymentManagement = () => {
       {/* Unified Payment Modal */}
       <UnifiedRecordPaymentModal
         isOpen={isLicenseModalOpen}
+        activeAcademicYear={activeAcademicYear}
         onClose={() => { setIsLicenseModalOpen(false); setActiveSubscriptionForLicense(null); }}
         onSubmitPayment={({ transaction, activationKey, issuedTo, deviceId, expiresAt }) => {
           pushPaymentToHistory(transaction);
