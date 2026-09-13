@@ -109,6 +109,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
+    { icon: School, label: 'Developer Hub / Tenants', path: '/dev/tenants', roles: ['owner', 'admin'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
     { icon: User, label: 'Profile Settings', path: '/settings/profile', roles: ['admin', 'owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
@@ -194,6 +195,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                                 //   5. Settings (System Configuration)
                                 const order = [
                                   '/',                       // Dashboard
+                                  '/dev/tenants',            // Developer Hub / Tenants
                                   '/payment-management',     // Payment & Subscriptions
                                   '/games',                  // Games Hub (global)
                                   '/settings/profile',       // Profile Settings
@@ -271,6 +273,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
       { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
       { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
+      { icon: School, label: 'Tenants', path: '/dev/tenants', roles: ['owner', 'admin'] },
       { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
       { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
       { icon: Database, label: 'Central', path: '/central-data', roles: ['admin'] },
