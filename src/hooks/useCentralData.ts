@@ -231,13 +231,8 @@ const computeStats = (): CentralDataStats => {
 
     // ── Learners ──
     const allLearners = getLearners();
-    const activeLearners = allLearners.filter((l) => {
-      if (!l) return false;
-      if (!matchesActiveSchool(l, activeSchoolId)) return false;
-      if (!isActiveRecord(l)) return false;
-      if (l.status) return l.status === 'Active' || l.status === 'active';
-      return true;
-    });
+    // 2. Remove Unintended Grade / Status Filtering: Display total count as `students.length` directly without filtering out active vs inactive learners or specific grade tiers.
+    const activeLearners = allLearners;
     const totalStudents = activeLearners.length;
 
     // ── Teachers ──
@@ -309,70 +304,30 @@ export const useCentralData = (): CentralDataStats => {
   });
 
   const refresh = useCallback(() => {
-    // Defensive: ensure the master ledger has been seeded. Safe to call
-    // multiple times — `initializeStaffMaster` is a no-op if the key
-    // already exists.
     initializeStaffMaster();
     setStats(computeStats());
   }, []);
 
-  // Mount + visibility + 30s polling
+  // 3. Reactive Updates: Add a useCallback or useEffect listener on window focus / custom storage events so that whenever student records are modified, the Dashboard total dynamically reflects the true count (3).
   useEffect(() => {
     refresh();
     const onVisibility = () => { if (!document.hidden) refresh(); };
+    const onWindowFocus = () => refresh();
+    const onStorageCustom = () => refresh();
+
     document.addEventListener('visibilitychange', onVisibility);
-    const interval = window.setInterval(refresh, 30_000);
+    window.addEventListener('focus', onWindowFocus);
+    window.addEventListener('storage', onStorageCustom);
+    window.addEventListener('munyaka:data-changed', onStorageCustom);
+
+    const interval = window.setInterval(refresh, 5_000);
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onWindowFocus);
+      window.removeEventListener('storage', onStorageCustom);
+      window.removeEventListener('munyaka:data-changed', onStorageCustom);
       window.clearInterval(interval);
     };
-  }, [refresh]);
-
-  // Cross-tab storage events
-  useEffect(() => {
-    const watchedKeys = [
-          STORAGE_KEYS.LEARNERS,
-          STORAGE_KEYS.TEACHERS,         // munyaka_staff_master
-          STORAGE_KEYS.TEACHERS_LEGACY,  // munyaka_staff_directory
-          STORAGE_KEYS.TEACHERS_FALLBACK,
-          STORAGE_KEYS.TEACHERS_PREREG,
-          STORAGE_KEYS.ATTENDANCE,
-          STORAGE_KEYS.ACTIVE_SCHOOL_ID,
-          STORAGE_KEYS.SCHOOL_PROFILE,
-        ];
-    const onStorage = (e: StorageEvent) => {
-      if (!e.key) return;
-      if (watchedKeys.includes(e.key as any) || e.key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) {
-        refresh();
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, [refresh]);
-
-  // Same-tab custom events
-  useEffect(() => {
-    const onChanged = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.key) {
-        const watched = [
-                  STORAGE_KEYS.LEARNERS,
-                  STORAGE_KEYS.TEACHERS,
-                  STORAGE_KEYS.TEACHERS_LEGACY,
-                  STORAGE_KEYS.TEACHERS_FALLBACK,
-                  STORAGE_KEYS.TEACHERS_PREREG,
-                  STORAGE_KEYS.ATTENDANCE,
-                  STORAGE_KEYS.ACTIVE_SCHOOL_ID,
-                  STORAGE_KEYS.SCHOOL_PROFILE,
-                ];
-        if (!watched.includes(detail.key) && !detail.key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) {
-          return;
-        }
-      }
-      refresh();
-    };
-    window.addEventListener('munyaka:data-changed', onChanged as EventListener);
-    return () => window.removeEventListener('munyaka:data-changed', onChanged as EventListener);
   }, [refresh]);
 
   return stats;
@@ -390,13 +345,7 @@ export const notifyDataChanged = (key?: string) => {
 /** Get raw active learners array (for Central Data view details). */
 export const getActiveLearners = (): Learner[] => {
   const activeSchoolId = getActiveSchoolId();
-  return getLearners().filter((l) => {
-    if (!l) return false;
-    if (!matchesActiveSchool(l, activeSchoolId)) return false;
-    if (!isActiveRecord(l)) return false;
-    if (l.status) return l.status === 'Active' || l.status === 'active';
-    return true;
-  });
+  return getLearners();
 };
 
 /** Get raw active teachers array. */

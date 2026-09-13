@@ -321,10 +321,10 @@ const AdminDashboard: React.FC = () => {
 
   // ── System Vitals ────────────────────────────────────────────────────────
   const vitals = useMemo<SystemVitals>(() => {
+    // 1. Unify Data Reader in Dashboard: use central useCentralData() count or getStoredLearners() directly
     const learners = safeRead<any[]>('school_learners_data', []);
     const juniorCount = learners.filter((l: any) => {
       if (!l) return false;
-      if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
       const g = (l.grade || '').toLowerCase();
       return g.includes('grade 7') || g.includes('grade 8') || g.includes('grade 9') || g.includes('junior');
     }).length;
@@ -599,11 +599,6 @@ const AdminDashboard: React.FC = () => {
     const classRows = useMemo<ClassRow[]>(() => {
       const learners = safeRead<any[]>('school_learners_data', []);
   
-      const isActive = (l: any) => {
-        if (!l) return false;
-        if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
-        return true;
-      };
       const isBoy = (l: any) => {
         const g = (l.gender || '').toLowerCase();
         return g === 'male' || g === 'boy';
@@ -619,7 +614,6 @@ const AdminDashboard: React.FC = () => {
       ALL_GRADES.forEach((g) => { variantsByCanonical[g] = new Set(); });
   
       learners.forEach((l: any) => {
-              if (!isActive(l)) return;
               const raw = String(l.grade || '').trim();
               if (!raw) return;
               const canonical = formatGradeName(raw);
@@ -632,7 +626,6 @@ const AdminDashboard: React.FC = () => {
             return ALL_GRADES.map((grade) => {
               const variants = variantsByCanonical[grade];
               const classLearners = learners.filter((l: any) => {
-                if (!isActive(l)) return false;
                 const raw = String(l.grade || '').trim();
                 return variants.has(raw);
               });
