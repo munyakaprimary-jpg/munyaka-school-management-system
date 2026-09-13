@@ -191,14 +191,35 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
 
   const [studentsData, setStudentsData] = useState<StudentItem[]>(() => {
     try {
-      const stored = localStorage.getItem(STUDENTS_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const keys = ['school_learners_data', 'munyaka_learners_db', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
+      for (const k of keys) {
+        const stored = localStorage.getItem(k);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
       }
     } catch { /* use default */ }
     return propStudentsData;
   });
+
+  // Re-read students when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      const keys = ['school_learners_data', 'munyaka_learners_db', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
+      for (const k of keys) {
+        const stored = localStorage.getItem(k);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setStudentsData(parsed);
+            return;
+          }
+        }
+      }
+    } catch {}
+  }, [isOpen]);
 
   // Sync from localStorage
   useEffect(() => {
