@@ -79,6 +79,23 @@ export interface UnifiedRecordPaymentModalProps {
 const GRADES_STORAGE_KEY = 'munyaka_grades';
 const STUDENTS_STORAGE_KEY = 'school_learners_data';
 
+// Default grades configuration matching LearnerFeePaymentModal
+const DEFAULT_GRADES_CONFIG: GradeItem[] = [
+  { id: "playgroup", name: "Playgroup", streams: [{ id: "yellow", name: "Yellow" }, { id: "blue", name: "Blue" }] },
+  { id: "pp1", name: "PP1", streams: [{ id: "yellow", name: "Yellow" }, { id: "blue", name: "Blue" }, { id: "red", name: "Red" }] },
+  { id: "pp2", name: "PP2", streams: [{ id: "yellow", name: "Yellow" }, { id: "blue", name: "Blue" }, { id: "red", name: "Red" }] },
+  ...Array.from({ length: 9 }, (_, i) => ({
+    id: `grade${i + 1}`,
+    name: `Grade ${i + 1}`,
+    streams: [
+      { id: `${i + 1}-yellow`, name: "Yellow" },
+      { id: `${i + 1}-blue`, name: "Blue" },
+      { id: `${i + 1}-red`, name: "Red" },
+      { id: `${i + 1}-green`, name: "Green" },
+    ],
+  })),
+];
+
 // ─────────────────────────────────────────────
 // Payment mode config
 // ─────────────────────────────────────────────
@@ -190,7 +207,7 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch { /* use default */ }
-    return propGradesData;
+    return DEFAULT_GRADES_CONFIG as unknown as Grade[];
   });
 
   const [studentsData, setStudentsData] = useState<StudentItem[]>(() => {
