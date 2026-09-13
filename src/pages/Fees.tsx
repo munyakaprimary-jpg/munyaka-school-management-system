@@ -998,40 +998,40 @@ const Fees = () => {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-50/80 border-b border-slate-200/80">
                     <tr>
-                      <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Student Details</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Term Fee</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Fee Paid</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                      <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider min-w-[220px] w-1/3">Student Details</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Term Fee</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Fee Paid</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredCalculatedFees.map((fee) => (
                       <tr key={fee.id} className="hover:bg-slate-50/60 transition-colors group">
-                        <td className="px-5 py-3.5">
-                          <p className="font-semibold text-slate-900">{fee.student}</p>
-                          <p className="text-xs text-slate-400">
+                        <td className="px-4 py-2.5 min-w-[220px]">
+                          <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{fee.student}</p>
+                          <p className="text-xs text-slate-500 leading-tight">
                             Adm No: {fee.admNo} • {fee.grade} {fee.stream ? `• ${fee.stream}` : ''}
                           </p>
                         </td>
-                        <td className="px-5 py-3.5 text-center font-medium text-slate-600">KES {fee.total.toLocaleString()}</td>
-                        <td className="px-5 py-3.5 text-center font-semibold text-emerald-600">KES {fee.paid.toLocaleString()}</td>
-                        <td className="px-5 py-3.5 text-center font-semibold">
+                        <td className="px-4 py-2.5 text-center text-sm font-medium text-slate-600">KES {fee.total.toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-center text-sm font-semibold text-emerald-600">KES {fee.paid.toLocaleString()}</td>
+                        <td className="px-4 py-2.5 text-center text-sm font-semibold">
                           <span className={fee.balance > 0 ? "text-rose-600" : "text-slate-400"}>
                             {fee.balance > 0 ? `KES ${fee.balance.toLocaleString()}` : "CLEARED"}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5 text-center">
-                          <Badge className={cn("rounded-md border-none px-2.5 py-0.5 text-xs font-medium", 
-                            fee.status === 'Cleared' ? "bg-emerald-50 text-emerald-700" : 
-                            fee.status === 'Partial' ? "bg-amber-50 text-amber-700" : 
+                        <td className="px-4 py-2.5 text-center">
+                          <Badge className={cn("rounded-md border-none px-2.5 py-0.5 text-xs font-medium",
+                            fee.status === 'Cleared' ? "bg-emerald-50 text-emerald-700" :
+                            fee.status === 'Partial' ? "bg-amber-50 text-amber-700" :
                             "bg-slate-100 text-slate-600"
                           )}>
                             {fee.status}
                           </Badge>
                         </td>
-                        <td className="px-5 py-3.5 text-right">
+                        <td className="px-4 py-2.5 text-right">
                           <div className="flex justify-end gap-1 no-print">
                             <Button 
                               variant="ghost" 
