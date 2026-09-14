@@ -37,6 +37,8 @@ export const initialSeedData = {
 // Auto-alias learners array to match students
 initialSeedData.learners = initialSeedData.students;
 
+export const INITIAL_SEED_DATA = initialSeedData;
+
 export const mockLearners = initialSeedData.learners;
 export const mockStudents = initialSeedData.students;
 export const mockExams = initialSeedData.exams;
