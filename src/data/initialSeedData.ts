@@ -1,4 +1,4 @@
-export const initialSeedData: Record<string, any> = {
+export const initialSeedData = {
   students: [
     {
       id: "1-001",
@@ -25,50 +25,100 @@ export const initialSeedData: Record<string, any> = {
       attendanceStatus: "Present",
       guardian: "TITUS KIJUSA LUVISIA",
       phone: "0705138090"
+    },
+    {
+      id: "1-003",
+      admNo: "B004761829",
+      name: "SAMWEL KAMAU WANJIKU",
+      fullName: "SAMWEL KAMAU WANJIKU",
+      grade: "Grade 6",
+      stream: "Yellow",
+      status: "Active",
+      gender: "Male",
+      attendanceStatus: "Late",
+      guardian: "MARY WANJIKU WAIRIMU",
+      phone: "0719182804"
+    },
+    {
+      id: "1-006",
+      admNo: "B004276095",
+      name: "ALFRED JUMA",
+      fullName: "ALFRED JUMA",
+      grade: "Grade 6",
+      stream: "East",
+      status: "Active",
+      gender: "Male",
+      attendanceStatus: "Unmarked",
+      guardian: "PHANICE NASIMIYU KIRISWA",
+      phone: "0141893904"
+    },
+    {
+      id: "1-007",
+      admNo: "B005110023",
+      name: "BRIAN KIPTOO",
+      fullName: "BRIAN KIPTOO",
+      grade: "Grade 7",
+      stream: "VENUS",
+      status: "Suspended",
+      gender: "Male",
+      attendanceStatus: "Unmarked",
+      guardian: "MARY KIPTOO",
+      phone: "0722001122"
+    },
+    {
+      id: "1-008",
+      admNo: "B005233114",
+      name: "MARY ATIENO",
+      fullName: "MARY ATIENO",
+      grade: "Grade 5",
+      stream: "Blue",
+      status: "Active",
+      gender: "Female",
+      attendanceStatus: "Present",
+      guardian: "JOHN ATIENO",
+      phone: "0711002233"
+    },
+    {
+      id: "1-009",
+      admNo: "MUN-G6-001/2021",
+      name: "SAMSON KIBET",
+      fullName: "SAMSON KIBET",
+      grade: "Grade 6",
+      stream: "Blue",
+      gender: "Male",
+      assessmentNo: "A0997890",
+      birthCertNo: "1442008976",
+      status: "Active",
+      attendanceStatus: "Present",
+      guardian: "ALICE KIBET",
+      phone: "0700000000"
     }
   ],
   learners: [],
   staff: [],
-  staffPrereg: [],
-  grades: [],
-  examTypes: [],
-  learningAreas: [],
-  assessmentScores: {},
-  fees: [],
-  feeStructures: [],
-  transactions: [],
-  attendance: {},
-  libraryBooks: [],
-  ictAssets: [],
-  notices: [],
-  settings: {},
   exams: [],
   marks: [],
-  cbcAssessments: []
+  cbcAssessments: [],
+  libraryBooks: [],
+  ictAssets: [],
+  feeStructures: [],
+  transactions: []
 };
 
-initialSeedData.learners = initialSeedData.students;
+(initialSeedData as any).learners = initialSeedData.students;
 
 export const INITIAL_SEED_DATA = initialSeedData;
 export const DEFAULT_CBC_CLUSTERS = [];
 export const buildDefaultClusters = () => [];
-export const strandCategories = [
-  'Languages',
-  'Mathematics',
-  'Science & Technology',
-  'Social Studies',
-  'Creative Arts',
-  'Religious Education',
-  'Assessments & Quizzes'
-];
-export const gradeLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+export const strandCategories = [];
+export const gradeLevels = [];
 export const ContentItem = {};
 export const StrandCategory = {};
 export const MemoryVerse = {};
 export const RevisionQuestion = {};
 export const Attachment = {};
 export const AssessmentType = {};
-export const assessmentTypeOptions = ['quiz', 'exam', 'assignment', 'practical', 'oral'];
+export const assessmentTypeOptions = [];
 
 export const mockLearners = initialSeedData.students;
 export const mockStudents = initialSeedData.students;
