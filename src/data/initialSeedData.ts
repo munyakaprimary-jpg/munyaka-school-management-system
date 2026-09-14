@@ -1,72 +1,150 @@
 export const initialSeedData = {
   // --- LEARNERS & STUDENTS ---
   students: [
-    { id: "1-001", admNo: "B002961576", name: "MUTWIKA KILONZO", fullName: "MUTWIKA KILONZO", grade: "Grade 7", stream: "VENUS", status: "Active" },
-    { id: "1-002", admNo: "B004123291", name: "OCTEVIOR LUVISIA", fullName: "OCTEVIOR LUVISIA", grade: "Grade 6", stream: "Yellow", status: "Active" },
-    { id: "1-003", admNo: "B004761829", name: "SAMWEL KAMAU WANJIKU", fullName: "SAMWEL KAMAU WANJIKU", grade: "Grade 6", stream: "Yellow", status: "Active" },
-    { id: "1-006", admNo: "B004276095", name: "ALFRED JUMA", fullName: "ALFRED JUMA", grade: "Grade 6", stream: "East", status: "Active" },
-    { id: "1-007", admNo: "B005110023", name: "BRIAN KIPTOO", fullName: "BRIAN KIPTOO", grade: "Grade 7", stream: "VENUS", status: "Suspended" },
-    { id: "1-008", admNo: "B005233114", name: "MARY ATIENO", fullName: "MARY ATIENO", grade: "Grade 5", stream: "Blue", status: "Active" },
-    { id: "1-009", admNo: "MUN-G6-001/2021", name: "SAMSON KIBET", fullName: "SAMSON KIBET", grade: "Grade 6", stream: "Blue", status: "Active" }
+    {
+      id: "1-001",
+      admNo: "B002961576",
+      name: "MUTWIKA KILONZO",
+      fullName: "MUTWIKA KILONZO",
+      grade: "Grade 7",
+      stream: "VENUS",
+      status: "Active",
+      gender: "Male",
+      attendanceStatus: "Present",
+      guardian: "STEPHEN KILONZO KINGOO",
+      phone: "0705221675"
+    },
+    {
+      id: "1-002",
+      admNo: "B004123291",
+      name: "OCTEVIOR LUVISIA",
+      fullName: "OCTEVIOR LUVISIA",
+      grade: "Grade 6",
+      stream: "Yellow",
+      status: "Active",
+      gender: "Male",
+      attendanceStatus: "Present",
+      guardian: "TITUS KIJUSA LUVISIA",
+      phone: "0705138090"
+    },
+    {
+      id: "1-003",
+      admNo: "B004761829",
+      name: "SAMWEL KAMAU WANJIKU",
+      fullName: "SAMWEL KAMAU WANJIKU",
+      grade: "Grade 6",
+      stream: "Yellow",
+      status: "Active",
+      gender: "Male",
+      attendanceStatus: "Late",
+      guardian: "MARY WANJIKU WAIRIMU",
+      phone: "0719182804"
+    },
+    {
+      id: "1-006",
+      admNo: "B004276095",
+      name: "ALFRED JUMA",
+      fullName: "ALFRED JUMA",
+      grade: "Grade 6",
+      stream: "East",
+      status: "Active",
+      gender: "Male",
+      attendanceStatus: "Unmarked",
+      guardian: "PHANICE NASIMIYU KIRISWA",
+      phone: "0141893904"
+    },
+    {
+      id: "1-007",
+      admNo: "B005110023",
+      name: "BRIAN KIPTOO",
+      fullName: "BRIAN KIPTOO",
+      grade: "Grade 7",
+      stream: "VENUS",
+      status: "Suspended",
+      gender: "Male",
+      attendanceStatus: "Unmarked",
+      guardian: "MARY KIPTOO",
+      phone: "0722001122"
+    },
+    {
+      id: "1-008",
+      admNo: "B005233114",
+      name: "MARY ATIENO",
+      fullName: "MARY ATIENO",
+      grade: "Grade 5",
+      stream: "Blue",
+      status: "Active",
+      gender: "Female",
+      attendanceStatus: "Present",
+      guardian: "JOHN ATIENO",
+      phone: "0711002233"
+    },
+    {
+      id: "1-009",
+      admNo: "MUN-G6-001/2021",
+      name: "SAMSON KIBET",
+      fullName: "SAMSON KIBET",
+      grade: "Grade 6",
+      stream: "Blue",
+      gender: "Male",
+      assessmentNo: "A0997890",
+      birthCertNo: "1442008976",
+      status: "Active",
+      attendanceStatus: "Present",
+      guardian: "ALICE KIBET",
+      phone: "0700000000"
+    }
   ],
   learners: [],
 
-  // --- EXAMS & ASSESSMENT MARKS ---
-  exams: [
-    // Add your exam definitions here (e.g., Opener Term 1, Mid Term)
-  ],
-  marks: [
-    // Add recorded assessment marks here
-  ],
+  // --- STAFF & TEACHERS ---
+  staff: [],
+
+  // --- EXAMS, CBC ASSESSMENTS & MARKS ---
+  exams: [],
+  marks: [],
+  cbcAssessments: [],
 
   // --- LIBRARY MANAGEMENT ---
-  libraryBooks: [
-    // Add library book records (e.g., titles, ISBNs, quantities, issued status)
-  ],
+  libraryBooks: [],
+  bookIssues: [],
 
   // --- ICT & ASSET INVENTORY ---
-  ictAssets: [
-    // Add ICT items (e.g., laptops, tablets, projectors, serial numbers)
-  ],
+  ictAssets: [],
+  maintenanceLogs: [],
 
-  // --- FINANCES & FEE TRACKING ---
+  // --- FINANCES, FEES & TRANSACTIONS ---
   feeStructures: [],
-  transactions: []
+  transactions: [],
+  feePayments: [],
+
+  // --- ATTENDANCE & TIMETABLE ---
+  attendanceRecords: [],
+  timetable: [],
+
+  // --- SYSTEM SETTINGS & SCHOOL PROFILE ---
+  schoolProfile: {
+    name: "Munyaka Academy",
+    motto: "Excellence in Education",
+    code: "MUN-001"
+  }
 };
 
-// Auto-alias learners array to match students
+// Auto-alias learners to match students array
 initialSeedData.learners = initialSeedData.students;
 
-export const INITIAL_SEED_DATA = initialSeedData;
-export const DEFAULT_CBC_CLUSTERS = [];
-export const buildDefaultClusters = () => [];
-export const strandCategories = [];
-export const gradeLevels = [];
-export const ContentItem = {};
-export const StrandCategory = {};
-export const MemoryVerse = {};
-export const RevisionQuestion = {};
-export const Attachment = {};
-export const AssessmentType = {};
-export const assessmentTypeOptions = [];
-export const DEFAULT_CBC_CLUSTERS = [];
-export const buildDefaultClusters = () => [];
-export const strandCategories = [];
-export const gradeLevels = [];
-export const ContentItem = {};
-export const StrandCategory = {};
-export const MemoryVerse = {};
-export const RevisionQuestion = {};
-export const Attachment = {};
-export const AssessmentType = {};
-export const assessmentTypeOptions = [];
-
+// Export individual named constants for backward compatibility across all modules
 export const mockLearners = initialSeedData.learners;
 export const mockStudents = initialSeedData.students;
+export const mockStaff = initialSeedData.staff;
 export const mockExams = initialSeedData.exams;
 export const mockMarks = initialSeedData.marks;
+export const mockCBCAssessments = initialSeedData.cbcAssessments;
 export const mockLibrary = initialSeedData.libraryBooks;
 export const mockICT = initialSeedData.ictAssets;
 export const mockFinances = initialSeedData.transactions;
+export const mockFeeStructures = initialSeedData.feeStructures;
+export const mockAttendance = initialSeedData.attendanceRecords;
+export const mockTimetable = initialSeedData.timetable;
 
 export default initialSeedData;
