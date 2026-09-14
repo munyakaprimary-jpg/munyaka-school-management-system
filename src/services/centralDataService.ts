@@ -1,72 +1,53 @@
-/**
- * Central Data Export Service
- * ============================
- * Aggregates all persistent data stores across the Munyaka school management system
- * into a single unified snapshot for export as `initialSeedData.ts`.
- */
+import { initialSeedData } from '../data/initialSeedData';
 
-export const generateFullSnapshot = (): string => {
-  const safeParse = (raw: string | null, fallback: any) => {
-    if (!raw) return fallback;
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return fallback;
-    }
-  };
-
-  const snapshot = {
-    // Core Academics & Structure
-    students: safeParse(
-      localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_db') || localStorage.getItem('school_learners_data'),
-      []
-    ),
-    classes: safeParse(localStorage.getItem('munyaka_classes'), []),
-    streams: safeParse(localStorage.getItem('munyaka_streams'), []),
-    learningAreas: safeParse(localStorage.getItem('munyaka_learning_areas'), []),
-
-    // Exams & Assessment Scores
-    exams: safeParse(localStorage.getItem('munyaka_exams'), []),
-    assessments: safeParse(localStorage.getItem('munyaka_assessments'), []),
-    gradingScales: safeParse(localStorage.getItem('munyaka_grading_scales'), []),
-    reportCards: safeParse(localStorage.getItem('munyaka_report_cards'), []),
-
-    // Personnel & Staff Directory
-    staff: safeParse(
-      localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_master_staff_list'),
-      []
-    ),
-    roles: safeParse(localStorage.getItem('munyaka_roles'), []),
-
-    // Financial Ledger & Payments
-    payments: safeParse(localStorage.getItem('munyaka_payments'), []),
-    feeStructures: safeParse(localStorage.getItem('munyaka_fee_structures'), []),
-    invoices: safeParse(localStorage.getItem('munyaka_invoices'), []),
-
-    // Specialized Support & Laboratory Logs
-    libraryBooks: safeParse(localStorage.getItem('munyaka_library_books'), []),
-    libraryLogs: safeParse(localStorage.getItem('munyaka_library_borrowings'), []),
-    scienceLabInventory: safeParse(localStorage.getItem('munyaka_science_lab'), []),
-    ictLabEquipment: safeParse(localStorage.getItem('munyaka_ict_lab'), []),
-    storeInventory: safeParse(localStorage.getItem('munyaka_store_items'), []),
-    attendance: safeParse(localStorage.getItem('munyaka_attendance'), []),
-
-    // System Configuration
-    schoolSettings: safeParse(localStorage.getItem('munyaka_school_settings') || localStorage.getItem('munyaka_system_settings_v3'), {}),
-  };
-
-  return `export const initialSeedData = ${JSON.stringify(snapshot, null, 2)};\n\nexport const INITIAL_SEED_DATA = initialSeedData;\n`;
+const KEYS = {
+  LEARNERS: 'munyaka_learners',
+  EXAMS: 'munyaka_exams',
+  MARKS: 'munyaka_marks',
+  LIBRARY: 'munyaka_library',
+  FINANCES: 'munyaka_finances',
 };
 
-export const downloadSeedFile = () => {
-  const content = generateFullSnapshot();
-  const blob = new Blob([content], { type: 'text/typescript;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'initialSeedData.ts';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+export const CentralDataService = {
+  // Retrieve module data or seed if empty
+  getData: <T>(key: string, fallbackSeed: T[]): T[] => {
+    try {
+      const stored = localStorage.getItem(key);
+      if (!stored) {
+        localStorage.setItem(key, JSON.stringify(fallbackSeed));
+        return fallbackSeed;
+      }
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        localStorage.setItem(key, JSON.stringify(fallbackSeed));
+        return fallbackSeed;
+      }
+      return parsed;
+    } catch {
+      localStorage.setItem(key, JSON.stringify(fallbackSeed));
+      return fallbackSeed;
+    }
+  },
+
+  // Save new items cleanly to storage
+  saveData: <T>(key: string, data: T[]): void => {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.error(`Failed to save data for ${key}:`, e);
+    }
+  },
+
+  // Getters for specific contexts
+  getLearners: () => CentralDataService.getData(KEYS.LEARNERS, initialSeedData.students),
+  getExams: () => CentralDataService.getData(KEYS.EXAMS, initialSeedData.exams || []),
+  getLibrary: () => CentralDataService.getData(KEYS.LIBRARY, initialSeedData.libraryBooks || []),
+  
+  // Storage updater for new records
+  addRecord: <T>(key: string, newRecord: T): T[] => {
+    const existing = CentralDataService.getData<T>(key, []);
+    const updated = [...existing, newRecord];
+    CentralDataService.saveData(key, updated);
+    return updated;
+  }
 };
