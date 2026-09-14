@@ -525,12 +525,12 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
                     <option value="3">Grade 3</option>
                   </optgroup>
                   <optgroup label="◀ Upper Primary (Grades 4–6)">
-                    {gradeLevels.filter((g) => g >= 4 && g <= 6).map((g) => (
+                    {gradeLevels.filter((g) => Number(g) >= 4 && Number(g) <= 6).map((g) => (
                       <option key={g} value={g}>Grade {g}</option>
                     ))}
                   </optgroup>
                   <optgroup label="◀ Junior Secondary (Grades 7–9)">
-                    {gradeLevels.filter((g) => g >= 7).map((g) => (
+                    {gradeLevels.filter((g) => Number(g) >= 7).map((g) => (
                       <option key={g} value={g}>Grade {g}</option>
                     ))}
                   </optgroup>

@@ -803,7 +803,7 @@ export default function Students() {
 
   // Handle Delete Confirmation — invoked by AdminPinModal when the entered
     // admin password is verified.
-    const confirmDelete = (learner: LearnerRowCompat) => {
+    const confirmDelete = (learner: any) => {
         const nextStudents = students.filter((item) => item.id !== learner.id);
         setStudents(nextStudents);
         localStorage.setItem('munyaka_students', JSON.stringify(nextStudents));

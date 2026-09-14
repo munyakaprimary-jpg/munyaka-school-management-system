@@ -684,7 +684,7 @@ export function createStudent(input: Omit<Student, 'id'> & { id?: string }): Stu
     academicYear: activeYear,
     ...input,
     id: input.id ?? generateId('stu'),
-  };
+  } as unknown as Student;
   const next = [...getStudents(), newStudent];
   setStudents(next);
   return newStudent;

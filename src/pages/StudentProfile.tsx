@@ -1027,9 +1027,9 @@ const StudentProfile = () => {
       <LearnerFeePaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
-        onSubmitPayment={(tx) => {
+        onSubmitPayment={(tx: any) => {
           setIsPaymentModalOpen(false);
-          handleRecordPayment(tx);
+          handleRecordPayment(tx.transaction || tx);
         }}
       />
     </div>

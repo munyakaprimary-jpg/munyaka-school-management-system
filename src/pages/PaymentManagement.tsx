@@ -2466,6 +2466,7 @@ const PaymentManagement = () => {
       </Modal>
 
       {/* Unified Payment Modal */}
+      {/*
       <UnifiedRecordPaymentModal
         isOpen={isLicenseModalOpen}
         activeAcademicYear={activeAcademicYear}
@@ -2510,6 +2511,7 @@ const PaymentManagement = () => {
         hideLearnerSelection={true}
         hideActivationKey={false}
       />
+      */}
 
       {/* Receipt Modal */}
       <ReceiptModal
