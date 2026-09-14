@@ -1,65 +1,37 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { initialSeedData } from '../data/initialSeedData';
+import { CentralDataService } from '../services/centralDataService';
 
 interface LearnerContextType {
   learners: any[];
   setLearners: React.Dispatch<React.SetStateAction<any[]>>;
-  addLearner?: (newLearner: any) => void;
+  addLearner: (newLearner: any) => void;
   resetToSeedData: () => void;
 }
 
 const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
-// Helper to normalize schema discrepancies
-const normalizeLearnerData = (data: any[]) => {
-  if (!Array.isArray(data)) return [];
-  return data.map((item) => ({
-    ...item,
-    name: item.name || item.fullName || 'Unknown',
-    fullName: item.fullName || item.name || 'Unknown'
-  }));
-};
-
-const getInitialLearners = () => {
-  const rawSeed = initialSeedData?.students || initialSeedData?.learners || [];
-  const normalizedSeed = normalizeLearnerData(rawSeed);
-
-  try {
-    const saved = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Only keep localStorage if it contains at least 7 learners
-      if (Array.isArray(parsed) && parsed.length >= 7) {
-        return normalizeLearnerData(parsed);
-      }
-    }
-  } catch (e) {
-    console.error("Storage parse error:", e);
-  }
-
-  // Overwrite empty/corrupted localStorage with full seed dataset
-  localStorage.setItem('munyaka_learners', JSON.stringify(normalizedSeed));
-  return normalizedSeed;
-};
-
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [learners, setLearners] = useState<any[]>(getInitialLearners);
+  const [learners, setLearners] = useState<any[]>(() => CentralDataService.getLearners());
 
   useEffect(() => {
     if (learners.length > 0) {
-      localStorage.setItem('munyaka_learners', JSON.stringify(learners));
+      CentralDataService.saveLearners(learners);
     }
   }, [learners]);
 
   const addLearner = (newLearner: any) => {
-    setLearners((prev) => [...prev, newLearner]);
+    setLearners((prev) => {
+      const updated = [...prev, newLearner];
+      CentralDataService.saveLearners(updated);
+      return updated;
+    });
   };
 
   const resetToSeedData = () => {
-    const rawSeed = initialSeedData?.students || initialSeedData?.learners || [];
-    const normalized = normalizeLearnerData(rawSeed);
-    setLearners(normalized);
-    localStorage.setItem('munyaka_learners', JSON.stringify(normalized));
+    localStorage.removeItem('munyaka_learners');
+    localStorage.removeItem('munyaka_students');
+    const resetList = CentralDataService.getLearners();
+    setLearners(resetList);
   };
 
   return (
