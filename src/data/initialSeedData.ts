@@ -105,21 +105,10 @@ export const initialSeedData = {
   transactions: []
 };
 
+// Mirror learners list automatically
 (initialSeedData as any).learners = initialSeedData.students;
 
-export const INITIAL_SEED_DATA = initialSeedData;
-export const DEFAULT_CBC_CLUSTERS = [];
-export const buildDefaultClusters = () => [];
-export const strandCategories = [];
-export const gradeLevels = [];
-export const ContentItem = {};
-export const StrandCategory = {};
-export const MemoryVerse = {};
-export const RevisionQuestion = {};
-export const Attachment = {};
-export const AssessmentType = {};
-export const assessmentTypeOptions = [];
-
+// Explicit named exports matching all component imports across the app
 export const mockLearners = initialSeedData.students;
 export const mockStudents = initialSeedData.students;
 export const mockStaff = initialSeedData.staff;
