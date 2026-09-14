@@ -797,48 +797,50 @@ export default function Students() {
           <div className="w-full max-w-full overflow-x-hidden">
 
         {/* 2. Top Header & Action Controls - stacks on mobile */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200 w-full max-w-full">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3 mb-1 flex-wrap">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Learners Management</h1>
-            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
-              {termBadge}
-            </span>
-          </div>
-          <p className="text-sm font-medium text-slate-500 break-words hyphens-auto">
-            {filteredLearners.length} active learners
-            {learners.length !== filteredLearners.length && ` (filtered from ${learners.length} total)`}
-            {isAdmin && (
-              <>
-                {' · '}
-                <Link
-                  to="/learners/archive"
-                  className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 transition-colors"
-                >
-                  <Archive size={13} />
-                  View Transferred Archive
-                </Link>
-              </>
-            )}
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">
-          <div className="relative w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              disabled={isAnyExportInProgress}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto"
-            >
-              {isAnyExportInProgress ? (
-                <Loader2 className="w-4 h-4 text-slate-500 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4 text-slate-500" />
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 mb-8 pb-6 border-b border-slate-200 w-full max-w-full">
+          <div className="min-w-0 flex-1 pr-0 lg:pr-4">
+            <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 whitespace-nowrap">Learners Management</h1>
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
+                {termBadge}
+              </span>
+            </div>
+            <p className="text-sm font-medium text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span>
+                {filteredLearners.length} active learners
+                {learners.length !== filteredLearners.length && ` (filtered from ${learners.length} total)`}
+              </span>
+              {isAdmin && (
+                <span className="inline-flex items-center gap-1">
+                  <span>·</span>
+                  <Link
+                    to="/learners/archive"
+                    className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 transition-colors"
+                  >
+                    <Archive size={13} />
+                    View Transferred Archive
+                  </Link>
+                </span>
               )}
-              {isAnyExportInProgress ? "Exporting…" : "Export CSV"}
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
-            </button>
+            </p>
+          </div>
+  
+          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            <div className="relative w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                disabled={isAnyExportInProgress}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto"
+              >
+                {isAnyExportInProgress ? (
+                  <Loader2 className="w-4 h-4 text-slate-500 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 text-slate-500" />
+                )}
+                {isAnyExportInProgress ? "Exporting…" : "Export CSV"}
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
+              </button>
 
             {isExportMenuOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
