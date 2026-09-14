@@ -70,6 +70,7 @@ import MarkedScriptsPage from "./pages/MarkedScriptsPage";
 import Communication from "./pages/Communication";
 import Library from "./pages/Library";
 import Inventory from "./pages/Inventory";
+import { LearnerProvider } from './context/LearnerContext';
 import { useStorageHydration } from "@/hooks/useStorageHydration";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
@@ -326,8 +327,9 @@ const App = () => {
                   <TooltipProvider>
                     <Toaster />
                     <Sonner />
-                    <Routes>
-                      {/* Public Routes */}
+                    <LearnerProvider>
+                      <Routes>
+                        {/* Public Routes */}
                       <Route path="/login" element={<Login />} />
                       <Route path="/portal" element={<ParentPortal />} />
 
@@ -395,6 +397,7 @@ const App = () => {
                       <Route path="/lan-config" element={<ProtectedRoute allowedRoles={['owner']} blockedRoles={['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student']}><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
+                    </LearnerProvider>
                   </TooltipProvider>
                 </ThemeProvider>
               </NotificationProvider>
