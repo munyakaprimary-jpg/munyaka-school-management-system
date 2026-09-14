@@ -1,5 +1,4 @@
 export const initialSeedData = {
-  // --- LEARNERS & STUDENTS ---
   students: [
     {
       id: "1-001",
@@ -96,45 +95,21 @@ export const initialSeedData = {
     }
   ],
   learners: [],
-
-  // --- STAFF & TEACHERS ---
   staff: [],
-
-  // --- EXAMS, CBC ASSESSMENTS & MARKS ---
   exams: [],
   marks: [],
   cbcAssessments: [],
-
-  // --- LIBRARY MANAGEMENT ---
   libraryBooks: [],
-  bookIssues: [],
-
-  // --- ICT & ASSET INVENTORY ---
   ictAssets: [],
-  maintenanceLogs: [],
-
-  // --- FINANCES, FEES & TRANSACTIONS ---
   feeStructures: [],
-  transactions: [],
-  feePayments: [],
-
-  // --- ATTENDANCE & TIMETABLE ---
-  attendanceRecords: [],
-  timetable: [],
-
-  // --- SYSTEM SETTINGS & SCHOOL PROFILE ---
-  schoolProfile: {
-    name: "Munyaka Academy",
-    motto: "Excellence in Education",
-    code: "MUN-001"
-  }
+  transactions: []
 };
 
-// Auto-alias learners to match students array
-initialSeedData.learners = initialSeedData.students;
+// Mirror learners list automatically
+(initialSeedData as any).learners = initialSeedData.students;
 
-// Export individual named constants for backward compatibility across all modules
-export const mockLearners = initialSeedData.learners;
+// Export explicit named components to prevent import errors
+export const mockLearners = initialSeedData.students;
 export const mockStudents = initialSeedData.students;
 export const mockStaff = initialSeedData.staff;
 export const mockExams = initialSeedData.exams;
@@ -144,7 +119,5 @@ export const mockLibrary = initialSeedData.libraryBooks;
 export const mockICT = initialSeedData.ictAssets;
 export const mockFinances = initialSeedData.transactions;
 export const mockFeeStructures = initialSeedData.feeStructures;
-export const mockAttendance = initialSeedData.attendanceRecords;
-export const mockTimetable = initialSeedData.timetable;
 
 export default initialSeedData;
