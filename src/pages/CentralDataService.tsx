@@ -103,16 +103,43 @@ export default function CentralDataService() {
   };
 
   const handleExportSeedData = () => {
-    try {
-      downloadSeedFile();
-      const nowStr = new Date().toLocaleString();
-      lsSet('munyaka_last_export_date', nowStr);
-      setStats(prev => ({ ...prev, lastExportDate: nowStr }));
-      showSuccess("Central database successfully exported as initialSeedData.ts!");
-    } catch (err) {
-      console.error('[CentralDataService] Failed to export seed file:', err);
-      showError('Failed to export initialSeedData.ts. Please check console logs.');
-    }
+    // Get active learners from state or localStorage
+    const localLearners = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners') || localStorage.getItem('munyaka_students');
+    const parsedLearners = localLearners ? JSON.parse(localLearners) : [];
+
+    // Standardize all learners to use both 'fullName' and 'name'
+    const standardizedLearners = parsedLearners.map((item: any) => ({
+      ...item,
+      name: item.name || item.fullName || '',
+      fullName: item.fullName || item.name || ''
+    }));
+
+    // Get active marks
+    const localMarks = localStorage.getItem('munyaka_marks') || localStorage.getItem('marks');
+    const parsedMarks = localMarks ? JSON.parse(localMarks) : [];
+
+    const fullExportData = `export const initialSeedData = {
+  students: ${JSON.stringify(standardizedLearners, null, 2)},
+  learners: ${JSON.stringify(standardizedLearners, null, 2)},
+  marks: ${JSON.stringify(parsedMarks, null, 2)}
+};
+
+export const mockLearners = initialSeedData.learners;
+export const mockStudents = initialSeedData.students;
+export const mockMarks = initialSeedData.marks;
+
+export default initialSeedData;
+`;
+
+    // Trigger file download
+    const blob = new Blob([fullExportData], { type: 'text/typescript' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'initialSeedData.ts';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // ====== UNIFIED EXPORT: JSON backup ======
