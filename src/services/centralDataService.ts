@@ -31,68 +31,33 @@ export const CentralDataService = {
     try {
       console.log("All localStorage keys:", Object.keys(localStorage));
 
-      // Diagnostic & Recovery Scan: Scan all localStorage keys for any array of objects
-      const recoveredLearners: any[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key !== STORAGE_KEY_LEARNERS) {
+      // Target strictly the primary student storage keys in order of precedence
+      const primaryKeys = ['munyaka_learners_db', 'munyaka_students', 'munyaka_learners', 'school_learners_data', STORAGE_KEY_LEARNERS];
+      for (const key of primaryKeys) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
           try {
-            const raw = localStorage.getItem(key);
-            if (raw && (raw.startsWith('[') || raw.startsWith('{'))) {
-              const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                // Check if items look like student records (have name or admNo or id)
-                const isStudentList = parsed.some(item => item && typeof item === 'object' && (item?.name || item?.fullName || item?.admNo || item?.admissionNo));
-                if (isStudentList) {
-                  console.log(`[Diagnostic Recovery] Found potential student list in key "${key}" with ${parsed.length} items.`);
-                  for (const student of parsed) {
-                    if (student && typeof student === 'object') {
-                      const id = student?.id || student?.admNo || student?.admissionNo;
-                      if (id && !recoveredLearners.some(s => (s?.id && s.id === id) || (s?.admNo && s.admNo === student?.admNo))) {
-                        recoveredLearners.push(student);
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          } catch {}
-        }
-      }
-
-      if (recoveredLearners.length > 0) {
-        console.log(`[Diagnostic Recovery] Successfully recovered ${recoveredLearners.length} unique learners from storage scan.`);
-        // Ensure name is properly populated
-        for (const l of recoveredLearners) {
-          if (!l.name && l.fullName) l.name = l.fullName;
-          if (!l.fullName && l.name) l.fullName = l.name;
-        }
-        localStorage.setItem(STORAGE_KEY_LEARNERS, JSON.stringify(recoveredLearners));
-        return recoveredLearners;
-      }
-
-      const data = localStorage.getItem(STORAGE_KEY_LEARNERS);
-      if (data) {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const hasPlaceholders = parsed.some((l: any) => l.name && /^Learner \d+$/i.test(l.name));
-          if (!hasPlaceholders) {
-            return parsed;
-          }
-        }
-      }
-
-      // Check legacy keys
-      const legacyKeys = ['munyaka_learners_db', 'munyaka_students', 'munyaka_learners', 'school_learners_data', 'students', 'learners', 'munyaka_pupils'];
-      for (const key of legacyKeys) {
-        const legacyData = localStorage.getItem(key);
-        if (legacyData) {
-          try {
-            const parsed = JSON.parse(legacyData);
+            const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              console.log(`Migrated learners from legacy key: ${key}`, parsed.length);
-              localStorage.setItem(STORAGE_KEY_LEARNERS, JSON.stringify(parsed));
-              return parsed;
+              // Filter to ensure items are valid student records (must have name or admission/assessment number)
+              const validStudents = parsed.filter(item =>
+                item &&
+                typeof item === 'object' &&
+                (item.name || item.fullName || item.admissionNo || item.admNo || item.assessmentNo) &&
+                !String(item.name || '').toLowerCase().includes('device') &&
+                !String(item.name || '').toLowerCase().includes('setting')
+              );
+
+              if (validStudents.length > 0) {
+                console.log(`[CentralDataService] Loaded ${validStudents.length} valid students from key: ${key}`);
+                // Ensure name & fullName are synchronized
+                for (const l of validStudents) {
+                  if (!l.name && l.fullName) l.name = l.fullName;
+                  if (!l.fullName && l.name) l.fullName = l.name;
+                }
+                localStorage.setItem(STORAGE_KEY_LEARNERS, JSON.stringify(validStudents));
+                return validStudents;
+              }
             }
           } catch {}
         }

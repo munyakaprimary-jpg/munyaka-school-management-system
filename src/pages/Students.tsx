@@ -131,7 +131,11 @@ export default function Students() {
   // ── 1. Unified LocalStorage Persistence Setup with munyaka_learners_db
   const [students, setStudents] = useState<Student[]>(() => {
     const central = CentralDataService.getLearners();
-    if (central && central.length > 0) return central as unknown as Student[];
+    if (central && central.length > 0) {
+      return (central as unknown as Student[]).filter(s =>
+        s && (s.name || s.fullName || s.admissionNo || (s as any).admNo)
+      );
+    }
     return getStoredLearners() as unknown as Student[];
   });
 
