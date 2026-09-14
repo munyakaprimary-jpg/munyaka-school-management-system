@@ -1,17 +1,6 @@
 export const initialSeedData = {
-  students: [
-    { id: '1', admissionNumber: 'M001', name: 'MUTWIKA', fullName: 'MUTWIKA', grade: 'Grade 1' },
-    { id: '2', admissionNumber: 'M002', name: 'OCTEVIOR', fullName: 'OCTEVIOR', grade: 'Grade 1' },
-    { id: '3', admissionNumber: 'M003', name: 'SAMWEL', fullName: 'SAMWEL', grade: 'Grade 1' },
-    { id: '4', admissionNumber: 'M004', name: 'ALFRED', fullName: 'ALFRED', grade: 'Grade 2' },
-    { id: '5', admissionNumber: 'M005', name: 'BRIAN', fullName: 'BRIAN', grade: 'Grade 2' },
-    { id: '6', admissionNumber: 'M006', name: 'MARY', fullName: 'MARY', grade: 'Grade 2' },
-    { id: '7', admissionNumber: 'M007', name: 'SAMSON KIBET', fullName: 'SAMSON KIBET', grade: 'Grade 3' },
-    { id: '8', admissionNumber: 'M008', name: 'LEARNER 8', fullName: 'LEARNER 8', grade: 'Grade 3' },
-    { id: '9', admissionNumber: 'M009', name: 'LEARNER 9', fullName: 'LEARNER 9', grade: 'Grade 4' },
-    { id: '10', admissionNumber: 'M010', name: 'LEARNER 10', fullName: 'LEARNER 10', grade: 'Grade 4' },
-    { id: '11', admissionNumber: 'M011', name: 'LEARNER 11', fullName: 'LEARNER 11', grade: 'Grade 5' }
-  ],
+  students: [] as any[],
+  learners: [] as any[],
   staff: [
     // Teaching Staff (2)
     { id: 's1', name: 'Teacher One', role: 'Teacher', type: 'Teaching', status: 'Active' },
