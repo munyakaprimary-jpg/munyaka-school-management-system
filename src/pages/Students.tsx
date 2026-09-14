@@ -128,8 +128,12 @@ const getGradeMatchKey = (name: string): string => {
 };
 
 export default function Students() {
-  // 1. Unified LocalStorage Persistence Setup with munyaka_learners_db
-  const [students, setStudents] = useState<Student[]>(() => getStoredLearners() as unknown as Student[]);
+  // ── 1. Unified LocalStorage Persistence Setup with munyaka_learners_db
+  const [students, setStudents] = useState<Student[]>(() => {
+    const central = CentralDataService.getLearners();
+    if (central && central.length > 0) return central as unknown as Student[];
+    return getStoredLearners() as unknown as Student[];
+  });
 
   // 2. Use the academic calendar hook for dynamic term/year
     const { activeTerm, activeYear, isLoading } = useAcademicCalendar();
@@ -140,7 +144,14 @@ export default function Students() {
 
   // Add event listener to refresh UI instantly when a student is saved
   useEffect(() => {
-    const syncStudents = () => setStudents(getStoredLearners() as unknown as Student[]);
+    const syncStudents = () => {
+      const central = CentralDataService.getLearners();
+      if (central && central.length > 0) {
+        setStudents(central as unknown as Student[]);
+      } else {
+        setStudents(getStoredLearners() as unknown as Student[]);
+      }
+    };
     window.addEventListener('students-updated', syncStudents);
     window.addEventListener('munyaka:data-changed', syncStudents);
     return () => {
@@ -161,7 +172,7 @@ export default function Students() {
   useEffect(() => {
     const centralData = CentralDataService.getLearners();
     if (centralData && centralData.length > 0) {
-      setStudents(centralData);
+      setStudents(centralData as unknown as Student[]);
     }
 
     const LEARNER_KEYS = ['munyaka_learners_db', 'munyaka_students', 'munyaka_learners', 'munyaka_pupils', 'students'];
@@ -169,6 +180,11 @@ export default function Students() {
 
     const reload = (_key: string | null) => {
       try {
+        const central = CentralDataService.getLearners();
+        if (central && central.length > 0) {
+          setStudents(central as unknown as Student[]);
+          return;
+        }
         const fresh = getStoredLearners();
         if (fresh) {
           setStudents(fresh as unknown as Student[]);
@@ -1031,7 +1047,7 @@ export default function Students() {
                           to={`/students/${learner.id}`}
                           className="hover:text-indigo-600 transition-colors inline-flex items-center gap-1.5 group/link"
                         >
-                          {learner.name}
+                          <span>{learner.fullName || learner.name || `Learner ${index + 1}`}</span>
                           <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
                         </Link>
                       </td>
