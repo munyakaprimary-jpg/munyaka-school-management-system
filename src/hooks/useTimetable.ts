@@ -12,6 +12,8 @@ export interface LessonEntry {
   id: string;
   subject: string;
   color: string;
+  teacherId?: string;
+  teacherName?: string;
 }
 
 export interface TimetableEntry {
@@ -50,6 +52,63 @@ const getCategoryColor = (category: string | null): { bg: string; text: string; 
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
 const STORAGE_KEY = 'school-timetable-data';
+const EXPORT_STORAGE_KEY = 'munyaka_timetable';
+
+export interface TeachingStaffMember {
+  id: string;
+  name: string;
+}
+
+const TEACHING_SYSTEM_ROLES = new Set([
+  'head_teacher', 'deputy_head_teacher', 'senior_teacher', 'class_teacher', 'subject_teacher', 'ict_teacher',
+]);
+const TEACHER_ROLE_KEYWORDS = /(teacher|head teacher|principal)/i;
+const NON_TEACHING_ROLE_KEYWORDS = /(bursar|librarian|storekeeper|lab assistant|support staff|ict technician|admin)/i;
+
+const isTeachingStaffRecord = (record: any): boolean => {
+  if (!record) return false;
+  if (record.isTeacher === true) return true;
+  const systemRole = (record.systemRole || '').toLowerCase().trim();
+  if (TEACHING_SYSTEM_ROLES.has(systemRole)) return true;
+  const role = (record.role || '').toUpperCase().trim();
+  if (NON_TEACHING_ROLE_KEYWORDS.test(record.role || '')) return false;
+  if (TEACHER_ROLE_KEYWORDS.test(record.role || '')) return true;
+  return false;
+};
+
+export const getTeachingStaffFromLocalStorage = (): TeachingStaffMember[] => {
+  try {
+    const ls = window.localStorage;
+    if (!ls) return [];
+    const keys = ['munyaka_staff', 'munyaka_staff_directory', 'munyaka_master_staff_list'];
+    for (const key of keys) {
+      const raw = ls.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const filtered = parsed.filter(isTeachingStaffRecord).filter((s: any) => s.id && s.name);
+          if (filtered.length > 0) {
+            return filtered.map((s: any) => ({ id: String(s.id), name: String(s.name) }));
+          }
+        }
+      }
+    }
+    return [];
+  } catch {
+    return [];
+  }
+};
+
+const persistTimetable = (updated: Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>) => {
+  try {
+    const json = JSON.stringify(updated);
+    const ls = window.localStorage;
+    ls?.setItem(STORAGE_KEY, json);
+    ls?.setItem(EXPORT_STORAGE_KEY, json);
+  } catch (err) {
+    console.error('[useTimetable] Failed to persist timetable:', err);
+  }
+};
 
 const SUBJECT_COLORS = [
   'bg-indigo-100 text-indigo-700 border border-indigo-200',
@@ -135,6 +194,16 @@ export function useTimetable() {
       const stored = ls?.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          // Sync to export key for Central Data parity
+          ls?.setItem(EXPORT_STORAGE_KEY, stored);
+          return parsed;
+        }
+      }
+      // Fallback: read from export key
+      const exportStored = ls?.getItem(EXPORT_STORAGE_KEY);
+      if (exportStored) {
+        const parsed = JSON.parse(exportStored);
         if (parsed && typeof parsed === 'object') return parsed;
       }
     } catch { /* ignore corrupt data */ }
@@ -148,11 +217,7 @@ export function useTimetable() {
       const entries = getDefaultEntries(timeSlots);
       setTimetables(prev => {
         const updated = { ...prev, [gradeId]: { timeSlots, entries } };
-        try {
-          window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-        } catch (err) {
-          console.error('[useTimetable] Failed to persist timetable:', err);
-        }
+        persistTimetable(updated);
         return updated;
       });
     }
@@ -205,11 +270,7 @@ export function useTimetable() {
         entries: paired.map(p => p.entry),
       };
       const updated = { ...prev, [selectedGrade]: updatedTimetable };
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (err) {
-        console.error('[useTimetable] Failed to persist addTimeSlot:', err);
-      }
+      persistTimetable(updated);
       return updated;
     });
   }, [selectedGrade]);
@@ -232,11 +293,7 @@ export function useTimetable() {
         return original;
       });
       const updated = { ...prev, [selectedGrade]: result };
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (err) {
-        console.error('[useTimetable] Failed to persist updateTimeSlot:', err);
-      }
+      persistTimetable(updated);
       return updated;
     });
   }, [selectedGrade]);
@@ -261,11 +318,7 @@ export function useTimetable() {
         return original;
       });
       const updated = { ...prev, [selectedGrade]: result };
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (err) {
-        console.error('[useTimetable] Failed to persist updateSlotTimes:', err);
-      }
+      persistTimetable(updated);
       return updated;
     });
   }, [selectedGrade]);
@@ -283,37 +336,29 @@ export function useTimetable() {
           entries: current.entries.filter((_, i) => i !== slotIndex),
         },
       };
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (err) {
-        console.error('[useTimetable] Failed to persist deleteTimeSlot:', err);
-      }
+      persistTimetable(updated);
       return updated;
     });
   }, [selectedGrade]);
 
   // Lesson Management
-  const setLesson = useCallback((slotIndex: number, day: string, subject: string, colorClass?: string) => {
-    setTimetables(prev => {
-      const current = prev[selectedGrade];
-      if (!current) return prev;
-      const color = colorClass || SUBJECT_COLORS[Math.floor(Math.random() * SUBJECT_COLORS.length)];
-      const newEntry: LessonEntry = { id: crypto.randomUUID(), subject, color };
-      const updatedEntries = current.entries.map((entry, idx) => {
-        if (idx === slotIndex) {
-          return { ...entry, [day]: subject === '' ? null : newEntry };
-        }
-        return entry;
+  const setLesson = useCallback((slotIndex: number, day: string, subject: string, colorClass?: string, teacherId?: string, teacherName?: string) => {
+      setTimetables(prev => {
+        const current = prev[selectedGrade];
+        if (!current) return prev;
+        const color = colorClass || SUBJECT_COLORS[Math.floor(Math.random() * SUBJECT_COLORS.length)];
+        const newEntry: LessonEntry = { id: crypto.randomUUID(), subject, color, ...(teacherId ? { teacherId } : {}), ...(teacherName ? { teacherName } : {}) };
+        const updatedEntries = current.entries.map((entry, idx) => {
+          if (idx === slotIndex) {
+            return { ...entry, [day]: subject === '' ? null : newEntry };
+          }
+          return entry;
+        });
+        const updated = { ...prev, [selectedGrade]: { ...current, entries: updatedEntries } };
+        persistTimetable(updated);
+        return updated;
       });
-      const updated = { ...prev, [selectedGrade]: { ...current, entries: updatedEntries } };
-      try {
-        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (err) {
-        console.error('[useTimetable] Failed to persist setLesson:', err);
-      }
-      return updated;
-    });
-  }, [selectedGrade]);
+    }, [selectedGrade]);
 
   const deleteLesson = useCallback((slotIndex: number, day: string) => {
     setLesson(slotIndex, day, '');

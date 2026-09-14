@@ -55,10 +55,10 @@ const Timetable = () => {
     setLessonDrawerOpen(true);
   };
 
-  const handleSaveLesson = (subject: string, colorClass?: string) => {
+  const handleSaveLesson = (subject: string, colorClass?: string, teacherId?: string, teacherName?: string) => {
     if (isReadOnly) return;
     if (selectedCell) {
-      setLesson(selectedCell.slotIndex, selectedCell.day, subject, colorClass);
+      setLesson(selectedCell.slotIndex, selectedCell.day, subject, colorClass, teacherId, teacherName);
       setLessonDrawerOpen(false);
       setSelectedCell(null);
     }
@@ -216,13 +216,18 @@ const Timetable = () => {
                             return (
                               <td key={day} className="px-3 py-3">
                                 <div
-                                  className={`w-full min-h-[64px] p-2.5 rounded-2xl text-xs font-bold flex items-center justify-center ${
+                                  className={`w-full min-h-[64px] p-2.5 rounded-2xl text-xs font-bold flex flex-col items-center justify-center ${
                                     entry?.color || 'bg-slate-50 text-slate-400'
                                   }`}
                                 >
                                   <span className="block truncate">
                                     {entry?.subject || <span className="text-slate-300">—</span>}
                                   </span>
+                                  {entry?.teacherName && (
+                                    <span className="text-[10px] font-medium text-emerald-700 mt-0.5 truncate">
+                                      {entry.teacherName}
+                                    </span>
+                                  )}
                                 </div>
                               </td>
                             );
@@ -231,7 +236,7 @@ const Timetable = () => {
                             <td key={day} className="px-3 py-3">
                               <button
                                 onClick={() => handleCellClick(slotIndex, day)}
-                                className={`w-full min-h-[64px] p-2.5 rounded-2xl text-xs font-bold transition-all hover:scale-[1.02] hover:shadow-md ${
+                                className={`w-full min-h-[64px] p-2.5 rounded-2xl text-xs font-bold transition-all hover:scale-[1.02] hover:shadow-md flex flex-col items-center justify-center ${
                                   entry?.color || 'bg-slate-100 text-slate-400 hover:bg-indigo-50'
                                 }`}
                               >
@@ -242,6 +247,11 @@ const Timetable = () => {
                                     </span>
                                   )}
                                 </span>
+                                {entry?.teacherName && (
+                                  <span className="text-[10px] font-medium text-emerald-700 mt-0.5 truncate">
+                                    {entry.teacherName}
+                                  </span>
+                                )}
                               </button>
                             </td>
                           );

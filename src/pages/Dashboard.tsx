@@ -368,6 +368,8 @@ export interface ClassScheduleItem {
   isBreak?: boolean;
   /** Optional custom category label (e.g., "Games / PE", "Assembly") */
   category?: string | null;
+  /** Teacher name assigned to this lesson */
+  teacherName?: string;
 }
 
 // ─── Break Categories Registry ─────────────────────────────────────────────────
@@ -441,6 +443,7 @@ const getTeacherDailySchedule = (teacherGradeId?: string): ClassScheduleItem[] =
           isLive: isCurrentPeriod(slot.startTime, slot.endTime),
           isBreak,
           category: slot.category || (isBreak ? subject : null),
+          teacherName: dayEntry?.teacherName || undefined,
         };
       });
 

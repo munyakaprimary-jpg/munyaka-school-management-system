@@ -3,7 +3,9 @@ import { X, Trash2, BookOpen, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { TimetableEntry, LessonEntry } from '@/hooks/useTimetable';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { LessonEntry } from '@/hooks/useTimetable';
+import { getTeachingStaffFromLocalStorage } from '@/hooks/useTimetable';
 
 interface LessonDrawerProps {
   open: boolean;
@@ -13,7 +15,7 @@ interface LessonDrawerProps {
   timeLabel: string;
   currentEntry: LessonEntry | null;
   isReadOnly?: boolean;
-  onSave: (subject: string, colorClass?: string) => void;
+  onSave: (subject: string, colorClass?: string, teacherId?: string, teacherName?: string) => void;
   onDelete: () => void;
 }
 
@@ -54,6 +56,9 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
   const [subject, setSubject] = useState('');
   const [customSubject, setCustomSubject] = useState('');
   const [isCustom, setIsCustom] = useState(false);
+  const [assignedTeacherId, setAssignedTeacherId] = useState<string>('');
+  const [assignedTeacherName, setAssignedTeacherName] = useState<string>('');
+  const teachingStaff = getTeachingStaffFromLocalStorage();
 
   useEffect(() => {
     if (open) {
@@ -66,6 +71,13 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
         setCustomSubject('');
         setSubject(currentEntry?.subject || '');
       }
+      if (currentEntry?.teacherId) {
+        setAssignedTeacherId(currentEntry.teacherId);
+        setAssignedTeacherName(currentEntry.teacherName || '');
+      } else {
+        setAssignedTeacherId('');
+        setAssignedTeacherName('');
+      }
     }
   }, [open, currentEntry]);
 
@@ -75,7 +87,7 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
     const finalSubject = isCustom ? String(customSubject || '').trim() : subject;
     if (!finalSubject) return;
     const preset = PRESET_SUBJECTS.find(p => p.name === finalSubject);
-    onSave(finalSubject, preset?.color);
+    onSave(finalSubject, preset?.color, assignedTeacherId || undefined, assignedTeacherName || undefined);
   };
 
   return (
@@ -184,6 +196,38 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
                   autoFocus
                 />
               )}
+            </div>
+          )}
+
+          {/* Teacher assignment */}
+          {!isReadOnly && (
+            <div className="border-t pt-5">
+              <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Assign Teacher</Label>
+              <div className="mt-3">
+                <Select
+                  value={assignedTeacherId}
+                  onValueChange={(value) => {
+                    setAssignedTeacherId(value);
+                    const selected = teachingStaff.find(s => s.id === value);
+                    setAssignedTeacherName(selected?.name || '');
+                  }}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Select a teacher..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teachingStaff.length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-slate-500">No teaching staff found</div>
+                    ) : (
+                      teachingStaff.map((staff) => (
+                        <SelectItem key={staff.id} value={staff.id}>
+                          {staff.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
 
