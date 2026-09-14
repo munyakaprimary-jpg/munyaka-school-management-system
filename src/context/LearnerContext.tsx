@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { initialSeedData, mockLearners } from '../data/initialSeedData';
+import { initialSeedData } from '../data/initialSeedData';
 
 interface LearnerContextType {
   learners: any[];
@@ -9,36 +9,38 @@ interface LearnerContextType {
 
 const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
-const getInitialData = () => {
-  const local = localStorage.getItem('munyaka_learners');
-  if (local) {
-    try {
-      const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((item: any) => ({
-          ...item,
-          name: item.name || item.fullName || '',
-          fullName: item.fullName || item.name || ''
-        }));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  // Fallback to normalized seed data
-  const rawList = (mockLearners as any) || initialSeedData?.students || initialSeedData?.learners || [];
-  return rawList.map((item: any) => ({
+// Helper to normalize schema discrepancies
+const normalizeLearnerData = (data: any[]) => {
+  if (!Array.isArray(data)) return [];
+  return data.map((item) => ({
     ...item,
-    name: item.name || item.fullName || '',
-    fullName: item.fullName || item.name || ''
+    name: item.name || item.fullName || 'Unknown',
+    fullName: item.fullName || item.name || 'Unknown'
   }));
 };
 
-export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [learners, setLearners] = useState(getInitialData);
+const getInitialLearners = () => {
+  try {
+    const saved = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return normalizeLearnerData(parsed);
+      }
+    }
+  } catch (e) {
+    console.error("Storage parse error:", e);
+  }
 
-  // Only save to localStorage when learners array actually has items
+  // Fallback directly to physical seed file
+  const rawSeed = initialSeedData?.students || initialSeedData?.learners || [];
+  return normalizeLearnerData(rawSeed);
+};
+
+export const LearnerProvider = ({ children }: { children: React.ReactNode }) => {
+  const [learners, setLearners] = useState(getInitialLearners);
+
+  // Prevent overwriting storage if learners array is completely empty
   useEffect(() => {
     if (learners && learners.length > 0) {
       localStorage.setItem('munyaka_learners', JSON.stringify(learners));
