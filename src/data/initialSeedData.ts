@@ -1,3 +1,20 @@
+export const DEFAULT_CBC_CLUSTERS = [];
+export const buildDefaultClusters = () => [];
+
+export const strandCategories: string[] = [];
+export const gradeLevels: string[] = [];
+export const assessmentTypeOptions: string[] = [];
+export const ContentItem = {};
+export const StrandCategory = {};
+export const MemoryVerse = {};
+export const RevisionQuestion = {};
+export const Attachment = {};
+export const AssessmentType = {};
+export const cbcStudyContent = [];
+
+export const DEFAULT_CBC_CLUSTERS = [];
+export const buildDefaultClusters = () => [];
+
 export const initialSeedData = {
   "students": [
     {
