@@ -63,66 +63,57 @@ export default function CentralDataService() {
   }, [centralStats.totalStudents, centralStats.totalTeachers]);
 
   // ====== UNIFIED EXPORT: Central database as initialSeedData.ts ======
-  const handleExportDatabase = async () => {
+  const generateFullSnapshot = () => {
+    const snapshot = {
+      // Core Academics & Structure
+      students: JSON.parse(localStorage.getItem('munyaka_learners_db') || localStorage.getItem('munyaka_learners') || '[]'),
+      classes: JSON.parse(localStorage.getItem('munyaka_classes') || '[]'),
+      streams: JSON.parse(localStorage.getItem('munyaka_streams') || '[]'),
+      learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || '[]'),
+      
+      // Exams & Assessment Scores
+      exams: JSON.parse(localStorage.getItem('munyaka_exams') || '[]'),
+      assessments: JSON.parse(localStorage.getItem('munyaka_assessments') || '[]'),
+      gradingScales: JSON.parse(localStorage.getItem('munyaka_grading_scales') || '[]'),
+      reportCards: JSON.parse(localStorage.getItem('munyaka_report_cards') || '[]'),
+
+      // Personnel & Staff Directory
+      staff: JSON.parse(localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || '[]'),
+      roles: JSON.parse(localStorage.getItem('munyaka_roles') || '[]'),
+      
+      // Financial Ledger & Payments
+      payments: JSON.parse(localStorage.getItem('munyaka_payments') || '[]'),
+      feeStructures: JSON.parse(localStorage.getItem('munyaka_fee_structures') || '[]'),
+      invoices: JSON.parse(localStorage.getItem('munyaka_invoices') || '[]'),
+
+      // Specialized Support & Laboratory Logs
+      libraryBooks: JSON.parse(localStorage.getItem('munyaka_library_books') || '[]'),
+      libraryLogs: JSON.parse(localStorage.getItem('munyaka_library_borrowings') || '[]'),
+      scienceLabInventory: JSON.parse(localStorage.getItem('munyaka_science_lab') || '[]'),
+      ictLabEquipment: JSON.parse(localStorage.getItem('munyaka_ict_lab') || '[]'),
+      storeInventory: JSON.parse(localStorage.getItem('munyaka_store_items') || '[]'),
+      attendance: JSON.parse(localStorage.getItem('munyaka_attendance') || '[]'),
+      
+      // System Configuration
+      schoolSettings: JSON.parse(localStorage.getItem('munyaka_school_settings') || '{}'),
+    };
+
+    return `export const initialSeedData = ${JSON.stringify(snapshot, null, 2)};`;
+  };
+
+  const handleExportSeedData = () => {
     try {
-      const dbBundle = {
-        version: "5.0", // v5.0: includes munyaka_master_staff_list
-        exportDate: new Date().toISOString(),
-        school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-        students: getStoredLearners(),
-        staff: lsRead<unknown>('munyaka_staff_directory', []),
-        staffPrereg: lsRead<unknown>('munyaka_staff_prereg', []),
-        staffMaster: lsRead<unknown>(STAFF_MASTER_KEY, []),   // canonical master ledger
-        fees: lsRead<unknown>('munyaka_fees_records', {}),
-        transactions: lsRead<unknown>('munyaka_transactions', []),
-        attendance: lsRead<unknown>('munyaka_attendance_records', {}),
-        grades: lsRead<unknown>('munyaka_grades', []),
-        examTypes: lsRead<unknown>('munyaka_exam_types', []),
-        learningAreas: lsRead<unknown>('munyaka_learning_areas', []),
-        assessmentScores: lsRead<unknown>('munyaka_assessment_scores', {}),
-        libraryBooks: lsRead<unknown>('munyaka_library_books', []),
-        ictAssets: lsRead<unknown>('munyaka_ict_assets', []),
-        settings: lsRead<unknown>('munyaka_system_settings_v3', {})
-      };
-
-      // Serialize EVERY single key stored in localStorage into a clean key-value dictionary object
-      const allLocalStorageData: Record<string, any> = {};
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key !== 'app_seed_version') {
-            const val = localStorage.getItem(key);
-            const parsed = tryParse(val);
-            allLocalStorageData[key] = parsed !== null ? parsed : val;
-          }
-        }
-      } catch (err) {
-        console.error('[CentralDataService] Failed to snapshot localStorage:', err);
-      }
-
-      const fullExportObject = {
-        ...dbBundle,
-        localStorageSnapshot: allLocalStorageData
-      };
-
-      const jsonString = `export const INITIAL_SEED_DATA = ${JSON.stringify(fullExportObject, null, 2)};\n`;
-
-      const nowStr = new Date().toLocaleString();
-      lsSet('munyaka_last_export_date', nowStr);
-      setStats(prev => ({ ...prev, lastExportDate: nowStr }));
-
-      await seedExport.download({
+      const fileContent = generateFullSnapshot();
+      downloadFile({
+        content: fileContent,
         filename: 'initialSeedData.ts',
-        data: jsonString,
-        mimeType: 'text/typescript;charset=utf-8;',
-        fileType: 'txt',
-        pendingMessage: 'Exporting central database...',
+        contentType: 'text/typescript',
         successMessage: 'Central database successfully exported as initialSeedData.ts!',
-        errorMessage: 'Failed to export database bundle.',
+        errorMessage: 'Failed to export initialSeedData.ts.'
       });
-    } catch (e) {
-      console.error(e);
-      showError("Failed to export database bundle.");
+    } catch (err) {
+      console.error('[CentralDataService] Failed to snapshot localStorage:', err);
+      toast.error('Failed to export initialSeedData.ts. Please check console logs.');
     }
   };
 
@@ -225,8 +216,8 @@ export default function CentralDataService() {
             All student and staff records are synchronized in a single unified persistent engine. Export your growing database directly into <code className="bg-emerald-950 px-1.5 py-0.5 rounded text-emerald-300 font-mono text-xs">src/data/initialSeedData.ts</code> before building your next Android APK.
           </p>
         </div>
-        <Button 
-          onClick={handleExportDatabase}
+        <Button
+          onClick={handleExportSeedData}
           disabled={seedExport.isDownloading}
           className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-lg flex items-center gap-2 px-5 py-3 h-auto disabled:opacity-60"
         >
