@@ -1,207 +1,44 @@
 export const initialSeedData = {
   students: [
-  {
-    "id": "1-001",
-    "admNo": "B002961576",
-    "name": "MUTWIKA KILONZO",
-    "fullName": "MUTWIKA KILONZO",
-    "grade": "Grade 7",
-    "stream": "VENUS",
-    "status": "Active",
-    "gender": "Male",
-    "attendanceStatus": "Present",
-    "guardian": "STEPHEN KILONZO KINGOO",
-    "phone": "0705221675"
-  },
-  {
-    "id": "1-002",
-    "admNo": "B004123291",
-    "name": "OCTEVIOR LUVISIA",
-    "fullName": "OCTEVIOR LUVISIA",
-    "grade": "Grade 6",
-    "stream": "Yellow",
-    "status": "Active",
-    "gender": "Male",
-    "attendanceStatus": "Present",
-    "guardian": "TITUS KIJUSA LUVISIA",
-    "phone": "0705138090"
-  },
-  {
-    "id": "1-003",
-    "admNo": "B004761829",
-    "name": "SAMWEL KAMAU WANJIKU",
-    "fullName": "SAMWEL KAMAU WANJIKU",
-    "grade": "Grade 6",
-    "stream": "Yellow",
-    "status": "Active",
-    "gender": "Male",
-    "attendanceStatus": "Late",
-    "guardian": "MARY WANJIKU WAIRIMU",
-    "phone": "0719182804"
-  },
-  {
-    "id": "1-006",
-    "admNo": "B004276095",
-    "name": "ALFRED JUMA",
-    "fullName": "ALFRED JUMA",
-    "grade": "Grade 6",
-    "stream": "East",
-    "status": "Active",
-    "gender": "Male",
-    "attendanceStatus": "Unmarked",
-    "guardian": "PHANICE NASIMIYU KIRISWA",
-    "phone": "0141893904"
-  },
-  {
-    "id": "1-007",
-    "admNo": "B005110023",
-    "name": "BRIAN KIPTOO",
-    "fullName": "BRIAN KIPTOO",
-    "grade": "Grade 7",
-    "stream": "VENUS",
-    "status": "Suspended",
-    "gender": "Male",
-    "attendanceStatus": "Unmarked",
-    "guardian": "MARY KIPTOO",
-    "phone": "0722001122"
-  },
-  {
-    "id": "1-008",
-    "admNo": "B005233114",
-    "name": "MARY ATIENO",
-    "fullName": "MARY ATIENO",
-    "grade": "Grade 5",
-    "stream": "Blue",
-    "status": "Active",
-    "gender": "Female",
-    "attendanceStatus": "Present",
-    "guardian": "JOHN ATIENO",
-    "phone": "0711002233"
-  },
-  {
-    "id": "1-009",
-    "admNo": "MUN-G6-001/2021",
-    "name": "SAMSON KIBET",
-    "fullName": "SAMSON KIBET",
-    "grade": "Grade 6",
-    "stream": "Blue",
-    "gender": "Male",
-    "assessmentNo": "A0997890",
-    "birthCertNo": "1442008976",
-    "status": "Active",
-    "attendanceStatus": "Present",
-    "guardian": "ALICE KIBET",
-    "phone": "0700000000"
-  }
-],
-  learners: [
-  {
-    "id": "1-001",
-    "admNo": "B002961576",
-    "name": "MUTWIKA KILONZO",
-    "fullName": "MUTWIKA KILONZO",
-    "grade": "Grade 7",
-    "stream": "VENUS",
-    "status": "Active",
-    "gender": "Male",
-    "attendanceStatus": "Present",
-    "guardian": "STEPHEN KILONZO KINGOO",
-    "phone": "0705221675"
-  },
-  {
-    "id": "1-002",
-    "admNo": "B004123291",
-    "name": "OCTEVIOR LUVISIA",
-    "fullName": "OCTEVIOR LUVISIA",
-    "grade": "Grade 6",
-    "stream": "Yellow",
-    "status": "Active",
-    "gender": "Male",
-    "attendanceStatus": "Present",
-    "guardian": "TITUS KIJUSA LUVISIA",
-    "phone": "0705138090"
-  },
-  {
-    "id": "1-003",
-    "admNo": "B004761829",
-    "name": "SAMWEL KAMAU WANJIKU",
-    "fullName": "SAMWEL KAMAU WANJIKU",
-    "grade": "Grade 6",
-    "stream": "Yellow",
-    "status": "Active",
-    "gender": "Male",
-    "attendanceStatus": "Late",
-    "guardian": "MARY WANJIKU WAIRIMU",
-    "phone": "0719182804"
-  },
-  {
-    "id": "1-006",
-    "admNo": "B004276095",
-    "name": "ALFRED JUMA",
-    "fullName": "ALFRED JUMA",
-    "grade": "Grade 6",
-    "stream": "East",
-    "status": "Active",
-    "gender": "Male",
-    "attendanceStatus": "Unmarked",
-    "guardian": "PHANICE NASIMIYU KIRISWA",
-    "phone": "0141893904"
-  },
-  {
-    "id": "1-007",
-    "admNo": "B005110023",
-    "name": "BRIAN KIPTOO",
-    "fullName": "BRIAN KIPTOO",
-    "grade": "Grade 7",
-    "stream": "VENUS",
-    "status": "Suspended",
-    "gender": "Male",
-    "attendanceStatus": "Unmarked",
-    "guardian": "MARY KIPTOO",
-    "phone": "0722001122"
-  },
-  {
-    "id": "1-008",
-    "admNo": "B005233114",
-    "name": "MARY ATIENO",
-    "fullName": "MARY ATIENO",
-    "grade": "Grade 5",
-    "stream": "Blue",
-    "status": "Active",
-    "gender": "Female",
-    "attendanceStatus": "Present",
-    "guardian": "JOHN ATIENO",
-    "phone": "0711002233"
-  },
-  {
-    "id": "1-009",
-    "admNo": "MUN-G6-001/2021",
-    "name": "SAMSON KIBET",
-    "fullName": "SAMSON KIBET",
-    "grade": "Grade 6",
-    "stream": "Blue",
-    "gender": "Male",
-    "assessmentNo": "A0997890",
-    "birthCertNo": "1442008976",
-    "status": "Active",
-    "attendanceStatus": "Present",
-    "guardian": "ALICE KIBET",
-    "phone": "0700000000"
-  }
-],
+    { id: '1', name: 'MUTWIKA', fullName: 'MUTWIKA', grade: 'Grade 1' },
+    { id: '2', name: 'OCTEVIOR', fullName: 'OCTEVIOR', grade: 'Grade 1' },
+    { id: '3', name: 'SAMWEL', fullName: 'SAMWEL', grade: 'Grade 1' },
+    { id: '4', name: 'ALFRED', fullName: 'ALFRED', grade: 'Grade 2' },
+    { id: '5', name: 'BRIAN', fullName: 'BRIAN', grade: 'Grade 2' },
+    { id: '6', name: 'MARY', fullName: 'MARY', grade: 'Grade 2' },
+    { id: '7', name: 'SAMSON KIBET', fullName: 'SAMSON KIBET', grade: 'Grade 3' }
+  ],
+  staff: [],
   exams: [],
-  marks: [],
   libraryBooks: [],
-  ictAssets: [],
   transactions: []
 };
 
-export const mockLearners = initialSeedData.learners;
+// MANDATORY EXPORTS FOR VITE COMPATIBILITY
+(initialSeedData as any).learners = initialSeedData.students;
+
+export const INITIAL_SEED_DATA = initialSeedData;
+export const DEFAULT_CBC_CLUSTERS = [];
+export const buildDefaultClusters = () => [];
+export const strandCategories = [];
+export const gradeLevels = [];
+export const ContentItem = {};
+export const StrandCategory = {};
+export const MemoryVerse = {};
+export const RevisionQuestion = {};
+export const Attachment = {};
+export const AssessmentType = {};
+export const assessmentTypeOptions = [];
+
+export const mockLearners = initialSeedData.students;
 export const mockStudents = initialSeedData.students;
+export const mockStaff = initialSeedData.staff;
 export const mockExams = initialSeedData.exams;
-export const mockMarks = initialSeedData.marks;
 export const mockLibrary = initialSeedData.libraryBooks;
-export const mockICT = initialSeedData.ictAssets;
 export const mockFinances = initialSeedData.transactions;
+
+export const cbcStudyContent = (initialSeedData as any).cbcStudyContent || [];
+export const cbcStudyMaterials = cbcStudyContent;
+export const cbcCurriculum = (initialSeedData as any).cbcCurriculum || [];
 
 export default initialSeedData;
