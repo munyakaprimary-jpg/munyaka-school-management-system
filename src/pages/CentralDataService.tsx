@@ -11,6 +11,7 @@ import { getStoredLearners, LEARNERS_DB_KEY } from '@/utils/learnersStore';
 import { lsSet, lsRead } from '@/utils/storage';
 import { STAFF_MASTER_KEY, getCategorizedMetrics, isTeachingRole, getStaffMaster } from '@/services/staffMasterService';
 import { tryParse } from '@/utils/storageUtils';
+import { downloadSeedFile } from '@/services/centralDataService';
 
 export default function CentralDataService() {
   const centralStats = useCentralData();
@@ -103,17 +104,14 @@ export default function CentralDataService() {
 
   const handleExportSeedData = () => {
     try {
-      const fileContent = generateFullSnapshot();
-      downloadFile({
-        content: fileContent,
-        filename: 'initialSeedData.ts',
-        contentType: 'text/typescript',
-        successMessage: 'Central database successfully exported as initialSeedData.ts!',
-        errorMessage: 'Failed to export initialSeedData.ts.'
-      });
+      downloadSeedFile();
+      const nowStr = new Date().toLocaleString();
+      lsSet('munyaka_last_export_date', nowStr);
+      setStats(prev => ({ ...prev, lastExportDate: nowStr }));
+      showSuccess("Central database successfully exported as initialSeedData.ts!");
     } catch (err) {
-      console.error('[CentralDataService] Failed to snapshot localStorage:', err);
-      toast.error('Failed to export initialSeedData.ts. Please check console logs.');
+      console.error('[CentralDataService] Failed to export seed file:', err);
+      showError('Failed to export initialSeedData.ts. Please check console logs.');
     }
   };
 

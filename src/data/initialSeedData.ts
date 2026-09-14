@@ -281,3 +281,5 @@ export const INITIAL_SEED_DATA = {
     lastUpdated: new Date().toISOString(),
   },
 };
+
+export const initialSeedData = INITIAL_SEED_DATA;

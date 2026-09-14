@@ -70,6 +70,7 @@ import MarkedScriptsPage from "./pages/MarkedScriptsPage";
 import Communication from "./pages/Communication";
 import Library from "./pages/Library";
 import Inventory from "./pages/Inventory";
+import { useStorageHydration } from "@/hooks/useStorageHydration";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
@@ -236,6 +237,8 @@ function runOneTimeFeeSanitizer(): void {
 const queryClient = new QueryClient();
 
 const App = () => {
+  useStorageHydration();
+
   // ── One-time learner-data migrations ───────────────────────────────────
   // Sequential, independently-gated migrations run on first launch:
   //
