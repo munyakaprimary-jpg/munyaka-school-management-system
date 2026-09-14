@@ -4,7 +4,7 @@ import { initialSeedData } from '../data/initialSeedData';
 interface LearnerContextType {
   learners: any[];
   setLearners: React.Dispatch<React.SetStateAction<any[]>>;
-  addLearner: (newLearner: any) => void;
+  addLearner?: (newLearner: any) => void;
   resetToSeedData: () => void;
 }
 
@@ -21,11 +21,15 @@ const normalizeLearnerData = (data: any[]) => {
 };
 
 const getInitialLearners = () => {
+  const rawSeed = initialSeedData?.students || initialSeedData?.learners || [];
+  const normalizedSeed = normalizeLearnerData(rawSeed);
+
   try {
     const saved = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      // Only keep localStorage if it has AT LEAST as many learners as our seed file
+      if (Array.isArray(parsed) && parsed.length >= normalizedSeed.length) {
         return normalizeLearnerData(parsed);
       }
     }
@@ -34,38 +38,18 @@ const getInitialLearners = () => {
   }
 
   // Fallback directly to physical seed file
-  const rawSeed = initialSeedData?.students || initialSeedData?.learners || [];
-  return normalizeLearnerData(rawSeed);
+  return normalizedSeed;
 };
 
-export const LearnerProvider = ({ children }: { children: React.ReactNode }) => {
-  const [learners, setLearners] = useState(getInitialLearners);
+export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [learners, setLearners] = useState<any[]>(getInitialLearners);
 
-  // Prevent overwriting storage if learners array is completely empty
   useEffect(() => {
-    if (learners && learners.length > 0) {
-      localStorage.setItem('munyaka_learners', JSON.stringify(learners));
-      try {
-        window.dispatchEvent(new CustomEvent('munyaka_learners_updated', { detail: learners }));
-        window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
-      } catch (err) {
-        // ignore dispatch errors in non-browser envs
-      }
-    }
+    localStorage.setItem('munyaka_learners', JSON.stringify(learners));
   }, [learners]);
 
   const addLearner = (newLearner: any) => {
-    setLearners((prev) => {
-      const exists = prev.some(
-        (l) => l.id === newLearner.id || l.admNo === newLearner.admNo
-      );
-      if (exists) {
-        return prev.map((l) =>
-          l.id === newLearner.id || l.admNo === newLearner.admNo ? newLearner : l
-        );
-      }
-      return [...prev, newLearner];
-    });
+    setLearners((prev) => [...prev, newLearner]);
   };
 
   const resetToSeedData = () => {
