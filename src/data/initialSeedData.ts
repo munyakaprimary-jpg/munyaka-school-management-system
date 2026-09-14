@@ -108,9 +108,7 @@ export const initialSeedData = {
 // Mirror learners list automatically
 (initialSeedData as any).learners = initialSeedData.students;
 
-export const INITIAL_SEED_DATA = initialSeedData;
-
-// Export explicit named components to prevent import errors
+// Explicit named exports matching all component imports across the app
 export const mockLearners = initialSeedData.students;
 export const mockStudents = initialSeedData.students;
 export const mockStaff = initialSeedData.staff;
