@@ -5,6 +5,7 @@ interface LearnerContextType {
   learners: any[];
   setLearners: React.Dispatch<React.SetStateAction<any[]>>;
   addLearner: (newLearner: any) => void;
+  resetToSeedData: () => void;
 }
 
 const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
@@ -59,7 +60,6 @@ export const LearnerProvider = ({ children }: { children: React.ReactNode }) => 
         (l) => l.id === newLearner.id || l.admNo === newLearner.admNo
       );
       if (exists) {
-        // Update existing record instead of creating duplicate
         return prev.map((l) =>
           l.id === newLearner.id || l.admNo === newLearner.admNo ? newLearner : l
         );
@@ -68,8 +68,15 @@ export const LearnerProvider = ({ children }: { children: React.ReactNode }) => 
     });
   };
 
+  const resetToSeedData = () => {
+    const rawSeed = initialSeedData?.students || initialSeedData?.learners || [];
+    const normalized = normalizeLearnerData(rawSeed);
+    setLearners(normalized);
+    localStorage.setItem('munyaka_learners', JSON.stringify(normalized));
+  };
+
   return (
-    <LearnerContext.Provider value={{ learners, setLearners, addLearner }}>
+    <LearnerContext.Provider value={{ learners, setLearners, addLearner, resetToSeedData }}>
       {children}
     </LearnerContext.Provider>
   );
