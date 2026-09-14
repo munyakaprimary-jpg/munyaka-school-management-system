@@ -1015,7 +1015,8 @@ export default function Students() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {filteredLearners.length > 0 ? (
-                filteredLearners.map((learner) => {
+                filteredLearners.map((learner, index) => {
+                  console.log("Single learner object:", learner);
                   // ── FIX 2: Use guaranteed unique key (admNo, fallback to id) ──
                   // The previous code used `learner.id` directly, but when two
                   // learners shared a missing/duplicate id (e.g. during a
@@ -1047,7 +1048,7 @@ export default function Students() {
                           to={`/students/${learner.id}`}
                           className="hover:text-indigo-600 transition-colors inline-flex items-center gap-1.5 group/link"
                         >
-                          <span>{learner.fullName || learner.name || `Learner ${index + 1}`}</span>
+                          <span>{learner.fullName || learner.name || (learner as any).studentName || (learner as any).learnerName || `Learner ${index + 1}`}</span>
                           <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
                         </Link>
                       </td>
