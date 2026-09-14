@@ -38,6 +38,28 @@ export const initialSeedData = {
 initialSeedData.learners = initialSeedData.students;
 
 export const INITIAL_SEED_DATA = initialSeedData;
+export const DEFAULT_CBC_CLUSTERS = [];
+export const buildDefaultClusters = () => [];
+export const strandCategories = [];
+export const gradeLevels = [];
+export const ContentItem = {};
+export const StrandCategory = {};
+export const MemoryVerse = {};
+export const RevisionQuestion = {};
+export const Attachment = {};
+export const AssessmentType = {};
+export const assessmentTypeOptions = [];
+export const DEFAULT_CBC_CLUSTERS = [];
+export const buildDefaultClusters = () => [];
+export const strandCategories = [];
+export const gradeLevels = [];
+export const ContentItem = {};
+export const StrandCategory = {};
+export const MemoryVerse = {};
+export const RevisionQuestion = {};
+export const Attachment = {};
+export const AssessmentType = {};
+export const assessmentTypeOptions = [];
 
 export const mockLearners = initialSeedData.learners;
 export const mockStudents = initialSeedData.students;
