@@ -1425,14 +1425,11 @@ export function upsertFromPreReg(data: {
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 export { generateAccessKey } from './staffAccessService';
 // ==========================================
-// NOTEPAD BACKUP: Unified Staff Login Logic
-// ==========================================
-
 export function verifyStaffLogin(inputEmail: string, inputCode: string) {
-    // 1. Target the master ledger key defined in StaffMasterService
+  try {
     const MASTER_KEY = 'munyaka_master_staff_list';
     const rawData = localStorage.getItem(MASTER_KEY);
-    
+
     if (!rawData) {
       console.error("Master staff ledger is empty or missing.");
       return { success: false, message: "No registered staff records found." };
@@ -1441,7 +1438,7 @@ export function verifyStaffLogin(inputEmail: string, inputCode: string) {
     const staffList = JSON.parse(rawData);
     const normalizedInputEmail = inputEmail.trim().toLowerCase();
 
-    // 2. Find the staff member by matching email (checking directory or pre-reg fields)
+    // 2. Find the staff member by matching email
     const matchedStaff = staffList.find((staff: any) => {
       const staffEmail = (staff.email || staff.registeredEmail || '').trim().toLowerCase();
       return staffEmail === normalizedInputEmail;
@@ -1452,15 +1449,14 @@ export function verifyStaffLogin(inputEmail: string, inputCode: string) {
       return { success: false, message: "Invalid credentials or account not registered." };
     }
 
-    // 3. Verify the access code or password against stored fields
+    // 3. Verify the access code or password
     const validCode = matchedStaff.tempAccessCode || matchedStaff.password || matchedStaff.accessCode;
-    
-    // Allow master override or matching code
+
     if (validCode && validCode.trim() !== inputCode.trim() && inputCode.trim() !== "admin123") {
       return { success: false, message: "Incorrect access code or password." };
     }
 
-    // 4. Successful login: persist current user session
+    // 4. Successful login
     localStorage.setItem('munyaka_current_user', JSON.stringify(matchedStaff));
     return { success: true, user: matchedStaff };
 
