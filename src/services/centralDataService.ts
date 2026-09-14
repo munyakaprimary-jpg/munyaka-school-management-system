@@ -26,6 +26,8 @@ export const CentralDataService = {
     }
   },
 
+  getStudents: () => CentralDataService.getLearners(),
+  saveStudents: (students: any[]) => CentralDataService.saveLearners(students),
   getStaff: () => {
     try {
       const raw = localStorage.getItem('munyaka_staff');
