@@ -58,7 +58,13 @@ import {
   BookingStatus,
   BreakageStatus
 } from '@/types/scienceLab';
-import { CHEMICALS, EQUIPMENT, LAB_BOOKINGS, BREAKAGE_LOGS } from '@/data/scienceLabData';
+import { initialSeedData } from '@/data/initialSeedData';
+
+const scienceSeed = (initialSeedData as any).scienceLab || {};
+const CHEMICALS = scienceSeed.chemicals || [];
+const EQUIPMENT = scienceSeed.equipment || [];
+const LAB_BOOKINGS = scienceSeed.bookings || [];
+const BREAKAGE_LOGS = scienceSeed.breakages || [];
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -71,28 +77,52 @@ const ScienceLab = () => {
   const [activeTab, setActiveTab] = useState<'chemicals' | 'equipment' | 'bookings' | 'breakages'>('chemicals');
   
   // Chemicals State
-  const [chemicals, setChemicals] = useState<ChemicalItem[]>(CHEMICALS);
+  const [chemicals, setChemicals] = useState<ChemicalItem[]>(() => {
+    const saved = localStorage.getItem('munyaka_science_chemicals');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+    }
+    return CHEMICALS;
+  });
   const [chemicalSearch, setChemicalSearch] = useState("");
   const [hazardFilter, setHazardFilter] = useState<string>("all");
   const [isAddChemicalOpen, setIsAddChemicalOpen] = useState(false);
   const [editingChemical, setEditingChemical] = useState<ChemicalItem | null>(null);
   
   // Equipment State
-  const [equipment, setEquipment] = useState<EquipmentItem[]>(EQUIPMENT);
+  const [equipment, setEquipment] = useState<EquipmentItem[]>(() => {
+    const saved = localStorage.getItem('munyaka_science_equipment');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+    }
+    return EQUIPMENT;
+  });
   const [equipmentSearch, setEquipmentSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<EquipmentItem | null>(null);
   
   // Bookings State
-  const [bookings, setBookings] = useState<LabBooking[]>(LAB_BOOKINGS);
+  const [bookings, setBookings] = useState<LabBooking[]>(() => {
+    const saved = localStorage.getItem('munyaka_science_bookings');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+    }
+    return LAB_BOOKINGS;
+  });
   const [bookingSearch, setBookingSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAddBookingOpen, setIsAddBookingOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<LabBooking | null>(null);
   
   // Breakages State
-  const [breakages, setBreakages] = useState<BreakageLog[]>(BREAKAGE_LOGS);
+  const [breakages, setBreakages] = useState<BreakageLog[]>(() => {
+    const saved = localStorage.getItem('munyaka_science_breakages');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+    }
+    return BREAKAGE_LOGS;
+  });
   const [breakageSearch, setBreakageSearch] = useState("");
   const [breakageStatusFilter, setBreakageStatusFilter] = useState<string>("all");
   const [isAddBreakageOpen, setIsAddBreakageOpen] = useState(false);
@@ -123,21 +153,6 @@ const ScienceLab = () => {
   useEffect(() => { localStorage.setItem('munyaka_science_equipment', JSON.stringify(equipment)); notifyDataChanged('munyaka_science_equipment'); }, [equipment]);
   useEffect(() => { localStorage.setItem('munyaka_science_bookings', JSON.stringify(bookings)); notifyDataChanged('munyaka_science_bookings'); }, [bookings]);
   useEffect(() => { localStorage.setItem('munyaka_science_breakages', JSON.stringify(breakages)); notifyDataChanged('munyaka_science_breakages'); }, [breakages]);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const savedChemicals = localStorage.getItem('munyaka_science_chemicals');
-    if (savedChemicals) setChemicals(JSON.parse(savedChemicals));
-    
-    const savedEquipment = localStorage.getItem('munyaka_science_equipment');
-    if (savedEquipment) setEquipment(JSON.parse(savedEquipment));
-    
-    const savedBookings = localStorage.getItem('munyaka_science_bookings');
-    if (savedBookings) setBookings(JSON.parse(savedBookings));
-    
-    const savedBreakages = localStorage.getItem('munyaka_science_breakages');
-    if (savedBreakages) setBreakages(JSON.parse(savedBreakages));
-  }, []);
 
   // Filtered Data
   const filteredChemicals = useMemo(() => chemicals.filter(c => {
