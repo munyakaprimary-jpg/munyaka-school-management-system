@@ -46,8 +46,17 @@ export const CentralDataService = {
   }
 };
 
+export const getLearners = CentralDataService.getLearners;
+export const saveLearners = CentralDataService.saveLearners;
+export const getStudents = CentralDataService.getStudents;
+export const saveStudents = CentralDataService.saveStudents;
+export const getStaff = CentralDataService.getStaff;
+export const saveStaff = CentralDataService.saveStaff;
+
 export function generateFullSnapshot() {
   const learners = CentralDataService.getLearners();
   const staff = CentralDataService.getStaff();
   return JSON.stringify({ learners, staff }, null, 2);
 }
+
+export default CentralDataService;
