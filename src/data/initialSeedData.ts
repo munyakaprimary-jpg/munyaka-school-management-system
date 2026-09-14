@@ -1,74 +1,44 @@
-export interface ContentItem {
-  id: string;
-  title: string;
-  strand: string;
-  subStrand?: string;
-  topic?: string;
-  grade: number;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  contentType: 'notes' | 'assessment' | 'flashcards' | 'quiz' | 'practical';
-  body: string;
-  attachment?: { name: string; url: string; size?: number; type?: string };
-  assessmentType?: string;
-  totalMarks?: number | "";
-  durationMinutes?: number | "";
-  markingScheme?: { name: string; url: string; size?: number; type?: string };
-  memoryVerses?: { reference: string; text: string }[];
-  revisionQuestions?: { question: string; answer?: string; rubric?: string }[];
-  tags?: string[];
-  [key: string]: any;
-}
-
-export type StrandCategory = string;
-export type AssessmentType = string;
-export type Attachment = { name: string; url: string; size?: number; type?: string };
-export type MemoryVerse = { reference: string; text: string };
-export type RevisionQuestion = { question: string; answer?: string; rubric?: string };
-
-export const strandCategories = [
-  'Languages',
-  'Mathematics',
-  'Science & Technology',
-  'Social Studies',
-  'Creative Arts',
-  'Religious Education',
-  'Assessments & Quizzes'
-];
-
-export const gradeLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
 export const initialSeedData = {
   students: [
-    { id: '1', admNo: 'MUN/001', name: 'Amina Wangari', fullName: 'Amina Wangari', grade: 'Grade 4' },
-    { id: '2', admNo: 'MUN/002', name: 'Brian Kiprono', fullName: 'Brian Kiprono', grade: 'Grade 5' }
+    { id: '1', name: 'MUTWIKA', fullName: 'MUTWIKA', grade: 'Grade 1' },
+    { id: '2', name: 'OCTEVIOR', fullName: 'OCTEVIOR', grade: 'Grade 1' },
+    { id: '3', name: 'SAMWEL', fullName: 'SAMWEL', grade: 'Grade 1' },
+    { id: '4', name: 'ALFRED', fullName: 'ALFRED', grade: 'Grade 2' },
+    { id: '5', name: 'BRIAN', fullName: 'BRIAN', grade: 'Grade 2' },
+    { id: '6', name: 'MARY', fullName: 'MARY', grade: 'Grade 2' },
+    { id: '7', name: 'SAMSON KIBET', fullName: 'SAMSON KIBET', grade: 'Grade 3' }
   ],
-  learners: [
-    { id: '1', admNo: 'MUN/001', name: 'Amina Wangari', fullName: 'Amina Wangari', grade: 'Grade 4' },
-    { id: '2', admNo: 'MUN/002', name: 'Brian Kiprono', fullName: 'Brian Kiprono', grade: 'Grade 5' }
-  ],
-  assessmentScores: {} as Record<string, any>,
-  fees: [] as any[],
-  feeStructures: [] as any[],
-  transactions: [] as any[],
-  attendance: {} as Record<string, any>,
-  libraryBooks: [] as any[],
-  ictAssets: [] as any[],
-  notices: [] as any[],
-  settings: {} as Record<string, any>,
-  staff: [] as any[],
-  staffPrereg: [] as any[],
-  grades: [] as any[],
-  examTypes: [] as any[],
-  learningAreas: [] as any[]
+  staff: [],
+  exams: [],
+  libraryBooks: [],
+  transactions: []
 };
 
-export const INITIAL_SEED_DATA = initialSeedData as any;
+// MANDATORY EXPORTS FOR VITE COMPATIBILITY
+(initialSeedData as any).learners = initialSeedData.students;
+
+export const INITIAL_SEED_DATA = initialSeedData;
 export const DEFAULT_CBC_CLUSTERS = [];
 export const buildDefaultClusters = () => [];
-export const assessmentTypeOptions = ['quiz', 'exam', 'assignment', 'practical', 'oral'];
+export const strandCategories = [];
+export const gradeLevels = [];
+export const ContentItem = {};
+export const StrandCategory = {};
+export const MemoryVerse = {};
+export const RevisionQuestion = {};
+export const Attachment = {};
+export const AssessmentType = {};
+export const assessmentTypeOptions = [];
 
-export const mockLearners = initialSeedData.learners;
+export const mockLearners = initialSeedData.students;
 export const mockStudents = initialSeedData.students;
-export const mockMarks = initialSeedData.marks;
+export const mockStaff = initialSeedData.staff;
+export const mockExams = initialSeedData.exams;
+export const mockLibrary = initialSeedData.libraryBooks;
+export const mockFinances = initialSeedData.transactions;
+
+export const cbcStudyContent = [];
+export const cbcStudyMaterials = cbcStudyContent;
+export const cbcCurriculum = [];
 
 export default initialSeedData;
