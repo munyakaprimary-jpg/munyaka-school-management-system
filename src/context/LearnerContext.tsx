@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { initialSeedData } from '@/data/initialSeedData';
+import { initialSeedData } from '../data/initialSeedData';
 
 interface LearnerContextType {
   learners: any[];
@@ -9,27 +9,33 @@ interface LearnerContextType {
 
 const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
+const getInitialLearners = () => {
+  try {
+    const local = localStorage.getItem('munyaka_learners');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error("Storage parse error", e);
+  }
+  // Fallback to hardcoded seed data
+  return initialSeedData?.learners || initialSeedData?.students || [];
+};
+
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [learners, setLearners] = useState(() => {
-    const primary = localStorage.getItem('munyaka_learners');
-    if (primary && JSON.parse(primary).length > 0) return JSON.parse(primary);
+  const [learners, setLearners] = useState(getInitialLearners);
 
-    const legacy1 = localStorage.getItem('learners');
-    if (legacy1 && JSON.parse(legacy1).length > 0) return JSON.parse(legacy1);
-
-    const legacy2 = localStorage.getItem('students');
-    if (legacy2 && JSON.parse(legacy2).length > 0) return JSON.parse(legacy2);
-
-    return initialSeedData.students || (initialSeedData as any).munyaka_learners || [];
-  });
-
+  // Only save to localStorage when learners array actually has items
   useEffect(() => {
-    try {
+    if (learners && learners.length > 0) {
       localStorage.setItem('munyaka_learners', JSON.stringify(learners));
-      window.dispatchEvent(new CustomEvent('munyaka_learners_updated', { detail: learners }));
-      window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
-    } catch (err) {
-      console.error('[LearnerContext] Failed to sync learners to localStorage:', err);
+      try {
+        window.dispatchEvent(new CustomEvent('munyaka_learners_updated', { detail: learners }));
+        window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
+      } catch (err) {
+        // ignore dispatch errors in non-browser envs
+      }
     }
   }, [learners]);
 
