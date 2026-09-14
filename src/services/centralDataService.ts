@@ -27,7 +27,6 @@ const DEFAULT_STAFF = [
 ];
 
 export const CentralDataService = {
-export const CentralDataService = {
   getLearners: () => {
     try {
       console.log("All localStorage keys:", Object.keys(localStorage));
@@ -43,13 +42,13 @@ export const CentralDataService = {
               const parsed = JSON.parse(raw);
               if (Array.isArray(parsed) && parsed.length > 0) {
                 // Check if items look like student records (have name or admNo or id)
-                const isStudentList = parsed.some(item => item && typeof item === 'object' && (item.name || item.fullName || item.admNo || item.admissionNo));
+                const isStudentList = parsed.some(item => item && typeof item === 'object' && (item?.name || item?.fullName || item?.admNo || item?.admissionNo));
                 if (isStudentList) {
                   console.log(`[Diagnostic Recovery] Found potential student list in key "${key}" with ${parsed.length} items.`);
                   for (const student of parsed) {
                     if (student && typeof student === 'object') {
-                      const id = student.id || student.admNo || student.admissionNo;
-                      if (id && !recoveredLearners.some(s => (s.id && s.id === id) || (s.admNo && s.admNo === student.admNo))) {
+                      const id = student?.id || student?.admNo || student?.admissionNo;
+                      if (id && !recoveredLearners.some(s => (s?.id && s.id === id) || (s?.admNo && s.admNo === student?.admNo))) {
                         recoveredLearners.push(student);
                       }
                     }
