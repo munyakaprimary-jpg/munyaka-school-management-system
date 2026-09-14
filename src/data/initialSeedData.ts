@@ -12,9 +12,6 @@ export const Attachment = {};
 export const AssessmentType = {};
 export const cbcStudyContent = [];
 
-export const DEFAULT_CBC_CLUSTERS = [];
-export const buildDefaultClusters = () => [];
-
 export const initialSeedData = {
   "students": [
     {
