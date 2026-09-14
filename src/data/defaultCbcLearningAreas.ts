@@ -1,3 +1,3 @@
 import { initialSeedData } from './initialSeedData';
-export const defaultCbcLearningAreas = initialSeedData.learningAreas;
+export const defaultCbcLearningAreas = (initialSeedData as any).learningAreas || [];
 export default defaultCbcLearningAreas;
