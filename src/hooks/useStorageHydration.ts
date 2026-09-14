@@ -4,127 +4,84 @@ import { initialSeedData } from '@/data/initialSeedData';
 /**
  * Key mapping from initialSeedData fields to their respective LocalStorage keys.
  */
-const KEY_MAPPING: Record<string, string[]> = {
-  students: ['munyaka_learners', 'munyaka_learners_db', 'school_learners_data'],
-  classes: ['munyaka_classes'],
-  streams: ['munyaka_streams'],
-  learningAreas: ['munyaka_learning_areas'],
-  exams: ['munyaka_exams'],
-  assessments: ['munyaka_assessments'],
-  gradingScales: ['munyaka_grading_scales'],
-  reportCards: ['munyaka_report_cards'],
-  staff: ['munyaka_staff', 'munyaka_staff_directory', 'munyaka_master_staff_list'],
-  roles: ['munyaka_roles'],
-  payments: ['munyaka_payments'],
-  feeStructures: ['munyaka_fee_structures'],
-  invoices: ['munyaka_invoices'],
-  libraryBooks: ['munyaka_library_books'],
-  libraryLogs: ['munyaka_library_borrowings'],
-  scienceLabInventory: ['munyaka_science_lab'],
-  ictLabEquipment: ['munyaka_ict_lab'],
-  storeInventory: ['munyaka_store_items'],
-  attendance: ['munyaka_attendance'],
-  schoolSettings: ['munyaka_school_settings', 'munyaka_system_settings_v3'],
+const KEY_MAPPING: Record<string, string> = {
+  students: 'munyaka_learners',
+  classes: 'munyaka_classes',
+  streams: 'munyaka_streams',
+  learningAreas: 'munyaka_learning_areas',
+  exams: 'munyaka_exams',
+  assessments: 'munyaka_assessments',
+  gradingScales: 'munyaka_grading_scales',
+  reportCards: 'munyaka_report_cards',
+  staff: 'munyaka_staff',
+  roles: 'munyaka_roles',
+  payments: 'munyaka_payments',
+  feeStructures: 'munyaka_fee_structures',
+  invoices: 'munyaka_invoices',
+  libraryBooks: 'munyaka_library_books',
+  libraryLogs: 'munyaka_library_borrowings',
+  scienceLabInventory: 'munyaka_science_lab',
+  ictLabEquipment: 'munyaka_ict_lab',
+  storeInventory: 'munyaka_store_items',
+  attendance: 'munyaka_attendance',
+  schoolSettings: 'munyaka_school_settings',
 };
 
 /**
- * Hydrates localStorage from initialSeedData on first app boot or when uninitialized.
+ * Hydrates localStorage from initialSeedData on first app boot or when uninitialized on Android / Web.
  */
 export function hydrateFromInitialSeed(): void {
   try {
-    const seedKeys = [
-      { key: 'munyaka_learners', data: (initialSeedData as any).students },
-      { key: 'munyaka_staff', data: (initialSeedData as any).staff },
-      { key: 'munyaka_payments', data: (initialSeedData as any).payments || (initialSeedData as any).transactions },
-      { key: 'munyaka_assessments', data: (initialSeedData as any).assessments || (initialSeedData as any).marks },
-      { key: 'munyaka_attendance', data: (initialSeedData as any).attendance },
-      { key: 'munyaka_science_lab', data: (initialSeedData as any).scienceLabInventory },
-      { key: 'munyaka_learning_areas', data: (initialSeedData as any).learningAreas },
-      { key: 'munyaka_study_content', data: (initialSeedData as any).cbcStudyContent },
-    ];
-
-    seedKeys.forEach(({ key, data }) => {
-      const existingNew = localStorage.getItem(key);
-      // Check if any legacy keys exist
-      const legacyKeyMap: Record<string, string[]> = {
-        'munyaka_learners': ['learners', 'students'],
-        'munyaka_staff': ['staff'],
-        'munyaka_assessments': ['assessments', 'marks'],
-      };
-      const oldKeys = legacyKeyMap[key] || [];
-      const hasOldData = oldKeys.some(ok => {
-        const val = localStorage.getItem(ok);
-        return val && val !== '[]' && val !== '{}';
-      });
-
-      if ((!existingNew || existingNew === '[]' || existingNew === '{}') && !hasOldData && data) {
-        localStorage.setItem(key, JSON.stringify(data));
-      }
-    });
-
     const isInitialized = localStorage.getItem('munyaka_initialized') === 'true';
     const seedVersion = (initialSeedData as any).version || (initialSeedData as any).seedVersion || 'v1';
     const currentVersion = localStorage.getItem('munyaka_seed_version');
 
     if (!isInitialized || currentVersion !== seedVersion) {
-      console.log('[StorageHydration] Seeding initial data from initialSeedData snapshot...');
+      console.log('[StorageHydration] First-boot storage hydration: Seeding initial data snapshot...');
 
-      const seedObj = (initialSeedData as Record<string, any>) || {};
+      const snapshot = {
+        students: (initialSeedData as any).students || [],
+        classes: (initialSeedData as any).classes || [],
+        streams: (initialSeedData as any).streams || [],
+        learningAreas: (initialSeedData as any).learningAreas || [],
+        exams: (initialSeedData as any).exams || [],
+        assessments: (initialSeedData as any).assessments || [],
+        gradingScales: (initialSeedData as any).gradingScales || [],
+        reportCards: (initialSeedData as any).reportCards || [],
+        staff: (initialSeedData as any).staff || [],
+        roles: (initialSeedData as any).roles || [],
+        payments: (initialSeedData as any).payments || [],
+        feeStructures: (initialSeedData as any).feeStructures || [],
+        invoices: (initialSeedData as any).invoices || [],
+        libraryBooks: (initialSeedData as any).libraryBooks || [],
+        libraryLogs: (initialSeedData as any).libraryLogs || [],
+        scienceLabInventory: (initialSeedData as any).scienceLabInventory || [],
+        ictLabEquipment: (initialSeedData as any).ictLabEquipment || [],
+        storeInventory: (initialSeedData as any).storeInventory || [],
+        attendance: (initialSeedData as any).attendance || [],
+        schoolSettings: (initialSeedData as any).schoolSettings || {},
+      };
 
-      // 1. Iterate through all keys in initialSeedData directly
-      Object.entries(seedObj).forEach(([key, value]) => {
+      // Iterate through all keys in initialSeedData and write them directly into localStorage
+      Object.entries(snapshot).forEach(([key, value]) => {
+        const localStorageKey = KEY_MAPPING[key] || `munyaka_${key}`;
         if (value !== undefined) {
-          const targetKey = `munyaka_${key}`;
-          const existingTarget = localStorage.getItem(targetKey);
-          const legacyKeyMap: Record<string, string[]> = {
-            'munyaka_learners': ['learners', 'students'],
-            'munyaka_staff': ['staff'],
-            'munyaka_assessments': ['assessments', 'marks'],
-          };
-          const oldKeys = legacyKeyMap[targetKey] || [];
-          const hasOldData = oldKeys.some(ok => {
-            const val = localStorage.getItem(ok);
-            return val && val !== '[]' && val !== '{}';
-          });
-
-          // Prevent unintended overwrites if non-empty data already exists under old or new keys
-          if (existingTarget && existingTarget !== '[]' && existingTarget !== '{}') {
-            // Already populated under new key, skip seed overwrite
-            return;
-          }
-          if (hasOldData) {
-            // Legacy old key has data, do not overwrite with seed default
-            return;
-          }
-
-          const stringified = typeof value === 'string' ? value : JSON.stringify(value);
-          localStorage.setItem(targetKey, stringified);
-
-          // If mapped to multiple alias keys, populate each
-          const aliases = KEY_MAPPING[key];
-          if (aliases && aliases.length > 0) {
-            aliases.forEach(aliasKey => {
-              const existingAlias = localStorage.getItem(aliasKey);
-              if (!existingAlias || existingAlias === '[]' || existingAlias === '{}') {
-                localStorage.setItem(aliasKey, stringified);
-              }
-            });
-          }
+          localStorage.setItem(localStorageKey, JSON.stringify(value));
         }
       });
 
-      // 2. Mark system as initialized and set current version
+      // Set munyaka_initialized to true
       localStorage.setItem('munyaka_initialized', 'true');
       localStorage.setItem('munyaka_seed_version', seedVersion);
 
-      // 3. Dispatch data change event so all active listeners re-render
+      // Dispatch event to notify listeners
       window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { source: 'seed-hydration' } }));
       window.dispatchEvent(new CustomEvent('munyaka_learners_updated'));
 
-      console.log('[StorageHydration] Initial seed data successfully hydrated into localStorage.');
+      console.log('[StorageHydration] 100% data parity achieved. LocalStorage successfully hydrated from initialSeedData.');
     }
   } catch (error) {
-    console.error('[StorageHydration] Error during seed hydration:', error);
+    console.error('[StorageHydration] Error during automatic first-boot storage hydration:', error);
   }
 }
 

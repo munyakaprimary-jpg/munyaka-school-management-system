@@ -67,7 +67,7 @@ export default function CentralDataService() {
   const generateFullSnapshot = () => {
     const snapshot = {
       // Core Academics & Structure
-      students: JSON.parse(localStorage.getItem('munyaka_learners_db') || localStorage.getItem('munyaka_learners') || '[]'),
+      students: JSON.parse(localStorage.getItem('munyaka_learners') || '[]'),
       classes: JSON.parse(localStorage.getItem('munyaka_classes') || '[]'),
       streams: JSON.parse(localStorage.getItem('munyaka_streams') || '[]'),
       learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || '[]'),
@@ -79,7 +79,7 @@ export default function CentralDataService() {
       reportCards: JSON.parse(localStorage.getItem('munyaka_report_cards') || '[]'),
 
       // Personnel & Staff Directory
-      staff: JSON.parse(localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || '[]'),
+      staff: JSON.parse(localStorage.getItem('munyaka_staff') || '[]'),
       roles: JSON.parse(localStorage.getItem('munyaka_roles') || '[]'),
       
       // Financial Ledger & Payments

@@ -265,6 +265,9 @@ const App = () => {
   useStorageHydration();
 
   // ── One-time learner-data migrations ───────────────────────────────────
+  useStorageHydration();
+
+  // ── One-time learner-data migrations ───────────────────────────────────
   // Sequential, independently-gated migrations run on first launch:
   //
   //   1. Assessment-number cleanup — removes fake MUN-XXX values that
