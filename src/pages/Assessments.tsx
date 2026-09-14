@@ -102,7 +102,6 @@ const Assessments = () => {
   const [stream, setStream] = useState<string>("All Streams");
   const [examType, setExamType] = useState<string>("Formative Assessment");
   const [term, setTerm] = useState<string>("Term 1");
-  const [adminOverrideActive, setAdminOverrideActive] = useState<boolean>(false);
   const [subject, setSubject] = useState<string>("All Subjects");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
