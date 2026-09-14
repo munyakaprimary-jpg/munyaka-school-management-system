@@ -158,12 +158,13 @@ export default function Students() {
   // listen for the cross-component change event and re-hydrate so the
   // table immediately reflects the newly assigned admission numbers
   // instead of the em-dash placeholders.
-useEffect(() => {
-  const centralData = CentralDataService.getLearners();
-  if (centralData && centralData.length > 0) {
-    setStudents(centralData);
-  }
-}, []);
+  useEffect(() => {
+    const centralData = CentralDataService.getLearners();
+    if (centralData && centralData.length > 0) {
+      setStudents(centralData);
+    }
+
+    const LEARNER_KEYS = ['munyaka_learners_db', 'munyaka_students', 'munyaka_learners', 'munyaka_pupils', 'students'];
     const isLearnerKey = (key: string | null) => !!key && LEARNER_KEYS.includes(key);
 
     const reload = (_key: string | null) => {
