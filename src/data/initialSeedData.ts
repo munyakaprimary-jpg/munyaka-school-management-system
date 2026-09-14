@@ -3,19 +3,10 @@
  * ======================================================
  * Cold-start defaults for the APK / offline-first app.
  *
- * Consolidated from:
- * - mockAttendance.ts
- * - mockLearnerMenu.ts
- * - mockMarks.ts
- * - mockTransactions.ts
- * - defaultCbcLearningAreas.ts
- * - cbcStudyContent.ts
- * - scienceLabData.ts
- *
- * Version: "sample-v1"
+ * Consolidated Export Structure matching all required mock models.
  */
 
-import type { LearnerMenuItem, LearnerMenuFilter } from "@/types/learnerMenu";
+import type { LearnerMenuItem } from "@/types/learnerMenu";
 import type { ClusterData } from "@/types/assessments";
 import type { ChemicalItem, EquipmentItem, LabBooking, BreakageLog } from "@/types/scienceLab";
 
@@ -136,17 +127,7 @@ export interface ContentItem {
   durationMinutes?: number;
 }
 
-// ── Consolidated Mock Data Exports ──────────────────────────────────────────
-
-export const mockAttendance = {
-  byStudent: {
-    '1787737452457': {
-      present: 42,
-      absent: 2,
-      late: 1,
-    },
-  },
-};
+// ── Mock Data Collections ──────────────────────────────────────────────────
 
 export const MOCK_LEARNERS: LearnerMenuItem[] = [
   {
@@ -295,7 +276,22 @@ export const MOCK_LEARNERS: LearnerMenuItem[] = [
   },
 ];
 
-export const mockMarks = {
+export const mockStaffList = [
+  { id: "staff-001", name: "Grace Njeri", tscNo: "TSC-88421", idNo: "22345678", phone: "+254720001001", email: "grace.njeri@munyaka.sc.ke", role: "Head Teacher", grade: "—", stream: "—", gender: "Female", status: "Active", salary: 95000, joinedDate: "2018-01-15", emergencyContact: "+254711001001", emergencyName: "John Njeri", profileComplete: true, schoolId: "munyaka-sc" },
+  { id: "staff-002", name: "John Kamau",  tscNo: "TSC-77102", idNo: "11223344", phone: "+254720002002", email: "john.kamau@munyaka.sc.ke",  role: "Teacher", grade: "Grade 7", stream: "MERCURY", gender: "Male", status: "Active", salary: 75000, joinedDate: "2020-03-01", emergencyContact: "+254722002002", emergencyName: "Mary Kamau", profileComplete: true, schoolId: "munyaka-sc" },
+];
+
+export const mockAttendanceData = {
+  byStudent: {
+    '1787737452457': {
+      present: 42,
+      absent: 2,
+      late: 1,
+    },
+  },
+};
+
+export const mockMarksData = {
   studentRecords: {
     '1787737452457': {
       currentTerm: 'Term 1',
@@ -328,7 +324,7 @@ export const mockMarks = {
   },
 };
 
-export const mockTransactions: Transaction[] = [
+export const mockTransactionsList: Transaction[] = [
   {
     id: 'TX-516',
     date: '8/26/2026',
@@ -442,13 +438,10 @@ export const buildDefaultClusters = (): ClusterData[] => {
   }));
 };
 
-// ── Study Content Data ──────────────────────────────────────────────────────
-const g = (grade: number) => grade;
-
-const creValues: ContentItem[] = [
+export const cbcStudyContentData: ContentItem[] = [
   {
     id: "cre-1-bible-reader",
-    grade: g(1),
+    grade: 1,
     strand: "CRE & Values",
     subStrand: "Bible Reader",
     topic: "Creation Story",
@@ -467,179 +460,91 @@ const creValues: ContentItem[] = [
     ],
     revisionQuestions: [
       { question: "How many days did God take to create the world?", answer: "Six days", rubric: "1 mark" },
-      { question: "What did God create on the first day?", answer: "Light", rubric: "1 mark" },
     ],
     difficulty: "beginner",
     tags: ["creation", "genesis", "days", "rest"],
   },
-  {
-    id: "cre-1-moral-parables",
-    grade: g(1),
-    strand: "CRE & Values",
-    subStrand: "Moral Parables",
-    topic: "The Good Samaritan",
-    summary: "Jesus tells the story of a man who helped a stranger in need.",
-    notes: [
-      "A man was travelling from Jerusalem to Jericho.",
-      "He was attacked by robbers and left hurt by the roadside.",
-      "A priest passed by but did not help.",
-      "A Levite also passed by and ignored the man.",
-      "A Samaritan (someone from a different community) stopped and helped.",
-      "He bandaged the man's wounds and took him to an inn.",
-      "Jesus said: 'Go and do likewise' — help anyone in need.",
-    ],
-    memoryVerses: [
-      { reference: "Luke 10:27", text: "Love your neighbour as yourself." },
-    ],
-    revisionQuestions: [
-      { question: "Who helped the hurt man on the road?", answer: "A Samaritan", rubric: "1 mark" },
-    ],
-    difficulty: "beginner",
-    tags: ["samaritan", "love", "neighbour", "parable"],
-  },
 ];
 
-const languagesData: ContentItem[] = [
-  {
-    id: "lang-1-english-vocab",
-    grade: g(1),
-    strand: "Languages",
-    subStrand: "English",
-    topic: "Colour and Number Vocabulary",
-    summary: "Learn to name colours and count objects in English.",
-    notes: [
-      "Colours: red, blue, yellow, green, orange, purple, pink, brown, black, white.",
-      "Numbers 1–10: one, two, three, four, five, six, seven, eight, nine, ten.",
-      "Use colours and numbers together: 'I have three red apples.'",
-      "Practice naming the colour of objects in your classroom.",
-      "Sing number songs to help remember the order of numbers.",
-    ],
-    revisionQuestions: [
-      { question: "How do you spell the colour of the sky?", answer: "Blue", rubric: "1 mark" },
-      { question: "Write numbers 1–5 in words.", answer: "One, two, three, four, five", rubric: "2 marks" },
-    ],
-    difficulty: "beginner",
-    tags: ["english", "vocabulary", "colours", "numbers"],
-  },
-];
+export const scienceLabDataStructure = {
+  chemicals: [
+    {
+      id: "CHM-001",
+      name: "Hydrochloric Acid",
+      formula: "HCl",
+      quantity: 2.5,
+      unit: "L",
+      location: "Chemical Cabinet A1",
+      expiryDate: "2026-12-31",
+      hazardLevel: "High",
+      minThreshold: 0.5,
+    } as ChemicalItem,
+  ],
+  equipment: [
+    {
+      id: "EQP-001",
+      name: "Bunsen Burner",
+      category: "Heating",
+      totalQty: 30,
+      functionalQty: 28,
+      damagedQty: 2,
+      location: "Lab Bench Row 1",
+    } as EquipmentItem,
+  ],
+  bookings: [
+    {
+      id: "LBK-001",
+      date: "2025-01-20",
+      timeSlot: "08:00-09:30",
+      teacher: "Mr. Peter Omondi",
+      gradeClass: "Grade 7 Alpha",
+      topic: "Acid-Base Titration",
+      itemsRequested: ["Hydrochloric Acid"],
+      status: "Approved",
+    } as LabBooking,
+  ],
+  breakages: [
+    {
+      id: "BRK-001",
+      date: "2025-01-15",
+      studentName: "Brian Kiptoo",
+      admNo: "A827361",
+      gradeClass: "Grade 7 Alpha",
+      itemBroken: "Test Tube (15mL)",
+      qty: 2,
+      cost: 120,
+      status: "Paid",
+    } as BreakageLog,
+  ],
+};
 
-export const cbcStudyContent: ContentItem[] = [
-  ...creValues,
-  ...languagesData,
-];
+// ── Consolidated Export Structure ──────────────────────────────────────────
 
-// ── Science Lab Data ────────────────────────────────────────────────────────
-export const CHEMICALS: ChemicalItem[] = [
-  {
-    id: "CHM-001",
-    name: "Hydrochloric Acid",
-    formula: "HCl",
-    quantity: 2.5,
-    unit: "L",
-    location: "Chemical Cabinet A1",
-    expiryDate: "2026-12-31",
-    hazardLevel: "High",
-    minThreshold: 0.5,
-  },
-  {
-    id: "CHM-002",
-    name: "Sodium Hydroxide",
-    formula: "NaOH",
-    quantity: 1.8,
-    unit: "kg",
-    location: "Chemical Cabinet A2",
-    expiryDate: "2027-06-15",
-    hazardLevel: "High",
-    minThreshold: 0.3,
-  },
-  {
-    id: "CHM-003",
-    name: "Copper(II) Sulfate",
-    formula: "CuSO₄·5H₂O",
-    quantity: 500,
-    unit: "g",
-    location: "Chemical Cabinet B1",
-    expiryDate: "2028-01-20",
-    hazardLevel: "Medium",
-    minThreshold: 100,
-  },
-];
-
-export const EQUIPMENT: EquipmentItem[] = [
-  {
-    id: "EQP-001",
-    name: "Bunsen Burner",
-    category: "Heating",
-    totalQty: 30,
-    functionalQty: 28,
-    damagedQty: 2,
-    location: "Lab Bench Row 1",
-  },
-  {
-    id: "EQP-002",
-    name: "Digital Balance (0.01g)",
-    category: "Measuring",
-    totalQty: 8,
-    functionalQty: 7,
-    damagedQty: 1,
-    location: "Instrument Cabinet",
-  },
-];
-
-export const LAB_BOOKINGS: LabBooking[] = [
-  {
-    id: "LBK-001",
-    date: "2025-01-20",
-    timeSlot: "08:00-09:30",
-    teacher: "Mr. Peter Omondi",
-    gradeClass: "Grade 7 Alpha",
-    topic: "Acid-Base Titration",
-    itemsRequested: ["Hydrochloric Acid", "Sodium Hydroxide", "Burette"],
-    status: "Approved",
-  },
-];
-
-export const BREAKAGE_LOGS: BreakageLog[] = [
-  {
-    id: "BRK-001",
-    date: "2025-01-15",
-    studentName: "Brian Kiptoo",
-    admNo: "A827361",
-    gradeClass: "Grade 7 Alpha",
-    itemBroken: "Test Tube (15mL)",
-    qty: 2,
-    cost: 120,
-    status: "Paid",
-  },
-];
-
-// ── Unified initialSeedData Export ──────────────────────────────────────────
-export const INITIAL_SEED_DATA = {
+export const initialSeedData = {
   version: "sample-v1",
   seedVersion: "sample-v1",
   exportDate: new Date().toISOString(),
   school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-  students: [],
-  staff: [
-    { id: "staff-001", name: "Grace Njeri", tscNo: "TSC-88421", idNo: "22345678", phone: "+254720001001", email: "grace.njeri@munyaka.sc.ke", role: "Head Teacher", grade: "—", stream: "—", gender: "Female", status: "Active", salary: 95000, joinedDate: "2018-01-15", emergencyContact: "+254711001001", emergencyName: "John Njeri", profileComplete: true, schoolId: "munyaka-sc" },
-    { id: "staff-002", name: "John Kamau",  tscNo: "TSC-77102", idNo: "11223344", phone: "+254720002002", email: "john.kamau@munyaka.sc.ke",  role: "Teacher", grade: "Grade 7", stream: "MERCURY", gender: "Male", status: "Active", salary: 75000, joinedDate: "2020-03-01", emergencyContact: "+254722002002", emergencyName: "Mary Kamau", profileComplete: true, schoolId: "munyaka-sc" },
-  ],
+  students: MOCK_LEARNERS,
+  learners: MOCK_LEARNERS,
+  staff: mockStaffList,
   staffPrereg: [],
   fees: {},
   feeStructures: [
-    { id: "fs-1",  gradeId: "gpp1", gradeName: "PP1",       year: "2026", term: "term1", amount: 8000  },
-    { id: "fs-2",  gradeId: "gpp2", gradeName: "PP2",       year: "2026", term: "term1", amount: 8000  },
+    { id: "fs-1", gradeId: "gpp1", gradeName: "PP1", year: "2026", term: "term1", amount: 8000 },
+    { id: "fs-2", gradeId: "gpp2", gradeName: "PP2", year: "2026", term: "term1", amount: 8000 },
   ],
-  transactions: mockTransactions,
-  attendance: mockAttendance,
+  attendance: mockAttendanceData,
+  marks: mockMarksData,
+  transactions: mockTransactionsList,
   grades: [
-    { id: "gpp1", name: "PP1",  category: "Pre-Primary",    streams: [
+    { id: "gpp1", name: "PP1", category: "Pre-Primary", streams: [
       { id: "spp1a", name: "Yellow", teacher: "Unassigned", studentsCount: 0 },
-      { id: "spp1b", name: "Green",  teacher: "Unassigned", studentsCount: 0 },
+      { id: "spp1b", name: "Green", teacher: "Unassigned", studentsCount: 0 },
     ]},
   ],
   examTypes: [
-    { id: "et-1", name: "Formative Assessment",  code: "FORMATIVE",  weight: 40, category: "Formative",  description: "Continuous assessment tests and classroom activities" },
+    { id: "et-1", name: "Formative Assessment", code: "FORMATIVE", weight: 40, category: "Formative", description: "Continuous assessment tests and classroom activities" },
   ],
   learningAreas: DEFAULT_CBC_CLUSTERS,
   assessmentScores: {},
@@ -663,7 +568,7 @@ export const INITIAL_SEED_DATA = {
       termEndDate: "",
       gradingScale: [
         { level: "EE", descriptor: "Exceeding Expectations", min: 80, max: 100, points: 4 },
-        { level: "ME", descriptor: "Meeting Expectations",     min: 50, max: 79,  points: 3 },
+        { level: "ME", descriptor: "Meeting Expectations", min: 50, max: 79, points: 3 },
       ],
     },
     permissions: {},
@@ -684,16 +589,11 @@ export const INITIAL_SEED_DATA = {
     todayAttendanceRate: 0,
     lastUpdated: new Date().toISOString(),
   },
-  studyContent: cbcStudyContent,
-  scienceLab: {
-    chemicals: CHEMICALS,
-    equipment: EQUIPMENT,
-    bookings: LAB_BOOKINGS,
-    breakages: BREAKAGE_LOGS,
-  },
+  studyContent: cbcStudyContentData,
+  scienceLab: scienceLabDataStructure
 };
 
-export const initialSeedData = INITIAL_SEED_DATA;
+export const INITIAL_SEED_DATA = initialSeedData;
 
 export const strandCategories = [
   "CRE & Values",
@@ -718,3 +618,15 @@ export const assessmentTypeOptions = [
   "Opener Quiz",
   "Other",
 ] as const;
+
+// Named exports for backwards compatibility
+export const mockLearners = initialSeedData.learners;
+export const mockStaff = initialSeedData.staff;
+export const mockAttendance = initialSeedData.attendance;
+export const mockMarks = initialSeedData.marks;
+export const mockTransactions = initialSeedData.transactions;
+export const defaultCbcLearningAreas = initialSeedData.learningAreas;
+export const cbcStudyContent = initialSeedData.studyContent;
+export const scienceLabData = initialSeedData.scienceLab;
+
+export default initialSeedData;
