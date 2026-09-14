@@ -109,22 +109,28 @@ export type AssessmentType =
 
 export interface ContentItem {
   id: string;
-  grade: number;
+  grade: number | string;
   strand: StrandCategory;
-  category?: StrandCategory;
-  subStrand: string;
-  topic: string;
+  subject?: string;
+  category?: StrandCategory | string;
+  subStrand?: string;
+  title?: string;
+  topic?: string;
   summary: string;
-  notes: string[];
+  notes?: string[];
+  fullNotes?: string[];
+  keyTerms?: string[];
+  practiceQuestions?: { question: string; options?: string[]; answer: string; rubric?: string }[];
   memoryVerses?: MemoryVerse[];
   revisionQuestions?: RevisionQuestion[];
-  difficulty: "beginner" | "intermediate" | "advanced";
-  tags: string[];
+  difficulty: "beginner" | "intermediate" | "advanced" | "Beginner" | "Intermediate" | "Advanced";
+  tags?: string[];
   attachment?: Attachment;
   markingScheme?: Attachment;
   assessmentType?: AssessmentType;
   totalMarks?: number;
   durationMinutes?: number;
+  readTimeMin?: number;
 }
 
 // ── Mock Data Collections ──────────────────────────────────────────────────
