@@ -1465,3 +1465,17 @@ export function verifyStaffLogin(inputEmail: string, inputCode: string) {
     return { success: false, message: "An unexpected error occurred during login." };
   }
 }
+import { verifyStaffLogin } from './staffMasterService'; // Adjust path if needed
+
+// Inside your form submit / button click handler:
+const handleLoginSubmit = (emailInput: string, passwordInput: string) => {
+  const result = verifyStaffLogin(emailInput, passwordInput);
+  
+  if (result.success) {
+    // Success! Move to staff dashboard
+    window.location.href = '/dashboard'; 
+  } else {
+    // This will display the exact message from our function
+    setErrorMessage(result.message); 
+  }
+};
