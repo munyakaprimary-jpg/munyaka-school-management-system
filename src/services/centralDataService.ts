@@ -45,3 +45,9 @@ export const CentralDataService = {
     } catch (e) {}
   }
 };
+
+export function generateFullSnapshot() {
+  const learners = CentralDataService.getLearners();
+  const staff = CentralDataService.getStaff();
+  return JSON.stringify({ learners, staff }, null, 2);
+}
