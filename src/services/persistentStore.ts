@@ -341,69 +341,69 @@ export function hydrateFromSeed(): void {
   seedIfAbsent('munyaka_staff', []);
 
   // Staff pre-registration
-  if (Array.isArray((INITIAL_SEED_DATA as any).staffPrereg)) {
-    seedIfAbsent('munyaka_staff_prereg', (INITIAL_SEED_DATA as any).staffPrereg);
+  if (Array.isArray(INITIAL_SEED_DATA.staffPrereg)) {
+    seedIfAbsent('munyaka_staff_prereg', INITIAL_SEED_DATA.staffPrereg);
   }
 
   // Grades
-  if (Array.isArray((INITIAL_SEED_DATA as any).grades)) {
-    seedIfAbsent('munyaka_grades', (INITIAL_SEED_DATA as any).grades);
+  if (Array.isArray(INITIAL_SEED_DATA.grades)) {
+    seedIfAbsent('munyaka_grades', INITIAL_SEED_DATA.grades);
   }
 
   // Exam types
-  if (Array.isArray((INITIAL_SEED_DATA as any).examTypes)) {
-    seedIfAbsent('munyaka_exam_types', (INITIAL_SEED_DATA as any).examTypes);
+  if (Array.isArray(INITIAL_SEED_DATA.examTypes)) {
+    seedIfAbsent('munyaka_exam_types', INITIAL_SEED_DATA.examTypes);
   }
 
   // Learning areas
-  if (Array.isArray((INITIAL_SEED_DATA as any).learningAreas)) {
-    seedIfAbsent('munyaka_learning_areas', (INITIAL_SEED_DATA as any).learningAreas);
+  if (Array.isArray(INITIAL_SEED_DATA.learningAreas)) {
+    seedIfAbsent('munyaka_learning_areas', INITIAL_SEED_DATA.learningAreas);
   }
 
   // Assessment scores
-  if ((INITIAL_SEED_DATA as any).assessmentScores) {
-    seedIfAbsent('munyaka_assessment_scores', (INITIAL_SEED_DATA as any).assessmentScores);
+  if (INITIAL_SEED_DATA.assessmentScores) {
+    seedIfAbsent('munyaka_assessment_scores', INITIAL_SEED_DATA.assessmentScores);
   }
 
   // Fee ledgers
-  if (Array.isArray((INITIAL_SEED_DATA as any).fees)) {
-    seedIfAbsent('munyaka_fees_records', (INITIAL_SEED_DATA as any).fees);
-    seedIfAbsent('munyaka_student_fees', (INITIAL_SEED_DATA as any).fees);
+  if (Array.isArray(INITIAL_SEED_DATA.fees)) {
+    seedIfAbsent('munyaka_fees_records', INITIAL_SEED_DATA.fees);
+    seedIfAbsent('munyaka_student_fees', INITIAL_SEED_DATA.fees);
   }
 
   // Fee structures
-  if (Array.isArray((INITIAL_SEED_DATA as any).feeStructures)) {
-    seedIfAbsent('munyaka_fee_structures', (INITIAL_SEED_DATA as any).feeStructures);
+  if (Array.isArray(INITIAL_SEED_DATA.feeStructures)) {
+    seedIfAbsent('munyaka_fee_structures', INITIAL_SEED_DATA.feeStructures);
   }
 
   // Transactions
-  if (Array.isArray((INITIAL_SEED_DATA as any).transactions)) {
-    seedIfAbsent('munyaka_transactions', (INITIAL_SEED_DATA as any).transactions);
+  if (Array.isArray(INITIAL_SEED_DATA.transactions)) {
+    seedIfAbsent('munyaka_transactions', INITIAL_SEED_DATA.transactions);
   }
 
   // Attendance
-  if ((INITIAL_SEED_DATA as any).attendance) {
-    seedIfAbsent('munyaka_attendance_records', (INITIAL_SEED_DATA as any).attendance);
+  if (INITIAL_SEED_DATA.attendance) {
+    seedIfAbsent('munyaka_attendance_records', INITIAL_SEED_DATA.attendance);
   }
 
   // Library books
-  if (Array.isArray((INITIAL_SEED_DATA as any).libraryBooks)) {
-    seedIfAbsent('munyaka_library_books', (INITIAL_SEED_DATA as any).libraryBooks);
+  if (Array.isArray(INITIAL_SEED_DATA.libraryBooks)) {
+    seedIfAbsent('munyaka_library_books', INITIAL_SEED_DATA.libraryBooks);
   }
 
   // ICT assets
-  if (Array.isArray((INITIAL_SEED_DATA as any).ictAssets)) {
-    seedIfAbsent('munyaka_ict_assets', (INITIAL_SEED_DATA as any).ictAssets);
+  if (Array.isArray(INITIAL_SEED_DATA.ictAssets)) {
+    seedIfAbsent('munyaka_ict_assets', INITIAL_SEED_DATA.ictAssets);
   }
 
   // Notices
-  if (Array.isArray((INITIAL_SEED_DATA as any).notices)) {
-    seedIfAbsent('munyaka_notices', (INITIAL_SEED_DATA as any).notices);
+  if (Array.isArray(INITIAL_SEED_DATA.notices)) {
+    seedIfAbsent('munyaka_notices', INITIAL_SEED_DATA.notices);
   }
 
   // System settings
-  if ((INITIAL_SEED_DATA as any).settings) {
-    seedIfAbsent('munyaka_system_settings_v3', (INITIAL_SEED_DATA as any).settings);
+  if (INITIAL_SEED_DATA.settings) {
+    seedIfAbsent('munyaka_system_settings_v3', INITIAL_SEED_DATA.settings);
   }
 }
 

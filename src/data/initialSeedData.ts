@@ -46,21 +46,20 @@ export const initialSeedData = {
     { id: '1', admNo: 'MUN/001', name: 'Amina Wangari', fullName: 'Amina Wangari', grade: 'Grade 4' },
     { id: '2', admNo: 'MUN/002', name: 'Brian Kiprono', fullName: 'Brian Kiprono', grade: 'Grade 5' }
   ],
-  marks: [],
-  staff: [],
-  staffPrereg: [],
-  grades: [],
-  examTypes: [],
-  learningAreas: [],
-  assessmentScores: {},
-  fees: [],
-  feeStructures: [],
-  transactions: [],
-  attendance: {},
-  libraryBooks: [],
-  ictAssets: [],
-  notices: [],
-  settings: {}
+  assessmentScores: {} as Record<string, any>,
+  fees: [] as any[],
+  feeStructures: [] as any[],
+  transactions: [] as any[],
+  attendance: {} as Record<string, any>,
+  libraryBooks: [] as any[],
+  ictAssets: [] as any[],
+  notices: [] as any[],
+  settings: {} as Record<string, any>,
+  staff: [] as any[],
+  staffPrereg: [] as any[],
+  grades: [] as any[],
+  examTypes: [] as any[],
+  learningAreas: [] as any[]
 };
 
 export const INITIAL_SEED_DATA = initialSeedData as any;
