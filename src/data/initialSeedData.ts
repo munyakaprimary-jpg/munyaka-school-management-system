@@ -1,5 +1,4 @@
 export const initialSeedData = {
-  // --- LEARNERS & STUDENTS ---
   students: [
     { id: "1-001", admNo: "B002961576", name: "MUTWIKA KILONZO", fullName: "MUTWIKA KILONZO", grade: "Grade 7", stream: "VENUS", status: "Active" },
     { id: "1-002", admNo: "B004123291", name: "OCTEVIOR LUVISIA", fullName: "OCTEVIOR LUVISIA", grade: "Grade 6", stream: "Yellow", status: "Active" },
@@ -10,45 +9,17 @@ export const initialSeedData = {
     { id: "1-009", admNo: "MUN-G6-001/2021", name: "SAMSON KIBET", fullName: "SAMSON KIBET", grade: "Grade 6", stream: "Blue", status: "Active" }
   ],
   learners: [],
-
-  // --- EXAMS & ASSESSMENT MARKS ---
-  exams: [
-    // Add your exam definitions here (e.g., Opener Term 1, Mid Term)
-  ],
-  marks: [
-    // Add recorded assessment marks here
-  ],
-
-  // --- LIBRARY MANAGEMENT ---
-  libraryBooks: [
-    // Add library book records (e.g., titles, ISBNs, quantities, issued status)
-  ],
-
-  // --- ICT & ASSET INVENTORY ---
-  ictAssets: [
-    // Add ICT items (e.g., laptops, tablets, projectors, serial numbers)
-  ],
-
-  // --- FINANCES & FEE TRACKING ---
+  exams: [],
+  marks: [],
+  libraryBooks: [],
+  ictAssets: [],
   feeStructures: [],
   transactions: []
 };
 
-// Auto-alias learners array to match students
 initialSeedData.learners = initialSeedData.students;
 
 export const INITIAL_SEED_DATA = initialSeedData;
-export const DEFAULT_CBC_CLUSTERS = [];
-export const buildDefaultClusters = () => [];
-export const strandCategories = [];
-export const gradeLevels = [];
-export const ContentItem = {};
-export const StrandCategory = {};
-export const MemoryVerse = {};
-export const RevisionQuestion = {};
-export const Attachment = {};
-export const AssessmentType = {};
-export const assessmentTypeOptions = [];
 export const DEFAULT_CBC_CLUSTERS = [];
 export const buildDefaultClusters = () => [];
 export const strandCategories = [];
