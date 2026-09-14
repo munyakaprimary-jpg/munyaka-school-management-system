@@ -103,43 +103,49 @@ export default function CentralDataService() {
   };
 
   const handleExportSeedData = () => {
-    // Get active learners from state or localStorage
-    const localLearners = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners') || localStorage.getItem('munyaka_students');
-    const parsedLearners = localLearners ? JSON.parse(localLearners) : [];
+    const getStorage = (key: string) => {
+      try {
+        const val = localStorage.getItem(key);
+        return val ? JSON.parse(val) : [];
+      } catch (e) {
+        return [];
+      }
+    };
 
-    // Standardize all learners to use both 'fullName' and 'name'
-    const standardizedLearners = parsedLearners.map((item: any) => ({
-      ...item,
-      name: item.name || item.fullName || '',
-      fullName: item.fullName || item.name || ''
-    }));
+    const learnersData = getStorage('munyaka_learners');
+    const examsData = getStorage('munyaka_exams');
+    const marksData = getStorage('munyaka_marks');
+    const libraryData = getStorage('munyaka_library');
+    const ictData = getStorage('munyaka_ict');
+    const financeData = getStorage('munyaka_finances');
 
-    // Get active marks
-    const localMarks = localStorage.getItem('munyaka_marks') || localStorage.getItem('marks');
-    const parsedMarks = localMarks ? JSON.parse(localMarks) : [];
-
-    const fullExportData = `export const initialSeedData = {
-  students: ${JSON.stringify(standardizedLearners, null, 2)},
-  learners: ${JSON.stringify(standardizedLearners, null, 2)},
-  marks: ${JSON.stringify(parsedMarks, null, 2)}
+    const fileContent = `export const initialSeedData = {
+  students: ${JSON.stringify(learnersData, null, 2)},
+  learners: ${JSON.stringify(learnersData, null, 2)},
+  exams: ${JSON.stringify(examsData, null, 2)},
+  marks: ${JSON.stringify(marksData, null, 2)},
+  libraryBooks: ${JSON.stringify(libraryData, null, 2)},
+  ictAssets: ${JSON.stringify(ictData, null, 2)},
+  transactions: ${JSON.stringify(financeData, null, 2)}
 };
 
 export const mockLearners = initialSeedData.learners;
 export const mockStudents = initialSeedData.students;
+export const mockExams = initialSeedData.exams;
 export const mockMarks = initialSeedData.marks;
+export const mockLibrary = initialSeedData.libraryBooks;
+export const mockICT = initialSeedData.ictAssets;
+export const mockFinances = initialSeedData.transactions;
 
 export default initialSeedData;
 `;
 
-    // Trigger file download
-    const blob = new Blob([fullExportData], { type: 'text/typescript' });
+    const blob = new Blob([fileContent], { type: 'text/typescript' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'initialSeedData.ts';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'initialSeedData.ts';
+    a.click();
   };
 
   // ====== UNIFIED EXPORT: JSON backup ======
