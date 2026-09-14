@@ -21,10 +21,27 @@ const DEFAULT_STAFF = [
 export const CentralDataService = {
   getLearners: () => {
     try {
+      console.log("All localStorage keys:", Object.keys(localStorage));
       const data = localStorage.getItem(STORAGE_KEY_LEARNERS);
       if (data) {
         const parsed = JSON.parse(data);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+
+      // Check legacy keys
+      const legacyKeys = ['munyaka_learners_db', 'munyaka_students', 'munyaka_learners', 'school_learners_data', 'students', 'learners', 'munyaka_pupils'];
+      for (const key of legacyKeys) {
+        const legacyData = localStorage.getItem(key);
+        if (legacyData) {
+          try {
+            const parsed = JSON.parse(legacyData);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              console.log(`Migrated learners from legacy key: ${key}`, parsed.length);
+              localStorage.setItem(STORAGE_KEY_LEARNERS, JSON.stringify(parsed));
+              return parsed;
+            }
+          } catch {}
+        }
       }
     } catch (e) {
       console.error("Error reading learners", e);
