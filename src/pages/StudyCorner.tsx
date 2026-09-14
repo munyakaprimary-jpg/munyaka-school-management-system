@@ -1345,7 +1345,7 @@ export default function StudyCorner() {
               Filter by Strand
             </p>
             <FilterPills
-              categories={strandCategories}
+              categories={strandCategories as any}
               selected={selectedStrands}
               onToggle={toggleStrand}
             />
@@ -1392,12 +1392,12 @@ export default function StudyCorner() {
                 >
                   All
                 </button>
-                {gradeLevels.map((g) => {
+                {gradeLevels.map((g: any) => {
                   const active = selectedGrade === g;
                   return (
                     <button
                       key={g}
-                      onClick={() => setSelectedGrade(active ? null : g)}
+                      onClick={() => setSelectedGrade(active ? (null as any) : g)}
                       className={`text-xs px-2.5 py-1 rounded-full border font-semibold transition-colors ${
                         active
                           ? "bg-rose-600 text-white border-rose-600"
