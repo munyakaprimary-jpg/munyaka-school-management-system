@@ -12,7 +12,7 @@ import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
 import { Plus, Trash2, GraduationCap, AlertCircle, Lock, Loader2, Edit, Sparkles } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { DEFAULT_CBC_CLUSTERS, buildDefaultClusters } from '@/data/defaultCbcLearningAreas';
+import { DEFAULT_CBC_CLUSTERS, buildDefaultClusters } from '@/data/initialSeedData';
 import { notifyDataChanged } from '@/utils/storage';
 import type { LearningArea, ClusterData } from '@/types/assessments';
 

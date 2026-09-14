@@ -18,7 +18,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
-import { buildDefaultClusters } from '@/data/defaultCbcLearningAreas';
+import { buildDefaultClusters } from '@/data/initialSeedData';
 import { safeParse, isQuotaExceeded, handleQuotaError, getLocalStorage } from './storageUtils';
 import { initializeStaffMaster } from '@/services/staffMasterService';
 

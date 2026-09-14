@@ -28,7 +28,8 @@ import {
   type RevisionQuestion,
   type Attachment,
   type AssessmentType,
-} from "@/data/cbcStudyContent";
+  cbcStudyContent,
+} from "@/data/initialSeedData";
 import { useAuth } from "@/context/AuthContext";
 import {
   fileToAttachment,

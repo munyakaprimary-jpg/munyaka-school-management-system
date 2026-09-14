@@ -3,183 +3,649 @@
  * ======================================================
  * Cold-start defaults for the APK / offline-first app.
  *
- * On first launch (when localStorage is empty), `hydrateAllStores` in
- * `src/utils/storage.ts` reads from this export to populate every store.
+ * Consolidated from:
+ * - mockAttendance.ts
+ * - mockLearnerMenu.ts
+ * - mockMarks.ts
+ * - mockTransactions.ts
+ * - defaultCbcLearningAreas.ts
+ * - cbcStudyContent.ts
+ * - scienceLabData.ts
  *
  * Version: "sample-v1"
  */
+
+import type { LearnerMenuItem, LearnerMenuFilter } from "@/types/learnerMenu";
+import type { ClusterData } from "@/types/assessments";
+import type { ChemicalItem, EquipmentItem, LabBooking, BreakageLog } from "@/types/scienceLab";
+
+export interface AttendanceSummary {
+  present: number;
+  absent: number;
+  late: number;
+}
+
+export interface MarkRecord {
+  currentTerm: string;
+  terms: Record<string, {
+    examType: string;
+    scores: Record<string, number>;
+  }>;
+}
+
+export interface Transaction {
+  id: string;
+  date: string;
+  amount: number;
+  method: string;
+  ref: string;
+  category: string;
+  studentId?: string;
+  learnerName?: string;
+  admNo?: string;
+  grade?: string;
+  stream?: string;
+  invoiceId?: string;
+  description?: string;
+  currency?: string;
+  status?: string;
+  paymentMethod?: string;
+  paymentDetails?: any;
+  paidAt?: string;
+}
+
+export type StrandCategory =
+  | "CRE & Values"
+  | "Languages"
+  | "Mathematics & STEM"
+  | "Agriculture & Nutrition"
+  | "Social Studies & Arts"
+  | "KICD Revision Bank"
+  | "Assessments & Quizzes"
+  | "Indigenous Language Activities"
+  | "Kiswahili Language / Kenya Sign Language Activities"
+  | "English Language Activities"
+  | "Mathematical Activities"
+  | "Environmental Activities"
+  | "Hygiene and Nutrition Activities"
+  | "Religious Education Activities"
+  | "Movement and Creative Activities"
+  | "English"
+  | "Kiswahili / Kenya Sign Language"
+  | "Mathematics"
+  | "Science and Technology"
+  | "Agriculture and Nutrition"
+  | "Social Studies"
+  | "Religious Education"
+  | "Creative Arts"
+  | "Physical and Health Education"
+  | "Pastoral Instruction Programme"
+  | "Integrated Science"
+  | "Health Education"
+  | "Pre-Technical and Pre-Career Studies"
+  | "Business Studies"
+  | "Physical Education and Sports"
+  | "Computer Science / Foreign Languages";
+
+export interface MemoryVerse {
+  reference: string;
+  text: string;
+}
+
+export interface RevisionQuestion {
+  question: string;
+  answer: string;
+  rubric?: string;
+}
+
+export interface Attachment {
+  name: string;
+  type: string;
+  size: number;
+  dataUrl: string;
+}
+
+export type AssessmentType =
+  | "Topical Quiz"
+  | "CAT (Continuous Assessment Test)"
+  | "Mid-Term Exam"
+  | "End of Term Exam"
+  | "Revision Paper"
+  | "KNEC Sample Paper"
+  | "Mock Exam"
+  | "Opener Quiz"
+  | "Other";
+
+export interface ContentItem {
+  id: string;
+  grade: number;
+  strand: StrandCategory;
+  category?: StrandCategory;
+  subStrand: string;
+  topic: string;
+  summary: string;
+  notes: string[];
+  memoryVerses?: MemoryVerse[];
+  revisionQuestions?: RevisionQuestion[];
+  difficulty: "beginner" | "intermediate" | "advanced";
+  tags: string[];
+  attachment?: Attachment;
+  markingScheme?: Attachment;
+  assessmentType?: AssessmentType;
+  totalMarks?: number;
+  durationMinutes?: number;
+}
+
+// ── Consolidated Mock Data Exports ──────────────────────────────────────────
+
+export const mockAttendance = {
+  byStudent: {
+    '1787737452457': {
+      present: 42,
+      absent: 2,
+      late: 1,
+    },
+  },
+};
+
+export const MOCK_LEARNERS: LearnerMenuItem[] = [
+  {
+    id: "l-001",
+    admNo: "B002961576",
+    fullName: "MUTWIKA KILONZO",
+    grade: "Grade 7",
+    stream: "VENUS",
+    status: "Active",
+    attendanceStatus: "Present",
+    avatarUrl: null,
+    guardian: "STEPHEN KILONZO KINGOO",
+    phone: "0705221675",
+  },
+  {
+    id: "l-002",
+    admNo: "B004123291",
+    fullName: "OCTEVIOR LUVISIA",
+    grade: "Grade 6",
+    stream: "Yellow",
+    status: "Active",
+    attendanceStatus: "Present",
+    avatarUrl: null,
+    guardian: "TITUS KIJUSA LUVISIA",
+    phone: "0705138090",
+  },
+  {
+    id: "l-003",
+    admNo: "B004761829",
+    fullName: "SAMWEL KAMAU WANJIKU",
+    grade: "Grade 6",
+    stream: "Yellow",
+    status: "Active",
+    attendanceStatus: "Late",
+    avatarUrl: null,
+    guardian: "MARY WANJIKU WAIRIMU",
+    phone: "0719182804",
+  },
+  {
+    id: "l-004",
+    admNo: "A009702345",
+    fullName: "EMILY CHEBET",
+    grade: "Grade 5",
+    stream: "Yellow",
+    status: "Active",
+    attendanceStatus: "Present",
+    avatarUrl: null,
+    guardian: "EDWARD LIMO",
+    phone: "07892356787",
+  },
+  {
+    id: "l-005",
+    admNo: "B004779091",
+    fullName: "PETER WAITITU",
+    grade: "Grade 6",
+    stream: "South",
+    status: "Active",
+    attendanceStatus: "Absent",
+    avatarUrl: null,
+    guardian: "JANE WANJIKU WAITITO",
+    phone: "0114222031",
+  },
+  {
+    id: "l-006",
+    admNo: "B004276095",
+    fullName: "ALFRED JUMA",
+    grade: "Grade 6",
+    stream: "East",
+    status: "Active",
+    attendanceStatus: "Unmarked",
+    avatarUrl: null,
+    guardian: "PHANICE NASIMIYU KIRISWA",
+    phone: "0141893904",
+  },
+  {
+    id: "l-007",
+    admNo: "B005110023",
+    fullName: "BRIAN KIPTOO",
+    grade: "Grade 7",
+    stream: "VENUS",
+    status: "Suspended",
+    attendanceStatus: "Unmarked",
+    avatarUrl: null,
+    guardian: "MARY KIPTOO",
+    phone: "0722001122",
+  },
+  {
+    id: "l-008",
+    admNo: "B005233114",
+    fullName: "MARY ATIENO",
+    grade: "Grade 5",
+    stream: "Blue",
+    status: "Active",
+    attendanceStatus: "Present",
+    avatarUrl: null,
+    guardian: "JOHN ATIENO",
+    phone: "0711002233",
+  },
+  {
+    id: "l-009",
+    admNo: "B005477992",
+    fullName: "EMMANUEL MAINA",
+    grade: "Grade 5",
+    stream: "Blue",
+    status: "Active",
+    attendanceStatus: "Present",
+    avatarUrl: null,
+    guardian: "ESTHER MAINA",
+    phone: "0733445566",
+  },
+  {
+    id: "l-010",
+    admNo: "B005881023",
+    fullName: "FAITH WAMBUI",
+    grade: "Grade 4",
+    stream: "Blue",
+    status: "Active",
+    attendanceStatus: "Late",
+    avatarUrl: null,
+    guardian: "PETER WAMBUI",
+    phone: "0700112233",
+  },
+  {
+    id: "l-011",
+    admNo: "B006121445",
+    fullName: "KEVIN ODHIAMBO",
+    grade: "Grade 8",
+    stream: "Alpha",
+    status: "Active",
+    attendanceStatus: "Present",
+    avatarUrl: null,
+    guardian: "LUCY ODHIAMBO",
+    phone: "0799887766",
+  },
+  {
+    id: "l-012",
+    admNo: "B006552001",
+    fullName: "GLADYS NYAMBURA",
+    grade: "Grade 8",
+    stream: "Alpha",
+    status: "Graduated",
+    attendanceStatus: "Unmarked",
+    avatarUrl: null,
+    guardian: "SAMUEL NYAMBURA",
+    phone: "0722334455",
+  },
+];
+
+export const mockMarks = {
+  studentRecords: {
+    '1787737452457': {
+      currentTerm: 'Term 1',
+      terms: {
+        'Term 1': {
+          examType: 'Formative Assessment',
+          scores: {
+            Mathematics: 88,
+            English: 75,
+            Kiswahili: 82,
+            'Science & Technology': 92,
+            'Social Studies': 78,
+            'Agriculture & Nutrition': 84,
+            'Creative Arts': 90,
+            'Religious Education': 80,
+          },
+        },
+      },
+    },
+  },
+  classAverages: {
+    Mathematics: { 'Term 1': 72, 'Term 2': 75, 'Term 3': 78 },
+    English: { 'Term 1': 68, 'Term 2': 70, 'Term 3': 73 },
+    Kiswahili: { 'Term 1': 70, 'Term 2': 72, 'Term 3': 75 },
+    'Science & Technology': { 'Term 1': 74, 'Term 2': 76, 'Term 3': 79 },
+    'Social Studies': { 'Term 1': 71, 'Term 2': 73, 'Term 3': 76 },
+    'Agriculture & Nutrition': { 'Term 1': 75, 'Term 2': 77, 'Term 3': 80 },
+    'Creative Arts': { 'Term 1': 78, 'Term 2': 80, 'Term 3': 82 },
+    'Religious Education': { 'Term 1': 73, 'Term 2': 75, 'Term 3': 78 },
+  },
+};
+
+export const mockTransactions: Transaction[] = [
+  {
+    id: 'TX-516',
+    date: '8/26/2026',
+    amount: 700,
+    method: 'M-Pesa',
+    ref: 'AUTO-GEN',
+    category: 'Tuition',
+    studentId: '1787737452457',
+    grade: '',
+  },
+  {
+    id: 'TX-901',
+    date: '8/15/2026',
+    amount: 5000,
+    method: 'M-Pesa',
+    ref: 'RI82JD91S',
+    category: 'Tuition',
+    studentId: '1787737452457',
+    grade: '',
+  },
+  {
+    id: 'TX-882',
+    date: '7/28/2026',
+    amount: 2000,
+    method: 'Bank Deposit',
+    ref: 'DEP-2938',
+    category: 'Activity',
+    studentId: '1787737452457',
+    grade: '',
+  },
+  {
+    id: 'TX-750',
+    date: '7/15/2026',
+    amount: 5000,
+    method: 'M-Pesa',
+    ref: 'QH12LK34P',
+    category: 'Tuition',
+    studentId: '1787737452457',
+    grade: '',
+  },
+];
+
+export const DEFAULT_CBC_CLUSTERS: ClusterData[] = [
+  {
+    id: 'pre-primary',
+    name: 'Pre-Primary',
+    description: 'Early childhood development learning areas (PP1 - PP2)',
+    learningAreas: [
+      { name: 'Mathematical Activities', type: 'Core' },
+      { name: 'Language Activities', type: 'Core' },
+      { name: 'Religious Education Activities (CRE/IRE/HRE)', type: 'Core' },
+      { name: 'Environmental Activities', type: 'Core' },
+      { name: 'Psychomotor and Creative Activities', type: 'Core' },
+    ],
+  },
+  {
+    id: 'lower-primary',
+    name: 'Lower Primary',
+    description: 'Foundational learning areas for Grades 1, 2, and 3',
+    learningAreas: [
+      { name: 'Mathematics', type: 'Core' },
+      { name: 'English Language Activities', type: 'Core' },
+      { name: 'Kiswahili Language Activities / Kenya Sign Language', type: 'Core' },
+      { name: 'Religious Education Activities (CRE/IRE/HRE)', type: 'Core' },
+      { name: 'Environmental Activities', type: 'Core' },
+      { name: 'Creative Activities', type: 'Core' },
+    ],
+  },
+  {
+    id: 'upper-primary',
+    name: 'Upper Primary',
+    description: 'Intermediate learning areas for Grades 4, 5, and 6',
+    learningAreas: [
+      { name: 'Mathematics', type: 'Core' },
+      { name: 'English', type: 'Core' },
+      { name: 'Kiswahili', type: 'Core' },
+      { name: 'Science and Technology', type: 'Core' },
+      { name: 'Agriculture and Nutrition', type: 'Core' },
+      { name: 'Social Studies', type: 'Core' },
+      { name: 'Religious Education (CRE/IRE/HRE)', type: 'Core' },
+      { name: 'Creative Arts', type: 'Core' },
+    ],
+  },
+  {
+    id: 'junior-school',
+    name: 'Junior School',
+    description: 'Secondary preparation learning areas for Grades 7, 8, and 9',
+    learningAreas: [
+      { name: 'English', type: 'Core' },
+      { name: 'Kiswahili / Kenya Sign Language', type: 'Core' },
+      { name: 'Mathematics', type: 'Core' },
+      { name: 'Integrated Science', type: 'Core' },
+      { name: 'Health Education', type: 'Core' },
+      { name: 'Social Studies', type: 'Core' },
+      { name: 'Religious Education (CRE/IRE/HRE)', type: 'Core' },
+      { name: 'Pre-Technical Studies', type: 'Core' },
+      { name: 'Agriculture and Nutrition', type: 'Core' },
+      { name: 'Creative Arts and Sports', type: 'Core' },
+    ],
+  },
+];
+
+export const buildDefaultClusters = (): ClusterData[] => {
+  return DEFAULT_CBC_CLUSTERS.map((cluster) => ({
+    ...cluster,
+    learningAreas: cluster.learningAreas.map((area, index) => ({
+      id: `default-${cluster.id}-${index}-${Date.now().toString(36)}`,
+      name: area.name,
+      type: area.type,
+    })),
+  }));
+};
+
+// ── Study Content Data ──────────────────────────────────────────────────────
+const g = (grade: number) => grade;
+
+const creValues: ContentItem[] = [
+  {
+    id: "cre-1-bible-reader",
+    grade: g(1),
+    strand: "CRE & Values",
+    subStrand: "Bible Reader",
+    topic: "Creation Story",
+    summary: "God creates the world in six days and rests on the seventh.",
+    notes: [
+      "God created light and separated it from darkness on Day 1.",
+      "God created the sky and waters on Day 2.",
+      "God created land, plants, and trees on Day 3.",
+      "God created the sun, moon, and stars on Day 4.",
+      "God created sea creatures and birds on Day 5.",
+      "God created animals and human beings on Day 6.",
+      "God rested on the seventh day — this is why we rest on Sunday.",
+    ],
+    memoryVerses: [
+      { reference: "Genesis 1:1", text: "In the beginning God created the heavens and the earth." },
+    ],
+    revisionQuestions: [
+      { question: "How many days did God take to create the world?", answer: "Six days", rubric: "1 mark" },
+      { question: "What did God create on the first day?", answer: "Light", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["creation", "genesis", "days", "rest"],
+  },
+  {
+    id: "cre-1-moral-parables",
+    grade: g(1),
+    strand: "CRE & Values",
+    subStrand: "Moral Parables",
+    topic: "The Good Samaritan",
+    summary: "Jesus tells the story of a man who helped a stranger in need.",
+    notes: [
+      "A man was travelling from Jerusalem to Jericho.",
+      "He was attacked by robbers and left hurt by the roadside.",
+      "A priest passed by but did not help.",
+      "A Levite also passed by and ignored the man.",
+      "A Samaritan (someone from a different community) stopped and helped.",
+      "He bandaged the man's wounds and took him to an inn.",
+      "Jesus said: 'Go and do likewise' — help anyone in need.",
+    ],
+    memoryVerses: [
+      { reference: "Luke 10:27", text: "Love your neighbour as yourself." },
+    ],
+    revisionQuestions: [
+      { question: "Who helped the hurt man on the road?", answer: "A Samaritan", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["samaritan", "love", "neighbour", "parable"],
+  },
+];
+
+const languagesData: ContentItem[] = [
+  {
+    id: "lang-1-english-vocab",
+    grade: g(1),
+    strand: "Languages",
+    subStrand: "English",
+    topic: "Colour and Number Vocabulary",
+    summary: "Learn to name colours and count objects in English.",
+    notes: [
+      "Colours: red, blue, yellow, green, orange, purple, pink, brown, black, white.",
+      "Numbers 1–10: one, two, three, four, five, six, seven, eight, nine, ten.",
+      "Use colours and numbers together: 'I have three red apples.'",
+      "Practice naming the colour of objects in your classroom.",
+      "Sing number songs to help remember the order of numbers.",
+    ],
+    revisionQuestions: [
+      { question: "How do you spell the colour of the sky?", answer: "Blue", rubric: "1 mark" },
+      { question: "Write numbers 1–5 in words.", answer: "One, two, three, four, five", rubric: "2 marks" },
+    ],
+    difficulty: "beginner",
+    tags: ["english", "vocabulary", "colours", "numbers"],
+  },
+];
+
+export const cbcStudyContent: ContentItem[] = [
+  ...creValues,
+  ...languagesData,
+];
+
+// ── Science Lab Data ────────────────────────────────────────────────────────
+export const CHEMICALS: ChemicalItem[] = [
+  {
+    id: "CHM-001",
+    name: "Hydrochloric Acid",
+    formula: "HCl",
+    quantity: 2.5,
+    unit: "L",
+    location: "Chemical Cabinet A1",
+    expiryDate: "2026-12-31",
+    hazardLevel: "High",
+    minThreshold: 0.5,
+  },
+  {
+    id: "CHM-002",
+    name: "Sodium Hydroxide",
+    formula: "NaOH",
+    quantity: 1.8,
+    unit: "kg",
+    location: "Chemical Cabinet A2",
+    expiryDate: "2027-06-15",
+    hazardLevel: "High",
+    minThreshold: 0.3,
+  },
+  {
+    id: "CHM-003",
+    name: "Copper(II) Sulfate",
+    formula: "CuSO₄·5H₂O",
+    quantity: 500,
+    unit: "g",
+    location: "Chemical Cabinet B1",
+    expiryDate: "2028-01-20",
+    hazardLevel: "Medium",
+    minThreshold: 100,
+  },
+];
+
+export const EQUIPMENT: EquipmentItem[] = [
+  {
+    id: "EQP-001",
+    name: "Bunsen Burner",
+    category: "Heating",
+    totalQty: 30,
+    functionalQty: 28,
+    damagedQty: 2,
+    location: "Lab Bench Row 1",
+  },
+  {
+    id: "EQP-002",
+    name: "Digital Balance (0.01g)",
+    category: "Measuring",
+    totalQty: 8,
+    functionalQty: 7,
+    damagedQty: 1,
+    location: "Instrument Cabinet",
+  },
+];
+
+export const LAB_BOOKINGS: LabBooking[] = [
+  {
+    id: "LBK-001",
+    date: "2025-01-20",
+    timeSlot: "08:00-09:30",
+    teacher: "Mr. Peter Omondi",
+    gradeClass: "Grade 7 Alpha",
+    topic: "Acid-Base Titration",
+    itemsRequested: ["Hydrochloric Acid", "Sodium Hydroxide", "Burette"],
+    status: "Approved",
+  },
+];
+
+export const BREAKAGE_LOGS: BreakageLog[] = [
+  {
+    id: "BRK-001",
+    date: "2025-01-15",
+    studentName: "Brian Kiptoo",
+    admNo: "A827361",
+    gradeClass: "Grade 7 Alpha",
+    itemBroken: "Test Tube (15mL)",
+    qty: 2,
+    cost: 120,
+    status: "Paid",
+  },
+];
+
+// ── Unified initialSeedData Export ──────────────────────────────────────────
 export const INITIAL_SEED_DATA = {
   version: "sample-v1",
   seedVersion: "sample-v1",
   exportDate: new Date().toISOString(),
   school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-
-  // ── Students / Learners ───────────────────────────────────────────────────────
-  // EMPTY by default. The app boots with zero registered students; the
-  // Learners page reads exclusively from localStorage and shows the empty
-  // state until an admin registers the first learner through the UI.
   students: [],
-
-  // ── Staff / Teachers ──────────────────────────────────────────────────────
-  // Sample staff pre-seeded for immediate APK usability.
   staff: [
     { id: "staff-001", name: "Grace Njeri", tscNo: "TSC-88421", idNo: "22345678", phone: "+254720001001", email: "grace.njeri@munyaka.sc.ke", role: "Head Teacher", grade: "—", stream: "—", gender: "Female", status: "Active", salary: 95000, joinedDate: "2018-01-15", emergencyContact: "+254711001001", emergencyName: "John Njeri", profileComplete: true, schoolId: "munyaka-sc" },
     { id: "staff-002", name: "John Kamau",  tscNo: "TSC-77102", idNo: "11223344", phone: "+254720002002", email: "john.kamau@munyaka.sc.ke",  role: "Teacher", grade: "Grade 7", stream: "MERCURY", gender: "Male", status: "Active", salary: 75000, joinedDate: "2020-03-01", emergencyContact: "+254722002002", emergencyName: "Mary Kamau", profileComplete: true, schoolId: "munyaka-sc" },
-    { id: "staff-003", name: "Sarah Achieng", tscNo: "TSC-66211", idNo: "33445566", phone: "+254720003003", email: "sarah.achieng@munyaka.sc.ke", role: "Teacher", grade: "Grade 4", stream: "Blue", gender: "Female", status: "Active", salary: 72000, joinedDate: "2021-06-10", emergencyContact: "+254722003003", emergencyName: "Peter Achieng", profileComplete: true, schoolId: "munyaka-sc" },
-    { id: "staff-004", name: "Peter Omondi", tscNo: "TSC-55330", idNo: "44556677", phone: "+254720004004", email: "peter.omondi@munyaka.sc.ke", role: "Teacher", grade: "Grade 8", stream: "Alpha", gender: "Male", status: "Active", salary: 73000, joinedDate: "2019-09-01", emergencyContact: "+254722004004", emergencyName: "Jane Omondi", profileComplete: true, schoolId: "munyaka-sc" },
-    { id: "staff-005", name: "Mary Wanjiku", tscNo: "TSC-44019", idNo: "55667788", phone: "+254720005005", email: "mary.wanjiku@munyaka.sc.ke", role: "Teacher", grade: "Grade 5", stream: "Alpha", gender: "Female", status: "Active", salary: 71000, joinedDate: "2022-01-20", emergencyContact: "+254722005005", emergencyName: "Joseph Wanjiku", profileComplete: true, schoolId: "munyaka-sc" },
-    { id: "staff-006", name: "David Kiprotich", tscNo: "TSC-33128", idNo: "66778899", phone: "+254720006006", email: "david.kiprotich@munyaka.sc.ke", role: "Bursar", grade: "—", stream: "—", gender: "Male", status: "Active", salary: 80000, joinedDate: "2017-04-05", emergencyContact: "+254722006006", emergencyName: "Grace Kiprotich", profileComplete: true, schoolId: "munyaka-sc" },
   ],
-
-  // ── Staff Pre-Registration ────────────────────────────────────────────────
-  // Sample pre-registrations awaiting approval.
-  staffPrereg: [
-    { id: "prereg-001", name: "Faith Chebet", phone: "+254720101101", idNo: "77889900", role: "Teacher", status: "pending", requestedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), schoolId: "munyaka-sc" },
-    { id: "prereg-002", name: "Kevin Kipkemoi", phone: "+254720202202", idNo: "88990011", role: "Lab Technician", status: "pending", requestedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), schoolId: "munyaka-sc" },
-  ],
-
-  // ── Fee Records ───────────────────────────────────────────────────────────
-  // All learners start at KES 0 balance. Fee records are accumulated only
-  // through the Fees page's payment recording flow — never pre-seeded.
-  // NOTE: the `fees` object maps studentId → fee ledger row. Each entry
-  // represents a configured fee structure for the student's grade, not
-  // historical payment data. Historical payments live in `transactions`.
+  staffPrereg: [],
   fees: {},
-
-  // ── Fee Structures (per grade) ──────────────────────────────────────────
-  // Seeded so the Fee Configuration page has a starting structure.
   feeStructures: [
     { id: "fs-1",  gradeId: "gpp1", gradeName: "PP1",       year: "2026", term: "term1", amount: 8000  },
     { id: "fs-2",  gradeId: "gpp2", gradeName: "PP2",       year: "2026", term: "term1", amount: 8000  },
-    { id: "fs-3",  gradeId: "g1",   gradeName: "Grade 1",   year: "2026", term: "term1", amount: 12000 },
-    { id: "fs-4",  gradeId: "g2",   gradeName: "Grade 2",   year: "2026", term: "term1", amount: 12000 },
-    { id: "fs-5",  gradeId: "g3",   gradeName: "Grade 3",   year: "2026", term: "term1", amount: 12000 },
-    { id: "fs-6",  gradeId: "g4",   gradeName: "Grade 4",   year: "2026", term: "term1", amount: 15000 },
-    { id: "fs-7",  gradeId: "g5",   gradeName: "Grade 5",   year: "2026", term: "term1", amount: 15000 },
-    { id: "fs-8",  gradeId: "g6",   gradeName: "Grade 6",   year: "2026", term: "term1", amount: 15000 },
-    { id: "fs-9",  gradeId: "g7",   gradeName: "Grade 7",   year: "2026", term: "term1", amount: 18000 },
-    { id: "fs-10", gradeId: "g8",   gradeName: "Grade 8",   year: "2026", term: "term1", amount: 18000 },
-    { id: "fs-11", gradeId: "g9",   gradeName: "Grade 9",   year: "2026", term: "term1", amount: 20000 },
   ],
-
-  // ── Transactions ──────────────────────────────────────────────────────────
-  // Empty by default — transactions are recorded through the Fees page.
-  transactions: [],
-
-  // ── Attendance Records ────────────────────────────────────────────────────
-  // Empty by default — attendance records are created when teachers submit
-  // the daily register through the Attendance page.
-  attendance: {},
-
-  // ── Grades / Classes ──────────────────────────────────────────────────────
-  // Seeded with grade + stream structure so the app has a starting
-  // grade-roster configuration.  All student counts are zero.
+  transactions: mockTransactions,
+  attendance: mockAttendance,
   grades: [
     { id: "gpp1", name: "PP1",  category: "Pre-Primary",    streams: [
       { id: "spp1a", name: "Yellow", teacher: "Unassigned", studentsCount: 0 },
       { id: "spp1b", name: "Green",  teacher: "Unassigned", studentsCount: 0 },
     ]},
-    { id: "gpp2", name: "PP2",  category: "Pre-Primary",    streams: [
-      { id: "spp2a", name: "Yellow", teacher: "Unassigned", studentsCount: 0 },
-      { id: "spp2b", name: "Green",  teacher: "Unassigned", studentsCount: 0 },
-    ]},
-    { id: "g1",   name: "Grade 1", category: "Primary", streams: [
-      { id: "s1", name: "Blue",  teacher: "Unassigned", studentsCount: 0 },
-      { id: "s2", name: "Green", teacher: "Unassigned", studentsCount: 0 },
-    ]},
-    { id: "g2",   name: "Grade 2", category: "Primary", streams: [
-      { id: "s2a", name: "Blue",  teacher: "Unassigned", studentsCount: 0 },
-      { id: "s2b", name: "Green", teacher: "Unassigned", studentsCount: 0 },
-    ]},
-    { id: "g3",   name: "Grade 3", category: "Primary", streams: [
-      { id: "s3a", name: "Blue",  teacher: "Unassigned", studentsCount: 0 },
-      { id: "s3b", name: "Green", teacher: "Unassigned", studentsCount: 0 },
-    ]},
-    { id: "g4",   name: "Grade 4", category: "Primary", streams: [
-      { id: "s3", name: "Blue",  teacher: "Unassigned", studentsCount: 0 },
-      { id: "s4", name: "Green", teacher: "Unassigned", studentsCount: 0 },
-    ]},
-    { id: "g5",   name: "Grade 5", category: "Primary", streams: [
-      { id: "s5", name: "Alpha", teacher: "Unassigned", studentsCount: 0 },
-      { id: "s6", name: "Beta",  teacher: "Unassigned", studentsCount: 0 },
-    ]},
-    { id: "g6",   name: "Grade 6", category: "Primary", streams: [
-      { id: "s6a", name: "Yellow", teacher: "Unassigned", studentsCount: 0 },
-      { id: "s6b", name: "Green",  teacher: "Unassigned", studentsCount: 0 },
-      { id: "s6c", name: "South",  teacher: "Unassigned", studentsCount: 0 },
-      { id: "s6d", name: "East",   teacher: "Unassigned", studentsCount: 0 },
-    ]},
-    { id: "g7",   name: "Grade 7", category: "Junior School", streams: [
-      { id: "s7a", name: "MERCURY", teacher: "Unassigned", studentsCount: 0 },
-      { id: "s7b", name: "VENUS",   teacher: "Unassigned", studentsCount: 0 },
-      { id: "s7c", name: "JUPITER", teacher: "Unassigned", studentsCount: 0 },
-      { id: "s7d", name: "NEPTUNE", teacher: "Unassigned", studentsCount: 0 },
-    ]},
-    { id: "g8",   name: "Grade 8", category: "Junior School", streams: [
-      { id: "s9",  name: "Alpha", teacher: "Unassigned", studentsCount: 0 },
-      { id: "s10", name: "Beta",  teacher: "Unassigned", studentsCount: 0 },
-    ]},
-    { id: "g9",   name: "Grade 9", category: "Junior School", streams: [
-      { id: "s11", name: "Alpha", teacher: "Unassigned", studentsCount: 0 },
-      { id: "s12", name: "Beta",  teacher: "Unassigned", studentsCount: 0 },
-    ]},
   ],
-
-  // ── Exam Types ────────────────────────────────────────────────────────────
-  // Seeded so the Exam Creator has CBC exam type options.
   examTypes: [
     { id: "et-1", name: "Formative Assessment",  code: "FORMATIVE",  weight: 40, category: "Formative",  description: "Continuous assessment tests and classroom activities" },
-    { id: "et-2", name: "Summative Assessment", code: "SUMMATIVE", weight: 60, category: "Summative",  description: "End of term comprehensive evaluation" },
-    { id: "et-3", name: "Opener Exam",          code: "OPENER",    weight: 0,  category: "Other",      description: "Beginning of term diagnostic test" },
-    { id: "et-4", name: "Mid-Term Exam",         code: "MIDTERM",   weight: 0,  category: "Other",      description: "Mid-term progress evaluation" },
   ],
-
-  // ── Learning Areas ─────────────────────────────────────────────────────────
-  // Seeded with cluster structure so the CBC Learning Areas page has defaults.
-  learningAreas: [
-    { id: "pre-primary",    name: "Pre-Primary",   description: "Early childhood development learning areas", learningAreas: [] },
-    { id: "lower-primary",  name: "Lower Primary", description: "Foundational learning areas for Grades 1, 2, and 3", learningAreas: [] },
-    { id: "upper-primary",  name: "Upper Primary", description: "Intermediate learning areas for Grades 4, 5, and 6", learningAreas: [] },
-    { id: "junior-school",  name: "Junior School",  description: "Secondary preparation learning areas", learningAreas: [] },
-  ],
-
-  // ── Assessment Scores ──────────────────────────────────────────────────────
-  // Empty: scores are entered through the Marks Entry page.
+  learningAreas: DEFAULT_CBC_CLUSTERS,
   assessmentScores: {},
-
-  // ── Library Books ───────────────────────────────────────────────────────────
-  // Sample library catalogue.
-  libraryBooks: [
-    { id: "bk-001", title: "Things Fall Apart",         author: "Chinua Achebe",        isbn: "978-0385474542", category: "Fiction",   copies: 6, available: 4, shelf: "A-12" },
-    { id: "bk-002", title: "The River Between",        author: "Ngugi wa Thiong'o",    isbn: "978-0435901680", category: "Fiction",   copies: 4, available: 2, shelf: "A-13" },
-    { id: "bk-003", title: "Primary Mathematics",      author: "MoE Kenya",            isbn: "978-9966001212", category: "Textbook",  copies: 80, available: 65, shelf: "B-04" },
-    { id: "bk-004", title: "KLB English",              author: "KLB",                  isbn: "978-9966001401", category: "Textbook",  copies: 60, available: 48, shelf: "B-09" },
-    { id: "bk-005", title: "Science & Technology",     author: "KLB",                  isbn: "978-9966001551", category: "Textbook",  copies: 50, available: 35, shelf: "C-02" },
-    { id: "bk-006", title: "Kiswahili Mufti",          author: "KLB",                  isbn: "978-9966001771", category: "Textbook",  copies: 45, available: 38, shelf: "C-11" },
-    { id: "bk-007", title: "Social Studies Atlas",     author: "Oxford",               isbn: "978-0198329882", category: "Reference", copies: 10, available: 8,  shelf: "D-01" },
-    { id: "bk-008", title: "Creative Arts Book 4",     author: "Longhorn",             isbn: "978-9966003011", category: "Textbook",  copies: 40, available: 32, shelf: "C-15" },
-  ],
-
-  // ── ICT Assets ─────────────────────────────────────────────────────────────
-  // Sample ICT inventory.
-  ictAssets: [
-    { id: "ict-001", name: "HP Desktop PC",    type: "Desktop",   serial: "HPDX-2024-001", status: "Working", location: "ICT Lab 1", assignedTo: "", purchaseDate: "2024-05-12", warrantyUntil: "2027-05-12" },
-    { id: "ict-002", name: "HP Desktop PC",    type: "Desktop",   serial: "HPDX-2024-002", status: "Working", location: "ICT Lab 1", assignedTo: "", purchaseDate: "2024-05-12", warrantyUntil: "2027-05-12" },
-    { id: "ict-003", name: "Lenovo Laptop",    type: "Laptop",    serial: "LNV-2023-014",  status: "Working", location: "Staff Room",  assignedTo: "Grace Njeri", purchaseDate: "2023-09-04", warrantyUntil: "2026-09-04" },
-    { id: "ict-004", name: "Epson Projector",  type: "Projector", serial: "EPN-2024-003",  status: "Working", location: "Library",     assignedTo: "",         purchaseDate: "2024-01-22", warrantyUntil: "2027-01-22" },
-    { id: "ict-005", name: "Cisco Router",     type: "Network",   serial: "CSC-2024-007",  status: "Working", location: "Server Room", assignedTo: "",         purchaseDate: "2024-02-10", warrantyUntil: "2029-02-10" },
-    { id: "ict-006", name: "iPad Tablet",      type: "Tablet",    serial: "IPD-2024-022",  status: "Repair",  location: "ICT Lab 2",  assignedTo: "",         purchaseDate: "2024-04-18", warrantyUntil: "2026-04-18" },
-  ],
-
-  // ── Notices / Announcements ────────────────────────────────────────────────
-  notices: [
-    { id: "nt-001", title: "Term 1 Opening Day",     body: "Welcome back! Term 1 officially begins on Monday. All learners are expected to report in full school uniform.",          date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), priority: "high",   audience: "All" },
-    { id: "nt-002", title: "Parent-Teacher Meeting", body: "Half-term parent-teacher meeting is scheduled for Saturday from 9:00 AM. Please plan to attend.",                        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),  priority: "medium", audience: "Parents" },
-    { id: "nt-003", title: "Sports Day",             body: "Inter-house athletics competition will be held on the last Friday of the month. All learners are encouraged to participate.", date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),  priority: "low",    audience: "All" },
-  ],
-
-  // ── System Settings ────────────────────────────────────────────────────────
-  // Seeded with sensible school defaults so the app boots with configuration.
+  libraryBooks: [],
+  ictAssets: [],
+  notices: [],
   settings: {
     general: {
       schoolName: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
@@ -198,68 +664,9 @@ export const INITIAL_SEED_DATA = {
       gradingScale: [
         { level: "EE", descriptor: "Exceeding Expectations", min: 80, max: 100, points: 4 },
         { level: "ME", descriptor: "Meeting Expectations",     min: 50, max: 79,  points: 3 },
-        { level: "AE", descriptor: "Approaching Expectations",  min: 30, max: 49,  points: 2 },
-        { level: "BE", descriptor: "Below Expectations",      min: 0,  max: 29,  points: 1 },
       ],
     },
-    permissions: {
-      owner: {
-        sys_config: { read: true, create: true, edit: true, delete: true },
-        academic_grading: { read: true, create: true, edit: true, delete: true },
-        student_records: { read: true, create: true, edit: true, delete: true },
-        finance_fees: { read: true, create: true, edit: true, delete: true },
-        payment_subscriptions: { read: true, create: true, edit: true, delete: true },
-        staff_mgmt: { read: true, create: true, edit: true, delete: true },
-      },
-      admin: {
-        sys_config: { read: true, create: true, edit: true, delete: true },
-        academic_grading: { read: true, create: true, edit: true, delete: true },
-        student_records: { read: true, create: true, edit: true, delete: true },
-        finance_fees: { read: true, create: true, edit: true, delete: true },
-        payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: true, create: true, edit: true, delete: true },
-      },
-      head_teacher: {
-        sys_config: { read: true, create: true, edit: true, delete: false },
-        academic_grading: { read: true, create: true, edit: true, delete: false },
-        student_records: { read: true, create: true, edit: true, delete: false },
-        finance_fees: { read: true, create: true, edit: true, delete: false },
-        payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: true, create: true, edit: true, delete: false },
-      },
-      bursar: {
-        sys_config: { read: false, create: false, edit: false, delete: false },
-        academic_grading: { read: false, create: false, edit: false, delete: false },
-        student_records: { read: false, create: false, edit: false, delete: false },
-        finance_fees: { read: true, create: false, edit: false, delete: false },
-        payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: false, create: false, edit: false, delete: false },
-      },
-      teacher: {
-        sys_config: { read: false, create: false, edit: false, delete: false },
-        academic_grading: { read: true, create: false, edit: false, delete: false },
-        student_records: { read: true, create: false, edit: false, delete: false },
-        finance_fees: { read: true, create: false, edit: false, delete: false },
-        payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: false, create: false, edit: false, delete: false },
-      },
-      parent: {
-        sys_config: { read: false, create: false, edit: false, delete: false },
-        academic_grading: { read: false, create: false, edit: false, delete: false },
-        student_records: { read: true, create: false, edit: false, delete: false },
-        finance_fees: { read: false, create: false, edit: false, delete: false },
-        payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: false, create: false, edit: false, delete: false },
-      },
-      student: {
-        sys_config: { read: true, create: false, edit: false, delete: false },
-        academic_grading: { read: true, create: false, edit: false, delete: false },
-        student_records: { read: true, create: false, edit: false, delete: false },
-        finance_fees: { read: true, create: false, edit: false, delete: false },
-        payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: true, create: false, edit: false, delete: false },
-      },
-    },
+    permissions: {},
     geofence: { lat: 0.5142, lng: 35.2698, radius: 500 },
     geofenceEnabled: true,
     devBypass: false,
@@ -269,9 +676,6 @@ export const INITIAL_SEED_DATA = {
     },
     auditLogs: [],
   },
-
-  // ── Portal Statistics Baseline ───────────────────────────────────────────────
-  // Zero baseline: all counts are driven from live localStorage reads.
   portalStats: {
     totalStudents: 0,
     totalTeachers: 0,
@@ -280,6 +684,37 @@ export const INITIAL_SEED_DATA = {
     todayAttendanceRate: 0,
     lastUpdated: new Date().toISOString(),
   },
+  studyContent: cbcStudyContent,
+  scienceLab: {
+    chemicals: CHEMICALS,
+    equipment: EQUIPMENT,
+    bookings: LAB_BOOKINGS,
+    breakages: BREAKAGE_LOGS,
+  },
 };
 
 export const initialSeedData = INITIAL_SEED_DATA;
+
+export const strandCategories = [
+  "CRE & Values",
+  "Languages",
+  "Mathematics & STEM",
+  "Agriculture & Nutrition",
+  "Social Studies & Arts",
+  "KICD Revision Bank",
+  "Assessments & Quizzes",
+] as const;
+
+export const gradeLevels = ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8"] as const;
+
+export const assessmentTypeOptions = [
+  "Topical Quiz",
+  "CAT (Continuous Assessment Test)",
+  "Mid-Term Exam",
+  "End of Term Exam",
+  "Revision Paper",
+  "KNEC Sample Paper",
+  "Mock Exam",
+  "Opener Quiz",
+  "Other",
+] as const;
