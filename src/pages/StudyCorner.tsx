@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  cbcStudyContent,
   strandCategories,
   gradeLevels,
   type ContentItem,
   type StrandCategory,
 } from "@/data/cbcStudyContent";
+import { initialSeedData } from "@/data/initialSeedData";
 import {
   BookOpen,
   Search,
@@ -21,10 +21,6 @@ import {
   FlaskConical,
   Globe,
   FileText,
-  ChevronLeft,
-  ChevronRight,
-  RotateCcw,
-  PlusCircle,
   Download,
   Printer,
   Paperclip,
@@ -36,6 +32,8 @@ import {
   BookHeart,
   Wrench,
   Palette,
+  PlusCircle,
+  RotateCcw,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AddMaterialModal, { loadCustomMaterials } from "@/components/AddMaterialModal";
@@ -950,7 +948,7 @@ export default function StudyCorner() {
       difficulty: 'Intermediate',
       readTimeMin: 7
     },
-    ...cbcStudyContent,
+    ...((initialSeedData as any).cbcStudyContent || []),
     ...customItems
   ];
 

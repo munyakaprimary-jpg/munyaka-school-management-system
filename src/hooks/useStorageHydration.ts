@@ -32,6 +32,23 @@ const KEY_MAPPING: Record<string, string[]> = {
  */
 export function hydrateFromInitialSeed(): void {
   try {
+    const seedKeys = [
+      { key: 'munyaka_learners', data: (initialSeedData as any).students },
+      { key: 'munyaka_staff', data: (initialSeedData as any).staff },
+      { key: 'munyaka_payments', data: (initialSeedData as any).payments || (initialSeedData as any).transactions },
+      { key: 'munyaka_assessments', data: (initialSeedData as any).assessments || (initialSeedData as any).marks },
+      { key: 'munyaka_attendance', data: (initialSeedData as any).attendance },
+      { key: 'munyaka_science_lab', data: (initialSeedData as any).scienceLabInventory },
+      { key: 'munyaka_learning_areas', data: (initialSeedData as any).learningAreas },
+      { key: 'munyaka_study_content', data: (initialSeedData as any).cbcStudyContent },
+    ];
+
+    seedKeys.forEach(({ key, data }) => {
+      if (!localStorage.getItem(key) && data) {
+        localStorage.setItem(key, JSON.stringify(data));
+      }
+    });
+
     const isInitialized = localStorage.getItem('munyaka_initialized') === 'true';
     const seedVersion = (initialSeedData as any).version || (initialSeedData as any).seedVersion || 'v1';
     const currentVersion = localStorage.getItem('munyaka_seed_version');
