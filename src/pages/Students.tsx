@@ -128,15 +128,9 @@ const getGradeMatchKey = (name: string): string => {
 };
 
 export default function Students() {
-  // ── 1. Unified LocalStorage Persistence Setup with munyaka_learners_db
+  // ── 1. Unified LocalStorage Persistence Setup with munyaka_students
   const [students, setStudents] = useState<Student[]>(() => {
-    const central = CentralDataService.getLearners();
-    if (central && central.length > 0) {
-      return (central as unknown as Student[]).filter(s =>
-        s && (s.name || s.fullName || s.admissionNo || (s as any).admNo)
-      );
-    }
-    return getStoredLearners() as unknown as Student[];
+    return CentralDataService.getLearners() as unknown as Student[];
   });
 
   // 2. Use the academic calendar hook for dynamic term/year
@@ -149,18 +143,15 @@ export default function Students() {
   // Add event listener to refresh UI instantly when a student is saved
   useEffect(() => {
     const syncStudents = () => {
-      const central = CentralDataService.getLearners();
-      if (central && central.length > 0) {
-        setStudents(central as unknown as Student[]);
-      } else {
-        setStudents(getStoredLearners() as unknown as Student[]);
-      }
+      setStudents(CentralDataService.getLearners() as unknown as Student[]);
     };
     window.addEventListener('students-updated', syncStudents);
     window.addEventListener('munyaka:data-changed', syncStudents);
+    window.addEventListener('storage', syncStudents);
     return () => {
       window.removeEventListener('students-updated', syncStudents);
       window.removeEventListener('munyaka:data-changed', syncStudents);
+      window.removeEventListener('storage', syncStudents);
     };
   }, []);
 
@@ -168,50 +159,11 @@ export default function Students() {
   const learners = students;
 
   // ── React to external learner-data changes ─────────────────────────────
-  // The one-time admission-number backfill (run on app mount in App.tsx)
-  // may write to `munyaka_students` from outside this component. We
-  // listen for the cross-component change event and re-hydrate so the
-  // table immediately reflects the newly assigned admission numbers
-  // instead of the em-dash placeholders.
   useEffect(() => {
     const centralData = CentralDataService.getLearners();
-    if (centralData && centralData.length > 0) {
+    if (centralData) {
       setStudents(centralData as unknown as Student[]);
     }
-
-    const LEARNER_KEYS = ['munyaka_learners_db', 'munyaka_students', 'munyaka_learners', 'munyaka_pupils', 'students'];
-    const isLearnerKey = (key: string | null) => !!key && LEARNER_KEYS.includes(key);
-
-    const reload = (_key: string | null) => {
-      try {
-        const central = CentralDataService.getLearners();
-        if (central && central.length > 0) {
-          setStudents(central as unknown as Student[]);
-          return;
-        }
-        const fresh = getStoredLearners();
-        if (fresh) {
-          setStudents(fresh as unknown as Student[]);
-        }
-      } catch (e) {
-        console.error('Error reloading learners after external update', e);
-      }
-    };
-
-    const handleCustom = (e: Event) => {
-      const detail = (e as CustomEvent<{ key?: string }>).detail;
-      reload(detail?.key ?? null);
-    };
-    const handleStorage = (e: StorageEvent) => {
-      if (isLearnerKey(e.key)) reload(e.key);
-    };
-
-    window.addEventListener('munyaka:data-changed', handleCustom as EventListener);
-    window.addEventListener('storage', handleStorage);
-    return () => {
-      window.removeEventListener('munyaka:data-changed', handleCustom as EventListener);
-      window.removeEventListener('storage', handleStorage);
-    };
   }, []);
 
   // 3. Read the grades & streams configuration. We re-read on a tick so that
