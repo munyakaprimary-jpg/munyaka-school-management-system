@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { initialSeedData } from '../data/initialSeedData';
+import { initialSeedData, mockLearners } from '../data/initialSeedData';
 
 interface LearnerContextType {
   learners: any[];
@@ -9,22 +9,34 @@ interface LearnerContextType {
 
 const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
-const getInitialLearners = () => {
-  try {
-    const local = localStorage.getItem('munyaka_learners');
-    if (local) {
+const getInitialData = () => {
+  const local = localStorage.getItem('munyaka_learners');
+  if (local) {
+    try {
       const parsed = JSON.parse(local);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((item: any) => ({
+          ...item,
+          name: item.name || item.fullName || '',
+          fullName: item.fullName || item.name || ''
+        }));
+      }
+    } catch (e) {
+      console.error(e);
     }
-  } catch (e) {
-    console.error("Storage parse error", e);
   }
-  // Fallback to hardcoded seed data
-  return initialSeedData?.learners || initialSeedData?.students || [];
+
+  // Fallback to normalized seed data
+  const rawList = (mockLearners as any) || initialSeedData?.students || initialSeedData?.learners || [];
+  return rawList.map((item: any) => ({
+    ...item,
+    name: item.name || item.fullName || '',
+    fullName: item.fullName || item.name || ''
+  }));
 };
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [learners, setLearners] = useState(getInitialLearners);
+  const [learners, setLearners] = useState(getInitialData);
 
   // Only save to localStorage when learners array actually has items
   useEffect(() => {
