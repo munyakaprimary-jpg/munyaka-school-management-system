@@ -44,7 +44,20 @@ export function hydrateFromInitialSeed(): void {
     ];
 
     seedKeys.forEach(({ key, data }) => {
-      if (!localStorage.getItem(key) && data) {
+      const existingNew = localStorage.getItem(key);
+      // Check if any legacy keys exist
+      const legacyKeyMap: Record<string, string[]> = {
+        'munyaka_learners': ['learners', 'students'],
+        'munyaka_staff': ['staff'],
+        'munyaka_assessments': ['assessments', 'marks'],
+      };
+      const oldKeys = legacyKeyMap[key] || [];
+      const hasOldData = oldKeys.some(ok => {
+        const val = localStorage.getItem(ok);
+        return val && val !== '[]' && val !== '{}';
+      });
+
+      if ((!existingNew || existingNew === '[]' || existingNew === '{}') && !hasOldData && data) {
         localStorage.setItem(key, JSON.stringify(data));
       }
     });
@@ -61,14 +74,40 @@ export function hydrateFromInitialSeed(): void {
       // 1. Iterate through all keys in initialSeedData directly
       Object.entries(seedObj).forEach(([key, value]) => {
         if (value !== undefined) {
+          const targetKey = `munyaka_${key}`;
+          const existingTarget = localStorage.getItem(targetKey);
+          const legacyKeyMap: Record<string, string[]> = {
+            'munyaka_learners': ['learners', 'students'],
+            'munyaka_staff': ['staff'],
+            'munyaka_assessments': ['assessments', 'marks'],
+          };
+          const oldKeys = legacyKeyMap[targetKey] || [];
+          const hasOldData = oldKeys.some(ok => {
+            const val = localStorage.getItem(ok);
+            return val && val !== '[]' && val !== '{}';
+          });
+
+          // Prevent unintended overwrites if non-empty data already exists under old or new keys
+          if (existingTarget && existingTarget !== '[]' && existingTarget !== '{}') {
+            // Already populated under new key, skip seed overwrite
+            return;
+          }
+          if (hasOldData) {
+            // Legacy old key has data, do not overwrite with seed default
+            return;
+          }
+
           const stringified = typeof value === 'string' ? value : JSON.stringify(value);
-          localStorage.setItem(`munyaka_${key}`, stringified);
+          localStorage.setItem(targetKey, stringified);
 
           // If mapped to multiple alias keys, populate each
           const aliases = KEY_MAPPING[key];
           if (aliases && aliases.length > 0) {
             aliases.forEach(aliasKey => {
-              localStorage.setItem(aliasKey, stringified);
+              const existingAlias = localStorage.getItem(aliasKey);
+              if (!existingAlias || existingAlias === '[]' || existingAlias === '{}') {
+                localStorage.setItem(aliasKey, stringified);
+              }
             });
           }
         }

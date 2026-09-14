@@ -76,6 +76,30 @@ import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
 
+// ── Legacy Key Auto-Migration ─────────────────────────────────────────────
+const migrateStorageKey = (oldKey: string, newKey: string) => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  const oldData = localStorage.getItem(oldKey);
+  const newData = localStorage.getItem(newKey);
+  
+  // If new key is empty but old key has valid data, preserve and copy over
+  if ((!newData || newData === '[]') && oldData && oldData !== '[]') {
+    localStorage.setItem(newKey, oldData);
+  }
+};
+
+// Run migrations for all modules on boot
+export function runLegacyKeyMigrations() {
+  migrateStorageKey('learners', 'munyaka_learners');
+  migrateStorageKey('students', 'munyaka_learners');
+  migrateStorageKey('staff', 'munyaka_staff');
+  migrateStorageKey('assessments', 'munyaka_assessments');
+  migrateStorageKey('marks', 'munyaka_assessments');
+}
+
+// Run immediately on module evaluation / boot
+runLegacyKeyMigrations();
+
 // ── LocalStorage keys that hold active learner rows ────────────────────────
 const LEARNER_STORAGE_KEYS = [
   'school_learners_data',
