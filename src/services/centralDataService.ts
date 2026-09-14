@@ -1,7 +1,7 @@
 const STORAGE_KEY_LEARNERS = 'munyaka_learners_v2';
 const STORAGE_KEY_STAFF = 'munyaka_staff_v2';
 
-const DEFAULT_LEARNERS: any[] = [];
+// No fallback learners default array
 
 const DEFAULT_STAFF = [
   { id: 's1', name: 'Teacher One', role: 'Teaching Staff' },
