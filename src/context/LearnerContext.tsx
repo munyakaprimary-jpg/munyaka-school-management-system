@@ -28,8 +28,8 @@ const getInitialLearners = () => {
     const saved = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Only keep localStorage if it has AT LEAST as many learners as our seed file
-      if (Array.isArray(parsed) && parsed.length >= normalizedSeed.length) {
+      // Only keep localStorage if it contains at least 7 learners
+      if (Array.isArray(parsed) && parsed.length >= 7) {
         return normalizeLearnerData(parsed);
       }
     }
@@ -37,7 +37,8 @@ const getInitialLearners = () => {
     console.error("Storage parse error:", e);
   }
 
-  // Fallback directly to physical seed file
+  // Overwrite empty/corrupted localStorage with full seed dataset
+  localStorage.setItem('munyaka_learners', JSON.stringify(normalizedSeed));
   return normalizedSeed;
 };
 
@@ -45,7 +46,9 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [learners, setLearners] = useState<any[]>(getInitialLearners);
 
   useEffect(() => {
-    localStorage.setItem('munyaka_learners', JSON.stringify(learners));
+    if (learners.length > 0) {
+      localStorage.setItem('munyaka_learners', JSON.stringify(learners));
+    }
   }, [learners]);
 
   const addLearner = (newLearner: any) => {
