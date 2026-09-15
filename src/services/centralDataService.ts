@@ -183,14 +183,17 @@ export const CentralDataService = {
 
   // ── Term Locking Mechanism ───────────────────────────────────────────────
   getTermLocks: (): Record<string, boolean> => {
-    // Default Term 1 and Term 2 to locked/archived so administrators have multiple past terms locked simultaneously
-    const locks = readStorage<Record<string, boolean>>('munyaka_term_locks', {
-      'term1 2026': true,
-      'term2 2026': true,
-      'term1 2025': true,
-      'term2 2025': true,
-      'term3 2025': true,
-    });
+    const currentYear = new Date().getFullYear();
+    const prevYear = currentYear - 1;
+    const defaultLocks: Record<string, boolean> = {
+      [`term1_${prevYear}`]: true,
+      [`term2_${prevYear}`]: true,
+      [`term3_${prevYear}`]: true,
+      [`term1_${currentYear}`]: false,
+      [`term2_${currentYear}`]: false,
+      [`term3_${currentYear}`]: false,
+    };
+    const locks = readStorage<Record<string, boolean>>('munyaka_term_locks', defaultLocks);
     return locks;
   },
   saveTermLocks: (locks: Record<string, boolean>) => writeStorage('munyaka_term_locks', locks),

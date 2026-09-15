@@ -405,10 +405,10 @@ const Settings = () => {
   });
 
   const [academicConfig, setAcademicConfig] = useState({
-    activeYear: "2026",
+    activeYear: new Date().getFullYear().toString(),
     activeTerm: "term1",
-    termStartDate: "2026-01-05",
-    termEndDate: "2026-04-10",
+    termStartDate: `${new Date().getFullYear()}-01-05`,
+    termEndDate: `${new Date().getFullYear()}-04-10`,
     gradingScale: [
       { level: "EE", descriptor: "Exceeding Expectations", min: 80, max: 100, points: 4 },
       { level: "ME", descriptor: "Meeting Expectations", min: 50, max: 79, points: 3 },
