@@ -21,6 +21,7 @@ const EXTRA_KEYS = {
 
 export const STORAGE_KEYS = {
   ...PERSISTENT_KEYS,
+  MASTER_LEARNERS: 'munyaka_master_learner_list',
   ...EXTRA_KEYS,
 };
 
@@ -53,11 +54,29 @@ export interface AttendanceRecord {
  */
 export const CentralDataService = {
   // ── Learners ──────────────────────────────────────────────────────────────
-  getLearners: (): Student[] => readStorage<Student[]>(STORAGE_KEYS.STUDENTS, []),
+  getLearners: (): Student[] => {
+    const primary = readStorage<Student[]>(STORAGE_KEYS.STUDENTS, []);
+    const master = readStorage<Student[]>(STORAGE_KEYS.MASTER_LEARNERS, []);
+    const legacy = readStorage<Student[]>(STORAGE_KEYS.STUDENTS_LEGACY, []);
+    const combinedMap = new Map<string, Student>();
+    
+    // Merge all sources into master unified map
+    [...master, ...primary, ...legacy].forEach(s => {
+      if (s && (s.id || s.admissionNumber || s.name)) {
+        const key = s.id || s.admissionNumber || s.name;
+        combinedMap.set(key, s);
+      }
+    });
+
+    const unified = Array.from(combinedMap.values());
+    return unified;
+  },
   saveLearners: (learners: Student[]) => {
     writeStorage(STORAGE_KEYS.STUDENTS, learners);
     writeStorage(STORAGE_KEYS.STUDENTS_LEGACY, learners);
+    writeStorage(STORAGE_KEYS.MASTER_LEARNERS, learners);
     window.dispatchEvent(new Event('students-updated'));
+    window.dispatchEvent(new Event('learners-updated'));
   },
   // Aliases for compatibility
   getStudents: () => CentralDataService.getLearners(),

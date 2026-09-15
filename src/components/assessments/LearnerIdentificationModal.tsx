@@ -283,41 +283,12 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
     }
   }, [filteredExams, selectedGrade, selectedExamId]);
 
-  // ── Load students from localStorage ─────────────────────────────────────────
-  // Reads from multiple possible storage keys; prioritises whichever has data.
+  // ── Load students from central storage (CentralDataService / students) ─────────────────
   useEffect(() => {
     try {
-      let loadedStudents: RegisteredStudent[] = [];
-
-      // Priority order: registered_students → students_list → STUDENTS_STORAGE_KEYS
-      const allKeys = [
-        "registered_students",
-        "students_list",
-        ...STUDENTS_STORAGE_KEYS,
-      ];
-
-      for (const key of allKeys) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            // Filter to plain objects so downstream .status / .name accesses don't crash.
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              loadedStudents = parsed.filter(
-                (item): item is RegisteredStudent =>
-                  item !== null && typeof item === "object" && "id" in item && "name" in item
-              );
-              break;
-            }
-          } catch {
-            // Continue to next key
-          }
-        }
-      }
-
-      // Filter out transferred students
+      const loadedStudents = CentralDataService.getLearners() || [];
       const active = loadedStudents.filter(
-        (s) => !s.status || s.status === "Active" || s.status === "active"
+        (s: any) => !s.status || s.status === "Active" || s.status === "active"
       );
       setStudents(active);
     } catch (err) {

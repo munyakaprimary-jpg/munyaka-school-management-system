@@ -40,6 +40,7 @@ export const STORAGE_KEYS = {
   // Primary state stores
   STUDENTS: STORAGE_KEY,
   STUDENTS_LEGACY: 'munyaka_students',
+  MASTER_LEARNERS: 'munyaka_master_learner_list',
   CBC_LEARNING_AREAS: 'munyaka_learning_areas',
   PAYMENT_RECORDS: 'munyaka_fees_records',
   TRANSACTIONS: 'munyaka_transactions',
