@@ -670,8 +670,16 @@ const Settings = () => {
         auditLogs
       };
       await localData.settings.save(masterLocal);
+      localStorage.setItem('munyaka_academic_calendar', JSON.stringify({
+        activeTerm: academicConfig.activeTerm,
+        activeYear: academicConfig.activeYear,
+        termStartDate: academicConfig.termStartDate,
+        termEndDate: academicConfig.termEndDate,
+        updatedAt: new Date().toISOString()
+      }));
       persistGeofenceConfig(geofenceConfig);
       setHasUnsavedChanges(false);
+      showSuccess("Active academic calendar & institutional settings saved successfully!");
     } catch (err: any) {
       showError(`Failed to save settings: ${err.message || 'Unknown error'}`);
     } finally {
