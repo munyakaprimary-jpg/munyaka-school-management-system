@@ -1440,12 +1440,12 @@ const Settings = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                   {['term1', 'term2', 'term3'].map(tKey => {
                     const termLabel = tKey === 'term1' ? 'Term 1' : tKey === 'term2' ? 'Term 2' : 'Term 3';
-                    const fullKey = `${tKey} ${academicConfig.activeYear}`;
+                    const fullKey = `${tKey}_${academicConfig.activeYear}`;
                     const isActive = tKey === academicConfig.activeTerm;
                     const isLocked = CentralDataService.isTermLocked(fullKey);
 
                     return (
-                      <div key={tKey} className={cn("p-4 rounded-xl border flex flex-col justify-between gap-3 bg-white", isActive ? "border-indigo-300 shadow-sm ring-1 ring-indigo-200" : "border-slate-200")}>
+                      <div key={fullKey} className={cn("p-4 rounded-xl border flex flex-col justify-between gap-3 bg-white", isActive ? "border-indigo-300 shadow-sm ring-1 ring-indigo-200" : "border-slate-200")}>
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="font-black text-slate-900 text-sm">{termLabel} {academicConfig.activeYear}</p>

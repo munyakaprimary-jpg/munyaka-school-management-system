@@ -437,9 +437,9 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
       }
     } catch { /* ignore */ }
 
-    const termKey = `${term} ${academicYear}`;
-    if (CentralDataService.isTermLocked(termKey)) {
-      showError(`Term "${termKey}" is locked. Archived terms are read-only.`);
+    const termKey = `${term.toLowerCase().replace(/\s+/g, '')} ${academicYear}`;
+    if (CentralDataService.isTermLocked(termKey) || CentralDataService.isTermLocked(`${term} ${academicYear}`)) {
+      showError(`Term "${term} ${academicYear}" is locked. Archived terms are read-only.`);
       return;
     }
 

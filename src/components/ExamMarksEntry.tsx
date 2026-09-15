@@ -81,7 +81,7 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
   const isLocked = Boolean(
     lockedTermsMap[termKey] || 
     lockedTermsMap[selectedExamPeriod] || 
-    CentralDataService.isTermLocked(termKey) ||
+    CentralDataService.isTermLocked(`${selectedTerm} ${selectedYear}`) ||
     CentralDataService.isTermLocked(selectedExamPeriod)
   );
 
