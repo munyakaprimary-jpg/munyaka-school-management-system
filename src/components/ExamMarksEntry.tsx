@@ -151,7 +151,14 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-800">Marks Entry — {selectedExamPeriod}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-bold text-slate-800">Marks Entry — {selectedExamPeriod}</h2>
+              {isLocked && (
+                <span className="bg-slate-100 text-slate-600 border border-slate-200 text-xs font-black px-2.5 py-0.5 rounded-lg flex items-center gap-1 shadow-xs" data-testid="header-locked-badge">
+                  <Lock size={11} /> Locked / Read-Only
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-500">Enter and manage subject scores for learners</p>
           </div>
         </div>
