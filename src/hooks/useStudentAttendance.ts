@@ -3,7 +3,15 @@ import { useAuth } from '@/context/AuthContext';
 import { StudentAttendance } from '@/types/attendance';
 import { isWithinGeofence } from '@/lib/geofence';
 import { showSuccess, showError } from '@/utils/toast';
-import { localData, StudentAttendanceRecord } from '@/services/localDataService';
+import { localData } from '@/services/localDataService';
+export interface StudentAttendanceRecord {
+  id?: string;
+  studentId: string;
+  date: string;
+  status: 'present' | 'absent' | 'late';
+  term?: string;
+  year?: string;
+}
 
 export const useStudentAttendance = (studentId: string | null) => {
   const { user } = useAuth();

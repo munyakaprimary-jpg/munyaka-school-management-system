@@ -4,7 +4,15 @@ import { AttendanceRecord } from '@/types/attendance';
 import { isWithinGeofence, SCHOOL_COORDINATES } from '@/lib/geofence';
 import { validateDeparture } from '@/lib/attendance-utils';
 import { showSuccess, showError } from '@/utils/toast';
-import { localData, TeacherAttendanceRecord } from '@/services/localDataService';
+import { localData } from '@/services/localDataService';
+export interface TeacherAttendanceRecord {
+  id?: string;
+  teacherId: string;
+  date: string;
+  status: 'present' | 'absent' | 'late';
+  checkInTime?: string;
+  checkOutTime?: string;
+}
 
 export const useTeacherAttendance = (currentLocation: { lat: number; lng: number } | null) => {
   const { user } = useAuth();
