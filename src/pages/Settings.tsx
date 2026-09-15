@@ -592,7 +592,8 @@ const Settings = () => {
   const fetchSettingsFromDatabase = useCallback(async () => {
     setIsLoadingSettings(true);
     try {
-      const data = localData.settings.get<Record<string, unknown>>();
+      const raw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
+      const data = raw ? JSON.parse(raw) : null;
 
       if (data && Object.keys(data).length > 0) {
         if (data.general) setGeneralConfig(data.general as any);
@@ -669,7 +670,10 @@ const Settings = () => {
         sessionSecurity,
         auditLogs
       };
-      await localData.settings.save(masterLocal);
+
+      // Direct local storage fallback handler saving to munyaka_academic_calendar and munyaka_system_settings
+      localStorage.setItem('munyaka_system_settings', JSON.stringify(masterLocal));
+      localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(masterLocal));
       localStorage.setItem('munyaka_academic_calendar', JSON.stringify({
         activeTerm: academicConfig.activeTerm,
         activeYear: academicConfig.activeYear,
@@ -678,6 +682,10 @@ const Settings = () => {
         updatedAt: new Date().toISOString()
       }));
       persistGeofenceConfig(geofenceConfig);
+
+      // Also try dispatching custom event if listeners exist
+      window.dispatchEvent(new CustomEvent('settings_updated', { detail: { key: 'munyaka_system_settings_v3' } }));
+
       setHasUnsavedChanges(false);
       showSuccess("Active academic calendar & institutional settings saved successfully!");
     } catch (err: any) {
