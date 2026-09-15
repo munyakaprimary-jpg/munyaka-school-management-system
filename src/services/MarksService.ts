@@ -1,4 +1,5 @@
-import { MarkRecord, MarksMatrix, ExamKey, MARKS_STORAGE_KEY } from './schema';
+import { MarkRecord, MarksMatrix, ExamKey } from './schema';
+import { CentralDataService, STORAGE_KEYS } from './centralDataService';
 
 /**
  * Builds a unique exam_id used to key every mark record.
@@ -13,11 +14,9 @@ export const buildExamId = (key: ExamKey): string =>
  */
 export const MarksService = {
  getMarks: (examId: string): MarksMatrix => {
- const raw = localStorage.getItem(MARKS_STORAGE_KEY);
- if (!raw) return {};
+ const records = CentralDataService.getMarks();
+ if (!records || !Array.isArray(records)) return {};
  try {
- const parsed = JSON.parse(raw);
- const records: MarkRecord[] = Array.isArray(parsed) ? parsed : [];
  return records
 .filter(r => r.exam_id === examId)
 .reduce<MarksMatrix>((matrix, r) => {
@@ -47,16 +46,7 @@ export const MarksService = {
  saveMarks: async (examId: string, matrix: MarksMatrix): Promise<MarkRecord[]> => {
   if (!examId) throw new Error("exam_id is required");
 
-  const raw = localStorage.getItem(MARKS_STORAGE_KEY);
-  let records: MarkRecord[] = [];
-  
-  try {
-    const parsed = raw ? JSON.parse(raw) : [];
-    records = Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    console.error("Error parsing marks from localStorage", e);
-    records = [];
-  }
+  const records = CentralDataService.getMarks();
 
   // Parse examId to extract context fields
   const [academic_year, term, exam_type, gradeId, streamId] = examId.split("|");
@@ -99,7 +89,7 @@ export const MarksService = {
     }
   });
 
-  localStorage.setItem(MARKS_STORAGE_KEY, JSON.stringify(updatedRecords));
+  CentralDataService.saveMarks(updatedRecords);
   return updatedRecords;
   }
 };
