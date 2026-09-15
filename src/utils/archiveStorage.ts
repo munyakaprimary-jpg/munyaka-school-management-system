@@ -229,6 +229,41 @@ export interface RestoredLearner {
   restoredAt: string;
 }
 
+/**
+ * Restore multiple learners to the active roster in a single batch.
+ *
+ * Returns an array of successfully restored learners and a list of
+ * IDs that failed to restore (e.g. not found in archive).
+ */
+export interface BatchRestoreResult {
+  restored: RestoredLearner[];
+  failed: { id: string; error: string }[];
+}
+
+export function batchRestoreLearnersToActiveRoster(
+  ids: string[],
+  targetGrade?: string,
+  targetStream?: string,
+  options: RestoreOptions = { deleteArchiveEntry: true }
+): BatchRestoreResult {
+  const result: BatchRestoreResult = { restored: [], failed: [] };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return result;
+  }
+
+  for (const id of ids) {
+    const restored = restoreLearnerToActiveRoster(id, targetGrade, targetStream, options);
+    if (restored) {
+      result.restored.push(restored);
+    } else {
+      result.failed.push({ id, error: 'Learner not found in archive or restore failed.' });
+    }
+  }
+
+  return result;
+}
+
 export function restoreLearnerToActiveRoster(
   id: string,
   targetGrade?: string,

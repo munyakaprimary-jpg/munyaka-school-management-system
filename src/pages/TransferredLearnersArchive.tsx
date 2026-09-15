@@ -51,8 +51,10 @@ import {
   filterArchiveByYear,
   getArchiveYears,
   restoreLearnerToActiveRoster,
+  batchRestoreLearnersToActiveRoster,
   ARCHIVE_UPDATED_EVENT,
   type RestoredLearner,
+  type BatchRestoreResult,
 } from '@/utils/archiveStorage';
 import type {
   TransferredLearnerArchive,
@@ -84,6 +86,16 @@ const TransferredLearnersArchive: React.FC = () => {
     useState<TransferredLearnerArchive | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  // ── Batch selection state ──────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBatchRestoreOpen, setIsBatchRestoreOpen] = useState(false);
+  const [batchRestorePassword, setBatchRestorePassword] = useState('');
+  const [batchRestoreGrade, setBatchRestoreGrade] = useState('');
+  const [batchRestoreStream, setBatchRestoreStream] = useState('');
+  const [batchRestoreError, setBatchRestoreError] = useState<string | null>(null);
+  const [isBatchRestoring, setIsBatchRestoring] = useState(false);
+  const [batchRestoreResult, setBatchRestoreResult] = useState<BatchRestoreResult | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Direct back handler — always navigates to the active Learners page.
   const handleBack = useCallback(() => {
@@ -214,6 +226,82 @@ const TransferredLearnersArchive: React.FC = () => {
       return { success: true };
     } finally {
       setIsRestoring(false);
+    }
+  };
+
+  // ── Batch restore handlers ──────────────────────────────
+  const handleBatchRestore = async (
+    targetGrade: string,
+    targetStream: string,
+    adminPassword: string
+  ): Promise<{ success: boolean; error?: string; result?: BatchRestoreResult }> => {
+    if (selectedIds.size === 0) {
+      return { success: false, error: 'No learners selected.' };
+    }
+    setIsBatchRestoring(true);
+    setBatchRestoreError(null);
+    try {
+      const storedPass = getActiveAdminPassword();
+      if (String(adminPassword || '').trim() !== storedPass) {
+        return { success: false, error: 'Admin password is incorrect. Authorization denied.' };
+      }
+
+      const result = batchRestoreLearnersToActiveRoster(
+        Array.from(selectedIds),
+        targetGrade || undefined,
+        targetStream || undefined,
+        { deleteArchiveEntry: true }
+      );
+
+      setBatchRestoreResult(result);
+
+      if (result.restored.length > 0) {
+        showSuccess(
+          `${result.restored.length} learner(s) restored to active roster. Reload the Learners page to see them.`
+        );
+        setSelectedIds(new Set());
+        setIsBatchRestoreOpen(false);
+        setBatchRestorePassword('');
+        setBatchRestoreGrade('');
+        setBatchRestoreStream('');
+        // Refresh records
+        const all = getArchive().filter((r) => !new Set<string>().has(r.id));
+        setRecords(all);
+      }
+
+      if (result.failed.length > 0) {
+        return {
+          success: result.restored.length > 0,
+          error: `${result.failed.length} learner(s) failed to restore.`,
+          result,
+        };
+      }
+
+      return { success: true, result };
+    } catch (err) {
+      return { success: false, error: 'Batch restore failed.' };
+    } finally {
+      setIsBatchRestoring(false);
+    }
+  };
+
+  const toggleSelectId = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === records.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(records.map((r) => r.id)));
     }
   };
 
@@ -358,6 +446,22 @@ const TransferredLearnersArchive: React.FC = () => {
             />
           </div>
 
+          {/* Batch Restore Button */}
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setBatchRestoreError(null);
+                setBatchRestoreResult(null);
+                setIsBatchRestoreOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 px-4 h-[42px] rounded-xl border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 text-sm font-bold transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 active:scale-95 whitespace-nowrap"
+            >
+              <RotateCcw size={15} />
+              Restore Selected ({selectedIds.size})
+            </button>
+          )}
+
           <select
             value={yearFilter === 'ALL' ? 'ALL' : String(yearFilter)}
             onChange={(e) =>
@@ -486,16 +590,25 @@ const TransferredLearnersArchive: React.FC = () => {
             style={{ minWidth: '1080px' }}
           >
             <colgroup>
-              <col style={{ width: '260px' }} />   {/* Student */}
-              <col style={{ width: '140px' }} />   {/* Adm. No / NEMIS */}
-              <col style={{ width: '180px' }} />   {/* Last Grade */}
-              <col style={{ width: '160px' }} />   {/* Transfer Ref # */}
-              <col style={{ width: '220px' }} />   {/* Destination */}
-              <col style={{ width: '120px' }} />   {/* Transfer Date */}
-              <col style={{ width: '120px' }} />   {/* Actions */}
-            </colgroup>
+                          <col style={{ width: '40px' }} />    {/* Checkbox */}
+                          <col style={{ width: '260px' }} />   {/* Student */}
+                          <col style={{ width: '140px' }} />   {/* Adm. No / NEMIS */}
+                          <col style={{ width: '180px' }} />   {/* Last Grade */}
+                          <col style={{ width: '160px' }} />   {/* Transfer Ref # */}
+                          <col style={{ width: '220px' }} />   {/* Destination */}
+                          <col style={{ width: '120px' }} />   {/* Transfer Date */}
+                          <col style={{ width: '120px' }} />   {/* Actions */}
+                        </colgroup>
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr className="text-left">
+                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    onChange={toggleSelectAll}
+                    checked={selectedIds.size === records.length && records.length > 0}
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                </th>
                 <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">
                   Student
                 </th>
@@ -540,8 +653,16 @@ const TransferredLearnersArchive: React.FC = () => {
                 records.map((r) => (
                   <tr
                     key={r.id}
-                    className="hover:bg-slate-50/70 transition-colors"
+                    className={`hover:bg-slate-50/70 transition-colors ${selectedIds.has(r.id) ? 'bg-amber-50/40' : ''}`}
                   >
+                    <td className="px-5 py-4 whitespace-nowrap align-middle">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(r.id)}
+                        onChange={() => toggleSelectId(r.id)}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                    </td>
                     <td className="px-5 py-4 whitespace-nowrap align-middle">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0">
@@ -652,6 +773,202 @@ const TransferredLearnersArchive: React.FC = () => {
           onConfirm={handleRestore}
           onClose={() => setRestoreTarget(null)}
         />
+      )}
+
+      {/* ─── Batch Restore Authorization Modal ──────────────────────────── */}
+      {isBatchRestoreOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setIsBatchRestoreOpen(false)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* ── Header ─────────────────────────────────────────────── */}
+            <div className="p-6 border-b border-slate-100 bg-gradient-to-br from-amber-50 to-orange-50/50">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-11 h-11 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center shrink-0">
+                  <ShieldCheck size={22} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900">
+                    Batch Restore Authorization
+                  </h2>
+                  <p className="text-[11px] font-bold text-amber-700 uppercase tracking-widest">
+                    Restricted action · Re-enrolment ({selectedIds.size} learners)
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                You are about to restore <strong className="text-slate-900">{selectedIds.size}</strong> learner(s) from the archive back to the active roster. Enter your admin password to authorise this action.
+              </p>
+            </div>
+
+            {/* ── Body ───────────────────────────────────────────────── */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleBatchRestore(batchRestoreGrade, batchRestoreStream, batchRestorePassword);
+              }}
+              className="p-6 space-y-5 max-h-[65vh] overflow-y-auto"
+            >
+              {/* Target grade + stream */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
+                  <GraduationCap size={12} />
+                  Select Grade / Stream to restore to
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="batch-restore-grade"
+                      className="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                    >
+                      Grade
+                    </label>
+                    <select
+                      id="batch-restore-grade"
+                      value={batchRestoreGrade}
+                      onChange={(e) => setBatchRestoreGrade(e.target.value)}
+                      disabled={isBatchRestoring}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 outline-none"
+                    >
+                      <option value="">Select Grade</option>
+                      {gradesConfig.grades.map((g) => (
+                        <option key={g} value={g}>
+                          Grade {g}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="batch-restore-stream"
+                      className="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                    >
+                      Stream
+                    </label>
+                    <select
+                      id="batch-restore-stream"
+                      value={batchRestoreStream}
+                      onChange={(e) => setBatchRestoreStream(e.target.value)}
+                      disabled={isBatchRestoring}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 outline-none"
+                    >
+                      <option value="">Select Stream</option>
+                      {gradesConfig.streams.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Admin password */}
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="batch-restore-admin-password"
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5"
+                >
+                  <Lock size={12} />
+                  Admin Password
+                </label>
+                <div className="relative">
+                  <Input
+                    id="batch-restore-admin-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={batchRestorePassword}
+                    onChange={(e) => {
+                      setBatchRestorePassword(e.target.value);
+                      if (batchRestoreError) setBatchRestoreError(null);
+                    }}
+                    placeholder="Enter your system admin password"
+                    disabled={isBatchRestoring}
+                    autoComplete="current-password"
+                    autoFocus
+                    className="h-12 pl-4 pr-12 rounded-xl bg-slate-50 border-slate-200 font-bold text-sm focus:bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={isBatchRestoring}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Inline error */}
+              {batchRestoreError && (
+                <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-bold animate-in slide-in-from-top-2">
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                  <span>{batchRestoreError}</span>
+                </div>
+              )}
+
+              {/* Success result */}
+              {batchRestoreResult && batchRestoreResult.restored.length > 0 && (
+                <div className="flex items-start gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-xs font-bold animate-in slide-in-from-top-2">
+                  <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
+                  <div>
+                    <p>Successfully restored {batchRestoreResult.restored.length} learner(s).</p>
+                    {batchRestoreResult.failed.length > 0 && (
+                      <p className="text-rose-600 mt-1">
+                        Failed: {batchRestoreResult.failed.length} learner(s) could not be restored.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Info note */}
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium leading-relaxed">
+                The archive entries will be permanently removed after restore. To keep audit history, use individual restore actions.
+              </div>
+            </form>
+
+            {/* ── Footer ─────────────────────────────────────────────── */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/70 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsBatchRestoreOpen(false)}
+                disabled={isBatchRestoring}
+                className="rounded-xl font-bold"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                form="restore-form"
+                disabled={isBatchRestoring || selectedIds.size === 0}
+                className="rounded-xl bg-amber-600 hover:bg-amber-700 font-bold gap-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleBatchRestore(batchRestoreGrade, batchRestoreStream, batchRestorePassword);
+                }}
+              >
+                {isBatchRestoring ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Restoring…
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck size={16} />
+                    Confirm Batch Restore
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
