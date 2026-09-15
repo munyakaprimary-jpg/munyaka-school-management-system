@@ -1107,8 +1107,13 @@ ${filteredStudents.length} learner(s) included.
                               max="100"
                               value={studentMarks[subj] !== undefined ? studentMarks[subj] : ""}
                               onChange={e => handleMarkChange(studentId, subj, e.target.value)}
+                              disabled={inputDisabled}
+                              readOnly={inputDisabled}
                               placeholder="—"
-                              className="w-16 sm:w-20 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
+                              className={cn(
+                                "w-16 sm:w-20 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all",
+                                inputDisabled && "opacity-60 cursor-not-allowed bg-slate-100 text-slate-500"
+                              )}
                             />
                           </td>
                         ))}
