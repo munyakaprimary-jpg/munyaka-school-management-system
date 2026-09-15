@@ -1425,28 +1425,51 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* Lock Active Term / Archive Term toggle switch */}
-              <div className="pt-6 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/70 p-5 rounded-2xl">
+              {/* Archive & Lock Past Terms */}
+              <div className="pt-6 border-t space-y-4 bg-slate-50/70 p-5 rounded-2xl">
                 <div className="min-w-0 space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-black text-slate-900 text-base">Lock Active Term / Archive Term</span>
-                    {CentralDataService.isTermLocked(`${academicConfig.activeTerm} ${academicConfig.activeYear}`) && (
-                      <span className="bg-rose-100 text-rose-700 text-xs px-2 py-0.5 rounded-full font-bold">Locked / Read-Only</span>
-                    )}
+                    <span className="font-black text-slate-900 text-base">Archive & Lock Past Terms</span>
+                    <span className="bg-slate-200 text-slate-700 text-xs px-2 py-0.5 rounded-full font-bold">Historical Archive</span>
                   </div>
                   <p className="text-xs text-slate-500">
-                    When enabled, all mark entry and grading sheets for Term {academicConfig.activeTerm === 'term1' ? '1' : academicConfig.activeTerm === 'term2' ? '2' : '3'} ({academicConfig.activeYear}) instantly switch to read-only mode.
+                    Active term <span className="font-bold text-slate-700">Term {academicConfig.activeTerm === 'term1' ? '1' : academicConfig.activeTerm === 'term2' ? '2' : '3'} {academicConfig.activeYear}</span> remains open and editable for grading. Toggle switches below allow freezing specific past terms to archive them as read-only.
                   </p>
                 </div>
-                <Switch
-                  checked={CentralDataService.isTermLocked(`${academicConfig.activeTerm} ${academicConfig.activeYear}`)}
-                  onCheckedChange={checked => {
-                    const termKey = `${academicConfig.activeTerm} ${academicConfig.activeYear}`;
-                    CentralDataService.toggleTermLock(termKey, checked);
-                    setHasUnsavedChanges(true);
-                    showSuccess(checked ? `Term "${termKey}" is now locked and read-only.` : `Term "${termKey}" has been unlocked.`);
-                  }}
-                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                  {['term1', 'term2', 'term3'].map(tKey => {
+                    const termLabel = tKey === 'term1' ? 'Term 1' : tKey === 'term2' ? 'Term 2' : 'Term 3';
+                    const fullKey = `${tKey} ${academicConfig.activeYear}`;
+                    const isActive = tKey === academicConfig.activeTerm;
+                    const isLocked = CentralDataService.isTermLocked(fullKey);
+
+                    return (
+                      <div key={tKey} className={cn("p-4 rounded-xl border flex flex-col justify-between gap-3 bg-white", isActive ? "border-indigo-300 shadow-sm ring-1 ring-indigo-200" : "border-slate-200")}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-black text-slate-900 text-sm">{termLabel} {academicConfig.activeYear}</p>
+                            {isActive ? (
+                              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md mt-1 inline-block">Active Term (Always Open)</span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-slate-500 mt-1 inline-block">{isLocked ? 'Archived & Locked' : 'Open for Grading'}</span>
+                            )}
+                          </div>
+                          {!isActive && (
+                            <Switch
+                              checked={isLocked}
+                              onCheckedChange={checked => {
+                                CentralDataService.toggleTermLock(fullKey, checked);
+                                setHasUnsavedChanges(true);
+                                showSuccess(checked ? `Archived and locked ${termLabel} ${academicConfig.activeYear}.` : `Unlocked ${termLabel} ${academicConfig.activeYear}.`);
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </CardContent>
           </Card>
