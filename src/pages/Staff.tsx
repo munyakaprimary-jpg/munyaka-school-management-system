@@ -258,6 +258,13 @@ const Staff = () => {
           assignedSubjects: isNonTeaching ? [] : [],
           status: 'Pre-Registered',
         });
+        
+        // Notify other components & refresh state
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('munyaka_data_changed'));
+        
+        setIsModalOpen(false);
+        setStaffList(getStaffMaster());
         showSuccess(`Staff member "${formData.full_name}" added and pre-registered.`);
       } catch (err) {
         showError('Failed to add staff. Please try again.');
@@ -286,6 +293,13 @@ const Staff = () => {
         }
 
         updateStaffMaster(editingStaff.id, updatePayload);
+        
+        // Notify other components & refresh state
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('munyaka_data_changed'));
+        
+        setIsModalOpen(false);
+        setStaffList(getStaffMaster());
         showSuccess(`Staff member "${formData.full_name}" updated successfully.`);
       } catch (err) {
         showError('Failed to update staff. Please try again.');
