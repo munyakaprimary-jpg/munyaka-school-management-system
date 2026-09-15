@@ -423,8 +423,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     [selectedExam, selectedExamId]
   );
 
-  // Read-only check for inputs when isLocked is true
-  const inputDisabled = isLocked;
+  // Check if term is locked
   let academicYear = new Date().getFullYear().toString();
   let term = "term1";
   try {
@@ -457,6 +456,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   }, []);
 
   const isLocked = Boolean(lockedTermsMap[termKey] || CentralDataService.isTermLocked(termKey));
+  const inputDisabled = isLocked;
   const handleSaveAll = useCallback(async () => {
     if (!selectedExam || studentGrades.length === 0) return;
 
