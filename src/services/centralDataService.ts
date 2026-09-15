@@ -47,14 +47,83 @@ export interface AttendanceRecord {
 
 /**
  * CentralDataService — Unified data storage gateway.
- * 
- * All menu modules (Learners, Staff, Attendance, Finance, Timetable) 
+ *
+ * All menu modules (Learners, Staff, Attendance, Finance, Timetable)
  * must route their data mutations and reads through this service.
  * It ensures APK builds and local-first persistence sync pull from a unified state.
  */
 export const CentralDataService = {
+  // ── Startup Migration Utility ─────────────────────────────────────────────
+  /**
+   * Automatically scans legacy local storage keys ('students', 'learners', 'registered_students', etc.)
+   * and merges any found records into 'munyaka_master_learner_list' without overwriting existing data,
+   * deduplicating by ID or admission number.
+   */
+  runStartupMigration: () => {
+    try {
+      const legacyKeys = [
+        'students',
+        'learners',
+        'registered_students',
+        'munyaka_registered_students',
+        'school_learners_data',
+        'munyaka_learners_db',
+        'pupils',
+        'school_students',
+        'munyaka_students'
+      ];
+
+      const masterKey = STORAGE_KEYS.MASTER_LEARNERS;
+      const existingMaster: Student[] = readStorage<Student[]>(masterKey, []);
+      const map = new Map<string, Student>();
+
+      // Load existing master records first
+      existingMaster.forEach(s => {
+        if (s && (s.id || s.admissionNumber || (s as any).admNo || s.name)) {
+          const key = String(s.id || s.admissionNumber || (s as any).admNo || s.name).trim().toLowerCase();
+          map.set(key, s);
+        }
+      });
+
+      // Scan legacy keys
+      let foundNew = false;
+      legacyKeys.forEach(k => {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((s: any) => {
+                if (s && (s.id || s.admissionNumber || s.admNo || s.name)) {
+                  const key = String(s.id || s.admissionNumber || s.admNo || s.name).trim().toLowerCase();
+                  if (!map.has(key)) {
+                    map.set(key, s);
+                    foundNew = true;
+                  }
+                }
+              });
+            }
+          } catch {
+            // ignore parse errors
+          }
+        }
+      });
+
+      const unified = Array.from(map.values());
+      if (foundNew || existingMaster.length === 0) {
+        writeStorage(masterKey, unified);
+        writeStorage(STORAGE_KEYS.STUDENTS, unified);
+        writeStorage(STORAGE_KEYS.STUDENTS_LEGACY, unified);
+        console.log(`[CentralDataService] Startup migration completed. Migrated/unified ${unified.length} learners.`);
+      }
+    } catch (err) {
+      console.error("[CentralDataService] Startup migration failed:", err);
+    }
+  },
+
   // ── Learners ──────────────────────────────────────────────────────────────
   getLearners: (): Student[] => {
+    CentralDataService.runStartupMigration();
     const primary = readStorage<Student[]>(STORAGE_KEYS.STUDENTS, []);
     const master = readStorage<Student[]>(STORAGE_KEYS.MASTER_LEARNERS, []);
     const legacy = readStorage<Student[]>(STORAGE_KEYS.STUDENTS_LEGACY, []);
@@ -62,8 +131,8 @@ export const CentralDataService = {
     
     // Merge all sources into master unified map
     [...master, ...primary, ...legacy].forEach(s => {
-      if (s && (s.id || s.admissionNumber || s.name)) {
-        const key = s.id || s.admissionNumber || s.name;
+      if (s && (s.id || s.admissionNumber || (s as any).admNo || s.name)) {
+        const key = String(s.id || s.admissionNumber || (s as any).admNo || s.name).trim().toLowerCase();
         combinedMap.set(key, s);
       }
     });
