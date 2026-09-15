@@ -102,6 +102,42 @@ const Assessments = () => {
   const [stream, setStream] = useState<string>("All Streams");
   const [examType, setExamType] = useState<string>("Formative Assessment");
   const [term, setTerm] = useState<string>("Term 1");
+
+  // Read term locking settings from localStorage and check if currently selected term is locked
+  const [lockedTermsMap, setLockedTermsMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_term_locks');
+      if (stored) {
+        setLockedTermsMap(JSON.parse(stored));
+      }
+    } catch { /* ignore */ }
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'munyaka_term_locks' && e.newValue) {
+        try { setLockedTermsMap(JSON.parse(e.newValue)); } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const isLocked = useMemo(() => {
+    try {
+      const cal = JSON.parse(localStorage.getItem('munyaka_academic_calendar') || '{}');
+      if (cal.terms && Array.isArray(cal.terms)) {
+        const currentTermObj = cal.terms.find((t: any) => t.isCurrent || t.active || t.name === term || t.name?.toLowerCase() === term.toLowerCase());
+        if (currentTermObj && (currentTermObj.isLocked || currentTermObj.locked)) {
+          return true;
+        }
+      }
+    } catch { /* ignore */ }
+    const termKey = `${term} ${academicYear}`;
+    return Boolean(lockedTermsMap[termKey] || lockedTermsMap[term] || lockedTermsMap[term.toLowerCase()]);
+  }, [lockedTermsMap, term, academicYear]);
+
+  const inputDisabled = isLocked;
   const [subject, setSubject] = useState<string>("All Subjects");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
