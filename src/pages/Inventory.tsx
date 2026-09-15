@@ -85,7 +85,7 @@ const Inventory = () => {
   const handleSyncStock = async () => {
     setIsSyncing(true);
     try {
-      const all = localData.inventory.getAll();
+      const all = (localData as any).inventory?.getAll?.() || [];
       if (all.length > 0) {
             setAssets(all as AssetItem[]);
             showSuccess(`Stock loaded from local storage (${all.length} assets).`);

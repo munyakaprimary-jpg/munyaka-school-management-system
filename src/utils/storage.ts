@@ -374,26 +374,26 @@ export function hydrateAllStores(): HydrationReport {
     }
 
     // 1c. Staff pre-registration
-    if (Array.isArray(INITIAL_SEED_DATA?.staffPrereg)) {
-      seedIfAbsent(STORAGE_KEYS.STAFF_PREREG, INITIAL_SEED_DATA.staffPrereg);
+    if (Array.isArray((INITIAL_SEED_DATA as any)?.staffPrereg)) {
+      seedIfAbsent(STORAGE_KEYS.STAFF_PREREG, (INITIAL_SEED_DATA as any).staffPrereg);
     }
     report.keys.push(STORAGE_KEYS.STAFF_PREREG);
 
     // 1d. Grades / Classes
-    if (Array.isArray(INITIAL_SEED_DATA?.grades)) {
-      seedIfAbsent(STORAGE_KEYS.GRADES, INITIAL_SEED_DATA.grades);
+    if (Array.isArray((INITIAL_SEED_DATA as any)?.grades)) {
+      seedIfAbsent(STORAGE_KEYS.GRADES, (INITIAL_SEED_DATA as any).grades);
     }
     report.keys.push(STORAGE_KEYS.GRADES);
 
     // 1e. Exam types
-    if (Array.isArray(INITIAL_SEED_DATA?.examTypes)) {
-      seedIfAbsent(STORAGE_KEYS.EXAM_TYPES, INITIAL_SEED_DATA.examTypes);
+    if (Array.isArray((INITIAL_SEED_DATA as any)?.examTypes)) {
+      seedIfAbsent(STORAGE_KEYS.EXAM_TYPES, (INITIAL_SEED_DATA as any).examTypes);
     }
     report.keys.push(STORAGE_KEYS.EXAM_TYPES);
 
     // 1f. Assessment scores
-    if (INITIAL_SEED_DATA?.assessmentScores) {
-      seedIfAbsent(STORAGE_KEYS.ASSESSMENT_SCORES, INITIAL_SEED_DATA.assessmentScores);
+    if ((INITIAL_SEED_DATA as any)?.assessmentScores) {
+      seedIfAbsent(STORAGE_KEYS.ASSESSMENT_SCORES, (INITIAL_SEED_DATA as any).assessmentScores);
     }
     report.keys.push(STORAGE_KEYS.ASSESSMENT_SCORES);
 
@@ -404,22 +404,22 @@ export function hydrateAllStores(): HydrationReport {
     report.keys.push(STORAGE_KEYS.LIBRARY_BOOKS);
 
     // 1h. ICT assets
-    if (Array.isArray(INITIAL_SEED_DATA?.ictAssets)) {
-      seedIfAbsent(STORAGE_KEYS.ICT_ASSETS, INITIAL_SEED_DATA.ictAssets);
+    if (Array.isArray((INITIAL_SEED_DATA as any)?.ictAssets)) {
+      seedIfAbsent(STORAGE_KEYS.ICT_ASSETS, (INITIAL_SEED_DATA as any).ictAssets);
     }
     report.keys.push(STORAGE_KEYS.ICT_ASSETS);
 
     // 1i. Attendance
-    if (INITIAL_SEED_DATA?.attendance) {
-      seedIfAbsent(STORAGE_KEYS.ATTENDANCE, INITIAL_SEED_DATA.attendance);
+    if ((INITIAL_SEED_DATA as any)?.attendance) {
+      seedIfAbsent(STORAGE_KEYS.ATTENDANCE, (INITIAL_SEED_DATA as any).attendance);
     }
     report.keys.push(STORAGE_KEYS.ATTENDANCE);
 
     // 2. CBC Learning Areas
     const existingClusters = ls.getItem(STORAGE_KEYS.CBC_LEARNING_AREAS);
     if (!existingClusters) {
-      const seedAreas = Array.isArray(INITIAL_SEED_DATA?.learningAreas)
-        ? INITIAL_SEED_DATA.learningAreas
+      const seedAreas = Array.isArray((INITIAL_SEED_DATA as any)?.learningAreas)
+        ? (INITIAL_SEED_DATA as any).learningAreas
         : null;
       const value =
         seedAreas && seedAreas.length > 0 ? seedAreas : buildDefaultClusters();
@@ -431,7 +431,7 @@ export function hydrateAllStores(): HydrationReport {
     if (ls.getItem(STORAGE_KEYS.PAYMENT_RECORDS) === null) {
       seedIfAbsent(
         STORAGE_KEYS.PAYMENT_RECORDS,
-        Array.isArray(INITIAL_SEED_DATA?.fees) ? INITIAL_SEED_DATA.fees : []
+        Array.isArray((INITIAL_SEED_DATA as any)?.fees) ? (INITIAL_SEED_DATA as any).fees : []
       );
     }
     report.keys.push(STORAGE_KEYS.PAYMENT_RECORDS);
@@ -447,7 +447,7 @@ export function hydrateAllStores(): HydrationReport {
 
     // 4. User Settings
     if (ls.getItem(STORAGE_KEYS.USER_SETTINGS) === null) {
-      seedIfAbsent(STORAGE_KEYS.USER_SETTINGS, INITIAL_SEED_DATA?.settings ?? {});
+      seedIfAbsent(STORAGE_KEYS.USER_SETTINGS, (INITIAL_SEED_DATA as any)?.settings ?? {});
     }
     report.keys.push(STORAGE_KEYS.USER_SETTINGS);
 

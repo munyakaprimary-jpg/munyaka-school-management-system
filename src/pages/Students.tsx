@@ -1006,7 +1006,7 @@ export default function Students() {
                           to={`/students/${learner.id || learner.admNo || (learner as any).admissionNo}`}
                           className="hover:text-indigo-600 transition-colors inline-flex items-center gap-1.5 group/link"
                         >
-                          <span>{learner.fullName || learner.name || (learner as any).studentName || (learner as any).learnerName || (learner as any).firstName || (learner as any).pupilName || `Learner ${index + 1}`}</span>
+                          <span>{(learner as any).fullName || learner.name || (learner as any).studentName || (learner as any).learnerName || (learner as any).firstName || (learner as any).pupilName || `Learner ${index + 1}`}</span>
                           <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
                         </Link>
                       </td>
