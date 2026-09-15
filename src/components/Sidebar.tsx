@@ -389,7 +389,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                     let displayMeta = '';
                     if (isLearnerRole) {
                       try {
-                        const studentsList = JSON.parse(localStorage.getItem('munyaka_registered_students') || localStorage.getItem('school_learners_data') || '[]');
+                        const studentsList = CentralDataService.getLearners();
                         const match = studentsList.find((s: any) =>
                           ((user as any)?.admissionNumber && (s.admissionNo === (user as any).admissionNumber || s.admissionNumber === (user as any).admissionNumber)) ||
                           (user?.id && s.id === user.id) ||

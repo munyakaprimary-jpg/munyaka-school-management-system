@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from "@/utils/toast";
 import { sortGradesAscending } from "@/utils/gradeSort";
+import { CentralDataService } from "@/services/centralDataService";
 
 const STUDENTS_STORAGE_KEYS = ["students_data", "school_learners_data"];
 
@@ -289,7 +290,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
       const loadedStudents = CentralDataService.getLearners() || [];
       const active = loadedStudents.filter(
         (s: any) => !s.status || s.status === "Active" || s.status === "active"
-      );
+      ) as RegisteredStudent[];
       setStudents(active);
     } catch (err) {
       console.error("[LearnerIdentificationModal] Failed to load students:", err);
@@ -417,13 +418,12 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
     };
 
     try {
-      // Read existing students
-      const raw = localStorage.getItem("registered_students");
-      const existing: RegisteredStudent[] = raw ? JSON.parse(raw) : [];
+      // Read existing students using CentralDataService
+      const existing: RegisteredStudent[] = (CentralDataService.getLearners() || []) as RegisteredStudent[];
 
       // Check for duplicates
       const duplicate = existing.some(
-        (s) =>
+        (s: any) =>
           s.admissionNumber === newStudent.admissionNumber ||
           s.admNo === newStudent.admNo ||
           s.assessmentNo === newStudent.assessmentNo
@@ -433,21 +433,8 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
         return;
       }
 
-      existing.push(newStudent);
-      localStorage.setItem("registered_students", JSON.stringify(existing));
-
-      // Also sync to other known student storage keys for compatibility
-      for (const key of STUDENTS_STORAGE_KEYS) {
-        const otherRaw = localStorage.getItem(key);
-        const other: RegisteredStudent[] = otherRaw ? JSON.parse(otherRaw) : [];
-        if (!other.some((s) => s.id === newStudent.id)) {
-          other.push(newStudent);
-          localStorage.setItem(key, JSON.stringify(other));
-        }
-      }
-
-      // Dispatch students_updated event so other parts of the app refresh
-      window.dispatchEvent(new Event("students_updated"));
+      const updatedStudents = [...existing, newStudent];
+      CentralDataService.saveLearners(updatedStudents as any[]);
 
       // Update local students list
       setStudents((prev) => [...prev, newStudent]);

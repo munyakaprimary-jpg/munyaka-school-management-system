@@ -103,14 +103,8 @@ runLegacyKeyMigrations();
 
 // ── LocalStorage keys that hold active learner rows ────────────────────────
 const LEARNER_STORAGE_KEYS = [
-  'school_learners_data',
-  'students',
-  'learners',
-  'pupils',
-  'school_students',
-  'registered_students',
   'munyaka_students',
-  'munyaka_learners',
+  'munyaka_master_learner_list'
 ];
 const FEE_LEDGER_KEYS = [
   'munyaka_fees_records',
