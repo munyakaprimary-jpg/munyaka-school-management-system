@@ -1442,7 +1442,8 @@ const Settings = () => {
                     const termLabel = tKey === 'term1' ? 'Term 1' : tKey === 'term2' ? 'Term 2' : 'Term 3';
                     const fullKey = `${tKey} ${academicConfig.activeYear}`;
                     const isActive = tKey === academicConfig.activeTerm;
-                    const isLocked = CentralDataService.isTermLocked(fullKey);
+                    const [localLocked, setLocalLocked] = useState<boolean | null>(null);
+                    const isLocked = localLocked !== null ? localLocked : CentralDataService.isTermLocked(fullKey);
 
                     return (
                       <div key={tKey} className={cn("p-4 rounded-xl border flex flex-col justify-between gap-3 bg-white", isActive ? "border-indigo-300 shadow-sm ring-1 ring-indigo-200" : "border-slate-200")}>
@@ -1459,9 +1460,21 @@ const Settings = () => {
                             <Switch
                               checked={isLocked}
                               onCheckedChange={(checked: boolean) => {
-                                CentralDataService.toggleTermLock(fullKey, checked);
+                                // 1. Optimistic UI update immediately
+                                setLocalLocked(checked);
                                 setHasUnsavedChanges(true);
+                                
+                                // 2. Immediate toast notification
                                 showSuccess(checked ? `Archived and locked ${termLabel} ${academicConfig.activeYear}.` : `Unlocked ${termLabel} ${academicConfig.activeYear}.`);
+
+                                // 3. Deferred background / asynchronous persistence
+                                setTimeout(() => {
+                                  try {
+                                    CentralDataService.toggleTermLock(fullKey, checked);
+                                  } catch (e) {
+                                    console.error('Failed to save term lock in background:', e);
+                                  }
+                                }, 0);
                               }}
                             />
                           )}
