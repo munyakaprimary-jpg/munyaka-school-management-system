@@ -443,6 +443,7 @@ const Settings = () => {
   });
 
   const [auditLogs, setAuditLogs] = useState(DEFAULT_AUDIT_LOGS);
+  const [termLocksState, setTermLocksState] = useState<Record<string, boolean>>({});
 
   // Check for existing session on mount
   useEffect(() => {
@@ -1442,8 +1443,7 @@ const Settings = () => {
                     const termLabel = tKey === 'term1' ? 'Term 1' : tKey === 'term2' ? 'Term 2' : 'Term 3';
                     const fullKey = `${tKey}_${academicConfig.activeYear}`;
                     const isActive = tKey === academicConfig.activeTerm;
-                    const [localLocks, setLocalLocks] = useState<Record<string, boolean>>({});
-                    const isLocked = localLocks[fullKey] !== undefined ? localLocks[fullKey] : CentralDataService.isTermLocked(fullKey);
+                    const isLocked = termLocksState[fullKey] !== undefined ? termLocksState[fullKey] : CentralDataService.isTermLocked(fullKey);
 
                     return (
                       <div key={fullKey} className={cn("p-4 rounded-xl border flex flex-col justify-between gap-3 bg-white", isActive ? "border-indigo-300 shadow-sm ring-1 ring-indigo-200" : "border-slate-200")}>
@@ -1461,7 +1461,7 @@ const Settings = () => {
                               checked={isLocked}
                               onCheckedChange={(checked: boolean) => {
                                 // 1. Optimistic UI update immediately
-                                setLocalLocks(prev => ({ ...prev, [fullKey]: checked }));
+                                setTermLocksState(prev => ({ ...prev, [fullKey]: checked }));
                                 setHasUnsavedChanges(true);
                                 showSuccess(checked ? `Archived and locked ${termLabel} ${academicConfig.activeYear}.` : `Unlocked ${termLabel} ${academicConfig.activeYear}.`);
 
@@ -1471,7 +1471,7 @@ const Settings = () => {
                                     CentralDataService.setTermLock(fullKey, checked);
                                   } catch (e) {
                                     console.error("Failed to persist term lock:", e);
-                                    setLocalLocks(prev => ({ ...prev, [fullKey]: !checked }));
+                                    setTermLocksState(prev => ({ ...prev, [fullKey]: !checked }));
                                     showError(`Failed to update lock for ${termLabel}. Please try again.`);
                                   }
                                 }, 0);
