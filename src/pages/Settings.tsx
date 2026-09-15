@@ -1460,12 +1460,10 @@ const Settings = () => {
                             <Switch
                               checked={isLocked}
                               onCheckedChange={(checked: boolean) => {
-                                // 1. Optimistic UI update immediately
                                 setTermLocksState(prev => ({ ...prev, [fullKey]: checked }));
                                 setHasUnsavedChanges(true);
                                 showSuccess(checked ? `Archived and locked ${termLabel} ${academicConfig.activeYear}.` : `Unlocked ${termLabel} ${academicConfig.activeYear}.`);
 
-                                // 2. Async background persistence with error handling and reversion
                                 setTimeout(() => {
                                   try {
                                     CentralDataService.setTermLock(fullKey, checked);

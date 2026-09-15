@@ -192,6 +192,7 @@ export const CentralDataService = {
       [`term1_${currentYear}`]: false,
       [`term2_${currentYear}`]: false,
       [`term3_${currentYear}`]: false,
+      [`term1_${currentYear + 1}`]: false,
     };
     const locks = readStorage<Record<string, boolean>>('munyaka_term_locks', defaultLocks);
     return locks;
