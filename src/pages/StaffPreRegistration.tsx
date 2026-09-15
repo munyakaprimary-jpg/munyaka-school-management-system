@@ -89,9 +89,13 @@ const StaffPreRegistration = () => {
     };
     window.addEventListener('staff-changed', refresh);
     window.addEventListener('munyaka:staff-directory-changed', refresh);
+    window.addEventListener('storage', refresh);
+    window.addEventListener('munyaka_data_changed', refresh);
     return () => {
       window.removeEventListener('staff-changed', refresh);
       window.removeEventListener('munyaka:staff-directory-changed', refresh);
+      window.removeEventListener('storage', refresh);
+      window.removeEventListener('munyaka_data_changed', refresh);
     };
   }, []);
 
