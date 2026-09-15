@@ -1458,7 +1458,7 @@ const Settings = () => {
                           {!isActive && (
                             <Switch
                               checked={isLocked}
-                              onCheckedChange={checked => {
+                              onCheckedChange={(checked: boolean) => {
                                 CentralDataService.toggleTermLock(fullKey, checked);
                                 setHasUnsavedChanges(true);
                                 showSuccess(checked ? `Archived and locked ${termLabel} ${academicConfig.activeYear}.` : `Unlocked ${termLabel} ${academicConfig.activeYear}.`);
