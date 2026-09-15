@@ -77,11 +77,14 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
     }
   } catch { /* ignore */ }
 
-  const termKey = `${activeTerm} ${academicYear}`;
+  const termKey = `${activeTerm}_${academicYear}`;
+  const termKeyLegacy = `${activeTerm} ${academicYear}`;
   const isLocked = Boolean(
-    lockedTermsMap[termKey] || 
-    lockedTermsMap[selectedExamPeriod] || 
-    CentralDataService.isTermLocked(`${selectedTerm} ${selectedYear}`) ||
+    lockedTermsMap[termKey] ||
+    lockedTermsMap[termKeyLegacy] ||
+    lockedTermsMap[selectedExamPeriod] ||
+    CentralDataService.isTermLocked(termKey) ||
+    CentralDataService.isTermLocked(termKeyLegacy) ||
     CentralDataService.isTermLocked(selectedExamPeriod)
   );
 
@@ -123,8 +126,17 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
       {isLocked && (
         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3 shadow-sm" data-testid="locked-term-banner">
           <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-          <div>
-            <h4 className="font-bold text-amber-900 text-sm">{selectedExamPeriod} is locked and archived. Mark entries are read-only.</h4>
+          <div className="flex-1 flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h4 className="font-bold text-amber-900 text-sm">Archived & Locked Term ({selectedExamPeriod || termKeyLegacy})</h4>
+              <p className="text-xs text-amber-700 mt-0.5">This term has been archived. Grading inputs are locked and read-only.</p>
+            </div>
+            <span className="bg-amber-100 text-amber-800 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+              <Lock size={12} /> Locked / Read-Only
+            </span>
+          </div>
+        </div>
+      )}
             <p className="text-xs text-amber-700 mt-0.5">
               This academic term has been locked in settings. Saving changes and editing marks are disabled.
             </p>
