@@ -15,7 +15,10 @@ import {
   FileText,
   Loader2,
   BookOpen,
+  Lock,
+  AlertCircle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1057,21 +1060,39 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
             <Button
               onClick={handleSaveAll}
-              disabled={isSaving || studentGrades.length === 0}
-              className="h-10 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 font-semibold shadow-sm gap-2"
+              disabled={isSaving || studentGrades.length === 0 || isLocked}
+              className={cn(
+                "h-10 px-5 rounded-xl font-semibold shadow-sm gap-2",
+                isLocked ? "bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300" : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
+              )}
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isLocked ? (
+                <Lock className="w-4 h-4" />
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              Save All
+              {isLocked ? 'Locked / Read-Only' : 'Save All'}
             </Button>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Locked term warning banner */}
+        {isLocked && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3 shadow-sm">
+            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <h4 className="font-bold text-amber-900 text-sm">Archived & Locked Term ({termKey})</h4>
+              <p className="text-xs text-amber-700 mt-0.5">
+                This term has been archived and locked. All historical grading records for <strong>{termKey}</strong> are currently in read-only mode. Mark entry and saving are disabled.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* No assessment */}
         {!selectedExam && (
           <div className="flex flex-col items-center justify-center py-28 text-center">
