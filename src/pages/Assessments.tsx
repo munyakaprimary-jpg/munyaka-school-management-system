@@ -145,11 +145,16 @@ const Assessments = () => {
       if (settings.academic?.termLocked && (settings.academic?.activeTerm === term || !settings.academic?.activeTerm)) {
         return true;
       }
+      // 3. Check munyaka_term_locks map
+      const locksMap = JSON.parse(localStorage.getItem('munyaka_term_locks') || '{}');
+      const termKey = `${term} ${academicYear}`;
+      if (locksMap[termKey] || locksMap[term] || locksMap[term.toLowerCase()]) {
+        return true;
+      }
     } catch { /* ignore */ }
 
-    const termKey = `${term} ${academicYear}`;
-    return Boolean(lockedTermsMap[termKey] || lockedTermsMap[term] || lockedTermsMap[term.toLowerCase()]);
-  }, [lockedTermsMap, term, academicYear]);
+    return false;
+  }, [term, academicYear]);
 
   const inputDisabled = isLocked;
 
