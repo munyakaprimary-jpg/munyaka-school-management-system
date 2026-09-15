@@ -48,6 +48,7 @@ import { notifyDataChanged, downloadDatabaseBackup } from '@/utils/storage';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getGeofenceConfig, setGeofenceConfig as persistGeofenceConfig, GeofenceConfig, calculateDistance } from '@/lib/geofence';
 import { localData } from '@/services/localDataService';
+import { CentralDataService } from '@/services/centralDataService';
 import { cn } from '@/lib/utils';
 import AdminLocationPicker from '@/components/AdminLocationPicker';
 import {
@@ -1405,13 +1406,47 @@ const Settings = () => {
 
                 <div className="space-y-2 min-w-0 sm:col-span-2 lg:col-span-1">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Term Start Date</Label>
-                  <Input 
+                  <Input
                     type="date"
                     value={academicConfig.termStartDate}
                     onChange={e => { setAcademicConfig({...academicConfig, termStartDate: e.target.value}); setHasUnsavedChanges(true); }}
                     className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full"
                   />
                 </div>
+
+                <div className="space-y-2 min-w-0 sm:col-span-2 lg:col-span-3">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Term End Date</Label>
+                  <Input
+                    type="date"
+                    value={academicConfig.termEndDate}
+                    onChange={e => { setAcademicConfig({...academicConfig, termEndDate: e.target.value}); setHasUnsavedChanges(true); }}
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Lock Active Term / Archive Term toggle switch */}
+              <div className="pt-6 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/70 p-5 rounded-2xl">
+                <div className="min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-slate-900 text-base">Lock Active Term / Archive Term</span>
+                    {CentralDataService.isTermLocked(`${academicConfig.activeTerm} ${academicConfig.activeYear}`) && (
+                      <span className="bg-rose-100 text-rose-700 text-xs px-2 py-0.5 rounded-full font-bold">Locked / Read-Only</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    When enabled, all mark entry and grading sheets for Term {academicConfig.activeTerm === 'term1' ? '1' : academicConfig.activeTerm === 'term2' ? '2' : '3'} ({academicConfig.activeYear}) instantly switch to read-only mode.
+                  </p>
+                </div>
+                <Switch
+                  checked={CentralDataService.isTermLocked(`${academicConfig.activeTerm} ${academicConfig.activeYear}`)}
+                  onCheckedChange={checked => {
+                    const termKey = `${academicConfig.activeTerm} ${academicConfig.activeYear}`;
+                    CentralDataService.toggleTermLock(termKey, checked);
+                    setHasUnsavedChanges(true);
+                    showSuccess(checked ? `Term "${termKey}" is now locked and read-only.` : `Term "${termKey}" has been unlocked.`);
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
