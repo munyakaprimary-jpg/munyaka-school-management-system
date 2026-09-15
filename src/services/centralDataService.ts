@@ -183,7 +183,18 @@ export const CentralDataService = {
 
   // ── Term Locking Mechanism ───────────────────────────────────────────────
   getTermLocks: (): Record<string, boolean> => {
-    const currentYear = new Date().getFullYear();
+    const activeYearStr = (() => {
+      try {
+        const settingsRaw = localStorage.getItem("munyaka_system_settings_v3");
+        if (settingsRaw) {
+          const s = JSON.parse(settingsRaw);
+          if (s.academicYear) return parseInt(s.academicYear, 10);
+        }
+      } catch {}
+      return new Date().getFullYear();
+    })();
+
+    const currentYear = activeYearStr || new Date().getFullYear();
     const prevYear = currentYear - 1;
     const defaultLocks: Record<string, boolean> = {
       [`term1_${prevYear}`]: true,
@@ -193,6 +204,8 @@ export const CentralDataService = {
       [`term2_${currentYear}`]: false,
       [`term3_${currentYear}`]: false,
       [`term1_${currentYear + 1}`]: false,
+      [`term2_${currentYear + 1}`]: false,
+      [`term3_${currentYear + 1}`]: false,
     };
     const locks = readStorage<Record<string, boolean>>('munyaka_term_locks', defaultLocks);
     return locks;
