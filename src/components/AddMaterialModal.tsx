@@ -22,10 +22,6 @@ import {
   strandCategories,
   gradeLevels,
   assessmentTypeOptions,
-import {
-  strandCategories,
-  gradeLevels,
-  assessmentTypeOptions,
   ContentItem,
   StrandCategory,
   MemoryVerse,
