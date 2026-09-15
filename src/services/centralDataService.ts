@@ -203,6 +203,11 @@ export const CentralDataService = {
     locks[termKey] = locked;
     CentralDataService.saveTermLocks(locks);
   },
+  setTermLock: (termKey: string, locked: boolean) => {
+    const locks = CentralDataService.getTermLocks();
+    locks[termKey] = locked;
+    CentralDataService.saveTermLocks(locks);
+  },
 
   // ── Generic Access ────────────────────────────────────────────────────────
   getData: <T>(key: string, fallback: T): T => readStorage<T>(key, fallback),
