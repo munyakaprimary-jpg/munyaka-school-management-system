@@ -22,6 +22,10 @@ import {
   strandCategories,
   gradeLevels,
   assessmentTypeOptions,
+import {
+  strandCategories,
+  gradeLevels,
+  assessmentTypeOptions,
   ContentItem,
   StrandCategory,
   MemoryVerse,
@@ -29,18 +33,6 @@ import {
   Attachment,
   AssessmentType,
 } from "@/data/cbcStudyContent";
-  StrandCategory,
-  MemoryVerse,
-  RevisionQuestion,
-  Attachment,
-  AssessmentType,
-  StrandCategory,
-  MemoryVerse,
-  RevisionQuestion,
-  Attachment,
-  AssessmentType,
-  cbcStudyContent,
-} from "@/data/initialSeedData";
 import { useAuth } from "@/context/AuthContext";
 import {
   fileToAttachment,
