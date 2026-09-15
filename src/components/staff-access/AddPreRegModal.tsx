@@ -87,11 +87,16 @@ const AddPreRegModal = ({
 
   // Exclude staff who already have a pre-registration record
   const availableStaff = useMemo(() => {
-    return directoryStaffList.filter(s =>
-      !existingNatIds.has(s.nationalId) &&
-      !existingEmails.has(s.email.toLowerCase())
-    );
-  }, [directoryStaffList, existingNatIds, existingEmails]);
+    return directoryStaffList.filter(s => {
+      const alreadyExists = existingPreRegistered.some(p =>
+        (s.nationalId && p.nationalId === s.nationalId) ||
+        (s.email && p.email?.toLowerCase() === s.email?.toLowerCase()) ||
+        (p.fullName?.toLowerCase() === s.name?.toLowerCase()) ||
+        (p.staffId && s.id && p.staffId === s.id)
+      );
+      return !alreadyExists;
+    });
+  }, [directoryStaffList, existingPreRegistered]);
 
   const generateRandomKey = () => {
     setFormData(prev => ({ ...prev, tempAccessCode: generateAccessKey() }));
