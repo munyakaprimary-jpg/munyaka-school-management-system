@@ -115,7 +115,25 @@ export const CentralDataService = {
       data[key] = readStorage(key, null);
     }
 
-    return JSON.stringify(data, null, 2);
+    const exportObject = {
+      students: data[STORAGE_KEYS.STUDENTS] || [],
+      learners: data[STORAGE_KEYS.STUDENTS] || [],
+      staff: data[STORAGE_KEYS.STAFF] || [
+        { id: 's1', name: 'Teacher One', role: 'Teacher', type: 'Teaching', status: 'Active' },
+        { id: 's2', name: 'Teacher Two', role: 'Teacher', type: 'Teaching', status: 'Active' },
+        { id: 's3', name: 'Staff Member 1', role: 'Support', type: 'Non-Teaching', status: 'Active' },
+        { id: 's4', name: 'Staff Member 2', role: 'Support', type: 'Non-Teaching', status: 'Active' },
+        { id: 's5', name: 'Staff Member 3', role: 'Support', type: 'Non-Teaching', status: 'Active' },
+        { id: 's6', name: 'Staff Member 4', role: 'Support', type: 'Non-Teaching', status: 'Active' },
+        { id: 's7', name: 'Staff Member 5', role: 'Support', type: 'Non-Teaching', status: 'Active' },
+        { id: 's8', name: 'Staff Member 6', role: 'Support', type: 'Non-Teaching', status: 'Active' }
+      ],
+      exams: data[STORAGE_KEYS.MARKS] || [],
+      libraryBooks: [],
+      transactions: data[STORAGE_KEYS.TRANSACTIONS] || []
+    };
+
+    return `export const initialSeedData = ${JSON.stringify(exportObject, null, 2)};\n\n(initialSeedData as any).learners = initialSeedData.students;\n\nexport const INITIAL_SEED_DATA = initialSeedData;\nexport const DEFAULT_CBC_CLUSTERS = [];\nexport const buildDefaultClusters = () => [];\nexport const strandCategories = [];\nexport const gradeLevels = [];\nexport const ContentItem = {};\nexport const StrandCategory = {};\nexport const MemoryVerse = {};\nexport const RevisionQuestion = {};\nexport const Attachment = {};\nexport const AssessmentType = {};\nexport const assessmentTypeOptions = [];\n\nexport const mockLearners = initialSeedData.students;\nexport const mockStudents = initialSeedData.students;\nexport const mockStaff = initialSeedData.staff;\nexport const mockExams = initialSeedData.exams;\nexport const mockLibrary = initialSeedData.libraryBooks;\nexport const mockFinances = initialSeedData.transactions;\n\nexport const cbcStudyContent = [];\nexport const cbcStudyMaterials = cbcStudyContent;\nexport const cbcCurriculum = [];\n\nexport default initialSeedData;\n`;
   },
 
   /**

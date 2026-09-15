@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CentralDataService, generateFullSnapshot } from '../services/centralDataService';
+import { CentralDataService } from '../services/centralDataService';
 import { Download, Users, GraduationCap, Briefcase, CheckCircle2 } from 'lucide-react';
 
 export default function CentralDataPage() {
@@ -29,8 +29,8 @@ export default function CentralDataPage() {
     });
   }, []);
 
-  const handleExport = () => {
-    const content = generateFullSnapshot();
+  const handleExport = async () => {
+    const content = await CentralDataService.generateFullSnapshot();
     const blob = new Blob([content], { type: 'text/typescript;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
