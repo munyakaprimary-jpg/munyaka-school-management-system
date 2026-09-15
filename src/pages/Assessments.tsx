@@ -109,6 +109,49 @@ const Assessments = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
 
+  // Term locking logic
+  const [lockedTermsMap, setLockedTermsMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_term_locks');
+      if (stored) {
+        setLockedTermsMap(JSON.parse(stored));
+      }
+    } catch { /* ignore */ }
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'munyaka_term_locks' && e.newValue) {
+        try { setLockedTermsMap(JSON.parse(e.newValue)); } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const isLocked = useMemo(() => {
+    try {
+      // 1. Check munyaka_academic_calendar
+      const cal = JSON.parse(localStorage.getItem('munyaka_academic_calendar') || '{}');
+      if (cal.terms && Array.isArray(cal.terms)) {
+        const currentTermObj = cal.terms.find((t: any) => t.isCurrent || t.active || t.name === term || t.name?.toLowerCase() === term.toLowerCase());
+        if (currentTermObj && (currentTermObj.isLocked || currentTermObj.locked)) {
+          return true;
+        }
+      }
+      // 2. Check munyaka_system_settings
+      const settings = JSON.parse(localStorage.getItem('munyaka_system_settings') || localStorage.getItem('munyaka_system_settings_v3') || '{}');
+      if (settings.academic?.termLocked && (settings.academic?.activeTerm === term || !settings.academic?.activeTerm)) {
+        return true;
+      }
+    } catch { /* ignore */ }
+
+    const termKey = `${term} ${academicYear}`;
+    return Boolean(lockedTermsMap[termKey] || lockedTermsMap[term] || lockedTermsMap[term.toLowerCase()]);
+  }, [lockedTermsMap, term, academicYear]);
+
+  const inputDisabled = isLocked;
+
   // ====== Navigation ======
   const navigate = useNavigate();
 
@@ -823,6 +866,16 @@ ${filteredStudents.length} learner(s) included.
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Term Locked Warning Banner */}
+      {isLocked && (
+        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 px-4 py-3 rounded-xl flex items-center gap-3 shadow-sm">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+          <div className="text-sm font-medium">
+            <strong>Term Locked:</strong> {term} {academicYear} is currently locked. All score entries and submissions are in read-only mode.
+          </div>
+        </div>
+      )}
+
       {/* 1. Header & Quick Actions Layout - stacks on mobile, row on sm+ */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 w-full max-w-full overflow-hidden">
         <div className="min-w-0 flex-1">
@@ -863,9 +916,9 @@ ${filteredStudents.length} learner(s) included.
             {pdfExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download PDF
           </Button>
 <Button
-  className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2 w-full sm:w-auto"
+  className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2 w-full sm:w-auto disabled:opacity-50"
   onClick={handleSaveAll}
-  disabled={isSaving}
+  disabled={isSaving || isLocked}
 >
   {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All Marks
 </Button>
