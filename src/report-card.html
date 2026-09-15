@@ -920,7 +920,12 @@
             }
 
             // 5. Write the printable content into the iframe
-            const frameDoc = printFrame.contentWindow?.document;
+            const printWindow = printFrame.contentWindow;
+            if (!printWindow) {
+              showToast("Could not access print iframe window.");
+              return;
+            }
+            const frameDoc = printWindow.document;
             if (!frameDoc) {
               showToast("Could not access print iframe document.");
               return;
@@ -971,8 +976,11 @@
 
             // 6. Trigger print cleanly inside the frame
             setTimeout(() => {
-              printFrame.contentWindow?.focus();
-              printFrame.contentWindow?.print();
+              const pw = printFrame.contentWindow;
+              if (pw) {
+                pw.focus();
+                pw.print();
+              }
             }, 300);
 
             showToast(`PDF print dialog opened`);

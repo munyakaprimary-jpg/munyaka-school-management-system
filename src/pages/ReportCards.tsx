@@ -212,7 +212,8 @@ const ReportCards = () => {
     }
 
     // 5. Write the printable content into the iframe
-    const frameDoc = printFrame.contentWindow?.document;
+    const pw = printFrame.contentWindow;
+    const frameDoc = pw?.document;
     if (!frameDoc) {
       showError("Could not access print iframe document.");
       return;
@@ -263,8 +264,8 @@ const ReportCards = () => {
 
     // 6. Trigger print cleanly inside the frame
     setTimeout(() => {
-      printFrame.contentWindow?.focus();
-      printFrame.contentWindow?.print();
+      pw?.focus();
+      pw?.print();
     }, 300);
 
     showSuccess("PDF print dialog opened.");
@@ -303,13 +304,14 @@ const ReportCards = () => {
     }
 
     // 5. Write the printable content into the iframe
-    const frameDoc = printFrame.contentWindow?.document;
-    if (!frameDoc) {
+    const pwAll = printFrame.contentWindow;
+    const frameDocAll = pwAll?.document;
+    if (!frameDocAll) {
       showError("Could not access print iframe document.");
       return;
     }
-    frameDoc.open();
-    frameDoc.write(`
+    frameDocAll.open();
+    frameDocAll.write(`
       <!DOCTYPE html>
       <html>
         <head>
@@ -350,12 +352,12 @@ const ReportCards = () => {
         </body>
       </html>
     `);
-    frameDoc.close();
+    frameDocAll.close();
 
     // 6. Trigger print cleanly inside the frame
     setTimeout(() => {
-      printFrame.contentWindow?.focus();
-      printFrame.contentWindow?.print();
+      pwAll?.focus();
+      pwAll?.print();
     }, 300);
 
     showSuccess("Bulk PDF print dialog opened.");

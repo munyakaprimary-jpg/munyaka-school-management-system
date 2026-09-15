@@ -448,15 +448,16 @@ function openPrintDialog(html: string, title: string): void {
     iframe.style.height = "0";
     iframe.style.border = "0";
     document.body.appendChild(iframe);
-    const doc = iframe.contentWindow?.document;
+    const iframeWin = iframe.contentWindow;
+    const doc = iframeWin?.document;
     if (!doc) return;
     doc.open();
     doc.write(html);
     doc.close();
-    iframe.contentWindow?.focus();
+    iframeWin?.focus();
     setTimeout(() => {
       try {
-        iframe.contentWindow?.print();
+        iframeWin?.print();
       } catch {
         /* noop */
       }
