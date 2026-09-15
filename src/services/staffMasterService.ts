@@ -1520,9 +1520,9 @@ export function verifyStaffLogin(
       };
     }
 
-    // ── 4. Check if the record is active ───────────────────────────
+    // ── 4. Check if the record is active or pre-registered ───────────
     const recordStatus = (matchedStaff.status || '').toLowerCase();
-    if (recordStatus !== 'active') {
+    if (recordStatus !== 'active' && recordStatus !== 'pre-registered') {
       console.warn(
         `[verifyStaffLogin] Staff "${matchedStaff.name}" (${matchedStaff.staffId}) has status "${matchedStaff.status}". Login denied.`
       );
@@ -1531,6 +1531,20 @@ export function verifyStaffLogin(
         message: `Account is not active. Current status: ${matchedStaff.status}`,
         reason: "INACTIVE_ACCOUNT",
       };
+    }
+
+    // Automatically activate pre-registered staff upon successful login
+    if (recordStatus === 'pre-registered') {
+      matchedStaff.status = 'Active';
+      matchedStaff.activatedAt = new Date().toISOString();
+      matchedStaff.lastLogin = new Date().toISOString();
+      // Update in master staff list
+      try {
+        const updatedList = staffList.map(s => s.id === matchedStaff.id ? matchedStaff : s);
+        localStorage.setItem(MASTER_KEY, JSON.stringify(updatedList));
+      } catch (e) {
+        console.error('[verifyStaffLogin] Failed to update pre-registered staff status:', e);
+      }
     }
 
     // ── 5. Check if the record has a valid systemRole ──────────────
@@ -1546,7 +1560,7 @@ export function verifyStaffLogin(
     }
 
     // ── 6. Verify the password ─────────────────────────────────────
-    const validCode = matchedStaff.tempAccessCode || matchedStaff.password || matchedStaff.accessCode;
+    const validCode = matchedStaff.tempAccessCode || (matchedStaff as any).password || (matchedStaff as any).accessCode;
 
     if (!validCode) {
       console.error(

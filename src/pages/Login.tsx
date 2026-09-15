@@ -377,24 +377,21 @@ const Login: React.FC = () => {
         return;
       }
   
-      // ── Offline authentication (localStorage lookup) ─────────────────────────────────
-      console.log('[Login] Attempting offline authentication against master staff ledger...');
+      // ── Offline authentication (localStorage lookup) against master staff ledger exclusively ─────────────────────────────────
+      console.log('[Login] Attempting offline authentication against master staff ledger (munyaka_master_staff_list)...');
 
       // Use the selected support role for role filtering (normalized)
       const normalizedSelectedRole = selectedSupportRole ? selectedSupportRole.toLowerCase().trim() : null;
 
-      // Delegate to the robust verifyStaffLogin service which checks the
+      // Delegate exclusively to the robust verifyStaffLogin service which checks the
       // canonical `munyaka_master_staff_list` ledger with case-insensitive
-      // identifier matching (email / staffId / tscNumber) and clear
-      // diagnostic logging for every failure reason.
+      // identifier matching (email / staffId / tscNumber) and MUNYAKA-xxxx access keys.
       const offlineResult = verifyStaffLogin(trimmedId, trimmedPass);
 
       if (offlineResult.success && offlineResult.user) {
         const matchedStaff = offlineResult.user;
 
         // ── Role validation ────────────────────────────────────────────────
-        // If a support role was selected, ensure the matched staff member's
-        // systemRole is compatible with that selection.
         if (normalizedSelectedRole) {
           const staffSystemRole = (matchedStaff.systemRole || '').toLowerCase().trim();
           const roleCompatible =
@@ -403,7 +400,9 @@ const Login: React.FC = () => {
             staffSystemRole === 'staff' ||
             staffSystemRole === 'support_staff' ||
             staffSystemRole === 'support_admin' ||
-            staffSystemRole === 'bursar';
+            staffSystemRole === 'bursar' ||
+            staffSystemRole === 'non_teaching' ||
+            staffSystemRole === 'support';
 
           if (!roleCompatible) {
             console.error(
@@ -437,9 +436,10 @@ const Login: React.FC = () => {
 
         try {
           localStorage.setItem('munyaka_session', JSON.stringify(userData));
+          localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
         } catch { /* ignore */ }
 
-        console.log('[Login] Offline authentication successful:', {
+        console.log('[Login] Master staff ledger offline authentication successful:', {
           name: userData.name,
           role: userData.role,
           staffId: userData.staff_id,
@@ -451,18 +451,13 @@ const Login: React.FC = () => {
         return;
       }
 
-      // ── Offline authentication failed ───────────────────────────────────────────────
-      // The verifyStaffLogin service already logged the exact reason to the
-      // console (e.g. STAFF_NOT_FOUND, PASSWORD_MISMATCH, INACTIVE_ACCOUNT,
-      // MISSING_ROLE, MISSING_PASSWORD_CONFIG, LEDGER_MISSING, etc.).
+      // ── Offline authentication failed against master staff ledger ───────────────────
       console.error(
-        `[Login] Offline authentication failed — reason: ${offlineResult.reason || 'UNKNOWN'}, ` +
+        `[Login] Master staff ledger offline authentication failed — reason: ${offlineResult.reason || 'UNKNOWN'}, ` +
         `message: ${offlineResult.message}`
       );
 
-      const errorMessage = normalizedSelectedRole
-        ? `Invalid credentials or account not registered under this role (${normalizedSelectedRole}).`
-        : offlineResult.message || 'Invalid credentials or account not registered.';
+      const errorMessage = offlineResult.message || 'Invalid credentials or account not found in master staff ledger.';
 
       setStaffAuthError(errorMessage);
       showError(errorMessage);
