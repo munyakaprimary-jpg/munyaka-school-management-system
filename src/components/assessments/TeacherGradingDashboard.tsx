@@ -423,56 +423,6 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     [selectedExam, selectedExamId]
   );
 
-  // Check if term is locked
-  let academicYear = new Date().getFullYear().toString();
-  let term = "Term 1";
-  try {
-    const calendarRaw = localStorage.getItem('munyaka_academic_calendar');
-    if (calendarRaw) {
-      const cal = JSON.parse(calendarRaw);
-      if (cal.terms && Array.isArray(cal.terms)) {
-        const activeTermObj = cal.terms.find((t: any) => t.isCurrent || t.active || t.name === term || t.name?.toLowerCase() === term.toLowerCase());
-        if (activeTermObj && activeTermObj.name) {
-          term = activeTermObj.name;
-        }
-      }
-    }
-  } catch { /* ignore */ }
-
-  const termKey = `${term} ${academicYear}`;
-  const [lockedTermsMap, setLockedTermsMap] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('munyaka_term_locks');
-      if (stored) {
-        setLockedTermsMap(JSON.parse(stored));
-      }
-    } catch { /* ignore */ }
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'munyaka_term_locks' && e.newValue) {
-        try { setLockedTermsMap(JSON.parse(e.newValue)); } catch { /* ignore */ }
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-
-  const isLocked = useMemo(() => {
-    try {
-      const cal = JSON.parse(localStorage.getItem('munyaka_academic_calendar') || '{}');
-      if (cal.terms && Array.isArray(cal.terms)) {
-        const currentTermObj = cal.terms.find((t: any) => t.isCurrent || t.active || t.name === term || t.name?.toLowerCase() === term.toLowerCase());
-        if (currentTermObj && (currentTermObj.isLocked || currentTermObj.locked)) {
-          return true;
-        }
-      }
-    } catch { /* ignore */ }
-    return Boolean(lockedTermsMap[termKey] || lockedTermsMap[term] || CentralDataService.isTermLocked(termKey));
-  }, [lockedTermsMap, term, termKey]);
-
-  const inputDisabled = isLocked;
   const handleSaveAll = useCallback(async () => {
     if (!selectedExam || studentGrades.length === 0) return;
 
@@ -973,7 +923,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                         min={0}
                         max={q.points}
                         placeholder="0"
-                        disabled={isLocked}
+                        disabled={false}
                         value={awarded !== null ? awarded : ""}
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
@@ -1098,39 +1048,21 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
             <Button
               onClick={handleSaveAll}
-              disabled={isSaving || studentGrades.length === 0 || isLocked}
-              className={cn(
-                "h-10 px-5 rounded-xl font-semibold shadow-sm gap-2",
-                isLocked ? "bg-slate-300 text-slate-500 cursor-not-allowed hover:bg-slate-300" : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
-              )}
+              disabled={isSaving || studentGrades.length === 0}
+              className="h-10 px-5 rounded-xl font-semibold shadow-sm gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-              ) : isLocked ? (
-                <Lock className="w-4 h-4" />
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              {isLocked ? 'Locked / Read-Only' : 'Save All'}
+              Save All
             </Button>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Locked term warning banner */}
-        {isLocked && (
-          <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3 shadow-sm">
-            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-            <div>
-              <h4 className="font-bold text-amber-900 text-sm">Archived & Locked Term ({termKey})</h4>
-              <p className="text-xs text-amber-700 mt-0.5">
-                This term has been archived and locked. All historical grading records for <strong>{termKey}</strong> are currently in read-only mode. Mark entry and saving are disabled.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* No assessment */}
         {!selectedExam && (
           <div className="flex flex-col items-center justify-center py-28 text-center">
