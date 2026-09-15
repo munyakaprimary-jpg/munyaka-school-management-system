@@ -423,19 +423,40 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     [selectedExam, selectedExamId]
   );
 
-  // Check if term is locked
+  // Read-only check for inputs when isLocked is true
+  const inputDisabled = isLocked;
   let academicYear = new Date().getFullYear().toString();
-  let term = "Term 1";
+  let term = "term1";
   try {
-    const settingsRaw = localStorage.getItem("munyaka_system_settings_v3");
+    const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
     if (settingsRaw) {
       const settings = JSON.parse(settingsRaw);
-      academicYear = settings.academicYear || academicYear;
-      term = settings.term || term;
+      academicYear = settings.academic?.activeYear || settings.academicYear || academicYear;
+      term = settings.academic?.activeTerm || settings.term || term;
     }
   } catch { /* ignore */ }
+
   const termKey = `${term} ${academicYear}`;
-  const isLocked = CentralDataService.isTermLocked(termKey);
+  const [lockedTermsMap, setLockedTermsMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_term_locks');
+      if (stored) {
+        setLockedTermsMap(JSON.parse(stored));
+      }
+    } catch { /* ignore */ }
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'munyaka_term_locks' && e.newValue) {
+        try { setLockedTermsMap(JSON.parse(e.newValue)); } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const isLocked = Boolean(lockedTermsMap[termKey] || CentralDataService.isTermLocked(termKey));
   const handleSaveAll = useCallback(async () => {
     if (!selectedExam || studentGrades.length === 0) return;
 
@@ -936,13 +957,14 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                         min={0}
                         max={q.points}
                         placeholder="0"
+                        disabled={isLocked}
                         value={awarded !== null ? awarded : ""}
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
                           const clamped = isNaN(val) || val < 0 ? 0 : Math.min(val, q.points);
                           handleStructuredMarkChange(g.studentId, q.id, clamped);
                         }}
-                        className="w-20 text-center font-bold rounded-lg"
+                        className="w-20 text-center font-bold rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                       <span className="text-sm text-slate-400">/ {q.points} pts</span>
                     </div>
