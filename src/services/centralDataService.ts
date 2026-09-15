@@ -182,11 +182,41 @@ export const CentralDataService = {
   saveMarks: (marks: any[]) => writeStorage(STORAGE_KEYS.MARKS, marks),
 
   // ── Term Locking Mechanism ───────────────────────────────────────────────
-  getTermLocks: (): Record<string, boolean> => readStorage<Record<string, boolean>>('munyaka_term_locks', { 'Term 3 2024': true, 'Term 2 2024': true }),
+  getTermLocks: (): Record<string, boolean> => {
+    const locks = readStorage<Record<string, boolean>>('munyaka_term_locks', { 'Term 3 2024': true, 'Term 2 2024': true });
+    
+    // Automatic date-based check: if current date is past typical term end dates, auto-lock
+    try {
+      const now = new Date();
+      // Example automatic check: Term 1 ends April 15, Term 2 ends August 15, Term 3 ends December 15
+      const year = now.getFullYear();
+      const termEndDates = [
+        { name: `Term 1 ${year}`, end: new Date(year, 3, 15) },
+        { name: `Term 2 ${year}`, end: new Date(year, 7, 15) },
+        { name: `Term 3 ${year}`, end: new Date(year, 11, 15) },
+        { name: `Term 1 ${year - 1}`, end: new Date(year - 1, 3, 15) },
+        { name: `Term 2 ${year - 1}`, end: new Date(year - 1, 7, 15) },
+        { name: `Term 3 ${year - 1}`, end: new Date(year - 1, 11, 15) },
+      ];
+
+      termEndDates.forEach(t => {
+        if (now > t.end) {
+          locks[t.name] = true;
+        }
+      });
+    } catch { /* ignore */ }
+
+    return locks;
+  },
   saveTermLocks: (locks: Record<string, boolean>) => writeStorage('munyaka_term_locks', locks),
   isTermLocked: (termKey: string): boolean => {
     const locks = CentralDataService.getTermLocks();
     return !!locks[termKey];
+  },
+  toggleTermLock: (termKey: string, locked: boolean) => {
+    const locks = CentralDataService.getTermLocks();
+    locks[termKey] = locked;
+    CentralDataService.saveTermLocks(locks);
   },
 
   // ── Generic Access ────────────────────────────────────────────────────────

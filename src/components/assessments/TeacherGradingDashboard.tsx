@@ -420,7 +420,19 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     [selectedExam, selectedExamId]
   );
 
-  // ── Save all results ───────────────────────────────────────────────────────
+  // Check if term is locked
+  let academicYear = new Date().getFullYear().toString();
+  let term = "Term 1";
+  try {
+    const settingsRaw = localStorage.getItem("munyaka_system_settings_v3");
+    if (settingsRaw) {
+      const settings = JSON.parse(settingsRaw);
+      academicYear = settings.academicYear || academicYear;
+      term = settings.term || term;
+    }
+  } catch { /* ignore */ }
+  const termKey = `${term} ${academicYear}`;
+  const isLocked = CentralDataService.isTermLocked(termKey);
   const handleSaveAll = useCallback(async () => {
     if (!selectedExam || studentGrades.length === 0) return;
 
