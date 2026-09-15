@@ -425,13 +425,17 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
   // Check if term is locked
   let academicYear = new Date().getFullYear().toString();
-  let term = "term1";
+  let term = "Term 1";
   try {
-    const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
-    if (settingsRaw) {
-      const settings = JSON.parse(settingsRaw);
-      academicYear = settings.academic?.activeYear || settings.academicYear || academicYear;
-      term = settings.academic?.activeTerm || settings.term || term;
+    const calendarRaw = localStorage.getItem('munyaka_academic_calendar');
+    if (calendarRaw) {
+      const cal = JSON.parse(calendarRaw);
+      if (cal.terms && Array.isArray(cal.terms)) {
+        const activeTermObj = cal.terms.find((t: any) => t.isCurrent || t.active || t.name === term || t.name?.toLowerCase() === term.toLowerCase());
+        if (activeTermObj && activeTermObj.name) {
+          term = activeTermObj.name;
+        }
+      }
     }
   } catch { /* ignore */ }
 
@@ -455,7 +459,19 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const isLocked = Boolean(lockedTermsMap[termKey] || CentralDataService.isTermLocked(termKey));
+  const isLocked = useMemo(() => {
+    try {
+      const cal = JSON.parse(localStorage.getItem('munyaka_academic_calendar') || '{}');
+      if (cal.terms && Array.isArray(cal.terms)) {
+        const currentTermObj = cal.terms.find((t: any) => t.isCurrent || t.active || t.name === term || t.name?.toLowerCase() === term.toLowerCase());
+        if (currentTermObj && (currentTermObj.isLocked || currentTermObj.locked)) {
+          return true;
+        }
+      }
+    } catch { /* ignore */ }
+    return Boolean(lockedTermsMap[termKey] || lockedTermsMap[term] || CentralDataService.isTermLocked(termKey));
+  }, [lockedTermsMap, term, termKey]);
+
   const inputDisabled = isLocked;
   const handleSaveAll = useCallback(async () => {
     if (!selectedExam || studentGrades.length === 0) return;
