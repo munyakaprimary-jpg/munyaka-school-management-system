@@ -181,9 +181,13 @@ export const CentralDataService = {
   getMarks: (): any[] => readStorage<any[]>(STORAGE_KEYS.MARKS, []),
   saveMarks: (marks: any[]) => writeStorage(STORAGE_KEYS.MARKS, marks),
 
-  // ── Settings ──────────────────────────────────────────────────────────────
-  getSettings: (): UserSettings => readStorage<UserSettings>(STORAGE_KEYS.USER_SETTINGS, {} as UserSettings),
-  saveSettings: (settings: UserSettings) => writeStorage(STORAGE_KEYS.USER_SETTINGS, settings),
+  // ── Term Locking Mechanism ───────────────────────────────────────────────
+  getTermLocks: (): Record<string, boolean> => readStorage<Record<string, boolean>>('munyaka_term_locks', { 'Term 3 2024': true, 'Term 2 2024': true }),
+  saveTermLocks: (locks: Record<string, boolean>) => writeStorage('munyaka_term_locks', locks),
+  isTermLocked: (termKey: string): boolean => {
+    const locks = CentralDataService.getTermLocks();
+    return !!locks[termKey];
+  },
 
   // ── Generic Access ────────────────────────────────────────────────────────
   getData: <T>(key: string, fallback: T): T => readStorage<T>(key, fallback),

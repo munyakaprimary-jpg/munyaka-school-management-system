@@ -33,6 +33,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { notifyDataChanged } from "@/utils/storage";
 import { useFileDownload, MUNYAKA_HEADERS } from "@/utils/fileDownloader";
 import { getAllAssessmentResults } from "@/utils/assessmentResults";
+import { CentralDataService } from "@/services/centralDataService";
 import { readGradesAndStreams, getStreamsForGrade } from "@/services/gradesStreamsConfig";
 import { saveMarkedSubmission } from "@/types/assessment";
 import type { StudentSubmission as MarkedSubmission } from "@/types/assessment";
@@ -422,6 +423,24 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   // ── Save all results ───────────────────────────────────────────────────────
   const handleSaveAll = useCallback(async () => {
     if (!selectedExam || studentGrades.length === 0) return;
+
+    let academicYear = new Date().getFullYear().toString();
+    let term = "Term 1";
+    try {
+      const settingsRaw = localStorage.getItem("munyaka_system_settings_v3");
+      if (settingsRaw) {
+        const settings = JSON.parse(settingsRaw);
+        academicYear = settings.academicYear || academicYear;
+        term = settings.term || term;
+      }
+    } catch { /* ignore */ }
+
+    const termKey = `${term} ${academicYear}`;
+    if (CentralDataService.isTermLocked(termKey)) {
+      showError(`Term "${termKey}" is locked. Archived terms are read-only.`);
+      return;
+    }
+
     setIsSaving(true);
     await new Promise((r) => setTimeout(r, 500));
 
