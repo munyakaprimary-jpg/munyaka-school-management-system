@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { teacherLogin, checkServerHealth } from '@/services/mobileAuthService';
 import { getApiBaseUrl } from '@/lib/apiBase';
 import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
+import { verifyStaffLogin } from '@/services/staffMasterService';
 import {
   MUNYAKA_ADMIN_PASSWORD,
   DEFAULT_ADMIN_PASSWORD,
@@ -377,100 +378,72 @@ const Login: React.FC = () => {
       }
   
       // ── Offline authentication (localStorage lookup) ─────────────────────────────────
-      console.log('[Login] Attempting offline authentication...');
+      console.log('[Login] Attempting offline authentication against master staff ledger...');
 
       // Use the selected support role for role filtering (normalized)
       const normalizedSelectedRole = selectedSupportRole ? selectedSupportRole.toLowerCase().trim() : null;
 
-      // Try multiple localStorage sources for staff data
-      const staffSources = [
-        'munyaka_staff_directory',  // Unified staff directory (StaffMasterService)
-        'munyaka_staff',           // Legacy staff array
-        'munyaka_staff_prereg',    // Pre-registration ledger
-      ];
+      // Delegate to the robust verifyStaffLogin service which checks the
+      // canonical `munyaka_master_staff_list` ledger with case-insensitive
+      // identifier matching (email / staffId / tscNumber) and clear
+      // diagnostic logging for every failure reason.
+      const offlineResult = verifyStaffLogin(trimmedId, trimmedPass);
 
-      let foundUser = null;
-      
-      for (const source of staffSources) {
-        try {
-          const staffData = localStorage.getItem(source);
-          if (!staffData) continue;
-          
-          const staffArray = JSON.parse(staffData);
-          if (!Array.isArray(staffArray)) continue;
-          
-          const inputId = trimmedId.toLowerCase().trim();
-          const inputCode = trimmedPass.trim();
-          
-          // Find user by email, staffId, nationalId, or phone
-          const user = staffArray.find((s: any) => {
-            const emailMatch = s.email && s.email.toLowerCase().trim() === inputId;
-            const staffIdMatch = (s.staffId || s.ref || s.id) && (s.staffId || s.ref || s.id).toLowerCase().trim() === inputId;
-            const nationalIdMatch = s.nationalId && s.nationalId === trimmedId;
-            const phoneMatch = s.phone && s.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
-            
-            if (!emailMatch && !staffIdMatch && !nationalIdMatch && !phoneMatch) {
-              return false;
-            }
-            
-            // Flexible credential matching: accessCode, ref, staffId, or password
-            const codeMatch =
-              s.accessCode === inputCode ||
-              s.ref === inputCode ||
-              s.staffId === inputCode ||
-              s.password === inputCode ||
-              (s.alternativePasswords && s.alternativePasswords.includes(inputCode));
-            
-            if (!codeMatch) {
-              return false;
-            }
-            
-            // Case-insensitive & flexible role check
-            const normalizedStaffRole = (s.systemRole || s.role || s.designation || '').toLowerCase().trim();
-            
-            if (normalizedSelectedRole) {
-              const isRoleMatch =
-                normalizedStaffRole === normalizedSelectedRole ||
-                (normalizedSelectedRole === 'librarian' && normalizedStaffRole.includes('librar')) ||
-                normalizedStaffRole === 'staff' ||
-                normalizedStaffRole === 'support_staff' ||
-                normalizedStaffRole === 'support_admin' ||
-                normalizedStaffRole === 'bursar';
-              
-              if (!isRoleMatch) {
-                return false;
-              }
-            }
-            
-            return true;
-          });
-          
-          if (user) {
-            foundUser = user;
-            console.log('[Login] Found user in offline source:', source, foundUser);
-            break;
+      if (offlineResult.success && offlineResult.user) {
+        const matchedStaff = offlineResult.user;
+
+        // ── Role validation ────────────────────────────────────────────────
+        // If a support role was selected, ensure the matched staff member's
+        // systemRole is compatible with that selection.
+        if (normalizedSelectedRole) {
+          const staffSystemRole = (matchedStaff.systemRole || '').toLowerCase().trim();
+          const roleCompatible =
+            staffSystemRole === normalizedSelectedRole ||
+            (normalizedSelectedRole === 'librarian' && staffSystemRole.includes('librar')) ||
+            staffSystemRole === 'staff' ||
+            staffSystemRole === 'support_staff' ||
+            staffSystemRole === 'support_admin' ||
+            staffSystemRole === 'bursar';
+
+          if (!roleCompatible) {
+            console.error(
+              `[Login] Offline auth: role mismatch — selected "${normalizedSelectedRole}" ` +
+              `but staff "${matchedStaff.name}" (${matchedStaff.staffId}) has systemRole "${matchedStaff.systemRole}".`
+            );
+            setStaffAuthError(
+              `This account is not registered under the "${normalizedSelectedRole}" role. ` +
+              `Please select the correct role or contact your administrator.`
+            );
+            showError('Role mismatch — please select the correct role.');
+            setIsStaffVerifying(false);
+            return;
           }
-        } catch (error) {
-          console.error(`[Login] Error parsing ${source}:`, error);
-          continue;
         }
-      }
 
-      // ── If user found offline, log them in ───────────────────────────────────────────
-      if (foundUser) {
         const userData = {
-          id: foundUser.id || foundUser.staffId || foundUser.ref || `offline-${Date.now()}`,
-          name: foundUser.name || foundUser.fullName || 'Unknown User',
-          email: foundUser.email || '',
-          phone: foundUser.phone || '',
-          role: foundUser.systemRole || foundUser.role || foundUser.designation || 'staff',
-          staff_id: foundUser.staffId || foundUser.ref || '',
-          avatar: (foundUser.name || foundUser.fullName || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+          id: matchedStaff.id || matchedStaff.staffId || `offline-${Date.now()}`,
+          name: matchedStaff.name || 'Staff Member',
+          email: matchedStaff.email || '',
+          phone: matchedStaff.phone || '',
+          role: matchedStaff.systemRole || matchedStaff.role || 'staff',
+          staff_id: matchedStaff.staffId || '',
+          avatar: (matchedStaff.name || 'U')
+            .split(' ')
+            .map(n => n[0] || '')
+            .join('')
+            .substring(0, 2)
+            .toUpperCase(),
         };
 
         try {
           localStorage.setItem('munyaka_session', JSON.stringify(userData));
         } catch { /* ignore */ }
+
+        console.log('[Login] Offline authentication successful:', {
+          name: userData.name,
+          role: userData.role,
+          staffId: userData.staff_id,
+        });
 
         showSuccess(`Welcome, ${userData.name}!`);
         navigate(getStaffRedirectPath(userData.role), { replace: true });
@@ -479,10 +452,18 @@ const Login: React.FC = () => {
       }
 
       // ── Offline authentication failed ───────────────────────────────────────────────
+      // The verifyStaffLogin service already logged the exact reason to the
+      // console (e.g. STAFF_NOT_FOUND, PASSWORD_MISMATCH, INACTIVE_ACCOUNT,
+      // MISSING_ROLE, MISSING_PASSWORD_CONFIG, LEDGER_MISSING, etc.).
+      console.error(
+        `[Login] Offline authentication failed — reason: ${offlineResult.reason || 'UNKNOWN'}, ` +
+        `message: ${offlineResult.message}`
+      );
+
       const errorMessage = normalizedSelectedRole
         ? `Invalid credentials or account not registered under this role (${normalizedSelectedRole}).`
-        : 'Invalid credentials or account not registered.';
-      
+        : offlineResult.message || 'Invalid credentials or account not registered.';
+
       setStaffAuthError(errorMessage);
       showError(errorMessage);
       setIsStaffVerifying(false);

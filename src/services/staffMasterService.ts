@@ -1424,58 +1424,171 @@ export function upsertFromPreReg(data: {
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────
 export { generateAccessKey } from './staffAccessService';
-// ==========================================
-export function verifyStaffLogin(inputEmail: string, inputCode: string) {
+
+/**
+ * Verify staff/teacher login credentials against the active staff master ledger.
+ *
+ * Accepts any of: email, staffId, tscNumber as the identifier.
+ * Performs case-insensitive matching on all identifier fields.
+ * Validates password against tempAccessCode (primary) with fallback fields.
+ * Requires the matched record to be Active and have a valid systemRole.
+ *
+ * @param identifier - email, staffId (e.g. "T001"), or tscNumber
+ * @param password - the password / tempAccessCode to verify
+ * @returns { success: boolean; user?: MasterStaffRecord; message: string; reason?: string }
+ */
+export function verifyStaffLogin(
+  identifier: string,
+  password: string
+): { success: boolean; user?: MasterStaffRecord; message: string; reason?: string } {
   try {
     const MASTER_KEY = 'munyaka_master_staff_list';
     const rawData = localStorage.getItem(MASTER_KEY);
 
+    // ── 1. Check if the ledger exists ──────────────────────────────
     if (!rawData) {
-      console.error("Master staff ledger is empty or missing.");
-      return { success: false, message: "No registered staff records found." };
+      console.error("[verifyStaffLogin] Master staff ledger is empty or missing.");
+      return {
+        success: false,
+        message: "No registered staff records found.",
+        reason: "LEDGER_MISSING",
+      };
     }
 
-    const staffList = JSON.parse(rawData);
-    const normalizedInputEmail = inputEmail.trim().toLowerCase();
+    let staffList: MasterStaffRecord[];
+    try {
+      staffList = JSON.parse(rawData);
+    } catch (parseErr) {
+      console.error("[verifyStaffLogin] Failed to parse staff ledger JSON:", parseErr);
+      return {
+        success: false,
+        message: "Staff records could not be parsed.",
+        reason: "LEDGER_PARSE_ERROR",
+      };
+    }
 
-    // 2. Find the staff member by matching email
-    const matchedStaff = staffList.find((staff: any) => {
-      const staffEmail = (staff.email || staff.registeredEmail || '').trim().toLowerCase();
-      return staffEmail === normalizedInputEmail;
+    if (!Array.isArray(staffList) || staffList.length === 0) {
+      console.error("[verifyStaffLogin] Staff ledger is not an array or is empty.");
+      return {
+        success: false,
+        message: "No registered staff records found.",
+        reason: "LEDGER_EMPTY",
+      };
+    }
+
+    const trimmedIdentifier = (identifier || '').trim();
+    const trimmedPassword = (password || '').trim();
+
+    // ── 2. Validate input ──────────────────────────────────────────
+    if (!trimmedIdentifier) {
+      console.error("[verifyStaffLogin] No identifier provided (email/staffId/tscNumber).");
+      return {
+        success: false,
+        message: "Email, Staff ID, or TSC Number is required.",
+        reason: "MISSING_IDENTIFIER",
+      };
+    }
+
+    if (!trimmedPassword) {
+      console.error("[verifyStaffLogin] No password provided for identifier:", trimmedIdentifier);
+      return {
+        success: false,
+        message: "Password is required.",
+        reason: "MISSING_PASSWORD",
+      };
+    }
+
+    const normalizedInput = trimmedIdentifier.toLowerCase().trim();
+
+    // ── 3. Find the staff member by email, staffId, or tscNumber ───
+    const matchedStaff = staffList.find((staff: MasterStaffRecord) => {
+      const emailMatch = (staff.email || '').trim().toLowerCase() === normalizedInput;
+      const staffIdMatch = (staff.staffId || '').trim().toLowerCase() === normalizedInput;
+      const tscMatch = (staff.tscNumber || '').trim().toLowerCase() === normalizedInput;
+      return emailMatch || staffIdMatch || tscMatch;
     });
 
     if (!matchedStaff) {
-      console.warn(`Staff member not found for email: ${normalizedInputEmail}`);
-      return { success: false, message: "Invalid credentials or account not registered." };
+      console.warn(
+        `[verifyStaffLogin] No active staff record found for identifier: "${normalizedInput}". ` +
+        `Searched ${staffList.length} records.`
+      );
+      return {
+        success: false,
+        message: "No account found with that email, Staff ID, or TSC Number.",
+        reason: "STAFF_NOT_FOUND",
+      };
     }
 
-    // 3. Verify the access code or password
+    // ── 4. Check if the record is active ───────────────────────────
+    const recordStatus = (matchedStaff.status || '').toLowerCase();
+    if (recordStatus !== 'active') {
+      console.warn(
+        `[verifyStaffLogin] Staff "${matchedStaff.name}" (${matchedStaff.staffId}) has status "${matchedStaff.status}". Login denied.`
+      );
+      return {
+        success: false,
+        message: `Account is not active. Current status: ${matchedStaff.status}`,
+        reason: "INACTIVE_ACCOUNT",
+      };
+    }
+
+    // ── 5. Check if the record has a valid systemRole ──────────────
+    if (!matchedStaff.systemRole) {
+      console.error(
+        `[verifyStaffLogin] Staff "${matchedStaff.name}" (${matchedStaff.staffId}) has no systemRole assigned.`
+      );
+      return {
+        success: false,
+        message: "Account has no role assigned. Contact administrator.",
+        reason: "MISSING_ROLE",
+      };
+    }
+
+    // ── 6. Verify the password ─────────────────────────────────────
     const validCode = matchedStaff.tempAccessCode || matchedStaff.password || matchedStaff.accessCode;
 
-    if (validCode && validCode.trim() !== inputCode.trim() && inputCode.trim() !== "admin123") {
-      return { success: false, message: "Incorrect access code or password." };
+    if (!validCode) {
+      console.error(
+        `[verifyStaffLogin] Staff "${matchedStaff.name}" (${matchedStaff.staffId}) has no password/tempAccessCode set.`
+      );
+      return {
+        success: false,
+        message: "Account has no password configured. Contact administrator.",
+        reason: "MISSING_PASSWORD_CONFIG",
+      };
     }
 
-    // 4. Successful login
-    localStorage.setItem('munyaka_current_user', JSON.stringify(matchedStaff));
-    return { success: true, user: matchedStaff };
+    const passwordMatches = validCode.trim() === trimmedPassword;
+    if (!passwordMatches) {
+      console.warn(
+        `[verifyStaffLogin] Password mismatch for "${matchedStaff.name}" (${matchedStaff.staffId}). ` +
+        `Expected: "${validCode}", Received: "${trimmedPassword}"`
+      );
+      return {
+        success: false,
+        message: "Incorrect password. Please try again.",
+        reason: "PASSWORD_MISMATCH",
+      };
+    }
+
+    // ── 7. Successful login ────────────────────────────────────────
+    console.log(
+      `[verifyStaffLogin] SUCCESS: "${matchedStaff.name}" (${matchedStaff.staffId}) logged in as ${matchedStaff.systemRole}.`
+    );
+
+    return {
+      success: true,
+      user: matchedStaff,
+      message: "Login successful.",
+    };
 
   } catch (err) {
-    console.error("Error during staff authentication:", err);
-    return { success: false, message: "An unexpected error occurred during login." };
+    console.error("[verifyStaffLogin] Unexpected error during authentication:", err);
+    return {
+      success: false,
+      message: "An unexpected error occurred during login.",
+      reason: "UNKNOWN_ERROR",
+    };
   }
 }
-import { verifyStaffLogin } from './staffMasterService'; // Adjust path if needed
-
-// Inside your form submit / button click handler:
-const handleLoginSubmit = (emailInput: string, passwordInput: string) => {
-  const result = verifyStaffLogin(emailInput, passwordInput);
-  
-  if (result.success) {
-    // Success! Move to staff dashboard
-    window.location.href = '/dashboard'; 
-  } else {
-    // This will display the exact message from our function
-    setErrorMessage(result.message); 
-  }
-};
