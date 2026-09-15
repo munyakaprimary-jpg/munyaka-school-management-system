@@ -158,6 +158,8 @@ const StaffPreRegistration = () => {
         profileComplete: false,
       });
       // staffMasterService already called broadcast() — no extra notify needed
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('munyaka_data_changed'));
       showSuccess(`${name} pre-registered with access key ${record.tempAccessCode}`);
       setIsAddModalOpen(false);
     } catch (err) {
