@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,19 +11,16 @@ import {
   Shield, 
   Key, 
   MapPin, 
-  Compass, 
   History, 
-  Lock, 
   UserCheck, 
-  Globe, 
-  Check, 
   AlertTriangle,
-  RefreshCw,
   Navigation
 } from 'lucide-react';
 
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
 const SECURITY_SETTINGS_KEY = 'munyaka_security_settings';
-const ADMIN_CREDENTIALS_KEY = 'munyaka_admin_credentials_store';
 const AUDIT_LOGS_KEY = 'munyaka_security_audit_logs';
 
 interface SecuritySettings {
@@ -86,12 +83,83 @@ export default function SecurityAuthTab() {
     return INITIAL_AUDIT_LOGS;
   });
 
+  // Leaflet Map Refs
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markerInstanceRef = useRef<L.Marker | null>(null);
+  const circleInstanceRef = useRef<L.Circle | null>(null);
+
   useEffect(() => {
     try {
       CentralDataService.setData(SECURITY_SETTINGS_KEY, security);
       localStorage.setItem(SECURITY_SETTINGS_KEY, JSON.stringify(security));
     } catch {}
   }, [security]);
+
+  // Initialize Leaflet Map
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    if (!mapInstanceRef.current) {
+      const map = L.map(mapContainerRef.current, {
+        zoomControl: true,
+        attributionControl: false
+      }).setView([security.latitude, security.longitude], 15);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Add marker
+      const marker = L.marker([security.latitude, security.longitude], {
+        draggable: true
+      }).addTo(map);
+
+      marker.on('dragend', () => {
+        const pos = marker.getLatLng();
+        setSecurity(prev => ({
+          ...prev,
+          latitude: parseFloat(pos.lat.toFixed(6)),
+          longitude: parseFloat(pos.lng.toFixed(6))
+        }));
+      });
+
+      // Add circle for geofence radius
+      const circle = L.circle([security.latitude, security.longitude], {
+        radius: security.geofenceRadiusMeters,
+        color: '#4f46e5',
+        fillColor: '#6366f1',
+        fillOpacity: 0.2
+      }).addTo(map);
+
+      mapInstanceRef.current = map;
+      markerInstanceRef.current = marker;
+      circleInstanceRef.current = circle;
+
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 250);
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update marker and circle when latitude, longitude, or radius changes
+  useEffect(() => {
+    if (mapInstanceRef.current && markerInstanceRef.current && circleInstanceRef.current) {
+      const newLatLng = new L.LatLng(security.latitude, security.longitude);
+      markerInstanceRef.current.setLatLng(newLatLng);
+      circleInstanceRef.current.setLatLng(newLatLng);
+      circleInstanceRef.current.setRadius(security.geofenceRadiusMeters);
+      mapInstanceRef.current.setView(newLatLng, mapInstanceRef.current.getZoom(), { animate: true });
+      mapInstanceRef.current.invalidateSize();
+    }
+  }, [security.latitude, security.longitude, security.geofenceRadiusMeters]);
 
   const handleSaveCredentials = (role: 'Admin' | 'Owner') => {
     showSuccess(`${role} credentials updated securely in persistent storage!`);
@@ -113,11 +181,16 @@ export default function SecurityAuthTab() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          const lat = parseFloat(position.coords.latitude.toFixed(6));
+          const lng = parseFloat(position.coords.longitude.toFixed(6));
           setSecurity(prev => ({
             ...prev,
-            latitude: parseFloat(position.coords.latitude.toFixed(6)),
-            longitude: parseFloat(position.coords.longitude.toFixed(6))
+            latitude: lat,
+            longitude: lng
           }));
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.setView([lat, lng], 16);
+          }
           showSuccess("Acquired current GPS coordinates successfully!");
         },
         () => {
@@ -218,7 +291,7 @@ export default function SecurityAuthTab() {
             />
           </div>
 
-          {/* Admin Location Picker Map Simulation */}
+          {/* Admin Location Picker Map (Leaflet) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="font-bold text-slate-800">Admin Location Picker (OpenStreetMap)</Label>
@@ -226,23 +299,10 @@ export default function SecurityAuthTab() {
                 <Navigation size={13} /> Use Current GPS Location
               </Button>
             </div>
-            <div className="relative w-full h-64 rounded-2xl overflow-hidden border bg-slate-100 flex items-center justify-center shadow-inner">
-              {/* Simulated interactive map background */}
-              <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px] opacity-70"></div>
-              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-50/50 via-slate-100/30 to-blue-50/50"></div>
-              
-              {/* Map pin */}
-              <div className="relative z-10 flex flex-col items-center animate-bounce">
-                <div className="bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
-                  <MapPin size={12} /> Munyaka Campus Center
-                </div>
-                <div className="w-4 h-4 bg-indigo-600 rotate-45 -mt-2 shadow"></div>
-              </div>
-
-              <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl border text-[11px] font-mono text-slate-600 shadow-sm">
-                Lat: {security.latitude}, Lng: {security.longitude}
-              </div>
-            </div>
+            <div 
+              ref={mapContainerRef} 
+              className="w-full h-80 rounded-2xl overflow-hidden border shadow-inner z-0 relative"
+            />
           </div>
 
           {/* Latitude & Longitude Inputs */}
