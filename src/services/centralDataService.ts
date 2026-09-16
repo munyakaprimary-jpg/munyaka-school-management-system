@@ -18,7 +18,6 @@ import type { Student, PaymentRecord, UserSettings, Subscription, LearningAreaCl
 export { UNIFIED_KEYS, CURRENT_SCHEMA_VERSION } from './unifiedDataLayer';
 export type { StorageAdapter, StorageInfo, DatabaseBackup, ImportResult, HydrationReport } from './unifiedDataLayer';
 export { UnifiedDataService };
-export default UnifiedDataService;
 
 // ─── Domain-specific keys ────────────────────────────────────────────
 
