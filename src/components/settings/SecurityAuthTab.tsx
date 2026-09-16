@@ -14,7 +14,8 @@ import {
   History, 
   UserCheck, 
   AlertTriangle,
-  Navigation
+  Navigation,
+  Radio
 } from 'lucide-react';
 
 import L from 'leaflet';
@@ -65,6 +66,9 @@ export default function SecurityAuthTab() {
     } catch {}
     return DEFAULT_SECURITY;
   });
+
+  const [isLiveTracking, setIsLiveTracking] = useState(false);
+  const watchIdRef = useRef<number | null>(null);
 
   // Admin Credentials state
   const [adminUsername, setAdminUsername] = useState("admin@munyaka.ac.ke");
@@ -142,6 +146,9 @@ export default function SecurityAuthTab() {
     }
 
     return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -161,6 +168,42 @@ export default function SecurityAuthTab() {
     }
   }, [security.latitude, security.longitude, security.geofenceRadiusMeters]);
 
+  const toggleLiveTracking = () => {
+    if (isLiveTracking) {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setIsLiveTracking(false);
+      showSuccess("Live geolocation tracking paused.");
+    } else {
+      if (!navigator.geolocation) {
+        showError("Geolocation is not supported by your browser.");
+        return;
+      }
+      setIsLiveTracking(true);
+      showSuccess("Live geolocation tracking active — mapping movement in real-time.");
+      
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const lat = parseFloat(position.coords.latitude.toFixed(6));
+          const lng = parseFloat(position.coords.longitude.toFixed(6));
+          setSecurity(prev => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng
+          }));
+        },
+        (error) => {
+          console.error(error);
+          showError("Unable to retrieve live location updates.");
+          setIsLiveTracking(false);
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+      );
+    }
+  };
+
   const handleSaveCredentials = (role: 'Admin' | 'Owner') => {
     showSuccess(`${role} credentials updated securely in persistent storage!`);
     const newLog: AuditLog = {
@@ -175,31 +218,6 @@ export default function SecurityAuthTab() {
     setAuditLogs(updatedLogs);
     CentralDataService.setData(AUDIT_LOGS_KEY, updatedLogs);
     localStorage.setItem(AUDIT_LOGS_KEY, JSON.stringify(updatedLogs));
-  };
-
-  const handleUseCurrentGPS = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = parseFloat(position.coords.latitude.toFixed(6));
-          const lng = parseFloat(position.coords.longitude.toFixed(6));
-          setSecurity(prev => ({
-            ...prev,
-            latitude: lat,
-            longitude: lng
-          }));
-          if (mapInstanceRef.current) {
-            mapInstanceRef.current.setView([lat, lng], 16);
-          }
-          showSuccess("Acquired current GPS coordinates successfully!");
-        },
-        () => {
-          showError("Unable to retrieve your GPS location. Please check browser permissions.");
-        }
-      );
-    } else {
-      showError("Geolocation is not supported by your browser.");
-    }
   };
 
   return (
@@ -291,12 +309,24 @@ export default function SecurityAuthTab() {
             />
           </div>
 
-          {/* Admin Location Picker Map (Leaflet) */}
+          {/* Admin Location Picker Map (Leaflet with Real-Time watchPosition) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="font-bold text-slate-800">Admin Location Picker (OpenStreetMap)</Label>
-              <Button size="sm" variant="outline" onClick={handleUseCurrentGPS} className="text-xs gap-1.5 h-8">
-                <Navigation size={13} /> Use Current GPS Location
+              <div className="flex items-center gap-2">
+                <Label className="font-bold text-slate-800">Admin Location Picker (OpenStreetMap)</Label>
+                {isLiveTracking && (
+                  <Badge className="bg-emerald-100 text-emerald-700 animate-pulse text-[10px] gap-1">
+                    <Radio size={10} /> Live GPS Tracking
+                  </Badge>
+                )}
+              </div>
+              <Button 
+                size="sm" 
+                variant={isLiveTracking ? "default" : "outline"} 
+                onClick={toggleLiveTracking} 
+                className={`text-xs gap-1.5 h-8 ${isLiveTracking ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : ''}`}
+              >
+                <Navigation size={13} /> {isLiveTracking ? 'Stop Live Tracking' : 'Start Live GPS Tracking'}
               </Button>
             </div>
             <div 
