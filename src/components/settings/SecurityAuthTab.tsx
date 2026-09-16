@@ -10,7 +10,6 @@ import { CentralDataService } from "@/services/centralDataService";
 import { 
   Shield, 
   Key, 
-  MapPin, 
   History, 
   UserCheck, 
   AlertTriangle,
@@ -55,9 +54,21 @@ export default function SecurityAuthTab() {
       const central = CentralDataService.getData<SecuritySettings>(SECURITY_SETTINGS_KEY, DEFAULT_SECURITY);
       if (central && typeof central === 'object') return { ...DEFAULT_SECURITY, ...central };
       const saved = localStorage.getItem(SECURITY_SETTINGS_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') return { ...DEFAULT_SECURITY, ...parsed };
+      }
     } catch {}
     return DEFAULT_SECURITY;
+  });
+
+  const [isSettingsLocked, setIsSettingsLocked] = useState<boolean>(() => {
+    try {
+      const savedLock = localStorage.getItem('munyaka_geofence_locked');
+      return savedLock ? JSON.parse(savedLock) : false;
+    } catch {
+      return false;
+    }
   });
 
   const [isLiveTracking, setIsLiveTracking] = useState(false);
@@ -69,7 +80,7 @@ export default function SecurityAuthTab() {
   const [ownerUsername, setOwnerUsername] = useState("director@munyaka.ac.ke");
   const [ownerPassword, setOwnerPassword] = useState("••••••••");
 
-  // Real Audit Logs state (no mock data)
+  // Real Audit Logs state
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
     try {
       const central = CentralDataService.getData<AuditLog[]>(AUDIT_LOGS_KEY, []);
@@ -89,7 +100,6 @@ export default function SecurityAuthTab() {
   const markerInstanceRef = useRef<L.Marker | null>(null);
   const circleInstanceRef = useRef<L.Circle | null>(null);
 
-  // Helper to log audit events
   const logSecurityEvent = (role: string, name: string, actionText: string, status: 'Success' | 'Warning' | 'Locked' = 'Success') => {
     const newLog: AuditLog = {
       id: `SEC-${Date.now().toString().slice(-6)}`,
@@ -109,12 +119,25 @@ export default function SecurityAuthTab() {
     });
   };
 
-  useEffect(() => {
+  const handleLockAndSave = () => {
     try {
       CentralDataService.setData(SECURITY_SETTINGS_KEY, security);
       localStorage.setItem(SECURITY_SETTINGS_KEY, JSON.stringify(security));
-    } catch {}
-  }, [security]);
+      const nextLockState = !isSettingsLocked;
+      setIsSettingsLocked(nextLockState);
+      localStorage.setItem('munyaka_geofence_locked', JSON.stringify(nextLockState));
+      
+      if (nextLockState) {
+        showSuccess("Geofence and coordinate parameters locked & saved permanently!");
+        logSecurityEvent('System Administrator', adminUsername, `Geofence & Coordinates Locked & Saved (${security.latitude}, ${security.longitude}, ${security.geofenceRadiusMeters}m)`, 'Locked');
+      } else {
+        showSuccess("Geofence settings unlocked for editing.");
+        logSecurityEvent('System Administrator', adminUsername, 'Geofence Settings Unlocked for Editing');
+      }
+    } catch (e) {
+      showError("Failed to save geofence settings.");
+    }
+  };
 
   // Initialize Leaflet Map
   useEffect(() => {
@@ -132,10 +155,11 @@ export default function SecurityAuthTab() {
 
       // Add marker
       const marker = L.marker([security.latitude, security.longitude], {
-        draggable: true
+        draggable: !isSettingsLocked
       }).addTo(map);
 
       marker.on('dragend', () => {
+        if (isSettingsLocked) return;
         const pos = marker.getLatLng();
         const lat = parseFloat(pos.lat.toFixed(6));
         const lng = parseFloat(pos.lng.toFixed(6));
@@ -185,9 +209,20 @@ export default function SecurityAuthTab() {
       mapInstanceRef.current.setView(newLatLng, mapInstanceRef.current.getZoom(), { animate: true });
       mapInstanceRef.current.invalidateSize();
     }
-  }, [security.latitude, security.longitude, security.geofenceRadiusMeters]);
+    if (markerInstanceRef.current) {
+      if (isSettingsLocked) {
+        markerInstanceRef.current.dragging?.disable();
+      } else {
+        markerInstanceRef.current.dragging?.enable();
+      }
+    }
+  }, [security.latitude, security.longitude, security.geofenceRadiusMeters, isSettingsLocked]);
 
   const toggleLiveTracking = () => {
+    if (isSettingsLocked) {
+      showError("Settings are locked. Unlock to use live GPS tracking.");
+      return;
+    }
     if (isLiveTracking) {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
@@ -233,16 +268,19 @@ export default function SecurityAuthTab() {
   };
 
   const handleRadiusChange = (radius: number) => {
+    if (isSettingsLocked) return;
     setSecurity(prev => ({ ...prev, geofenceRadiusMeters: radius }));
     logSecurityEvent('System Administrator', adminUsername, `Geofence Radius Updated (${radius}m)`);
   };
 
   const handleGeofenceToggle = (val: boolean) => {
+    if (isSettingsLocked) return;
     setSecurity(prev => ({ ...prev, enforceGeofence: val }));
     logSecurityEvent('System Administrator', adminUsername, `Geofence Enforcement ${val ? 'Enabled' : 'Disabled'}`);
   };
 
   const handleBypassToggle = (val: boolean) => {
+    if (isSettingsLocked) return;
     setSecurity(prev => ({ ...prev, localhostBypass: val }));
     logSecurityEvent('System Administrator', adminUsername, `Localhost GPS Bypass ${val ? 'Enabled' : 'Disabled'}`);
   };
@@ -312,41 +350,84 @@ export default function SecurityAuthTab() {
       </Card>
 
       {/* 2. Geofence & Location Security Rules */}
-      <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
-        <CardHeader className="px-0 pt-0 pb-6 border-b">
+      <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 shadow-sm border border-slate-100 space-y-6">
+        
+        {/* Geofence Card Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <MapPin size={22} />
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
             </div>
             <div>
-              <CardTitle className="text-xl font-bold text-slate-900">Geofence & Location Security Rules</CardTitle>
-              <CardDescription>Global GPS parameters for staff daily attendance check-ins.</CardDescription>
+              <h3 className="text-lg font-bold text-slate-800">Geofence & Location Security Rules</h3>
+              <p className="text-xs text-slate-500">Global GPS parameters for staff daily attendance check-ins.</p>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="px-0 pt-6 space-y-6">
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
-            <div>
-              <h4 className="font-bold text-slate-900">Enforce Attendance Geofence</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">Require staff to be within campus radius to submit daily check-in.</p>
-            </div>
-            <Switch 
-              checked={security.enforceGeofence} 
-              onCheckedChange={handleGeofenceToggle} 
-            />
           </div>
 
-          {/* Admin Location Picker Map (Leaflet with Real-Time watchPosition) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Label className="font-bold text-slate-800">Admin Location Picker (OpenStreetMap)</Label>
-                {isLiveTracking && (
-                  <Badge className="bg-emerald-100 text-emerald-700 animate-pulse text-[10px] gap-1">
-                    <Radio size={10} /> Live GPS Tracking
-                  </Badge>
-                )}
-              </div>
+          {/* Lock & Save Action Button */}
+          <button
+            type="button"
+            onClick={handleLockAndSave}
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors shadow-sm ${
+              isSettingsLocked 
+                ? 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100' 
+                : 'bg-emerald-600 text-white hover:bg-emerald-700'
+            }`}
+          >
+            {isSettingsLocked ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Unlock Settings
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+                Lock & Save Settings
+              </>
+            )}
+          </button>
+        </div>
+
+        {isSettingsLocked && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-800 text-xs font-bold">
+            <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            Settings are currently locked and saved permanently. Click &quot;Unlock Settings&quot; above to modify.
+          </div>
+        )}
+
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
+          <div>
+            <h4 className="font-bold text-slate-900 text-sm">Enforce Attendance Geofence</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">Require staff to be within campus radius to submit daily check-in.</p>
+          </div>
+          <Switch 
+            checked={security.enforceGeofence} 
+            onCheckedChange={handleGeofenceToggle}
+            disabled={isSettingsLocked}
+          />
+        </div>
+
+        {/* Admin Location Picker Map (Leaflet with Real-Time watchPosition) */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Label className="font-bold text-slate-800">Admin Location Picker (OpenStreetMap)</Label>
+              {isLiveTracking && (
+                <Badge className="bg-emerald-100 text-emerald-700 animate-pulse text-[10px] gap-1">
+                  <Radio size={10} /> Live GPS Tracking
+                </Badge>
+              )}
+            </div>
+            {!isSettingsLocked && (
               <Button 
                 size="sm" 
                 variant={isLiveTracking ? "default" : "outline"} 
@@ -355,96 +436,112 @@ export default function SecurityAuthTab() {
               >
                 <Navigation size={13} /> {isLiveTracking ? 'Stop Live Tracking' : 'Start Live GPS Tracking'}
               </Button>
-            </div>
-            <div 
-              ref={mapContainerRef} 
-              className="w-full h-80 rounded-2xl overflow-hidden border shadow-inner z-0 relative"
+            )}
+          </div>
+          <div 
+            ref={mapContainerRef} 
+            className="w-full h-80 rounded-2xl overflow-hidden border shadow-inner z-0 relative"
+          />
+        </div>
+
+        {/* Latitude & Longitude Inputs */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs">Latitude</Label>
+            <Input 
+              type="number" 
+              step="0.0001"
+              value={security.latitude} 
+              disabled={isSettingsLocked}
+              onChange={e => {
+                if (isSettingsLocked) return;
+                const val = parseFloat(e.target.value) || 0;
+                setSecurity({...security, latitude: val});
+                logSecurityEvent('System Administrator', adminUsername, `Latitude Adjusted to ${val}`);
+              }} 
             />
           </div>
-
-          {/* Latitude & Longitude Inputs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs">Latitude</Label>
-              <Input 
-                type="number" 
-                step="0.0001"
-                value={security.latitude} 
-                onChange={e => {
-                  const val = parseFloat(e.target.value) || 0;
-                  setSecurity({...security, latitude: val});
-                  logSecurityEvent('System Administrator', adminUsername, `Latitude Adjusted to ${val}`);
-                }} 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Longitude</Label>
-              <Input 
-                type="number" 
-                step="0.0001"
-                value={security.longitude} 
-                onChange={e => {
-                  const val = parseFloat(e.target.value) || 0;
-                  setSecurity({...security, longitude: val});
-                  logSecurityEvent('System Administrator', adminUsername, `Longitude Adjusted to ${val}`);
-                }} 
-              />
-            </div>
-          </div>
-
-          {/* Geofence Radius Slider & Quick Select Buttons */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-bold text-slate-800">Geofence Radius ({security.geofenceRadiusMeters} meters)</Label>
-              <span className="text-xs text-indigo-600 font-mono font-bold">Allowed campus perimeter</span>
-            </div>
-            <input 
-              type="range" 
-              min="10" 
-              max="1000" 
-              step="10"
-              value={security.geofenceRadiusMeters}
-              onChange={e => handleRadiusChange(parseInt(e.target.value))}
-              className="w-full accent-indigo-600 cursor-pointer"
-            />
-            <div className="flex flex-wrap gap-2 pt-1">
-              {[25, 50, 100, 150, 200, 500, 1000].map(m => (
-                <button
-                  key={m}
-                  onClick={() => handleRadiusChange(m)}
-                  className={`text-xs px-3 py-1.5 rounded-xl border font-bold transition-colors ${
-                    security.geofenceRadiusMeters === m 
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  {m}m
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Live Distance Verification Warning & Localhost Bypass */}
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="font-bold text-amber-900 text-sm">Live Distance Verification Active</h4>
-              <p className="text-xs text-amber-700 mt-0.5">Staff check-ins outside the {security.geofenceRadiusMeters}m radius will be flagged or rejected unless Development Bypass is active.</p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
-            <div>
-              <h4 className="font-bold text-slate-900">Development / Localhost GPS Bypass</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">Skip GPS distance enforcement during local testing and simulation.</p>
-            </div>
-            <Switch 
-              checked={security.localhostBypass} 
-              onCheckedChange={handleBypassToggle} 
+          <div className="space-y-2">
+            <Label className="text-xs">Longitude</Label>
+            <Input 
+              type="number" 
+              step="0.0001"
+              value={security.longitude} 
+              disabled={isSettingsLocked}
+              onChange={e => {
+                if (isSettingsLocked) return;
+                const val = parseFloat(e.target.value) || 0;
+                setSecurity({...security, longitude: val});
+                logSecurityEvent('System Administrator', adminUsername, `Longitude Adjusted to ${val}`);
+              }} 
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Geofence Radius Slider & Quick Select Buttons */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+            <label className="font-bold text-slate-800">Geofence Radius ({security.geofenceRadiusMeters} meters)</label>
+            <span className="text-indigo-600 font-bold">Allowed campus perimeter</span>
+          </div>
+          <input 
+            type="range" 
+            min="25" 
+            max="1000" 
+            step="25"
+            value={security.geofenceRadiusMeters}
+            disabled={isSettingsLocked}
+            onChange={e => handleRadiusChange(parseInt(e.target.value))}
+            className="w-full accent-indigo-600 bg-slate-200 h-2 rounded-lg cursor-pointer disabled:opacity-50"
+          />
+          <div className="flex justify-between text-[11px] text-slate-400 px-1">
+            <span>25m</span>
+            <span>50m</span>
+            <span>100m</span>
+            <span>150m</span>
+            <span>200m</span>
+            <span>500m</span>
+            <span>1000m</span>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-2">
+            {[25, 50, 100, 150, 200, 500, 1000].map(m => (
+              <button
+                key={m}
+                onClick={() => handleRadiusChange(m)}
+                disabled={isSettingsLocked}
+                className={`text-xs px-3 py-1.5 rounded-xl border font-bold transition-colors disabled:opacity-50 ${
+                  security.geofenceRadiusMeters === m 
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {m}m
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Live Distance Verification Warning & Localhost Bypass */}
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h4 className="font-bold text-amber-900 text-sm">Live Distance Verification Active</h4>
+            <p className="text-xs text-amber-700 mt-0.5">Staff check-ins outside the {security.geofenceRadiusMeters}m radius will be flagged or rejected unless Development Bypass is active.</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
+          <div>
+            <h4 className="font-bold text-slate-900 text-sm">Development / Localhost GPS Bypass</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">Skip GPS distance enforcement during local testing and simulation.</p>
+          </div>
+          <Switch 
+            checked={security.localhostBypass} 
+            onCheckedChange={handleBypassToggle} 
+            disabled={isSettingsLocked}
+          />
+        </div>
+      </div>
 
       {/* 3. System Security Audit Trail */}
       <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
