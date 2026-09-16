@@ -898,10 +898,9 @@ export const UnifiedDataService = {
   },
 };
 
-// ─── Re-export types & keys ───────────────────────────────────────────
+// ─── Re-export types ───────────────────────────────────────────
 
 export type { StorageAdapter, StorageInfo, DatabaseBackup, ImportResult, HydrationReport };
-export { UNIFIED_KEYS, CURRENT_SCHEMA_VERSION };
 
 // ─── Convenience default export ───────────────────────────────────────
 
