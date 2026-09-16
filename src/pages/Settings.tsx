@@ -9,12 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
-import SecurityAuditTrailCard from "@/components/SecurityAuditTrailCard";
-import {
-  Building,
-  Lock,
-  Database,
-  Save,
+import { 
+  Building, 
+  Lock, 
+  Database, 
+  Save, 
   RefreshCw,
   Server,
   Shield,
@@ -391,9 +390,6 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
-
-          {/* System Security Audit Trail */}
-          <SecurityAuditTrailCard />
         </TabsContent>
 
         {/* 5. Database & Backups */}
