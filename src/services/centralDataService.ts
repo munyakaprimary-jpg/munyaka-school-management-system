@@ -1,16 +1,27 @@
-import { 
-  readStorage, 
-  writeStorage, 
-  STORAGE_KEYS as PERSISTENT_KEYS,
-  Student,
-  PaymentRecord,
-  UserSettings,
-  idbGetAll,
-  idbPutMany,
-  notifyDataChanged
-} from './persistentStore';
+/**
+ * centralDataService.ts — Backward-compatible wrapper around UnifiedDataService
+ *
+ * This module preserves the existing synchronous API for all current callers
+ * while routing every write through the new UnifiedDataService so that:
+ *   • Native builds persist via Capacitor Preferences
+ *   • Web builds persist via localStorage + IndexedDB write-through
+ *
+ * New code should import directly from unifiedDataLayer.ts.
+ */
 
-// Domain-specific keys that might not be in persistentStore yet
+import { UnifiedDataService, UNIFIED_KEYS } from './unifiedDataLayer';
+import { readStorage, writeStorage, STORAGE_KEYS as PERSISTENT_KEYS } from './persistentStore';
+import type { Student, PaymentRecord, UserSettings, Subscription, LearningAreaCluster } from './persistentStore';
+
+// ─── Re-export unified keys & types ──────────────────────────────────
+
+export { UNIFIED_KEYS, CURRENT_SCHEMA_VERSION } from './unifiedDataLayer';
+export type { StorageAdapter, StorageInfo, DatabaseBackup, ImportResult, HydrationReport } from './unifiedDataLayer';
+export { UnifiedDataService };
+export default UnifiedDataService;
+
+// ─── Domain-specific keys ────────────────────────────────────────────
+
 const EXTRA_KEYS = {
   MARKS: 'munyaka_marks_records',
   TIMETABLE: 'school-timetable-data',
@@ -24,6 +35,8 @@ export const STORAGE_KEYS = {
   MASTER_LEARNERS: 'munyaka_master_learner_list',
   ...EXTRA_KEYS,
 };
+
+// ─── Types ───────────────────────────────────────────────────────────
 
 export interface StaffRecord {
   id: string;
@@ -45,49 +58,32 @@ export interface AttendanceRecord {
   [key: string]: unknown;
 }
 
-/**
- * CentralDataService — Unified data storage gateway.
- *
- * All menu modules (Learners, Staff, Attendance, Finance, Timetable)
- * must route their data mutations and reads through this service.
- * It ensures APK builds and local-first persistence sync pull from a unified state.
- */
+// ─── CentralDataService (backward-compatible synchronous API) ────────
+
 export const CentralDataService = {
-  // ── Startup Migration Utility ─────────────────────────────────────────────
-  /**
-   * Automatically scans legacy local storage keys ('students', 'learners', 'registered_students', etc.)
-   * and merges any found records into 'munyaka_master_learner_list' without overwriting existing data,
-   * deduplicating by ID or admission number.
-   */
+  // ── Startup Migration Utility ─────────────────────────────────────
+
   runStartupMigration: () => {
     try {
       const legacyKeys = [
-        'students',
-        'learners',
-        'registered_students',
-        'munyaka_registered_students',
-        'school_learners_data',
-        'munyaka_learners_db',
-        'pupils',
-        'school_students',
-        'munyaka_students'
+        'students', 'learners', 'registered_students',
+        'munyaka_registered_students', 'school_learners_data',
+        'munyaka_learners_db', 'pupils', 'school_students', 'munyaka_students',
       ];
 
       const masterKey = STORAGE_KEYS.MASTER_LEARNERS;
       const existingMaster: Student[] = readStorage<Student[]>(masterKey, []);
       const map = new Map<string, Student>();
 
-      // Load existing master records first
-      existingMaster.forEach(s => {
+      existingMaster.forEach((s) => {
         if (s && (s.id || s.admissionNumber || (s as any).admNo || s.name)) {
           const key = String(s.id || s.admissionNumber || (s as any).admNo || s.name).trim().toLowerCase();
           map.set(key, s);
         }
       });
 
-      // Scan legacy keys
       let foundNew = false;
-      legacyKeys.forEach(k => {
+      legacyKeys.forEach((k) => {
         const raw = localStorage.getItem(k);
         if (raw) {
           try {
@@ -96,16 +92,11 @@ export const CentralDataService = {
               parsed.forEach((s: any) => {
                 if (s && (s.id || s.admissionNumber || s.admNo || s.name)) {
                   const key = String(s.id || s.admissionNumber || s.admNo || s.name).trim().toLowerCase();
-                  if (!map.has(key)) {
-                    map.set(key, s);
-                    foundNew = true;
-                  }
+                  if (!map.has(key)) { map.set(key, s); foundNew = true; }
                 }
               });
             }
-          } catch {
-            // ignore parse errors
-          }
+          } catch { /* ignore parse errors */ }
         }
       });
 
@@ -117,75 +108,78 @@ export const CentralDataService = {
         console.log(`[CentralDataService] Startup migration completed. Migrated/unified ${unified.length} learners.`);
       }
     } catch (err) {
-      console.error("[CentralDataService] Startup migration failed:", err);
+      console.error('[CentralDataService] Startup migration failed:', err);
     }
   },
 
-  // ── Learners ──────────────────────────────────────────────────────────────
+  // ── Learners ──────────────────────────────────────────────────────
+
   getLearners: (): Student[] => {
     CentralDataService.runStartupMigration();
     const primary = readStorage<Student[]>(STORAGE_KEYS.STUDENTS, []);
     const master = readStorage<Student[]>(STORAGE_KEYS.MASTER_LEARNERS, []);
     const legacy = readStorage<Student[]>(STORAGE_KEYS.STUDENTS_LEGACY, []);
     const combinedMap = new Map<string, Student>();
-    
-    // Merge all sources into master unified map
-    [...master, ...primary, ...legacy].forEach(s => {
+
+    [...master, ...primary, ...legacy].forEach((s) => {
       if (s && (s.id || s.admissionNumber || (s as any).admNo || s.name)) {
         const key = String(s.id || s.admissionNumber || (s as any).admNo || s.name).trim().toLowerCase();
         combinedMap.set(key, s);
       }
     });
 
-    const unified = Array.from(combinedMap.values());
-    return unified;
+    return Array.from(combinedMap.values());
   },
-  saveLearners: (learners: Student[]) => {
+
+  saveLearners: (learners: Student[]): boolean => {
     writeStorage(STORAGE_KEYS.STUDENTS, learners);
     writeStorage(STORAGE_KEYS.STUDENTS_LEGACY, learners);
     writeStorage(STORAGE_KEYS.MASTER_LEARNERS, learners);
     window.dispatchEvent(new Event('students-updated'));
     window.dispatchEvent(new Event('learners-updated'));
+    return true;
   },
-  // Aliases for compatibility
+
   getStudents: () => CentralDataService.getLearners(),
   saveStudents: (students: Student[]) => CentralDataService.saveLearners(students),
 
-  // ── Staff ─────────────────────────────────────────────────────────────────
-  getStaff: (): StaffRecord[] => readStorage<StaffRecord[]>(STORAGE_KEYS.STAFF, []),
-  saveStaff: (staff: StaffRecord[]) => {
-    writeStorage(STORAGE_KEYS.STAFF, staff);
-  },
+  // ── Staff ─────────────────────────────────────────────────────────
 
-  // ── Attendance ────────────────────────────────────────────────────────────
+  getStaff: (): StaffRecord[] => readStorage<StaffRecord[]>(STORAGE_KEYS.STAFF, []),
+  saveStaff: (staff: StaffRecord[]) => writeStorage(STORAGE_KEYS.STAFF, staff),
+
+  // ── Attendance ────────────────────────────────────────────────────
+
   getAttendance: (): AttendanceRecord[] => readStorage<AttendanceRecord[]>(STORAGE_KEYS.ATTENDANCE, []),
-  saveAttendance: (records: AttendanceRecord[]) => {
-    writeStorage(STORAGE_KEYS.ATTENDANCE, records);
-  },
+  saveAttendance: (records: AttendanceRecord[]) => writeStorage(STORAGE_KEYS.ATTENDANCE, records),
   getStaffAttendance: () => readStorage<any[]>(STORAGE_KEYS.STAFF_ATTENDANCE, []),
   saveStaffAttendance: (records: any[]) => writeStorage(STORAGE_KEYS.STAFF_ATTENDANCE, records),
 
-  // ── Finance ───────────────────────────────────────────────────────────────
+  // ── Finance ───────────────────────────────────────────────────────
+
   getFees: (): PaymentRecord[] => readStorage<PaymentRecord[]>(STORAGE_KEYS.PAYMENT_RECORDS, []),
   saveFees: (records: PaymentRecord[]) => writeStorage(STORAGE_KEYS.PAYMENT_RECORDS, records),
   getTransactions: (): PaymentRecord[] => readStorage<PaymentRecord[]>(STORAGE_KEYS.TRANSACTIONS, []),
   saveTransactions: (records: PaymentRecord[]) => writeStorage(STORAGE_KEYS.TRANSACTIONS, records),
 
-  // ── Timetable ─────────────────────────────────────────────────────────────
+  // ── Timetable ─────────────────────────────────────────────────────
+
   getTimetable: () => readStorage<any[]>(STORAGE_KEYS.TIMETABLE, []),
   saveTimetable: (data: any[]) => writeStorage(STORAGE_KEYS.TIMETABLE, data),
   getTimetableGrades: () => readStorage<any[]>(STORAGE_KEYS.TIMETABLE_GRADES, []),
   saveTimetableGrades: (data: any[]) => writeStorage(STORAGE_KEYS.TIMETABLE_GRADES, data),
 
-  // ── Marks & Assessments ───────────────────────────────────────────────────
+  // ── Marks & Assessments ───────────────────────────────────────────
+
   getMarks: (): any[] => readStorage<any[]>(STORAGE_KEYS.MARKS, []),
   saveMarks: (marks: any[]) => writeStorage(STORAGE_KEYS.MARKS, marks),
 
-  // ── Term Locking Mechanism ───────────────────────────────────────────────
+  // ── Term Locking Mechanism ────────────────────────────────────────
+
   getTermLocks: (): Record<string, boolean> => {
     const activeYearStr = (() => {
       try {
-        const settingsRaw = localStorage.getItem("munyaka_system_settings_v3");
+        const settingsRaw = localStorage.getItem('munyaka_system_settings_v3');
         if (settingsRaw) {
           const s = JSON.parse(settingsRaw);
           if (s.academicYear) return parseInt(s.academicYear, 10);
@@ -197,19 +191,13 @@ export const CentralDataService = {
     const currentYear = activeYearStr || new Date().getFullYear();
     const prevYear = currentYear - 1;
     const defaultLocks: Record<string, boolean> = {
-      [`term1_${prevYear}`]: true,
-      [`term2_${prevYear}`]: true,
-      [`term3_${prevYear}`]: true,
-      [`term1_${currentYear}`]: false,
-      [`term2_${currentYear}`]: false,
-      [`term3_${currentYear}`]: false,
-      [`term1_${currentYear + 1}`]: false,
-      [`term2_${currentYear + 1}`]: false,
-      [`term3_${currentYear + 1}`]: false,
+      [`term1_${prevYear}`]: true, [`term2_${prevYear}`]: true, [`term3_${prevYear}`]: true,
+      [`term1_${currentYear}`]: false, [`term2_${currentYear}`]: false, [`term3_${currentYear}`]: false,
+      [`term1_${currentYear + 1}`]: false, [`term2_${currentYear + 1}`]: false, [`term3_${currentYear + 1}`]: false,
     };
-    const locks = readStorage<Record<string, boolean>>('munyaka_term_locks', defaultLocks);
-    return locks;
+    return readStorage<Record<string, boolean>>('munyaka_term_locks', defaultLocks);
   },
+
   saveTermLocks: (locks: Record<string, boolean>) => writeStorage('munyaka_term_locks', locks),
   isTermLocked: (termKey: string): boolean => {
     const locks = CentralDataService.getTermLocks();
@@ -226,23 +214,17 @@ export const CentralDataService = {
     CentralDataService.saveTermLocks(locks);
   },
 
-  // ── Generic Access ────────────────────────────────────────────────────────
-  getData: <T>(key: string, fallback: T): T => readStorage<T>(key, fallback),
-  setData: <T>(key: string, value: T): void => {
-    writeStorage(key, value);
-  },
+  // ── Generic Access ────────────────────────────────────────────────
 
-  // ── Snapshot & Sync ───────────────────────────────────────────────────────
-  /**
-   * Generates a full snapshot of all unified storage for APK export or backup.
-   */
+  getData: <T>(key: string, fallback: T): T => readStorage<T>(key, fallback),
+  setData: <T>(key: string, value: T): void => { writeStorage(key, value); },
+
+  // ── Snapshot & Sync ───────────────────────────────────────────────
+
   generateFullSnapshot: async () => {
     const data: Record<string, any> = {};
     const keys = Object.values(STORAGE_KEYS);
-    
-    for (const key of keys) {
-      data[key] = readStorage(key, null);
-    }
+    for (const key of keys) { data[key] = readStorage(key, null); }
 
     const exportObject = {
       students: data[STORAGE_KEYS.STUDENTS] || [],
@@ -255,34 +237,30 @@ export const CentralDataService = {
         { id: 's5', name: 'Staff Member 3', role: 'Support', type: 'Non-Teaching', status: 'Active' },
         { id: 's6', name: 'Staff Member 4', role: 'Support', type: 'Non-Teaching', status: 'Active' },
         { id: 's7', name: 'Staff Member 5', role: 'Support', type: 'Non-Teaching', status: 'Active' },
-        { id: 's8', name: 'Staff Member 6', role: 'Support', type: 'Non-Teaching', status: 'Active' }
+        { id: 's8', name: 'Staff Member 6', role: 'Support', type: 'Non-Teaching', status: 'Active' },
       ],
       exams: data[STORAGE_KEYS.MARKS] || [],
       libraryBooks: [],
-      transactions: data[STORAGE_KEYS.TRANSACTIONS] || []
+      transactions: data[STORAGE_KEYS.TRANSACTIONS] || [],
     };
 
     return `export const initialSeedData = ${JSON.stringify(exportObject, null, 2)};\n\n(initialSeedData as any).learners = initialSeedData.students;\n\nexport const INITIAL_SEED_DATA = initialSeedData;\nexport const DEFAULT_CBC_CLUSTERS = [];\nexport const buildDefaultClusters = () => [];\nexport const strandCategories = [];\nexport const gradeLevels = [];\nexport const ContentItem = {};\nexport const StrandCategory = {};\nexport const MemoryVerse = {};\nexport const RevisionQuestion = {};\nexport const Attachment = {};\nexport const AssessmentType = {};\nexport const assessmentTypeOptions = [];\n\nexport const mockLearners = initialSeedData.students;\nexport const mockStudents = initialSeedData.students;\nexport const mockStaff = initialSeedData.staff;\nexport const mockExams = initialSeedData.exams;\nexport const mockLibrary = initialSeedData.libraryBooks;\nexport const mockFinances = initialSeedData.transactions;\n\nexport const cbcStudyContent = [];\nexport const cbcStudyMaterials = cbcStudyContent;\nexport const cbcCurriculum = [];\n\nexport default initialSeedData;\n`;
   },
 
-  /**
-   * Restores a full snapshot into unified storage.
-   */
   restoreSnapshot: async (snapshot: string) => {
     try {
       const data = JSON.parse(snapshot);
-      Object.entries(data).forEach(([key, value]) => {
-        writeStorage(key, value);
-      });
+      Object.entries(data).forEach(([key, value]) => { writeStorage(key, value); });
       return true;
     } catch (e) {
-      console.error("Failed to restore snapshot", e);
+      console.error('Failed to restore snapshot', e);
       return false;
     }
-  }
+  },
 };
 
-// Re-export shorthand functions
+// ─── Re-export shorthand functions ───────────────────────────────────
+
 export const getLearners = CentralDataService.getLearners;
 export const saveLearners = CentralDataService.saveLearners;
 export const getStudents = CentralDataService.getStudents;
