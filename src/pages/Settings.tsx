@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
+import SecurityAuthTab from '@/components/settings/SecurityAuthTab';
 import { 
   Building, 
   Lock, 
@@ -362,34 +363,7 @@ export default function Settings() {
 
         {/* 4. Security & Auth */}
         <TabsContent value="security" className="space-y-6">
-          <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
-            <CardHeader className="px-0 pt-0 pb-6 border-b">
-              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Shield className="text-indigo-600" size={22} /> Security & Authentication
-              </CardTitle>
-              <CardDescription>Configure encryption, session timeouts, and authentication policies.</CardDescription>
-            </CardHeader>
-            <CardContent className="px-0 pt-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Session Timeout</Label>
-                  <Input value={settings.authSessionTimeout} onChange={e => setSettings({...settings, authSessionTimeout: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Max Upload Limit</Label>
-                  <Input value={settings.maxUploadSize} onChange={e => setSettings({...settings, maxUploadSize: e.target.value})} />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
-                <div>
-                  <h4 className="font-bold text-slate-900">Local Storage Encryption</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Encrypt sensitive persistent store records on device.</p>
-                </div>
-                <Switch checked={settings.encryptionEnabled} onCheckedChange={(val) => setSettings({...settings, encryptionEnabled: val})} />
-              </div>
-            </CardContent>
-          </Card>
+          <SecurityAuthTab />
         </TabsContent>
 
         {/* 5. Database & Backups */}
