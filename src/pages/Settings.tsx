@@ -16,11 +16,8 @@ import {
   Server,
   Shield,
   Bell,
-  Sliders,
-  Globe,
-  Key,
   Users,
-  HardDrive
+  Key
 } from 'lucide-react';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
@@ -42,6 +39,10 @@ interface SystemSettings {
   studentPortalAccess: boolean;
   teacherPortalAccess: boolean;
   maxUploadSize: string;
+  rbacAdminAccess: boolean;
+  rbacTeacherRole: string;
+  authSessionTimeout: string;
+  encryptionEnabled: boolean;
 }
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -61,6 +62,10 @@ const DEFAULT_SETTINGS: SystemSettings = {
   studentPortalAccess: true,
   teacherPortalAccess: true,
   maxUploadSize: "50 MB",
+  rbacAdminAccess: true,
+  rbacTeacherRole: "Standard Instructor",
+  authSessionTimeout: "30 minutes",
+  encryptionEnabled: true,
 };
 
 export default function Settings() {
@@ -101,7 +106,8 @@ export default function Settings() {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-6 max-w-7xl mx-auto space-y-8 animate-in fade-in pb-20">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-6 max-w-7xl mx-auto space-y-8 animate-in fade-in pb-24">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 sm:p-8 rounded-3xl text-white shadow-xl">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -110,22 +116,35 @@ export default function Settings() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">System Settings & Preferences</h1>
-          <p className="text-indigo-200 text-sm mt-1">Manage institutional profile, academic calendars, portal controls, and persistent storage.</p>
+          <p className="text-indigo-200 text-sm mt-1">Manage institutional profile, academic setup, RBAC roles, security & auth, and database backups.</p>
         </div>
-        <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg gap-2">
+        <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg gap-2 shrink-0">
           {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Save All Changes
         </Button>
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="bg-white p-1.5 rounded-2xl shadow-sm border h-14 mb-8 flex flex-wrap gap-1">
-          <TabsTrigger value="profile" className="rounded-xl px-5 font-bold text-xs">School Profile</TabsTrigger>
-          <TabsTrigger value="academic" className="rounded-xl px-5 font-bold text-xs">Academic & Term Locks</TabsTrigger>
-          <TabsTrigger value="portals" className="rounded-xl px-5 font-bold text-xs">Portals & Access</TabsTrigger>
-          <TabsTrigger value="notifications" className="rounded-xl px-5 font-bold text-xs">Notifications</TabsTrigger>
-          <TabsTrigger value="storage" className="rounded-xl px-5 font-bold text-xs">Storage & Backups</TabsTrigger>
-        </TabsList>
+        {/* Scrollable sub-navigation container */}
+        <div className="w-full overflow-x-auto pb-2 mb-6">
+          <TabsList className="bg-white p-1.5 rounded-2xl shadow-sm border h-16 inline-flex min-w-max gap-1">
+            <TabsTrigger value="profile" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
+              <Building size={14} /> School Profile
+            </TabsTrigger>
+            <TabsTrigger value="academic" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
+              <Lock size={14} /> Academic Setup
+            </TabsTrigger>
+            <TabsTrigger value="rbac" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
+              <Users size={14} /> RBAC Roles
+            </TabsTrigger>
+            <TabsTrigger value="security" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
+              <Shield size={14} /> Security & Auth
+            </TabsTrigger>
+            <TabsTrigger value="storage" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
+              <Database size={14} /> Database & Backups
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* 1. School Profile */}
         <TabsContent value="profile" className="space-y-6">
@@ -163,12 +182,12 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* 2. Academic & Term Locks */}
+        {/* 2. Academic Setup */}
         <TabsContent value="academic" className="space-y-6">
           <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Lock className="text-indigo-600" size={22} /> Academic Calendar & Term Locks
+                <Lock className="text-indigo-600" size={22} /> Academic Setup & Term Locks
               </CardTitle>
               <CardDescription>Configure active term and auto-lock rules for archived grades.</CardDescription>
             </CardHeader>
@@ -199,20 +218,20 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* 3. Portals & Access */}
-        <TabsContent value="portals" className="space-y-6">
+        {/* 3. RBAC Roles */}
+        <TabsContent value="rbac" className="space-y-6">
           <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Users className="text-indigo-600" size={22} /> Portal Access Controls
+                <Users className="text-indigo-600" size={22} /> RBAC Roles & Permissions
               </CardTitle>
-              <CardDescription>Enable or restrict student and teacher portal accessibility across the network.</CardDescription>
+              <CardDescription>Define role-based access control and portal permissions.</CardDescription>
             </CardHeader>
             <CardContent className="px-0 pt-6 space-y-4">
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
                 <div>
                   <h4 className="font-bold text-slate-900">Student Portal Access</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Allow students to log in and view report cards and homework.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Allow students to log in and view report cards.</p>
                 </div>
                 <Switch checked={settings.studentPortalAccess} onCheckedChange={(val) => setSettings({...settings, studentPortalAccess: val})} />
               </div>
@@ -220,7 +239,7 @@ export default function Settings() {
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
                 <div>
                   <h4 className="font-bold text-slate-900">Teacher Portal Access</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Allow teaching staff to enter marks, attendance, and lesson plans.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Allow teaching staff to enter marks and attendance.</p>
                 </div>
                 <Switch checked={settings.teacherPortalAccess} onCheckedChange={(val) => setSettings({...settings, teacherPortalAccess: val})} />
               </div>
@@ -228,43 +247,46 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* 4. Notifications */}
-        <TabsContent value="notifications" className="space-y-6">
+        {/* 4. Security & Auth */}
+        <TabsContent value="security" className="space-y-6">
           <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Bell className="text-indigo-600" size={22} /> Notification Preferences
+                <Shield className="text-indigo-600" size={22} /> Security & Authentication
               </CardTitle>
-              <CardDescription>Configure automated SMS and email communication triggers.</CardDescription>
+              <CardDescription>Configure encryption, session timeouts, and authentication policies.</CardDescription>
             </CardHeader>
             <CardContent className="px-0 pt-6 space-y-4">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
-                <div>
-                  <h4 className="font-bold text-slate-900">SMS Notifications</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Send automated attendance and fee reminders via SMS gateway.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Session Timeout</Label>
+                  <Input value={settings.authSessionTimeout} onChange={e => setSettings({...settings, authSessionTimeout: e.target.value})} />
                 </div>
-                <Switch checked={settings.smsNotifications} onCheckedChange={(val) => setSettings({...settings, smsNotifications: val})} />
+                <div className="space-y-2">
+                  <Label>Max Upload Limit</Label>
+                  <Input value={settings.maxUploadSize} onChange={e => setSettings({...settings, maxUploadSize: e.target.value})} />
+                </div>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
                 <div>
-                  <h4 className="font-bold text-slate-900">Email Alerts</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Broadcast notices and report cards via email.</p>
+                  <h4 className="font-bold text-slate-900">Local Storage Encryption</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Encrypt sensitive persistent store records on device.</p>
                 </div>
-                <Switch checked={settings.emailAlerts} onCheckedChange={(val) => setSettings({...settings, emailAlerts: val})} />
+                <Switch checked={settings.encryptionEnabled} onCheckedChange={(val) => setSettings({...settings, encryptionEnabled: val})} />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* 5. Storage & Backups */}
+        {/* 5. Database & Backups */}
         <TabsContent value="storage" className="space-y-6">
           <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Database className="text-indigo-600" size={22} /> Central Storage & Sync
+                <Database className="text-indigo-600" size={22} /> Database & Backups
               </CardTitle>
-              <CardDescription>Permanent storage persistence status and cloud sync configurations.</CardDescription>
+              <CardDescription>Permanent storage persistence status and cloud backup configurations.</CardDescription>
             </CardHeader>
             <CardContent className="px-0 pt-6 space-y-6">
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
