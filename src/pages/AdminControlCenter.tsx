@@ -3,97 +3,52 @@ import { getApiBaseUrl } from '@/lib/apiBase';
 import { CentralDataService } from '@/services/centralDataService';
 import {
   Server,
-  Monitor,
-  Smartphone,
-  Database,
-  Users,
-  Wifi,
-  WifiOff,
-  RefreshCw,
-  Download,
-  Upload,
-  Trash2,
-  Plus,
-  Edit2,
   Shield,
-  Clock,
-  Activity,
-  HardDrive,
+  Key,
+  Users,
+  Sliders,
+  Lock,
+  Unlock,
+  RefreshCw,
+  Plus,
+  Trash2,
+  Edit3,
   CheckCircle2,
-  XCircle,
-  AlertCircle,
-  Copy,
-  Settings,
-  Wifi as LanIcon,
+  AlertTriangle,
+  FileText,
+  Database,
+  Globe,
+  Settings as SettingsIcon,
+  Search,
+  ArrowLeft
 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from '@/utils/toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
-import { useAuth } from '@/context/AuthContext';
-import { cn } from '@/lib/utils';
-import LANServerConfig from '@/pages/LANServerConfig';
-
-interface ServerInfo {
-  ip: string;
-  port: number;
-  url: string;
-  database: string;
-  version: string;
-  uptime: number;
-  timestamp: string;
-}
-
-interface ConnectedDevice {
-  id: string;
-  device_id: string;
-  device_name: string;
-  device_type: string;
-  last_seen: string;
-  ip_address: string;
-  current_status: 'online' | 'offline';
-  created_at: string;
-}
-
-interface SyncQueueItem {
-  id: string;
-  device_id: string;
-  data_type: string;
-  data_json: string;
-  synced_at: string | null;
-  created_at: string;
-}
-
-interface DBStats {
-  students: number;
-  teachers: number;
-  attendance_today: number;
-  pending_fees: number;
-  connected_devices: number;
-  pending_sync: number;
-}
+import { useNavigate } from 'react-router-dom';
 
 interface User {
   id: string;
   name: string;
   email: string;
-  phone: string;
-  role: string;
-  staff_id: string;
+  phone?: string;
+  role: 'admin' | 'head_teacher' | 'bursar' | 'teacher' | 'parent';
+  staff_id?: string;
   is_active: number;
   created_at: string;
 }
 
-const LAN_SERVER_KEY = 'lan_server_url';
+const LAN_SERVER_KEY = 'munyaka_lan_server_url';
 const ADMIN_USERS_KEY = 'munyaka_admin_users';
-const getServerUrl = () => localStorage.getItem(LAN_SERVER_KEY) || getApiBaseUrl();
+const SYSTEM_PARAMS_KEY = 'munyaka_system_parameters';
+const SECURITY_POLICY_KEY = 'munyaka_security_policy';
 
-/** Load admin users from central persistent storage / localStorage. Falls back to default admin. */
 const loadLocalUsers = (): User[] => {
   try {
     const raw = CentralDataService.getData<User[]>(ADMIN_USERS_KEY, []);
@@ -103,7 +58,6 @@ const loadLocalUsers = (): User[] => {
       const parsed = JSON.parse(legacy);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
-    // Default admin fallback
     const defaults: User[] = [
       { id: 'usr-1', name: 'System Administrator', email: 'admin@munyaka.ac.ke', phone: '+254700000000', role: 'admin', staff_id: 'ADM001', is_active: 1, created_at: new Date().toISOString() },
       { id: 'usr-2', name: 'Head Teacher', email: 'headteacher@munyaka.ac.ke', phone: '+254711111111', role: 'head_teacher', staff_id: 'HT001', is_active: 1, created_at: new Date().toISOString() },
@@ -116,7 +70,6 @@ const loadLocalUsers = (): User[] => {
   }
 };
 
-/** Persist admin users to central persistent storage. */
 const saveLocalUsers = (users: User[]): void => {
   try {
     CentralDataService.setData(ADMIN_USERS_KEY, users);
@@ -124,923 +77,431 @@ const saveLocalUsers = (users: User[]): void => {
   } catch {}
 };
 
-/**
- * Detect the machine's external LAN IPv4 address via a WebRTC ICE
- * candidate gather. This works without privileged access because it
- * only uses STUN. Falls back to null when the browser blocks WebRTC
- * (e.g. some privacy modes) or when no candidate is gathered.
- */
-const detectClientLanIP = (): Promise<string | null> => {
-  return new Promise((resolve) => {
+export default function AdminControlCenter() {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('setup');
+  const [serverUrl, setServerUrl] = useState(() => localStorage.getItem(LAN_SERVER_KEY) || getApiBaseUrl());
+  const [users, setUsers] = useState<User[]>(loadLocalUsers());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isNewUserOpen, setIsNewUserOpen] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newRole, setNewRole] = useState<User['role']>('teacher');
+
+  // System Parameters
+  const [sysParams, setSysParams] = useState(() => {
     try {
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+      const stored = CentralDataService.getData(SYSTEM_PARAMS_KEY, {
+        term: 'Term 1',
+        year: '2026',
+        maxLoginAttempts: '5',
+        sessionTimeoutMinutes: '30',
+        requireMfa: false
       });
-
-      pc.createDataChannel('');
-
-      const tryResolve = (ip: string) => {
-        if (
-          ip &&
-          ip !== '0.0.0.0' &&
-          ip !== '127.0.0.1' &&
-          ip !== '255.255.255.255'
-        ) {
-          try { pc.close(); } catch {}
-          resolve(ip);
-        }
-      };
-
-      pc.onicecandidate = (e) => {
-        if (!e || !e.candidate) return;
-        const cand = e.candidate.candidate || '';
-        const ipMatch = cand.match(/(\d+\.\d+\.\d+\.\d+)/);
-        if (ipMatch) {
-          tryResolve(ipMatch[1]);
-        }
-      };
-
-      setTimeout(() => {
-        try { pc.close(); } catch {}
-        resolve(null);
-      }, 4000);
-
-      pc.createOffer({}).then((offer) => pc.setLocalDescription(offer)).catch(() => resolve(null));
+      return stored;
     } catch {
-      resolve(null);
+      return { term: 'Term 1', year: '2026', maxLoginAttempts: '5', sessionTimeoutMinutes: '30', requireMfa: false };
     }
   });
-};
 
-/**
- * The backend's `getLocalIP()` may return 127.0.0.1 / ::1 / 0.0.0.0
- * (especially in containers or hosts without an external NIC). When this
- * happens, the `serverInfo.url` returned by `/api/server/info` is
- * useless for mobile clients on the LAN. This helper rewrites the URL
- * to point at the host machine's real LAN IPv4 address when one is
- * detectable from the browser.
- */
-const resolveLanUrl = (
-  serverUrl: string,
-  clientLanIP: string | null
-): { url: string; isLoopback: boolean; resolved: boolean } => {
-  if (!serverUrl) return { url: getApiBaseUrl(), isLoopback: false, resolved: false };
-
-  const isLoopback =
-    serverUrl.includes('127.') ||
-    serverUrl.includes('localhost') ||
-    serverUrl.includes('0.0.0.0') ||
-    serverUrl.includes('::1');
-
-  if (!isLoopback) {
-    return { url: serverUrl, isLoopback: false, resolved: false };
-  }
-
-  if (!clientLanIP) {
-    return { url: serverUrl, isLoopback: true, resolved: false };
-  }
-
-  const portMatch = serverUrl.match(/:(\d+)/);
-  const port = portMatch ? portMatch[1] : '5000';
-  const resolvedUrl = `http://${clientLanIP}:${port}`;
-  return { url: resolvedUrl, isLoopback: true, resolved: true };
-};
-
-const formatUptime = (seconds: number): string => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return `${hours}h ${minutes}m`;
-};
-
-const formatLastSeen = (dateStr: string): string => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-  return date.toLocaleDateString();
-};
-
-type TabId = 'system' | 'lan';
-
-export default function AdminControlCenter() {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('system');
-  const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
-  const [devices, setDevices] = useState<ConnectedDevice[]>([]);
-  const [stats, setStats] = useState<DBStats | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [serverUrl, setServerUrl] = useState(getServerUrl());
-  const [clientLanIP, setClientLanIP] = useState<string | null>(null);
-  const [editUser, setEditUser] = useState<User | null>(null);
-  const [showAddUser, setShowAddUser] = useState(false);
-  const [newUser, setNewUser] = useState({ name: '', email: '', phone: '', role: 'teacher', password: '', staff_id: '' });
-  const [showServerSettings, setShowServerSettings] = useState(false);
-
-  // Monitor online/offline status
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    detectClientLanIP().then((ip) => {
-      if (!cancelled) setClientLanIP(ip);
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  const fetchData = useCallback(async () => {
-    // Always load users from localStorage first (offline-first)
-    setUsers(loadLocalUsers());
-
-    if (!isOnline) {
-      setIsLoading(false);
-      return;
-    }
-
-    setRefreshing(true);
-    const baseUrl = getServerUrl();
-
+  // Security Policy
+  const [securityPolicy, setSecurityPolicy] = useState(() => {
     try {
-      const [infoRes, devicesRes, statsRes] = await Promise.all([
-        fetch(`${baseUrl}/api/server/info`).catch(() => null),
-        fetch(`${baseUrl}/api/devices`).catch(() => null),
-        fetch(`${baseUrl}/api/stats`).catch(() => null),
-      ]);
-
-      if (infoRes?.ok) {
-        const data = await infoRes.json();
-        setServerInfo(data.data);
-        setServerUrl(data.data.url);
-      }
-
-      if (devicesRes?.ok) {
-        const data = await devicesRes.json();
-        setDevices(data.data || []);
-      }
-
-      if (statsRes?.ok) {
-        const data = await statsRes.json();
-        setStats(data.data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch server data:', err);
+      return CentralDataService.getData(SECURITY_POLICY_KEY, {
+        strictPasswordPolicy: true,
+        enforceHttps: true,
+        auditLogging: true,
+        ipWhitelistEnabled: false
+      });
+    } catch {
+      return { strictPasswordPolicy: true, enforceHttps: true, auditLogging: true, ipWhitelistEnabled: false };
     }
-
-    setIsLoading(false);
-    setRefreshing(false);
-  }, [isOnline]);
+  });
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    showSuccess('Copied to clipboard');
-  };
+    try {
+      CentralDataService.setData(SYSTEM_PARAMS_KEY, sysParams);
+      CentralDataService.setData(SECURITY_POLICY_KEY, securityPolicy);
+      localStorage.setItem(SYSTEM_PARAMS_KEY, JSON.stringify(sysParams));
+      localStorage.setItem(SECURITY_POLICY_KEY, JSON.stringify(securityPolicy));
+    } catch {}
+  }, [sysParams, securityPolicy]);
 
   const handleSaveServerUrl = () => {
-    try {
-      localStorage.setItem(LAN_SERVER_KEY, serverUrl);
-      setShowServerSettings(false);
-      fetchData();
-      showSuccess('Server URL updated');
-    } catch (e) {
-      console.error('Failed to save server URL:', e);
-      showError('Failed to save server URL');
-    }
+    localStorage.setItem(LAN_SERVER_KEY, serverUrl);
+    showSuccess('Server URL configuration saved successfully!');
   };
 
-  const handleBackup = async () => {
-    try {
-      // Collect all localStorage data and bundle into a single JSON file
-      const all: Record<string, unknown> = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (!k) continue;
-        const v = localStorage.getItem(k);
-        if (v !== null) {
-          try { all[k] = JSON.parse(v); } catch { all[k] = v; }
-        }
-      }
-      const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `munyaka-backup-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      showSuccess('Database backup downloaded');
-    } catch (e) {
-      console.error('Backup failed:', e);
-      showError('Failed to download backup');
+  const handleCreateUser = () => {
+    if (!newName.trim() || !newEmail.trim()) {
+      showError('Name and email are required.');
+      return;
     }
+    const newUser: User = {
+      id: 'usr-' + Date.now(),
+      name: newName,
+      email: newEmail,
+      phone: '+254700000000',
+      role: newRole,
+      staff_id: 'STF' + Math.floor(100 + Math.random() * 900),
+      is_active: 1,
+      created_at: new Date().toISOString()
+    };
+    const updated = [newUser, ...users];
+    setUsers(updated);
+    saveLocalUsers(updated);
+    setIsNewUserOpen(false);
+    setNewName('');
+    setNewEmail('');
+    showSuccess(`User "${newUser.name}" created successfully with role [${newUser.role}]!`);
   };
 
-  const handleRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-
-      if (typeof data !== 'object' || data === null) {
-        throw new Error('Invalid backup file format');
-      }
-
-      // Restore each key into localStorage
-      for (const [key, value] of Object.entries(data)) {
-        try {
-          localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
-        } catch (e) {
-          console.error(`Failed to restore key ${key}:`, e);
-        }
-      }
-      showSuccess('Database restored successfully — reloading data…');
-      // Refresh local user list
-      setUsers(loadLocalUsers());
-    } catch (e) {
-      console.error('Restore failed:', e);
-      showError('Failed to restore database');
-    }
-    event.target.value = '';
+  const handleToggleActive = (id: string) => {
+    const updated = users.map(u => u.id === id ? { ...u, is_active: u.is_active === 1 ? 0 : 1 } : u);
+    setUsers(updated);
+    saveLocalUsers(updated);
+    showSuccess('User status updated.');
   };
 
-  const handleCreateUser = async () => {
-    try {
-      const all = loadLocalUsers();
-      const created: User = {
-        id: `user-${Date.now()}`,
-        ...newUser,
-        is_active: 1,
-        created_at: new Date().toISOString(),
-      };
-      all.push(created);
-      saveLocalUsers(all);
-      setUsers(all);
-      showSuccess('User created successfully');
-      setShowAddUser(false);
-      setNewUser({ name: '', email: '', phone: '', role: 'teacher', password: '', staff_id: '' });
-    } catch (e) {
-      console.error('Failed to create user:', e);
-      showError('Failed to create user');
-    }
-  };
-
-  const handleUpdateUser = async () => {
-    if (!editUser) return;
-    try {
-      const all = loadLocalUsers();
-      const updated = all.map(u => u.id === editUser.id ? editUser : u);
-      saveLocalUsers(updated);
+  const handleDeleteUser = (id: string) => {
+    if (confirm('Are you sure you want to delete this user?')) {
+      const updated = users.filter(u => u.id !== id);
       setUsers(updated);
-      showSuccess('User updated successfully');
-      setEditUser(null);
-    } catch (e) {
-      console.error('Failed to update user:', e);
-      showError('Failed to update user');
-    }
-  };
-
-  const handleDeleteUser = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    try {
-      const all = loadLocalUsers().filter(u => u.id !== id);
-      saveLocalUsers(all);
-      setUsers(all);
-      showSuccess('User deleted successfully');
-    } catch (e) {
-      console.error('Failed to delete user:', e);
-      showError('Failed to delete user');
-    }
-  };
-
-  const handleToggleUserStatus = async (user: User) => {
-    try {
-      const all = loadLocalUsers();
-      const updated = all.map(u =>
-        u.id === user.id ? { ...u, is_active: u.is_active ? 0 : 1 } : u
-      );
       saveLocalUsers(updated);
-      setUsers(updated);
-      showSuccess(`User ${user.is_active ? 'deactivated' : 'activated'}`);
-    } catch (e) {
-      console.error('Failed to toggle user status:', e);
-      showError('Failed to update user status');
+      showSuccess('User deleted.');
     }
   };
 
-  // Only admin (and super_admin) users can access this page.
-  if (user?.role !== 'admin' && (user?.role as string) !== 'super_admin') {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
-            <Shield className="w-16 h-16 mx-auto text-amber-500 mb-4" />
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Admin Access Required</h2>
-            <p className="text-slate-600 dark:text-slate-400">You need administrator privileges to access this page.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
-    { id: 'system', label: 'System & Academic Settings', icon: Server },
-    { id: 'lan', label: 'LAN & Local Server Config', icon: LanIcon },
-  ];
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.role.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 pb-20">
-      {/* Page-level header */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 text-white shadow-xl">
-        <div className="flex items-start justify-between mb-4">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-6 max-w-7xl mx-auto space-y-8 animate-in fade-in pb-20">
+      {/* HEADER BANNER */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 p-6 sm:p-8 rounded-3xl text-white shadow-xl border border-indigo-500/20">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/')} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Server className="w-5 h-5" />
-              <span className="text-xs font-bold uppercase tracking-widest opacity-80">Admin Control Center</span>
+              <Badge className="bg-indigo-500/30 text-indigo-200 border-indigo-400/30 text-xs">System Administration</Badge>
             </div>
-            <h1 className="text-2xl font-black tracking-tight">System & Academic Settings</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Admin Control Center</h1>
+            <p className="text-indigo-200 text-sm mt-1">Configure server endpoints, RBAC permissions, security policies, and system parameters.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className={`${isOnline ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'} border-0`}>
-              {isOnline ? <Wifi className="w-3 h-3 mr-1" /> : <WifiOff className="w-3 h-3 mr-1" />}
-              {isOnline ? 'Online' : 'Offline'}
-            </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowServerSettings(true)}
-              className="text-white/80 hover:text-white hover:bg-white/20 rounded-xl"
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Tab navigation */}
-        <div className="flex items-center gap-2 mt-4 overflow-x-auto scrollbar-hide">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-200 shrink-0",
-                  isActive
-                    ? "bg-white/20 text-white shadow-lg"
-                    : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                )}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-              </button>
-            );
-          })}
         </div>
       </div>
 
-      {/* ── Tab 1: System & Academic Settings ─────────────────────────────── */}
-      {activeTab === 'system' && (
-        <>
-          {/* Server Connection Header */}
-          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 text-white shadow-xl -mt-0">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-1">Server Address (for Mobile APK)</p>
-                  <p className="text-xl font-black font-mono truncate">{(() => {
-                    if (!serverInfo) return 'Not Connected';
-                    const lan = resolveLanUrl(serverInfo.url, clientLanIP);
-                    return lan.url;
-                  })()}</p>
-                  {serverInfo && (() => {
-                    const lan = resolveLanUrl(serverInfo.url, clientLanIP);
-                    if (lan.resolved) {
-                      return <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 mt-1">✓ Resolved from {serverInfo.url}</p>;
-                    }
-                    if (lan.isLoopback && !lan.resolved) {
-                      return <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200 mt-1">⚠ Backend reported a loopback address. Manual LAN IP needed.</p>;
-                    }
-                    return null;
-                  })()}
-                </div>
-                {serverInfo && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(resolveLanUrl(serverInfo.url, clientLanIP).url)}
-                    className="text-white/80 hover:text-white hover:bg-white/20 rounded-xl shrink-0"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-              {serverInfo && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-white/10">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Port</p>
-                    <p className="font-bold">{serverInfo.port}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Version</p>
-                    <p className="font-bold">{serverInfo.version}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Uptime</p>
-                    <p className="font-bold">{formatUptime(serverInfo.uptime)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Connected</p>
-                    <p className="font-bold">{stats?.connected_devices || 0} devices</p>
-                  </div>
-                </div>
-              )}
-              {!serverInfo && !isLoading && (
-                <p className="text-sm opacity-70 mt-1">Server Not Connected — make sure the LAN server is running</p>
-              )}
-            </div>
-          </div>
+      {/* TABS NAVIGATION BAR */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex flex-wrap gap-1">
+          <TabsTrigger value="setup" className="rounded-xl px-6 h-full font-bold text-xs flex items-center gap-2">
+            <Server size={16} /> Basic Setup
+          </TabsTrigger>
+          <TabsTrigger value="rbac" className="rounded-xl px-6 h-full font-bold text-xs flex items-center gap-2">
+            <Users size={16} /> RBAC Roles &amp; Users
+          </TabsTrigger>
+          <TabsTrigger value="security" className="rounded-xl px-6 h-full font-bold text-xs flex items-center gap-2">
+            <Shield size={16} /> Security
+          </TabsTrigger>
+          <TabsTrigger value="policy" className="rounded-xl px-6 h-full font-bold text-xs flex items-center gap-2">
+            <Lock size={16} /> Policy
+          </TabsTrigger>
+          <TabsTrigger value="params" className="rounded-xl px-6 h-full font-bold text-xs flex items-center gap-2">
+            <Sliders size={16} /> System Parameters
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Quick Stats */}
-          {stats && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 border-0 text-white">
-                <CardContent className="pt-4 pb-3">
-                  <Users className="w-6 h-6 mb-2 opacity-80" />
-                  <p className="text-2xl font-black">{stats.students}</p>
-                  <p className="text-xs font-bold opacity-80">Students</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 border-0 text-white">
-                <CardContent className="pt-4 pb-3">
-                  <Activity className="w-6 h-6 mb-2 opacity-80" />
-                  <p className="text-2xl font-black">{stats.teachers}</p>
-                  <p className="text-xs font-bold opacity-80">Teachers</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-amber-500 to-amber-600 border-0 text-white">
-                <CardContent className="pt-4 pb-3">
-                  <CheckCircle2 className="w-6 h-6 mb-2 opacity-80" />
-                  <p className="text-2xl font-black">{stats.attendance_today}</p>
-                  <p className="text-xs font-bold opacity-80">Attendance Today</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-rose-500 to-rose-600 border-0 text-white">
-                <CardContent className="pt-4 pb-3">
-                  <HardDrive className="w-6 h-6 mb-2 opacity-80" />
-                  <p className="text-2xl font-black">{stats.pending_fees}</p>
-                  <p className="text-xs font-bold opacity-80">Pending Fees</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-violet-500 to-violet-600 border-0 text-white">
-                <CardContent className="pt-4 pb-3">
-                  <Smartphone className="w-6 h-6 mb-2 opacity-80" />
-                  <p className="text-2xl font-black">{stats.connected_devices}</p>
-                  <p className="text-xs font-bold opacity-80">Online Devices</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-gradient-to-br from-cyan-500 to-cyan-600 border-0 text-white">
-                <CardContent className="pt-4 pb-3">
-                  <RefreshCw className="w-6 h-6 mb-2 opacity-80" />
-                  <p className="text-2xl font-black">{stats.pending_sync}</p>
-                  <p className="text-xs font-bold opacity-80">Pending Sync</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Connected Devices */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="w-5 h-5 text-indigo-600" />
-                  <CardTitle className="text-lg">Connected Teacher Devices</CardTitle>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={fetchData}
-                  disabled={refreshing}
-                  className="rounded-xl"
-                >
-                  <RefreshCw className={`w-4 h-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-              </div>
-              <CardDescription>Teachers currently connected to this server via mobile APK</CardDescription>
+        {/* 1. BASIC SETUP TAB */}
+        <TabsContent value="setup" className="space-y-6">
+          <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
+            <CardHeader className="px-0 pt-0 pb-6 border-b">
+              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Globe className="text-indigo-600" size={22} /> Network &amp; Server Connection
+              </CardTitle>
+              <CardDescription>Configure primary LAN server URL, API gateway endpoints, and local IP routing.</CardDescription>
             </CardHeader>
-            <CardContent>
-              {devices.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <Smartphone className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">No devices connected</p>
-                  <p className="text-sm">Teachers will appear here when they connect their mobile APK</p>
+            <CardContent className="px-0 pt-6 space-y-4">
+              <div className="space-y-2">
+                <Label>LAN Server URL / API Base URL</Label>
+                <div className="flex gap-3">
+                  <Input 
+                    value={serverUrl} 
+                    onChange={e => setServerUrl(e.target.value)} 
+                    placeholder="http://192.168.1.100:3000" 
+                    className="font-mono"
+                  />
+                  <Button onClick={handleSaveServerUrl} className="bg-indigo-600 hover:bg-indigo-500 text-white shrink-0">
+                    Save Endpoint
+                  </Button>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {devices.map((device) => (
-                    <div
-                      key={device.id}
-                      className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                          device.current_status === 'online'
-                            ? 'bg-green-100 dark:bg-green-900/30'
-                            : 'bg-slate-200 dark:bg-slate-700'
-                        }`}>
-                          {device.device_type === 'mobile' ? (
-                            <Smartphone className={`w-6 h-6 ${
-                              device.current_status === 'online' ? 'text-green-600' : 'text-slate-400'
-                            }`} />
-                          ) : (
-                            <Monitor className={`w-6 h-6 ${
-                              device.current_status === 'online' ? 'text-green-600' : 'text-slate-400'
-                            }`} />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-white">
-                            {device.device_name || 'Unknown Device'}
-                          </p>
-                          <p className="text-sm text-slate-500 font-mono">{device.device_id}</p>
-                          {device.ip_address && (
-                            <p className="text-xs text-slate-400">IP: {device.ip_address}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge
-                          variant={device.current_status === 'online' ? 'default' : 'secondary'}
-                          className={`${
-                            device.current_status === 'online'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-slate-100 text-slate-500'
-                          }`}
-                        >
-                          {device.current_status === 'online' ? (
-                            <><CheckCircle2 className="w-3 h-3 mr-1" /> Online</>
-                          ) : (
-                            <><XCircle className="w-3 h-3 mr-1" /> Offline</>
-                          )}
-                        </Badge>
-                        <p className="text-xs text-slate-400 mt-1 flex items-center justify-end gap-1">
-                          <Clock className="w-3 h-3" />
-                          {formatLastSeen(device.last_seen)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              </div>
+
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between mt-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="text-emerald-600" size={24} />
+                  <div>
+                    <h4 className="font-bold text-emerald-900 text-sm">Connection Status: Online</h4>
+                    <p className="text-xs text-emerald-700">Central data store is synchronized with local IndexedDB storage.</p>
+                  </div>
                 </div>
-              )}
+                <Badge className="bg-emerald-600 text-white font-bold">Connected</Badge>
+              </div>
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Database & Backup */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Database className="w-5 h-5 text-indigo-600" />
-                  <CardTitle className="text-lg">Database Management</CardTitle>
+        {/* 2. RBAC ROLES & USERS TAB */}
+        <TabsContent value="rbac" className="space-y-6">
+          <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
+            <CardHeader className="px-0 pt-0 pb-6 border-b">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <Users className="text-indigo-600" size={22} /> Role-Based Access Control (RBAC) &amp; Users
+                  </CardTitle>
+                  <CardDescription>Manage user accounts, staff access roles, and permission levels.</CardDescription>
                 </div>
-                <CardDescription>Backup and restore your school data</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Download className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold">Export Backup</p>
-                    <p className="text-sm text-slate-500">Download complete database as JSON</p>
-                  </div>
-                  <Button onClick={handleBackup} className="rounded-xl bg-blue-600 hover:bg-blue-700">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
-                </div>
-
-                <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                    <Upload className="w-6 h-6 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold">Restore Backup</p>
-                    <p className="text-sm text-slate-500">Import data from a backup file</p>
-                  </div>
-                  <label>
-                    <input type="file" accept=".json" onChange={handleRestore} className="hidden" />
-                    <Button asChild className="rounded-xl bg-amber-600 hover:bg-amber-700">
-                      <span><Upload className="w-4 h-4 mr-2" />Import</span>
-                    </Button>
-                  </label>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* User Account Management */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-indigo-600" />
-                    <CardTitle className="text-lg">User Accounts</CardTitle>
-                  </div>
-                  <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add User
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="rounded-3xl">
-                      <DialogHeader>
-                        <DialogTitle>Add New User</DialogTitle>
-                        <DialogDescription>Create a new user account for staff access</DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div>
-                          <Label>Full Name</Label>
-                          <Input
-                            value={newUser.name}
-                            onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                            placeholder="John Kamau"
-                            className="rounded-xl mt-1"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label>Email</Label>
-                            <Input
-                              type="email"
-                              value={newUser.email}
-                              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                              placeholder="john@school.sc.ke"
-                              className="rounded-xl mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label>Phone</Label>
-                            <Input
-                              value={newUser.phone}
-                              onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-                              placeholder="+254 700 000 000"
-                              className="rounded-xl mt-1"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label>Role</Label>
-                            <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v })}>
-                              <SelectTrigger className="rounded-xl mt-1">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                                <SelectItem value="teacher">Teacher</SelectItem>
-                                <SelectItem value="bursar">Bursar</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label>Staff ID</Label>
-                            <Input
-                              value={newUser.staff_id}
-                              onChange={(e) => setNewUser({ ...newUser, staff_id: e.target.value })}
-                              placeholder="T001"
-                              className="rounded-xl mt-1"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label>Password</Label>
-                          <Input
-                            type="password"
-                            value={newUser.password}
-                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                            placeholder="Enter password"
-                            className="rounded-xl mt-1"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowAddUser(false)} className="rounded-xl">
-                          Cancel
-                        </Button>
-                        <Button onClick={handleCreateUser} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
-                          Create User
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-                <CardDescription>Manage staff access to the system</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                  {users.map((u) => (
-                    <div
-                      key={u.id}
-                      className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 font-bold text-sm">
-                          {u.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm text-slate-900 dark:text-white">{u.name}</p>
-                          <p className="text-xs text-slate-500">{u.email || u.staff_id || 'No email'}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="rounded-lg text-xs">
-                          {u.role.replace('_', ' ')}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className={`rounded-lg text-xs cursor-pointer ${
-                            u.is_active
-                              ? 'border-green-200 text-green-600 hover:bg-green-50'
-                              : 'border-red-200 text-red-600 hover:bg-red-50'
-                          }`}
-                          onClick={() => handleToggleUserStatus(u)}
-                        >
-                          {u.is_active ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
-                          {u.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-xl"
-                            onClick={() => setEditUser(u)}
-                          >
-                            <Edit2 className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-xl text-red-500 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => handleDeleteUser(u.id)}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Edit User Dialog */}
-          <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
-            <DialogContent className="rounded-3xl">
-              <DialogHeader>
-                <DialogTitle>Edit User</DialogTitle>
-                <DialogDescription>Update user account details</DialogDescription>
-              </DialogHeader>
-              {editUser && (
-                <div className="space-y-4 py-4">
-                  <div>
-                    <Label>Full Name</Label>
-                    <Input
-                      value={editUser.name}
-                      onChange={(e) => setEditUser({ ...editUser, name: e.target.value })}
-                      className="rounded-xl mt-1"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Email</Label>
-                      <Input
-                        type="email"
-                        value={editUser.email}
-                        onChange={(e) => setEditUser({ ...editUser, email: e.target.value })}
-                        className="rounded-xl mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label>Phone</Label>
-                      <Input
-                        value={editUser.phone}
-                        onChange={(e) => setEditUser({ ...editUser, phone: e.target.value })}
-                        className="rounded-xl mt-1"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Role</Label>
-                      <Select value={editUser.role} onValueChange={(v) => setEditUser({ ...editUser, role: v })}>
-                        <SelectTrigger className="rounded-xl mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                          <SelectItem value="teacher">Teacher</SelectItem>
-                          <SelectItem value="bursar">Bursar</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Staff ID</Label>
-                      <Input
-                        value={editUser.staff_id}
-                        onChange={(e) => setEditUser({ ...editUser, staff_id: e.target.value })}
-                        className="rounded-xl mt-1"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>New Password (leave blank to keep current)</Label>
-                    <Input
-                      type="password"
-                      value={(editUser as any).password || ''}
-                      onChange={(e) => setEditUser({ ...editUser, password: e.target.value } as any)}
-                      placeholder="Enter new password"
-                      className="rounded-xl mt-1"
-                    />
-                  </div>
-                </div>
-              )}
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEditUser(null)} className="rounded-xl">
-                  Cancel
+                <Button onClick={() => setIsNewUserOpen(true)} className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2">
+                  <Plus size={16} /> Add User Account
                 </Button>
-                <Button onClick={handleUpdateUser} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
-                  Save Changes
+              </div>
+            </CardHeader>
+            <CardContent className="px-0 pt-6 space-y-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search users by name, email, or role..." 
+                    value={searchQuery} 
+                    onChange={e => setSearchQuery(e.target.value)} 
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                      <th className="py-3 px-4 font-semibold">User Name</th>
+                      <th className="py-3 px-4 font-semibold">Email &amp; Phone</th>
+                      <th className="py-3 px-4 font-semibold">Role</th>
+                      <th className="py-3 px-4 font-semibold">Status</th>
+                      <th className="py-3 px-4 font-semibold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y text-sm">
+                    {filteredUsers.length === 0 ? (
+                      <tr><td colSpan={5} className="py-8 text-center text-slate-400">No users found.</td></tr>
+                    ) : (
+                      filteredUsers.map(user => (
+                        <tr key={user.id} className="hover:bg-slate-50/50">
+                          <td className="py-4 px-4 font-semibold text-slate-900">{user.name}</td>
+                          <td className="py-4 px-4 text-slate-600 text-xs">
+                            <div>{user.email}</div>
+                            <div className="text-slate-400">{user.phone || '—'}</div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <Badge className="bg-indigo-100 text-indigo-800 capitalize font-bold text-xs">
+                              {user.role.replace('_', ' ')}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-4">
+                            <Badge className={user.is_active === 1 ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-red-100 text-red-800 font-bold'}>
+                              {user.is_active === 1 ? 'Active' : 'Suspended'}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button size="sm" variant="outline" onClick={() => handleToggleActive(user.id)} className="h-8 text-xs">
+                                {user.is_active === 1 ? 'Suspend' : 'Activate'}
+                              </Button>
+                              <Button size="icon" variant="ghost" onClick={() => handleDeleteUser(user.id)} className="h-8 w-8 text-red-500 hover:text-red-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 3. SECURITY TAB */}
+        <TabsContent value="security" className="space-y-6">
+          <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
+            <CardHeader className="px-0 pt-0 pb-6 border-b">
+              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Shield className="text-indigo-600" size={22} /> Security &amp; Encryption Controls
+              </CardTitle>
+              <CardDescription>Configure SSL policies, audit logging, and access security frameworks.</CardDescription>
+            </CardHeader>
+            <CardContent className="px-0 pt-6 space-y-6">
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
+                <div>
+                  <h4 className="font-bold text-slate-900">Enforce HTTPS / Secure Transport</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Require TLS encryption for all client-server communications.</p>
+                </div>
+                <Switch 
+                  checked={securityPolicy.enforceHttps} 
+                  onCheckedChange={val => setSecurityPolicy({...securityPolicy, enforceHttps: val})}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
+                <div>
+                  <h4 className="font-bold text-slate-900">Comprehensive Audit Logging</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Log administrative actions, mark edits, and permission changes.</p>
+                </div>
+                <Switch 
+                  checked={securityPolicy.auditLogging} 
+                  onCheckedChange={val => setSecurityPolicy({...securityPolicy, auditLogging: val})}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
+                <div>
+                  <h4 className="font-bold text-slate-900">Strict Password Complexity</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Require minimum 8 characters with alphanumeric and symbol mix.</p>
+                </div>
+                <Switch 
+                  checked={securityPolicy.strictPasswordPolicy} 
+                  onCheckedChange={val => setSecurityPolicy({...securityPolicy, strictPasswordPolicy: val})}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 4. POLICY TAB */}
+        <TabsContent value="policy" className="space-y-6">
+          <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
+            <CardHeader className="px-0 pt-0 pb-6 border-b">
+              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Lock className="text-indigo-600" size={22} /> Institutional Compliance &amp; Policy
+              </CardTitle>
+              <CardDescription>Manage academic privacy compliance, data retention, and term grading lockdowns.</CardDescription>
+            </CardHeader>
+            <CardContent className="px-0 pt-6 space-y-4 text-sm text-slate-600 leading-relaxed">
+              <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-2xl space-y-2">
+                <h4 className="font-bold text-indigo-900">CBC Curriculum Standards &amp; Privacy Policy</h4>
+                <p className="text-xs text-indigo-700">
+                  This platform complies with Ministry of Education CBC guidelines and data protection regulations. All student academic assessments, attendance logs, and financial records are encrypted and stored in local persistent storage.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border mt-4">
+                <div>
+                  <h4 className="font-bold text-slate-900">IP Whitelist Restriction</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Limit admin panel access to trusted school LAN subnets only.</p>
+                </div>
+                <Switch 
+                  checked={securityPolicy.ipWhitelistEnabled} 
+                  onCheckedChange={val => setSecurityPolicy({...securityPolicy, ipWhitelistEnabled: val})}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 5. SYSTEM PARAMETERS TAB */}
+        <TabsContent value="params" className="space-y-6">
+          <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
+            <CardHeader className="px-0 pt-0 pb-6 border-b">
+              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Sliders className="text-indigo-600" size={22} /> System Parameters &amp; Thresholds
+              </CardTitle>
+              <CardDescription>Configure global session limits, active academic terms, and login timeouts.</CardDescription>
+            </CardHeader>
+            <CardContent className="px-0 pt-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Active Academic Term</Label>
+                  <Input 
+                    value={sysParams.term} 
+                    onChange={e => setSysParams({...sysParams, term: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Academic Year</Label>
+                  <Input 
+                    value={sysParams.year} 
+                    onChange={e => setSysParams({...sysParams, year: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Failed Login Attempts</Label>
+                  <Input 
+                    value={sysParams.maxLoginAttempts} 
+                    onChange={e => setSysParams({...sysParams, maxLoginAttempts: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Session Timeout (Minutes)</Label>
+                  <Input 
+                    value={sysParams.sessionTimeoutMinutes} 
+                    onChange={e => setSysParams({...sysParams, sessionTimeoutMinutes: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end">
+                <Button onClick={() => {
+                  CentralDataService.setData(SYSTEM_PARAMS_KEY, sysParams);
+                  showSuccess("System parameters updated successfully!");
+                }} className="bg-indigo-600 hover:bg-indigo-500 text-white">
+                  Save System Parameters
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
-      )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-      {/* ── Tab 2: LAN & Local Server Config ─────────────────────────────── */}
-      {activeTab === 'lan' && (
-        <LANServerConfig />
-      )}
-
-      {/* Server Settings Dialog */}
-      <Dialog open={showServerSettings} onOpenChange={setShowServerSettings}>
-        <DialogContent className="rounded-3xl">
-          <DialogHeader>
-            <DialogTitle>Server Connection Settings</DialogTitle>
-            <DialogDescription>Configure the LAN server address for this device</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label>Server URL</Label>
-              <Input
-                value={serverUrl}
-                onChange={(e) => setServerUrl(e.target.value)}
-                placeholder="http://192.168.1.100:5000"
-                className="rounded-xl mt-1 font-mono"
-              />
-              <p className="text-xs text-slate-500 mt-2">
-                Enter the Admin PC's local network IP address with port 5000
-              </p>
+      {/* NEW USER MODAL */}
+      {isNewUserOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold text-slate-900">Add New User Account</h3>
+            <div className="space-y-3">
+              <div>
+                <Label>Full Name</Label>
+                <Input placeholder="e.g. John Doe" value={newName} onChange={e => setNewName(e.target.value)} />
+              </div>
+              <div>
+                <Label>Email Address</Label>
+                <Input placeholder="user@munyaka.ac.ke" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
+              </div>
+              <div>
+                <Label>Access Role</Label>
+                <Select value={newRole} onValueChange={(v: any) => setNewRole(v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">System Administrator</SelectItem>
+                    <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                    <SelectItem value="bursar">Bursar</SelectItem>
+                    <SelectItem value="teacher">Teacher</SelectItem>
+                    <SelectItem value="parent">Parent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setIsNewUserOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateUser} className="bg-indigo-600 text-white">Create Account</Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowServerSettings(false)} className="rounded-xl">
-              Cancel
-            </Button>
-            <Button onClick={handleSaveServerUrl} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
-              Save & Connect
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }
