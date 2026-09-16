@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
 import { 
@@ -16,10 +17,13 @@ import {
   RefreshCw,
   Server,
   Shield,
-  Users
+  Users,
+  Check,
+  X
 } from 'lucide-react';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
+const RBAC_STORAGE_KEY = 'munyaka_rbac_permissions';
 
 interface SystemSettings {
   schoolName: string;
@@ -38,8 +42,6 @@ interface SystemSettings {
   studentPortalAccess: boolean;
   teacherPortalAccess: boolean;
   maxUploadSize: string;
-  rbacAdminAccess: boolean;
-  rbacTeacherRole: string;
   authSessionTimeout: string;
   encryptionEnabled: boolean;
 }
@@ -61,10 +63,37 @@ const DEFAULT_SETTINGS: SystemSettings = {
   studentPortalAccess: true,
   teacherPortalAccess: true,
   maxUploadSize: "50 MB",
-  rbacAdminAccess: true,
-  rbacTeacherRole: "Standard Instructor",
   authSessionTimeout: "30 minutes",
   encryptionEnabled: true,
+};
+
+const SYSTEM_ROLES = [
+  { id: 'admin', name: 'Administrators', description: 'Full access to institutional control center, staff records, and financial ledgers.' },
+  { id: 'teacher', name: 'Teachers', description: 'Access to mark entry, student attendance, lesson plans, and CBC assessments.' },
+  { id: 'bursar', name: 'Bursars', description: 'Access to fee collections, payment records, and financial summaries.' },
+  { id: 'librarian', name: 'Librarians', description: 'Access to library catalog, book checkouts, and e-resource inventories.' },
+  { id: 'ict_technician', name: 'ICT Technicians', description: 'Access to lab devices, digital literacy hubs, and network monitoring.' },
+  { id: 'developer', name: 'Platform Developers', description: 'Full access to multi-tenant configurations, schema migrations, and raw database backups.' }
+];
+
+const MODULE_PERMISSIONS = [
+  { id: 'dashboard', name: 'Dashboard & Overview' },
+  { id: 'admissions', name: 'Student Admissions & Profiles' },
+  { id: 'academics', name: 'Timetable & CBC Assessments' },
+  { id: 'finance', name: 'Fees & Financial Ledgers' },
+  { id: 'library', name: 'Library & E-Resources' },
+  { id: 'ict_labs', name: 'ICT Lab & Hardware Inventory' },
+  { id: 'communication', name: 'SMS & Email Communication' },
+  { id: 'settings', name: 'System Settings & RBAC' }
+];
+
+const DEFAULT_RBAC_MATRIX: Record<string, Record<string, boolean>> = {
+  admin: { dashboard: true, admissions: true, academics: true, finance: true, library: true, ict_labs: true, communication: true, settings: true },
+  teacher: { dashboard: true, admissions: false, academics: true, finance: false, library: true, ict_labs: true, communication: true, settings: false },
+  bursar: { dashboard: true, admissions: true, academics: false, finance: true, library: false, ict_labs: false, communication: true, settings: false },
+  librarian: { dashboard: true, admissions: false, academics: false, finance: false, library: true, ict_labs: false, communication: false, settings: false },
+  ict_technician: { dashboard: true, admissions: false, academics: false, finance: false, library: false, ict_labs: true, communication: false, settings: false },
+  developer: { dashboard: true, admissions: true, academics: true, finance: true, library: true, ict_labs: true, communication: true, settings: true }
 };
 
 export default function Settings() {
@@ -81,6 +110,19 @@ export default function Settings() {
     return DEFAULT_SETTINGS;
   });
 
+  const [rbacMatrix, setRbacMatrix] = useState<Record<string, Record<string, boolean>>>(() => {
+    try {
+      const central = CentralDataService.getData<Record<string, Record<string, boolean>>>(RBAC_STORAGE_KEY, {});
+      if (central && typeof central === 'object' && Object.keys(central).length > 0) return central;
+      const saved = localStorage.getItem(RBAC_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch {}
+    return DEFAULT_RBAC_MATRIX;
+  });
+
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -90,13 +132,32 @@ export default function Settings() {
     } catch {}
   }, [settings]);
 
+  useEffect(() => {
+    try {
+      CentralDataService.setData(RBAC_STORAGE_KEY, rbacMatrix);
+      localStorage.setItem(RBAC_STORAGE_KEY, JSON.stringify(rbacMatrix));
+    } catch {}
+  }, [rbacMatrix]);
+
+  const handlePermissionToggle = (roleId: string, moduleId: string) => {
+    setRbacMatrix(prev => ({
+      ...prev,
+      [roleId]: {
+        ...(prev[roleId] || {}),
+        [moduleId]: !prev[roleId]?.[moduleId]
+      }
+    }));
+  };
+
   const handleSave = () => {
     setIsSaving(true);
     setTimeout(() => {
       try {
         CentralDataService.setData(SETTINGS_STORAGE_KEY, settings);
+        CentralDataService.setData(RBAC_STORAGE_KEY, rbacMatrix);
         localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-        showSuccess("All system settings saved securely to permanent storage!");
+        localStorage.setItem(RBAC_STORAGE_KEY, JSON.stringify(rbacMatrix));
+        showSuccess("All system settings and RBAC permissions saved securely!");
       } catch (e) {
         showError("Failed to save settings.");
       }
@@ -248,30 +309,52 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* 3. RBAC Roles */}
+        {/* 3. RBAC Roles & Permissions Matrix */}
         <TabsContent value="rbac" className="space-y-6">
           <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b">
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Users className="text-indigo-600" size={22} /> RBAC Roles & Permissions
+                <Users className="text-indigo-600" size={22} /> RBAC Roles & Granular Permissions Matrix
               </CardTitle>
-              <CardDescription>Define role-based access control and portal permissions.</CardDescription>
+              <CardDescription>Configure module access permissions across all institutional system roles.</CardDescription>
             </CardHeader>
-            <CardContent className="px-0 pt-6 space-y-4">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
-                <div>
-                  <h4 className="font-bold text-slate-900">Student Portal Access</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Allow students to log in and view report cards.</p>
-                </div>
-                <Switch checked={settings.studentPortalAccess} onCheckedChange={(val) => setSettings({...settings, studentPortalAccess: val})} />
-              </div>
+            <CardContent className="px-0 pt-6 space-y-6">
+              <div className="space-y-6">
+                {SYSTEM_ROLES.map(role => (
+                  <div key={role.id} className="p-5 bg-slate-50/80 rounded-2xl border space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-slate-900 text-base">{role.name}</h4>
+                          <Badge variant="outline" className="font-mono text-xs uppercase">{role.id}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
+                      </div>
+                    </div>
 
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
-                <div>
-                  <h4 className="font-bold text-slate-900">Teacher Portal Access</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">Allow teaching staff to enter marks and attendance.</p>
-                </div>
-                <Switch checked={settings.teacherPortalAccess} onCheckedChange={(val) => setSettings({...settings, teacherPortalAccess: val})} />
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                      {MODULE_PERMISSIONS.map(mod => {
+                        const isAllowed = Boolean(rbacMatrix[role.id]?.[mod.id]);
+                        return (
+                          <div 
+                            key={mod.id} 
+                            onClick={() => handlePermissionToggle(role.id, mod.id)}
+                            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                              isAllowed 
+                                ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm' 
+                                : 'bg-white border-slate-200 text-slate-400 opacity-60 hover:opacity-100'
+                            }`}
+                          >
+                            <span className="text-xs font-bold truncate">{mod.name}</span>
+                            <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isAllowed ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                              {isAllowed ? <Check size={12} /> : <X size={12} />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
