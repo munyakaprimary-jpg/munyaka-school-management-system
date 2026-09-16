@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { showSuccess } from '@/utils/toast';
 import PromoteStudentsModal from '@/components/ui/PromoteStudentsModal';
+import { getStudents, setStudents as saveStudentsToStore } from '@/services/persistentStore';
+import { CentralDataService } from '@/services/centralDataService';
 
 // Modular Components
 import PromotionHeader from '@/components/promote/PromotionHeader';
@@ -14,67 +16,59 @@ import PromotionPreviewTable, { StudentPreview } from '@/components/promote/Prom
 import PromotionHistoryTable, { PromotionRecord } from '@/components/promote/PromotionHistoryTable';
 import SuccessMessage from '@/components/promote/SuccessMessage';
 
-// Types
 interface Student {
   id: string;
   name: string;
   grade: string;
   stream: string;
   status: 'Active' | 'Graduated' | 'Archived';
+  [key: string]: any;
 }
 
-// Mock data for students
-const MOCK_STUDENTS: Student[] = [
-  { id: "1", name: "Brian Kiptoo", grade: "Grade 6", stream: "Blue", status: "Active" },
-  { id: "2", name: "Mary Atieno", grade: "Grade 6", stream: "Blue", status: "Active" },
-  { id: "3", name: "Emmanuel Maina", grade: "Grade 6", stream: "Green", status: "Active" },
-  { id: "4", name: "Sheila Chepkoech", grade: "Grade 5", stream: "Alpha", status: "Active" },
-  { id: "5", name: "David Mutua", grade: "Grade 5", stream: "Alpha", status: "Active" },
-  { id: "6", name: "Grace Wanjiku", grade: "Grade 4", stream: "Beta", status: "Active" },
-  { id: "7", name: "Joseph Kariuki", grade: "Grade 4", stream: "Beta", status: "Active" },
-  { id: "8", name: "Faith Njeri", grade: "Grade 3", stream: "Alpha", status: "Active" },
-  { id: "9", name: "George Ochieng", grade: "Grade 3", stream: "Beta", status: "Active" },
-  { id: "10", name: "Helen Moraa", grade: "Grade 2", stream: "Alpha", status: "Active" },
-  { id: "11", name: "Samuel Kamau", grade: "Grade 2", stream: "Beta", status: "Active" },
-  { id: "12", name: "Winnie Achieng", grade: "Grade 1", stream: "Blue", status: "Active" },
-  { id: "13", name: "Peter Odhiambo", grade: "Grade 1", stream: "Green", status: "Active" },
-  { id: "14", name: "Jane Mwangi", grade: "Grade PP2", stream: "Yellow", status: "Active" },
-  { id: "15", name: "David Maina", grade: "Grade PP1", stream: "Yellow", status: "Active" },
-];
-
-const MOCK_STATS = {
-  totalStudents: 15,
-  activeStudents: 15,
-  graduatedStudents: 0,
-  studentsByGrade: [
-    { grade: "Grade PP1", count: 1 },
-    { grade: "Grade PP2", count: 1 },
-    { grade: "Grade 1", count: 2 },
-    { grade: "Grade 2", count: 2 },
-    { grade: "Grade 3", count: 2 },
-    { grade: "Grade 4", count: 2 },
-    { grade: "Grade 5", count: 2 },
-    { grade: "Grade 6", count: 2 },
-  ],
-  studentsByStream: [
-    { stream: "Blue", count: 3 },
-    { stream: "Green", count: 2 },
-    { stream: "Alpha", count: 3 },
-    { stream: "Beta", count: 2 },
-    { stream: "Yellow", count: 2 },
-  ]
-};
+const HISTORY_STORAGE_KEY = 'munyaka_promotion_history';
 
 const Promote = () => {
   const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
-  const [students, setStudents] = useState<Student[]>(MOCK_STUDENTS);
+  const [students, setStudents] = useState<Student[]>(() => {
+    try {
+      const raw = getStudents();
+      if (Array.isArray(raw) && raw.length > 0) {
+        return raw.map((s: any) => ({
+          id: s.id || String(Math.random()),
+          name: s.name || 'Unnamed Learner',
+          grade: s.grade || 'Grade 1',
+          stream: s.stream || 'Blue',
+          status: s.status || 'Active'
+        }));
+      }
+    } catch {}
+    return [];
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGrade, setFilterGrade] = useState('');
   const [filterStream, setFilterStream] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [activeTab, setActiveTab] = useState('preview');
-  const [promotionHistory, setPromotionHistory] = useState<PromotionRecord[]>([]);
+  
+  const [promotionHistory, setPromotionHistory] = useState<PromotionRecord[]>(() => {
+    try {
+      const central = CentralDataService.getData<PromotionRecord[]>(HISTORY_STORAGE_KEY, []);
+      if (central && Array.isArray(central)) return central;
+      const saved = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
+
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
+  useEffect(() => {
+    try {
+      CentralDataService.setData(HISTORY_STORAGE_KEY, promotionHistory);
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(promotionHistory));
+    } catch {}
+  }, [promotionHistory]);
 
   // Filter students based on search and filters
   const filteredStudents = useMemo(() => {
@@ -112,11 +106,12 @@ const Promote = () => {
   };
 
   const getHighestGrade = (): string => {
+    if (students.length === 0) return 'Grade 6';
     const maxGrade = Math.max(...students.map(s => {
       const match = s.grade.match(/Grade (\d+)/);
       return match ? parseInt(match[1]) : 0;
     }));
-    return `Grade ${maxGrade}`;
+    return `Grade ${maxGrade > 0 ? maxGrade : 6}`;
   };
 
   // Generate promotion preview
@@ -137,6 +132,9 @@ const Promote = () => {
   // Handle promotion execution
   const handlePromoteStudents = (promotedStudents: Student[]) => {
     setStudents(promotedStudents);
+    try {
+      saveStudentsToStore(promotedStudents);
+    } catch {}
     
     // Add to promotion history
     const promotionRecord: PromotionRecord = {
@@ -151,36 +149,51 @@ const Promote = () => {
       }))
     };
     
-    setPromotionHistory([promotionRecord, ...promotionHistory]);
+    const updatedHistory = [promotionRecord, ...promotionHistory];
+    setPromotionHistory(updatedHistory);
     setShowSuccessMessage(true);
+    showSuccess("Students promoted successfully in permanent storage!");
     
-    // Hide success message after 5 seconds
     setTimeout(() => setShowSuccessMessage(false), 5000);
   };
 
-  // Get promotion preview data
   const promotionPreview = getPromotionPreview();
 
-  // Prepare stats data
-  const statsData = {
-    totalStudents: MOCK_STATS.totalStudents,
-    activeStudents: MOCK_STATS.activeStudents,
-    graduatedStudents: MOCK_STATS.graduatedStudents,
-    highestGrade: getHighestGrade()
-  };
+  const statsData = useMemo(() => {
+    const active = students.filter(s => s.status === 'Active').length;
+    const graduated = students.filter(s => s.status === 'Graduated').length;
+    return {
+      totalStudents: students.length,
+      activeStudents: active,
+      graduatedStudents: graduated,
+      highestGrade: getHighestGrade()
+    };
+  }, [students]);
+
+  const gradeCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    students.forEach(s => {
+      map[s.grade] = (map[s.grade] || 0) + 1;
+    });
+    return Object.keys(map).map(grade => ({ grade, count: map[grade] }));
+  }, [students]);
+
+  const streamCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    students.forEach(s => {
+      if (s.stream) map[s.stream] = (map[s.stream] || 0) + 1;
+    });
+    return Object.keys(map).map(stream => ({ stream, count: map[stream] }));
+  }, [students]);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Success Message */}
       <SuccessMessage visible={showSuccessMessage} />
 
-      {/* Header */}
       <PromotionHeader onPromoteClick={() => setIsPromoteModalOpen(true)} />
 
-      {/* Warning Banner */}
       <WarningBanner />
 
-      {/* Tabs for Preview and History */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-full overflow-x-hidden">
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8 flex-wrap">
           <TabsTrigger value="preview" className="rounded-xl px-8 h-full font-bold text-xs">Promotion Preview</TabsTrigger>
@@ -188,10 +201,8 @@ const Promote = () => {
         </TabsList>
 
         <TabsContent value="preview" className="space-y-8">
-          {/* Statistics Cards */}
           <PromotionStats stats={statsData} />
 
-          {/* Filters */}
           <PromotionFilters
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
@@ -201,11 +212,10 @@ const Promote = () => {
             onStreamChange={setFilterStream}
             filterStatus={filterStatus}
             onStatusChange={setFilterStatus}
-            grades={MOCK_STATS.studentsByGrade}
-            streams={MOCK_STATS.studentsByStream}
+            grades={gradeCounts}
+            streams={streamCounts}
           />
 
-          {/* Promotion Preview Table */}
           <PromotionPreviewTable students={promotionPreview} />
         </TabsContent>
 
@@ -214,7 +224,6 @@ const Promote = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Promote Students Modal */}
       <PromoteStudentsModal
         isOpen={isPromoteModalOpen}
         onClose={() => setIsPromoteModalOpen(false)}
