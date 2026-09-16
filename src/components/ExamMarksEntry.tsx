@@ -113,7 +113,7 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
   const filteredLearners = useMemo(() => {
     if (!searchTerm.trim()) return learners;
     const q = searchTerm.toLowerCase();
-    return learners.filter(l => 
+    return learners.filter(l =>
       (l.name && l.name.toLowerCase().includes(q)) ||
       (l.admissionNumber && l.admissionNumber.toLowerCase().includes(q)) ||
       (l.admNo && l.admNo.toLowerCase().includes(q))
@@ -134,12 +134,6 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
             <span className="bg-amber-100 text-amber-800 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
               <Lock size={12} /> Locked / Read-Only
             </span>
-          </div>
-        </div>
-      )}
-            <p className="text-xs text-amber-700 mt-0.5">
-              This academic term has been locked in settings. Saving changes and editing marks are disabled.
-            </p>
           </div>
         </div>
       )}

@@ -41,7 +41,7 @@ const saveLocalNotices = (notices: NoticeRecord[]) => {
 import { showSuccess } from '@/utils/toast';
 
 const Notices = () => {
-  const [noticesList, setNoticesList] = useState<NoticeRecord[]>(initialNotices);
+  const [noticesList, setNoticesList] = useState<NoticeRecord[]>(loadLocalNotices());
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Notice");
@@ -50,7 +50,9 @@ const Notices = () => {
   const handlePostNotice = () => {
     if (!String(title || '').trim() || !String(content || '').trim()) return;
     const newNotice = { id: Date.now().toString(), title, content, date: "Just now", category, color: "bg-emerald-50 text-emerald-600" };
-    setNoticesList([newNotice, ...noticesList]);
+    const updated = [newNotice, ...noticesList];
+    setNoticesList(updated);
+    saveLocalNotices(updated);
     setIsOpen(false);
     setTitle(""); setContent("");
     showSuccess("New notice published successfully!");
