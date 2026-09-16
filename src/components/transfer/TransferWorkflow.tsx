@@ -704,10 +704,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       iframe.style.visibility = 'hidden';
       document.body.appendChild(iframe);
 
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      const iframeDoc = iframe?.contentDocument || iframe?.contentWindow?.document;
       if (!iframeDoc) {
         showError('Unable to prepare the certificate for printing. Please try again.');
-        iframe.remove();
+        iframe?.remove();
         return;
       }
 
@@ -732,14 +732,14 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       iframeDoc.close();
 
       // Remove the iframe from the DOM once the print dialog is dismissed
-      iframe.contentWindow?.addEventListener('afterprint', () => {
-        setTimeout(() => iframe.remove(), 100);
+      iframe?.contentWindow?.addEventListener('afterprint', () => {
+        setTimeout(() => iframe?.remove(), 100);
       });
 
       // Wait for the image inside the iframe to load before triggering the dialog
       setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
+        iframe?.contentWindow?.focus();
+        iframe?.contentWindow?.print();
       }, 300);
     } catch (err) {
       console.error('Print error:', err);

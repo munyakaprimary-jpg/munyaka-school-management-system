@@ -212,7 +212,7 @@ const ReportCards = () => {
     }
 
     // 5. Write the printable content into the iframe
-    const pw = printFrame.contentWindow;
+    const pw = printFrame?.contentWindow;
     const frameDoc = pw?.document;
     if (!frameDoc) {
       showError("Could not access print iframe document.");
@@ -304,12 +304,12 @@ const ReportCards = () => {
     }
 
     // 5. Write the printable content into the iframe
-    const pwAll = printFrame.contentWindow;
-    const frameDocAll = pwAll?.document;
-    if (!frameDocAll) {
-      showError("Could not access print iframe document.");
-      return;
-    }
+        const pwAll = printFrame?.contentWindow;
+        const frameDocAll = pwAll?.document;
+        if (!frameDocAll) {
+          showError("Could not access print iframe document.");
+          return;
+        }
     frameDocAll.open();
     frameDocAll.write(`
       <!DOCTYPE html>
