@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
 import { 
@@ -15,9 +16,7 @@ import {
   RefreshCw,
   Server,
   Shield,
-  Bell,
-  Users,
-  Key
+  Users
 } from 'lucide-react';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
@@ -195,15 +194,46 @@ export default function Settings() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Current Active Term</Label>
-                  <Input value={settings.currentTerm} onChange={e => setSettings({...settings, currentTerm: e.target.value})} />
+                  <Select value={settings.currentTerm} onValueChange={(val) => setSettings({...settings, currentTerm: val})}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select active term..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Term 1">Term 1</SelectItem>
+                      <SelectItem value="Term 2">Term 2</SelectItem>
+                      <SelectItem value="Term 3">Term 3</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
                 <div className="space-y-2">
                   <Label>Academic Year</Label>
-                  <Input value={settings.academicYear} onChange={e => setSettings({...settings, academicYear: e.target.value})} />
+                  <Select value={settings.academicYear} onValueChange={(val) => setSettings({...settings, academicYear: val})}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select academic year..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2024">2024 Academic Year</SelectItem>
+                      <SelectItem value="2025">2025 Academic Year</SelectItem>
+                      <SelectItem value="2026">2026 Academic Year</SelectItem>
+                      <SelectItem value="2027">2027 Academic Year</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Grading System Framework</Label>
-                  <Input value={settings.gradingSystem} onChange={e => setSettings({...settings, gradingSystem: e.target.value})} />
+                  <Select value={settings.gradingSystem} onValueChange={(val) => setSettings({...settings, gradingSystem: val})}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select grading framework..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CBC 4-Point (EE, ME, AE, BE)">CBC 4-Point (EE, ME, AE, BE)</SelectItem>
+                      <SelectItem value="Percentage (0-100%)">Percentage (0-100%)</SelectItem>
+                      <SelectItem value="Letter Grade (A, B, C, D, E)">Letter Grade (A, B, C, D, E)</SelectItem>
+                      <SelectItem value="Competency Rubric (Exceeds, Meets, Approaches, Below)">Competency Rubric (Exceeds, Meets, Approaches, Below)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
