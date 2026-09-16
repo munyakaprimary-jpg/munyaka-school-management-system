@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, Plus, Search, Filter, RefreshCw, CheckCircle2, 
-  AlertTriangle, Server, Database, HardDrive, Users, Key, 
-  Settings, Shield, ChevronDown, Check, Globe, Sliders, 
+import {
+  Building2, Plus, Search, Filter, RefreshCw, CheckCircle2,
+  AlertTriangle, Server, Database, HardDrive, Users, Key,
+  Settings, Shield, ChevronDown, Check, Globe, Sliders,
   Trash2, Edit3, Power, Zap, Cpu, Lock, Unlock, ArrowUpRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { TenantConfigModal, TenantFormData } from '@/components/TenantConfigModal';
+import { CentralDataService } from '@/services/centralDataService';
 
 export interface Tenant {
   id: string;
@@ -30,6 +31,7 @@ export interface Tenant {
 }
 
 const STORAGE_KEY = 'munyaka_multitenant_config';
+const ACTIVE_TENANT_KEY = 'munyaka_active_tenant_id';
 
 const INITIAL_TENANTS: Tenant[] = [
   {
@@ -93,20 +95,28 @@ const INITIAL_TENANTS: Tenant[] = [
 export default function OwnersDashboard() {
   const [tenants, setTenants] = useState<Tenant[]>(() => {
     try {
+      const central = CentralDataService.getData<Tenant[]>(STORAGE_KEY, []);
+      if (central && Array.isArray(central) && central.length > 0) return central;
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          CentralDataService.setData(STORAGE_KEY, parsed);
+          return parsed;
+        }
       }
     } catch (e) {
       console.error(e);
     }
+    CentralDataService.setData(STORAGE_KEY, INITIAL_TENANTS);
     return INITIAL_TENANTS;
   });
 
   const [activeTenantId, setActiveTenantId] = useState<string>(() => {
     try {
-      const savedActive = localStorage.getItem('munyaka_active_tenant_id');
+      const centralActive = CentralDataService.getData<string>(ACTIVE_TENANT_KEY, '');
+      if (centralActive) return centralActive;
+      const savedActive = localStorage.getItem(ACTIVE_TENANT_KEY);
       if (savedActive) return savedActive;
     } catch (e) {
       console.error(e);
@@ -122,6 +132,7 @@ export default function OwnersDashboard() {
   // Persist tenants and active tenant
   useEffect(() => {
     try {
+      CentralDataService.setData(STORAGE_KEY, tenants);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tenants));
     } catch (e) {
       console.error(e);
@@ -130,7 +141,8 @@ export default function OwnersDashboard() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('munyaka_active_tenant_id', activeTenantId);
+      CentralDataService.setData(ACTIVE_TENANT_KEY, activeTenantId);
+      localStorage.setItem(ACTIVE_TENANT_KEY, activeTenantId);
       const activeObj = tenants.find(t => t.id === activeTenantId);
       if (activeObj) {
         localStorage.setItem('munyaka_active_tenant_name', activeObj.name);

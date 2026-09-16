@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { MessageSquare, Mail, Send, History, UserCheck } from 'lucide-react';
-// Messages are managed through the app's communication flow.
+import { CentralDataService } from '@/services/centralDataService';
 interface MessageRecord {
   id: string;
   recipient: string;
@@ -22,14 +22,31 @@ interface MessageRecord {
   date: string;
   status: string;
 }
-const initialMessages: MessageRecord[] = [];
+const COMMUNICATION_STORAGE_KEY = 'munyaka_communication_logs';
+const loadLocalMessages = (): MessageRecord[] => {
+  try {
+    const raw = CentralDataService.getData<MessageRecord[]>(COMMUNICATION_STORAGE_KEY, []);
+    if (raw && raw.length > 0) return raw;
+    return [
+      { id: 'msg-1', recipient: 'All Parents', subject: 'Welcome to Term 1 Academic Year', type: 'Email', date: 'Yesterday', status: 'Opened' },
+      { id: 'msg-2', recipient: 'Grade 8 Parents', subject: 'KCPE / Junior Secondary Assessment Prep', type: 'SMS', date: '3 days ago', status: 'Delivered' }
+    ];
+  } catch {
+    return [];
+  }
+};
+const saveLocalMessages = (messages: MessageRecord[]) => {
+  try {
+    CentralDataService.setData(COMMUNICATION_STORAGE_KEY, messages);
+  } catch {}
+};
 import { showSuccess } from '@/utils/toast';
 import { useNotifications } from '@/components/ui/notification-provider'; // Import the notification hook
 
 const Communication = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("outreach");
-  const [messagesList, setMessagesList] = useState<MessageRecord[]>(initialMessages);
+  const [messagesList, setMessagesList] = useState<MessageRecord[]>(loadLocalMessages());
   const [isOpen, setIsOpen] = useState(false);
   const [msgType, setMsgType] = useState<'SMS' | 'Email'>('Email');
   const [recipient, setRecipient] = useState("All Parents");
@@ -51,7 +68,9 @@ const Communication = () => {
   const handleSend = () => {
     if (!String(subject || '').trim() || !String(body || '').trim()) return;
     const newMsg = { id: Date.now().toString(), recipient, subject, type: msgType, date: "Just now", status: msgType === 'SMS' ? "Delivered" : "Opened" };
-    setMessagesList([newMsg, ...messagesList]);
+    const updated = [newMsg, ...messagesList];
+    setMessagesList(updated);
+    saveLocalMessages(updated);
     setIsOpen(false);
     setSubject(""); setBody("");
     showSuccess(`${msgType} message broadcasted successfully!`);

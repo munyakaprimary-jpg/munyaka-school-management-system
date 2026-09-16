@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getApiBaseUrl } from '@/lib/apiBase';
+import { CentralDataService } from '@/services/centralDataService';
 import {
   Server,
   Monitor,
@@ -92,17 +93,35 @@ const LAN_SERVER_KEY = 'lan_server_url';
 const ADMIN_USERS_KEY = 'munyaka_admin_users';
 const getServerUrl = () => localStorage.getItem(LAN_SERVER_KEY) || getApiBaseUrl();
 
-/** Load admin users from localStorage. Falls back to empty array. */
+/** Load admin users from central persistent storage / localStorage. Falls back to default admin. */
 const loadLocalUsers = (): User[] => {
   try {
-    const raw = localStorage.getItem(ADMIN_USERS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+    const raw = CentralDataService.getData<User[]>(ADMIN_USERS_KEY, []);
+    if (raw && raw.length > 0) return raw;
+    const legacy = localStorage.getItem(ADMIN_USERS_KEY);
+    if (legacy) {
+      const parsed = JSON.parse(legacy);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+    // Default admin fallback
+    const defaults: User[] = [
+      { id: 'usr-1', name: 'System Administrator', email: 'admin@munyaka.ac.ke', phone: '+254700000000', role: 'admin', staff_id: 'ADM001', is_active: 1, created_at: new Date().toISOString() },
+      { id: 'usr-2', name: 'Head Teacher', email: 'headteacher@munyaka.ac.ke', phone: '+254711111111', role: 'head_teacher', staff_id: 'HT001', is_active: 1, created_at: new Date().toISOString() },
+      { id: 'usr-3', name: 'Bursar', email: 'bursar@munyaka.ac.ke', phone: '+254722222222', role: 'bursar', staff_id: 'BUR001', is_active: 1, created_at: new Date().toISOString() }
+    ];
+    CentralDataService.setData(ADMIN_USERS_KEY, defaults);
+    return defaults;
+  } catch {
+    return [];
+  }
 };
 
-/** Persist admin users to localStorage. */
+/** Persist admin users to central persistent storage. */
 const saveLocalUsers = (users: User[]): void => {
-  try { localStorage.setItem(ADMIN_USERS_KEY, JSON.stringify(users)); } catch {}
+  try {
+    CentralDataService.setData(ADMIN_USERS_KEY, users);
+    localStorage.setItem(ADMIN_USERS_KEY, JSON.stringify(users));
+  } catch {}
 };
 
 /**

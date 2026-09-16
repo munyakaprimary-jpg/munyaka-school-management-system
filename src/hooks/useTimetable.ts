@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
+import { CentralDataService } from '@/services/centralDataService';
 
 export interface TimeSlot {
   id: string;
@@ -78,6 +79,13 @@ const isTeachingStaffRecord = (record: any): boolean => {
 
 export const getTeachingStaffFromLocalStorage = (): TeachingStaffMember[] => {
   try {
+    const raw = CentralDataService.getData<any[]>('munyaka_staff', []);
+    if (Array.isArray(raw) && raw.length > 0) {
+      const filtered = raw.filter(isTeachingStaffRecord).filter((s: any) => s.id && s.name);
+      if (filtered.length > 0) {
+        return filtered.map((s: any) => ({ id: String(s.id), name: String(s.name) }));
+      }
+    }
     const ls = window.localStorage;
     if (!ls) return [];
     const keys = ['munyaka_staff', 'munyaka_staff_directory', 'munyaka_master_staff_list'];
@@ -101,6 +109,8 @@ export const getTeachingStaffFromLocalStorage = (): TeachingStaffMember[] => {
 
 const persistTimetable = (updated: Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>) => {
   try {
+    CentralDataService.setData(STORAGE_KEY, updated);
+    CentralDataService.setData(EXPORT_STORAGE_KEY, updated);
     const json = JSON.stringify(updated);
     const ls = window.localStorage;
     ls?.setItem(STORAGE_KEY, json);
@@ -190,21 +200,20 @@ export function useTimetable() {
 
   const [timetables, setTimetables] = useState<Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>>(() => {
     try {
+      const central = CentralDataService.getData<Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>>(STORAGE_KEY, {});
+      if (central && Object.keys(central).length > 0) return central;
+      const centralExport = CentralDataService.getData<Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>>(EXPORT_STORAGE_KEY, {});
+      if (centralExport && Object.keys(centralExport).length > 0) return centralExport;
+
       const ls = window.localStorage;
       const stored = ls?.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && typeof parsed === 'object') {
-          // Sync to export key for Central Data parity
-          ls?.setItem(EXPORT_STORAGE_KEY, stored);
+          CentralDataService.setData(STORAGE_KEY, parsed);
+          CentralDataService.setData(EXPORT_STORAGE_KEY, parsed);
           return parsed;
         }
-      }
-      // Fallback: read from export key
-      const exportStored = ls?.getItem(EXPORT_STORAGE_KEY);
-      if (exportStored) {
-        const parsed = JSON.parse(exportStored);
-        if (parsed && typeof parsed === 'object') return parsed;
       }
     } catch { /* ignore corrupt data */ }
     return {};

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { Megaphone, Calendar, Pin, Plus, Send } from 'lucide-react';
-// Notices are managed through the app's notice board flow.
+import { CentralDataService } from '@/services/centralDataService';
 interface NoticeRecord {
   id: string;
   title: string;
@@ -20,7 +20,24 @@ interface NoticeRecord {
   category: string;
   color: string;
 }
-const initialNotices: NoticeRecord[] = [];
+const NOTICES_STORAGE_KEY = 'munyaka_notices_board';
+const loadLocalNotices = (): NoticeRecord[] => {
+  try {
+    const raw = CentralDataService.getData<NoticeRecord[]>(NOTICES_STORAGE_KEY, []);
+    if (raw && raw.length > 0) return raw;
+    return [
+      { id: 'not-1', title: 'Opening Day for Term 1', content: 'All students are expected to report back by 8:00 AM sharp in full proper school uniform.', date: 'Today', category: 'Notice', color: 'bg-indigo-50 text-indigo-600' },
+      { id: 'not-2', title: 'Parent-Teacher Association AGM', content: 'Annual General Meeting for all parents and guardians to discuss school development and fee structures.', date: '2 days ago', category: 'Event', color: 'bg-emerald-50 text-emerald-600' }
+    ];
+  } catch {
+    return [];
+  }
+};
+const saveLocalNotices = (notices: NoticeRecord[]) => {
+  try {
+    CentralDataService.setData(NOTICES_STORAGE_KEY, notices);
+  } catch {}
+};
 import { showSuccess } from '@/utils/toast';
 
 const Notices = () => {
