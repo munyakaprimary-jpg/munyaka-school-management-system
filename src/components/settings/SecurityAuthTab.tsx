@@ -49,13 +49,6 @@ interface AuditLog {
   status: 'Success' | 'Warning' | 'Locked';
 }
 
-const INITIAL_AUDIT_LOGS: AuditLog[] = [
-  { id: 'LOG-101', timestamp: '2026-04-14 08:30:12', userRole: 'School Owner', userName: 'Director Kiprop', action: 'Geofence Radius Updated (100m)', status: 'Success' },
-  { id: 'LOG-102', timestamp: '2026-04-13 14:22:05', userRole: 'School Administrator', userName: 'System Admin', action: 'Admin Credentials Reset', status: 'Success' },
-  { id: 'LOG-103', timestamp: '2026-04-12 09:10:44', userRole: 'School Owner', userName: 'Director Kiprop', action: 'Grade Bounds Modified (CBC 4-Point)', status: 'Success' },
-  { id: 'LOG-104', timestamp: '2026-04-10 16:45:00', userRole: 'System Administrator', userName: 'System Admin', action: 'Idle Session Timeout Configured (30 mins)', status: 'Success' },
-];
-
 export default function SecurityAuthTab() {
   const [security, setSecurity] = useState<SecuritySettings>(() => {
     try {
@@ -76,15 +69,18 @@ export default function SecurityAuthTab() {
   const [ownerUsername, setOwnerUsername] = useState("director@munyaka.ac.ke");
   const [ownerPassword, setOwnerPassword] = useState("••••••••");
 
-  // Audit Logs state
+  // Real Audit Logs state (no mock data)
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
     try {
       const central = CentralDataService.getData<AuditLog[]>(AUDIT_LOGS_KEY, []);
-      if (central && central.length > 0) return central;
+      if (central && Array.isArray(central)) return central;
       const saved = localStorage.getItem(AUDIT_LOGS_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
     } catch {}
-    return INITIAL_AUDIT_LOGS;
+    return [];
   });
 
   // Leaflet Map Refs
@@ -92,6 +88,26 @@ export default function SecurityAuthTab() {
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerInstanceRef = useRef<L.Marker | null>(null);
   const circleInstanceRef = useRef<L.Circle | null>(null);
+
+  // Helper to log audit events
+  const logSecurityEvent = (role: string, name: string, actionText: string, status: 'Success' | 'Warning' | 'Locked' = 'Success') => {
+    const newLog: AuditLog = {
+      id: `SEC-${Date.now().toString().slice(-6)}`,
+      timestamp: new Date().toLocaleString(),
+      userRole: role,
+      userName: name,
+      action: actionText,
+      status
+    };
+    setAuditLogs(prev => {
+      const updated = [newLog, ...prev];
+      try {
+        CentralDataService.setData(AUDIT_LOGS_KEY, updated);
+        localStorage.setItem(AUDIT_LOGS_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
 
   useEffect(() => {
     try {
@@ -121,11 +137,14 @@ export default function SecurityAuthTab() {
 
       marker.on('dragend', () => {
         const pos = marker.getLatLng();
+        const lat = parseFloat(pos.lat.toFixed(6));
+        const lng = parseFloat(pos.lng.toFixed(6));
         setSecurity(prev => ({
           ...prev,
-          latitude: parseFloat(pos.lat.toFixed(6)),
-          longitude: parseFloat(pos.lng.toFixed(6))
+          latitude: lat,
+          longitude: lng
         }));
+        logSecurityEvent('System Administrator', adminUsername, `Campus Geofence Pin Dropped at (${lat}, ${lng})`);
       });
 
       // Add circle for geofence radius
@@ -176,6 +195,7 @@ export default function SecurityAuthTab() {
       }
       setIsLiveTracking(false);
       showSuccess("Live geolocation tracking paused.");
+      logSecurityEvent('System Administrator', adminUsername, 'Stopped Live GPS Tracking');
     } else {
       if (!navigator.geolocation) {
         showError("Geolocation is not supported by your browser.");
@@ -183,6 +203,7 @@ export default function SecurityAuthTab() {
       }
       setIsLiveTracking(true);
       showSuccess("Live geolocation tracking active — mapping movement in real-time.");
+      logSecurityEvent('System Administrator', adminUsername, 'Started Live GPS Tracking');
       
       watchIdRef.current = navigator.geolocation.watchPosition(
         (position) => {
@@ -205,19 +226,25 @@ export default function SecurityAuthTab() {
   };
 
   const handleSaveCredentials = (role: 'Admin' | 'Owner') => {
+    const roleTitle = role === 'Owner' ? 'School Owner' : 'School Administrator';
+    const name = role === 'Owner' ? ownerUsername : adminUsername;
     showSuccess(`${role} credentials updated securely in persistent storage!`);
-    const newLog: AuditLog = {
-      id: `LOG-${Date.now().toString().slice(-4)}`,
-      timestamp: new Date().toLocaleString(),
-      userRole: role === 'Owner' ? 'School Owner' : 'School Administrator',
-      userName: role === 'Owner' ? ownerUsername : adminUsername,
-      action: `${role} Login Credentials Reset`,
-      status: 'Success'
-    };
-    const updatedLogs = [newLog, ...auditLogs];
-    setAuditLogs(updatedLogs);
-    CentralDataService.setData(AUDIT_LOGS_KEY, updatedLogs);
-    localStorage.setItem(AUDIT_LOGS_KEY, JSON.stringify(updatedLogs));
+    logSecurityEvent(roleTitle, name, `${role} Login Credentials Reset`);
+  };
+
+  const handleRadiusChange = (radius: number) => {
+    setSecurity(prev => ({ ...prev, geofenceRadiusMeters: radius }));
+    logSecurityEvent('System Administrator', adminUsername, `Geofence Radius Updated (${radius}m)`);
+  };
+
+  const handleGeofenceToggle = (val: boolean) => {
+    setSecurity(prev => ({ ...prev, enforceGeofence: val }));
+    logSecurityEvent('System Administrator', adminUsername, `Geofence Enforcement ${val ? 'Enabled' : 'Disabled'}`);
+  };
+
+  const handleBypassToggle = (val: boolean) => {
+    setSecurity(prev => ({ ...prev, localhostBypass: val }));
+    logSecurityEvent('System Administrator', adminUsername, `Localhost GPS Bypass ${val ? 'Enabled' : 'Disabled'}`);
   };
 
   return (
@@ -305,7 +332,7 @@ export default function SecurityAuthTab() {
             </div>
             <Switch 
               checked={security.enforceGeofence} 
-              onCheckedChange={(val) => setSecurity({...security, enforceGeofence: val})} 
+              onCheckedChange={handleGeofenceToggle} 
             />
           </div>
 
@@ -343,7 +370,11 @@ export default function SecurityAuthTab() {
                 type="number" 
                 step="0.0001"
                 value={security.latitude} 
-                onChange={e => setSecurity({...security, latitude: parseFloat(e.target.value) || 0})} 
+                onChange={e => {
+                  const val = parseFloat(e.target.value) || 0;
+                  setSecurity({...security, latitude: val});
+                  logSecurityEvent('System Administrator', adminUsername, `Latitude Adjusted to ${val}`);
+                }} 
               />
             </div>
             <div className="space-y-2">
@@ -352,7 +383,11 @@ export default function SecurityAuthTab() {
                 type="number" 
                 step="0.0001"
                 value={security.longitude} 
-                onChange={e => setSecurity({...security, longitude: parseFloat(e.target.value) || 0})} 
+                onChange={e => {
+                  const val = parseFloat(e.target.value) || 0;
+                  setSecurity({...security, longitude: val});
+                  logSecurityEvent('System Administrator', adminUsername, `Longitude Adjusted to ${val}`);
+                }} 
               />
             </div>
           </div>
@@ -369,14 +404,14 @@ export default function SecurityAuthTab() {
               max="1000" 
               step="10"
               value={security.geofenceRadiusMeters}
-              onChange={e => setSecurity({...security, geofenceRadiusMeters: parseInt(e.target.value)})}
+              onChange={e => handleRadiusChange(parseInt(e.target.value))}
               className="w-full accent-indigo-600 cursor-pointer"
             />
             <div className="flex flex-wrap gap-2 pt-1">
               {[25, 50, 100, 150, 200, 500, 1000].map(m => (
                 <button
                   key={m}
-                  onClick={() => setSecurity({...security, geofenceRadiusMeters: m})}
+                  onClick={() => handleRadiusChange(m)}
                   className={`text-xs px-3 py-1.5 rounded-xl border font-bold transition-colors ${
                     security.geofenceRadiusMeters === m 
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
@@ -405,7 +440,7 @@ export default function SecurityAuthTab() {
             </div>
             <Switch 
               checked={security.localhostBypass} 
-              onCheckedChange={(val) => setSecurity({...security, localhostBypass: val})} 
+              onCheckedChange={handleBypassToggle} 
             />
           </div>
         </CardContent>
@@ -429,36 +464,42 @@ export default function SecurityAuthTab() {
         </CardHeader>
         <CardContent className="px-0 pt-6">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b bg-slate-50/80 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  <th className="py-3 px-4">Event ID / Timestamp</th>
-                  <th className="py-3 px-4">User Role & Name</th>
-                  <th className="py-3 px-4">Action Taken</th>
-                  <th className="py-3 px-4 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {auditLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-4 font-mono text-xs">
-                      <div className="font-bold text-slate-900">{log.id}</div>
-                      <div className="text-slate-400 text-[11px]">{log.timestamp}</div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="font-bold text-slate-900">{log.userName}</div>
-                      <div className="text-xs text-indigo-600">{log.userRole}</div>
-                    </td>
-                    <td className="py-4 px-4 text-slate-700">{log.action}</td>
-                    <td className="py-4 px-4 text-right">
-                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-xs font-bold">
-                        {log.status}
-                      </Badge>
-                    </td>
+            {auditLogs.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 font-medium text-sm">
+                No security events recorded yet.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="border-b bg-slate-50/80 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <th className="py-3 px-4">Event ID / Timestamp</th>
+                    <th className="py-3 px-4">User Role & Name</th>
+                    <th className="py-3 px-4">Action Taken</th>
+                    <th className="py-3 px-4 text-right">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {auditLogs.map(log => (
+                    <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-4 px-4 font-mono text-xs">
+                        <div className="font-bold text-slate-900">{log.id}</div>
+                        <div className="text-slate-400 text-[11px]">{log.timestamp}</div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="font-bold text-slate-900">{log.userName}</div>
+                        <div className="text-xs text-indigo-600">{log.userRole}</div>
+                      </td>
+                      <td className="py-4 px-4 text-slate-700">{log.action}</td>
+                      <td className="py-4 px-4 text-right">
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-xs font-bold">
+                          {log.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </CardContent>
       </Card>
