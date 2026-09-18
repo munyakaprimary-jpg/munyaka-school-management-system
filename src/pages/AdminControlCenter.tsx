@@ -229,8 +229,7 @@ type TabId = 'system' | 'lan';
 
 export default function AdminControlCenter() {
   const { user } = useAuth();
-  // Ensure default active tab is 'lan' since 'system' was removed
-  const [activeTab, setActiveTab] = useState<TabId>('lan');
+  const [activeTab, setActiveTab] = useState<TabId>('system');
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [devices, setDevices] = useState<ConnectedDevice[]>([]);
   const [stats, setStats] = useState<DBStats | null>(null);
@@ -468,6 +467,7 @@ export default function AdminControlCenter() {
   }
 
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
+    { id: 'system', label: 'System & Academic Settings', icon: Server },
     { id: 'lan', label: 'LAN & Local Server Config', icon: LanIcon },
   ];
 
@@ -501,7 +501,7 @@ export default function AdminControlCenter() {
         </div>
 
         {/* Tab navigation */}
-        <div className="flex items-center justify-center gap-2 mt-4">
+        <div className="flex items-center gap-2 mt-4 overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -509,13 +509,13 @@ export default function AdminControlCenter() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-base transition-all duration-200 w-full max-w-md shadow-lg",
+                  "flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm whitespace-nowrap transition-all duration-200 shrink-0",
                   isActive
-                    ? "bg-white/25 text-white shadow-xl ring-2 ring-white/30"
-                    : "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
+                    ? "bg-white/20 text-white shadow-lg"
+                    : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
                 )}
               >
-                <tab.icon size={20} />
+                <tab.icon size={16} />
                 {tab.label}
               </button>
             );
