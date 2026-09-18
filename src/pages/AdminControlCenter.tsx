@@ -287,19 +287,6 @@ export default function AdminControlCenter() {
         const data = await infoRes.json();
         setServerInfo(data.data);
         setServerUrl(data.data.url);
-      } else {
-        // Fallback health check if /api/server/info fails
-        const healthRes = await fetch(`${baseUrl}/api/health`).catch(() => null);
-        if (healthRes?.ok) {
-          const healthData = await healthRes.json().catch(() => ({}));
-          setServerInfo({
-            url: baseUrl,
-            port: '5000',
-            version: healthData.version || '1.0.0',
-            uptime: healthData.uptime || 0,
-            connected_clients: 0
-          });
-        }
       }
 
       if (devicesRes?.ok) {
