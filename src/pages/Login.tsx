@@ -188,7 +188,7 @@ const RoleCard: React.FC<RoleCardProps> = ({
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated, user } = useAuth();
+  const { login, isAuthenticated, user, setUser } = useAuth();
 
   // ── Cover page state ────────────────────────────────────────────────────
   const [showCover, setShowCover] = useState(true);
@@ -366,12 +366,19 @@ const Login: React.FC = () => {
           tsc_number: serverLoginResult.user.tsc_number,
           avatar: serverLoginResult.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
         };
-  
+
         try {
           localStorage.setItem('munyaka_session', JSON.stringify(userData));
         } catch { /* ignore */ }
-  
-        showSuccess(`Welcome, ${serverLoginResult.user.name}!`);
+
+        // Update AuthContext state synchronously so ProtectedRoute
+                // recognizes the authenticated state immediately and does not
+                // redirect back to /login (which caused the redirect loop).
+                if (setUser) {
+                  setUser({ ...userData, role: (userData.role as any) || 'teacher' });
+                }
+        
+                showSuccess(`Welcome, ${serverLoginResult.user.name}!`);
         navigate(getStaffRedirectPath(serverLoginResult.user.role || 'subject_teacher'), { replace: true });
         setIsStaffVerifying(false);
         return;
@@ -439,7 +446,14 @@ const Login: React.FC = () => {
           localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
         } catch { /* ignore */ }
 
-        console.log('[Login] Master staff ledger offline authentication successful:', {
+        // Update AuthContext state synchronously so ProtectedRoute
+                // recognizes the authenticated state immediately and does not
+                // redirect back to /login (which caused the redirect loop).
+                if (setUser) {
+                  setUser({ ...userData, role: (userData.role as any) || 'staff' });
+                }
+        
+                console.log('[Login] Master staff ledger offline authentication successful:', {
           name: userData.name,
           role: userData.role,
           staffId: userData.staff_id,

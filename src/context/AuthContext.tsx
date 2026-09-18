@@ -64,6 +64,10 @@ interface AuthContextType {
   isLoading: boolean;
   // Role switching for testing/admin purposes
   switchRole: (role: UserRole) => void;
+  // Direct session setter — used by login handlers that authenticate
+  // outside the standard login() flow (e.g. LAN server / offline auth)
+  // so the app recognizes the logged-in state immediately.
+  setUser: (user: User | null) => void;
 }
 
 interface RegisterData {
@@ -738,17 +742,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     showSuccess(`Switched to ${role.replace('_', ' ')} role`);
   };
 
+  // Direct session setter — used by login handlers that authenticate
+  // outside the standard login() flow (e.g. LAN server / offline auth)
+  // so the app recognizes the logged-in state immediately.
+  const setUserValue = (newUser: User | null) => {
+    if (newUser) {
+      localStorage.setItem('munyaka_session', JSON.stringify(newUser));
+      persistCurrentAuthRole(newUser.role);
+    } else {
+      localStorage.removeItem('munyaka_session');
+      persistCurrentAuthRole(null);
+    }
+    setUser(newUser);
+  };
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated: !!user, 
-      login, 
-      register, 
-      logout, 
-      updateProfile, 
-      updatePassword, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated: !!user,
+      login,
+      register,
+      logout,
+      updateProfile,
+      updatePassword,
       isLoading,
-      switchRole
+      switchRole,
+      setUser: setUserValue
     }}>
       {children}
     </AuthContext.Provider>

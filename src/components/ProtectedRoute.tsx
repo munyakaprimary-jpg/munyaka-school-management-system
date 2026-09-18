@@ -40,6 +40,22 @@ const ProtectedRoute = ({
   const { hasPermission } = usePermissions();
   const location = useLocation();
 
+  // Synchronous localStorage fallback check during render.
+  // This prevents a redirect loop when AuthContext state hasn't
+  // updated yet but a valid session exists in localStorage.
+  let hasLocalSession = false;
+  try {
+    const saved = localStorage.getItem('munyaka_session');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object' && parsed.role) {
+        hasLocalSession = true;
+      }
+    }
+  } catch {
+    hasLocalSession = false;
+  }
+
   if (isLoading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
@@ -48,7 +64,12 @@ const ProtectedRoute = ({
     );
   }
 
-  if (!isAuthenticated) {
+  // Allow access if AuthContext says authenticated OR a valid session
+  // exists in localStorage (covers the case where setUser was called
+  // directly outside the standard login flow).
+  const authenticated = isAuthenticated || hasLocalSession;
+
+  if (!authenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
