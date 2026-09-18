@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils';
 import { notifyServerUrlChanged } from '@/lib/apiBase';
 
 const LAN_SERVER_KEY = 'lan_server_url';
-const DEFAULT_LAN_URL = 'http://10.28.160.196:5000';
+const DEFAULT_LAN_URL = 'http://10.53.221.196:5000';
 
 type ConnectionStatus = 'connected' | 'offline' | 'testing' | 'starting' | 'stopping';
 type ServerProcessStatus = 'online' | 'offline' | 'starting' | 'stopping' | 'error';
@@ -153,7 +153,7 @@ export default function LANServerConfig() {
   const pingHealth = async (
     url: string
   ): Promise<{ ok: boolean; latency: number | null; stats: ServerStats | null; notRunning?: boolean }> => {
-    const normalized = normalizeUrl(url);
+    const normalized = normalizeUrl(url || 'http://10.53.221.196:5000');
     const start = Date.now();
     try {
       const controller = new AbortController();
