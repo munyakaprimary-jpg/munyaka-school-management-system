@@ -496,9 +496,11 @@ export default function AdminControlCenter() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/lan-config')}
+              onClick={() => {
+                setShowServerSettings(true);
+              }}
               className="text-white/80 hover:text-white hover:bg-white/20 rounded-xl"
-              title="LAN & Network Settings"
+              title="LAN Network Configuration"
             >
               <Settings className="w-4 h-4" />
             </Button>
@@ -993,10 +995,10 @@ export default function AdminControlCenter() {
         </>
       )}
 
-      {/* ── Tab 2: LAN & Local Server Config ─────────────────────────────── */}
-      {activeTab === 'lan' && (
+      {/* ── LAN & Local Server Config Section ─────────────────────────────── */}
+      <div id="lan-network-config-section">
         <LANServerConfig />
-      )}
+      </div>
 
       {/* Server Settings Dialog */}
       <Dialog open={showServerSettings} onOpenChange={setShowServerSettings}>
