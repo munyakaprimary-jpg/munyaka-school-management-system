@@ -493,17 +493,6 @@ export default function AdminControlCenter() {
               {isOnline ? <Wifi className="w-3 h-3 mr-1" /> : <WifiOff className="w-3 h-3 mr-1" />}
               {isOnline ? 'Online' : 'Offline'}
             </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setShowServerSettings(true);
-              }}
-              className="text-white/80 hover:text-white hover:bg-white/20 rounded-xl"
-              title="LAN Network Configuration"
-            >
-              <Settings className="w-4 h-4" />
-            </Button>
           </div>
         </div>
 
