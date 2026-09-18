@@ -632,12 +632,23 @@ const Staff = () => {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation *</Label>
-                <Input
+                <select
                   value={formData.role}
-                  onChange={e => handleRoleChange(e.target.value)}
-                  placeholder="e.g. TEACHER, LIBRARIAN, ADMINISTRATOR"
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                />
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                  required
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm h-12"
+                >
+                  <option value="TEACHER">TEACHER</option>
+                  <option value="SUBJECT TEACHER">SUBJECT TEACHER</option>
+                  <option value="CLASS TEACHER">CLASS TEACHER</option>
+                  <option value="ICT TEACHER">ICT TEACHER</option>
+                  <option value="ICT TECHNICIAN">ICT TECHNICIAN</option>
+                  <option value="LIBRARIAN">LIBRARIAN</option>
+                  <option value="LIBRARY TEACHER">LIBRARY TEACHER</option>
+                  <option value="ADMINISTRATOR">ADMINISTRATOR</option>
+                  <option value="DEPUTY HEAD TEACHER">DEPUTY HEAD TEACHER</option>
+                  <option value="HEAD TEACHER">HEAD TEACHER</option>
+                </select>
                 {formData.systemRole && (
                   <p className="text-xs text-slate-500 font-medium">
                     System role: <span className="font-bold text-indigo-600">{formData.systemRole}</span>
