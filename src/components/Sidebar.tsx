@@ -102,7 +102,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'librarian', 'library_teacher'] },
-    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student', 'parent', 'librarian', 'library_teacher'] },
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
@@ -125,7 +124,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
     if (isAdminRole) {
       return menuItems.filter(item => {
-        if (item.path === '/study-corner') return true;
         const itemRoles = item?.roles ?? [];
         if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
           return false;
@@ -139,7 +137,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
     if (roleLower === 'owner') {
       const roleFiltered = menuItems.filter(item => {
-        if (item.path === '/study-corner') return true;
         if (item?.global) return true;
         return (item?.roles || []).map((r: string) => String(r).toLowerCase()).includes('owner');
       });
@@ -166,13 +163,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     }
 
     if (roleLower === 'student' || roleLower === 'learner') {
-      const learnerPaths = ['/', '/attendance/students', '/reports', '/fees', '/study-corner', '/games'];
+      const learnerPaths = ['/', '/attendance/students', '/reports', '/fees', '/games'];
       const labels: Record<string, string> = {
         '/': 'Overview',
         '/attendance/students': 'Attendance',
         '/reports': 'Reports & Marksheets',
         '/fees': 'Fees',
-        '/study-corner': 'Study Corner',
         '/games': 'Games Hub',
       };
       const items = menuItems.filter(item => learnerPaths.includes(item.path));
@@ -193,7 +189,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
     if (isTeacher) {
       return menuItems.filter(item => {
-        if (item?.path === '/study-corner') return true;
         if (item?.global) return true;
         const itemRoles = (item?.roles || []).map((r: string) => String(r).toUpperCase());
         return (
@@ -220,7 +215,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
     if (isLibrarianRole(role, specialties)) {
       return menuItems.filter(item => {
-        if (item?.path === '/' || item?.path === '/games' || item?.path === '/library' || item?.path === '/study-corner') return true;
+        if (item?.path === '/' || item?.path === '/games' || item?.path === '/library') return true;
         return false;
       });
     }

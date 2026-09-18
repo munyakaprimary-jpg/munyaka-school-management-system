@@ -25,8 +25,7 @@ import {
   BookOpen,
   Loader2,
   X,
-  Gamepad2,
-  BookMarked
+  Gamepad2
 } from "lucide-react";
 import BilingualMatch from "@/components/games/BilingualMatch";
 import MemoryMatch from "@/components/games/MemoryMatch";
@@ -35,7 +34,6 @@ import SpeedMath from "@/components/games/SpeedMath";
 import SudokuMini from "@/components/games/SudokuMini";
 import TargetMath from "@/components/games/TargetMath";
 import WordScramble from "@/components/games/WordScramble";
-import StudyCorner from './StudyCorner';
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
 import { getStudents, getPaymentRecords, readStorage, STORAGE_KEYS } from '@/utils/storage';
@@ -351,7 +349,7 @@ const Dashboard = ({
   onLogout: () => void;
 }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'reports' | 'fees' | 'games' | 'study'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'reports' | 'fees' | 'games'>('overview');
 
   const attendance = useMemo(() => getAttendanceForStudent(session.studentId), [session.studentId]);
   const assessments = useMemo(() => getAssessmentScoresForStudent(session.studentId), [session.studentId]);
@@ -382,7 +380,6 @@ const Dashboard = ({
     { id: 'reports' as const, label: 'Reports', icon: FileText },
     { id: 'fees' as const, label: 'Fees', icon: Receipt },
     { id: 'games' as const, label: 'Games Hub', icon: Gamepad2 },
-    { id: 'study' as const, label: 'Study Corner', icon: BookMarked },
   ];
 
   return (
@@ -866,13 +863,6 @@ const Dashboard = ({
                 </CardContent>
               </Card>
             </div>
-          </div>
-        )}
-
-        {/* Study Corner Tab */}
-        {activeTab === 'study' && (
-          <div className="space-y-6">
-            <StudyCorner />
           </div>
         )}
       </div>
