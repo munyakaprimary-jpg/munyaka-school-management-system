@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Lock, User, ArrowRight, AlertCircle, KeyRound, GraduationCap, School } from "lucide-react";
+import { Shield, Lock, User, ArrowRight, AlertCircle, KeyRound, CheckCircle2 } from "lucide-react";
+import { getStaffMaster } from "@/services/staffMasterService";
 
 export const Login: React.FC = () => {
   const [identifier, setIdentifier] = useState("");
@@ -91,6 +92,7 @@ export const Login: React.FC = () => {
         throw new Error(data.error || 'Failed to update password');
       }
 
+      // Automatically log in with new password
       await login(identifier.trim(), newPassword);
       setShowPasswordResetModal(false);
     } catch (err: any) {
@@ -107,32 +109,19 @@ export const Login: React.FC = () => {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md z-10 space-y-6">
-        {/* School Branding Banner */}
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 text-white shadow-xl shadow-indigo-500/25 mb-1 ring-4 ring-indigo-500/20">
-            <School className="w-10 h-10" />
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-500/20 mb-2">
+            <Shield className="w-8 h-8" />
           </div>
-          <div className="space-y-1">
-            <span className="inline-block px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold tracking-wider uppercase mb-1">
-              CBC & Competency Based Education
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Munyaka Primary & Junior School
-            </h1>
-            <p className="text-sm font-medium text-slate-400">
-              Integrated School Management & Learning Portal
-            </p>
-          </div>
+          <h1 className="text-3xl font-black text-white tracking-tight">Munyaka System Portal</h1>
+          <p className="text-sm text-slate-400">Secure Authentication Gateway</p>
         </div>
 
         <Card className="border-slate-800 bg-slate-900/90 backdrop-blur-xl shadow-2xl">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
-              <Shield className="w-5 h-5 text-indigo-400" />
-              <span>Secure Portal Login</span>
-            </CardTitle>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-xl font-bold text-white">Sign In</CardTitle>
             <CardDescription className="text-slate-400">
-              Enter your credentials to access your authorized workspace
+              Enter your credentials to access your authorized portal
             </CardDescription>
           </CardHeader>
 
@@ -182,7 +171,7 @@ export const Login: React.FC = () => {
               </div>
             </CardContent>
 
-            <CardFooter className="pt-2">
+            <CardFooter>
               <Button
                 type="submit"
                 disabled={loading}
@@ -201,9 +190,8 @@ export const Login: React.FC = () => {
           </form>
         </Card>
 
-        <div className="text-center text-xs text-slate-500 space-y-1">
-          <p>Munyaka Primary & Junior School Management System</p>
-          <p className="text-slate-600">Protected by Role-Based Access Control (RBAC)</p>
+        <div className="text-center text-xs text-slate-500">
+          Protected by Role-Based Access Control (RBAC) & Secure Session Vault
         </div>
       </div>
 
