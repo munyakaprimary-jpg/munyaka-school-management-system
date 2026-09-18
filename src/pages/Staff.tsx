@@ -638,7 +638,6 @@ const Staff = () => {
                   required
                   className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm h-12"
                 >
-                  <option value="TEACHER">TEACHER</option>
                   <option value="SUBJECT TEACHER">SUBJECT TEACHER</option>
                   <option value="CLASS TEACHER">CLASS TEACHER</option>
                   <option value="ICT TEACHER">ICT TEACHER</option>
