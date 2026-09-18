@@ -496,9 +496,9 @@ export default function AdminControlCenter() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/admin/settings')}
+              onClick={() => navigate('/lan-config')}
               className="text-white/80 hover:text-white hover:bg-white/20 rounded-xl"
-              title="System Settings & Preferences"
+              title="LAN & Network Settings"
             >
               <Settings className="w-4 h-4" />
             </Button>
