@@ -845,126 +845,12 @@ const Login: React.FC = () => {
             {/* ── SUPPORT STAFF TAB ── */}
             <TabsContent value="support" className="mt-4">
               <div className="space-y-4">
-                {/* Role selection cards */}
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
-                  Select Your Role
-                </p>
-
-                {/* Non-Teaching Staff Card */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSupportRole('support_staff');
-                                    setStaffId('');
-                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                                  }}
-                                  className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-white hover:shadow-lg hover:border-orange-300 transition-all text-left group active:scale-[0.98]"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                      <Users size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-black text-slate-800">Non-Teaching Staff</div>
-                                      <div className="text-xs text-slate-500">General support &amp; administration</div>
-                                    </div>
-                                    <ArrowRight size={16} className="text-orange-400 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </button>
-                
-                                {/* Librarian Card */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSupportRole('librarian');
-                                    setStaffId('');
-                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                                  }}
-                                  className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-white hover:shadow-lg hover:border-orange-300 transition-all text-left group active:scale-[0.98]"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                      <BookOpen size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-black text-slate-800">Librarian</div>
-                                      <div className="text-xs text-slate-500">Library management &amp; resources</div>
-                                    </div>
-                                    <ArrowRight size={16} className="text-orange-400 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </button>
-                
-                                {/* Storekeeper Card */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSupportRole('storekeeper');
-                                    setStaffId('');
-                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                                  }}
-                                  className="w-full p-4 rounded-2xl border-2 border-yellow-200 bg-white hover:shadow-lg hover:border-yellow-300 transition-all text-left group active:scale-[0.98]"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                      <Package size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-black text-slate-800">Storekeeper</div>
-                                      <div className="text-xs text-slate-500">Inventory &amp; supplies management</div>
-                                    </div>
-                                    <ArrowRight size={16} className="text-yellow-400 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </button>
-                
-                                {/* Science Lab Assistant Card */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSupportRole('lab_assistant');
-                                    setStaffId('');
-                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                                  }}
-                                  className="w-full p-4 rounded-2xl border-2 border-teal-200 bg-white hover:shadow-lg hover:border-teal-300 transition-all text-left group active:scale-[0.98]"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                      <Beaker size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-black text-slate-800">Science Lab Assistant</div>
-                                      <div className="text-xs text-slate-500">Science lab &amp; materials management</div>
-                                    </div>
-                                    <ArrowRight size={16} className="text-teal-400 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </button>
-                
-                                {/* ICT Lab Technician Card */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSupportRole('ict_technician');
-                                    setStaffId('');
-                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                                  }}
-                                  className="w-full p-4 rounded-2xl border-2 border-violet-200 bg-white hover:shadow-lg hover:border-violet-300 transition-all text-left group active:scale-[0.98]"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                      <Monitor size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-black text-slate-800">ICT Lab Technician</div>
-                                      <div className="text-xs text-slate-500">IT systems &amp; technical support</div>
-                                    </div>
-                                    <ArrowRight size={16} className="text-violet-400 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </button>
-
                 {/* Login Form for Support Staff */}
-                <Card className="border-none shadow-lg rounded-2xl bg-white overflow-hidden mt-4">
+                <Card className="border-none shadow-lg rounded-2xl bg-white overflow-hidden mt-2">
                   <CardContent className="p-5 space-y-4">
                     <div className="text-center">
-                      <p className="text-xs text-slate-500 font-medium">Enter your credentials below</p>
+                      <h3 className="text-sm font-black text-slate-800">Support &amp; Staff Sign In</h3>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">Enter your credentials below</p>
                     </div>
                     
                     {staffAuthError && (
