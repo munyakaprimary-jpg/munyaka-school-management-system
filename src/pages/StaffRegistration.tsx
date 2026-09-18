@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,8 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
 import BackButton from '@/components/ui/BackButton';
 import { addStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
-// ─── Local-first staff storage ───────────────────────────────────────────────
 const STAFF_LOCAL_KEY = 'staff_local';
 
 export interface StaffRecord {
@@ -45,7 +43,6 @@ export const addLocalStaff = (record: StaffRecord) => {
   saveLocalStaff(list);
 };
 
-// ─── Optional backend sync (only if a URL is configured) ─────────────────────
 const BACKEND_URL_KEY = 'lan_server_url';
 
 const getConfiguredBackendUrl = (): string | null => {
@@ -57,35 +54,14 @@ const getConfiguredBackendUrl = (): string | null => {
   }
 };
 
-const tryBackendSync = async (endpoint: string, payload: unknown): Promise<boolean> => {
-  const baseUrl = getConfiguredBackendUrl();
-  if (!baseUrl) return false; // no backend configured — pure local-first
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 5000);
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    window.clearTimeout(timeoutId);
-    return response.ok;
-  } catch {
-    // Swallow network errors silently — local record is already saved
-    return false;
-  }
-};
-
-// ─── ID generator ────────────────────────────────────────────────────────────
 const generateId = () => `staff-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
 const StaffRegistration = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdTempCredentials, setCreatedTempCredentials] = useState<{ username: string; tempPassword: string; name: string; role: string } | null>(null);
+  const [showCredsModal, setShowCredsModal] = useState(false);
 
   const [formData, setFormData] = useState<StaffFormInput>({
     role: '',
@@ -114,152 +90,231 @@ const StaffRegistration = () => {
       createdAt: new Date().toISOString(),
     };
 
-    // ── 1. CRITICAL: write to staffMasterService FIRST — this is the single
-    //    source of truth used by Staff Directory and Access Master Ledger.
-    //    initializeStaffMaster() is idempotent so it's safe to call every time.
     try {
       initializeStaffMaster();
       addStaffMaster({
-        name: formData.fullName.trim(),
-        nationalId: `ID-${Date.now()}`,
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        tscNumber: formData.tscNumber?.trim() || undefined,
-        role: formData.role.toUpperCase().trim(),
-        systemRole: 'subject_teacher',
-        department: 'School Administration',
-        status: 'Pre-Registered',
+        id: staffId,
+        name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        nationalId: formData.tscNumber || `NAT-${Math.floor(100000 + Math.random() * 900000)}`,
+        role: formData.role || 'Teacher',
+        tscNumber: formData.tscNumber,
+        tempAccessCode: `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`,
+        schoolId: 'munyaka-sc',
+        status: 'Active'
       });
     } catch (err) {
       console.error('[StaffRegistration] staffMasterService sync failed:', err);
-      // Fall through: still write to local storage and navigate
     }
 
-    // ── 2. Local backup: also write to staff_local for legacy consumers ─────
     addLocalStaff(record);
 
-    // ── 3. Broadcast so all open listeners refresh immediately ─────────────────
-    window.dispatchEvent(new Event('staff-changed'));
+    let assignedTempPassword = '';
+    try {
+      const serverUrls = [
+        localStorage.getItem('munyaka_server_url') || '',
+        'http://localhost:5000',
+        'http://127.0.0.1:5000',
+        'http://localhost:32100'
+      ].filter(Boolean);
 
-    // ── 4. Optional backend sync (silent — no error UI on failure) ───────────
-    const synced = await tryBackendSync('/api/teachers', {
-      id: staffId,
-      full_name: record.fullName,
-      role: record.role.toUpperCase(),
-      phone: record.phone,
-      email: record.email,
-      tsc_number: record.tscNumber || null,
-      id_number: `ID-${Date.now()}`,
-      created_at: record.createdAt,
-    });
+      for (const baseUrl of Array.from(new Set(serverUrls))) {
+        try {
+          const apiRes = await fetch(`${baseUrl.replace(/\/$/, '')}/api/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: formData.email.split('@')[0],
+              email: formData.email,
+              name: formData.fullName,
+              role: formData.role.toUpperCase(),
+              staffCategory: 'TEACHING',
+              department: 'ACADEMIC'
+            })
+          });
+          const apiData = await apiRes.json();
+          if (apiRes.ok && apiData.success && apiData.tempPassword) {
+            assignedTempPassword = apiData.tempPassword;
+            break;
+          }
+        } catch (e) {}
+      }
+    } catch (e) {}
 
-    // ── 5. UI feedback ───────────────────────────────────────────────────────
-    toast({
-      title: synced ? "Staff registered" : "Staff saved locally",
-      description: synced
-        ? `${record.fullName} has been added successfully.`
-        : `${record.fullName} saved — will sync when the server is reachable.`,
-    });
+    if (!assignedTempPassword) {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      assignedTempPassword = `MUNYAKA-${rand}`;
+    }
 
     setIsSubmitting(false);
-    navigate('/staff');
+    setCreatedTempCredentials({
+      username: formData.email.split('@')[0],
+      tempPassword: assignedTempPassword,
+      name: formData.fullName,
+      role: formData.role.toUpperCase()
+    });
+    setShowCredsModal(true);
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex items-center gap-3">
-        <BackButton to="/staff" />
+    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+      <div className="flex items-center gap-4">
+        <BackButton />
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Staff Registration</h1>
-          <p className="text-muted-foreground">Onboard new teachers and administrative personnel.</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Staff Registration</h1>
+          <p className="text-sm text-slate-500">Register new staff member with auto-generated MUNYAKA-XXXX temporary credentials</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-          <CardHeader className="p-8 border-b">
-            <CardTitle>Personal Details</CardTitle>
-          </CardHeader>
-          <CardContent className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Role / Designation</Label>
-              <Select
-                required
-                value={formData.role}
-                onValueChange={(val) => handleChange('role', val)}
-              >
-                <SelectTrigger className="rounded-xl h-12 bg-slate-50/50 border-slate-100">
-                  <SelectValue placeholder="Select Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Class Teacher">Class Teacher</SelectItem>
-                  <SelectItem value="Senior Teacher">Senior Teacher</SelectItem>
-                  <SelectItem value="Administrator">Administrator</SelectItem>
-                  <SelectItem value="Support Staff">Support Staff</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input
-                placeholder="e.g. Jane Mwangi"
-                required
-                value={formData.fullName}
-                onChange={(e) => handleChange('fullName', e.target.value)}
-                className="rounded-xl h-12 bg-slate-50/50 border-slate-100"
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <Card className="border-slate-200/85 shadow-xl rounded-2xl overflow-hidden bg-white">
+        <CardHeader className="bg-slate-50 border-b border-slate-100 pb-6">
+          <CardTitle className="text-lg font-bold text-slate-800">Staff Details</CardTitle>
+        </CardHeader>
+        <CardContent className="p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="fullName" className="text-xs font-bold uppercase text-slate-600">Full Name *</Label>
+                <Input
+                  id="fullName"
+                  value={formData.fullName}
+                  onChange={e => handleChange('fullName', e.target.value)}
+                  placeholder="e.g. John Kamau"
+                  required
+                  className="rounded-xl border-slate-200 py-3"
+                />
+              </div>
 
-        <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-          <CardHeader className="p-8 border-b">
-            <CardTitle>Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Phone Number</Label>
-              <Input
-                placeholder="e.g. +254 700 000 000"
-                required
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                className="rounded-xl h-12 bg-slate-50/50 border-slate-100"
-              />
+              <div className="space-y-2">
+                <Label htmlFor="role" className="text-xs font-bold uppercase text-slate-600">Role *</Label>
+                <Select value={formData.role} onValueChange={val => handleChange('role', val)}>
+                  <SelectTrigger className="rounded-xl border-slate-200 py-3">
+                    <SelectValue placeholder="Select staff role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Teacher">Teacher</SelectItem>
+                    <SelectItem value="Head Teacher">Head Teacher</SelectItem>
+                    <SelectItem value="Accountant">Accountant</SelectItem>
+                    <SelectItem value="Store Manager">Store Manager</SelectItem>
+                    <SelectItem value="Admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-xs font-bold uppercase text-slate-600">Email Address *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={e => handleChange('email', e.target.value)}
+                  placeholder="john.kamau@munyaka.sc.ke"
+                  required
+                  className="rounded-xl border-slate-200 py-3"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-xs font-bold uppercase text-slate-600">Phone Number *</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={e => handleChange('phone', e.target.value)}
+                  placeholder="+254 712 345 678"
+                  required
+                  className="rounded-xl border-slate-200 py-3"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="tscNumber" className="text-xs font-bold uppercase text-slate-600">TSC Number / Staff ID (Optional)</Label>
+                <Input
+                  id="tscNumber"
+                  value={formData.tscNumber}
+                  onChange={e => handleChange('tscNumber', e.target.value)}
+                  placeholder="TSC-123456"
+                  className="rounded-xl border-slate-200 py-3"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Email Address</Label>
-              <Input
-                type="email"
-                placeholder="e.g. jane@munyaka.sc.ke"
-                required
-                value={formData.email}
-                onChange={(e) => handleChange('email', e.target.value)}
-                className="rounded-xl h-12 bg-slate-50/50 border-slate-100"
-              />
+
+            <div className="pt-6 border-t border-slate-100 flex justify-end gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate('/staff')}
+                className="rounded-xl px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-xl px-8 bg-blue-600 hover:bg-blue-500 text-white font-bold"
+              >
+                {isSubmitting ? 'Registering Staff...' : 'Register & Generate Credentials'}
+              </Button>
             </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label>TSC Number (Optional)</Label>
-              <Input
-                placeholder="e.g. TSC-123456"
-                value={formData.tscNumber}
-                onChange={(e) => handleChange('tscNumber', e.target.value)}
-                className="rounded-xl h-12 bg-slate-50/50 border-slate-100"
-              />
+          </form>
+        </CardContent>
+      </Card>
+
+      {showCredsModal && createdTempCredentials && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-slate-900 border border-emerald-500/30 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 p-6 border-b border-emerald-500/20 text-center">
+              <div className="w-14 h-14 bg-emerald-500/20 border border-emerald-500/40 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-400">
+                <CheckCircle2 size={28} />
+              </div>
+              <h2 className="text-xl font-bold text-white mb-1">Staff Member Created Successfully</h2>
+              <p className="text-sm text-slate-300">
+                Temporary login credentials have been generated. Issue these to {createdTempCredentials.name}.
+              </p>
             </div>
-          </CardContent>
-          <div className="p-8 pt-0 flex justify-end">
-            <Button
-              type="submit"
-              size="lg"
-              disabled={isSubmitting}
-              className="rounded-2xl px-10 h-14 bg-indigo-600 shadow-xl shadow-indigo-100"
-            >
-              {isSubmitting ? "Saving…" : "Register Staff Member"}
-            </Button>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-3 font-mono text-xs">
+                <div className="flex justify-between items-center py-1 border-b border-slate-900">
+                  <span className="text-slate-400 uppercase">Name:</span>
+                  <span className="text-white font-bold">{createdTempCredentials.name}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-900">
+                  <span className="text-slate-400 uppercase">Role:</span>
+                  <span className="text-amber-400 font-bold">{createdTempCredentials.role}</span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-900">
+                  <span className="text-slate-400 uppercase">Username:</span>
+                  <span className="text-emerald-400 font-bold">{createdTempCredentials.username}</span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-slate-400 uppercase">Temporary Password:</span>
+                  <span className="text-cyan-400 font-bold text-sm tracking-wider">{createdTempCredentials.tempPassword}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-300 flex items-start gap-2">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <span>
+                  The staff member will be required to change this temporary password upon their first login (<code className="font-mono">mustChangePassword: true</code>).
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCredsModal(false);
+                  setCreatedTempCredentials(null);
+                  navigate('/staff');
+                }}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all"
+              >
+                Done / Return to Staff List
+              </button>
+            </div>
           </div>
-        </Card>
-      </form>
+        </div>
+      )}
     </div>
   );
 };
