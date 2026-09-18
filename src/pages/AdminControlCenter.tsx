@@ -92,7 +92,7 @@ interface User {
 
 const LAN_SERVER_KEY = 'lan_server_url';
 const ADMIN_USERS_KEY = 'munyaka_admin_users';
-const getServerUrl = () => localStorage.getItem(LAN_SERVER_KEY) || getApiBaseUrl();
+const getServerUrl = () => localStorage.getItem(LAN_SERVER_KEY) || 'http://10.53.221.196:5000';
 
 /** Load admin users from central persistent storage / localStorage. Falls back to default admin. */
 const loadLocalUsers = (): User[] => {
@@ -278,11 +278,16 @@ export default function AdminControlCenter() {
     const baseUrl = getServerUrl();
 
     try {
-      const [infoRes, devicesRes, statsRes] = await Promise.all([
+      const [healthRes, infoRes, devicesRes, statsRes] = await Promise.all([
+        fetch(`${baseUrl}/api/health`).catch(() => null),
         fetch(`${baseUrl}/api/server/info`).catch(() => null),
         fetch(`${baseUrl}/api/devices`).catch(() => null),
         fetch(`${baseUrl}/api/stats`).catch(() => null),
       ]);
+
+      if (healthRes?.ok) {
+        setIsOnline(true);
+      }
 
       if (infoRes?.ok) {
         const data = await infoRes.json();
@@ -481,7 +486,7 @@ export default function AdminControlCenter() {
               <Server className="w-5 h-5" />
               <span className="text-xs font-bold uppercase tracking-widest opacity-80">Admin Control Center</span>
             </div>
-            <h1 className="text-2xl font-black tracking-tight">System & Academic Settings</h1>
+            <h1 className="text-2xl font-black tracking-tight">LAN & Network Management</h1>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className={`${isOnline ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'} border-0`}>
@@ -545,7 +550,7 @@ export default function AdminControlCenter() {
                     if (serverInfo && serverInfo.url && !serverInfo.url.includes('127.0.0.1') && !serverInfo.url.includes('localhost')) {
                       return serverInfo.url;
                     }
-                    return 'http://192.168.1.100:5000';
+                    return 'http://10.53.221.196:5000';
                   })()}</p>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 mt-1">✓ Connected (Active Wi-Fi LAN Server)</p>
                 </div>
