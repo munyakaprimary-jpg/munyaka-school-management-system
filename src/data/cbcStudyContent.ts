@@ -1,21 +1,42 @@
-import {
-  cbcStudyContent as cbc,
-  strandCategories as sc,
-  gradeLevels as gl,
-  ContentItem as CI,
-  StrandCategory as SC,
-  Attachment as Att,
-} from "./initialSeedData";
+export interface MemoryVerse {
+  id: string;
+  reference: string;
+  verse: string;
+}
 
-export const cbcStudyContent = cbc;
-export const strandCategories = sc;
-export const gradeLevels = gl;
-export const assessmentTypeOptions = [
-  { value: 'formative', label: 'Formative Assessment (AfA)' },
-  { value: 'summative', label: 'Summative Assessment' },
-  { value: 'project', label: 'Project-Based Assessment' },
-  { value: 'portfolio', label: 'Portfolio Assessment' }
-];
+export interface RevisionQuestion {
+  id: string;
+  question: string;
+  options?: string[];
+  answer: string;
+}
+
+export interface AttItem {
+  id: string;
+  title: string;
+  url: string;
+  type: string;
+}
+
+export type AssessmentType = 'quiz' | 'exam' | 'assignment';
+
+export interface CI {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export interface SC {
+  id: string;
+  name: string;
+}
+
+export interface Att {
+  id: string;
+  url: string;
+}
+
+export const cbcStudyContent = [];
 export type ContentItem = CI;
 export type StrandCategory = SC;
 export type Attachment = Att;
