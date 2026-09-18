@@ -154,10 +154,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       const ordered: typeof withDashboard = [];
       order.forEach(p => {
         const found = withDashboard.find((i: any) => i?.path === p);
-        if (found) ordered.push(found);
+        if (found && !ordered.includes(found)) ordered.push(found);
       });
       withDashboard.forEach((i: any) => {
         if (!ordered.includes(i)) ordered.push(i);
+      });
+      return ordered;
+    }
       });
       return ordered;
     }
