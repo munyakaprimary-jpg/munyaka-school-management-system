@@ -467,7 +467,7 @@ export default function AdminControlCenter() {
   }
 
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
-    { id: 'system', label: 'General & Academic Setup', icon: Server },
+    { id: 'system', label: 'System & Academic Settings', icon: Server },
     { id: 'lan', label: 'LAN & Local Server Config', icon: LanIcon },
   ];
 
@@ -547,7 +547,7 @@ export default function AdminControlCenter() {
                     }
                     return 'http://192.168.1.100:5000';
                   })()}</p>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 mt-1">{serverInfo ? '✓ CONNECTED (ACTIVE WI-FI LAN SERVER)' : 'Not Connected'}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 mt-1">✓ Connected (Active Wi-Fi LAN Server)</p>
                 </div>
                 {serverInfo && (
                   <Button
