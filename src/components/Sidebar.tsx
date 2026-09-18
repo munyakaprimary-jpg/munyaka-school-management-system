@@ -44,19 +44,17 @@ import {
   ChevronRight,
   Menu,
   X,
-  LogOut,
-  FlaskConical
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
+import { isTeacherRole, isIctRole, isLibrarianRole } from '@/utils/roleHelper';
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [showBottomNav, setShowBottomNav] = useState(true);
-  const lastScrollY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
@@ -65,68 +63,49 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   useMobileBackButton(isOpen, () => setIsOpen(false));
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!scrollContainerRef.current) return;
-      const currentScrollY = scrollContainerRef.current.scrollTop;
-      if (Math.abs(currentScrollY - lastScrollY.current) < 10) return;
-      if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
-        setShowBottomNav(false);
-      } else {
-        setShowBottomNav(true);
-      }
-      lastScrollY.current = currentScrollY;
-    };
-    const container = scrollContainerRef.current;
-    if (container) container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container?.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => setShowBottomNav(true), [location.pathname]);
-
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'bursar', 'parent', 'student', 'owner', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'] },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'owner', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'] },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
-    { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'bursar'] },
-    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
-    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
+    { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'] },
+    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: School, label: 'Developer Hub / Tenants', path: '/dev/tenants', roles: ['owner', 'admin'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
     { icon: User, label: 'Profile Settings', path: '/settings/profile', roles: ['admin', 'owner'] },
-    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
-    { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'bursar', 'parent', 'student'] },
-    { icon: Clock, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'parent', 'student'] },
+    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
+    { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student'] },
+    { icon: Clock, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
     { icon: CheckSquare, label: 'Attendance Management', path: '/attendance', roles: ['admin'] },
-    { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher'] },
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'teacher', 'class_teacher', 'head_teacher', 'bursar'] },
-    { icon: Fingerprint, label: 'Staff Attendance', path: '/staff/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'bursar'],
+    { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'bursar'] },
+    { icon: Fingerprint, label: 'Staff Attendance', path: '/staff/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'],
       subItems: [
         { label: 'Check In/Out', path: '/staff/check-in' },
         { label: 'Monitor', path: '/staff/attendance-monitor', roles: ['admin'] }
       ]
     },
-    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher'] },
-    { icon: FileText, label: 'Marked Scripts', path: '/assessments/marked-scripts', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher'] },
-    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'parent', 'student'] },
-    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'student'] },
+    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
+    { icon: FileText, label: 'Marked Scripts', path: '/assessments/marked-scripts', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
+    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
+    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student'] },
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'ict_teacher', 'ict_technician'] },
-    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher'] },
-    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher'] },
-    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'student'] },
+    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
+    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
+    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'librarian', 'library_teacher'] },
-    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'student', 'parent', 'librarian', 'library_teacher'] },
+    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student', 'parent', 'librarian', 'library_teacher'] },
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
-    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent', 'teacher', 'class_teacher'] },
-    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'parent', 'student'] },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent', 'teacher', 'class_teacher', 'subject_teacher'] },
+    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
     { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
     { icon: UserCheck, label: 'Staff Access Master', path: '/staff/access', roles: ['admin'] },
     { icon: Archive, label: 'Transferred Archive', path: '/transferred-archive', roles: ['admin'] },
@@ -137,6 +116,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const filteredMenu = React.useMemo(() => {
     const userObj = (user || {}) as Record<string, any>;
     const role = (userObj.role ?? '') as string;
+    const staffCategory = (userObj.staffCategory ?? '') as string;
+    const specialties = userObj.specialties;
     const roleLower = String(role).toLowerCase();
 
     const dashboardItem = menuItems.find(item => item.path === '/');
@@ -201,12 +182,19 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       }));
     }
 
-    if (roleLower === 'teacher' || roleLower === 'class_teacher') {
+    // ── Flexible Teacher / Subject Teacher / Head Teacher Helper check ─────
+    const isTeacher = isTeacherRole(role, staffCategory, specialties);
+    if (isTeacher) {
       return menuItems.filter(item => {
         if (item?.path === '/study-corner') return true;
         if (item?.global) return true;
         const itemRoles = (item?.roles || []).map((r: string) => String(r).toLowerCase());
-        return itemRoles.includes('teacher') || itemRoles.includes('class_teacher');
+        return (
+          itemRoles.includes('teacher') ||
+          itemRoles.includes('class_teacher') ||
+          itemRoles.includes('subject_teacher') ||
+          itemRoles.includes('head_teacher')
+        );
       }).map(item => {
         if (item?.path === '/') {
           return { ...item, label: "Teacher's Dashboard" };
@@ -215,14 +203,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       });
     }
 
-    if (roleLower === 'ict_teacher' || roleLower === 'ict_technician') {
+    if (isIctRole(role, specialties)) {
       return menuItems.filter(item => {
         if (item?.path === '/' || item?.path === '/games' || item?.path === '/ict-lab') return true;
         return false;
       });
     }
 
-    if (roleLower === 'librarian' || roleLower === 'library_teacher') {
+    if (isLibrarianRole(role, specialties)) {
       return menuItems.filter(item => {
         if (item?.path === '/' || item?.path === '/games' || item?.path === '/library' || item?.path === '/study-corner') return true;
         return false;
