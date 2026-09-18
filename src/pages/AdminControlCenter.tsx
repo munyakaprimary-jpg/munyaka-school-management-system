@@ -240,6 +240,7 @@ export default function AdminControlCenter() {
   const [refreshing, setRefreshing] = useState(false);
   const [serverUrl, setServerUrl] = useState(getServerUrl());
   const [clientLanIP, setClientLanIP] = useState<string | null>(null);
+  const navigate = useNavigate();
   const [editUser, setEditUser] = useState<User | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', phone: '', role: 'teacher', password: '', staff_id: '' });
@@ -472,9 +473,7 @@ export default function AdminControlCenter() {
     );
   }
 
-  const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
-    { id: 'lan', label: 'LAN & Local Server Config', icon: LanIcon },
-  ];
+  const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [];
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 pb-20">
@@ -487,6 +486,7 @@ export default function AdminControlCenter() {
               <span className="text-xs font-bold uppercase tracking-widest opacity-80">Admin Control Center</span>
             </div>
             <h1 className="text-2xl font-black tracking-tight">LAN & Network Management</h1>
+            <p className="text-white/80 text-sm mt-1">Monitor active Wi-Fi LAN server connections, IP configurations, and mobile APK sync endpoints.</p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className={`${isOnline ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'} border-0`}>
@@ -505,27 +505,7 @@ export default function AdminControlCenter() {
           </div>
         </div>
 
-        {/* Tab navigation */}
-        <div className="flex items-center justify-center gap-2 mt-4">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-base transition-all duration-200 w-full max-w-md shadow-lg",
-                  isActive
-                    ? "bg-white/25 text-white shadow-xl ring-2 ring-white/30"
-                    : "bg-white/10 text-white/80 hover:bg-white/20 hover:text-white"
-                )}
-              >
-                <tab.icon size={20} />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Tab navigation removed as requested */}
       </div>
 
       {/* ── Tab 1: System & Academic Settings ─────────────────────────────── */}
