@@ -183,17 +183,25 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     }
 
     // ── Flexible Teacher / Subject Teacher / Head Teacher Helper check ─────
-    const isTeacher = isTeacherRole(role, staffCategory, specialties);
+    const rawRole = (user?.role || '').toUpperCase().trim();
+    const isTeacher =
+      rawRole.includes('TEACHER') ||
+      rawRole.includes('INSTRUCTOR') ||
+      rawRole === 'SUBJECT TEACHER' ||
+      rawRole === 'CLASS TEACHER' ||
+      isTeacherRole(role, staffCategory, specialties);
+
     if (isTeacher) {
       return menuItems.filter(item => {
         if (item?.path === '/study-corner') return true;
         if (item?.global) return true;
-        const itemRoles = (item?.roles || []).map((r: string) => String(r).toLowerCase());
+        const itemRoles = (item?.roles || []).map((r: string) => String(r).toUpperCase());
         return (
-          itemRoles.includes('teacher') ||
-          itemRoles.includes('class_teacher') ||
-          itemRoles.includes('subject_teacher') ||
-          itemRoles.includes('head_teacher')
+          itemRoles.includes('TEACHER') ||
+          itemRoles.includes('CLASS_TEACHER') ||
+          itemRoles.includes('SUBJECT_TEACHER') ||
+          itemRoles.includes('HEAD_TEACHER') ||
+          itemRoles.includes('TEACHING')
         );
       }).map(item => {
         if (item?.path === '/') {
