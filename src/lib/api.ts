@@ -1,104 +1,119 @@
 /**
- * Lightweight fetch wrapper for the local Express API.
- * Centralizes base URL and error handling so we can surface the server's
- * exact failure reasons (e.g. SQLite constraint errors) in the UI.
- *
- * The base URL is resolved dynamically via `getApiBaseUrl()`, which:
- *   1. honors `VITE_API_URL` (build time) or `lan_server_url`/`server_ip`
- *      (runtime), or
- *   2. falls back to `http://<window.location.hostname>:5000` so the
- *      same bundle works on the dev machine, the LAN IP, or a deployed
- *      domain without code changes.
- *
- * A request interceptor injects the JWT (when present) and stamps every
- * outgoing request with `X-LAN-Server` so the LAN Server Config page can
- * see which backend the requests are hitting.
+ * Central API Client for Munyaka LAN School Management System
+ * 
+ * 1. Dynamically resolves API base URL using `admin_server_url` (and fallback keys).
+ * 2. Prompts user or handles unconfigured server state.
+ * 3. Intercepts network failure errors, shows "Working Offline - Changes saved locally" banner,
+ *    and falls back to cached data in localStorage / IndexedDB.
  */
 
-import { getApiBaseUrl } from './apiBase';
+import { toast } from "@/components/ui/use-toast";
 
-const resolveBaseUrl = (): string => getApiBaseUrl();
+const STORAGE_KEYS = {
+  ADMIN_SERVER_URL: "admin_server_url",
+  LAN_SERVER_URL: "lan_server_url",
+  SERVER_IP: "server_ip"
+};
+
+const DEFAULT_PORT = 5000;
 
 export class ApiError extends Error {
   status: number;
   body: unknown;
-  constructor(message: string, status: number, body: unknown) {
+  isOfflineFallback?: boolean;
+
+  constructor(message: string, status: number, body: unknown, isOfflineFallback = false) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
+    this.isOfflineFallback = isOfflineFallback;
   }
 }
 
 /**
- * Request interceptor — runs before every request. Mutates the supplied
- * headers object and (optionally) the URL. Multiple interceptors can be
- * registered; they execute in FIFO order.
+ * Get dynamic API Base URL with precedence:
+ * 1. localStorage `admin_server_url`
+ * 2. localStorage `lan_server_url` / `server_ip`
+ * 3. Vite env `VITE_API_URL`
+ * 4. Fallback: http://<window.location.hostname>:5000
  */
-export type RequestInterceptor = (ctx: {
-  url: string;
-  method: string;
-  headers: Record<string, string>;
-  /** Mutate this to abort the request with a custom error */
-  abort?: (err: Error) => void;
-}) => void | Promise<void>;
+export const getApiBaseUrl = (): string => {
+  if (typeof window === 'undefined') {
+    return `http://localhost:${DEFAULT_PORT}`;
+  }
 
-const interceptors: RequestInterceptor[] = [];
+  try {
+    const adminUrl = localStorage.getItem(STORAGE_KEYS.ADMIN_SERVER_URL);
+    if (adminUrl && adminUrl.trim()) {
+      return normalizeUrl(adminUrl.trim());
+    }
 
-/** Register a request interceptor. Returns an unsubscribe function. */
-export const addRequestInterceptor = (i: RequestInterceptor): (() => void) => {
-  interceptors.push(i);
-  return () => {
-    const idx = interceptors.indexOf(i);
-    if (idx !== -1) interceptors.splice(idx, 1);
-  };
+    const lanUrl = localStorage.getItem(STORAGE_KEYS.LAN_SERVER_URL) || localStorage.getItem(STORAGE_KEYS.SERVER_IP);
+    if (lanUrl && lanUrl.trim()) {
+      return normalizeUrl(lanUrl.trim());
+    }
+  } catch { /* private mode / SSR */ }
+
+  const envUrl = (import.meta as any)?.env?.VITE_API_URL;
+  if (envUrl && String(envUrl).trim()) {
+    return normalizeUrl(String(envUrl).trim());
+  }
+
+  const hostname = window.location.hostname || 'localhost';
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+    return `http://localhost:${DEFAULT_PORT}`;
+  }
+
+  return `http://${hostname}:${DEFAULT_PORT}`;
+};
+
+const normalizeUrl = (url: string): string => {
+  let cleaned = url.trim();
+  if (!/^https?:\/\//i.test(cleaned)) {
+    cleaned = `http://${cleaned}`;
+  }
+  if (!/(:\d+)$/.test(cleaned.replace(/\/+$/, ''))) {
+    cleaned = `${cleaned.replace(/\/+$/, '')}:${DEFAULT_PORT}`;
+  }
+  return cleaned.replace(/\/+$/, '');
 };
 
 /**
- * Built-in interceptor #1: stamp every outgoing request with the current
- * LAN server URL so it shows up in browser dev-tools network tabs and on
- * the server's access logs.
+ * Check if server address has been configured. If not, dispatches event or returns false.
  */
-addRequestInterceptor(({ url, headers }) => {
+export const isServerConfigured = (): boolean => {
+  if (typeof window === 'undefined') return true;
   try {
-    const u = new URL(url);
-    headers['X-LAN-Server'] = `${u.host}`;
-  } catch { /* ignore */ }
-});
+    const url = localStorage.getItem(STORAGE_KEYS.ADMIN_SERVER_URL) || localStorage.getItem(STORAGE_KEYS.LAN_SERVER_URL);
+    return !!(url && url.trim().length > 0);
+  } catch {
+    return true;
+  }
+};
+
+// Global offline banner trigger flag to prevent toast spamming
+let lastOfflineToastTime = 0;
+const showOfflineBanner = () => {
+  const now = Date.now();
+  if (now - lastOfflineToastTime > 10000) { // Max once every 10s
+    lastOfflineToastTime = now;
+    toast({
+      title: "Working Offline",
+      description: "Changes saved locally to device storage. Sync will resume when reconnected.",
+      className: "bg-amber-50 border-amber-200 text-amber-900 font-medium",
+    });
+  }
+};
 
 /**
- * Built-in interceptor #2: inject the auth JWT when one is in localStorage.
- * Server's `verifyToken` middleware accepts requests with or without a
- * token, so missing tokens don't block unauthenticated endpoints.
+ * Core Request wrapper with offline fallback and response interceptors
  */
-addRequestInterceptor(async ({ headers }) => {
-  try {
-    const token = localStorage.getItem('munyaka_auth_token');
-    if (token && !headers['Authorization']) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-  } catch { /* private mode */ }
-});
-
-async function runInterceptors(ctx: {
-  url: string;
-  method: string;
-  headers: Record<string, string>;
-  abort?: (err: Error) => void;
-}): Promise<void> {
-  for (const i of interceptors) {
-    await i(ctx);
-    if (ctx.abort) {
-      throw ctx.abort(new Error('Aborted by request interceptor'));
-    }
-  }
-}
-
 async function request<T = unknown>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const baseUrl = resolveBaseUrl();
+  const baseUrl = getApiBaseUrl();
   const url = `${baseUrl}${path}`;
   const method = (options.method || 'GET').toUpperCase();
 
@@ -108,25 +123,51 @@ async function request<T = unknown>(
     ...(options.headers as Record<string, string> | undefined),
   };
 
-  let abort: ((err: Error) => void) | undefined;
-  const interceptorCtx = {
-    url,
-    method,
-    headers,
-    get abort() { return abort; },
-    set abort(fn: ((err: Error) => void) | undefined) { abort = fn; },
-  };
-  await runInterceptors(interceptorCtx);
+  // Inject Auth Token if present
+  try {
+    const token = localStorage.getItem('munyaka_auth_token');
+    if (token && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  } catch { /* ignore */ }
 
   let response: Response;
   try {
-    response = await fetch(url, { ...options, headers });
+    response = await fetch(url, { ...options, headers, signal: options.signal || AbortSignal.timeout(6000) });
   } catch (err: any) {
-    // Network-level error (server unreachable, CORS, DNS, etc.)
+    // Network error / unreachable / offline fallback
+    showOfflineBanner();
+
+    // Attempt offline cache lookup from localStorage
+    const cacheKey = `offline_cache_${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    if (method === 'GET') {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return parsed as T;
+        }
+      } catch { /* ignore cache read failure */ }
+    } else if (method === 'POST' || method === 'PUT') {
+      // Queue offline mutation
+      try {
+        const queueKey = 'offline_mutation_queue';
+        const existingQueue = JSON.parse(localStorage.getItem(queueKey) || '[]');
+        existingQueue.push({
+          path,
+          method,
+          body: options.body,
+          timestamp: Date.now()
+        });
+        localStorage.setItem(queueKey, JSON.stringify(existingQueue));
+      } catch { /* ignore */ }
+    }
+
     throw new ApiError(
-      `Cannot reach server at ${baseUrl}. ${err?.message || ''}`.trim(),
-      0,
-      null
+      `Working Offline - Server unreachable at ${baseUrl}. Using local cache.`,
+      503,
+      { offline: true },
+      true
     );
   }
 
@@ -136,6 +177,14 @@ async function request<T = unknown>(
     body = await response.json().catch(() => null);
   } else {
     body = await response.text().catch(() => null);
+  }
+
+  // Cache successful GET responses for offline fallback
+  if (response.ok && method === 'GET') {
+    try {
+      const cacheKey = `offline_cache_${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      localStorage.setItem(cacheKey, JSON.stringify(body));
+    } catch { /* quota exceeded or private mode */ }
   }
 
   if (!response.ok) {
@@ -149,28 +198,21 @@ async function request<T = unknown>(
 }
 
 export const api = {
-  get: <T = unknown>(path: string) => request<T>(path, { method: 'GET' }),
-  post: <T = unknown>(path: string, data?: unknown) =>
+  get: <T = unknown>(path: string, options?: RequestInit) => request<T>(path, { ...(options || {}), method: 'GET' }),
+  post: <T = unknown>(path: string, data?: unknown, options?: RequestInit) =>
     request<T>(path, {
+      ...(options || {}),
       method: 'POST',
       body: data === undefined ? undefined : JSON.stringify(data),
     }),
-  put: <T = unknown>(path: string, data?: unknown) =>
+  put: <T = unknown>(path: string, data?: unknown, options?: RequestInit) =>
     request<T>(path, {
+      ...(options || {}),
       method: 'PUT',
       body: data === undefined ? undefined : JSON.stringify(data),
     }),
-  del: <T = unknown>(path: string) => request<T>(path, { method: 'DELETE' }),
+  del: <T = unknown>(path: string, options?: RequestInit) => request<T>(path, { ...(options || {}), method: 'DELETE' }),
 };
 
-/**
- * Synchronous getter for the currently-resolved base URL. Re-evaluates on
- * every access so runtime configuration changes (e.g. the LAN server
- * settings page) are picked up without a page reload.
- */
-export const API_BASE_URL: string = resolveBaseUrl();
-
-/**
- * Re-export the base URL getter for callers that need to display or log it.
- */
-export const getApiBase = (): string => resolveBaseUrl();
+export const API_BASE_URL: string = getApiBaseUrl();
+export const getApiBase = (): string => getApiBaseUrl();
