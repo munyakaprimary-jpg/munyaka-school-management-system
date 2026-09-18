@@ -490,8 +490,9 @@ export default function AdminControlCenter() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setShowServerSettings(true)}
+              onClick={() => navigate('/admin/settings')}
               className="text-white/80 hover:text-white hover:bg-white/20 rounded-xl"
+              title="System Settings & Preferences"
             >
               <Settings className="w-4 h-4" />
             </Button>
