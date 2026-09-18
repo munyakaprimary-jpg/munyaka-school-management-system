@@ -676,9 +676,11 @@ const Staff = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                  {isNonTeachingDesignation(formData.role) ? 'Staff ID / Employee No (Optional)' : 'TSC Number (Optional)'}
+                </Label>
                 <Input value={formData.tsc_number} onChange={e => setFormData({ ...formData, tsc_number: e.target.value })}
-                  placeholder="e.g. TSC-482910" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+                  placeholder={isNonTeachingDesignation(formData.role) ? 'e.g. EMP-001' : 'e.g. TSC-482910'} className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
               </div>
               <div className="flex gap-3 pt-4 border-t">
                 <Button variant="ghost" className="flex-1 rounded-xl h-11 font-bold" onClick={handleCloseModal}>Cancel</Button>
