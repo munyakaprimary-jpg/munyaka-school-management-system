@@ -206,6 +206,12 @@ export default function Students() {
     });
   }, [students, searchTerm, gradeFilter]);
 
+  const extractStreamName = (item: any): string => {
+    if (!item) return '';
+    if (typeof item === 'string') return item;
+    return item.name || item.streamName || item.label || item.title || item.code || '';
+  };
+
   // Dynamic streams state for selected grade
   const [availableStreams, setAvailableStreams] = useState<string[]>([]);
   const [availableStreamsForModal, setAvailableStreamsForModal] = useState<string[]>([]);
@@ -243,9 +249,15 @@ export default function Students() {
   // Synchronize availableStreamsForModal with availableStreams
   useEffect(() => {
     if (availableStreams.length > 0) {
+      const firstStreamName = extractStreamName(availableStreams[0]);
       setAvailableStreamsForModal(availableStreams);
+      if (firstStreamName) {
+        setStream(firstStreamName);
+      }
     } else {
-      setAvailableStreamsForModal(['North', 'South', 'East', 'West', 'Central', 'Red', 'Blue', 'Green']);
+      const defaultStreams = ['GREEN', 'BLUE', 'YELLOW', 'RED'];
+      setAvailableStreamsForModal(defaultStreams);
+      setStream(defaultStreams[0]);
     }
   }, [availableStreams]);
   const generateAdmissionNumber = (selectedGrade: string, existingStudentsCount: number = 0) => {
@@ -616,11 +628,20 @@ export default function Students() {
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       required
                     >
-                      {availableStreamsForModal.map((st: string) => (
-                        <option key={st} value={st}>
-                          {st}
+                      {(availableStreamsForModal || []).length > 0 ? (
+                        availableStreamsForModal.map((st: any, idx: number) => {
+                          const name = extractStreamName(st);
+                          return (
+                            <option key={st?.id || idx} value={name}>
+                              {name}
+                            </option>
+                          );
+                        })
+                      ) : (
+                        <option value="" disabled>
+                          No streams configured for this grade. Add streams in 'Grades & Streams' menu.
                         </option>
-                      ))}
+                      )}
                     </select>
                   </div>
                 </div>
