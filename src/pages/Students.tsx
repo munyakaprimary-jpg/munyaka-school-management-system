@@ -231,36 +231,40 @@ export default function Students() {
     return formatStreamLabel(item);
   };
 
+  // Retrieve configured grades and streams dynamically from central storage or local state
+  const getConfiguredGrades = (): any[] => {
+    try {
+      const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+      const configured = centralData.grades || centralData.gradesAndStreams || JSON.parse(localStorage.getItem('munyaka_grades') || localStorage.getItem('munyaka_grades_streams') || '[]');
+      if (Array.isArray(configured) && configured.length > 0) return configured;
+      if (configured && Array.isArray(configured.grades)) return configured.grades;
+    } catch {}
+    return ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+  };
+
+  const configuredGradesList = getConfiguredGrades();
+
   // Dynamic streams state for selected grade
-  const [availableStreams, setAvailableStreams] = useState<string[]>([]);
-  const [availableStreamsForModal, setAvailableStreamsForModal] = useState<string[]>([]);
+  const [availableStreams, setAvailableStreams] = useState<any[]>([]);
+  const [availableStreamsForModal, setAvailableStreamsForModal] = useState<any[]>([]);
 
   useEffect(() => {
-    // Pull dynamic grades/streams setup from LocalStorage or system state
-    const storedGrades = localStorage.getItem('munyaka_grades') || localStorage.getItem('munyaka_grades_streams') || localStorage.getItem('munyaka_grades_streams_data') || localStorage.getItem('grades_streams');
+    const gradesArray = getConfiguredGrades();
     
-    if (storedGrades) {
-      try {
-        const parsed = JSON.parse(storedGrades);
-        const gradesArray = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.grades) ? parsed.grades : []);
-        
-        // Match streams configured specifically for the currently selected grade
-        const gradeObj = gradesArray.find((g: any) =>
-          String(g.name || g.grade || '').trim().toLowerCase() === String(grade || '').trim().toLowerCase() ||
-          g.id === grade
-        );
-        
-        if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
-          setAvailableStreams(gradeObj.streams.map(String));
-          setStream(gradeObj.streams[0]); // Set first configured stream as default
-          return;
-        }
-      } catch (err) {
-        console.error("Error parsing dynamic streams", err);
-      }
+    // Match streams configured specifically for the currently selected grade
+    const gradeObj = gradesArray.find((g: any) => {
+      const gName = typeof g === 'string' ? g : (g.name || g.gradeName || g.title || '');
+      return String(gName).trim().toLowerCase() === String(grade || '').trim().toLowerCase() ||
+        (g.id && String(g.id) === String(grade));
+    });
+    
+    if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
+      setAvailableStreams(gradeObj.streams);
+      const firstStreamName = formatStreamLabel(gradeObj.streams[0]);
+      if (firstStreamName) setStream(firstStreamName);
+      return;
     }
     
-    // If no dynamic streams are configured in 'Grades & Streams', clear options array completely
     setAvailableStreams([]);
     setStream('');
   }, [grade]);
@@ -268,15 +272,17 @@ export default function Students() {
   // Synchronize availableStreamsForModal with availableStreams
   useEffect(() => {
     if (availableStreams.length > 0) {
-      const firstStreamName = extractStreamName(availableStreams[0]);
-      setAvailableStreamsForModal(availableStreams);
-      if (firstStreamName) {
-        setStream(firstStreamName);
+      const clean = availableStreams.map(st => formatStreamLabel(st)).filter(Boolean);
+      setAvailableStreamsForModal(clean);
+      if (clean.length > 0 && (!stream || !clean.includes(stream))) {
+        setStream(clean[0]);
       }
     } else {
       const defaultStreams = ['GREEN', 'BLUE', 'YELLOW', 'RED'];
       setAvailableStreamsForModal(defaultStreams);
-      setStream(defaultStreams[0]);
+      if (!stream || !defaultStreams.includes(stream)) {
+        setStream(defaultStreams[0]);
+      }
     }
   }, [availableStreams]);
   const generateAdmissionNumber = (selectedGrade: string, existingStudentsCount: number = 0) => {
@@ -627,15 +633,18 @@ export default function Students() {
                       }}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     >
-                      <option value="Grade 1">Grade 1</option>
-                      <option value="Grade 2">Grade 2</option>
-                      <option value="Grade 3">Grade 3</option>
-                      <option value="Grade 4">Grade 4</option>
-                      <option value="Grade 5">Grade 5</option>
-                      <option value="Grade 6">Grade 6</option>
-                      <option value="Grade 7">Grade 7</option>
-                      <option value="Grade 8">Grade 8</option>
-                      <option value="Grade 9">Grade 9</option>
+                      {configuredGradesList.length > 0 ? (
+                        configuredGradesList.map((g: any, idx: number) => {
+                          const gradeName = typeof g === 'string' ? g : (g.name || g.gradeName || g.title || g.grade || '');
+                          return (
+                            <option key={g?.id || idx} value={gradeName}>
+                              {gradeName}
+                            </option>
+                          );
+                        })
+                      ) : (
+                        <option value="" disabled>No grades configured in Settings</option>
+                      )}
                     </select>
                   </div>
 
@@ -648,10 +657,10 @@ export default function Students() {
                       required
                     >
                       {(availableStreamsForModal || []).length > 0 ? (
-                        availableStreamsForModal.map((st: any, idx: number) => {
-                          const name = formatStreamLabel(st);
+                        availableStreamsForModal.map((stName: any, idx: number) => {
+                          const name = typeof stName === 'string' ? stName : formatStreamLabel(stName);
                           return (
-                            <option key={st?.id || idx} value={name}>
+                            <option key={idx} value={name}>
                               {name}
                             </option>
                           );
