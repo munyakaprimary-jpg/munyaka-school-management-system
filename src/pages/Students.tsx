@@ -309,6 +309,12 @@ export default function Students() {
 
   const configuredGradesList = getConfiguredGrades();
 
+  // Count learners whose status is active (or default active)
+  const activeCount = useMemo(() => {
+    if (!Array.isArray(students)) return 0;
+    return students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length;
+  }, [students]);
+
   // Active streams list for the selected grade filter
   const availableStreamsForFilter = useMemo(() => {
     const gradesArray = getConfiguredGrades();
