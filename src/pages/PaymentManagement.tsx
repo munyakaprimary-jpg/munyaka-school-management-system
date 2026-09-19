@@ -584,17 +584,19 @@ export default function PaymentManagement() {
       {/* Record Payment Modal */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-5 animate-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">Record Subscription Payment</h3>
-              <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden border border-slate-100">
+            {/* Modal Header (Fixed at top) */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <h3 className="text-lg font-bold text-slate-900">Record Subscription Payment</h3>
+              <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">
+                ×
+              </button>
             </div>
 
             <form onSubmit={(e) => {
               e.preventDefault();
               const amtNum = Number(paymentAmount);
               
-              // 1. Update campus status in local state
               setSubscriptions(prev => prev.map(s => {
                 if (s.school === paymentCampus) {
                   return { ...s, status: 'Active', expires: '2027-03-31' };
@@ -602,7 +604,6 @@ export default function PaymentManagement() {
                 return s;
               }));
 
-              // 2. Append payment into munyaka_billing_history
               try {
                 const history = JSON.parse(localStorage.getItem('munyaka_billing_history') || '[]');
                 history.unshift({
@@ -620,85 +621,89 @@ export default function PaymentManagement() {
 
               showSuccess(`Payment of KES ${amtNum.toLocaleString()} successfully recorded for ${paymentCampus}!`);
               setIsPaymentModalOpen(false);
-            }} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold uppercase text-slate-500">Selected Campus</Label>
-                <Input disabled value={paymentCampus} className="bg-slate-100 font-bold text-slate-800 h-10" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+            }} className="flex flex-col flex-1 overflow-hidden">
+              {/* Modal Body (Scrollable Area) */}
+              <div className="p-5 overflow-y-auto space-y-4 flex-1">
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold uppercase text-slate-500">Payment Method</Label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
-                  >
-                    <option value="M-Pesa Paybill / STK">M-Pesa Paybill / STK</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                    <option value="Cheque">Cheque</option>
-                    <option value="Cash">Cash</option>
-                  </select>
+                  <Label className="text-[11px] font-bold uppercase text-slate-500">Selected Campus</Label>
+                  <Input disabled value={paymentCampus} className="bg-slate-100 font-bold text-slate-800 h-10" />
                 </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-bold uppercase text-slate-500">Payment Method</Label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                    >
+                      <option value="M-Pesa Paybill / STK">M-Pesa Paybill / STK</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="Cheque">Cheque</option>
+                      <option value="Cash">Cash</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-bold uppercase text-slate-500">Transaction Reference Code</Label>
+                    <Input
+                      value={paymentRef}
+                      onChange={(e) => setPaymentRef(e.target.value)}
+                      placeholder="e.g. QKH78923XX"
+                      className="h-10 bg-slate-50 font-mono text-xs font-semibold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-bold uppercase text-slate-500">Amount Received (KES)</Label>
+                    <Input
+                      type="number"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      className="h-10 bg-slate-50 font-bold text-sm text-emerald-600"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-bold uppercase text-slate-500">Billing Period / Extension</Label>
+                    <select
+                      value={paymentPeriod}
+                      onChange={(e) => setPaymentPeriod(e.target.value)}
+                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                    >
+                      <option value="1 Year Extension">1 Year Extension</option>
+                      <option value="6 Months Extension">6 Months Extension</option>
+                      <option value="Custom Term">Custom Term</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold uppercase text-slate-500">Transaction Reference Code</Label>
+                  <Label className="text-[11px] font-bold uppercase text-slate-500">Payment Date</Label>
                   <Input
-                    value={paymentRef}
-                    onChange={(e) => setPaymentRef(e.target.value)}
-                    placeholder="e.g. QKH78923XX"
-                    className="h-10 bg-slate-50 font-mono text-xs font-semibold"
+                    type="date"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className="h-10 bg-slate-50 text-xs font-semibold"
                     required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase text-slate-500">Notes / Receipt Remarks</Label>
+                  <Input
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                    placeholder="Additional notes..."
+                    className="h-10 bg-slate-50 text-xs font-medium"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold uppercase text-slate-500">Amount Received (KES)</Label>
-                  <Input
-                    type="number"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                    className="h-10 bg-slate-50 font-bold text-sm text-emerald-600"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold uppercase text-slate-500">Billing Period / Extension</Label>
-                  <select
-                    value={paymentPeriod}
-                    onChange={(e) => setPaymentPeriod(e.target.value)}
-                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
-                  >
-                    <option value="1 Year Extension">1 Year Extension</option>
-                    <option value="6 Months Extension">6 Months Extension</option>
-                    <option value="Custom Term">Custom Term</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold uppercase text-slate-500">Payment Date</Label>
-                <Input
-                  type="date"
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
-                  className="h-10 bg-slate-50 text-xs font-semibold"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-[11px] font-bold uppercase text-slate-500">Notes / Receipt Remarks</Label>
-                <Input
-                  value={paymentNotes}
-                  onChange={(e) => setPaymentNotes(e.target.value)}
-                  placeholder="Additional notes..."
-                  className="h-10 bg-slate-50 text-xs font-medium"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+              {/* Modal Footer (Fixed at bottom) */}
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-2 shrink-0">
                 <Button
                   type="button"
                   variant="outline"
