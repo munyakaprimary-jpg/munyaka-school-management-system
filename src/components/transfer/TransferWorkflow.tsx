@@ -882,30 +882,40 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </div>
           </div>
 
-          {/* Transfer Details Form */}
-          <div className="space-y-5">
-            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <FileText size={20} className="text-indigo-600" /> Transfer Details
-            </h4>
-            
+          {/* SECTION 1: DESTINATION SCHOOL DETAILS */}
+          <div className="space-y-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-sm">
+                01
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white">Destination School Details</h3>
+                <p className="text-xs text-slate-500">Destination School Name & Reason for Transfer</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Date of Exit</Label>
-                <Input 
-                  type="date"
-                  value={transferData.dateOfExit}
-                  onChange={(e) => setTransferData({...transferData, dateOfExit: e.target.value})}
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                  Destination School Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={transferData.destinationSchool}
+                  onChange={(e) => setTransferData({...transferData, destinationSchool: e.target.value})}
+                  placeholder="e.g. St. Mary's Academy, Nairobi"
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                   required
                 />
               </div>
               
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Destination School / Reason</Label>
-                <Input 
-                  value={transferData.destinationSchool}
-                  onChange={(e) => setTransferData({...transferData, destinationSchool: e.target.value})}
-                  placeholder="e.g. St. Mary's Academy, Nairobi / Parent relocation"
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                  Reason for Transfer <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={transferData.reason}
+                  onChange={(e) => setTransferData({...transferData, reason: e.target.value})}
+                  placeholder="e.g. Parent relocation, Academic programs..."
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                   required
                 />
@@ -913,23 +923,66 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Additional Reason / Notes</Label>
-              <Textarea 
-                value={transferData.reason}
-                onChange={(e) => setTransferData({...transferData, reason: e.target.value})}
-                placeholder="Any additional context for the transfer..."
-                className="rounded-xl bg-slate-50 border-none min-h-[80px]"
-                rows={3}
+              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Date of Exit</Label>
+              <Input
+                type="date"
+                value={transferData.dateOfExit}
+                onChange={(e) => setTransferData({...transferData, dateOfExit: e.target.value})}
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                required
               />
             </div>
           </div>
 
-          {/* Financial Clearance Card */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <CreditCard size={20} className="text-amber-600" /> Financial Clearance Status
-            </h4>
-            
+          {/* SECTION 2: ACADEMIC & CO-CURRICULAR */}
+          <div className="space-y-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-950/50 flex items-center justify-center text-violet-600 dark:text-violet-400 font-bold text-sm">
+                02
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white">Academic & Co-curricular</h3>
+                <p className="text-xs text-slate-500">Co-curricular activities & achievements, headteacher remarks</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Co-curricular Activities & Achievements</Label>
+                <Textarea
+                  value={transferData.coCurricularActivities}
+                  onChange={(e) => setTransferData({...transferData, coCurricularActivities: e.target.value})}
+                  placeholder="e.g. Football team captain, Science fair winner, Choir member..."
+                  className="rounded-xl bg-slate-50 border-none min-h-[80px]"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Headteacher Remarks</Label>
+                <Textarea
+                  value={transferData.headteacherRemarks}
+                  onChange={(e) => setTransferData({...transferData, headteacherRemarks: e.target.value})}
+                  placeholder="General conduct, character reference, special notes..."
+                  className="rounded-xl bg-slate-50 border-none min-h-[80px]"
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 3: INSTITUTIONAL CLEARANCE CHECKLIST */}
+          <div className="space-y-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                03
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white">Institutional Clearance Checklist</h3>
+                <p className="text-xs text-slate-500">Fees clearance status, textbooks & learning materials, other school property</p>
+              </div>
+            </div>
+
             <Card className={cn(
               "border-none shadow-sm rounded-2xl p-6",
               student?.feeBalance > 0 ? "bg-amber-50 border-2 border-amber-200" : "bg-emerald-50 border-2 border-emerald-200"
@@ -942,7 +995,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   {student?.feeBalance > 0 ? <AlertTriangle size={28} /> : <CheckCircle2 size={28} />}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-500">Outstanding Fee Balance</p>
+                  <p className="text-sm font-medium text-slate-500">Fees Clearance Status & Outstanding Amount</p>
                   <p className="text-2xl font-black text-slate-900">
                     KES {student?.feeBalance?.toLocaleString() ?? '0'}
                   </p>
@@ -956,77 +1009,74 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               </div>
               
               {student?.feeBalance > 0 && (
-                <div className="flex flex-col items-end md:items-center gap-2 text-amber-700">
+                <div className="flex flex-col items-end md:items-center gap-2 text-amber-700 mt-4">
                   <AlertCircle size={20} className="shrink-0" />
                   <p className="text-sm font-bold text-center max-w-xs">
-                    Attention: This student has an outstanding fee balance of <strong>KES {student?.feeBalance?.toLocaleString() ?? '0'}</strong>. 
+                    Attention: This student has an outstanding fee balance of <strong>KES {student?.feeBalance?.toLocaleString() ?? '0'}</strong>.
                     Ensure clearance or settlement before issuing final documents.
                   </p>
                 </div>
               )}
             </Card>
-          </div>
 
-          {/* Additional Certificate Details */}
-          <div className="space-y-5 pt-4 border-t border-slate-100">
-            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <PenTool size={20} className="text-indigo-600" /> Certificate Details (Optional)
-            </h4>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Co-curricular Activities & Achievements</Label>
-                <Textarea 
-                  value={transferData.coCurricularActivities}
-                  onChange={(e) => setTransferData({...transferData, coCurricularActivities: e.target.value})}
-                  placeholder="e.g. Football team captain, Science fair winner, Choir member..."
-                  className="rounded-xl bg-slate-50 border-none min-h-[80px]"
-                  rows={3}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 rounded-xl cursor-pointer hover:bg-slate-100/50 transition-all">
+                <input
+                  type="checkbox"
+                  defaultChecked={true}
+                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Headteacher Remarks</Label>
-                <Textarea 
-                  value={transferData.headteacherRemarks}
-                  onChange={(e) => setTransferData({...transferData, headteacherRemarks: e.target.value})}
-                  placeholder="General conduct, character reference, special notes..."
-                  className="rounded-xl bg-slate-50 border-none min-h-[80px]"
-                  rows={3}
+                <div>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">Textbooks & Learning Materials</p>
+                  <p className="text-[11px] text-slate-500">All library books and issued materials returned</p>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80 rounded-xl cursor-pointer hover:bg-slate-100/50 transition-all">
+                <input
+                  type="checkbox"
+                  defaultChecked={true}
+                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
                 />
-              </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">Other School Property</p>
+                  <p className="text-[11px] text-slate-500">Sports kit, lockers, keys, and lab gear returned</p>
+                </div>
+              </label>
             </div>
           </div>
 
-          {/* Admin Password Verification */}
-          <div className="space-y-4 pt-4 border-t border-slate-100 bg-amber-50/50 rounded-2xl p-5 border border-amber-100">
-            <div className="flex items-center gap-3 mb-2">
-              <Lock className="text-amber-600" size={20} />
+          {/* SECTION 4 (BOTTOM): ADMIN AUTHORIZATION CARD */}
+          <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100/80 flex items-center justify-center text-amber-700 shrink-0">
+                <Lock className="w-5 h-5" />
+              </div>
               <div>
-                <h4 className="font-bold text-amber-800">Admin Authorization Required</h4>
-                <p className="text-sm text-amber-700">Enter admin password to authorize this student transfer.</p>
+                <h4 className="font-bold text-amber-800 text-sm">Admin Authorization Required</h4>
+                <p className="text-xs text-amber-700/80">Enter admin password to authorize this student transfer.</p>
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">ADMIN PASSWORD</Label>
+              <Label className="text-xs font-black uppercase text-amber-800/70 tracking-widest">ADMIN PASSWORD</Label>
               <div className="relative">
-                <Input 
+                <Input
                   type={showPassword ? "text" : "password"}
                   value={adminPassword}
-                  onChange={(e) => { 
+                  onChange={(e) => {
                     const trimmed = String(e.target.value || '').trim();
                     setAdminPassword(trimmed);
                     if (authError) setAuthError("");
                   }}
                   placeholder="Enter admin password to confirm..."
-                  className="rounded-xl h-12 bg-white border-amber-200 font-bold pr-12"
+                  className="rounded-xl h-12 bg-white/90 border-amber-300 font-bold pr-12 text-slate-900"
                   autoFocus
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-700 hover:text-amber-900"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
