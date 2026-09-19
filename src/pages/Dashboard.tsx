@@ -70,6 +70,14 @@ const safeRead = <T,>(key: string, fallback: T): T => {
   }
 };
 
+const getCentralDb = () => {
+  try {
+    return JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+  } catch {
+    return {};
+  }
+};
+
 // ─── Shared Sub-components ────────────────────────────────────────────────────
 
 const LiveBadge = ({ label }: { label: string }) => (
