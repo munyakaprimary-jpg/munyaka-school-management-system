@@ -37,6 +37,20 @@ export default function Students() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [selectedStudentForTransfer, setSelectedStudentForTransfer] = useState<any>(null);
 
+  // Transfer Form Field States (moved to top level to avoid conditional/render hook errors)
+  const [destSchool, setDestSchool] = useState('');
+  const [transferReason, setTransferReason] = useState('');
+  const [coCurricular, setCoCurricular] = useState('');
+  const [headTeacherRemarks, setHeadTeacherRemarks] = useState('');
+  const [feesStatus, setFeesStatus] = useState('Fully Cleared (KES 0 Balance)');
+  const [outstandingAmount, setOutstandingAmount] = useState('0');
+  const [textbookClearance, setTextbookClearance] = useState('All Textbooks Returned & Accounted For');
+  const [propertyClearance, setPropertyClearance] = useState('Sports kit, desk, locker cleared');
+  const [transferAdminPwd, setTransferAdminPwd] = useState('');
+  const [showTransferPwd, setShowTransferPwd] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [isExecutingTransfer, setIsExecutingTransfer] = useState(false);
+
   // Admin Password Modal State for Reset Database
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
