@@ -452,7 +452,7 @@ export default function PaymentManagement() {
                 Configure Gateway Credentials
               </Button>
             </div>
-          </CardData>
+          </Card>
 
           <Card className="border border-slate-200 shadow-sm rounded-3xl p-6 bg-white">
             <div className="flex items-center justify-between mb-4">
