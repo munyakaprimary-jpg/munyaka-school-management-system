@@ -3,11 +3,25 @@ import { Search, Plus, Edit3, Trash2, X, Eye, Users, Loader2 } from 'lucide-reac
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { showSuccess } from '@/utils/toast';
+import { useAuth } from '@/context/AuthContext';
 
 const API_BASE_URL = 'http://10.53.221.196:5000/api';
 
 export default function Students() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // Safe user resolution with local storage fallbacks
+  const activeUser = useMemo(() => {
+    if (user) return user;
+    try {
+      const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  }, [user]);
+
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,10 +38,11 @@ export default function Students() {
 
   // Check if current user is admin/owner
   const isUserAdminOrOwner = useMemo(() => {
-    if (!user) return true; // Default true if auth not fully initialized
-    const r = String(user.role || '').toLowerCase();
-    return r === 'admin' || r === 'super_admin' || r === 'owner' || r === 'head_teacher';
-  }, [user]);
+    const role = String(activeUser?.role || activeUser?.staffCategory || '').toLowerCase();
+    // If no role is found or if it's explicitly admin/owner/head_teacher
+    if (!role) return true;
+    return role === 'admin' || role === 'super_admin' || role === 'owner' || role === 'head_teacher';
+  }, [activeUser]);
 
   // Database Reset Handler (Verified via Admin Password Modal)
   const handleVerifyAndResetDatabase = async (e: React.FormEvent) => {
@@ -47,7 +62,7 @@ export default function Students() {
         const authRes = await fetch(`${API_BASE_URL}/auth/verify-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: adminPasswordInput, email: user?.email }),
+          body: JSON.stringify({ password: adminPasswordInput, email: activeUser?.email }),
           signal: AbortSignal.timeout(3000),
         });
         if (authRes.ok) {
@@ -56,7 +71,8 @@ export default function Students() {
         }
       } catch {
         // Fallback check against stored admin session or default password if offline
-        if (adminPasswordInput === 'admin123' || adminPasswordInput === 'password' || adminPasswordInput === '123456' || adminPasswordInput === (localStorage.getItem('munyaka_admin_pwd') || 'admin')) {
+        const sessionPwd = activeUser?.password || localStorage.getItem('munyaka_admin_pwd') || 'admin123';
+        if (adminPasswordInput === 'admin123' || adminPasswordInput === 'password' || adminPasswordInput === '123456' || adminPasswordInput === sessionPwd) {
           isValidPassword = true;
         }
       }
