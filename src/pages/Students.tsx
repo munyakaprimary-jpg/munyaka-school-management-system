@@ -390,6 +390,41 @@ export default function Students() {
     return `MUN-${gradeCode}-${sequenceNumber}-${currentYear}`;
   };
 
+  const handleExportCSV = () => {
+    if (!students || students.length === 0) {
+      alert("No learner data available to export.");
+      return;
+    }
+
+    // CSV Headers
+    const headers = ["Admission No", "Assessment No", "Full Name", "Grade", "Stream", "Gender", "Parent Name", "Phone Number"];
+    
+    // Map active learners into CSV rows
+    const csvRows = students.map((s: any) => [
+      `"${s.admissionNumber || s.admNo || ''}"`,
+      `"${s.assessmentNumber || s.assessmentNo || ''}"`,
+      `"${s.fullName || s.name || ''}"`,
+      `"${s.grade || s.class || ''}"`,
+      `"${s.stream || ''}"`,
+      `"${s.gender || ''}"`,
+      `"${s.parentName || s.guardian || ''}"`,
+      `"${s.phoneNumber || s.phone || ''}"`
+    ]);
+
+    // Combine header and rows
+    const csvContent = [headers.join(","), ...csvRows.map(row => row.join(","))].join("\n");
+
+    // Create blob and trigger automatic file download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Munyaka_Learners_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Open Add Modal
   const handleOpenAddModal = () => {
     setEditingId(null);
