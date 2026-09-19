@@ -83,7 +83,15 @@ export default function Students() {
         return;
       }
 
-      // 2. Wipe all student/learner storage keys across local & session storage
+      // 2. Wipe student/learner records from central DB and storage keys while preserving other configs
+      try {
+        const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+        delete centralData.students;
+        centralData.lastUpdated = new Date().toISOString();
+        localStorage.setItem('munyaka_central_db', JSON.stringify(centralData));
+        window.dispatchEvent(new CustomEvent('central-data-updated', { detail: centralData }));
+      } catch {}
+
       const keysToWipe = [
         'munyaka_students',
         'school_learners_data',
@@ -146,7 +154,7 @@ export default function Students() {
   const [parentName, setParentName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
 
-  // Fetch learners from API with fallback to localStorage
+  // Fetch learners from API with fallback to localStorage & munyaka_central_db
   useEffect(() => {
     let isMounted = true;
     const fetchStudents = async () => {
@@ -162,7 +170,16 @@ export default function Students() {
             if (Array.isArray(json)) fetched = json;
           }
         } catch (netErr) {
-          console.warn('Backend API unavailable, falling back to localStorage:', netErr);
+          console.warn('Backend API unavailable, falling back to central storage:', netErr);
+        }
+
+        if (fetched.length === 0) {
+          try {
+            const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+            if (Array.isArray(centralData.students) && centralData.students.length > 0) {
+              fetched = centralData.students;
+            }
+          } catch {}
         }
 
         if (fetched.length === 0) {
@@ -185,7 +202,28 @@ export default function Students() {
     };
 
     fetchStudents();
-    return () => { isMounted = false; };
+
+    // Listen to central-data-updated event for instant live sync
+    const handleCentralUpdate = (e: any) => {
+      if (e?.detail?.students && Array.isArray(e.detail.students)) {
+        setStudents(e.detail.students);
+      } else {
+        try {
+          const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+          if (Array.isArray(centralData.students)) {
+            setStudents(centralData.students);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('central-data-updated', handleCentralUpdate);
+    window.addEventListener('storage', handleCentralUpdate);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('central-data-updated', handleCentralUpdate);
+      window.removeEventListener('storage', handleCentralUpdate);
+    };
   }, []);
 
   // Filtered students list
@@ -374,8 +412,32 @@ export default function Students() {
     }
 
     setStudents(updated);
+    
+    // Save to localStorage backups
     localStorage.setItem('munyaka_students', JSON.stringify(updated));
     localStorage.setItem('school_learners_data', JSON.stringify(updated));
+
+    // Save and synchronize with munyaka_central_db central database key & sync endpoint
+    try {
+      const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+      const updatedCentralData = {
+        ...centralData,
+        students: updated,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem('munyaka_central_db', JSON.stringify(updatedCentralData));
+
+      // Dispatch custom event for immediate live view sync
+      window.dispatchEvent(new CustomEvent('central-data-updated', { detail: updatedCentralData }));
+
+      // Send to central sync server endpoint
+      fetch(`${API_BASE_URL}/central/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedCentralData),
+        signal: AbortSignal.timeout(3000)
+      }).catch(() => {});
+    } catch {}
 
     // Reset & Close Modal
     setIsModalOpen(false);
