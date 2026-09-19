@@ -280,10 +280,28 @@ function runOneTimeFeeSanitizer(): void {
 const queryClient = new QueryClient();
 
 const App = () => {
-  useStorageHydration();
-
-  // ── One-time learner-data migrations ───────────────────────────────────
-  useStorageHydration();
+  useEffect(() => {
+    try {
+      const existingDb = localStorage.getItem('munyaka_central_db');
+      if (!existingDb) {
+        const initialDb = {
+          students: initialSeedData.students || [],
+          staff: initialSeedData.staff || [],
+        };
+        localStorage.setItem('munyaka_central_db', JSON.stringify(initialDb));
+        window.dispatchEvent(new Event('central_db_updated'));
+      } else {
+        const parsed = JSON.parse(existingDb);
+        if (!parsed.students || parsed.students.length === 0) {
+          parsed.students = initialSeedData.students || [];
+          localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
+          window.dispatchEvent(new Event('central_db_updated'));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to seed munyaka_central_db:", err);
+    }
+  }, []);
 
   // ── One-time learner-data migrations ───────────────────────────────────
   // Sequential, independently-gated migrations run on first launch:

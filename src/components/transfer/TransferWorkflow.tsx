@@ -542,7 +542,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         const transferDate = transferData.dateOfExit || new Date().toISOString().split('T')[0];
         const archiveRecord: TransferredLearnerArchive = {
           id: student.id,
-          admNo: student.assessment || student.admissionNumber || '',
+          admNo: (student as any).admissionNumber || (student as any).admNo || student.assessment || '',
           name: student.name,
           grade: student.grade,
           stream: student.stream,
