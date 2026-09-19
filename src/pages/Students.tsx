@@ -344,7 +344,7 @@ export default function Students() {
     if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
       return gradeObj.streams.map((st: any) => formatStreamLabel(st)).filter(Boolean);
     }
-    return ['North', 'South', 'East', 'West', 'Central', 'Red', 'Blue', 'Green'];
+    return ['BLUE', 'GREEN', 'YELLOW', 'RED', 'MERCURY', 'VENUS'];
   }, [gradeFilter]);
   const [availableStreams, setAvailableStreams] = useState<any[]>([]);
   const [availableStreamsForModal, setAvailableStreamsForModal] = useState<any[]>([]);
