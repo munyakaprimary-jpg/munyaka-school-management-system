@@ -72,11 +72,34 @@ import Communication from "./pages/Communication";
 import Library from "./pages/Library";
 import Inventory from "./pages/Inventory";
 import { LearnerProvider } from './context/LearnerContext';
-import { useStorageHydration } from "@/hooks/useStorageHydration";
+import { initialSeedData } from './data/initialSeedData';
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
+
+// ── Critical Central Database Initialization ──────────────────────────────
+// Ensures `munyaka_central_db` is always populated with `initialSeedData` on boot.
+if (typeof window !== 'undefined' && window.localStorage) {
+  try {
+    const existingDb = localStorage.getItem('munyaka_central_db');
+    if (!existingDb) {
+      const initialDb = {
+        students: initialSeedData.students || [],
+        staff: initialSeedData.staff || [],
+      };
+      localStorage.setItem('munyaka_central_db', JSON.stringify(initialDb));
+    } else {
+      const parsed = JSON.parse(existingDb);
+      if (!parsed.students || parsed.students.length === 0) {
+        parsed.students = initialSeedData.students || [];
+        localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
+      }
+    }
+  } catch (e) {
+    console.error('[Central DB Init] Failed to seed munyaka_central_db:', e);
+  }
+}
 
 // ── Legacy Key Auto-Migration ─────────────────────────────────────────────
 const migrateStorageKey = (oldKey: string, newKey: string) => {
