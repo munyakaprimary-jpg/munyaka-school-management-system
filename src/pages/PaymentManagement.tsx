@@ -1,23 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   CreditCard, 
   ShieldCheck, 
   Building2, 
   CheckCircle2, 
-  Clock, 
-  DollarSign, 
   Smartphone, 
   Building, 
-  ArrowUpRight, 
-  Sparkles, 
   Key, 
   RefreshCw, 
-  AlertCircle,
   FileText,
-  BadgePercent,
-  Lock
+  Users,
+  Calendar,
+  DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,12 +23,20 @@ import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
 
 export default function PaymentManagement() {
-  const [activeTab, setActiveTab] = useState<'subscriptions' | 'gateways' | 'invoices' | 'settings'>('subscriptions');
+  const [activeTab, setActiveTab] = useState<'subscriptions' | 'seats' | 'monthly' | 'gateways' | 'invoices'>('subscriptions');
   const [mpesaNumber, setMpesaNumber] = useState('0738873359');
   const [selectedPlan, setSelectedPlan] = useState('Enterprise Annual (KES 120,000)');
   const [isProcessing, setIsProcessing] = useState(false);
   const [licenseKey, setLicenseKey] = useState('MUNYAKA-ENT-2026-9982');
   const [isRenewed, setIsRenewed] = useState(false);
+
+  // Seat allocation state
+  const [allocatedSeats, setAllocatedSeats] = useState(450);
+  const [maxSeats, setMaxSeats] = useState(500);
+
+  // Monthly billing setting state
+  const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState(1200);
+  const [autoDebitEnabled, setAutoDebitEnabled] = useState(true);
 
   const [subscriptions, setSubscriptions] = useState([
     { id: 1, school: 'Munyaka Primary & Junior School', tier: 'Enterprise Tier', status: 'Active', expires: '2026-12-31', amount: 'KES 120,000' },
@@ -78,18 +82,18 @@ export default function PaymentManagement() {
             </div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight">Payment & Subscriptions</h1>
             <p className="text-indigo-200 text-sm mt-2 max-w-2xl font-medium">
-              Manage multi-campus software licenses, M-Pesa payment gateways, automated STK push billing, and institution subscription renewals.
+              Manage multi-campus software licenses, learner seat allocations, monthly payment settings, M-Pesa payment gateways, and subscription renewals.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-center">
+            <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-center">
               <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider">Active Campuses</p>
               <p className="text-2xl font-black mt-1">3 Campuses</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-center">
-              <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider">License Status</p>
-              <p className="text-2xl font-black mt-1 text-emerald-400">Verified</p>
+            <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-center">
+              <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider">Seat Allocation</p>
+              <p className="text-2xl font-black mt-1 text-emerald-400">{allocatedSeats} / {maxSeats}</p>
             </div>
           </div>
         </div>
@@ -106,6 +110,26 @@ export default function PaymentManagement() {
           }`}
         >
           <CreditCard size={18} /> Subscriptions & Renewal
+        </button>
+        <button
+          onClick={() => setActiveTab('seats')}
+          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'seats'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
+              : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'
+          }`}
+        >
+          <Users size={18} /> Seats Allocation
+        </button>
+        <button
+          onClick={() => setActiveTab('monthly')}
+          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'monthly'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
+              : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'
+          }`}
+        >
+          <Calendar size={18} /> Monthly Payment Setting
         </button>
         <button
           onClick={() => setActiveTab('gateways')}
@@ -127,22 +151,11 @@ export default function PaymentManagement() {
         >
           <FileText size={18} /> Billing History & Invoices
         </button>
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'settings'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
-              : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'
-          }`}
-        >
-          <ShieldCheck size={18} /> Payment Configuration & Settings
-        </button>
       </div>
 
       {/* Tab 1: Subscriptions & Renewal */}
       {activeTab === 'subscriptions' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
-          {/* Left 2 Cols: Campuses Table */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="border border-slate-200 shadow-sm rounded-3xl overflow-hidden bg-white">
               <CardHeader className="bg-slate-50/70 border-b border-slate-100 px-6 py-5">
@@ -183,7 +196,6 @@ export default function PaymentManagement() {
               </CardContent>
             </Card>
 
-            {/* License Key Management */}
             <Card className="border border-slate-200 shadow-sm rounded-3xl p-6 bg-white">
               <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
                 <Key className="text-indigo-600" size={20} /> Software Activation & License Key
@@ -206,11 +218,10 @@ export default function PaymentManagement() {
             </Card>
           </div>
 
-          {/* Right Col: Instant M-Pesa STK Renewal */}
           <div className="space-y-6">
             <Card className="border border-indigo-200 shadow-lg rounded-3xl p-6 bg-gradient-to-br from-indigo-50/50 via-white to-slate-50">
               <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-2">
-                <Sparkles className="text-indigo-600" size={20} /> Instant M-Pesa Renewal
+                <CreditCard className="text-indigo-600" size={20} /> Instant M-Pesa Renewal
               </h3>
               <p className="text-xs text-slate-500 mb-6 font-medium">
                 Trigger automated STK Push directly to the billing phone number to renew annual school software licenses instantly.
@@ -269,7 +280,115 @@ export default function PaymentManagement() {
         </div>
       )}
 
-      {/* Tab 2: M-Pesa & Bank Gateways */}
+      {/* Tab 2: Seats Allocation */}
+      {activeTab === 'seats' && (
+        <Card className="border border-slate-200 shadow-sm rounded-3xl p-8 bg-white animate-in fade-in space-y-6">
+          <CardHeader className="p-0 border-b border-slate-100 pb-4">
+            <CardTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <Users className="text-indigo-600" size={24} /> Learner & Staff Seats Allocation
+            </CardTitle>
+            <p className="text-xs text-slate-500 font-medium mt-1">Manage active learner slots and user license seats across all registered campuses.</p>
+          </CardHeader>
+
+          <CardContent className="p-0 space-y-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <p className="text-xs font-black uppercase text-slate-400">Currently Allocated Seats</p>
+                <p className="text-4xl font-black text-slate-900 mt-2">{allocatedSeats}</p>
+                <p className="text-xs text-indigo-600 font-bold mt-1">Active registered learners</p>
+              </div>
+
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <p className="text-xs font-black uppercase text-slate-400">Maximum License Capacity</p>
+                <p className="text-4xl font-black text-slate-900 mt-2">{maxSeats}</p>
+                <p className="text-xs text-emerald-600 font-bold mt-1">Enterprise Plan Limit</p>
+              </div>
+
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <p className="text-xs font-black uppercase text-slate-400">Available Free Slots</p>
+                <p className="text-4xl font-black text-slate-900 mt-2">{maxSeats - allocatedSeats}</p>
+                <p className="text-xs text-slate-500 font-bold mt-1">Ready for enrollment</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <div className="space-y-2 max-w-md">
+                <Label className="text-xs font-black uppercase text-slate-500">Request Seat Expansion / Upgrade Tier</Label>
+                <Input 
+                  type="number"
+                  value={maxSeats}
+                  onChange={(e) => setMaxSeats(Number(e.target.value))}
+                  className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
+                />
+              </div>
+
+              <Button 
+                onClick={() => showSuccess(`Seat capacity successfully updated to ${maxSeats} seats.`)}
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-8"
+              >
+                Save Seat Allocation Limits
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tab 3: Monthly Payment Setting */}
+      {activeTab === 'monthly' && (
+        <Card className="border border-slate-200 shadow-sm rounded-3xl p-8 bg-white animate-in fade-in space-y-6">
+          <CardHeader className="p-0 border-b border-slate-100 pb-4">
+            <CardTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <Calendar className="text-indigo-600" size={24} /> Monthly Payment & Billing Setting
+            </CardTitle>
+            <p className="text-xs text-slate-500 font-medium mt-1">Configure recurring monthly billing cycles, per-student subscription fees, and auto-debit rules.</p>
+          </CardHeader>
+
+          <CardContent className="p-0 space-y-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-500">Monthly License Fee Per Student (KES)</Label>
+                <Input 
+                  type="number"
+                  value={monthlyFeePerStudent}
+                  onChange={(e) => setMonthlyFeePerStudent(Number(e.target.value))}
+                  className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-500">Automated Monthly Direct Debit</Label>
+                <select 
+                  value={autoDebitEnabled ? 'yes' : 'no'}
+                  onChange={(e) => setAutoDebitEnabled(e.target.value === 'yes')}
+                  className="w-full h-12 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800"
+                >
+                  <option value="yes">Enabled (Auto-charge via M-Pesa / Bank)</option>
+                  <option value="no">Disabled (Manual Invoicing)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3 text-amber-900">
+              <DollarSign className="shrink-0 text-amber-600 mt-0.5" size={20} />
+              <div>
+                <p className="font-bold text-xs uppercase tracking-wider">Monthly Billing Cycle Note</p>
+                <p className="text-xs mt-1">Recurring invoices are automatically dispatched on the 1st of every month based on active registered learner counts.</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <Button 
+                onClick={() => showSuccess('Monthly payment settings saved successfully.')}
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-8"
+              >
+                Save Monthly Billing Rules
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tab 4: M-Pesa & Bank Gateways */}
       {activeTab === 'gateways' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in">
           <Card className="border border-slate-200 shadow-sm rounded-3xl p-6 bg-white">
@@ -332,7 +451,7 @@ export default function PaymentManagement() {
         </div>
       )}
 
-      {/* Tab 3: Billing History & Invoices */}
+      {/* Tab 5: Billing History & Invoices */}
       {activeTab === 'invoices' && (
         <Card className="border border-slate-200 shadow-sm rounded-3xl overflow-hidden bg-white animate-in fade-in">
           <CardHeader className="bg-slate-50/70 border-b border-slate-100 px-6 py-5">
@@ -364,53 +483,6 @@ export default function PaymentManagement() {
                   </div>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Tab 4: Payment Configuration & Settings */}
-      {activeTab === 'settings' && (
-        <Card className="border border-slate-200 shadow-sm rounded-3xl p-6 bg-white animate-in fade-in space-y-6">
-          <CardHeader className="p-0 border-b border-slate-100 pb-4">
-            <CardTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
-              <ShieldCheck className="text-indigo-600" size={24} /> Payment Configuration & Settings
-            </CardTitle>
-            <p className="text-xs text-slate-500 font-medium mt-1">Configure global billing thresholds, tax settings, automatic receipt dispatch, and multi-currency rules.</p>
-          </CardHeader>
-          <CardContent className="p-0 space-y-6 pt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-500">Default Currency</Label>
-                <select className="w-full h-12 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800">
-                  <option value="KES">KES — Kenyan Shilling</option>
-                  <option value="USD">USD — US Dollar</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-500">Value Added Tax (VAT %)</Label>
-                <Input defaultValue="16%" className="h-12 bg-slate-50 border-slate-200 font-bold" />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-500">Automatic Receipt Email Dispatch</Label>
-                <select className="w-full h-12 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800">
-                  <option value="enabled">Enabled (Send PDF on Payment)</option>
-                  <option value="disabled">Disabled</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-500">Billing Notification Webhook URL</Label>
-                <Input defaultValue="https://portal.munyakaschool.ac.ke/api/v1/billing/webhook" className="h-12 bg-slate-50 border-slate-200 font-mono text-xs font-bold" />
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-4 border-t border-slate-100">
-              <Button onClick={() => showSuccess('Payment configuration and settings saved successfully.')} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-8">
-                Save Configuration
-              </Button>
             </div>
           </CardContent>
         </Card>
