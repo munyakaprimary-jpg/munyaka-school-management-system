@@ -80,36 +80,25 @@ interface ProfileLearner {
 const StudentProfile = () => {
   const { id } = useParams<{ id: string }>();
 
-  // ── FIX 1: Look up the ACTIVE learner from localStorage checking ALL learner keys + fallback.
-  const [activeLearner, setActiveLearner] = useState<ProfileLearner | null>(null);
-
-  useEffect(() => {
-    if (!id) {
-      setActiveLearner(null);
-      return;
-    }
-
+  const activeLearner = useMemo(() => {
     try {
-      const stored = getStoredLearners();
-      if (stored && stored.length > 0) {
-        const match = stored.find((l: any) =>
-          String(l.id ?? '').trim().toLowerCase() === String(id ?? '').trim().toLowerCase() ||
-          String(l.admNo ?? l.admissionNo ?? '').trim().toLowerCase() === String(id ?? '').trim().toLowerCase()
-        );
-        if (match) {
-          setActiveLearner(match as ProfileLearner);
-          return;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to resolve learner from munyaka_learners_db', e);
-    }
+      const rawDb = localStorage.getItem('munyaka_central_db');
+      const db = rawDb ? JSON.parse(rawDb) : {};
+      const studentsList = Array.isArray(db.students) ? db.students : [];
 
-    setActiveLearner(null);
+      return studentsList.find((s: any) =>
+        String(s.id) === String(id) ||
+        String(s.admissionNo) === String(id) ||
+        String(s.admissionNumber) === String(id) ||
+        String(s.assessmentNo) === String(id) ||
+        String(s.assessment) === String(id) ||
+        encodeURIComponent(s.admissionNo) === id
+      ) || null;
+    } catch (e) {
+      return null;
+    }
   }, [id]);
 
-  // If the URL doesn't resolve to any learner, show a friendly empty state
-  // rather than silently rendering a different student's profile.
   const [showNotFound, setShowNotFound] = useState(false);
   useEffect(() => {
     if (!id) return;
