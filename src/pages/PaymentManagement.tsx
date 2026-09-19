@@ -27,7 +27,7 @@ import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
 
 export default function PaymentManagement() {
-  const [activeTab, setActiveTab] = useState<'subscriptions' | 'gateways' | 'invoices'>('subscriptions');
+  const [activeTab, setActiveTab] = useState<'subscriptions' | 'gateways' | 'invoices' | 'settings'>('subscriptions');
   const [mpesaNumber, setMpesaNumber] = useState('0738873359');
   const [selectedPlan, setSelectedPlan] = useState('Enterprise Annual (KES 120,000)');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -96,10 +96,10 @@ export default function PaymentManagement() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-px">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-px overflow-x-auto">
         <button
           onClick={() => setActiveTab('subscriptions')}
-          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 ${
+          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'subscriptions'
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
               : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'
@@ -109,7 +109,7 @@ export default function PaymentManagement() {
         </button>
         <button
           onClick={() => setActiveTab('gateways')}
-          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 ${
+          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'gateways'
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
               : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'
@@ -119,13 +119,23 @@ export default function PaymentManagement() {
         </button>
         <button
           onClick={() => setActiveTab('invoices')}
-          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 ${
+          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'invoices'
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
               : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'
           }`}
         >
           <FileText size={18} /> Billing History & Invoices
+        </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'settings'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
+              : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'
+          }`}
+        >
+          <ShieldCheck size={18} /> Payment Configuration & Settings
         </button>
       </div>
 
@@ -354,6 +364,53 @@ export default function PaymentManagement() {
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tab 4: Payment Configuration & Settings */}
+      {activeTab === 'settings' && (
+        <Card className="border border-slate-200 shadow-sm rounded-3xl p-6 bg-white animate-in fade-in space-y-6">
+          <CardHeader className="p-0 border-b border-slate-100 pb-4">
+            <CardTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
+              <ShieldCheck className="text-indigo-600" size={24} /> Payment Configuration & Settings
+            </CardTitle>
+            <p className="text-xs text-slate-500 font-medium mt-1">Configure global billing thresholds, tax settings, automatic receipt dispatch, and multi-currency rules.</p>
+          </CardHeader>
+          <CardContent className="p-0 space-y-6 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-500">Default Currency</Label>
+                <select className="w-full h-12 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800">
+                  <option value="KES">KES — Kenyan Shilling</option>
+                  <option value="USD">USD — US Dollar</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-500">Value Added Tax (VAT %)</Label>
+                <Input defaultValue="16%" className="h-12 bg-slate-50 border-slate-200 font-bold" />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-500">Automatic Receipt Email Dispatch</Label>
+                <select className="w-full h-12 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800">
+                  <option value="enabled">Enabled (Send PDF on Payment)</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-500">Billing Notification Webhook URL</Label>
+                <Input defaultValue="https://portal.munyakaschool.ac.ke/api/v1/billing/webhook" className="h-12 bg-slate-50 border-slate-200 font-mono text-xs font-bold" />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <Button onClick={() => showSuccess('Payment configuration and settings saved successfully.')} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-8">
+                Save Configuration
+              </Button>
             </div>
           </CardContent>
         </Card>
