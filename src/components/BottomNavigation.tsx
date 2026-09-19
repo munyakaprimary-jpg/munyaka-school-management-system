@@ -39,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: Key, label: 'Licenses', path: '/licenses', roles: ['admin'] },
   { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin', 'teacher', 'accountant', 'staff', 'student'] },
   { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin'] },
+  { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'teacher', 'student', 'staff', 'librarian'] },
 ];
 
 export const BottomNavigation = () => {

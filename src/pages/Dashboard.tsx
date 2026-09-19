@@ -1311,6 +1311,18 @@ const LearnerDashboard: React.FC = () => {
 
           <button
             type="button"
+            onClick={() => navigate('/study-corner')}
+            className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+              <BookOpen size={20} />
+            </div>
+            <h4 className="font-bold text-slate-900">Study Corner</h4>
+            <p className="mt-1 text-sm text-slate-500">Revision and CBC learning tools</p>
+          </button>
+
+          <button
+            type="button"
             onClick={() => navigate('/games')}
             className="group rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
           >
