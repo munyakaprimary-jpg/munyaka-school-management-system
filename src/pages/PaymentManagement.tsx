@@ -30,6 +30,16 @@ export default function PaymentManagement() {
   const [licenseKey, setLicenseKey] = useState('MUNYAKA-ENT-2026-9982');
   const [isRenewed, setIsRenewed] = useState(false);
 
+  // Record Payment Modal State
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentCampus, setPaymentCampus] = useState('Munyaka Primary & Junior School');
+  const [paymentMethod, setPaymentMethod] = useState('M-Pesa Paybill / STK');
+  const [paymentRef, setPaymentRef] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState('112500');
+  const [paymentPeriod, setPaymentPeriod] = useState('1 Year Extension');
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentNotes, setPaymentNotes] = useState('Official annual software license renewal');
+
   // Real Data from munyaka_central_db
   const centralStudents = useMemo(() => {
     try {
@@ -179,15 +189,21 @@ export default function PaymentManagement() {
                 <p className="text-[11px] font-bold uppercase text-indigo-600 tracking-wider">Per-Seat Subscription Summary</p>
                 <p className="text-sm font-bold text-slate-900 mt-0.5">Total Licensed Seats: <span className="text-indigo-600 font-extrabold">{allocatedSeats} Seats</span></p>
               </div>
-              <div className="flex items-center gap-4 text-right">
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Rate / Seat</p>
-                  <p className="text-xs font-bold text-slate-700">KES 250 / yr</p>
-                </div>
-                <div className="border-l border-slate-200 pl-4">
+              <div className="flex items-center gap-4">
+                <div className="text-right">
                   <p className="text-[10px] uppercase font-bold text-slate-400">Total Commitment</p>
                   <p className="text-sm font-extrabold text-emerald-600">KES {(allocatedSeats * 250).toLocaleString()}</p>
                 </div>
+                <Button
+                  onClick={() => {
+                    setPaymentCampus('Munyaka Primary & Junior School');
+                    setPaymentAmount(String(allocatedSeats * 250));
+                    setIsPaymentModalOpen(true);
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-sm"
+                >
+                  Record Payment
+                </Button>
               </div>
             </div>
 
@@ -200,12 +216,11 @@ export default function PaymentManagement() {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y divide-slate-100 text-xs">
-                  {[
-                    { id: 1, school: 'Munyaka Primary & Junior School', tier: 'Enterprise Per-Seat Tier', status: 'Active', expires: '2026-12-31', seats: allocatedSeats, rate: 250 },
-                    { id: 2, school: 'Eldoret Junior Academy', tier: 'Standard Per-Seat Tier', status: 'Active', expires: '2026-08-15', seats: 180, rate: 250 },
-                    { id: 3, school: 'Kapsabet Annex Campus', tier: 'Starter Per-Seat Tier', status: 'Pending Renewal', expires: '2026-03-01', seats: 120, rate: 250 },
-                  ].map((sub) => {
-                    const subtotal = sub.seats * sub.rate;
+                  {subscriptions.map((sub) => {
+                    const isMain = sub.id === 1;
+                    const subtotal = isMain ? allocatedSeats * 250 : (sub.school.includes('Eldoret') ? 180 * 250 : 120 * 250);
+                    const seatCount = isMain ? allocatedSeats : (sub.school.includes('Eldoret') ? 180 : 120);
+
                     return (
                       <div key={sub.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
                         <div className="flex items-start gap-3">
@@ -215,13 +230,13 @@ export default function PaymentManagement() {
                           <div>
                             <h4 className="font-bold text-slate-900 text-sm">{sub.school}</h4>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge className="bg-slate-100 text-slate-700 font-semibold text-[11px] px-2 py-0.5">{sub.seats} Active Seats @ KES {sub.rate} / seat</Badge>
+                              <Badge className="bg-slate-100 text-slate-700 font-semibold text-[11px] px-2 py-0.5">{seatCount} Active Seats @ KES 250 / seat</Badge>
                               <span className="text-[11px] text-slate-400 font-medium">Expires: {sub.expires}</span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between md:justify-end gap-3">
+                        <div className="flex items-center justify-between md:justify-end gap-2.5">
                           <div className="text-right">
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Annual Subtotal</p>
                             <p className="font-extrabold text-slate-900 text-xs">KES {subtotal.toLocaleString()}</p>
@@ -229,13 +244,25 @@ export default function PaymentManagement() {
                           <Badge className={sub.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-0.5' : 'bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-0.5'}>
                             {sub.status}
                           </Badge>
-                          <Button
-                            variant="outline"
-                            onClick={() => setActiveTab('seats')}
-                            className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-slate-200"
-                          >
-                            Manage Seats
-                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              onClick={() => {
+                                setPaymentCampus(sub.school);
+                                setPaymentAmount(String(subtotal));
+                                setIsPaymentModalOpen(true);
+                              }}
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm"
+                            >
+                              Record Payment
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => setActiveTab('seats')}
+                              className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-slate-200"
+                            >
+                              Manage Seats
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -552,6 +579,144 @@ export default function PaymentManagement() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Record Payment Modal */}
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-5 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Record Subscription Payment</h3>
+              <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const amtNum = Number(paymentAmount);
+              
+              // 1. Update campus status in local state
+              setSubscriptions(prev => prev.map(s => {
+                if (s.school === paymentCampus) {
+                  return { ...s, status: 'Active', expires: '2027-03-31' };
+                }
+                return s;
+              }));
+
+              // 2. Append payment into munyaka_billing_history
+              try {
+                const history = JSON.parse(localStorage.getItem('munyaka_billing_history') || '[]');
+                history.unshift({
+                  id: `PAY-${Date.now()}`,
+                  date: paymentDate,
+                  campus: paymentCampus,
+                  method: paymentMethod,
+                  ref: paymentRef || `REF-${Math.floor(100000 + Math.random() * 900000)}`,
+                  amount: `KES ${amtNum.toLocaleString()}`,
+                  period: paymentPeriod,
+                  notes: paymentNotes
+                });
+                localStorage.setItem('munyaka_billing_history', JSON.stringify(history));
+              } catch {}
+
+              showSuccess(`Payment of KES ${amtNum.toLocaleString()} successfully recorded for ${paymentCampus}!`);
+              setIsPaymentModalOpen(false);
+            }} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-bold uppercase text-slate-500">Selected Campus</Label>
+                <Input disabled value={paymentCampus} className="bg-slate-100 font-bold text-slate-800 h-10" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase text-slate-500">Payment Method</Label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                  >
+                    <option value="M-Pesa Paybill / STK">M-Pesa Paybill / STK</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="Cash">Cash</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase text-slate-500">Transaction Reference Code</Label>
+                  <Input
+                    value={paymentRef}
+                    onChange={(e) => setPaymentRef(e.target.value)}
+                    placeholder="e.g. QKH78923XX"
+                    className="h-10 bg-slate-50 font-mono text-xs font-semibold"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase text-slate-500">Amount Received (KES)</Label>
+                  <Input
+                    type="number"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="h-10 bg-slate-50 font-bold text-sm text-emerald-600"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase text-slate-500">Billing Period / Extension</Label>
+                  <select
+                    value={paymentPeriod}
+                    onChange={(e) => setPaymentPeriod(e.target.value)}
+                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                  >
+                    <option value="1 Year Extension">1 Year Extension</option>
+                    <option value="6 Months Extension">6 Months Extension</option>
+                    <option value="Custom Term">Custom Term</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-bold uppercase text-slate-500">Payment Date</Label>
+                <Input
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="h-10 bg-slate-50 text-xs font-semibold"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-bold uppercase text-slate-500">Notes / Receipt Remarks</Label>
+                <Input
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  placeholder="Additional notes..."
+                  className="h-10 bg-slate-50 text-xs font-medium"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsPaymentModalOpen(false)}
+                  className="rounded-xl text-xs font-semibold h-10 px-4"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-10 px-6 shadow-sm"
+                >
+                  Confirm & Record Payment
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
