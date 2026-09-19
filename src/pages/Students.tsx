@@ -206,37 +206,38 @@ export default function Students() {
     });
   }, [students, searchTerm, gradeFilter]);
 
-  // Compute available streams for the currently selected grade using gradesStreamsConfig or localStorage
-  const availableStreamsForModal = useMemo(() => {
-    try {
-      const gradesRaw = localStorage.getItem('munyaka_grades') || localStorage.getItem('munyaka_grades_streams') || localStorage.getItem('munyaka_grades_streams_data');
-      if (gradesRaw) {
-        const parsed = JSON.parse(gradesRaw);
-        if (parsed && typeof parsed === 'object') {
-          // If stored as an object mapping grades to streams or arrays
-          if (Array.isArray(parsed.grades)) {
-            const gradeObj = parsed.grades.find((g: any) => String(g.name || '').toLowerCase() === String(grade).toLowerCase());
-            if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
-              return gradeObj.streams;
-            }
-          }
-          if (parsed[grade] && Array.isArray(parsed[grade])) {
-            return parsed[grade];
-          }
-        }
-      }
-    } catch {}
+  // Dynamic streams state for selected grade
+  const [availableStreams, setAvailableStreams] = useState<string[]>([]);
 
-    // Default fallback streams if none are specifically configured
-    return ['North', 'South', 'East', 'West', 'Central', 'Red', 'Blue', 'Green'];
-  }, [grade]);
-
-  // Ensure stream is valid when grade changes
   useEffect(() => {
-    if (availableStreamsForModal.length > 0 && !availableStreamsForModal.includes(stream)) {
-      setStream(availableStreamsForModal[0]);
+    // Pull dynamic grades/streams setup from LocalStorage or system state
+    const storedGrades = localStorage.getItem('munyaka_grades') || localStorage.getItem('munyaka_grades_streams') || localStorage.getItem('munyaka_grades_streams_data') || localStorage.getItem('grades_streams');
+    
+    if (storedGrades) {
+      try {
+        const parsed = JSON.parse(storedGrades);
+        const gradesArray = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.grades) ? parsed.grades : []);
+        
+        // Match streams configured specifically for the currently selected grade
+        const gradeObj = gradesArray.find((g: any) =>
+          String(g.name || g.grade || '').trim().toLowerCase() === String(grade || '').trim().toLowerCase() ||
+          g.id === grade
+        );
+        
+        if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
+          setAvailableStreams(gradeObj.streams.map(String));
+          setStream(gradeObj.streams[0]); // Set first configured stream as default
+          return;
+        }
+      } catch (err) {
+        console.error("Error parsing dynamic streams", err);
+      }
     }
-  }, [availableStreamsForModal, stream]);
+    
+    // If no dynamic streams are configured in 'Grades & Streams', clear options array completely
+    setAvailableStreams([]);
+    setStream('');
+  }, [grade]);
   const generateAdmissionNumber = (selectedGrade: string, existingStudentsCount: number = 0) => {
     const gradeMatch = selectedGrade.match(/\d+/);
     const gradeCode = gradeMatch ? `G${gradeMatch[0]}` : 'G1';
@@ -277,6 +278,11 @@ export default function Students() {
     e.preventDefault();
     if (!fullName || !admissionNumber) {
       alert("Please provide at least Full Name and Admission Number.");
+      return;
+    }
+
+    if (!stream) {
+      alert("Please select a valid stream for this grade. Configure streams in 'Grades & Streams' if none are available.");
       return;
     }
 
