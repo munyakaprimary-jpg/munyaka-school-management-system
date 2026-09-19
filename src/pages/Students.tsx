@@ -720,12 +720,14 @@ export default function Students() {
             <table className="w-full text-left border-collapse min-w-[950px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3.5 px-5">ADMISSION NO.</th>
-                  <th className="py-3.5 px-5">ASSESSMENT NO.</th>
-                  <th className="py-3.5 px-5">FULL NAME</th>
-                  <th className="py-3.5 px-5">GRADE & STREAM</th>
-                  <th className="py-3.5 px-5">GENDER</th>
-                  <th className="py-3.5 px-5 text-right">ACTIONS</th>
+                  <th className="py-3.5 px-4">ADMISSION NO.</th>
+                  <th className="py-3.5 px-4">ASSESSMENT NO.</th>
+                  <th className="py-3.5 px-4">FULL NAME</th>
+                  <th className="py-3.5 px-4">GRADE & STREAM</th>
+                  <th className="py-3.5 px-4">GENDER</th>
+                  <th className="py-3.5 px-4">PARENT / GUARDIAN</th>
+                  <th className="py-3.5 px-4">PHONE NUMBER</th>
+                  <th className="py-3.5 px-4 text-right">ACTIONS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -733,25 +735,31 @@ export default function Students() {
                   const sId = student.id || student.admissionNumber || student.admNo || idx;
                   const sName = student.name || student.fullName || 'Unnamed Learner';
                   const sAdm = student.admissionNumber || student.admNo || student.admissionNo || '—';
-                  const sAss = student.assessmentNo || student.assessmentNumber || student.assNo || '—';
-                  const sGender = student.gender || '—';
+                  const sAss = student.assessmentNo || student.assessmentNumber || student.assessment || student.assNo || '—';
+                  const sGender = student.gender || 'Male';
+                  const sParent = student.parentName || student.guardian || '—';
+                  const sPhone = student.parentPhone || student.phoneNumber || student.phone || '—';
+                  const sStreamRaw = student.stream || 'BLUE';
+                  const sStream = /North|South|East|West/i.test(sStreamRaw) ? 'BLUE' : sStreamRaw;
 
                   return (
-                    <tr key={sId} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-5 font-mono text-xs font-semibold text-indigo-600">{sAdm}</td>
-                      <td className="py-3.5 px-5 font-mono text-xs text-slate-600">{sAss}</td>
-                      <td className="py-3.5 px-5 font-semibold text-slate-900">
+                    <tr key={sId} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3 text-xs font-mono font-semibold text-indigo-600">{sAdm}</td>
+                      <td className="px-4 py-3 text-xs font-mono text-slate-500">{sAss}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-slate-900">
                         <Link to={`/students/${sId}`} className="hover:text-indigo-600 transition-colors">
                           {sName}
                         </Link>
                       </td>
-                      <td className="py-3.5 px-5">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {student.grade || student.class} {student.stream ? `(${student.stream})` : ''}
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          {student.grade || student.class} ({sStream})
                         </span>
                       </td>
-                      <td className="py-3.5 px-5 text-slate-600 font-medium">{sGender}</td>
-                      <td className="py-3.5 px-5 text-right">
+                      <td className="px-4 py-3 text-sm text-slate-700">{sGender}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">{sParent}</td>
+                      <td className="px-4 py-3 text-sm font-mono text-slate-700">{sPhone}</td>
+                      <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => {
