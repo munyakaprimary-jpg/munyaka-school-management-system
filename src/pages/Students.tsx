@@ -280,6 +280,11 @@ export default function Students() {
       return;
     }
 
+    if (!stream) {
+      alert("Please select a valid stream for this grade. Configure streams in 'Grades & Streams' if none are available.");
+      return;
+    }
+
     const newStudent = {
       id: editingId || Date.now().toString(),
       name: fullName,
