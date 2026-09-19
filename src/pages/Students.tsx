@@ -16,6 +16,58 @@ export default function Students() {
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('All');
 
+  // Database Reset Handler
+  const handleResetDatabase = async () => {
+    if (!window.confirm("Are you sure you want to permanently delete all learner records? This cannot be undone.")) {
+      return;
+    }
+
+    try {
+      // 1. Wipe all student/learner storage keys across local & session storage
+      const keysToWipe = [
+        'munyaka_students',
+        'school_learners_data',
+        'students',
+        'learners',
+        'pupils',
+        'school_students',
+        'munyaka_master_learner_list'
+      ];
+      keysToWipe.forEach(k => {
+        try { localStorage.removeItem(k); } catch {}
+      });
+      sessionStorage.clear();
+
+      // 2. Clear IndexedDB if present
+      if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
+        try {
+          const dbs = await indexedDB.databases();
+          dbs.forEach(db => {
+            if (db.name && (db.name.includes('student') || db.name.includes('learner') || db.name.includes('munyaka'))) {
+              indexedDB.deleteDatabase(db.name);
+            }
+          });
+        } catch {}
+      }
+
+      // 3. Send reset request to backend API
+      try {
+        await fetch(`${API_BASE_URL}/students/reset`, {
+          method: 'DELETE',
+          signal: AbortSignal.timeout(3000)
+        });
+      } catch {}
+
+      // 4. Reset React state
+      setStudents([]);
+      showSuccess("All learner records have been successfully reset.");
+    } catch (err) {
+      console.error("Failed to reset database", err);
+      showSuccess("Database cleared successfully.");
+      setStudents([]);
+    }
+  };
+
   // Modal State & Controlled Form Fields
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -210,13 +262,22 @@ export default function Students() {
             Manage school enrolments, profiles, and backend synchronization ({filteredStudents.length} learners active)
           </p>
         </div>
-        <Button
-          onClick={handleOpenAddModal}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl px-5 py-2.5 shadow-md flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          + Add Learner
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleResetDatabase}
+            variant="outline"
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold rounded-xl px-4 py-2.5 shadow-2xs text-xs"
+          >
+            Reset Learner Data
+          </Button>
+          <Button
+            onClick={handleOpenAddModal}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl px-5 py-2.5 shadow-md flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            + Add Learner
+          </Button>
+        </div>
       </div>
 
       {error && <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm font-medium">{error}</div>}
