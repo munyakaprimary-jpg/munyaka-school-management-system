@@ -758,8 +758,8 @@ export default function Students() {
                             <ArrowRightLeft className="w-4 h-4 text-indigo-600"/>
                           </button>
                           <button
-                            onClick={() => navigate(`/students/${sId}`)}
-                            title="View Profile"
+                            onClick={() => navigate(`/students/${student.id || student.admissionNumber || student.admNo}`)}
+                            title="View Learner Profile"
                             className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                           >
                             <Eye className="w-4 h-4" />
