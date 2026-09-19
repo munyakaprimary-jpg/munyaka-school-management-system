@@ -154,7 +154,7 @@ export default function Students() {
   const [fullName, setFullName] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [assessmentNumber, setAssessmentNumber] = useState('');
-  const [gender, setGender] = useState('Female');
+  const [gender, setGender] = useState('Male');
   const [grade, setGrade] = useState('Grade 1');
   const [stream, setStream] = useState('North');
   const [parentName, setParentName] = useState('');
