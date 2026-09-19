@@ -115,6 +115,18 @@ export const CentralDataService = {
 
   getLearners: (): Student[] => {
     CentralDataService.runStartupMigration();
+    
+    // Check munyaka_central_db first
+    try {
+      const centralRaw = localStorage.getItem('munyaka_central_db');
+      if (centralRaw) {
+        const db = JSON.parse(centralRaw);
+        if (Array.isArray(db.students) && db.students.length > 0) {
+          return db.students;
+        }
+      }
+    } catch {}
+
     const primary = readStorage<Student[]>(STORAGE_KEYS.STUDENTS, []);
     const master = readStorage<Student[]>(STORAGE_KEYS.MASTER_LEARNERS, []);
     const legacy = readStorage<Student[]>(STORAGE_KEYS.STUDENTS_LEGACY, []);
@@ -127,15 +139,31 @@ export const CentralDataService = {
       }
     });
 
-    return Array.from(combinedMap.values());
+    const results = Array.from(combinedMap.values());
+    if (results.length > 0) {
+      try {
+        const centralRaw = localStorage.getItem('munyaka_central_db') || '{}';
+        const db = JSON.parse(centralRaw);
+        db.students = results;
+        localStorage.setItem('munyaka_central_db', JSON.stringify(db));
+      } catch {}
+    }
+    return results;
   },
 
   saveLearners: (learners: Student[]): boolean => {
     writeStorage(STORAGE_KEYS.STUDENTS, learners);
     writeStorage(STORAGE_KEYS.STUDENTS_LEGACY, learners);
     writeStorage(STORAGE_KEYS.MASTER_LEARNERS, learners);
+    try {
+      const centralRaw = localStorage.getItem('munyaka_central_db') || '{}';
+      const db = JSON.parse(centralRaw);
+      db.students = learners;
+      localStorage.setItem('munyaka_central_db', JSON.stringify(db));
+    } catch {}
     window.dispatchEvent(new Event('students-updated'));
     window.dispatchEvent(new Event('learners-updated'));
+    window.dispatchEvent(new Event('central_db_updated'));
     return true;
   },
 
