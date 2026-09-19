@@ -171,102 +171,134 @@ export default function PaymentManagement() {
 
       {/* Tab 1: Subscriptions & Renewal */}
       {activeTab === 'subscriptions' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="border border-slate-200 shadow-sm rounded-3xl overflow-hidden bg-white">
-              <CardHeader className="bg-slate-50/70 border-b border-slate-100 px-6 py-5">
-                <CardTitle className="text-lg font-black text-slate-900 flex items-center justify-between">
-                  <span>Registered Campuses & Subscription Tiers</span>
-                  <Badge className="bg-indigo-100 text-indigo-700 font-bold px-3 py-1">3 Active</Badge>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in">
+          <div className="lg:col-span-2 space-y-5">
+            {/* Top-Level Subscription Summary Banner */}
+            <div className="bg-gradient-to-r from-indigo-50 to-slate-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-bold uppercase text-indigo-600 tracking-wider">Per-Seat Subscription Summary</p>
+                <p className="text-sm font-bold text-slate-900 mt-0.5">Total Licensed Seats: <span className="text-indigo-600 font-extrabold">{allocatedSeats} Seats</span></p>
+              </div>
+              <div className="flex items-center gap-4 text-right">
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Rate / Seat</p>
+                  <p className="text-xs font-bold text-slate-700">KES 250 / yr</p>
+                </div>
+                <div className="border-l border-slate-200 pl-4">
+                  <p className="text-[10px] uppercase font-bold text-slate-400">Total Commitment</p>
+                  <p className="text-sm font-extrabold text-emerald-600">KES {(allocatedSeats * 250).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            <Card className="border border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
+              <CardHeader className="bg-slate-50/70 border-b border-slate-100 px-5 py-3.5">
+                <CardTitle className="text-sm font-bold text-slate-900 flex items-center justify-between">
+                  <span>Registered Campuses & Per-Seat Tiers</span>
+                  <Badge className="bg-indigo-100 text-indigo-700 font-bold px-2.5 py-0.5 text-xs">3 Active</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-slate-100">
-                  {subscriptions.map((sub) => (
-                    <div key={sub.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 shrink-0 font-bold">
-                          <Building2 size={24} />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-slate-900 text-base">{sub.school}</h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge className="bg-slate-100 text-slate-700 font-semibold">{sub.tier}</Badge>
-                            <span className="text-xs text-slate-400 font-medium">Expires: {sub.expires}</span>
+                <div className="divide-y divide-slate-100 text-xs">
+                  {[
+                    { id: 1, school: 'Munyaka Primary & Junior School', tier: 'Enterprise Per-Seat Tier', status: 'Active', expires: '2026-12-31', seats: allocatedSeats, rate: 250 },
+                    { id: 2, school: 'Eldoret Junior Academy', tier: 'Standard Per-Seat Tier', status: 'Active', expires: '2026-08-15', seats: 180, rate: 250 },
+                    { id: 3, school: 'Kapsabet Annex Campus', tier: 'Starter Per-Seat Tier', status: 'Pending Renewal', expires: '2026-03-01', seats: 120, rate: 250 },
+                  ].map((sub) => {
+                    const subtotal = sub.seats * sub.rate;
+                    return (
+                      <div key={sub.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shrink-0 font-bold">
+                            <Building2 size={20} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-900 text-sm">{sub.school}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge className="bg-slate-100 text-slate-700 font-semibold text-[11px] px-2 py-0.5">{sub.seats} Active Seats @ KES {sub.rate} / seat</Badge>
+                              <span className="text-[11px] text-slate-400 font-medium">Expires: {sub.expires}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center justify-between md:justify-end gap-4">
-                        <div className="text-right">
-                          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Annual Fee</p>
-                          <p className="font-black text-slate-900 text-base">{sub.amount}</p>
+                        <div className="flex items-center justify-between md:justify-end gap-3">
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Annual Subtotal</p>
+                            <p className="font-extrabold text-slate-900 text-xs">KES {subtotal.toLocaleString()}</p>
+                          </div>
+                          <Badge className={sub.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-0.5' : 'bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-0.5'}>
+                            {sub.status}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            onClick={() => setActiveTab('seats')}
+                            className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-slate-200"
+                          >
+                            Manage Seats
+                          </Button>
                         </div>
-                        <Badge className={sub.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold px-3 py-1' : 'bg-amber-100 text-amber-700 font-bold px-3 py-1'}>
-                          {sub.status}
-                        </Badge>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border border-slate-200 shadow-sm rounded-3xl p-6 bg-white">
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
-                <Key className="text-indigo-600" size={20} /> Software Activation & License Key
+            <Card className="border border-slate-200 shadow-sm rounded-2xl p-5 bg-white">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-3">
+                <Key className="text-indigo-600" size={18} /> Software Activation & License Key
               </h3>
-              <p className="text-sm text-slate-600 mb-6 font-medium">
-                Your portal instance is bound to the official Munyaka Enterprise License. Regenerate or verify your key below.
+              <p className="text-xs text-slate-600 mb-4 font-medium">
+                Your portal instance is bound to the official Munyaka Per-Seat Enterprise License. Regenerate or verify your key below.
               </p>
               
-              <div className="flex flex-col md:flex-row items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                <div className="flex-1 font-mono font-bold text-indigo-600 bg-white px-4 py-3 rounded-xl border border-slate-200 w-full text-center md:text-left">
+              <div className="flex flex-col md:flex-row items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div className="flex-1 font-mono font-bold text-indigo-600 bg-white px-3.5 py-2 rounded-lg border border-slate-200 w-full text-center md:text-left text-xs">
                   {licenseKey}
                 </div>
                 <Button
                   onClick={handleRegenerateLicense}
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-6 w-full md:w-auto shrink-0 shadow-md shadow-indigo-100 gap-2"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-9 px-4 w-full md:w-auto shrink-0 shadow-sm gap-1.5"
                 >
-                  <RefreshCw size={16} /> Regenerate Key
+                  <RefreshCw size={14} /> Regenerate Key
                 </Button>
               </div>
             </Card>
           </div>
 
-          <div className="space-y-6">
-            <Card className="border border-indigo-200 shadow-lg rounded-3xl p-6 bg-gradient-to-br from-indigo-50/50 via-white to-slate-50">
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-2">
-                <CreditCard className="text-indigo-600" size={20} /> Instant M-Pesa Renewal
+          <div className="space-y-5">
+            <Card className="border border-indigo-200 shadow-md rounded-2xl p-5 bg-gradient-to-br from-indigo-50/50 via-white to-slate-50">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-1.5">
+                <CreditCard className="text-indigo-600" size={18} /> Instant M-Pesa Renewal
               </h3>
-              <p className="text-xs text-slate-500 mb-6 font-medium">
-                Trigger automated STK Push directly to the billing phone number to renew annual school software licenses instantly.
+              <p className="text-xs text-slate-500 mb-4 font-medium">
+                Trigger automated STK Push for total per-seat commitment: <strong className="text-emerald-600">KES {(allocatedSeats * 250).toLocaleString()}</strong>.
               </p>
 
-              <form onSubmit={handleMpesaCheckout} className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase text-slate-400 tracking-wider">Select Subscription Plan</Label>
+              <form onSubmit={handleMpesaCheckout} className="space-y-3.5">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Select Subscription Plan</Label>
                   <select
                     value={selectedPlan}
                     onChange={(e) => setSelectedPlan(e.target.value)}
-                    className="w-full h-12 px-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
                   >
-                    <option value="Enterprise Annual (KES 120,000)">Enterprise Annual (KES 120,000)</option>
-                    <option value="Standard Annual (KES 65,000)">Standard Annual (KES 65,000)</option>
-                    <option value="Starter Annual (KES 35,000)">Starter Annual (KES 35,000)</option>
+                    <option value="Enterprise Per-Seat Annual">Enterprise Per-Seat Annual (KES {(allocatedSeats * 250).toLocaleString()})</option>
+                    <option value="Standard Per-Seat Annual">Standard Per-Seat Annual</option>
+                    <option value="Starter Per-Seat Annual">Starter Per-Seat Annual</option>
                   </select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase text-slate-400 tracking-wider">M-Pesa Phone Number (STK Push)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">M-Pesa Phone Number (STK Push)</Label>
                   <div className="relative">
-                    <Smartphone className="absolute left-3.5 top-3.5 text-slate-400" size={18} />
+                    <Smartphone className="absolute left-3 top-2.5 text-slate-400" size={16} />
                     <Input
                       type="text"
                       value={mpesaNumber}
                       onChange={(e) => setMpesaNumber(e.target.value)}
                       placeholder="0712345678"
-                      className="pl-10 h-12 rounded-xl bg-white border-slate-200 font-bold"
+                      className="pl-9 h-9 rounded-xl bg-white border-slate-200 font-semibold text-xs"
                       required
                     />
                   </div>
@@ -275,19 +307,19 @@ export default function PaymentManagement() {
                 <Button
                   type="submit"
                   disabled={isProcessing}
-                  className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-100 gap-2 mt-2"
+                  className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm gap-1.5 mt-1"
                 >
-                  {isProcessing ? <RefreshCw className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
-                  {isProcessing ? 'Processing STK Push...' : 'Pay via M-Pesa STK Push'}
+                  {isProcessing ? <RefreshCw className="animate-spin" size={15} /> : <CheckCircle2 size={15} />}
+                  {isProcessing ? 'Processing STK Push...' : `Pay KES ${(allocatedSeats * 250).toLocaleString()} via M-Pesa`}
                 </Button>
               </form>
 
               {isRenewed && (
-                <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3 text-emerald-800 animate-in fade-in">
-                  <CheckCircle2 className="shrink-0 text-emerald-600 mt-0.5" size={18} />
+                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-emerald-800 animate-in fade-in text-xs">
+                  <CheckCircle2 className="shrink-0 text-emerald-600 mt-0.5" size={16} />
                   <div>
-                    <p className="font-bold text-xs uppercase tracking-wider">Renewal Successful</p>
-                    <p className="text-xs mt-1">License extended through Dec 31, 2026. Official receipt generated.</p>
+                    <p className="font-bold uppercase tracking-wider text-[11px]">Renewal Successful</p>
+                    <p className="mt-0.5">Per-seat license extended through Dec 31, 2026. Official receipt generated.</p>
                   </div>
                 </div>
               )}
