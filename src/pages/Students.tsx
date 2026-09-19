@@ -88,16 +88,25 @@ export default function Students() {
     });
   }, [students, searchTerm, gradeFilter]);
 
+  // Helper to generate admission number according to strict standard: MUN-G{GradeNumber}-{3-Digit-Sequence}-{CurrentYear}
+  const generateAdmissionNumber = (selectedGrade: string, existingStudentsCount: number = 0) => {
+    const gradeMatch = selectedGrade.match(/\d+/);
+    const gradeCode = gradeMatch ? `G${gradeMatch[0]}` : 'G1';
+    const sequenceNumber = String(existingStudentsCount + 1).padStart(3, '0');
+    const currentYear = new Date().getFullYear();
+    return `MUN-${gradeCode}-${sequenceNumber}-${currentYear}`;
+  };
+
   // Open Add Modal
   const handleOpenAddModal = () => {
     setEditingId(null);
     setFullName('');
-    setAdmissionNumber(`MUN-${Math.floor(1000 + Math.random() * 9000)}`);
-    setGender('Female');
     setGrade('Grade 1');
     setStream('North');
+    setGender('Female');
     setParentName('');
     setPhoneNumber('');
+    setAdmissionNumber(generateAdmissionNumber('Grade 1', students.length));
     setIsModalOpen(true);
   };
 
@@ -393,7 +402,13 @@ export default function Students() {
                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Grade / Class</label>
                     <select
                       value={grade}
-                      onChange={(e) => setGrade(e.target.value)}
+                      onChange={(e) => {
+                        const newGrade = e.target.value;
+                        setGrade(newGrade);
+                        if (!editingId) {
+                          setAdmissionNumber(generateAdmissionNumber(newGrade, students.length));
+                        }
+                      }}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     >
                       <option value="Grade 1">Grade 1</option>
