@@ -130,8 +130,15 @@ const getGradeMatchKey = (name: string): string => {
 export default function Students() {
   // ── 1. Unified LocalStorage Persistence Setup with munyaka_students
   const [students, setStudents] = useState<Student[]>(() => {
-    return CentralDataService.getLearners() as unknown as Student[];
+    try {
+      const data = CentralDataService.getLearners();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
   });
+
+  const [loading, setLoading] = useState(false);
 
   // 2. Use the academic calendar hook for dynamic term/year
     const { activeTerm, activeYear, isLoading } = useAcademicCalendar();
@@ -143,7 +150,12 @@ export default function Students() {
   // Add event listener to refresh UI instantly when a student is saved
   useEffect(() => {
     const syncStudents = () => {
-      setStudents(CentralDataService.getLearners() as unknown as Student[]);
+      try {
+        const data = CentralDataService.getLearners();
+        setStudents(Array.isArray(data) ? data : []);
+      } catch {
+        setStudents([]);
+      }
     };
     window.addEventListener('students-updated', syncStudents);
     window.addEventListener('munyaka:data-changed', syncStudents);
@@ -160,10 +172,12 @@ export default function Students() {
 
   // ── React to external learner-data changes ─────────────────────────────
   useEffect(() => {
-    const centralData = CentralDataService.getLearners();
-    if (centralData) {
-      setStudents(centralData as unknown as Student[]);
-    }
+    try {
+      const centralData = CentralDataService.getLearners();
+      if (Array.isArray(centralData)) {
+        setStudents(centralData as unknown as Student[]);
+      }
+    } catch {}
   }, []);
 
   // 3. Read the grades & streams configuration. We re-read on a tick so that
@@ -198,7 +212,7 @@ export default function Students() {
 
   // Normalize all learner streams once so the table is case-consistent.
   const normalizedLearners = useMemo(
-    () => learners.map((l) => ({ ...l, stream: normalizeStreamName(l.stream) })),
+    () => (Array.isArray(learners) ? learners : []).map((l) => ({ ...l, stream: normalizeStreamName(l.stream) })),
     [learners]
   );
 
@@ -206,6 +220,10 @@ export default function Students() {
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('All');
   const [streamFilter, setStreamFilter] = useState('All');
+
+  // Pagination for large dataset performance
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
   // Clear or update filter state on mount / navigation return
   useEffect(() => {
@@ -238,6 +256,7 @@ export default function Students() {
     const newGrade = e.target.value;
     setGradeFilter(newGrade);
     setStreamFilter('All');
+    setCurrentPage(1);
   };
 
   // Filtered learners
@@ -255,7 +274,7 @@ export default function Students() {
                 || streamFilter === 'All Streams'
                 || String(streamFilter || '').trim().toLowerCase() === 'all';
           
-              return normalizedLearners.filter(s => {
+              return (Array.isArray(normalizedLearners) ? normalizedLearners : []).filter(s => {
                 // ── Grade match ─────────────────────────────────────────────────────
                 // Skip grade comparison entirely when "All Grades" is selected.
                 // When a specific grade IS selected, accept:
@@ -299,6 +318,15 @@ export default function Students() {
       // dedicated Transferred Learners Archive (/learners/archive) instead.
       .filter((s) => s.status !== 'TRANSFERRED');
     }, [normalizedLearners, searchTerm, gradeFilter, streamFilter]);
+
+  // Paginated learners for rendering top slice
+  const paginatedLearners = useMemo(() => {
+    const list = Array.isArray(filteredLearners) ? filteredLearners : [];
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return list.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredLearners, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil((Array.isArray(filteredLearners) ? filteredLearners.length : 0) / itemsPerPage) || 1;
 
   // === Unified file-download state ===
   // We track a single download state for the export menu's "all / current view"
@@ -972,8 +1000,8 @@ export default function Students() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {filteredLearners.length > 0 ? (
-                filteredLearners.map((learner, index) => {
+              {(Array.isArray(paginatedLearners) ? paginatedLearners : []).length > 0 ? (
+                paginatedLearners.map((learner, index) => {
                   console.log("Single learner object:", learner);
                   // ── FIX 2: Use guaranteed unique key (admNo, fallback to id) ──
                   // The previous code used `learner.id` directly, but when two
@@ -1108,6 +1136,33 @@ export default function Students() {
           </DualScrollContainer>
         </div>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200/80 rounded-2xl shadow-xs mt-4">
+          <div className="text-xs text-slate-500 font-medium">
+            Showing page <span className="font-bold text-slate-800">{currentPage}</span> of <span className="font-bold text-slate-800">{totalPages}</span> ({filteredLearners.length} learners)
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 text-xs font-semibold bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 5. RegisterModal — Add / Edit Learner (Dynamic Grades & Streams, Teacher Restrictions) */}
             <RegisterModal
