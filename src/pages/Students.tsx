@@ -206,10 +206,29 @@ export default function Students() {
     });
   }, [students, searchTerm, gradeFilter]);
 
+  const formatStreamLabel = (streamItem: any): string => {
+    if (!streamItem) return '';
+    if (typeof streamItem === 'string') return streamItem;
+    
+    // Deeply inspect object properties
+    const possibleVal =
+      streamItem.name ||
+      streamItem.streamName ||
+      streamItem.label ||
+      streamItem.title ||
+      streamItem.value ||
+      streamItem.code;
+
+    if (typeof possibleVal === 'string') return possibleVal;
+    if (typeof possibleVal === 'object' && possibleVal !== null) {
+      return formatStreamLabel(possibleVal); // Handle double-nested objects
+    }
+
+    return String(streamItem.id || 'Stream');
+  };
+
   const extractStreamName = (item: any): string => {
-    if (!item) return '';
-    if (typeof item === 'string') return item;
-    return item.name || item.streamName || item.label || item.title || item.code || '';
+    return formatStreamLabel(item);
   };
 
   // Dynamic streams state for selected grade
@@ -630,7 +649,7 @@ export default function Students() {
                     >
                       {(availableStreamsForModal || []).length > 0 ? (
                         availableStreamsForModal.map((st: any, idx: number) => {
-                          const name = extractStreamName(st);
+                          const name = formatStreamLabel(st);
                           return (
                             <option key={st?.id || idx} value={name}>
                               {name}
