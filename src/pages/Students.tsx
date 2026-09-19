@@ -206,7 +206,37 @@ export default function Students() {
     });
   }, [students, searchTerm, gradeFilter]);
 
-  // Helper to generate admission number according to strict standard: MUN-G{GradeNumber}-{3-Digit-Sequence}-{CurrentYear}
+  // Compute available streams for the currently selected grade using gradesStreamsConfig or localStorage
+  const availableStreamsForModal = useMemo(() => {
+    try {
+      const gradesRaw = localStorage.getItem('munyaka_grades') || localStorage.getItem('munyaka_grades_streams') || localStorage.getItem('munyaka_grades_streams_data');
+      if (gradesRaw) {
+        const parsed = JSON.parse(gradesRaw);
+        if (parsed && typeof parsed === 'object') {
+          // If stored as an object mapping grades to streams or arrays
+          if (Array.isArray(parsed.grades)) {
+            const gradeObj = parsed.grades.find((g: any) => String(g.name || '').toLowerCase() === String(grade).toLowerCase());
+            if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
+              return gradeObj.streams;
+            }
+          }
+          if (parsed[grade] && Array.isArray(parsed[grade])) {
+            return parsed[grade];
+          }
+        }
+      }
+    } catch {}
+
+    // Default fallback streams if none are specifically configured
+    return ['North', 'South', 'East', 'West', 'Central', 'Red', 'Blue', 'Green'];
+  }, [grade]);
+
+  // Ensure stream is valid when grade changes
+  useEffect(() => {
+    if (availableStreamsForModal.length > 0 && !availableStreamsForModal.includes(stream)) {
+      setStream(availableStreamsForModal[0]);
+    }
+  }, [availableStreamsForModal, stream]);
   const generateAdmissionNumber = (selectedGrade: string, existingStudentsCount: number = 0) => {
     const gradeMatch = selectedGrade.match(/\d+/);
     const gradeCode = gradeMatch ? `G${gradeMatch[0]}` : 'G1';
@@ -220,7 +250,8 @@ export default function Students() {
     setEditingId(null);
     setFullName('');
     setGrade('Grade 1');
-    setStream('North');
+    const initialStreams = ['North', 'South', 'East', 'West', 'Central', 'Red', 'Blue', 'Green'];
+    setStream(initialStreams[0]);
     setGender('Female');
     setParentName('');
     setPhoneNumber('');
@@ -558,13 +589,18 @@ export default function Students() {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Stream</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. North, South, Blue"
+                    <select
                       value={stream}
                       onChange={(e) => setStream(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
+                      required
+                    >
+                      {availableStreamsForModal.map((st: string) => (
+                        <option key={st} value={st}>
+                          {st}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
