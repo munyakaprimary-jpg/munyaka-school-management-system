@@ -71,12 +71,23 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<'FORM' | 'CERTIFICATE'>('FORM');
   const [isExecuting, setIsExecuting] = useState(false);
-  const [transferData, setTransferData] = useState<Partial<TransferData>>({
+  const [transferData, setTransferData] = useState<Partial<TransferData> & {
+    feesStatus?: string;
+    feesBalance?: string;
+    textbookStatus?: string;
+    textbookDetails?: string;
+    propertyNotes?: string;
+  }>({
     dateOfExit: new Date().toISOString().split('T')[0],
     destinationSchool: '',
     reason: '',
     coCurricularActivities: student?.coCurricularActivities || '',
     headteacherRemarks: '',
+    feesStatus: student?.feeBalance && student.feeBalance > 0 ? 'Outstanding Balance' : 'Fully Cleared (KES 0 Balance)',
+    feesBalance: student?.feeBalance ? `KES ${student.feeBalance.toLocaleString()}` : 'KES 0',
+    textbookStatus: 'All Textbooks Returned & Accounted For',
+    textbookDetails: 'All Grade CBC textbooks returned in good condition',
+    propertyNotes: 'Sports kit returned, desk and locker cleared',
   });
   const [certificateNumber, setCertificateNumber] = useState('');
   
@@ -110,6 +121,11 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         reason: '',
         coCurricularActivities: student?.coCurricularActivities || '',
         headteacherRemarks: '',
+        feesStatus: student?.feeBalance && student.feeBalance > 0 ? 'Outstanding Balance' : 'Fully Cleared (KES 0 Balance)',
+        feesBalance: student?.feeBalance ? `KES ${student.feeBalance.toLocaleString()}` : 'KES 0',
+        textbookStatus: 'All Textbooks Returned & Accounted For',
+        textbookDetails: 'All Grade CBC textbooks returned in good condition',
+        propertyNotes: 'Sports kit returned, desk and locker cleared',
       });
       setCertificateNumber('');
       setAdminPassword('');
@@ -365,18 +381,19 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     drawLine(y, 0.3);
     y += 10;
 
-    // ── 4. TRANSFER METADATA ────────────────────────────────────────────────
-    addCenteredText('TRANSFER PARTICULARS', 11, 'bold', [40, 40, 40], 0);
+    // ── 4. TRANSFER & INSTITUTIONAL CLEARANCE RECORD ────────────────────────
+    addCenteredText('CLEARANCE & TRANSFER RECORD', 11, 'bold', [40, 40, 40], 0);
     y += 8;
 
-    const transferDetails: [string, string][] = [
-      ['Date of Exit:', formatDate(transferData.dateOfExit || '')],
-      ['Destination School / Reason:', transferData.destinationSchool || 'Not specified'],
-      ['Additional Notes:', transferData.reason || '—'],
+    const clearanceItems: [string, string][] = [
+      ['DESTINATION SCHOOL:', transferData.destinationSchool || 'Not specified'],
+      ['1. FEES DEPARTMENT:', `${transferData.feesStatus || 'Fully Cleared'} (Balance: ${transferData.feesBalance || 'KES 0'})`],
+      ['2. TEXTBOOKS & LIBRARY:', `${transferData.textbookStatus || 'Accounted'} — ${transferData.textbookDetails || '—'}`],
+      ['3. STORES & PROPERTY:', transferData.propertyNotes || 'All items returned and cleared'],
     ];
 
-    transferDetails.forEach(([label, value]) => {
-      doc.setFontSize(10);
+    clearanceItems.forEach(([label, value]) => {
+      doc.setFontSize(9.5);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(80, 80, 80);
       doc.text(label, margin, y + 5);
@@ -386,53 +403,35 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       wrapped.forEach((line: string, i: number) => {
         doc.text(line, margin + 65, y + 5 + i * 5);
       });
-      y += 7 + (wrapped.length - 1) * 5;
+      y += 6 + (wrapped.length - 1) * 5;
     });
 
     y += 4;
     drawLine(y, 0.3);
     y += 10;
 
-    // ── 5. FINANCIAL CLEARANCE ─────────────────────────────────────────────
-    addCenteredText('FINANCIAL CLEARANCE STATUS', 11, 'bold', [40, 40, 40], 0);
+    // ── 5. CO-CURRICULAR & REMARKS ─────────────────────────────────────────
+    addCenteredText('CO-CURRICULAR & HEADTEACHER REMARKS', 11, 'bold', [40, 40, 40], 0);
     y += 8;
-
-    const feeBalance = student?.feeBalance ?? 0;
-    const feeStatus = feeBalance <= 0 ? 'CLEARED — No Outstanding Fees' : `PENDING — Outstanding Balance: KES ${feeBalance.toLocaleString()}`;
-    const feeColor: [number, number, number] = feeBalance <= 0 ? [5, 120, 60] : [200, 60, 20];
-
-    doc.setFontSize(10);
+    
+    doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...feeColor);
-    doc.text(feeStatus, margin, y + 5);
-    y += 10;
-
-    drawLine(y, 0.3);
-    y += 10;
-
-    // ── 6. CO-CURRICULAR ACTIVITIES ────────────────────────────────────────
-    addCenteredText('CO-CURRICULAR ACTIVITIES & ACHIEVEMENTS', 11, 'bold', [40, 40, 40], 0);
-    y += 8;
-    drawLine(y, 0.2);
-    y += 5;
-    const activities = transferData.coCurricularActivities || 'No co-curricular activities recorded.';
-    addWrappedText(activities, margin, 9.5, 'normal', [50, 50, 50], 6);
+    doc.setTextColor(80, 80, 80);
+    doc.text('Co-curricular Activities:', margin, y + 5);
     y += 6;
+    addWrappedText(transferData.coCurricularActivities || 'No co-curricular activities recorded.', margin, 9, 'normal', [50, 50, 50], 5);
+    
+    y += 4;
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80, 80, 80);
+    doc.text('Headteacher Remarks & Character Reference:', margin, y + 5);
+    y += 6;
+    addWrappedText(transferData.headteacherRemarks || 'No additional remarks provided.', margin, 9, 'normal', [50, 50, 50], 5);
 
+    y += 6;
     drawLine(y, 0.3);
     y += 10;
-
-    // ── 7. HEADTEACHER REMARKS ─────────────────────────────────────────────
-    addCenteredText('HEADTEACHER REMARKS & CHARACTER REFERENCE', 11, 'bold', [40, 40, 40], 0);
-    y += 8;
-    drawLine(y, 0.2);
-    y += 5;
-    const remarks = transferData.headteacherRemarks || 'No additional remarks provided.';
-    addWrappedText(remarks, margin, 9.5, 'normal', [50, 50, 50], 6);
-    y += 10;
-
-    drawLine(y, 0.3);
-    y += 12;
 
     // ── 8. AUTHORIZATION BLOCK ─────────────────────────────────────────────
     addCenteredText('AUTHORIZATION & SIGN-OFF', 11, 'bold', [40, 40, 40], 0);
@@ -543,7 +542,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         const transferDate = transferData.dateOfExit || new Date().toISOString().split('T')[0];
         const archiveRecord: TransferredLearnerArchive = {
           id: student.id,
-          admNo: student.assessment || '',
+          admNo: student.assessment || student.admissionNumber || '',
           name: student.name,
           grade: student.grade,
           stream: student.stream,
@@ -568,6 +567,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           certificateNumber: certNum,
           feeBalanceAtExit: student.feeBalance ?? 0,
           isFeeCleared: (student.feeBalance ?? 0) <= 0,
+          // Central Storage Sync clearance fields as requested
+          feesStatus: transferData.feesStatus || 'Fully Cleared',
+          feesBalance: transferData.feesBalance || 'KES 0',
+          textbookStatus: transferData.textbookStatus || 'Accounted',
+          textbookDetails: transferData.textbookDetails || '',
+          propertyNotes: transferData.propertyNotes || '',
           audit: {
             executedBy: user?.name || user?.email || 'Admin',
             executedAt: new Date().toISOString(),
@@ -883,159 +888,183 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           </div>
 
           {/* Transfer Details Form */}
-          <div className="space-y-5">
-            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <FileText size={20} className="text-indigo-600" /> Transfer Details
-            </h4>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Date of Exit</Label>
-                <Input 
-                  type="date"
-                  value={transferData.dateOfExit}
-                  onChange={(e) => setTransferData({...transferData, dateOfExit: e.target.value})}
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Destination School / Reason</Label>
-                <Input 
-                  value={transferData.destinationSchool}
-                  onChange={(e) => setTransferData({...transferData, destinationSchool: e.target.value})}
-                  placeholder="e.g. St. Mary's Academy, Nairobi / Parent relocation"
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Additional Reason / Notes</Label>
-              <Textarea 
-                value={transferData.reason}
-                onChange={(e) => setTransferData({...transferData, reason: e.target.value})}
-                placeholder="Any additional context for the transfer..."
-                className="rounded-xl bg-slate-50 border-none min-h-[80px]"
-                rows={3}
-              />
-            </div>
-          </div>
-
-          {/* Financial Clearance Card */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <CreditCard size={20} className="text-amber-600" /> Financial Clearance Status
-            </h4>
-            
-            <Card className={cn(
-              "border-none shadow-sm rounded-2xl p-6",
-              student?.feeBalance > 0 ? "bg-amber-50 border-2 border-amber-200" : "bg-emerald-50 border-2 border-emerald-200"
-            )}>
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className={cn(
-                  "p-4 rounded-2xl",
-                  student?.feeBalance > 0 ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
-                )}>
-                  {student?.feeBalance > 0 ? <AlertTriangle size={28} /> : <CheckCircle2 size={28} />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Outstanding Fee Balance</p>
-                  <p className="text-2xl font-black text-slate-900">
-                    KES {student?.feeBalance?.toLocaleString() ?? '0'}
-                  </p>
-                  <Badge className={cn(
-                    "mt-2 text-xs font-bold",
-                    student?.feeBalance > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
-                  )}>
-                    {feeStatus}
-                  </Badge>
-                </div>
-              </div>
-              
-              {student?.feeBalance > 0 && (
-                <div className="flex flex-col items-end md:items-center gap-2 text-amber-700">
-                  <AlertCircle size={20} className="shrink-0" />
-                  <p className="text-sm font-bold text-center max-w-xs">
-                    Attention: This student has an outstanding fee balance of <strong>KES {student?.feeBalance?.toLocaleString() ?? '0'}</strong>. 
-                    Ensure clearance or settlement before issuing final documents.
-                  </p>
-                </div>
-              )}
-            </Card>
-          </div>
-
-          {/* Additional Certificate Details */}
-          <div className="space-y-5 pt-4 border-t border-slate-100">
-            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <PenTool size={20} className="text-indigo-600" /> Certificate Details (Optional)
-            </h4>
-            
+          <div className="space-y-6">
+            {/* DESTINATION SCHOOL DETAILS */}
             <div className="space-y-4">
+              <h4 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-2">
+                <School size={18} className="text-indigo-600" /> DESTINATION SCHOOL DETAILS
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Date of Exit</Label>
+                  <Input
+                    type="date"
+                    value={transferData.dateOfExit}
+                    onChange={(e) => setTransferData({...transferData, dateOfExit: e.target.value})}
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Destination School Name</Label>
+                  <Input
+                    value={transferData.destinationSchool}
+                    onChange={(e) => setTransferData({...transferData, destinationSchool: e.target.value})}
+                    placeholder="e.g. St. Mary's Academy, Nairobi"
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Transfer Reason / Additional Notes</Label>
+                <Textarea
+                  value={transferData.reason}
+                  onChange={(e) => setTransferData({...transferData, reason: e.target.value})}
+                  placeholder="Reason for transfer..."
+                  className="rounded-xl bg-slate-50 border-none min-h-[60px]"
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            {/* INSTITUTIONAL CLEARANCE CHECKLIST */}
+            <div className="space-y-4">
+              <h4 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-2">
+                <FileCheck size={18} className="text-indigo-600" /> INSTITUTIONAL CLEARANCE CHECKLIST
+              </h4>
+
+              {/* Fees Clearance */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase text-slate-500 tracking-widest">FEES CLEARANCE STATUS</Label>
+                  <select
+                    value={transferData.feesStatus}
+                    onChange={(e) => setTransferData({...transferData, feesStatus: e.target.value})}
+                    className="w-full h-12 px-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    <option value="Fully Cleared (KES 0 Balance)">Fully Cleared (KES 0 Balance)</option>
+                    <option value="Outstanding Balance">Outstanding Balance</option>
+                    <option value="Pending Refund">Pending Refund</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase text-slate-500 tracking-widest">Outstanding Fees Amount</Label>
+                  <Input
+                    value={transferData.feesBalance}
+                    onChange={(e) => setTransferData({...transferData, feesBalance: e.target.value})}
+                    placeholder="e.g. KES 1,500 or KES 0"
+                    className="rounded-xl h-12 bg-white border border-slate-200 font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Textbooks Clearance */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase text-slate-500 tracking-widest">TEXTBOOKS & MATERIALS</Label>
+                  <select
+                    value={transferData.textbookStatus}
+                    onChange={(e) => setTransferData({...transferData, textbookStatus: e.target.value})}
+                    className="w-full h-12 px-3.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    <option value="All Textbooks Returned & Accounted For">All Textbooks Returned & Accounted For</option>
+                    <option value="Missing / Outstanding Textbooks">Missing / Outstanding Textbooks</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase text-slate-500 tracking-widest">Textbooks Details</Label>
+                  <Input
+                    value={transferData.textbookDetails}
+                    onChange={(e) => setTransferData({...transferData, textbookDetails: e.target.value})}
+                    placeholder="e.g. All Grade CBC textbooks returned in good condition"
+                    className="rounded-xl h-12 bg-white border border-slate-200 font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Other Property Clearance */}
+              <div className="space-y-2 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
+                <Label className="text-xs font-black uppercase text-slate-500 tracking-widest">OTHER SCHOOL PROPERTY & STORES CLEARANCE</Label>
+                <Input
+                  value={transferData.propertyNotes}
+                  onChange={(e) => setTransferData({...transferData, propertyNotes: e.target.value})}
+                  placeholder="e.g. Sports kit returned, desk and locker cleared"
+                  className="rounded-xl h-12 bg-white border border-slate-200 font-bold"
+                />
+              </div>
+            </div>
+
+            {/* ACADEMIC & CO-CURRICULAR */}
+            <div className="space-y-4">
+              <h4 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-2">
+                <Award size={18} className="text-indigo-600" /> ACADEMIC & CO-CURRICULAR
+              </h4>
+              
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Co-curricular Activities & Achievements</Label>
-                <Textarea 
+                <Textarea
                   value={transferData.coCurricularActivities}
                   onChange={(e) => setTransferData({...transferData, coCurricularActivities: e.target.value})}
-                  placeholder="e.g. Football team captain, Science fair winner, Choir member..."
-                  className="rounded-xl bg-slate-50 border-none min-h-[80px]"
-                  rows={3}
+                  placeholder="e.g. Football team captain, Science fair winner..."
+                  className="rounded-xl bg-slate-50 border-none min-h-[70px]"
+                  rows={2}
                 />
               </div>
               
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Headteacher Remarks</Label>
-                <Textarea 
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Headteacher Remarks & Character Reference</Label>
+                <Textarea
                   value={transferData.headteacherRemarks}
                   onChange={(e) => setTransferData({...transferData, headteacherRemarks: e.target.value})}
-                  placeholder="General conduct, character reference, special notes..."
-                  className="rounded-xl bg-slate-50 border-none min-h-[80px]"
-                  rows={3}
+                  placeholder="General conduct and character reference..."
+                  className="rounded-xl bg-slate-50 border-none min-h-[70px]"
+                  rows={2}
                 />
               </div>
             </div>
-          </div>
 
-          {/* Admin Password Verification */}
-          <div className="space-y-4 pt-4 border-t border-slate-100 bg-amber-50/50 rounded-2xl p-5 border border-amber-100">
-            <div className="flex items-center gap-3 mb-2">
-              <Lock className="text-amber-600" size={20} />
-              <div>
-                <h4 className="font-bold text-amber-800">Admin Authorization Required</h4>
-                <p className="text-sm text-amber-700">Enter admin password to authorize this student transfer.</p>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">ADMIN PASSWORD</Label>
-              <div className="relative">
-                <Input 
-                  type={showPassword ? "text" : "password"}
-                  value={adminPassword}
-                  onChange={(e) => { 
-                    const trimmed = String(e.target.value || '').trim();
-                    setAdminPassword(trimmed);
-                    if (authError) setAuthError("");
-                  }}
-                  placeholder="Enter admin password to confirm..."
-                  className="rounded-xl h-12 bg-white border-amber-200 font-bold pr-12"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              {authError && (
-                <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                  <AlertCircle size={14} /> {authError}
+            {/* ADMIN AUTHORIZATION LOCK */}
+            <div className="space-y-4 pt-2 border-t border-slate-100 bg-amber-50/60 rounded-2xl p-5 border border-amber-100">
+              <div className="flex items-center gap-3 mb-2">
+                <Lock className="text-amber-600 shrink-0" size={20} />
+                <div>
+                  <h4 className="font-bold text-amber-900 text-sm">ADMIN AUTHORIZATION LOCK</h4>
+                  <p className="text-xs text-amber-700">Enter admin password to authorize clearance and transfer certificate generation.</p>
                 </div>
-              )}
+              </div>
+              
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase text-amber-800 tracking-widest">ADMIN PASSWORD</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={adminPassword}
+                    onChange={(e) => {
+                      const trimmed = String(e.target.value || '').trim();
+                      setAdminPassword(trimmed);
+                      if (authError) setAuthError("");
+                    }}
+                    placeholder="Enter admin password..."
+                    className="rounded-xl h-12 bg-white border-amber-200 font-bold pr-12 text-slate-900"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {authError && (
+                  <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                    <AlertCircle size={14} /> {authError}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </form>

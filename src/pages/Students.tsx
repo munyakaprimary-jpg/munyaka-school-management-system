@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { showSuccess } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import TransferInModal from '@/components/students/TransferInModal';
+import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 
 const API_BASE_URL = 'http://10.53.221.196:5000/api';
 
@@ -32,6 +33,8 @@ export default function Students() {
   const [gradeFilter, setGradeFilter] = useState('All');
   const [streamFilter, setStreamFilter] = useState('All');
   const [isTransferInModalOpen, setIsTransferInModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [selectedStudentForTransfer, setSelectedStudentForTransfer] = useState<any | null>(null);
 
   // Admin Password Modal State for Reset Database
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -746,14 +749,13 @@ export default function Students() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => {
-                              if (window.confirm(`Transfer out ${sName}? This will archive the learner record.`)) {
-                                navigate('/learners/archive');
-                              }
+                              setSelectedStudentForTransfer(student);
+                              setIsTransferModalOpen(true);
                             }}
-                            title="Transfer Out"
-                            className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                            title="Initiate Inter-School Transfer"
+                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                           >
-                            <ArrowRightLeft className="w-4 h-4" />
+                            <ArrowRightLeft className="w-4 h-4 text-indigo-600"/>
                           </button>
                           <button
                             onClick={() => navigate(`/students/${sId}`)}
@@ -786,6 +788,23 @@ export default function Students() {
           </div>
         )}
       </div>
+
+      {/* Transfer Out Workflow Modal */}
+      {isTransferModalOpen && selectedStudentForTransfer && (
+        <TransferWorkflow
+          student={selectedStudentForTransfer}
+          isOpen={isTransferModalOpen}
+          onClose={() => {
+            setIsTransferModalOpen(false);
+            setSelectedStudentForTransfer(null);
+          }}
+          onTransferComplete={(studentId, certificateNumber) => {
+            setStudents(prev => prev.filter(s => (s.id || s.admissionNumber) !== studentId));
+            setIsTransferModalOpen(false);
+            setSelectedStudentForTransfer(null);
+          }}
+        />
+      )}
 
       {/* Transfer In Modal */}
       {isTransferInModalOpen && (
