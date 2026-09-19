@@ -226,10 +226,10 @@ export default function Students() {
     };
   }, []);
 
-  // Filtered students list
+  // Filtered and sorted students list in strict ascending order by admission number sequence
   const filteredStudents = useMemo(() => {
     if (!Array.isArray(students)) return [];
-    return students.filter(s => {
+    const filtered = students.filter(s => {
       const nameVal = s.name || s.fullName || '';
       const admVal = s.admNo || s.admissionNumber || s.admissionNo || '';
       const matchesSearch = !searchTerm ||
@@ -241,6 +241,25 @@ export default function Students() {
         gradeVal.toLowerCase() === gradeFilter.toLowerCase();
 
       return matchesSearch && matchesGrade;
+    });
+
+    return [...filtered].sort((a, b) => {
+      // Extract sequence numbers from format MUN-G{Grade}-{Sequence}-{Year}
+      const getSeq = (admNo: string) => {
+        if (!admNo) return 0;
+        const parts = admNo.split('-');
+        return parseInt(parts[2] || '0', 10);
+      };
+
+      const seqA = getSeq(a.admissionNumber || a.admNo || '');
+      const seqB = getSeq(b.admissionNumber || b.admNo || '');
+
+      // Fallback to standard string comparison if sequence extraction matches
+      if (seqA !== seqB) {
+        return seqA - seqB; // Ascending order (001 -> 002 -> 003)
+      }
+
+      return (a.admissionNumber || a.admNo || '').localeCompare(b.admissionNumber || b.admNo || '', undefined, { numeric: true });
     });
   }, [students, searchTerm, gradeFilter]);
 
