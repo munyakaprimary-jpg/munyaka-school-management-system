@@ -719,18 +719,18 @@ export default function Students() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[950px] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3.5 px-4">ADMISSION NO.</th>
-                  <th className="py-3.5 px-4">ASSESSMENT NO.</th>
-                  <th className="py-3.5 px-4">FULL NAME</th>
-                  <th className="py-3.5 px-4">GRADE & STREAM</th>
-                  <th className="py-3.5 px-4">GENDER</th>
-                  <th className="py-3.5 px-4">PARENT / GUARDIAN</th>
-                  <th className="py-3.5 px-4">PHONE NUMBER</th>
-                  <th className="py-3.5 px-4 text-right">ACTIONS</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-tight">
+                  <th className="px-2.5 py-2 text-left">ADMISSION NO.</th>
+                  <th className="px-2.5 py-2 text-left">ASSESSMENT NO.</th>
+                  <th className="px-2.5 py-2 text-left">FULL NAME</th>
+                  <th className="px-2.5 py-2 text-left">GRADE & STREAM</th>
+                  <th className="px-2.5 py-2 text-left">GENDER</th>
+                  <th className="px-2.5 py-2 text-left">PARENT / GUARDIAN</th>
+                  <th className="px-2.5 py-2 text-left">PHONE NUMBER</th>
+                  <th className="px-2.5 py-2 text-right">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 text-xs">
                 {filteredStudents.map((student, idx) => {
                   const sId = student.id || student.admissionNumber || student.admNo || idx;
                   const sName = student.name || student.fullName || 'Unnamed Learner';
@@ -744,22 +744,22 @@ export default function Students() {
 
                   return (
                     <tr key={sId} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3 text-xs font-mono font-semibold text-indigo-600">{sAdm}</td>
-                      <td className="px-4 py-3 text-xs font-mono text-slate-500">{sAss}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-slate-900">
+                      <td className="px-2.5 py-2 font-mono text-[11px] font-semibold text-indigo-600 whitespace-nowrap">{sAdm}</td>
+                      <td className="px-2.5 py-2 font-mono text-[11px] text-slate-500 whitespace-nowrap">{sAss}</td>
+                      <td className="px-2.5 py-2 font-bold text-slate-900 truncate max-w-[140px]" title={sName}>
                         <Link to={`/students/${sId}`} className="hover:text-indigo-600 transition-colors">
                           {sName}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                      <td className="px-2.5 py-2 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                           {student.grade || student.class} ({sStream})
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{sGender}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{sParent}</td>
-                      <td className="px-4 py-3 text-sm font-mono text-slate-700">{sPhone}</td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-2.5 py-2 text-slate-700 whitespace-nowrap">{sGender}</td>
+                      <td className="px-2.5 py-2 text-slate-700 truncate max-w-[120px]" title={sParent}>{sParent}</td>
+                      <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">{sPhone}</td>
+                      <td className="px-2.5 py-2 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => {
