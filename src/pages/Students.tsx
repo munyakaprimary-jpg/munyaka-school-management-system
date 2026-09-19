@@ -915,23 +915,15 @@ export default function Students() {
                     <select
                       value={stream}
                       onChange={(e) => setStream(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       required
                     >
-                      {(availableStreamsForModal || []).length > 0 ? (
-                        availableStreamsForModal.map((stName: any, idx: number) => {
-                          const name = typeof stName === 'string' ? stName : formatStreamLabel(stName);
-                          return (
-                            <option key={idx} value={name}>
-                              {name}
-                            </option>
-                          );
-                        })
-                      ) : (
-                        <option value="" disabled>
-                          No streams configured for this grade. Add streams in 'Grades & Streams' menu.
-                        </option>
-                      )}
+                      <option value="BLUE">BLUE</option>
+                      <option value="GREEN">GREEN</option>
+                      <option value="YELLOW">YELLOW</option>
+                      <option value="RED">RED</option>
+                      <option value="MERCURY">MERCURY</option>
+                      <option value="VENUS">VENUS</option>
                     </select>
                   </div>
                 </div>
