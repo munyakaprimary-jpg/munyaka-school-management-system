@@ -153,6 +153,7 @@ export default function Students() {
   
   const [fullName, setFullName] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
+  const [assessmentNumber, setAssessmentNumber] = useState('');
   const [gender, setGender] = useState('Female');
   const [grade, setGrade] = useState('Grade 1');
   const [stream, setStream] = useState('North');
@@ -442,6 +443,7 @@ export default function Students() {
     setGender('Female');
     setParentName('');
     setPhoneNumber('');
+    setAssessmentNumber('');
     setAdmissionNumber(generateAdmissionNumber('Grade 1', students.length));
     setIsModalOpen(true);
   };
@@ -451,6 +453,7 @@ export default function Students() {
     setEditingId(student.id || student.admissionNumber || student.admNo);
     setFullName(student.name || student.fullName || '');
     setAdmissionNumber(student.admissionNumber || student.admNo || student.admissionNo || '');
+    setAssessmentNumber(student.assessmentNumber || student.assessmentNo || student.assessment || '');
     setGender(student.gender || 'Female');
     setGrade(student.grade || 'Grade 1');
     setStream(student.stream || 'North');
@@ -483,6 +486,9 @@ export default function Students() {
       fullName,
       admissionNumber,
       admNo: admissionNumber,
+      assessmentNumber,
+      assessmentNo: assessmentNumber,
+      assessment: assessmentNumber,
       gender,
       grade,
       stream,
@@ -864,16 +870,14 @@ export default function Students() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Gender</label>
-                    <select
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    >
-                      <option value="Female">Female</option>
-                      <option value="Male">Male</option>
-                      <option value="Other">Other</option>
-                    </select>
+                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Assessment No. / UPI</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. UPI-987654"
+                      value={assessmentNumber}
+                      onChange={(e) => setAssessmentNumber(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
                   </div>
                 </div>
 
