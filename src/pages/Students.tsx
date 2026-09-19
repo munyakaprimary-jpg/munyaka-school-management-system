@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Edit3, Trash2, X, Eye, ArrowRightLeft, Users, Loader2 } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, X, Eye, Users, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { showSuccess } from '@/utils/toast';
@@ -16,18 +16,17 @@ export default function Students() {
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('All');
 
-  // Modal State
+  // Modal State & Controlled Form Fields
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    admNo: '',
-    grade: 'Grade 1',
-    stream: 'North',
-    gender: 'Female',
-    guardian: '',
-    phone: '',
-  });
+  
+  const [fullName, setFullName] = useState('');
+  const [admissionNumber, setAdmissionNumber] = useState('');
+  const [gender, setGender] = useState('Female');
+  const [grade, setGrade] = useState('Grade 1');
+  const [stream, setStream] = useState('North');
+  const [parentName, setParentName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   // Fetch learners from API with fallback to localStorage
   useEffect(() => {
@@ -75,50 +74,86 @@ export default function Students() {
   const filteredStudents = useMemo(() => {
     if (!Array.isArray(students)) return [];
     return students.filter(s => {
+      const nameVal = s.name || s.fullName || '';
+      const admVal = s.admNo || s.admissionNumber || s.admissionNo || '';
       const matchesSearch = !searchTerm ||
-        (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (s.admNo || s.admissionNo || '').toLowerCase().includes(searchTerm.toLowerCase());
+        nameVal.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        admVal.toLowerCase().includes(searchTerm.toLowerCase());
 
+      const gradeVal = s.grade || '';
       const matchesGrade = gradeFilter === 'All' ||
-        (s.grade || '').toLowerCase() === gradeFilter.toLowerCase();
+        gradeVal.toLowerCase() === gradeFilter.toLowerCase();
 
       return matchesSearch && matchesGrade;
     });
   }, [students, searchTerm, gradeFilter]);
 
-  // Save or Update student
-  const handleSaveStudent = async (e: React.FormEvent) => {
+  // Open Add Modal
+  const handleOpenAddModal = () => {
+    setEditingId(null);
+    setFullName('');
+    setAdmissionNumber(`MUN-${Math.floor(1000 + Math.random() * 9000)}`);
+    setGender('Female');
+    setGrade('Grade 1');
+    setStream('North');
+    setParentName('');
+    setPhoneNumber('');
+    setIsModalOpen(true);
+  };
+
+  // Open Edit Modal
+  const handleOpenEditModal = (student: any) => {
+    setEditingId(student.id || student.admissionNumber || student.admNo);
+    setFullName(student.name || student.fullName || '');
+    setAdmissionNumber(student.admissionNumber || student.admNo || student.admissionNo || '');
+    setGender(student.gender || 'Female');
+    setGrade(student.grade || 'Grade 1');
+    setStream(student.stream || 'North');
+    setParentName(student.parentName || student.guardian || '');
+    setPhoneNumber(student.phoneNumber || student.phone || '');
+    setIsModalOpen(true);
+  };
+
+  // Form Submission Handler (`handleSubmit`)
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.admNo) {
-      alert("Please provide at least Name and Admission Number.");
+    if (!fullName || !admissionNumber) {
+      alert("Please provide at least Full Name and Admission Number.");
       return;
     }
 
-    const payload = {
-      id: editingId || `stu_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-      ...formData,
-      status: 'Active',
-      updatedAt: new Date().toISOString(),
+    const newStudent = {
+      id: editingId || Date.now().toString(),
+      name: fullName,
+      fullName,
+      admissionNumber,
+      admNo: admissionNumber,
+      gender,
+      grade,
+      stream,
+      parentName,
+      guardian: parentName,
+      phoneNumber,
+      phone: phoneNumber,
+      createdAt: new Date().toISOString()
     };
 
     try {
-      // Try posting/patching to backend API
       const endpoint = editingId ? `${API_BASE_URL}/students/${editingId}` : `${API_BASE_URL}/students`;
       const method = editingId ? 'PUT' : 'POST';
       await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(newStudent),
       }).catch(() => {});
     } catch {}
 
-    // Update local state and persistence
     let updated;
     if (editingId) {
-      updated = students.map(s => (s.id === editingId || s.admNo === formData.admNo) ? { ...s, ...payload } : s);
+      updated = students.map(s => (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId) ? { ...s, ...newStudent } : s);
       showSuccess("Learner updated successfully.");
     } else {
-      updated = [payload, ...students];
+      updated = [newStudent, ...students];
       showSuccess("Learner registered successfully.");
     }
 
@@ -129,34 +164,18 @@ export default function Students() {
     // Reset & Close Modal
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({
-      name: '',
-      admNo: '',
-      grade: 'Grade 1',
-      stream: 'North',
-      gender: 'Female',
-      guardian: '',
-      phone: '',
-    });
-  };
-
-  const handleEdit = (student: any) => {
-    setEditingId(student.id || student.admNo);
-    setFormData({
-      name: student.name || '',
-      admNo: student.admNo || student.admissionNo || '',
-      grade: student.grade || 'Grade 1',
-      stream: student.stream || 'North',
-      gender: student.gender || 'Female',
-      guardian: student.guardian || '',
-      phone: student.phone || '',
-    });
-    setIsModalOpen(true);
+    setFullName('');
+    setAdmissionNumber('');
+    setGender('Female');
+    setGrade('Grade 1');
+    setStream('North');
+    setParentName('');
+    setPhoneNumber('');
   };
 
   const handleDelete = (id: string) => {
     if (!window.confirm("Are you sure you want to delete this learner record?")) return;
-    const updated = students.filter(s => s.id !== id && s.admNo !== id);
+    const updated = students.filter(s => s.id !== id && s.admissionNumber !== id && s.admNo !== id);
     setStudents(updated);
     localStorage.setItem('munyaka_students', JSON.stringify(updated));
     localStorage.setItem('school_learners_data', JSON.stringify(updated));
@@ -183,11 +202,7 @@ export default function Students() {
           </p>
         </div>
         <Button
-          onClick={() => {
-            setEditingId(null);
-            setFormData({ name: '', admNo: `MUN-${Math.floor(1000 + Math.random() * 9000)}`, grade: 'Grade 1', stream: 'North', gender: 'Female', guardian: '', phone: '' });
-            setIsModalOpen(true);
-          }}
+          onClick={handleOpenAddModal}
           className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl px-5 py-2.5 shadow-md flex items-center gap-2"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -247,67 +262,74 @@ export default function Students() {
                   <th className="py-3.5 px-5">Full Name</th>
                   <th className="py-3.5 px-5">Grade & Stream</th>
                   <th className="py-3.5 px-5">Gender</th>
-                  <th className="py-3.5 px-5">Guardian & Phone</th>
+                  <th className="py-3.5 px-5">Parent & Phone</th>
                   <th className="py-3.5 px-5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredStudents.map((student, idx) => (
-                  <tr key={student.id || student.admNo || idx} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-5 font-mono text-xs font-semibold text-indigo-600">
-                      {student.admNo || student.admissionNo || '—'}
-                    </td>
-                    <td className="py-3.5 px-5 font-semibold text-slate-900">
-                      <Link to={`/students/${student.id || student.admNo}`} className="hover:text-indigo-600 transition-colors">
-                        {student.name || 'Unnamed Learner'}
-                      </Link>
-                    </td>
-                    <td className="py-3.5 px-5">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                        {student.grade || 'N/A'} {student.stream ? `(${student.stream})` : ''}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-5 text-slate-600 font-medium">
-                      {student.gender || '—'}
-                    </td>
-                    <td className="py-3.5 px-5">
-                      <div className="text-slate-900 font-medium">{student.guardian || '—'}</div>
-                      <div className="text-xs text-slate-500 font-mono">{student.phone || '—'}</div>
-                    </td>
-                    <td className="py-3.5 px-5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => navigate(`/students/${student.id || student.admNo}`)}
-                          title="View Profile"
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(student)}
-                          title="Edit Learner"
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(student.id || student.admNo)}
-                          title="Delete / Archive"
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filteredStudents.map((student, idx) => {
+                  const sId = student.id || student.admissionNumber || student.admNo || idx;
+                  const sName = student.name || student.fullName || 'Unnamed Learner';
+                  const sAdm = student.admissionNumber || student.admNo || student.admissionNo || '—';
+                  const sGrade = student.grade || 'N/A';
+                  const sStream = student.stream || '';
+                  const sGender = student.gender || '—';
+                  const sParent = student.parentName || student.guardian || '—';
+                  const sPhone = student.phoneNumber || student.phone || '—';
+
+                  return (
+                    <tr key={sId} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-5 font-mono text-xs font-semibold text-indigo-600">{sAdm}</td>
+                      <td className="py-3.5 px-5 font-semibold text-slate-900">
+                        <Link to={`/students/${sId}`} className="hover:text-indigo-600 transition-colors">
+                          {sName}
+                        </Link>
+                      </td>
+                      <td className="py-3.5 px-5">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                          {sGrade} {sStream ? `(${sStream})` : ''}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-5 text-slate-600 font-medium">{sGender}</td>
+                      <td className="py-3.5 px-5">
+                        <div className="text-slate-900 font-medium">{sParent}</div>
+                        <div className="text-xs text-slate-500 font-mono">{sPhone}</div>
+                      </td>
+                      <td className="py-3.5 px-5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => navigate(`/students/${sId}`)}
+                            title="View Profile"
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenEditModal(student)}
+                            title="Edit Learner"
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(sId)}
+                            title="Delete / Archive"
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Add / Edit Modal */}
+      {/* Dynamic Add / Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
@@ -323,15 +345,15 @@ export default function Students() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveStudent} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Brian Kipkorir"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
@@ -343,8 +365,8 @@ export default function Students() {
                     type="text"
                     required
                     placeholder="e.g. MUN-G4-001/2026"
-                    value={formData.admNo}
-                    onChange={(e) => setFormData(prev => ({ ...prev, admNo: e.target.value }))}
+                    value={admissionNumber}
+                    onChange={(e) => setAdmissionNumber(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
@@ -352,8 +374,8 @@ export default function Students() {
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Gender</label>
                   <select
-                    value={formData.gender}
-                    onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   >
                     <option value="Female">Female</option>
@@ -367,8 +389,8 @@ export default function Students() {
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Grade / Class</label>
                   <select
-                    value={formData.grade}
-                    onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   >
                     <option value="Grade 1">Grade 1</option>
@@ -388,8 +410,8 @@ export default function Students() {
                   <input
                     type="text"
                     placeholder="e.g. North, South, Blue"
-                    value={formData.stream}
-                    onChange={(e) => setFormData(prev => ({ ...prev, stream: e.target.value }))}
+                    value={stream}
+                    onChange={(e) => setStream(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
@@ -401,8 +423,8 @@ export default function Students() {
                   <input
                     type="text"
                     placeholder="e.g. Mr. & Mrs. Kipkorir"
-                    value={formData.guardian}
-                    onChange={(e) => setFormData(prev => ({ ...prev, guardian: e.target.value }))}
+                    value={parentName}
+                    onChange={(e) => setParentName(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
@@ -412,8 +434,8 @@ export default function Students() {
                   <input
                     type="text"
                     placeholder="e.g. 0712345678"
-                    value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
@@ -431,7 +453,7 @@ export default function Students() {
                   type="submit"
                   className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
                 >
-                  {editingId ? 'Save Changes' : 'Register Student'}
+                  {editingId ? 'Save Changes' : 'Save Learner'}
                 </button>
               </div>
             </form>
