@@ -33,6 +33,10 @@ export default function Students() {
   const [streamFilter, setStreamFilter] = useState('All');
   const [isTransferInModalOpen, setIsTransferInModalOpen] = useState(false);
 
+  // Transfer Modal State
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [selectedStudentForTransfer, setSelectedStudentForTransfer] = useState<any>(null);
+
   // Admin Password Modal State for Reset Database
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
@@ -745,15 +749,15 @@ export default function Students() {
                       <td className="py-3.5 px-5 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
+                            type="button"
                             onClick={() => {
-                              if (window.confirm(`Transfer out ${sName}? This will archive the learner record.`)) {
-                                navigate('/learners/archive');
-                              }
+                              setSelectedStudentForTransfer(student);
+                              setIsTransferModalOpen(true);
                             }}
-                            title="Transfer Out"
-                            className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            title="Initiate Inter-School Transfer"
                           >
-                            <ArrowRightLeft className="w-4 h-4" />
+                            <ArrowRightLeft className="w-4 h-4 text-indigo-600"/>
                           </button>
                           <button
                             onClick={() => navigate(`/students/${sId}`)}
@@ -786,6 +790,109 @@ export default function Students() {
           </div>
         )}
       </div>
+
+      {/* Transfer In Modal */}
+      {isTransferInModalOpen && (
+        <TransferInModal
+          isOpen={isTransferInModalOpen}
+          onClose={() => setIsTransferInModalOpen(false)}
+          onSuccess={() => {
+            setIsTransferInModalOpen(false);
+            window.location.reload();
+          }}
+        />
+      )}
+
+      {/* Transfer Out Modal */}
+      {isTransferModalOpen && selectedStudentForTransfer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
+                Inter-School Transfer
+              </h3>
+              <button
+                onClick={() => {
+                  setIsTransferModalOpen(false);
+                  setSelectedStudentForTransfer(null);
+                }}
+                className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="p-4 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-1">
+                <p className="text-xs font-semibold text-indigo-900 uppercase tracking-wide">Selected Learner</p>
+                <p className="text-base font-bold text-slate-900">{selectedStudentForTransfer.name || selectedStudentForTransfer.fullName}</p>
+                <p className="text-xs font-mono text-indigo-700">Admission No: {selectedStudentForTransfer.admissionNumber || selectedStudentForTransfer.admNo}</p>
+                <p className="text-xs text-slate-600">Grade: {selectedStudentForTransfer.grade} {selectedStudentForTransfer.stream ? `(${selectedStudentForTransfer.stream})` : ''}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Destination School Name *</label>
+                <input
+                  type="text"
+                  id="transferDestinationSchool"
+                  placeholder="e.g. Makini School Nairobi"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Reason / Remarks</label>
+                <textarea
+                  id="transferReason"
+                  rows={3}
+                  placeholder="e.g. Relocation of parents..."
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTransferModalOpen(false);
+                    setSelectedStudentForTransfer(null);
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const destInput = (document.getElementById('transferDestinationSchool') as HTMLInputElement)?.value;
+                    if (!destInput) {
+                      alert('Please enter the destination school name.');
+                      return;
+                    }
+                    // Archive student
+                    const sId = selectedStudentForTransfer.id || selectedStudentForTransfer.admissionNumber || selectedStudentForTransfer.admNo;
+                    const updated = students.map(s => {
+                      if ((s.id || s.admissionNumber || s.admNo) === sId) {
+                        return { ...s, status: 'TRANSFERRED_OUT', transferDestination: destInput, transferredAt: new Date().toISOString() };
+                      }
+                      return s;
+                    });
+                    setStudents(updated);
+                    localStorage.setItem('munyaka_students', JSON.stringify(updated));
+                    showSuccess(`Successfully processed transfer for ${selectedStudentForTransfer.name || selectedStudentForTransfer.fullName} to ${destInput}.`);
+                    setIsTransferModalOpen(false);
+                    setSelectedStudentForTransfer(null);
+                    navigate('/learners/archive');
+                  }}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
+                >
+                  Confirm Transfer Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Transfer In Modal */}
       {isTransferInModalOpen && (
