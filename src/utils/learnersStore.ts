@@ -3,7 +3,7 @@
  * Single authoritative source of truth for all learner records across Munyaka Portal.
  */
 
-export const LEARNERS_DB_KEY = 'munyaka_learners_db';
+export const LEARNERS_DB_KEY = 'munyaka_central_db';
 
 export interface PersistentLearner {
   id: string;

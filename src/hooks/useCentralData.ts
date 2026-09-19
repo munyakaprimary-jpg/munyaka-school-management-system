@@ -231,8 +231,9 @@ const computeStats = (): CentralDataStats => {
 
     // ── Learners ──
     const allLearners = getLearners();
-    // 2. Remove Unintended Grade / Status Filtering: Display total count as `students.length` directly without filtering out active vs inactive learners or specific grade tiers.
-    const activeLearners = allLearners;
+    const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+    const centralStudents = centralData.students || allLearners;
+    const activeLearners = centralStudents.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED');
     const totalStudents = activeLearners.length;
 
     // ── Teachers ──
