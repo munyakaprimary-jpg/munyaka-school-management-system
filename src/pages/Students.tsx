@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Edit3, Trash2, X, Eye, Users, Loader2 } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, X, Eye, Users, Loader2, FileSpreadsheet, Printer, ArrowRightLeft, Archive } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { showSuccess } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
+import TransferInModal from '@/components/students/TransferInModal';
 
 const API_BASE_URL = 'http://10.53.221.196:5000/api';
 
@@ -29,6 +30,8 @@ export default function Students() {
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('All');
+  const [streamFilter, setStreamFilter] = useState('All');
+  const [isTransferInModalOpen, setIsTransferInModalOpen] = useState(false);
 
   // Admin Password Modal State for Reset Database
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -39,7 +42,6 @@ export default function Students() {
   // Check if current user is admin/owner
   const isUserAdminOrOwner = useMemo(() => {
     const role = String(activeUser?.role || activeUser?.staffCategory || '').toLowerCase();
-    // If no role is found or if it's explicitly admin/owner/head_teacher
     if (!role) return true;
     return role === 'admin' || role === 'super_admin' || role === 'owner' || role === 'head_teacher';
   }, [activeUser]);
@@ -232,15 +234,21 @@ export default function Students() {
     const filtered = students.filter(s => {
       const nameVal = s.name || s.fullName || '';
       const admVal = s.admNo || s.admissionNumber || s.admissionNo || '';
+      const assVal = s.assessmentNo || s.assessmentNumber || s.assNo || '';
       const matchesSearch = !searchTerm ||
         nameVal.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admVal.toLowerCase().includes(searchTerm.toLowerCase());
+        admVal.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        assVal.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const gradeVal = s.grade || '';
+      const gradeVal = s.grade || s.class || '';
       const matchesGrade = gradeFilter === 'All' ||
         gradeVal.toLowerCase() === gradeFilter.toLowerCase();
 
-      return matchesSearch && matchesGrade;
+      const streamVal = s.stream || '';
+      const matchesStream = streamFilter === 'All' ||
+        streamVal.toLowerCase() === streamFilter.toLowerCase();
+
+      return matchesSearch && matchesGrade && matchesStream;
     });
 
     return [...filtered].sort((a, b) => {
@@ -261,7 +269,7 @@ export default function Students() {
 
       return (a.admissionNumber || a.admNo || '').localeCompare(b.admissionNumber || b.admNo || '', undefined, { numeric: true });
     });
-  }, [students, searchTerm, gradeFilter]);
+  }, [students, searchTerm, gradeFilter, streamFilter]);
 
   const formatStreamLabel = (streamItem: any): string => {
     if (!streamItem) return '';
@@ -301,7 +309,33 @@ export default function Students() {
 
   const configuredGradesList = getConfiguredGrades();
 
-  // Dynamic streams state for selected grade
+  // Active streams list for the selected grade filter
+  const availableStreamsForFilter = useMemo(() => {
+    const gradesArray = getConfiguredGrades();
+    if (gradeFilter === 'All') {
+      const allStreamsSet = new Set<string>();
+      gradesArray.forEach((g: any) => {
+        if (g && Array.isArray(g.streams)) {
+          g.streams.forEach((st: any) => {
+            const sName = formatStreamLabel(st);
+            if (sName) allStreamsSet.add(sName);
+          });
+        }
+      });
+      return Array.from(allStreamsSet);
+    }
+
+    const gradeObj = gradesArray.find((g: any) => {
+      const gName = typeof g === 'string' ? g : (g.name || g.gradeName || g.title || '');
+      return String(gName).trim().toLowerCase() === String(gradeFilter || '').trim().toLowerCase() ||
+        (g.id && String(g.id) === String(gradeFilter));
+    });
+
+    if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
+      return gradeObj.streams.map((st: any) => formatStreamLabel(st)).filter(Boolean);
+    }
+    return ['North', 'South', 'East', 'West', 'Central', 'Red', 'Blue', 'Green'];
+  }, [gradeFilter]);
   const [availableStreams, setAvailableStreams] = useState<any[]>([]);
   const [availableStreamsForModal, setAvailableStreamsForModal] = useState<any[]>([]);
 
@@ -490,15 +524,65 @@ export default function Students() {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header & Action Bar */}
+      {/* Header Section & Subtext Layout */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Learner Directory</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage school enrolments, profiles, and backend synchronization ({filteredStudents.length} learners active)
-          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Learners directory</h1>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Term 3, 2026
+            </span>
+          </div>
+          <div className="flex items-center gap-4 mt-2">
+            <span className="text-sm font-medium text-slate-600">{activeCount} active learners</span>
+            <span className="text-slate-300">•</span>
+            <Link
+              to="/learners/archive"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 transition-colors"
+            >
+              <Archive className="w-3.5 h-3.5" />
+              View Transferred Archive
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Action Buttons Row */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            onClick={handleExportCSV}
+            variant="outline"
+            className="rounded-full border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs px-4 py-2"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+            Export CSV
+          </Button>
+
+          <Button
+            onClick={handlePrint}
+            variant="outline"
+            className="rounded-full border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs px-4 py-2"
+          >
+            <Printer className="w-3.5 h-3.5 mr-1.5 text-slate-600" />
+            Print
+          </Button>
+
+          <Button
+            onClick={() => setIsTransferInModalOpen(true)}
+            variant="outline"
+            className="rounded-full border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold text-xs px-4 py-2"
+          >
+            <ArrowRightLeft className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
+            Transfer In Learner
+          </Button>
+
+          <Button
+            onClick={handleOpenAddModal}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full px-5 py-2 shadow-md flex items-center gap-2 text-xs"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            + Add Learner
+          </Button>
+
           {isUserAdminOrOwner && (
             <Button
               onClick={() => {
@@ -507,53 +591,65 @@ export default function Students() {
                 setIsResetModalOpen(true);
               }}
               variant="outline"
-              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold rounded-xl px-4 py-2.5 shadow-2xs text-xs"
+              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold rounded-full px-4 py-2 text-xs"
             >
-              Reset Learner Data
+              Reset Data
             </Button>
           )}
-          <Button
-            onClick={handleOpenAddModal}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl px-5 py-2.5 shadow-md flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            + Add Learner
-          </Button>
         </div>
       </div>
 
       {error && <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm font-medium">{error}</div>}
 
-      {/* Search & Filter Bar */}
-      <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full sm:w-96">
+      {/* Filter & Search Card */}
+      <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full md:flex-1">
           <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by name or admission no..."
+            placeholder="Search by learner Name, Admission No., or Assessment No..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
 
-        <div className="w-full sm:w-48">
-          <select
-            value={gradeFilter}
-            onChange={(e) => setGradeFilter(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-          >
-            <option value="All">All Grades</option>
-            <option value="Grade 1">Grade 1</option>
-            <option value="Grade 2">Grade 2</option>
-            <option value="Grade 3">Grade 3</option>
-            <option value="Grade 4">Grade 4</option>
-            <option value="Grade 5">Grade 5</option>
-            <option value="Grade 6">Grade 6</option>
-            <option value="Grade 7">Grade 7</option>
-            <option value="Grade 8">Grade 8</option>
-            <option value="Grade 9">Grade 9</option>
-          </select>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="w-full md:w-48">
+            <select
+              value={gradeFilter}
+              onChange={(e) => {
+                setGradeFilter(e.target.value);
+                setStreamFilter('All');
+              }}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            >
+              <option value="All">All Grades</option>
+              {configuredGradesList.map((g: any, idx: number) => {
+                const gradeName = typeof g === 'string' ? g : (g.name || g.gradeName || g.title || g.grade || '');
+                return (
+                  <option key={g?.id || idx} value={gradeName}>
+                    {gradeName}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          <div className="w-full md:w-48">
+            <select
+              value={streamFilter}
+              onChange={(e) => setStreamFilter(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            >
+              <option value="All">All Streams</option>
+              {availableStreamsForFilter.map((stName: string, idx: number) => (
+                <option key={idx} value={stName}>
+                  {stName}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -567,15 +663,15 @@ export default function Students() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px] text-sm">
+            <table className="w-full text-left border-collapse min-w-[950px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3.5 px-5">Admission No</th>
-                  <th className="py-3.5 px-5">Full Name</th>
-                  <th className="py-3.5 px-5">Grade & Stream</th>
-                  <th className="py-3.5 px-5">Gender</th>
-                  <th className="py-3.5 px-5">Parent & Phone</th>
-                  <th className="py-3.5 px-5 text-right">Actions</th>
+                  <th className="py-3.5 px-5">ADMISSION NO.</th>
+                  <th className="py-3.5 px-5">ASSESSMENT NO.</th>
+                  <th className="py-3.5 px-5">FULL NAME</th>
+                  <th className="py-3.5 px-5">GRADE & STREAM</th>
+                  <th className="py-3.5 px-5">GENDER</th>
+                  <th className="py-3.5 px-5 text-right">ACTIONS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -583,15 +679,13 @@ export default function Students() {
                   const sId = student.id || student.admissionNumber || student.admNo || idx;
                   const sName = student.name || student.fullName || 'Unnamed Learner';
                   const sAdm = student.admissionNumber || student.admNo || student.admissionNo || '—';
-                  const sGrade = student.grade || 'N/A';
-                  const sStream = student.stream || '';
+                  const sAss = student.assessmentNo || student.assessmentNumber || student.assNo || '—';
                   const sGender = student.gender || '—';
-                  const sParent = student.parentName || student.guardian || '—';
-                  const sPhone = student.phoneNumber || student.phone || '—';
 
                   return (
                     <tr key={sId} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3.5 px-5 font-mono text-xs font-semibold text-indigo-600">{sAdm}</td>
+                      <td className="py-3.5 px-5 font-mono text-xs text-slate-600">{sAss}</td>
                       <td className="py-3.5 px-5 font-semibold text-slate-900">
                         <Link to={`/students/${sId}`} className="hover:text-indigo-600 transition-colors">
                           {sName}
@@ -603,12 +697,19 @@ export default function Students() {
                         </span>
                       </td>
                       <td className="py-3.5 px-5 text-slate-600 font-medium">{sGender}</td>
-                      <td className="py-3.5 px-5">
-                        <div className="text-slate-900 font-medium">{sParent}</div>
-                        <div className="text-xs text-slate-500 font-mono">{sPhone}</div>
-                      </td>
                       <td className="py-3.5 px-5 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Transfer out ${sName}? This will archive the learner record.`)) {
+                                navigate('/learners/archive');
+                              }
+                            }}
+                            title="Transfer Out"
+                            className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                          >
+                            <ArrowRightLeft className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => navigate(`/students/${sId}`)}
                             title="View Profile"
@@ -640,6 +741,18 @@ export default function Students() {
           </div>
         )}
       </div>
+
+      {/* Transfer In Modal */}
+      {isTransferInModalOpen && (
+        <TransferInModal
+          isOpen={isTransferInModalOpen}
+          onClose={() => setIsTransferInModalOpen(false)}
+          onSuccess={() => {
+            setIsTransferInModalOpen(false);
+            window.location.reload();
+          }}
+        />
+      )}
 
       {/* Dynamic Add / Edit Modal */}
       {isModalOpen && (
