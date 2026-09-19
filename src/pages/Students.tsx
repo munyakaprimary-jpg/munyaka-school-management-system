@@ -598,8 +598,8 @@ export default function Students() {
                         </Link>
                       </td>
                       <td className="py-3.5 px-5">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                          {sGrade} {sStream ? `(${sStream})` : ''}
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          {student.grade || student.class} {student.stream ? `(${student.stream})` : ''}
                         </span>
                       </td>
                       <td className="py-3.5 px-5 text-slate-600 font-medium">{sGender}</td>
