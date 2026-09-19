@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Edit3, Trash2, X, Eye, Users, Loader2 } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, X, Eye, Users, Loader2, ArrowRightLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { showSuccess } from '@/utils/toast';
@@ -364,8 +364,115 @@ export default function Students() {
     setIsModalOpen(true);
   };
 
-  // Open Edit Modal
-  const handleOpenEditModal = (student: any) => {
+  // Transfer Modal State
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [transferringStudent, setTransferringStudent] = useState<any>(null);
+  const [transferGrade, setTransferGrade] = useState('Grade 1');
+  const [transferStream, setTransferStream] = useState('Green');
+  const [transferReason, setTransferReason] = useState('Stream Reallocation');
+  const [availableTransferStreams, setAvailableTransferStreams] = useState<string[]>([]);
+
+  // Open Transfer Modal
+  const handleOpenTransferModal = (student: any) => {
+    setTransferringStudent(student);
+    const targetGrade = student.grade || 'Grade 1';
+    setTransferGrade(targetGrade);
+    setTransferStream(student.stream || 'Green');
+    setTransferReason('Stream Reallocation');
+
+    // Compute streams for target grade
+    const gradesArray = getConfiguredGrades();
+    const gradeObj = gradesArray.find((g: any) => {
+      const gName = typeof g === 'string' ? g : (g.name || g.gradeName || g.title || '');
+      return String(gName).trim().toLowerCase() === String(targetGrade).trim().toLowerCase() ||
+        (g.id && String(g.id) === String(targetGrade));
+    });
+    if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
+      const cleanStreams = gradeObj.streams.map((st: any) => formatStreamLabel(st)).filter(Boolean);
+      setAvailableTransferStreams(cleanStreams);
+      if (cleanStreams.length > 0) setTransferStream(cleanStreams[0]);
+    } else {
+      setAvailableTransferStreams(['GREEN', 'BLUE', 'YELLOW', 'RED']);
+    }
+
+    setIsTransferModalOpen(true);
+  };
+
+  // Handle Transfer Grade Change
+  useEffect(() => {
+    if (!transferGrade) return;
+    const gradesArray = getConfiguredGrades();
+    const gradeObj = gradesArray.find((g: any) => {
+      const gName = typeof g === 'string' ? g : (g.name || g.gradeName || g.title || '');
+      return String(gName).trim().toLowerCase() === String(transferGrade).trim().toLowerCase() ||
+        (g.id && String(g.id) === String(transferGrade));
+    });
+    if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
+      const cleanStreams = gradeObj.streams.map((st: any) => formatStreamLabel(st)).filter(Boolean);
+      setAvailableTransferStreams(cleanStreams);
+      if (cleanStreams.length > 0) setTransferStream(cleanStreams[0]);
+    } else {
+      const defaultStreams = ['GREEN', 'BLUE', 'YELLOW', 'RED'];
+      setAvailableTransferStreams(defaultStreams);
+      setTransferStream(defaultStreams[0]);
+    }
+  }, [transferGrade]);
+
+  // Confirm Transfer Submission
+  const handleConfirmTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferringStudent) return;
+
+    const studentId = transferringStudent.id || transferringStudent.admissionNumber || transferringStudent.admNo;
+    const updatedStudents = students.map(s => {
+      const sId = s.id || s.admissionNumber || s.admNo;
+      if (sId === studentId) {
+        return {
+          ...s,
+          grade: transferGrade,
+          stream: transferStream,
+          transferHistory: [
+            ...(s.transferHistory || []),
+            {
+              fromGrade: s.grade,
+              fromStream: s.stream,
+              toGrade: transferGrade,
+              toStream: transferStream,
+              reason: transferReason,
+              date: new Date().toISOString()
+            }
+          ]
+        };
+      }
+      return s;
+    });
+
+    setStudents(updatedStudents);
+    localStorage.setItem('munyaka_students', JSON.stringify(updatedStudents));
+    localStorage.setItem('school_learners_data', JSON.stringify(updatedStudents));
+
+    try {
+      const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+      const updatedCentralData = {
+        ...centralData,
+        students: updatedStudents,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem('munyaka_central_db', JSON.stringify(updatedCentralData));
+      window.dispatchEvent(new CustomEvent('central-data-updated', { detail: updatedCentralData }));
+
+      fetch(`${API_BASE_URL}/central/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedCentralData),
+        signal: AbortSignal.timeout(3000)
+      }).catch(() => {});
+    } catch {}
+
+    showSuccess(`Learner transferred successfully to ${transferGrade} (${transferStream}).`);
+    setIsTransferModalOpen(false);
+    setTransferringStudent(null);
+  };
     setEditingId(student.id || student.admissionNumber || student.admNo);
     setFullName(student.name || student.fullName || '');
     setAdmissionNumber(student.admissionNumber || student.admNo || student.admissionNo || '');
