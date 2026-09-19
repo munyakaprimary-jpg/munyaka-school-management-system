@@ -208,6 +208,7 @@ export default function Students() {
 
   // Dynamic streams state for selected grade
   const [availableStreams, setAvailableStreams] = useState<string[]>([]);
+  const [availableStreamsForModal, setAvailableStreamsForModal] = useState<string[]>([]);
 
   useEffect(() => {
     // Pull dynamic grades/streams setup from LocalStorage or system state
@@ -238,6 +239,15 @@ export default function Students() {
     setAvailableStreams([]);
     setStream('');
   }, [grade]);
+
+  // Synchronize availableStreamsForModal with availableStreams
+  useEffect(() => {
+    if (availableStreams.length > 0) {
+      setAvailableStreamsForModal(availableStreams);
+    } else {
+      setAvailableStreamsForModal(['North', 'South', 'East', 'West', 'Central', 'Red', 'Blue', 'Green']);
+    }
+  }, [availableStreams]);
   const generateAdmissionNumber = (selectedGrade: string, existingStudentsCount: number = 0) => {
     const gradeMatch = selectedGrade.match(/\d+/);
     const gradeCode = gradeMatch ? `G${gradeMatch[0]}` : 'G1';
