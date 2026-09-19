@@ -425,6 +425,10 @@ export default function Students() {
     document.body.removeChild(link);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   // Open Add Modal
   const handleOpenAddModal = () => {
     setEditingId(null);
