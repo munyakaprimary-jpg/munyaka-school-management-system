@@ -12,7 +12,7 @@
  * error rather than silently truncating.
  */
 
-import type { Attachment } from "@/data/cbcStudyContent";
+import type { Att, Attachment } from "@/data/cbcStudyContent";
 
 /** Default soft cap per attachment: 4 MB. */
 export const DEFAULT_MAX_BYTES = 4 * 1024 * 1024;
@@ -63,11 +63,14 @@ export async function fileToAttachment(
   const type = file.type || guessMimeFromName(file.name);
 
   return {
+    id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    url: dataUrl,
     name: file.name,
+    title: file.name,
     type,
     size: file.size,
     dataUrl,
-  };
+  } as Att;
 }
 
 /**
@@ -96,14 +99,15 @@ export function guessMimeFromName(name: string): string {
 }
 
 /** Open an attachment in a new tab — works fully offline. */
-export function openAttachment(att: Attachment): void {
+export function openAttachment(att: Att): void {
   try {
-    const win = window.open(att.dataUrl, "_blank", "noopener,noreferrer");
+    const targetUrl = att.dataUrl || att.url;
+    const win = window.open(targetUrl, "_blank", "noopener,noreferrer");
     if (!win) {
       // Pop-up blocked — fall back to an anchor click.
       const link = document.createElement("a");
-      link.href = att.dataUrl;
-      link.download = att.name;
+      link.href = targetUrl;
+      link.download = att.name || att.title || 'download';
       link.target = "_blank";
       link.rel = "noopener";
       document.body.appendChild(link);
@@ -119,8 +123,8 @@ export function openAttachment(att: Attachment): void {
 export function downloadAttachment(att: Attachment): void {
   try {
     const link = document.createElement("a");
-    link.href = att.dataUrl;
-    link.download = att.name;
+    link.href = att.dataUrl || att.url;
+    link.download = att.name || att.title || 'download';
     link.rel = "noopener";
     link.style.display = "none";
     document.body.appendChild(link);
@@ -132,8 +136,8 @@ export function downloadAttachment(att: Attachment): void {
 }
 
 /** Human-friendly description of a file (used in badges / previews). */
-export function describeAttachment(att: Attachment): string {
-  return `${att.name} · ${att.type || "file"} · ${formatBytes(att.size)}`;
+export function describeAttachment(att: Att): string {
+  return `${att.name || att.title || 'File'} · ${att.type || "file"} · ${formatBytes(att.size || 0)}`;
 }
 
 /** Pick a lucide icon name for the attachment based on MIME type. */

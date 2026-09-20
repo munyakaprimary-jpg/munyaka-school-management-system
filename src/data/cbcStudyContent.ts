@@ -1,21 +1,35 @@
-export interface CI {
-  id: string;
-  title: string;
-  description: string;
-  strand?: string;
-  grade?: number | string;
-}
-
-export interface SC {
-  id: string;
-  name: string;
-}
+export type SC = string;
 
 export interface Att {
   id: string;
   url: string;
   title?: string;
   type?: string;
+  name?: string;
+  size?: number;
+  dataUrl?: string;
+}
+
+export interface CI {
+  id: string;
+  title: string;
+  description: string;
+  strand?: string;
+  subStrand?: string;
+  topic?: string;
+  summary?: string;
+  grade?: number | string;
+  difficulty?: 'Easy' | 'Medium' | 'Hard';
+  assessmentType?: string;
+  totalMarks?: number;
+  durationMinutes?: number;
+  attachment?: Att;
+  markingScheme?: Att;
+  notes?: string;
+  memoryVerses?: MemoryVerse[];
+  revisionQuestions?: RevisionQuestion[];
+  tags?: string[];
+  category?: string;
 }
 
 export type ContentItem = CI;

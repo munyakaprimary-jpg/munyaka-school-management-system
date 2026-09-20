@@ -1,4 +1,4 @@
-import { CentralDataService, STORAGE_KEYS, type StaffRecord } from './centralDataService';
+import { CentralDataService, STORAGE_KEYS } from './centralDataService';
 
 export const STAFF_MASTER_KEY = STORAGE_KEYS.STAFF;
 
@@ -32,6 +32,15 @@ export interface MasterStaffRecord {
   staffId?: string;
   tempAccessCode?: string;
   joinedDate?: string;
+  gender?: string;
+  salary?: number | string;
+  emergencyContact?: string;
+  emergencyName?: string;
+  schoolId?: string;
+  datePreRegistered?: string;
+  activatedAt?: string;
+  lastLogin?: string;
+  profileComplete?: boolean;
 }
 
 export const TEACHING_SYSTEM_ROLES: MasterSystemRole[] = [

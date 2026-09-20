@@ -79,7 +79,14 @@ export interface CentralDataStats {
   isLoading: boolean;
 }
 
-// ─── Storage keys ─────────────────────────────────────────────────────────────
+export interface CategorizedStaffMetrics {
+  teachingTotal: number;
+  teachingActive: number;
+  teachingPending: number;
+  nonTeachingTotal: number;
+  nonTeachingActive: number;
+  nonTeachingPending: number;
+}
 
 const STORAGE_KEYS = {
   LEARNERS:             'school_learners_data',

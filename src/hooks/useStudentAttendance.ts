@@ -75,7 +75,7 @@ export const useStudentAttendance = (studentId: string | null) => {
 
     const result = await localData.studentAttend.save(record);
 
-    if (result.ok) {
+    if (result) {
       setAttendanceRecords(prev => ({
         ...prev,
         [date]: {
@@ -89,7 +89,7 @@ export const useStudentAttendance = (studentId: string | null) => {
     }
 
     setLoading(false);
-    return result.ok;
+    return !!result;
   };
 
   const getAttendanceForDate = (date: string): StudentAttendance => {
