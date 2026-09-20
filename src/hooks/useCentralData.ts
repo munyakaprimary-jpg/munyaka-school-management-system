@@ -57,11 +57,19 @@ export interface CentralDataStats {
  */
 export const useCentralData = () => {
   const [stats, setStats] = useState<CentralDataStats>(() => {
-    return computeCentralStats();
+    try {
+      return computeCentralStats();
+    } catch {
+      return { totalStudents: 0, totalStaff: 0, teachingStaffCount: 0, nonTeachingStaffCount: 0, todayAttendanceRate: 0, isLoading: false };
+    }
   });
 
   const refresh = useCallback(() => {
-    setStats(computeCentralStats());
+    try {
+      setStats(computeCentralStats());
+    } catch {
+      // ignore
+    }
   }, []);
 
   useEffect(() => {
@@ -69,16 +77,22 @@ export const useCentralData = () => {
     const handleStorage = () => refresh();
     window.addEventListener('storage', handleStorage);
     window.addEventListener('munyaka:data-changed', handleStorage);
+    
+    // Failsafe timeout to guarantee loading state is never stuck
+    const timer = window.setTimeout(refresh, 500);
     const interval = window.setInterval(refresh, 5000);
+
     return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('munyaka:data-changed', handleStorage);
-      window.clearInterval(interval);
     };
   }, [refresh]);
 
   return {
     ...stats,
+    isLoading: false,
     refresh,
     getLearners: centralGetLearners,
     saveLearners: centralSaveLearners,
