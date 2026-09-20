@@ -387,10 +387,20 @@ export default function Students() {
       }
     }
   }, [availableStreams]);
-  const generateAdmissionNumber = (selectedGrade: string, existingStudentsCount: number = 0) => {
+  const generateAdmissionNumber = (selectedGrade: string) => {
+    // Filter existing students belonging strictly to the selected grade
+    const gradeStudents = (students || []).filter((s: any) => {
+      const sGrade = String(s.grade || s.class || '').trim().toLowerCase();
+      const targetGrade = String(selectedGrade || '').trim().toLowerCase();
+      return sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade);
+    });
+
     const gradeMatch = selectedGrade.match(/\d+/);
     const gradeCode = gradeMatch ? `G${gradeMatch[0]}` : 'G1';
-    const sequenceNumber = String(existingStudentsCount + 1).padStart(3, '0');
+    
+    // Count how many students already exist in that specific grade and increment by 1
+    const nextSeq = gradeStudents.length + 1;
+    const sequenceNumber = String(nextSeq).padStart(3, '0');
     const currentYear = new Date().getFullYear();
     return `MUN-${gradeCode}-${sequenceNumber}-${currentYear}`;
   };
