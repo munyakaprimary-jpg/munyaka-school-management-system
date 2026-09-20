@@ -142,9 +142,9 @@ export const staffService = {
 
     return {
       total: staff.length,
-      teachingCount: teaching.length > 0 ? teaching.length : 2,
-      nonTeachingCount: nonTeaching.length > 0 ? nonTeaching.length : 6,
-      activeCount: active.length > 0 ? active.length : staff.length,
+      teachingCount: teaching.length,
+      nonTeachingCount: nonTeaching.length,
+      activeCount: active.length,
     };
   }
 };
