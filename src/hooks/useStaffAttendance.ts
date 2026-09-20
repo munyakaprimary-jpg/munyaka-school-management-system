@@ -6,7 +6,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff } from '@/types/staff-access';
 import { startOfWeek, addDays, format, isAfter } from 'date-fns';
 import { lsSet, lsRead } from '@/utils/storage';
-import { getStaffMaster } from '@/hooks/useCentralData';
+import { getStaffMaster } from '@/services/staffMasterService';
 
 const PERSONAL_STORAGE_PREFIX = 'munyaka_staff_attendance_';
 const MASTER_REGISTER_PREFIX = 'munyaka_master_staff_register_';

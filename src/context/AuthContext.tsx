@@ -12,7 +12,7 @@ import {
   DEFAULT_ADMIN_PASSWORD,
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
-import { getStaffMaster } from '@/hooks/useCentralData';
+import { getStaffMaster } from '@/services/staffMasterService';
 
 export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff';
 
