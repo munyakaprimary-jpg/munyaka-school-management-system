@@ -42,19 +42,18 @@ export const initializeApplicationStorage = (): void => {
 
   seedMappings.forEach(({ key, data }) => {
     const existing = localStorage.getItem(key);
-    // STRICT NON-DESTRUCTIVE CHECK: Never overwrite existing populated storage with seed data
-    if (existing === null || existing === undefined || existing === 'undefined' || existing === 'null') {
+    if (!existing) {
       localStorage.setItem(key, JSON.stringify(data));
       return;
     }
     try {
       const parsed = JSON.parse(existing);
-      // Re-seed ONLY if storage is an empty array and seed has items
+      // Re-seed ONLY if storage was cleared or set to an empty array
       if (Array.isArray(parsed) && parsed.length === 0 && Array.isArray(data) && data.length > 0) {
         localStorage.setItem(key, JSON.stringify(data));
       }
     } catch {
-      // Preserve existing
+      localStorage.setItem(key, JSON.stringify(data));
     }
   });
 };

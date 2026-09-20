@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { getStaffMaster } from '@/services/staffMasterService';
+import { getStaffMaster, initializeStaffMaster, isTeachingRole } from '@/services/staffMasterService';
 
 interface AttendanceRecord {
   id: string;
@@ -328,7 +328,7 @@ export default function AttendanceMonitor() {
 
   const theme = THEME_CONFIGS[monitorTheme];
 
-  // Load staff from central storage
+  // Load staff from staffMasterService
   useEffect(() => {
     initializeStaffMaster();
     const staff = getStaffMaster();
@@ -354,7 +354,7 @@ export default function AttendanceMonitor() {
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
-      // Re-read from central storage
+      // Re-read from staffMasterService
       const staff = getStaffMaster();
       const today = new Date().toISOString().split('T')[0];
       const attendanceRecords: AttendanceRecord[] = staff

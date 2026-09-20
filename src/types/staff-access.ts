@@ -1,4 +1,4 @@
-// Shared role & status types used by StaffPreRegistration
+// Shared role & status types used by both staffMasterService and StaffPreRegistration
 
 export type MasterSystemRole =
   | 'head_teacher'
@@ -65,7 +65,7 @@ export const isNonTeachingRole = (role?: string): boolean => {
  * Shape used by the Access Master Ledger (StaffPreRegistration.tsx) and
  * AddPreRegModal.tsx for displaying and submitting pre-registration records.
  *
- * Mirrors the fields of staff records so that
+ * Mirrors the fields of MasterStaffRecord from staffMasterService so that
  * conversions (toPreReg / masterToStaffMember) are lossless.
  */
 export interface PreRegisteredStaff {

@@ -20,7 +20,7 @@
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { buildDefaultClusters } from '@/data/initialSeedData';
 import { safeParse, isQuotaExceeded, handleQuotaError, getLocalStorage } from './storageUtils';
-// central staff storage is initialized in App.tsx
+import { initializeStaffMaster } from '@/services/staffMasterService';
 
 /**
  * Re-export the safe localStorage accessor so existing imports of

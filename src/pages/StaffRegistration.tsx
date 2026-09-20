@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
 import BackButton from '@/components/ui/BackButton';
-import { addStaffRecord as addStaffMaster } from '@/hooks/useCentralData';
+import { addStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 const STAFF_LOCAL_KEY = 'staff_local';
@@ -105,7 +105,7 @@ const StaffRegistration = () => {
         status: 'Active'
       });
     } catch (err) {
-      console.error('[StaffRegistration] central sync failed:', err);
+      console.error('[StaffRegistration] staffMasterService sync failed:', err);
     }
 
     addLocalStaff(record);

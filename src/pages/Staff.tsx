@@ -1,433 +1,701 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Users, UserPlus, Search, Filter, MoreVertical, Edit, Trash2, 
-  FileText, Download, Upload, CheckCircle2, XCircle, ShieldAlert,
-  ChevronRight, ArrowUpDown, RefreshCw, Eye, Award, Sparkles, Loader2, Briefcase, GraduationCap
-} from 'lucide-react';
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { showSuccess, showError } from '@/utils/toast';
-import staffService, { StaffMember } from '@/services/staffService';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import BackButton from '@/components/ui/BackButton';
+import {
+  UserPlus, Phone, Mail, Briefcase, MoreHorizontal, Search,
+  Eye, Edit, Key, ShieldCheck, UserCheck, Clock, Plus,
+  X, Save, AlertCircle, Users, Loader2
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
+import { showSuccess, showError, dismissToast } from '@/utils/toast';
+import {
+  getStaffMaster,
+  addStaffMaster,
+  updateStaffMaster,
+  activateStaffMaster,
+  bulkActivateStaffMaster,
+  initializeStaffMaster,
+  TEACHING_SYSTEM_ROLES,
+  mapDesignationToSystemRole,
+  isNonTeachingDesignation,
+  isLibrarianDesignation,
+  type MasterStaffRecord,
+  type MasterSystemRole,
+} from '@/services/staffMasterService';
+import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
+import { SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 
-export default function StaffPage() {
-  const [staffList, setStaffList] = useState<StaffMember[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'teaching' | 'non-teaching'>('all');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+const toTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
 
-  // Form states
-  const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('Teacher');
-  const [category, setCategory] = useState('Teaching');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [tscNumber, setTscNumber] = useState('');
+interface StaffMember {
+  id: string;
+  id_no: string;
+  staff_id?: string;
+  ref?: string;
+  access_key?: string;
+  tsc_no?: string;
+  full_name: string;
+  role: string;
+  systemRole?: string;
+  subjects: string[];
+  phone: string;
+  email: string;
+  status: 'Active' | 'Pre-Registered' | 'Suspended';
+  joined: string;
+  department: string;
+}
 
-  const loadStaffData = () => {
-    try {
-      const data = staffService.getStaff();
-      setStaffList(data);
-    } catch (err) {
-      console.error("Failed to load staff list:", err);
-    }
+const systemRoleToLabel: Record<string, string> = {
+  head_teacher:   'Head Teacher',
+  senior_teacher: 'Senior Teacher',
+  class_teacher:  'Class Teacher',
+  subject_teacher: 'Subject Teacher',
+  bursar:         'Bursar',
+  support_admin:   'System Admin',
+};
+
+// Helper to get default department based on system role
+const getDepartmentForRole = (systemRole: string): string => {
+  switch (systemRole) {
+    case 'librarian': return 'Library';
+    case 'bursar': return 'Finance';
+    case 'storekeeper': return 'Procurement';
+    case 'lab_assistant': return 'Science';
+    case 'ict_technician': return 'ICT';
+    case 'support_staff': return 'Administration';
+    case 'support_admin': return 'Administration';
+    default: return 'School Administration';
+  }
+};
+
+function masterToStaffMember(r: MasterStaffRecord): StaffMember {
+  return {
+    id: r.id,
+    id_no: r.nationalId,
+    staff_id: r.staffId,
+    access_key: r.tempAccessCode,
+    tsc_no: r.tscNumber,
+    full_name: r.name,
+    role: r.role || SYSTEM_ROLE_LABELS[r.systemRole]?.label || 'Teacher',
+    systemRole: r.systemRole,
+    subjects: r.assignedSubjects ?? [],
+    phone: r.phone,
+    email: r.email,
+    status: (r.status === 'Active' ? 'Active' : r.status === 'Suspended' ? 'Suspended' : 'Pre-Registered') as StaffMember['status'],
+    joined: r.joinedDate || '',
+    department: r.department || 'School Administration',
   };
+}
+
+const Staff = () => {
+  const navigate = useNavigate();
+
+  // ── Source of truth: staffMasterService ─────────────────────────────────────
+  const [masterRecords, setMasterRecords] = useState<MasterStaffRecord[]>([]);
 
   useEffect(() => {
-    loadStaffData();
-    // Also run an immediate check after mount to guarantee sync
-    const timer = setTimeout(loadStaffData, 50);
-    window.addEventListener('storage', loadStaffData);
-    window.addEventListener('munyaka:data-changed', loadStaffData);
+    initializeStaffMaster();
+    setMasterRecords(getStaffMaster());
+  }, []);
+
+  // Keep in sync with mutations from any component
+  useEffect(() => {
+    const refresh = () => setMasterRecords(getStaffMaster());
+    window.addEventListener('staff-changed', refresh);
+    window.addEventListener('munyaka:staff-directory-changed', refresh);
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener('storage', loadStaffData);
-      window.removeEventListener('munyaka:data-changed', loadStaffData);
+      window.removeEventListener('staff-changed', refresh);
+      window.removeEventListener('munyaka:staff-directory-changed', refresh);
     };
   }, []);
 
-  const stats = useMemo(() => {
-    return staffService.getStaffStats();
-  }, [staffList]);
+  // ── Derive display list from master ───────────────────────────────────────────
+  const masterStaffList = useMemo<StaffMember[]>(
+    () => masterRecords.map(masterToStaffMember),
+    [masterRecords]
+  );
 
+  // ── UI state ─────────────────────────────────────────────────────────────────
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pre-Registered'>('All');
+  const [categoryFilter, setCategoryFilter] = useState<'All' | 'Teaching' | 'Non-Teaching'>('All');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('edit');
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkActivating, setIsBulkActivating] = useState(false);
+  const [formData, setFormData] = useState({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '' });
+  const [formError, setFormError] = useState('');
+  const [showTeachingFields, setShowTeachingFields] = useState(true);
+
+  // ── Filter ───────────────────────────────────────────────────────────────────
   const filteredStaff = useMemo(() => {
-    return staffList.filter((s) => {
-      const name = (s.name || s.fullName || '').toLowerCase();
-      const sEmail = (s.email || '').toLowerCase();
-      const sPhone = (s.phone || '').toLowerCase();
-      const sRole = (s.role || '').toLowerCase();
-
-      const matchesSearch = 
-        name.includes(searchTerm.toLowerCase()) || 
-        sEmail.includes(searchTerm.toLowerCase()) || 
-        sPhone.includes(searchTerm.toLowerCase()) || 
-        sRole.includes(searchTerm.toLowerCase());
-
-      const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.position || ''}`.toLowerCase();
-      const isTeaching = roleStr.includes('teach') || roleStr.includes('educator');
-
-      if (activeTab === 'teaching') return matchesSearch && isTeaching;
-      if (activeTab === 'non-teaching') return matchesSearch && !isTeaching;
-      return matchesSearch;
+    const needle = String(searchTerm || '').toLowerCase();
+    return masterStaffList.filter(s => {
+      const matchesSearch =
+        String(s.full_name || '').toLowerCase().includes(needle) ||
+        String(s.id || '').toLowerCase().includes(needle) ||
+        String(s.id_no || '').toLowerCase().includes(needle) ||
+        String(s.email || '').toLowerCase().includes(needle) ||
+        String(s.role || '').toLowerCase().includes(needle);
+      const matchesStatus = statusFilter === 'All' || s.status === statusFilter;
+      
+      // Category filter: Teaching vs Non-Teaching
+      const isTeaching = s.systemRole ? TEACHING_SYSTEM_ROLES.includes(s.systemRole as any) : false;
+      const matchesCategory =
+        categoryFilter === 'All' ||
+        (categoryFilter === 'Teaching' && isTeaching) ||
+        (categoryFilter === 'Non-Teaching' && !isTeaching);
+      
+      return matchesSearch && matchesStatus && matchesCategory;
     });
-  }, [staffList, searchTerm, activeTab]);
+  }, [masterStaffList, searchTerm, statusFilter, categoryFilter]);
 
-  const handleOpenAddModal = () => {
-    setEditingId(null);
-    setFullName('');
-    setRole('Teacher');
-    setCategory('Teaching');
-    setEmail('');
-    setPhone('');
-    setTscNumber('');
+  const isPending = (s: StaffMember): boolean => s.status !== 'Active';
+  const activeCount  = useMemo(() => masterStaffList.filter(s => !isPending(s)).length, [masterStaffList]);
+  const preRegCount  = useMemo(() => masterStaffList.filter(isPending).length, [masterStaffList]);
+
+  // ── Modal handlers ───────────────────────────────────────────────────────────
+  const handleOpenAdd = () => {
+    setModalMode('add');
+    setEditingStaff(null);
+    setFormData({ full_name: '', role: '', systemRole: 'subject_teacher', phone: '', email: '', tsc_number: '' });
+    setShowTeachingFields(true);
+    setFormError('');
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (staff: StaffMember) => {
-    setEditingId(staff.id);
-    setFullName(staff.name || staff.fullName || '');
-    setRole(staff.role || staff.position || 'Teacher');
-    setCategory(staff.category || staff.type || 'Teaching');
-    setEmail(staff.email || '');
-    setPhone(staff.phone || '');
-    setTscNumber(staff.tscNumber || '');
+  const handleOpenEdit = (staff: StaffMember) => {
+    setModalMode('edit');
+    setEditingStaff(staff);
+    const designation = (staff.role || '').toUpperCase().trim();
+    const isNonTeaching = isNonTeachingDesignation(designation);
+    setShowTeachingFields(!isNonTeaching);
+    setFormData({
+      full_name: staff.full_name,
+      role: staff.role,
+      systemRole: staff.systemRole || 'subject_teacher',
+      phone: staff.phone,
+      email: staff.email,
+      tsc_number: staff.tsc_no || ''
+    });
+    setFormError('');
     setIsModalOpen(true);
   };
 
-  const handleSaveStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSaving) return;
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingStaff(null);
+    setFormError('');
+    setFormData({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '' });
+    setShowTeachingFields(true);
+  };
 
-    if (!fullName.trim()) {
-      showError("Please enter staff member name");
+  // Handle role/designation changes and sync system role
+  const handleRoleChange = (designation: string) => {
+    const mappedRole = mapDesignationToSystemRole(designation);
+    const isNonTeaching = mappedRole ? isNonTeachingDesignation(designation) : false;
+    
+    setFormData(prev => ({
+      ...prev,
+      role: designation,
+      systemRole: mappedRole || prev.systemRole,
+    }));
+    setShowTeachingFields(!isNonTeaching);
+  };
+
+  const handleSaveStaff = () => {
+    if (!String(formData.full_name || '').trim() || !String(formData.role || '').trim()) {
+      setFormError('Please fill in all required fields (Full Name, Role / Designation).');
       return;
     }
 
     setIsSaving(true);
+    setFormError('');
+
+    const designation = formData.role.toUpperCase().trim();
+    const mappedSystemRole = mapDesignationToSystemRole(designation);
+    const isNonTeaching = mappedSystemRole ? isNonTeachingDesignation(designation) : false;
+
+    if (modalMode === 'add') {
+      const natId = `ID-${Date.now()}`;
+      try {
+        const resolvedSystemRole: MasterSystemRole = mappedSystemRole || 'subject_teacher';
+        addStaffMaster({
+          name: formData.full_name.trim(),
+          nationalId: natId,
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          tscNumber: formData.tsc_number.trim() || undefined,
+          role: designation,
+          systemRole: resolvedSystemRole,
+          department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
+          // Clear teaching-specific fields for non-teaching staff
+          assignedGrade: isNonTeaching ? undefined : undefined,
+          assignedStream: isNonTeaching ? undefined : undefined,
+          assignedSubjects: isNonTeaching ? [] : [],
+          status: 'Pre-Registered',
+        });
+        
+        // Notify other components & refresh state
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('munyaka_data_changed'));
+        
+        setIsModalOpen(false);
+        setStaffList(getStaffMaster());
+        showSuccess(`Staff member "${formData.full_name}" added and pre-registered.`);
+      } catch (err) {
+        showError('Failed to add staff. Please try again.');
+        console.error('[Staff] handleSaveStaff (add):', err);
+        setIsSaving(false);
+        return;
+      }
+    } else if (editingStaff) {
+      try {
+        const resolvedSystemRole: MasterSystemRole = mappedSystemRole || (formData.systemRole as MasterSystemRole) || 'subject_teacher';
+        const updatePayload: Partial<MasterStaffRecord> = {
+          name: formData.full_name.trim(),
+          role: designation,
+          systemRole: resolvedSystemRole,
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          tscNumber: formData.tsc_number.trim() || undefined,
+          department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
+        };
+
+        // Clear teaching-specific fields for non-teaching staff
+        if (isNonTeaching) {
+          updatePayload.assignedGrade = undefined;
+          updatePayload.assignedStream = undefined;
+          updatePayload.assignedSubjects = [];
+        }
+
+        updateStaffMaster(editingStaff.id, updatePayload);
+        
+        // Notify other components & refresh state
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('munyaka_data_changed'));
+        
+        setIsModalOpen(false);
+        setStaffList(getStaffMaster());
+        showSuccess(`Staff member "${formData.full_name}" updated successfully.`);
+      } catch (err) {
+        showError('Failed to update staff. Please try again.');
+        console.error('[Staff] handleSaveStaff (edit):', err);
+        setIsSaving(false);
+        return;
+      }
+    }
+
+    setIsModalOpen(false);
+    setEditingStaff(null);
+    setFormData({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '' });
+    setShowTeachingFields(true);
+    setIsSaving(false);
+  };
+
+  // ── Bulk activation — via staffMasterService ─────────────────────────────────
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredStaff.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredStaff.map(s => s.id)));
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkActivate = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkActivating(true);
+    const ids = [...selectedIds];
     try {
-      const staffData = {
-        name: fullName.trim(),
-        fullName: fullName.trim(),
-        role,
-        category,
-        type: category,
-        email: email.trim(),
-        phone: phone.trim(),
-        tscNumber: tscNumber.trim(),
-        status: 'Active',
-      };
-
-      if (editingId) {
-        staffService.updateStaffMember(editingId, staffData);
-        showSuccess("Staff record updated successfully");
-      } else {
-        staffService.addStaffMember(staffData);
-        showSuccess("Staff member added successfully");
-      }
-
-      loadStaffData();
-      setIsModalOpen(false);
+      bulkActivateStaffMaster(ids);
+      dismissToast();
+      showSuccess(`Activated ${ids.length} staff member(s).`);
     } catch (err) {
-      showError("Failed to save staff record");
+      showError('Failed to activate staff.');
+      console.error('[Staff] handleBulkActivate:', err);
     } finally {
-      setIsSaving(false);
+      setSelectedIds(new Set());
+      setIsBulkActivating(false);
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this staff member?")) {
-      const success = staffService.deleteStaffMember(id);
-      if (success) {
-        showSuccess("Staff member deleted");
-        loadStaffData();
-      } else {
-        showError("Failed to delete record");
-      }
+  const handleActivateAll = async () => {
+    const pending = masterStaffList.filter(isPending);
+    if (pending.length === 0) { dismissToast(); showError('No pre-registered staff to activate.'); return; }
+    if (!window.confirm(`Activate all ${pending.length} pre-registered staff member(s)?`)) return;
+    setIsBulkActivating(true);
+    try {
+      bulkActivateStaffMaster(pending.map(s => s.id));
+      dismissToast();
+      showSuccess(`All ${pending.length} pending staff activated.`);
+    } catch (err) {
+      showError('Failed to activate all staff.');
+      console.error('[Staff] handleActivateAll:', err);
+    } finally {
+      setIsBulkActivating(false);
     }
   };
 
+  const handleActivateOne = (member: StaffMember) => {
+    try {
+      activateStaffMaster(member.id);
+      dismissToast();
+      showSuccess(`${member.full_name} has been activated.`);
+    } catch (err) {
+      showError('Failed to activate staff.');
+      console.error('[Staff] handleActivateOne:', err);
+    }
+  };
+
+  const initialsOf = (name: string): string =>
+    String(name || 'PR').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto pb-20">
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <Badge variant="outline" className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 mb-2">
-            STAFF & PERSONNEL DIRECTORY
-          </Badge>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Staff Management</h1>
-          <p className="text-sm text-indigo-200 mt-1 max-w-2xl">
-            Manage teaching faculty, administrative staff, and support personnel with unified data persistence.
-          </p>
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Page Header - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 action-bar w-full max-w-full">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <BackButton parentPath="/" />
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Staff &amp; Personnel</h1>
+            <p className="text-muted-foreground break-words hyphens-auto">Master directory of teachers, administrators, and support staff.</p>
+          </div>
         </div>
-        <Button onClick={handleOpenAddModal} className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 rounded-2xl px-5 py-3 font-bold flex items-center gap-2">
-          <UserPlus className="w-5 h-5" />
-          Add Staff Member
+        <Button className="h-11 px-6 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 w-full sm:w-auto" onClick={handleOpenAdd}>
+          <UserPlus size={18} /> Add Staff
         </Button>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border shadow-sm rounded-2xl bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Total Staff Records</CardTitle>
-            <Users className="w-5 h-5 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
-            <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Fully synchronized
-            </p>
-          </CardContent>
+      {/* Metrics - responsive grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
+          <div className="p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl"><Briefcase size={22} /></div>
+          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Staff Records</p><p className="text-2xl font-black text-slate-900">{masterStaffList.length}</p></div>
         </Card>
-
-        <Card className="border shadow-sm rounded-2xl bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Teaching Staff</CardTitle>
-            <GraduationCap className="w-5 h-5 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.teachingCount}</div>
-            <p className="text-xs text-gray-500 mt-1">Active faculty & educators</p>
-          </CardContent>
+        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
+          <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl"><UserCheck size={22} /></div>
+          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Accounts</p><p className="text-2xl font-black text-slate-900">{activeCount}</p></div>
         </Card>
-
-        <Card className="border shadow-sm rounded-2xl bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Non-Teaching Staff</CardTitle>
-            <Briefcase className="w-5 h-5 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.nonTeachingCount}</div>
-            <p className="text-xs text-gray-500 mt-1">Admin, support & operations</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm rounded-2xl bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Active Accounts</CardTitle>
-            <ShieldAlert className="w-5 h-5 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.activeCount}</div>
-            <p className="text-xs text-emerald-600 mt-1">Operational & verified</p>
-          </CardContent>
+        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
+          <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl"><Clock size={22} /></div>
+          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pre-Registered Keys</p><p className="text-2xl font-black text-slate-900">{preRegCount}</p></div>
         </Card>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name, role, email, or phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-            />
-          </div>
+      {/* Search & Status Filter - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 w-full max-w-full">
+        <div className="relative flex-1 w-full max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Search staff by name, ID or email..."
+            className="h-12 rounded-2xl bg-white border-none shadow-sm pl-11 text-sm font-medium focus:ring-2 ring-indigo-50" />
+        </div>
+        <div className="flex flex-wrap gap-1.5 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 w-full sm:w-auto">
+          {(['All', 'Active', 'Pre-Registered'] as const).map(status => (
+            <Button key={status} variant="ghost" onClick={() => setStatusFilter(status)}
+              className={statusFilter === status ? "rounded-xl h-10 px-5 font-bold text-xs bg-indigo-600 text-white shadow-md shadow-indigo-100" : "rounded-xl h-10 px-5 font-bold text-xs text-slate-500 hover:bg-slate-50"}>
+              {status}
+            </Button>
+          ))}
+        </div>
+      </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'all' ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-            >
-              All Staff ({staffList.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('teaching')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'teaching' ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-            >
-              Teaching
-            </button>
-            <button
-              onClick={() => setActiveTab('non-teaching')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'non-teaching' ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-            >
-              Non-Teaching
-            </button>
+      {/* Category Filter: Teaching vs Non-Teaching */}
+      <div className="flex items-center gap-3 p-1.5 bg-slate-100 rounded-2xl w-fit mx-auto md:mx-0">
+        {(['All', 'Teaching', 'Non-Teaching'] as const).map(cat => (
+          <Button key={cat} variant="ghost" onClick={() => setCategoryFilter(cat)}
+            className={categoryFilter === cat
+              ? "rounded-xl h-9 px-4 font-bold text-xs bg-white text-indigo-600 shadow-sm border border-indigo-100"
+              : "rounded-xl h-9 px-4 font-bold text-xs text-slate-500 hover:bg-white hover:text-slate-700"}>
+            {cat === 'All' ? 'All Staff' : cat === 'Teaching' ? '👩‍🏫 Teaching Staff' : '👔 Non-Teaching Staff'}
+          </Button>
+        ))}
+      </div>
+
+      {/* Bulk Action Bar */}
+      {preRegCount > 0 && (
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 p-4 md:p-5 bg-amber-50 border border-amber-200 rounded-2xl">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0"><ShieldCheck size={20} /></div>
+            <div>
+              <p className="text-sm font-bold text-amber-900">{preRegCount} staff member{preRegCount === 1 ? '' : 's'} pending activation</p>
+              <p className="text-xs text-amber-700 font-medium">Pre-registered staff can sign in but haven't been approved for full system access yet.</p>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            {selectedIds.size > 0 && (
+              <Button onClick={handleBulkActivate} disabled={isBulkActivating}
+                className="h-11 px-5 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100">
+                {isBulkActivating ? <Loader2 className="animate-spin" size={16} /> : <UserCheck size={16} />}
+                Approve Selected ({selectedIds.size})
+              </Button>
+            )}
+            <Button onClick={handleActivateAll} disabled={isBulkActivating} variant="outline"
+              className="h-11 px-5 rounded-2xl gap-2 border-amber-300 text-amber-800 hover:bg-amber-100 font-bold">
+              {isBulkActivating ? <Loader2 className="animate-spin" size={16} /> : <UserCheck size={16} />}
+              Activate All
+            </Button>
           </div>
         </div>
+      )}
 
-        {/* Staff Table / Cards */}
-        <div className="overflow-x-auto">
-          {filteredStaff.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">
-              <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-semibold text-gray-600">No staff members found.</p>
-              <p className="text-xs text-gray-400 mt-1">Try adjusting your search query or tab filter.</p>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b text-xs font-bold text-gray-400 uppercase bg-slate-50/70">
-                  <th className="py-3.5 px-4 rounded-l-xl">Name / Staff ID</th>
-                  <th className="py-3.5 px-4">Role / Category</th>
-                  <th className="py-3.5 px-4">TSC / ID No.</th>
-                  <th className="py-3.5 px-4">Contact</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4 text-right rounded-r-xl">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {filteredStaff.map((staff) => {
-                  const name = staff.name || staff.fullName || 'Unnamed Staff';
-                  const roleTitle = staff.role || staff.position || 'Staff';
-                  const categoryName = staff.category || staff.type || 'General';
-                  const isTeach = categoryName.toLowerCase().includes('teach');
+      {/* Empty State */}
+      {masterStaffList.length === 0 && (
+        <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm p-12 text-center">
+          <div className="flex flex-col items-center gap-3 max-w-md mx-auto">
+            <div className="p-4 bg-amber-50 rounded-full"><Users className="w-10 h-10 text-amber-500" /></div>
+            <h3 className="text-lg font-bold text-slate-900">No staff members registered yet</h3>
+            <p className="text-sm text-slate-500">The staff directory is currently empty. Add your first staff member to get started.</p>
+            <Button onClick={handleOpenAdd} className="mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100">
+              <UserPlus size={18} /> Add New Staff Member
+            </Button>
+          </div>
+        </Card>
+      )}
 
-                  return (
-                    <tr key={staff.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-4 px-4 font-semibold text-gray-900">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${isTeach ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}`}>
-                            {name.slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900">{name}</div>
-                            <div className="text-xs text-slate-400 font-mono">ID: {staff.id}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="font-medium text-slate-800">{roleTitle}</div>
-                        <span className={`inline-block mt-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${isTeach ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-orange-50 text-orange-700 border border-orange-200'}`}>
-                          {categoryName}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 font-mono text-xs text-slate-600">
-                        {staff.tscNumber || staff.idNumber || '—'}
-                      </td>
-                      <td className="py-4 px-4 text-xs text-slate-600">
-                        <div>{staff.phone || '—'}</div>
-                        <div className="text-slate-400">{staff.email || '—'}</div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[11px]">
-                          Active
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(staff)} className="h-8 w-8 p-0 text-slate-500 hover:text-indigo-600">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(staff.id)} className="h-8 w-8 p-0 text-slate-500 hover:text-rose-600">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
+      {/* Data Table */}
+      {masterStaffList.length > 0 && (
+        <div>
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+            <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Personnel Directory</CardTitle>
+                <p className="text-sm text-slate-500 font-medium">Full master ledger of internal school staff.</p>
+              </div>
+              <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold px-4 py-1.5 rounded-xl">
+                {filteredStaff.length} Record{filteredStaff.length === 1 ? '' : 's'}
+                {selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ''}
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="p-2">
+                <DualScrollContainer>
+                  <table className="w-full text-sm text-left min-w-[900px]">
+                  <thead className="text-slate-500 bg-slate-50/50 border-b">
+                    <tr>
+                      <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
+                        <Checkbox checked={filteredStaff.length > 0 && selectedIds.size === filteredStaff.length} onCheckedChange={toggleSelectAll} aria-label="Select all staff" />
+                      </th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff Name</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">System Role</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Registered Email</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Temp Access Code</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredStaff.map(member => (
+                      <tr key={member.id} className="hover:bg-slate-50/60 transition-colors group">
+                        <td className="px-4 py-5 w-12">
+                          <Checkbox checked={selectedIds.has(member.id)} onCheckedChange={() => toggleSelectOne(member.id)} aria-label={`Select ${member.full_name}`} />
+                        </td>
+                        <td className="px-8 py-5 min-w-[200px]">
+                                                  <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                                      {initialsOf(member.full_name)}
+                                                    </div>
+                                                    <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{toTitleCase(member.full_name)}</span>
+                                                  </div>
+                                                </td>
+                        <td className="px-8 py-5 min-w-[140px]">
+                                                  <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
+                                                    {(() => {
+                                                      // Priority: tscNumber (actual TSC) > nationalId (ID) — do NOT use staffId/login placeholder
+                                                      const tscNumber = (member as any).tscNo || member.tsc_no;
+                                                      const nationalId = (member as any).nationalId;
+                                                      const validId = tscNumber || nationalId;
+                                                      if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
+                                                        return validId;
+                                                      }
+                                                      return '—';
+                                                    })()}
+                                                  </span>
+                                                </td>
+                        <td className="px-8 py-5 min-w-[180px]">
+                                                  <p className="font-bold text-slate-800 whitespace-nowrap">{toTitleCase(member.role || 'Pending Assignment')}</p>
+                                                  <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{toTitleCase(member.department)}</p>
+                                                </td>
+                        <td className="px-8 py-5 min-w-[220px]">
+                          <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{member.email || 'No Email Provided'}</span>
+                        </td>
+                        <td className="px-8 py-5 min-w-[140px]">
+                          <span className="font-mono text-xs font-bold text-amber-600 whitespace-nowrap">
+                            {(member as any).ref || (member as any).accessCode || (member as any).tempAccessCode || '—'}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5 text-center min-w-[140px]">
+                          <Badge className={member.status === 'Active' ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl" : "bg-amber-50 text-amber-700 border-none font-bold text-xs px-3 py-1 rounded-xl"}>
+                            {member.status}
+                          </Badge>
+                        </td>
+                        <td className="px-8 py-5 text-right min-w-[120px]">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-slate-600">
+                                <MoreHorizontal size={18} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-2xl p-2 min-w-[180px] shadow-xl border-slate-100">
+                              <DropdownMenuItem onClick={() => navigate(`/staff/${member.id}`)}
+                                className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600">
+                                <Eye size={15} /> View Profile
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenEdit(member)}
+                                className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600">
+                                <Edit size={15} /> Edit Profile
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="my-1" />
+                              {isPending(member) && (
+                                <DropdownMenuItem onClick={() => handleActivateOne(member)}
+                                  className="rounded-xl gap-2 font-bold cursor-pointer text-emerald-600 hover:bg-emerald-50">
+                                  <UserCheck size={15} /> Activate Staff
+                                </DropdownMenuItem>
+                              )}
+                              {!isPending(member) && (
+                                <DropdownMenuItem onClick={() => navigate('/staff/pre-registration')}
+                                  className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50">
+                                  <Key size={15} /> Manage Access Keys
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredStaff.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-8 py-20 text-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <Search size={32} className="text-slate-200" />
+                            <p className="text-slate-500 font-bold">No personnel match your search criteria.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                </DualScrollContainer>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      )}
 
-      {/* Add / Edit Staff Modal */}
+      {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center border-b pb-4">
-              <h2 className="text-xl font-bold text-slate-900">
-                {editingId ? 'Edit Staff Member' : 'Add New Staff Member'}
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full">
-                ✕
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h3 className="text-lg font-bold text-slate-900">{modalMode === 'add' ? 'Add New Staff Member' : 'Edit Staff Profile'}</h3>
+              <button onClick={handleCloseModal} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button>
             </div>
-
-            <form onSubmit={handleSaveStaff} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name *</label>
-                <input
-                  type="text"
+            <div className="p-6 space-y-4">
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold">
+                  <AlertCircle size={14} /> {formError}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name</Label>
+                <Input value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+                  placeholder="e.g. Jane Mwangi" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation *</Label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => handleRoleChange(e.target.value)}
                   required
-                  placeholder="e.g. Jane Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                />
+                  className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm h-12"
+                >
+                  <option value="SUBJECT TEACHER">SUBJECT TEACHER</option>
+                  <option value="CLASS TEACHER">CLASS TEACHER</option>
+                  <option value="ICT TEACHER">ICT TEACHER</option>
+                  <option value="ICT TECHNICIAN">ICT TECHNICIAN</option>
+                  <option value="LIBRARIAN">LIBRARIAN</option>
+                  <option value="LIBRARY TEACHER">LIBRARY TEACHER</option>
+                  <option value="ADMINISTRATOR">ADMINISTRATOR</option>
+                  <option value="DEPUTY HEAD TEACHER">DEPUTY HEAD TEACHER</option>
+                  <option value="HEAD TEACHER">HEAD TEACHER</option>
+                </select>
+                {formData.systemRole && (
+                  <p className="text-xs text-slate-500 font-medium">
+                    System role: <span className="font-bold text-indigo-600">{formData.systemRole}</span>
+                    {!showTeachingFields && (
+                      <span className="text-amber-600 ml-1">(Non-teaching access)</span>
+                    )}
+                  </p>
+                )}
+                {!showTeachingFields && (
+                  <p className="text-xs text-amber-600 font-medium flex items-center gap-1 mt-1">
+                    <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                    Non-teaching designation — teaching fields will be cleared on save
+                  </p>
+                )}
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Role / Position</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Senior Mathematics Teacher"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone</Label>
+                  <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+254..." className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  >
-                    <option value="Teaching">Teaching</option>
-                    <option value="Non-Teaching">Non-Teaching</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">TSC No. / ID No.</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. TSC-123456"
-                    value={tscNumber}
-                    onChange={(e) => setTscNumber(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 0712345678"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                  />
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Email</Label>
+                  <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="email@school.ac.ke" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Email Address</label>
-                <input
-                  type="email"
-                  placeholder="e.g. staff@munyaka.ac.ke"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                />
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                  {isNonTeachingDesignation(formData.role) ? 'Staff ID / Employee No (Optional)' : 'TSC Number (Optional)'}
+                </Label>
+                <Input value={formData.tsc_number} onChange={e => setFormData({ ...formData, tsc_number: e.target.value })}
+                  placeholder={isNonTeachingDesignation(formData.role) ? 'e.g. EMP-001' : 'e.g. TSC-482910'} className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
               </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)} className="rounded-xl font-bold">
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold px-5 shadow-lg shadow-indigo-600/20">
-                  {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingId ? 'Save Changes' : 'Save Staff Member'}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button variant="ghost" className="flex-1 rounded-xl h-11 font-bold" onClick={handleCloseModal}>Cancel</Button>
+                <Button onClick={handleSaveStaff} disabled={isSaving}
+                  className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2">
+                  {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                  {modalMode === 'add' ? 'Add Staff' : 'Save Changes'}
                 </Button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
-}
+};
+
+export default Staff;
