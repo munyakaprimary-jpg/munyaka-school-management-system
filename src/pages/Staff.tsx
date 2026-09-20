@@ -264,7 +264,7 @@ const Staff = () => {
         window.dispatchEvent(new CustomEvent('munyaka_data_changed'));
         
         setIsModalOpen(false);
-        setStaffList(getStaffMaster());
+        setMasterRecords(getStaffMaster());
         showSuccess(`Staff member "${formData.full_name}" added and pre-registered.`);
       } catch (err) {
         showError('Failed to add staff. Please try again.');
@@ -299,7 +299,7 @@ const Staff = () => {
         window.dispatchEvent(new CustomEvent('munyaka_data_changed'));
         
         setIsModalOpen(false);
-        setStaffList(getStaffMaster());
+        setMasterRecords(getStaffMaster());
         showSuccess(`Staff member "${formData.full_name}" updated successfully.`);
       } catch (err) {
         showError('Failed to update staff. Please try again.');
