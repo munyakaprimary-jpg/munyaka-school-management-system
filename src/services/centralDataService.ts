@@ -289,16 +289,7 @@ export const CentralDataService = {
     const exportObject = {
       students: data[STORAGE_KEYS.STUDENTS] || [],
       learners: data[STORAGE_KEYS.STUDENTS] || [],
-      staff: data[STORAGE_KEYS.STAFF] || [
-        { id: 's1', name: 'Teacher One', role: 'Teacher', type: 'Teaching', status: 'Active' },
-        { id: 's2', name: 'Teacher Two', role: 'Teacher', type: 'Teaching', status: 'Active' },
-        { id: 's3', name: 'Staff Member 1', role: 'Support', type: 'Non-Teaching', status: 'Active' },
-        { id: 's4', name: 'Staff Member 2', role: 'Support', type: 'Non-Teaching', status: 'Active' },
-        { id: 's5', name: 'Staff Member 3', role: 'Support', type: 'Non-Teaching', status: 'Active' },
-        { id: 's6', name: 'Staff Member 4', role: 'Support', type: 'Non-Teaching', status: 'Active' },
-        { id: 's7', name: 'Staff Member 5', role: 'Support', type: 'Non-Teaching', status: 'Active' },
-        { id: 's8', name: 'Staff Member 6', role: 'Support', type: 'Non-Teaching', status: 'Active' },
-      ],
+      staff: data[STORAGE_KEYS.STAFF] || [],
       exams: data[STORAGE_KEYS.MARKS] || [],
       libraryBooks: [],
       transactions: data[STORAGE_KEYS.TRANSACTIONS] || [],
