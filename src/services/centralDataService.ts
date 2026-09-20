@@ -172,7 +172,12 @@ export const CentralDataService = {
 
   // ── Staff ─────────────────────────────────────────────────────────
 
-  getStaff: (): StaffRecord[] => readStorage<StaffRecord[]>(STORAGE_KEYS.STAFF, []),
+  getStaff: (): StaffRecord[] => {
+    if (localStorage.getItem('munyaka_staff_cleared_explicitly') === 'true') {
+      return [];
+    }
+    return readStorage<StaffRecord[]>(STORAGE_KEYS.STAFF, []);
+  },
   saveStaff: (staff: StaffRecord[]) => writeStorage(STORAGE_KEYS.STAFF, staff),
   clearStaff: (): void => {
     localStorage.setItem('munyaka_staff_cleared_explicitly', 'true');
