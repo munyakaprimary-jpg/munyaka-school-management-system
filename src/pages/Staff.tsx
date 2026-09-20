@@ -37,9 +37,12 @@ export default function StaffPage() {
 
   useEffect(() => {
     loadStaffData();
+    // Also run an immediate check after mount to guarantee sync
+    const timer = setTimeout(loadStaffData, 50);
     window.addEventListener('storage', loadStaffData);
     window.addEventListener('munyaka:data-changed', loadStaffData);
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('storage', loadStaffData);
       window.removeEventListener('munyaka:data-changed', loadStaffData);
     };

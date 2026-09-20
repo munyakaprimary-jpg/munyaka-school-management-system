@@ -36,31 +36,37 @@ export const staffService = {
     }
 
     try {
+      // 1. Check if ANY staff storage key has data
       for (const key of STAFF_STORAGE_KEYS) {
         const raw = localStorage.getItem(key);
         if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            // Filter out unnamed placeholder staff permanently
-            const cleaned = parsed.filter((s: any) => {
-              const name = String(s.name || s.fullName || '').trim().toLowerCase();
-              const sId = String(s.id || '').trim();
-              if (name === 'unnamed staff' || name === '' || sId === 'MUNYAKA-3304') {
-                return false;
-              }
-              return true;
-            });
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              // Clean unnamed placeholder records
+              const cleaned = parsed.filter((s: any) => {
+                const name = String(s.name || s.fullName || '').trim().toLowerCase();
+                const sId = String(s.id || '').trim();
+                if (name === 'unnamed staff' || name === '' || sId === 'MUNYAKA-3304') {
+                  return false;
+                }
+                return true;
+              });
 
-            // Update storage to permanently purge unnamed records
-            localStorage.setItem(key, JSON.stringify(cleaned));
-            if (cleaned.length > 0 || parsed.length > 0) {
-              return cleaned;
+              if (cleaned.length > 0) {
+                // Also ensure munyaka_staff_directory and munyaka_staff_v2 are synchronized
+                localStorage.setItem('munyaka_staff_v2', JSON.stringify(cleaned));
+                localStorage.setItem('munyaka_staff_directory', JSON.stringify(cleaned));
+                return cleaned;
+              }
             }
+          } catch {
+            // parse error, continue
           }
         }
       }
 
-      // Fallback to initial seed data, also filtering out unnamed staff
+      // 2. If no populated staff key exists, initialize and persist from initialSeedData.staff
       const seed = ((initialSeedData.staff as StaffMember[]) || []).filter((s: any) => {
         const name = String(s.name || s.fullName || '').trim().toLowerCase();
         const sId = String(s.id || '').trim();
@@ -70,11 +76,13 @@ export const staffService = {
       if (seed.length > 0) {
         localStorage.setItem('munyaka_staff_v2', JSON.stringify(seed));
         localStorage.setItem('munyaka_staff_directory', JSON.stringify(seed));
+        localStorage.setItem('munyaka_staff', JSON.stringify(seed));
+        return seed;
       }
-      return seed;
+      return [];
     } catch (err) {
       console.error('[StaffService] Error loading staff:', err);
-      return [];
+      return (initialSeedData.staff as StaffMember[]) || [];
     }
   },
 
@@ -147,12 +155,16 @@ export const staffService = {
     const staff = this.getStaff();
     const teaching = staff.filter((s) => {
       const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.position || ''} ${s.department || ''}`.toLowerCase();
-      return roleStr.includes('teach') || roleStr.includes('educator');
+      // Check category explicitly or role keywords
+      const cat = String(s.category || s.type || '').toLowerCase();
+      return cat.includes('teach') || roleStr.includes('teach') || roleStr.includes('educator') || roleStr.includes('teacher');
     });
 
     const nonTeaching = staff.filter((s) => {
       const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.position || ''} ${s.department || ''}`.toLowerCase();
-      return !roleStr.includes('teach') && !roleStr.includes('educator');
+      const cat = String(s.category || s.type || '').toLowerCase();
+      const isTeach = cat.includes('teach') || roleStr.includes('teach') || roleStr.includes('educator') || roleStr.includes('teacher');
+      return !isTeach;
     });
 
     const active = staff.filter((s) => !s.isArchived && String(s.status || '').toLowerCase() !== 'archived');
