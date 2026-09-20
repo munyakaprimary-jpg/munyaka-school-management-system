@@ -1,16 +1,11 @@
 /**
- * unifiedDataLayer.ts — The definitive unified data storage engine
- *
- * All menus, dashboards, and services in the application MUST read and write
- * exclusively through this service to ensure instant persistence, offline APK
- * compatibility, and zero data loss.
+ * unifiedDataStorage.ts — Definitive unified data storage engine
+ * All menus, dashboards, and services in the application read and write exclusively through this service.
  */
 
-import { STORAGE_KEYS, readStorage, writeStorage, removeStorage, clearAllStorage, notifyDataChanged } from '@/services/persistentStore';
-import { idbStore } from '@/services/idbStore';
+import { STORAGE_KEYS, readStorage, writeStorage, removeStorage, clearAllStorage } from '@/services/persistentStore';
 
 export const UnifiedDataStorage = {
-  // ── Generic Get / Set ──────────────────────────────────────────────
   get: <T>(key: string, fallback: T): T => {
     return readStorage<T>(key, fallback);
   },
@@ -30,7 +25,6 @@ export const UnifiedDataStorage = {
     window.dispatchEvent(new Event('munyaka:data-changed'));
   },
 
-  // ── Staff & Personnel Operations ───────────────────────────────────
   getStaff: (): any[] => {
     if (localStorage.getItem('munyaka_staff_cleared_explicitly') === 'true') {
       return [];
@@ -47,8 +41,7 @@ export const UnifiedDataStorage = {
       }
     });
 
-    const results = Array.from(map.values());
-    return results;
+    return Array.from(map.values());
   },
 
   saveStaff: (staffList: any[]): boolean => {
@@ -134,7 +127,6 @@ export const UnifiedDataStorage = {
     window.dispatchEvent(new Event('munyaka:data-changed'));
   },
 
-  // ── Learners / Students Operations ─────────────────────────────────
   getLearners: (): any[] => {
     const primary = readStorage<any[]>('school_learners_data', []);
     const master = readStorage<any[]>('munyaka_master_learner_list', []);
@@ -161,11 +153,9 @@ export const UnifiedDataStorage = {
     return true;
   },
 
-  // ── Financials & Fees ──────────────────────────────────────────────
   getFees: (): any[] => readStorage<any[]>('munyaka_fees_records', []),
   saveFees: (records: any[]): boolean => writeStorage('munyaka_fees_records', records),
 
-  // ── Attendance ─────────────────────────────────────────────────────
   getAttendance: (): any[] => readStorage<any[]>('munyaka_attendance_records', []),
   saveAttendance: (records: any[]): boolean => writeStorage('munyaka_attendance_records', records),
 };
