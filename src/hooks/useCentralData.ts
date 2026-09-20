@@ -369,6 +369,41 @@ export function activateStaffMaster(id: string): boolean {
   }
 }
 
+export const getStaffMaster = () => {
+  try {
+    const list = centralGetStaff();
+    return (Array.isArray(list) ? list : []).map((s: any) => ({
+      id: s.id || `T00${Math.floor(Math.random() * 900) + 100}`,
+      name: s.name || s.fullName || 'Staff Member',
+      fullName: s.name || s.fullName || 'Staff Member',
+      nationalId: s.nationalId || '',
+      tscNumber: s.tscNumber || '',
+      email: s.email || '',
+      phone: s.phone || '',
+      systemRole: s.systemRole || s.role || 'subject_teacher',
+      role: s.role || 'Teacher',
+      category: s.category || 'Teaching',
+      assignedSubjects: s.assignedSubjects || s.subjects || [],
+      status: s.status || 'Active',
+      isArchived: !!s.isArchived,
+    }));
+  } catch {
+    return [];
+  }
+};
+
+export const saveStaffMaster = (records: any[]) => {
+  try {
+    centralSaveStaff(records || []);
+  } catch {}
+};
+
+export const broadcastStaffMasterChange = () => {
+  try {
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_staff_v3' } }));
+  } catch {}
+};
+
 export const getActiveLearners = centralGetLearners;
 export const getActiveStaff = centralGetStaff;
 export const getActiveTeachers = centralGetStaff;
