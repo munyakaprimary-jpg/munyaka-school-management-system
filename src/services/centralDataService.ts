@@ -176,13 +176,17 @@ export const CentralDataService = {
   saveStaff: (staff: StaffRecord[]) => writeStorage(STORAGE_KEYS.STAFF, staff),
   clearStaff: (): void => {
     writeStorage(STORAGE_KEYS.STAFF, []);
-    localStorage.removeItem('munyaka_master_staff_list');
-    localStorage.removeItem('munyaka_staff_directory');
-    localStorage.removeItem('munyaka_staff');
-    localStorage.removeItem('munyaka_staff_prereg');
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify([]));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify([]));
+    localStorage.setItem('munyaka_staff', JSON.stringify([]));
+    localStorage.setItem('munyaka_staff_prereg', JSON.stringify([]));
+    localStorage.setItem('munyaka_teachers', JSON.stringify([]));
+    // Set a flag to prevent auto-re seeding on next mount
+    localStorage.setItem('munyaka_staff_cleared_explicitly', 'true');
     window.dispatchEvent(new Event('staff-changed'));
     window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
     window.dispatchEvent(new Event('munyaka:data-changed'));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_staff' } }));
   },
 
   // ── Attendance ────────────────────────────────────────────────────
