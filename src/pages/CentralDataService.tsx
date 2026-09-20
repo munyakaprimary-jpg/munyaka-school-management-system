@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CentralDataService } from '../services/centralDataService';
 import { exportAllData, parseAndImportBackup, downloadDatabaseBackup } from '@/utils/storage';
-import { Download, Upload, Users, GraduationCap, Briefcase, CheckCircle2, RefreshCw, AlertCircle, Database } from 'lucide-react';
+import { Download, Upload, Users, GraduationCap, Briefcase, CheckCircle2, RefreshCw, AlertCircle, Database, Trash2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
 export default function CentralDataPage() {
@@ -70,6 +70,26 @@ export default function CentralDataPage() {
     }
   };
 
+  const handleClearStaff = () => {
+    if (!window.confirm("Are you sure you want to clear all staff records? This will wipe all teacher and staff personnel data and reset the list to empty.")) {
+      return;
+    }
+    try {
+      CentralDataService.clearStaff();
+      setStats({
+        learners: stats.learners,
+        teaching: 0,
+        nonTeaching: 0
+      });
+      showSuccess("All staff records have been successfully cleared.");
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (e) {
+      showError("Failed to clear staff records.");
+    }
+  };
+
   const handleFileRestoreClick = () => {
     fileInputRef.current?.click();
   };
@@ -126,6 +146,10 @@ export default function CentralDataPage() {
           <Button onClick={handleFileRestoreClick} disabled={isRestoring} className="bg-emerald-600 hover:bg-emerald-500 text-white shadow">
             {isRestoring ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
             Restore JSON Backup
+          </Button>
+          <Button onClick={handleClearStaff} variant="destructive" className="bg-red-600 hover:bg-red-500 text-white shadow">
+            <Trash2 className="w-4 h-4 mr-2" />
+            Reset Staff Database
           </Button>
           <input
             type="file"

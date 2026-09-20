@@ -174,6 +174,16 @@ export const CentralDataService = {
 
   getStaff: (): StaffRecord[] => readStorage<StaffRecord[]>(STORAGE_KEYS.STAFF, []),
   saveStaff: (staff: StaffRecord[]) => writeStorage(STORAGE_KEYS.STAFF, staff),
+  clearStaff: (): void => {
+    writeStorage(STORAGE_KEYS.STAFF, []);
+    localStorage.removeItem('munyaka_master_staff_list');
+    localStorage.removeItem('munyaka_staff_directory');
+    localStorage.removeItem('munyaka_staff');
+    localStorage.removeItem('munyaka_staff_prereg');
+    window.dispatchEvent(new Event('staff-changed'));
+    window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
+    window.dispatchEvent(new Event('munyaka:data-changed'));
+  },
 
   // ── Attendance ────────────────────────────────────────────────────
 
