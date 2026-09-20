@@ -923,14 +923,15 @@ export default function Students() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Admission Number *</label>
+                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Admission Number * (Auto-generated)</label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. MUN-G4-001/2026"
+                      readOnly
+                      disabled
+                      placeholder="e.g. MUN-G6-001-2026"
                       value={admissionNumber}
-                      onChange={(e) => setAdmissionNumber(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-mono text-slate-600 cursor-not-allowed focus:outline-none"
                     />
                   </div>
 
@@ -955,7 +956,7 @@ export default function Students() {
                         const newGrade = e.target.value;
                         setGrade(newGrade);
                         if (!editingId) {
-                          setAdmissionNumber(generateAdmissionNumber(newGrade, students.length));
+                          setAdmissionNumber(generateAdmissionNumber(newGrade));
                         }
                       }}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
