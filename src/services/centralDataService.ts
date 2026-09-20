@@ -4,6 +4,16 @@
  */
 
 import { UnifiedDataStorage } from './unifiedDataStorage';
+import { STORAGE_KEYS as PERSISTENT_KEYS } from './persistentStore';
+
+export const STORAGE_KEYS = {
+  ...PERSISTENT_KEYS,
+  MASTER_LEARNERS: 'munyaka_master_learner_list',
+  MARKS: 'munyaka_marks_records',
+  TIMETABLE: 'school-timetable-data',
+  TIMETABLE_GRADES: 'school-timetable-grades',
+  STAFF_ATTENDANCE: 'munyaka_staff_attendance',
+};
 
 export const CentralDataService = {
   getLearners: () => UnifiedDataStorage.getLearners(),
