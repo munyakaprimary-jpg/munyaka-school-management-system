@@ -69,17 +69,17 @@ function toPreReg(record: MasterStaffRecord): PreRegisteredStaff {
 const StaffPreRegistration = () => {
   const navigate = useNavigate();
 
-  // ── Staff list sourced exclusively from staffMasterService ─────────────────
+  // ── Staff list sourced exclusively from central storage ─────────────────
   const [staffList, setStaffList] = useState<PreRegisteredStaff[]>([]);
 
-  // ── Boot: load from staffMasterService ─────────────────────────────────────
+  // ── Boot: load from central storage ─────────────────────────────────────
   useEffect(() => {
     initializeStaffMaster(); // safe to call multiple times — idempotent
     const records = getStaffMaster();
     setStaffList(records.map(toPreReg));
   }, []);
 
-  // ── Listen for external changes broadcast by staffMasterService mutations ──
+  // ── Listen for external changes broadcast by storage mutations ──
   useEffect(() => {
     const refresh = () => {
       const records = getStaffMaster();
@@ -159,7 +159,7 @@ const StaffPreRegistration = () => {
         datePreRegistered: formData.datePreRegistered || new Date().toISOString().split('T')[0],
         profileComplete: false,
       });
-      // staffMasterService already called broadcast() — no extra notify needed
+      // central storage already updated — no extra notify needed
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('munyaka_data_changed'));
       showSuccess(`${name} pre-registered with access key ${record.tempAccessCode}`);
@@ -260,7 +260,7 @@ const StaffPreRegistration = () => {
           </div>
         </div>
 
-        {/* Counter cards — always reflect staffMasterService counts */}
+        {/* Counter cards — always reflect central counts */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="rounded-2xl border border-amber-200 bg-amber-50/60 shadow-sm">
             <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-amber-700">Pre-Registered</CardTitle></CardHeader>

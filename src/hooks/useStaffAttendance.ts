@@ -58,7 +58,7 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     const savedMaster = lsRead<Record<string, StaffAttendanceRecord>>(masterKey, {});
     let currentMaster: Record<string, StaffAttendanceRecord> = savedMaster;
 
-    // Dynamic Fetch: Populate register from staffMasterService (single source of truth)
+    // Dynamic Fetch: Populate register from central data (single source of truth)
     initializeStaffMaster();
     const staffLedger = getStaffMaster();
     const totalActiveStaff = staffLedger.length;

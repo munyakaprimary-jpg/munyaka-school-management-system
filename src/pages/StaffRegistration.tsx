@@ -105,7 +105,7 @@ const StaffRegistration = () => {
         status: 'Active'
       });
     } catch (err) {
-      console.error('[StaffRegistration] staffMasterService sync failed:', err);
+      console.error('[StaffRegistration] central sync failed:', err);
     }
 
     addLocalStaff(record);

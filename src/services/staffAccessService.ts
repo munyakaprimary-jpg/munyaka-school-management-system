@@ -14,7 +14,7 @@
  *   - contains bare UUIDs or long raw IDs
  *   - empty / undefined
  *
- * All storage I/O for access keys is handled exclusively by staffMasterService.
+ * All storage I/O for access keys is handled exclusively by central storage.
  */
 
 import { PreRegisteredStaff } from '@/types/staff-access';

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RefreshCw, Sparkles, Check, ChevronsUpDown, User, Info, CheckCircle2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import { SystemRole, PreRegisteredStaff } from '@/types/staff-access';
-import { getStaffMaster } from "@/services/staffMasterService";
+import { centralGetStaff } from "@/hooks/useCentralData";
 import { generateAccessKey } from "@/services/staffAccessService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -18,14 +18,11 @@ interface AddPreRegModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: Partial<PreRegisteredStaff>) => void;
-  /** Staff already in staffMasterService — used to filter duplicates */
   existingPreRegistered?: PreRegisteredStaff[];
   existingNatIds?: Set<string>;
-  /** Emails already in staffMasterService */
   existingEmails?: Set<string>;
 }
 
-// Combobox item derived from a MasterStaffRecord
 interface DirectoryStaffItem {
   id: string;
   name: string;
@@ -71,21 +68,20 @@ const AddPreRegModal = ({
     staffId: ""
   });
 
-  // ── Directory staff sourced exclusively from staffMasterService ───────────────
   const directoryStaffList = useMemo<DirectoryStaffItem[]>(() => {
-    return getStaffMaster().map(r => ({
-      id: r.id,
-      name: r.name,
-      nationalId: r.nationalId,
-      email: r.email,
-      phone: r.phone,
-      tscNumber: r.tscNumber,
-      systemRole: r.systemRole,
-      subjects: r.assignedSubjects ?? [],
+    const list = centralGetStaff();
+    return (Array.isArray(list) ? list : []).map((s: any) => ({
+      id: s.id || `T00${Math.floor(Math.random() * 900) + 100}`,
+      name: s.name || s.fullName || 'Staff Member',
+      nationalId: s.nationalId || '',
+      email: s.email || '',
+      phone: s.phone || '',
+      tscNumber: s.tscNumber || '',
+      systemRole: s.systemRole || s.role || 'subject_teacher',
+      subjects: s.assignedSubjects || s.subjects || [],
     }));
-  }, [isOpen]); // re-read every time modal opens
+  }, [isOpen]);
 
-  // Exclude staff who already have a pre-registration record
   const availableStaff = useMemo(() => {
     return directoryStaffList.filter(s => {
       const alreadyExists = existingPreRegistered.some(p =>
@@ -103,8 +99,8 @@ const AddPreRegModal = ({
   };
 
   const generateStaffId = () => {
-    const master = getStaffMaster();
-    const next = master.length + 7; // start at T007 to avoid collisions
+    const master = centralGetStaff();
+    const next = master.length + 7;
     return `T${String(next).padStart(3, '0')}`;
   };
 
@@ -126,102 +122,80 @@ const AddPreRegModal = ({
     });
   }, [isOpen]);
 
-  // Autofill from combobox selection
-  const handleSelectStaff = (staff: DirectoryStaffItem) => {
-    setSelectedStaffId(staff.id);
-    setComboboxOpen(false);
-    setFormData(prev => ({
-      ...prev,
-      fullName: staff.name,
-      nationalId: staff.nationalId,
-      tscNumber: staff.tscNumber || "",
-      email: staff.email,
-      phone: staff.phone,
-      systemRole: mapRoleToSystemRole(staff.systemRole),
-      assignedSubjects: staff.subjects.length > 0 ? staff.subjects : ["Mathematics", "Science & Tech"],
-    }));
+  const handleSelectStaffMember = (staffId: string) => {
+    setSelectedStaffId(staffId);
+    const found = directoryStaffList.find(s => s.id === staffId);
+    if (found) {
+      setFormData({
+        fullName: found.name,
+        nationalId: found.nationalId || "",
+        tscNumber: found.tscNumber || "",
+        email: found.email || "",
+        phone: found.phone || "",
+        systemRole: mapRoleToSystemRole(found.systemRole),
+        assignedSubjects: found.subjects.length > 0 ? found.subjects : ["Mathematics", "Science & Tech"],
+        tempAccessCode: formData.tempAccessCode || generateAccessKey(),
+        staffId: found.id
+      });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(formData.fullName || '').trim() || !String(formData.email || '').trim()) return;
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    });
+    onClose();
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Pre-Register Staff for System Access"
-      description="Select staff from the Directory to autofill credentials, or enter details manually."
-      maxWidth="max-w-2xl"
-      footer={
-        <div className="flex gap-2 justify-end w-full">
-          <Button type="button" variant="ghost" onClick={onClose} className="rounded-xl font-bold h-12 px-6">Cancel</Button>
-          <Button onClick={handleSubmit}
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold h-12 px-8 text-white shadow-lg shadow-indigo-100 gap-2">
-            <Sparkles size={18} /> Pre-Authorize Access
-          </Button>
-        </div>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-5">
-
-        {/* Searchable Combobox */}
-        <div className="space-y-2 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
-          <div className="flex justify-between items-center">
-            <Label className="text-xs font-black uppercase tracking-widest text-indigo-900">
-              1. Search Staff Directory (Autofill)
-            </Label>
-            {selectedStaffId && (
-              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                <CheckCircle2 size={13} /> Autofilled from Directory
-              </span>
-            )}
-          </div>
-
+    <Modal isOpen={isOpen} onClose={onClose} title="Pre-Register Staff Access">
+      <form onSubmit={handleSubmit} className="space-y-4 py-2">
+        <div className="space-y-2">
+          <Label>Select from Staff Directory (Optional)</Label>
           <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 role="combobox"
                 aria-expanded={comboboxOpen}
-                className="w-full justify-between h-12 rounded-xl bg-white border-slate-200 text-left font-bold text-slate-800"
+                className="w-full justify-between font-normal"
               >
-                {selectedStaffId ? (
-                  <div className="flex items-center gap-2 truncate">
-                    <User size={16} className="text-indigo-600 shrink-0" />
-                    <span>{formData.fullName || 'Pre-Registered Staff'} ({formData.nationalId || 'No ID'})</span>
-                  </div>
-                ) : (
-                  <span className="text-slate-400 font-normal">Type staff name or National ID to search…</span>
-                )}
-                <ChevronsUpDown size={16} className="ml-2 shrink-0 opacity-50" />
+                {selectedStaffId
+                  ? directoryStaffList.find((s) => s.id === selectedStaffId)?.name
+                  : "Search directory staff..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[500px] p-0 rounded-2xl shadow-xl border-slate-200" align="start">
+            <PopoverContent className="w-full p-0" align="start">
               <Command>
-                <CommandInput placeholder="Search by name, ID or role…" className="h-12 font-medium"
-                  value={searchQuery} onValueChange={setSearchQuery} />
-                <CommandList className="max-h-60 p-1">
-                  <CommandEmpty className="py-6 text-center text-xs font-bold text-slate-400">
-                    No eligible staff found in Directory.
-                  </CommandEmpty>
-                  <CommandGroup heading="Available Staff Members">
-                    {availableStaff.map(staff => (
+                <CommandInput placeholder="Search name or TSC..." value={searchQuery} onValueChange={setSearchQuery} />
+                <CommandList>
+                  <CommandEmpty>No available staff found in directory.</CommandEmpty>
+                  <CommandGroup>
+                    {availableStaff.map((staff) => (
                       <CommandItem
                         key={staff.id}
-                        value={`${staff.name} ${staff.nationalId} ${staff.email}`}
-                        onSelect={() => handleSelectStaff(staff)}
-                        className="rounded-xl p-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between"
+                        value={`${staff.name} ${staff.tscNumber} ${staff.email}`}
+                        onSelect={() => {
+                          handleSelectStaffMember(staff.id);
+                          setComboboxOpen(false);
+                        }}
                       >
-                        <div>
-                          <p className="font-bold text-slate-900 text-sm">{staff.name}</p>
-                          <p className="text-xs text-slate-500 font-medium">
-                            ID: {staff.nationalId} &bull; {staff.systemRole} &bull; {staff.email}
-                          </p>
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedStaffId === staff.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{staff.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {staff.tscNumber ? `TSC: ${staff.tscNumber}` : staff.email || staff.id}
+                          </span>
                         </div>
-                        <Check className={cn("h-4 w-4 text-indigo-600", selectedStaffId === staff.id ? "opacity-100" : "opacity-0")} />
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -229,73 +203,120 @@ const AddPreRegModal = ({
               </Command>
             </PopoverContent>
           </Popover>
-
-          {availableStaff.length === 0 && (
-            <p className="text-[11px] text-amber-700 font-medium flex items-center gap-1 mt-1">
-              <Info size={12} /> All staff in the directory already have pre-registered access records.
-            </p>
-          )}
         </div>
 
-        {/* Form Fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name *</Label>
-            <Input value={formData.fullName} onChange={e => setFormData({ ...formData, fullName: e.target.value })}
-              placeholder="e.g. Jane Mwangi" className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" required />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Full Name *</Label>
+            <Input
+              id="fullName"
+              required
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              placeholder="e.g. Jane Doe"
+            />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">National ID Number *</Label>
-            <Input value={formData.nationalId} onChange={e => setFormData({ ...formData, nationalId: e.target.value })}
-              placeholder="e.g. 28374615" className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" required />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
-            <Input value={formData.tscNumber} onChange={e => setFormData({ ...formData, tscNumber: e.target.value })}
-              placeholder="e.g. TSC-482910" className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">System Access Role *</Label>
-            <Select value={formData.systemRole} onValueChange={(val: SystemRole) => setFormData({ ...formData, systemRole: val })}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900"><SelectValue /></SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="subject_teacher">Subject Teacher</SelectItem>
-                <SelectItem value="class_teacher">Class Teacher</SelectItem>
-                <SelectItem value="senior_teacher">Senior Teacher</SelectItem>
-                <SelectItem value="head_teacher">Head Teacher</SelectItem>
-                <SelectItem value="bursar">Bursar / Accounts</SelectItem>
-                <SelectItem value="support_admin">System Admin</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-2">
+            <Label htmlFor="staffId">Staff ID / Code</Label>
+            <Input
+              id="staffId"
+              value={formData.staffId}
+              onChange={(e) => setFormData({ ...formData, staffId: e.target.value })}
+              placeholder="e.g. T001"
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Official Email *</Label>
-            <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
-              placeholder="e.g. jane@email.com" className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" required />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="tscNumber">TSC Number</Label>
+            <Input
+              id="tscNumber"
+              value={formData.tscNumber}
+              onChange={(e) => setFormData({ ...formData, tscNumber: e.target.value })}
+              placeholder="e.g. TSC123456"
+            />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone Number *</Label>
-            <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="+254…" className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" required />
+          <div className="space-y-2">
+            <Label htmlFor="nationalId">National ID</Label>
+            <Input
+              id="nationalId"
+              value={formData.nationalId}
+              onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })}
+              placeholder="e.g. 31234567"
+            />
           </div>
         </div>
 
-        {/* Access Key — always MUNYAKA-XXXX, generated via staffAccessService */}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Access Key</Label>
-          <div className="flex gap-2">
-            <Input value={formData.tempAccessCode} readOnly
-              className="rounded-xl h-12 bg-slate-50 border-none font-black text-center text-indigo-700" />
-            <Button type="button" variant="outline" className="h-12 px-3 rounded-xl border-slate-200" onClick={generateRandomKey}>
-              <RefreshCw size={16} />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="staff@munyaka.ac.ke"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <Input
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="0712345678"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="systemRole">System Role</Label>
+          <Select
+            value={formData.systemRole}
+            onValueChange={(val) => setFormData({ ...formData, systemRole: val as SystemRole })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select system role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="head_teacher">Head Teacher</SelectItem>
+              <SelectItem value="senior_teacher">Senior Teacher</SelectItem>
+              <SelectItem value="class_teacher">Class Teacher</SelectItem>
+              <SelectItem value="subject_teacher">Subject Teacher</SelectItem>
+              <SelectItem value="bursar">Bursar / Accounts</SelectItem>
+              <SelectItem value="support_admin">Support Admin</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2 bg-muted/50 p-3 rounded-lg border">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Generated Temporary Access Key</Label>
+            <Button type="button" variant="ghost" size="sm" onClick={generateRandomKey} className="h-7 text-xs">
+              <RefreshCw className="h-3 w-3 mr-1" /> Regenerate
             </Button>
           </div>
+          <div className="flex items-center gap-2">
+            <Input
+              value={formData.tempAccessCode}
+              onChange={(e) => setFormData({ ...formData, tempAccessCode: e.target.value })}
+              className="font-mono font-bold text-center tracking-widest text-primary bg-background"
+              required
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Provide this access key to the staff member. They will be required to enter it upon first login.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit">
+            <CheckCircle2 className="h-4 w-4 mr-2" /> Save &amp; Pre-Register
+          </Button>
         </div>
       </form>
     </Modal>

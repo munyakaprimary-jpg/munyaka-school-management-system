@@ -328,7 +328,7 @@ export default function AttendanceMonitor() {
 
   const theme = THEME_CONFIGS[monitorTheme];
 
-  // Load staff from staffMasterService
+  // Load staff from central storage
   useEffect(() => {
     initializeStaffMaster();
     const staff = getStaffMaster();
@@ -354,7 +354,7 @@ export default function AttendanceMonitor() {
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
-      // Re-read from staffMasterService
+      // Re-read from central storage
       const staff = getStaffMaster();
       const today = new Date().toISOString().split('T')[0];
       const attendanceRecords: AttendanceRecord[] = staff
