@@ -287,3 +287,19 @@ export function verifyStaffLogin(identifier: string, pass: string): { success: b
     role: found.role || found.category || 'Teacher',
   };
 }
+
+export const getActiveLearners = centralGetLearners;
+export const getActiveStaff = centralGetStaff;
+export const getActiveTeachers = centralGetStaff;
+export const getTeachingStaff = () => centralGetStaff().filter((s: any) => {
+  const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''}`.toLowerCase();
+  const cat = String(s.category || s.type || '').toLowerCase();
+  return cat.includes('teach') || roleStr.includes('teach') || roleStr.includes('educator');
+});
+export const getNonTeachingStaff = () => centralGetStaff().filter((s: any) => {
+  const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''}`.toLowerCase();
+  const cat = String(s.category || s.type || '').toLowerCase();
+  return !(cat.includes('teach') || roleStr.includes('teach') || roleStr.includes('educator'));
+});
+
+export default useCentralData;
