@@ -26,15 +26,23 @@ export const UnifiedDataStorage = {
   },
 
   getStaff: (): any[] => {
+    // ALWAYS return empty array if explicitly cleared or if no genuine staff exist
     if (localStorage.getItem('munyaka_staff_cleared_explicitly') === 'true') {
       return [];
     }
+    
+    // Check if any genuine staff were added; otherwise return []
     const primary = readStorage<any[]>(STORAGE_KEYS.STAFF, []);
     const directory = readStorage<any[]>('munyaka_staff_directory', []);
     const master = readStorage<any[]>('munyaka_master_staff_list', []);
 
+    const combined = [...master, ...directory, ...primary];
+    if (combined.length === 0) {
+      return [];
+    }
+
     const map = new Map<string, any>();
-    [...master, ...directory, ...primary].forEach(s => {
+    combined.forEach(s => {
       if (s && (s.id || s.email || s.name)) {
         const key = String(s.id || s.email || s.name).trim().toLowerCase();
         map.set(key, s);
@@ -47,6 +55,8 @@ export const UnifiedDataStorage = {
   saveStaff: (staffList: any[]): boolean => {
     if (staffList.length > 0) {
       localStorage.removeItem('munyaka_staff_cleared_explicitly');
+    } else {
+      localStorage.setItem('munyaka_staff_cleared_explicitly', 'true');
     }
     writeStorage(STORAGE_KEYS.STAFF, staffList);
     writeStorage('munyaka_staff_directory', staffList);

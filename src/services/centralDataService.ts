@@ -26,7 +26,16 @@ export const CentralDataService = {
   addStaff: (record: any) => UnifiedDataStorage.addStaff(record),
   updateStaff: (id: string, updates: any) => UnifiedDataStorage.updateStaff(id, updates),
   deleteStaff: (id: string) => UnifiedDataStorage.deleteStaff(id),
-  clearStaff: () => UnifiedDataStorage.clearStaff(),
+  clearStaff: () => {
+    UnifiedDataStorage.clearStaff();
+    // Aggressively purge all known hidden staff keys
+    localStorage.removeItem('munyaka_staff_directory');
+    localStorage.removeItem('munyaka_master_staff_list');
+    localStorage.removeItem('munyaka_staff');
+    localStorage.removeItem('munyaka_staff_prereg');
+    localStorage.removeItem('munyaka_teachers');
+    localStorage.setItem('munyaka_staff_cleared_explicitly', 'true');
+  },
 
   getAttendance: () => UnifiedDataStorage.getAttendance(),
   saveAttendance: (records: any[]) => UnifiedDataStorage.saveAttendance(records),
@@ -71,3 +80,4 @@ export const getStaff = CentralDataService.getStaff;
 export const saveStaff = CentralDataService.saveStaff;
 
 export default CentralDataService;
+
