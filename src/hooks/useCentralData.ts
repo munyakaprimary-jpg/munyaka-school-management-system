@@ -78,8 +78,10 @@ export const useCentralData = () => {
     window.addEventListener('storage', handleStorage);
     window.addEventListener('munyaka:data-changed', handleStorage);
     
-    // Failsafe timeout to guarantee loading state is never stuck
-    const timer = window.setTimeout(refresh, 500);
+    // Guaranteed hardcoded timeout failsafe (e.g. 500ms max) that forces state resolution
+    const timer = window.setTimeout(() => {
+      refresh();
+    }, 500);
     const interval = window.setInterval(refresh, 5000);
 
     return () => {
@@ -111,109 +113,151 @@ export const useCentralData = () => {
   };
 };
 
-// ─── Module CRUD Helpers ──────────────────────────────────────────────────────
+// ─── Module CRUD Helpers with Safe Default Object Fallbacks ────────────────────
 
 export function centralGetLearners(): Learner[] {
-  const learners = dbRead<Learner[]>(KEYS.LEARNERS, []);
-  if (learners.length > 0) return learners;
-  const legacy = dbRead<Learner[]>('school_learners_data', []);
-  if (legacy.length > 0) return legacy;
-  const stored = getStoredLearners();
-  if (Array.isArray(stored) && stored.length > 0) return stored as unknown as Learner[];
-  return [];
+  try {
+    const learners = dbRead<Learner[]>(KEYS.LEARNERS, []);
+    if (learners && learners.length > 0) return learners;
+    const legacy = dbRead<Learner[]>('school_learners_data', []);
+    if (legacy && legacy.length > 0) return legacy;
+    const stored = getStoredLearners();
+    if (Array.isArray(stored) && stored.length > 0) return stored as unknown as Learner[];
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 export function centralSaveLearners(learners: Learner[]): void {
-  dbWrite(KEYS.LEARNERS, learners);
-  dbWrite('school_learners_data', learners);
-  notifyDataChanged(KEYS.LEARNERS);
+  try {
+    dbWrite(KEYS.LEARNERS, learners || []);
+    dbWrite('school_learners_data', learners || []);
+    notifyDataChanged(KEYS.LEARNERS);
+  } catch {}
 }
 
 export function centralGetStaff(): StaffMember[] {
-  const staff = dbRead<StaffMember[]>(KEYS.STAFF, []);
-  if (staff.length > 0) return staff;
-  for (const key of ['munyaka_staff_v2', 'munyaka_staff_directory', 'munyaka_staff']) {
-    const data = dbRead<StaffMember[]>(key, []);
-    if (data.length > 0) return data;
+  try {
+    const staff = dbRead<StaffMember[]>(KEYS.STAFF, []);
+    if (staff && staff.length > 0) return staff;
+    for (const key of ['munyaka_staff_v2', 'munyaka_staff_directory', 'munyaka_staff']) {
+      const data = dbRead<StaffMember[]>(key, []);
+      if (data && data.length > 0) return data;
+    }
+    return [];
+  } catch {
+    return [];
   }
-  return [];
 }
 
 export function centralSaveStaff(staff: StaffMember[]): void {
-  dbWrite(KEYS.STAFF, staff);
-  dbWrite('munyaka_staff_directory', staff);
-  dbWrite('munyaka_staff_v2', staff);
-  notifyDataChanged(KEYS.STAFF);
+  try {
+    dbWrite(KEYS.STAFF, staff || []);
+    dbWrite('munyaka_staff_directory', staff || []);
+    dbWrite('munyaka_staff_v2', staff || []);
+    notifyDataChanged(KEYS.STAFF);
+  } catch {}
 }
 
 export function centralGetFees(): any[] {
-  const fees = dbRead<any[]>(KEYS.FEES, []);
-  if (fees.length > 0) return fees;
-  const legacy = dbRead<any[]>('munyaka_fees_records', []);
-  if (legacy.length > 0) return legacy;
-  return [];
+  try {
+    const fees = dbRead<any[]>(KEYS.FEES, []);
+    if (fees && fees.length > 0) return fees;
+    const legacy = dbRead<any[]>('munyaka_fees_records', []);
+    if (legacy && legacy.length > 0) return legacy;
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 export function centralSaveFees(fees: any[]): void {
-  dbWrite(KEYS.FEES, fees);
-  dbWrite('munyaka_fees_records', fees);
-  notifyDataChanged(KEYS.FEES);
+  try {
+    dbWrite(KEYS.FEES, fees || []);
+    dbWrite('munyaka_fees_records', fees || []);
+    notifyDataChanged(KEYS.FEES);
+  } catch {}
 }
 
 export function centralGetStock(): any[] {
-  const stock = dbRead<any[]>(KEYS.STOCK, []);
-  if (stock.length > 0) return stock;
-  const legacy = dbRead<any[]>('munyaka_stock', []);
-  if (legacy.length > 0) return legacy;
-  return [];
+  try {
+    const stock = dbRead<any[]>(KEYS.STOCK, []);
+    if (stock && stock.length > 0) return stock;
+    const legacy = dbRead<any[]>('munyaka_stock', []);
+    if (legacy && legacy.length > 0) return legacy;
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 export function centralSaveStock(stock: any[]): void {
-  dbWrite(KEYS.STOCK, stock);
-  dbWrite('munyaka_stock', stock);
-  notifyDataChanged(KEYS.STOCK);
+  try {
+    dbWrite(KEYS.STOCK, stock || []);
+    dbWrite('munyaka_stock', stock || []);
+    notifyDataChanged(KEYS.STOCK);
+  } catch {}
 }
 
 export function centralGetEvents(): any[] {
-  const events = dbRead<any[]>(KEYS.EVENTS, []);
-  if (events.length > 0) return events;
-  const legacy = dbRead<any[]>('munyaka_events_v2', []);
-  if (legacy.length > 0) return legacy;
-  return [];
+  try {
+    const events = dbRead<any[]>(KEYS.EVENTS, []);
+    if (events && events.length > 0) return events;
+    const legacy = dbRead<any[]>('munyaka_events_v2', []);
+    if (legacy && legacy.length > 0) return legacy;
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 export function centralSaveEvents(events: any[]): void {
-  dbWrite(KEYS.EVENTS, events);
-  dbWrite('munyaka_events_v2', events);
-  notifyDataChanged(KEYS.EVENTS);
+  try {
+    dbWrite(KEYS.EVENTS, events || []);
+    dbWrite('munyaka_events_v2', events || []);
+    notifyDataChanged(KEYS.EVENTS);
+  } catch {}
 }
 
 export function centralGetLibraryBooks(): any[] {
-  const books = dbRead<any[]>(KEYS.LIBRARY_BOOKS, []);
-  if (books.length > 0) return books;
-  const legacy = dbRead<any[]>('munyaka_library_books', []);
-  if (legacy.length > 0) return legacy;
-  return [];
+  try {
+    const books = dbRead<any[]>(KEYS.LIBRARY_BOOKS, []);
+    if (books && books.length > 0) return books;
+    const legacy = dbRead<any[]>('munyaka_library_books', []);
+    if (legacy && legacy.length > 0) return legacy;
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 export function centralSaveLibraryBooks(books: any[]): void {
-  dbWrite(KEYS.LIBRARY_BOOKS, books);
-  dbWrite('munyaka_library_books', books);
-  notifyDataChanged(KEYS.LIBRARY_BOOKS);
+  try {
+    dbWrite(KEYS.LIBRARY_BOOKS, books || []);
+    dbWrite('munyaka_library_books', books || []);
+    notifyDataChanged(KEYS.LIBRARY_BOOKS);
+  } catch {}
 }
 
 export function centralGetICTAssets(): any[] {
-  const assets = dbRead<any[]>(KEYS.ICT_ASSETS, []);
-  if (assets.length > 0) return assets;
-  const legacy = dbRead<any[]>('munyaka_ict_assets', []);
-  if (legacy.length > 0) return legacy;
-  return [];
+  try {
+    const assets = dbRead<any[]>(KEYS.ICT_ASSETS, []);
+    if (assets && assets.length > 0) return assets;
+    const legacy = dbRead<any[]>('munyaka_ict_assets', []);
+    if (legacy && legacy.length > 0) return legacy;
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 export function centralSaveICTAssets(assets: any[]): void {
-  dbWrite(KEYS.ICT_ASSETS, assets);
-  dbWrite('munyaka_ict_assets', assets);
-  notifyDataChanged(KEYS.ICT_ASSETS);
+  try {
+    dbWrite(KEYS.ICT_ASSETS, assets || []);
+    dbWrite('munyaka_ict_assets', assets || []);
+    notifyDataChanged(KEYS.ICT_ASSETS);
+  } catch {}
 }
 
 // ─── Centralized Computed Stats ───────────────────────────────────────────────
@@ -221,10 +265,10 @@ export function centralSaveICTAssets(assets: any[]): void {
 function computeCentralStats(): CentralDataStats {
   try {
     const learners = centralGetLearners();
-    const activeLearners = learners.filter((l: any) => l.status !== 'TRANSFERRED_OUT' && l.status !== 'ARCHIVED');
+    const activeLearners = Array.isArray(learners) ? learners.filter((l: any) => l && l.status !== 'TRANSFERRED_OUT' && l.status !== 'ARCHIVED') : [];
 
     const staff = centralGetStaff();
-    const activeStaff = staff.filter((s: any) => !s.isArchived && String(s.status || '').toLowerCase() !== 'archived');
+    const activeStaff = Array.isArray(staff) ? staff.filter((s: any) => s && !s.isArchived && String(s.status || '').toLowerCase() !== 'archived') : [];
 
     const teaching = activeStaff.filter((s: any) => {
       const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''}`.toLowerCase();
@@ -268,68 +312,89 @@ export function notifyDataChanged(key?: string) {
 }
 
 export function verifyStaffLogin(identifier: string, pass: string): { success: boolean; staff?: any; role?: string; error?: string } {
-  const staffList = centralGetStaff();
-  const cleanId = identifier.trim().toLowerCase();
-  
-  const found = staffList.find((s: any) => {
-    const sId = String(s.id || '').trim().toLowerCase();
-    const tsc = String(s.tscNumber || '').trim().toLowerCase();
-    const email = String(s.email || '').trim().toLowerCase();
-    const phone = String(s.phone || '').trim().toLowerCase();
-    const name = String(s.name || s.fullName || '').trim().toLowerCase();
+  try {
+    const staffList = centralGetStaff();
+    const cleanId = String(identifier || '').trim().toLowerCase();
     
-    return sId === cleanId || tsc === cleanId || email === cleanId || phone === cleanId || name === cleanId;
-  });
+    const found = (Array.isArray(staffList) ? staffList : []).find((s: any) => {
+      if (!s) return false;
+      const sId = String(s.id || '').trim().toLowerCase();
+      const tsc = String(s.tscNumber || '').trim().toLowerCase();
+      const email = String(s.email || '').trim().toLowerCase();
+      const phone = String(s.phone || '').trim().toLowerCase();
+      const name = String(s.name || s.fullName || '').trim().toLowerCase();
+      
+      return sId === cleanId || tsc === cleanId || email === cleanId || phone === cleanId || name === cleanId;
+    });
 
-  if (!found) {
-    // Check default admin fallback
-    if ((cleanId === 'admin' || cleanId === 'munyaka') && (pass === 'munyaka5239' || pass === 'admin123')) {
-      return { success: true, staff: { id: 'ADMIN-01', name: 'System Administrator', role: 'Administrator' }, role: 'Administrator' };
+    if (!found) {
+      if ((cleanId === 'admin' || cleanId === 'munyaka') && (pass === 'munyaka5239' || pass === 'admin123')) {
+        return { success: true, staff: { id: 'ADMIN-01', name: 'System Administrator', role: 'Administrator' }, role: 'Administrator' };
+      }
+      return { success: false, error: 'Staff member not found with ID, TSC, or email.' };
     }
-    return { success: false, error: 'Staff member not found with ID, TSC, or email.' };
-  }
 
-  // Verify password or PIN if set, or allow default PIN
-  const staffPass = String(found.password || found.pin || 'munyaka5239');
-  if (pass && pass !== staffPass && pass !== 'munyaka5239') {
-    return { success: false, error: 'Invalid password or PIN.' };
-  }
+    const staffPass = String(found.password || found.pin || 'munyaka5239');
+    if (pass && pass !== staffPass && pass !== 'munyaka5239') {
+      return { success: false, error: 'Invalid password or PIN.' };
+    }
 
-  return {
-    success: true,
-    staff: found,
-    role: found.role || found.category || 'Teacher',
-  };
+    return {
+      success: true,
+      staff: found,
+      role: found.role || found.category || 'Teacher',
+    };
+  } catch (err) {
+    return { success: false, error: 'Verification error occurred.' };
+  }
 }
 
 export function activateStaffMaster(id: string): boolean {
-  const staff = centralGetStaff();
-  let found = false;
-  const updated = staff.map((s: any) => {
-    if (s.id === id) {
-      found = true;
-      return { ...s, status: 'Active', isArchived: false };
+  try {
+    const staff = centralGetStaff();
+    let found = false;
+    const updated = (Array.isArray(staff) ? staff : []).map((s: any) => {
+      if (s && s.id === id) {
+        found = true;
+        return { ...s, status: 'Active', isArchived: false };
+      }
+      return s;
+    });
+    if (found) {
+      centralSaveStaff(updated);
     }
-    return s;
-  });
-  if (found) {
-    centralSaveStaff(updated);
+    return found;
+  } catch {
+    return false;
   }
-  return found;
 }
 
 export const getActiveLearners = centralGetLearners;
 export const getActiveStaff = centralGetStaff;
 export const getActiveTeachers = centralGetStaff;
-export const getTeachingStaff = () => centralGetStaff().filter((s: any) => {
-  const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''}`.toLowerCase();
-  const cat = String(s.category || s.type || '').toLowerCase();
-  return cat.includes('teach') || roleStr.includes('teach') || roleStr.includes('educator');
-});
-export const getNonTeachingStaff = () => centralGetStaff().filter((s: any) => {
-  const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''}`.toLowerCase();
-  const cat = String(s.category || s.type || '').toLowerCase();
-  return !(cat.includes('teach') || roleStr.includes('teach') || roleStr.includes('educator'));
-});
+export const getTeachingStaff = () => {
+  try {
+    return centralGetStaff().filter((s: any) => {
+      if (!s) return false;
+      const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''}`.toLowerCase();
+      const cat = String(s.category || s.type || '').toLowerCase();
+      return cat.includes('teach') || roleStr.includes('teach') || roleStr.includes('educator');
+    });
+  } catch {
+    return [];
+  }
+};
+export const getNonTeachingStaff = () => {
+  try {
+    return centralGetStaff().filter((s: any) => {
+      if (!s) return false;
+      const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''}`.toLowerCase();
+      const cat = String(s.category || s.type || '').toLowerCase();
+      return !(cat.includes('teach') || roleStr.includes('teach') || roleStr.includes('educator'));
+    });
+  } catch {
+    return [];
+  }
+};
 
 export default useCentralData;
