@@ -257,22 +257,26 @@ export default function Students() {
     });
 
     return [...filtered].sort((a, b) => {
-      // Extract sequence numbers from format MUN-G{Grade}-{Sequence}-{Year}
-      const getSeq = (admNo: string) => {
-        if (!admNo) return 0;
-        const parts = admNo.split('-');
-        return parseInt(parts[2] || '0', 10);
+      // 1. Extract numeric grade values (e.g., "Grade 1" or "GRADE 6" -> 1, 6)
+      const getGradeNum = (gradeStr: any) => {
+        const match = String(gradeStr || '').match(/\d+/);
+        return match ? parseInt(match[0], 10) : 0;
       };
 
-      const seqA = getSeq(a.admissionNumber || a.admNo || '');
-      const seqB = getSeq(b.admissionNumber || b.admNo || '');
+      const gradeA = getGradeNum(a.grade || a.gradeClass || a.class);
+      const gradeB = getGradeNum(b.grade || b.gradeClass || b.class);
+      if (gradeA !== gradeB) return gradeA - gradeB;
 
-      // Fallback to standard string comparison if sequence extraction matches
-      if (seqA !== seqB) {
-        return seqA - seqB; // Ascending order (001 -> 002 -> 003)
-      }
+      // 2. Sort by stream alphabetically (e.g., BLUE vs GREEN)
+      const streamA = String(a.stream || '').toUpperCase();
+      const streamB = String(b.stream || '').toUpperCase();
+      if (streamA < streamB) return -1;
+      if (streamA > streamB) return 1;
 
-      return (a.admissionNumber || a.admNo || '').localeCompare(b.admissionNumber || b.admNo || '', undefined, { numeric: true });
+      // 3. Sort by admission number sequence
+      const admA = String(a.admissionNumber || a.admNo || a.admissionNo || '');
+      const admB = String(b.admissionNumber || b.admNo || b.admissionNo || '');
+      return admA.localeCompare(admB);
     });
   }, [students, searchTerm, gradeFilter, streamFilter]);
 
