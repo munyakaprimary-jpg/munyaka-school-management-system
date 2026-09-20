@@ -77,6 +77,10 @@ import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
+import { initializeCentralStorage } from "./utils/centralDbInit";
+
+// Execute unified central storage initialization on application load
+initializeCentralStorage();
 
 // ── Critical Central Database Initialization ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Ensures ALL canonical storage keys are populated from initialSeedData on clean install.
