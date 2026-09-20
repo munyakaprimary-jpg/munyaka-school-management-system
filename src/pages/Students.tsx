@@ -388,18 +388,35 @@ export default function Students() {
     }
   }, [availableStreams]);
   const generateAdmissionNumber = (selectedGrade: string) => {
-    // Filter existing students belonging strictly to the selected grade
+    // Filter existing students belonging strictly to the selected grade (excluding current editing student if any)
     const gradeStudents = (students || []).filter((s: any) => {
+      if (editingId && (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId)) {
+        return false;
+      }
       const sGrade = String(s.grade || s.class || '').trim().toLowerCase();
       const targetGrade = String(selectedGrade || '').trim().toLowerCase();
       return sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade);
     });
 
+    // Extract grade number or code (e.g., "Grade 6" -> "G6", "PP1" -> "PP1")
     const gradeMatch = selectedGrade.match(/\d+/);
-    const gradeCode = gradeMatch ? `G${gradeMatch[0]}` : 'G1';
-    
-    // Count how many students already exist in that specific grade and increment by 1
-    const nextSeq = gradeStudents.length + 1;
+    const gradeCode = gradeMatch ? `G${gradeMatch[0]}` : (selectedGrade.toUpperCase().replace(/\s+/g, '') || 'G1');
+
+    // Find the highest sequence number among existing records for this grade
+    let maxSeq = 0;
+    gradeStudents.forEach((s: any) => {
+      const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '');
+      const parts = admNo.split('-');
+      // Expected format: MUN-G6-001-2026 -> parts[2] is sequence
+      if (parts.length >= 3) {
+        const seq = parseInt(parts[2], 10);
+        if (!isNaN(seq) && seq > maxSeq) {
+          maxSeq = seq;
+        }
+      }
+    });
+
+    const nextSeq = maxSeq + 1;
     const sequenceNumber = String(nextSeq).padStart(3, '0');
     const currentYear = new Date().getFullYear();
     return `MUN-${gradeCode}-${sequenceNumber}-${currentYear}`;
@@ -448,14 +465,15 @@ export default function Students() {
   const handleOpenAddModal = () => {
     setEditingId(null);
     setFullName('');
-    setGrade('Grade 1');
+    const defaultGrade = configuredGradesList.length > 0 ? (typeof configuredGradesList[0] === 'string' ? configuredGradesList[0] : (configuredGradesList[0].name || configuredGradesList[0].gradeName || 'Grade 1')) : 'Grade 1';
+    setGrade(defaultGrade);
     const initialStreams = ['North', 'South', 'East', 'West', 'Central', 'Red', 'Blue', 'Green'];
     setStream(initialStreams[0]);
     setGender('Female');
     setParentName('');
     setPhoneNumber('');
     setAssessmentNumber('');
-    setAdmissionNumber(generateAdmissionNumber('Grade 1', students.length));
+    setAdmissionNumber(generateAdmissionNumber(defaultGrade));
     setIsModalOpen(true);
   };
 
@@ -489,6 +507,24 @@ export default function Students() {
 
     setIsSaving(true);
     try {
+      // Check for duplicate admission number before saving
+      const cleanAdmNo = admissionNumber.trim().toLowerCase();
+      const duplicateStudent = students.find((s: any) => {
+        const otherAdmNo = String(s.admissionNumber || s.admNo || s.admissionNo || '').trim().toLowerCase();
+        const otherId = s.id || s.admissionNumber || s.admNo;
+        // If editing, allow matching the current student record
+        if (editingId && (otherId === editingId || otherAdmNo === String(editingId).trim().toLowerCase())) {
+          return false;
+        }
+        return otherAdmNo === cleanAdmNo;
+      });
+
+      if (duplicateStudent) {
+        showError("Admission number already exists. Please use a unique admission number.");
+        setIsSaving(false);
+        return;
+      }
+
       const newStudent = {
         id: editingId || Date.now().toString(),
         name: fullName,
