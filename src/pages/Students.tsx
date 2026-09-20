@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import TransferInModal from '@/components/students/TransferInModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 
-const API_BASE_URL = 'http://10.53.221.196:5000/api';
+const API_BASE_URL = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
 
 export default function Students() {
   const navigate = useNavigate();
