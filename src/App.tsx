@@ -125,6 +125,10 @@ const queryClient = new QueryClient();
 const App = () => {
   return (
     <AppErrorBoundary>
+      <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white text-xs px-3 py-1 z-[999999] flex items-center justify-between shadow-md">
+        <span>🏫 Munyaka School Portal — Connected &amp; Online</span>
+        <span className="opacity-80">v3.5 Active</span>
+      </div>
       <QueryClientProvider client={queryClient}>
         <HashRouter>
           <AuthProvider>
