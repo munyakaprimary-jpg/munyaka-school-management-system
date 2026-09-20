@@ -150,6 +150,9 @@ export default function Students() {
   // Modal State & Controlled Form Fields
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [fullName, setFullName] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
@@ -465,6 +468,7 @@ export default function Students() {
   // Form Submission Handler (`handleSubmit`)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!fullName || !admissionNumber) {
       alert("Please provide at least Full Name and Admission Number.");
       return;
@@ -475,57 +479,54 @@ export default function Students() {
       return;
     }
 
-    if (!stream) {
-      alert("Please select a valid stream for this grade. Configure streams in 'Grades & Streams' if none are available.");
-      return;
-    }
-
-    const newStudent = {
-      id: editingId || Date.now().toString(),
-      name: fullName,
-      fullName,
-      admissionNumber,
-      admNo: admissionNumber,
-      assessmentNumber,
-      assessmentNo: assessmentNumber,
-      assessment: assessmentNumber,
-      gender,
-      grade,
-      stream,
-      parentName,
-      guardian: parentName,
-      phoneNumber,
-      phone: phoneNumber,
-      createdAt: new Date().toISOString()
-    };
-
+    setIsSaving(true);
     try {
-      const endpoint = editingId ? `${API_BASE_URL}/students/${editingId}` : `${API_BASE_URL}/students`;
-      const method = editingId ? 'PUT' : 'POST';
-      await fetch(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newStudent),
-      }).catch(() => {});
-    } catch {}
+      const newStudent = {
+        id: editingId || Date.now().toString(),
+        name: fullName,
+        fullName,
+        admissionNumber,
+        admNo: admissionNumber,
+        assessmentNumber,
+        assessmentNo: assessmentNumber,
+        assessment: assessmentNumber,
+        gender,
+        grade,
+        stream,
+        parentName,
+        guardian: parentName,
+        phoneNumber,
+        phone: phoneNumber,
+        createdAt: new Date().toISOString()
+      };
 
-    let updated;
-    if (editingId) {
-      updated = students.map(s => (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId) ? { ...s, ...newStudent } : s);
-      showSuccess("Learner updated successfully.");
-    } else {
-      updated = [newStudent, ...students];
-      showSuccess("Learner registered successfully.");
-    }
+      try {
+        const endpoint = editingId ? `${API_BASE_URL}/students/${editingId}` : `${API_BASE_URL}/students`;
+        const method = editingId ? 'PUT' : 'POST';
+        await fetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newStudent),
+        }).catch(() => {});
+      } catch {}
 
-    setStudents(updated);
-    
-    // Save to localStorage backups
-    localStorage.setItem('munyaka_students', JSON.stringify(updated));
-    localStorage.setItem('school_learners_data', JSON.stringify(updated));
+      let updated;
+      if (editingId) {
+        updated = students.map(s => (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId) ? { ...s, ...newStudent } : s);
+        showSuccess("Learner updated successfully.");
+      } else {
+        updated = [newStudent, ...students];
+        showSuccess("Learner registered successfully.");
+      }
 
-    // Save and synchronize with munyaka_central_db central database key & sync endpoint
-    try {
+      setStudents(updated);
+      
+      // Save to localStorage backups
+      localStorage.setItem('munyaka_students', JSON.stringify(updated));
+      localStorage.setItem('school_learners_data', JSON.stringify(updated));
+
+      // Save and synchronize with munyaka_central_db central database key & sync endpoint
+      try {
       const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
       const updatedCentralData = {
         ...centralData,
@@ -556,6 +557,9 @@ export default function Students() {
     setStream('North');
     setParentName('');
     setPhoneNumber('');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -986,9 +990,11 @@ export default function Students() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
                 >
-                  {editingId ? 'Save Changes' : 'Save Learner'}
+                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {editingId ? (isSaving ? 'Saving...' : 'Save Changes') : (isSaving ? 'Saving...' : 'Save Learner')}
                 </button>
               </div>
             </form>
