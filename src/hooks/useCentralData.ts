@@ -487,4 +487,19 @@ export const getNonTeachingStaff = () => {
   }
 };
 
+// Catch-all Proxy for any legacy service or function reference
+export const staffMasterService = new Proxy({}, {
+  get: (_target, prop) => {
+    if (prop === 'getStaffMaster') return getStaffMaster;
+    if (prop === 'saveStaffMaster') return saveStaffMaster;
+    if (prop === 'addStaffRecord') return addStaffRecord;
+    if (prop === 'updateStaffRecord') return updateStaffRecord;
+    if (prop === 'deleteStaffRecord') return deleteStaffRecord;
+    return (...args: any[]) => {
+      console.warn(`[staffMasterService Proxy] called missing method: ${String(prop)}`, args);
+      return [];
+    };
+  }
+});
+
 export default useCentralData;
