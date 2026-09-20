@@ -175,14 +175,19 @@ export const CentralDataService = {
   getStaff: (): StaffRecord[] => readStorage<StaffRecord[]>(STORAGE_KEYS.STAFF, []),
   saveStaff: (staff: StaffRecord[]) => writeStorage(STORAGE_KEYS.STAFF, staff),
   clearStaff: (): void => {
+    localStorage.setItem('munyaka_staff_cleared_explicitly', 'true');
     writeStorage(STORAGE_KEYS.STAFF, []);
     localStorage.setItem('munyaka_master_staff_list', JSON.stringify([]));
     localStorage.setItem('munyaka_staff_directory', JSON.stringify([]));
     localStorage.setItem('munyaka_staff', JSON.stringify([]));
     localStorage.setItem('munyaka_staff_prereg', JSON.stringify([]));
     localStorage.setItem('munyaka_teachers', JSON.stringify([]));
-    // Set a flag to prevent auto-re seeding on next mount
-    localStorage.setItem('munyaka_staff_cleared_explicitly', 'true');
+    try {
+      const centralRaw = localStorage.getItem('munyaka_central_db') || '{}';
+      const db = JSON.parse(centralRaw);
+      db.staff = [];
+      localStorage.setItem('munyaka_central_db', JSON.stringify(db));
+    } catch {}
     window.dispatchEvent(new Event('staff-changed'));
     window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
     window.dispatchEvent(new Event('munyaka:data-changed'));
