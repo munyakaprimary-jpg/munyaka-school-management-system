@@ -98,11 +98,27 @@ const ICTLabManagement = () => {
   const [activeTab, setActiveTab] = useState("inventory");
   const [assets, setAssets] = useState<ICTAsset[]>(() => {
     const saved = localStorage.getItem('munyaka_ict_assets');
-    return saved ? JSON.parse(saved) : INITIAL_ASSETS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // fallback
+      }
+    }
+    return INITIAL_ASSETS;
   });
   const [logs, setLogs] = useState<ICTLog[]>(() => {
     const saved = localStorage.getItem('munyaka_ict_logs');
-    return saved ? JSON.parse(saved) : INITIAL_LOGS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // fallback
+      }
+    }
+    return INITIAL_LOGS;
   });
 
   const [searchQuery, setSearchQuery] = useState("");

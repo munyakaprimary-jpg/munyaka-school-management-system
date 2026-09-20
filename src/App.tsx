@@ -88,7 +88,7 @@ initializeCentralStorage();
 // that the app starts with data even on a fresh browser / APK install.
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
-    // Seed the canonical storage keys from initialSeedData if they are empty/absent.
+    // Seed the canonical storage keys from initialSeedData ONLY if they do not exist at all or are empty (Strict Existence Check).
     const seedKeys: [string, unknown][] = [
       ['munyaka_students', initialSeedData.students || []],
       ['school_learners_data', initialSeedData.students || []],
@@ -110,14 +110,15 @@ if (typeof window !== 'undefined' && window.localStorage) {
     let anySeeded = false;
     for (const [key, value] of seedKeys) {
       const existing = localStorage.getItem(key);
-      if (!existing) {
+      // STRICT NON-DESTRUCTIVE CHECK: If storage key already exists and has records, NEVER overwrite with seed!
+      if (existing === null || existing === undefined || existing === 'undefined' || existing === 'null') {
         localStorage.setItem(key, JSON.stringify(value));
         anySeeded = true;
       } else {
-        // If the existing data is an empty array and seed has data, re-seed it.
         try {
           const parsed = JSON.parse(existing);
-          if ((Array.isArray(parsed) && parsed.length === 0) && Array.isArray(value) && value.length > 0) {
+          // If existing is an empty array and seed has items, populate. Otherwise keep existing user data!
+          if (Array.isArray(parsed) && parsed.length === 0 && Array.isArray(value) && value.length > 0) {
             localStorage.setItem(key, JSON.stringify(value));
             anySeeded = true;
           }
