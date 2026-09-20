@@ -87,6 +87,10 @@ if (typeof window !== 'undefined' && window.localStorage) {
     // Seed the canonical storage keys from initialSeedData if they are empty/absent.
     const seedKeys: [string, unknown][] = [
       ['munyaka_students', initialSeedData.students || []],
+      ['school_learners_data', initialSeedData.students || []],
+      ['munyaka_staff', initialSeedData.staff || []],
+      ['munyaka_staff_directory', initialSeedData.staff || []],
+      ['munyaka_staff_master', initialSeedData.staff || []],
       ['munyaka_fees_records', (initialSeedData as any).fees || []],
       ['munyaka_student_fees', (initialSeedData as any).fees || []],
       ['munyaka_transactions', initialSeedData.transactions || []],
