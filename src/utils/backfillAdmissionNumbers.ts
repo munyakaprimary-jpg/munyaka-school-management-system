@@ -238,12 +238,25 @@ export function generateAdmissionNo(
   enrollmentYear: number,
   learners: Array<Record<string, unknown>>
 ): string {
-  // 1. Gather every admission number from the in-memory array + storage
-  const allValues: unknown[] = [];
+  // 1. Normalize the target grade for matching (e.g., "Grade 1" -> "G1", "PP1" -> "PP1")
+  const targetGradeNormalized = grade.toLowerCase().replace(/\s+/g, '');
+
+  // Helper to check if a learner's grade matches the target grade
+  const matchesGrade = (learnerGrade: unknown): boolean => {
+    if (!learnerGrade || typeof learnerGrade !== 'string') return false;
+    const norm = learnerGrade.toLowerCase().replace(/\s+/g, '');
+    return norm === targetGradeNormalized || norm.includes(targetGradeNormalized) || targetGradeNormalized.includes(norm);
+  };
+
+  // 2. Gather admission numbers belonging strictly to the same target grade
+  const gradeValues: unknown[] = [];
 
   for (const learner of learners) {
     if (learner && typeof learner === 'object') {
-      allValues.push((learner as Record<string, unknown>).admissionNo);
+      const lGrade = (learner as Record<string, unknown>).grade || (learner as Record<string, unknown>).class;
+      if (matchesGrade(lGrade)) {
+        gradeValues.push((learner as Record<string, unknown>).admissionNo);
+      }
     }
   }
 
@@ -267,22 +280,25 @@ export function generateAdmissionNo(
 
       for (const row of parsed) {
         if (row && typeof row === 'object') {
-          allValues.push((row as Record<string, unknown>).admissionNo);
+          const rGrade = (row as Record<string, unknown>).grade || (row as Record<string, unknown>).class;
+          if (matchesGrade(rGrade)) {
+            gradeValues.push((row as Record<string, unknown>).admissionNo);
+          }
         }
       }
     }
   }
 
-  // 2. Find the absolute maximum seq integer across every parsed number
+  // 3. Find the maximum seq integer strictly within this grade cohort
   let maxSeq = 0;
-  for (const v of allValues) {
+  for (const v of gradeValues) {
     const parts = parseAdmissionNo(v);
     if (parts && parts.seq > maxSeq) {
       maxSeq = parts.seq;
     }
   }
 
-  // 3. Increment and format
+  // 4. Increment and format with zero-padding (padStart(3, '0'))
   return buildAdmissionNo(grade, enrollmentYear, maxSeq + 1);
 }
 
