@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -75,7 +76,11 @@ import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
 import { initializeCentralStorage } from "./utils/centralDbInit";
 
-initializeCentralStorage();
+try {
+  initializeCentralStorage();
+} catch (err) {
+  console.error('[App Init] initializeCentralStorage error:', err);
+}
 
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
@@ -102,6 +107,33 @@ if (typeof window !== 'undefined' && window.localStorage) {
 const queryClient = new QueryClient();
 
 export default function App() {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setIsReady(true);
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (!isReady) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#f8fafc',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        color: '#2563eb',
+        fontWeight: 600,
+        fontSize: '16px'
+      }}>
+        Loading Munyaka Portal...
+      </div>
+    );
+  }
+
   return (
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
