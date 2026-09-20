@@ -103,8 +103,9 @@ const queryClient = new QueryClient();
 
 export default function App() {
   return (
-    <AppErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+    <div id="root" data-dyad-root="true" style={{ width: '100%', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <AppErrorBoundary>
+        <QueryClientProvider client={queryClient}>
         <HashRouter>
           <AuthProvider>
             <AuthGate>
@@ -192,5 +193,6 @@ export default function App() {
         </HashRouter>
       </QueryClientProvider>
     </AppErrorBoundary>
+    </div>
   );
 }
