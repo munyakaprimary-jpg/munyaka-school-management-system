@@ -23,6 +23,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError, dismissToast } from '@/utils/toast';
 import { useCentralData } from '@/hooks/useCentralData';
+import {
+  getStaffMaster,
+  addStaffMaster,
+  updateStaffMaster,
+  activateStaffMaster,
+  bulkActivateStaffMaster,
+  initializeStaffMaster,
+  TEACHING_SYSTEM_ROLES,
+  mapDesignationToSystemRole,
+  isNonTeachingDesignation,
+  isLibrarianDesignation,
+  type MasterStaffRecord,
+  type MasterSystemRole,
+} from '@/services/staffMasterService';
 import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 import { SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 
