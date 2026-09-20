@@ -1,4 +1,8 @@
-import { CentralDataService, STORAGE_KEYS } from './centralDataService';
+/**
+ * staffMasterService.ts — Unified wrapper routing 100% through CentralDataService
+ */
+
+import { CentralDataService, STORAGE_KEYS, type StaffRecord } from './centralDataService';
 
 export const STAFF_MASTER_KEY = STORAGE_KEYS.STAFF;
 
@@ -70,7 +74,21 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     return [];
   }
   const staff = CentralDataService.getStaff();
-  return staff as unknown as MasterStaffRecord[];
+  return (staff || []).map((s: any) => ({
+    id: s.id,
+    name: s.name || s.full_name || 'Staff Member',
+    nationalId: s.nationalId || s.id_no || `ID-${s.id}`,
+    email: s.email || '',
+    phone: s.phone || '',
+    tscNumber: s.tscNumber || s.tsc_no,
+    role: s.role || 'Teacher',
+    systemRole: s.systemRole || 'subject_teacher',
+    department: s.department || 'Administration',
+    status: s.status || 'Pre-Registered',
+    staffId: s.staffId || s.staff_id,
+    tempAccessCode: s.tempAccessCode || s.access_key || s.ref,
+    joinedDate: s.joinedDate || s.joined,
+  }));
 };
 
 export const getStaffMasterCount = (): number => getStaffMaster().length;
@@ -91,82 +109,57 @@ export const getCategorizedMetrics = (_schoolId?: string | null) => {
 };
 
 export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' | 'tempAccessCode' | 'joinedDate'>): MasterStaffRecord => {
-  localStorage.removeItem('munyaka_staff_cleared_explicitly');
-  const staff = getStaffMaster();
-  const id = `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const staffId = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
-  const tempAccessCode = String(Math.floor(100000 + Math.random() * 900000));
-  const joinedDate = new Date().toISOString().slice(0, 10);
-
-  const newRecord: MasterStaffRecord = {
-    ...record,
-    id,
-    staffId,
-    tempAccessCode,
-    joinedDate,
+  const created = CentralDataService.addStaff({
+    name: record.name,
+    nationalId: record.nationalId,
+    email: record.email,
+    phone: record.phone,
+    tscNumber: record.tscNumber,
+    role: record.role,
+    systemRole: record.systemRole,
+    department: record.department,
     status: record.status || 'Pre-Registered',
+  });
+  return {
+    id: created.id,
+    name: created.name || '',
+    nationalId: (created as any).nationalId || '',
+    email: created.email || '',
+    phone: created.phone || '',
+    tscNumber: (created as any).tscNumber,
+    role: created.role || '',
+    systemRole: (created as any).systemRole || 'subject_teacher',
+    department: created.department || '',
+    status: (created.status as any) || 'Pre-Registered',
+    staffId: (created as any).staffId,
+    tempAccessCode: (created as any).tempAccessCode,
+    joinedDate: (created as any).joined,
   };
-
-  staff.push(newRecord);
-  CentralDataService.saveStaff(staff as any);
-  window.dispatchEvent(new Event('staff-changed'));
-  window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
-  window.dispatchEvent(new Event('munyaka:data-changed'));
-  return newRecord;
 };
 
 export const updateStaffMaster = (id: string, updates: Partial<MasterStaffRecord>): void => {
-  const staff = getStaffMaster();
-  const index = staff.findIndex(s => s.id === id);
-  if (index !== -1) {
-    staff[index] = { ...staff[index], ...updates };
-    CentralDataService.saveStaff(staff as any);
-    window.dispatchEvent(new Event('staff-changed'));
-    window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
-    window.dispatchEvent(new Event('munyaka:data-changed'));
-  }
+  CentralDataService.updateStaff(id, updates as any);
 };
 
 export const deleteStaffMaster = (id: string): void => {
-  const staff = getStaffMaster();
-  const filtered = staff.filter(s => s.id !== id);
-  CentralDataService.saveStaff(filtered as any);
-  localStorage.setItem('munyaka_master_staff_list', JSON.stringify(filtered));
-  localStorage.setItem('munyaka_staff_directory', JSON.stringify(filtered));
-  localStorage.setItem('munyaka_staff', JSON.stringify(filtered));
-  try {
-    const centralRaw = localStorage.getItem('munyaka_central_db') || '{}';
-    const db = JSON.parse(centralRaw);
-    db.staff = filtered;
-    localStorage.setItem('munyaka_central_db', JSON.stringify(db));
-  } catch {}
-  import('@/services/idbStore').then(({ idbStore }) => {
-    idbStore.delete('staff', id).catch(() => {});
-  }).catch(() => {});
-
-  window.dispatchEvent(new Event('staff-changed'));
-  window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
-  window.dispatchEvent(new Event('munyaka:data-changed'));
+  CentralDataService.deleteStaff(id);
 };
 
 export const activateStaffMaster = (id: string): void => {
-  updateStaffMaster(id, { status: 'Active' });
+  CentralDataService.updateStaff(id, { status: 'Active' });
 };
 
 export const bulkActivateStaffMaster = (ids: string[]): void => {
-  const staff = getStaffMaster();
+  const staff = CentralDataService.getStaff();
   let changed = false;
-  staff.forEach(s => {
+  staff.forEach((s: any) => {
     if (ids.includes(s.id)) {
       s.status = 'Active';
       changed = true;
     }
   });
   if (changed) {
-    CentralDataService.saveStaff(staff as any);
-    window.dispatchEvent(new Event('staff-changed'));
-    window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
-    window.dispatchEvent(new Event('munyaka:data-changed'));
+    CentralDataService.saveStaff(staff);
   }
 };
 
