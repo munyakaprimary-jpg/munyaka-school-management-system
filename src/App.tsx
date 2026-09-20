@@ -1,3 +1,4 @@
+import React from "react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -73,33 +74,22 @@ import { LearnerProvider } from './context/LearnerContext';
 import { initialSeedData } from './data/initialSeedData';
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
-import { initializeCentralStorage } from "./utils/centralDbInit";
 
-try {
-  initializeCentralStorage();
-} catch (err) {
-  console.error('[App Init] initializeCentralStorage error:', err);
-}
-
+// Synchronous local storage check on module evaluation
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
-    const seedKeys: [string, unknown][] = [
+    const keys = [
       ['munyaka_students', initialSeedData.students || []],
-      ['school_learners_data', initialSeedData.students || []],
       ['munyaka_staff', initialSeedData.staff || []],
-      ['munyaka_staff_directory', initialSeedData.staff || []],
-      ['munyaka_staff_master', initialSeedData.staff || []],
-      ['munyaka_fees_records', (initialSeedData as any).fees || []],
-      ['munyaka_student_fees', (initialSeedData as any).fees || []],
-      ['munyaka_transactions', initialSeedData.transactions || []],
+      ['munyaka_fees_records', initialSeedData.fees || []],
     ];
-    for (const [k, v] of seedKeys) {
-      if (!window.localStorage.getItem(k)) {
-        window.localStorage.setItem(k, JSON.stringify(v));
+    for (const [k, v] of keys) {
+      if (!localStorage.getItem(k)) {
+        localStorage.setItem(k, JSON.stringify(v));
       }
     }
-  } catch (e) {
-    console.error('[App Boot] Failed to seed initial data:', e);
+  } catch (err) {
+    console.error('[Sync Seed] Error:', err);
   }
 }
 
@@ -108,7 +98,7 @@ const queryClient = new QueryClient();
 export default function App() {
   return (
     <AppErrorBoundary>
-      <div data-testid="munyaka-portal-root" className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+      <div id="munyaka-app-root" className="min-h-screen flex flex-col bg-slate-50 text-slate-900 w-full">
         <QueryClientProvider client={queryClient}>
           <HashRouter>
             <AuthProvider>
