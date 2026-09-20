@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Edit3, Trash2, X, Eye, Users, Loader2, FileSpreadsheet, Printer, ArrowRightLeft, Archive } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import TransferInModal from '@/components/students/TransferInModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
@@ -547,13 +547,19 @@ export default function Students() {
       window.dispatchEvent(new CustomEvent('central-data-updated', { detail: updatedCentralData }));
 
       // Send to central sync server endpoint
-      fetch(`${API_BASE_URL}/central/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedCentralData),
-        signal: AbortSignal.timeout(3000)
-      }).catch(() => {});
-    } catch {}
+      try {
+        await fetch(`${API_BASE_URL}/central/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedCentralData),
+          signal: AbortSignal.timeout(3000)
+        });
+      } catch (syncErr) {
+        console.warn("Central sync network request skipped or timed out:", syncErr);
+      }
+    } catch (centralErr) {
+      console.warn("Central DB update warning:", centralErr);
+    }
 
     // Reset & Close Modal
     setIsModalOpen(false);
@@ -565,6 +571,9 @@ export default function Students() {
     setStream('North');
     setParentName('');
     setPhoneNumber('');
+    } catch (err) {
+      console.error("Failed to save learner record:", err);
+      showError(err instanceof Error ? err.message : "Failed to save learner record.");
     } finally {
       setIsSaving(false);
     }
