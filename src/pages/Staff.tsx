@@ -22,20 +22,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError, dismissToast } from '@/utils/toast';
-import {
-  getStaffMaster,
-  addStaffMaster,
-  updateStaffMaster,
-  activateStaffMaster,
-  bulkActivateStaffMaster,
-  initializeStaffMaster,
-  TEACHING_SYSTEM_ROLES,
-  mapDesignationToSystemRole,
-  isNonTeachingDesignation,
-  isLibrarianDesignation,
-  type MasterStaffRecord,
-  type MasterSystemRole,
-} from '@/services/staffMasterService';
+import { useCentralData } from '@/hooks/useCentralData';
 import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 import { SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 
@@ -109,6 +96,7 @@ function masterToStaffMember(r: MasterStaffRecord): StaffMember {
 
 const Staff = () => {
   const navigate = useNavigate();
+  const centralStats = useCentralData();
 
   // ── Source of truth: staffMasterService ─────────────────────────────────────
   const [masterRecords, setMasterRecords] = useState<MasterStaffRecord[]>([]);
@@ -118,14 +106,16 @@ const Staff = () => {
     setMasterRecords(getStaffMaster());
   }, []);
 
-  // Keep in sync with mutations from any component
+  // Keep in sync with mutations from any component and central data hook
   useEffect(() => {
     const refresh = () => setMasterRecords(getStaffMaster());
     window.addEventListener('staff-changed', refresh);
     window.addEventListener('munyaka:staff-directory-changed', refresh);
+    window.addEventListener('munyaka:data-changed', refresh);
     return () => {
       window.removeEventListener('staff-changed', refresh);
       window.removeEventListener('munyaka:staff-directory-changed', refresh);
+      window.removeEventListener('munyaka:data-changed', refresh);
     };
   }, []);
 
