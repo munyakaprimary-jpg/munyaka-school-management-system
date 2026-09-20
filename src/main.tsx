@@ -3,13 +3,20 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-const rootElement = document.getElementById('root') || document.querySelector('[data-dyad-root="true"]');
+const rootElement = document.getElementById('root');
 
-if (!rootElement) {
-  console.error('[Munyaka Portal] Fatal: Root element #root or [data-dyad-root] not found in DOM.');
-} else {
-  console.info('[Munyaka Portal] Mounting React root successfully...');
+if (rootElement) {
   ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+} else {
+  const fallback = document.createElement('div');
+  fallback.id = 'root';
+  fallback.setAttribute('data-dyad-root', 'true');
+  document.body.appendChild(fallback);
+  ReactDOM.createRoot(fallback).render(
     <React.StrictMode>
       <App />
     </React.StrictMode>
