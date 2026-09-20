@@ -131,6 +131,19 @@ export const deleteStaffMaster = (id: string): void => {
   const staff = getStaffMaster();
   const filtered = staff.filter(s => s.id !== id);
   CentralDataService.saveStaff(filtered as any);
+  localStorage.setItem('munyaka_master_staff_list', JSON.stringify(filtered));
+  localStorage.setItem('munyaka_staff_directory', JSON.stringify(filtered));
+  localStorage.setItem('munyaka_staff', JSON.stringify(filtered));
+  try {
+    const centralRaw = localStorage.getItem('munyaka_central_db') || '{}';
+    const db = JSON.parse(centralRaw);
+    db.staff = filtered;
+    localStorage.setItem('munyaka_central_db', JSON.stringify(db));
+  } catch {}
+  import('@/services/idbStore').then(({ idbStore }) => {
+    idbStore.delete('staff', id).catch(() => {});
+  }).catch(() => {});
+
   window.dispatchEvent(new Event('staff-changed'));
   window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
   window.dispatchEvent(new Event('munyaka:data-changed'));

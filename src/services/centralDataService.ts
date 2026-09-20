@@ -188,6 +188,15 @@ export const CentralDataService = {
       db.staff = [];
       localStorage.setItem('munyaka_central_db', JSON.stringify(db));
     } catch {}
+    // Clear IndexedDB stores via store utility or direct clear
+    import('@/services/persistentStore').then(({ clearAllStorage }) => {
+      // Just clear specific staff store in IDB
+    }).catch(() => {});
+    import('@/services/idbStore').then(({ idbStore }) => {
+      idbStore.clearStore('staff').catch(() => {});
+      idbStore.clearStore('staff_prereg').catch(() => {});
+    }).catch(() => {});
+
     window.dispatchEvent(new Event('staff-changed'));
     window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
     window.dispatchEvent(new Event('munyaka:data-changed'));
