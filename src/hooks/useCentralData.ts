@@ -372,7 +372,6 @@ export function activateStaffMaster(id: string): boolean {
 export const getActiveLearners = centralGetLearners;
 export const getActiveStaff = centralGetStaff;
 export const getActiveTeachers = centralGetStaff;
-export const getStaffMaster = centralGetStaff;
 export const getTeachingStaff = () => {
   try {
     return centralGetStaff().filter((s: any) => {

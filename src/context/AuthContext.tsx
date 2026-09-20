@@ -12,7 +12,7 @@ import {
   DEFAULT_ADMIN_PASSWORD,
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
-import { getStaffMaster } from '@/services/staffMasterService';
+import { centralGetStaff } from '@/hooks/useCentralData';
 
 export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff';
 
@@ -215,7 +215,7 @@ const initializeUsersStorage = () => {
 
   // Primary: read from the staff master ledger (single source of truth).
   // Convert MasterStaffRecord → PreRegisteredStaff shape for the code below.
-  const masterRecords = getStaffMaster();
+  const masterRecords = centralGetStaff();
   const staffLedger: PreRegisteredStaff[] = masterRecords.length > 0
     ? masterRecords.map(r => ({
         id: r.id,

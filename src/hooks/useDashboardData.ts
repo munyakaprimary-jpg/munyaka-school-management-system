@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getLocalStorage, tryParse } from '@/utils/storageUtils';
-import { getStaffMaster } from '@/services/staffMasterService';
+import { centralGetStaff } from '@/hooks/useCentralData';
 const STAFF_MASTER_KEY = 'munyaka_staff_v2';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ const computeStats = (): DashboardStats => {
     // ── 2. Teachers ─────────────────────────────────────────────────────────
         // Read from the single master ledger — no more merging pre-reg + directory
         // since the master already contains all staff in one place.
-        const master = getStaffMaster();
+        const master = centralGetStaff();
         const teachers: Teacher[] = master as unknown as Teacher[];
 
     const totalTeachers = teachers.filter((t) => {
