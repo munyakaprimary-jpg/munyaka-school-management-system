@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { dbRead, dbWrite, dbInitSeed, KEYS } from '@/lib/db';
+import { dbRead, dbWrite, KEYS } from '@/lib/db';
 import { getStoredLearners } from '@/utils/learnersStore';
 
 export interface Learner {
@@ -368,96 +368,6 @@ export function activateStaffMaster(id: string): boolean {
     return false;
   }
 }
-
-export const addStaffRecord = (record: any) => {
-  try {
-    const list = centralGetStaff();
-    const newRecord = {
-      id: record.id || `T00${Math.floor(Math.random() * 900) + 100}`,
-      name: record.name || record.fullName || 'Staff Member',
-      fullName: record.name || record.fullName || 'Staff Member',
-      nationalId: record.nationalId || '',
-      tscNumber: record.tscNumber || '',
-      email: record.email || '',
-      phone: record.phone || '',
-      systemRole: record.systemRole || record.role || 'subject_teacher',
-      role: record.role || 'Teacher',
-      category: record.category || 'Teaching',
-      assignedSubjects: record.assignedSubjects || record.subjects || [],
-      status: record.status || 'Active',
-      isArchived: false,
-      ...record,
-    };
-    centralSaveStaff([newRecord, ...list]);
-    broadcastStaffMasterChange();
-    return newRecord;
-  } catch (err) {
-    console.error('[addStaffRecord] error:', err);
-    return null;
-  }
-};
-
-export const updateStaffRecord = (id: string, updates: any) => {
-  try {
-    const list = centralGetStaff();
-    const updated = (Array.isArray(list) ? list : []).map((s: any) => {
-      if (s && s.id === id) {
-        return { ...s, ...updates };
-      }
-      return s;
-    });
-    centralSaveStaff(updated);
-    broadcastStaffMasterChange();
-  } catch (err) {
-    console.error('[updateStaffRecord] error:', err);
-  }
-};
-
-export const deleteStaffRecord = (id: string) => {
-  try {
-    const list = centralGetStaff();
-    const filtered = (Array.isArray(list) ? list : []).filter((s: any) => s && s.id !== id);
-    centralSaveStaff(filtered);
-    broadcastStaffMasterChange();
-  } catch (err) {
-    console.error('[deleteStaffRecord] error:', err);
-  }
-};
-
-export const getStaffMaster = () => {
-  try {
-    const list = centralGetStaff();
-    return (Array.isArray(list) ? list : []).map((s: any) => ({
-      id: s.id || `T00${Math.floor(Math.random() * 900) + 100}`,
-      name: s.name || s.fullName || 'Staff Member',
-      fullName: s.name || s.fullName || 'Staff Member',
-      nationalId: s.nationalId || '',
-      tscNumber: s.tscNumber || '',
-      email: s.email || '',
-      phone: s.phone || '',
-      systemRole: s.systemRole || s.role || 'subject_teacher',
-      role: s.role || 'Teacher',
-      category: s.category || 'Teaching',
-      assignedSubjects: s.assignedSubjects || s.subjects || [],
-      status: s.status || 'Active',
-      isArchived: !!s.isArchived,
-    }));
-  } catch {
-    return [];
-  }
-};
-
-export const saveStaffMaster = (records: any[]) => {
-  try {
-    centralSaveStaff(records || []);
-  } catch {}
-};
-
-export const broadcastStaffMasterChange = () => {
-  try {
-    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_staff_v3' } }));
-  } catch {}
-};
 
 export const getActiveLearners = centralGetLearners;
 export const getActiveStaff = centralGetStaff;
