@@ -1169,7 +1169,7 @@ export default function StudyCorner() {
                 ).length;
                 return (
                   <button
-                    key={cat}
+                    key={typeof cat === 'string' ? cat : (cat.id || cat.name)}
                     onClick={() =>
                       setSelectedStrands(active ? [] : [cat])
                     }
@@ -1180,7 +1180,7 @@ export default function StudyCorner() {
                     }`}
                   >
                     {meta.icon}
-                    {cat}
+                    {typeof cat === 'string' ? cat : (cat.name || cat.id)}
                     {count > 0 && (
                       <span
                         className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-full ${
