@@ -1,7 +1,3 @@
-/**
- * staffMasterService.ts — Unified wrapper routing 100% through CentralDataService
- */
-
 import { CentralDataService, STORAGE_KEYS, type StaffRecord } from './centralDataService';
 
 export const STAFF_MASTER_KEY = STORAGE_KEYS.STAFF;
@@ -109,37 +105,32 @@ export const getCategorizedMetrics = (_schoolId?: string | null) => {
 };
 
 export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' | 'tempAccessCode' | 'joinedDate'>): MasterStaffRecord => {
-  try {
-    const created = CentralDataService.addStaff({
-      name: record.name,
-      nationalId: record.nationalId,
-      email: record.email,
-      phone: record.phone,
-      tscNumber: record.tscNumber,
-      role: record.role,
-      systemRole: record.systemRole,
-      department: record.department,
-      status: record.status || 'Pre-Registered',
-    });
-    return {
-      id: created.id,
-      name: created.name || '',
-      nationalId: (created as any).nationalId || '',
-      email: created.email || '',
-      phone: created.phone || '',
-      tscNumber: (created as any).tscNumber,
-      role: created.role || '',
-      systemRole: (created as any).systemRole || 'subject_teacher',
-      department: created.department || '',
-      status: (created.status as any) || 'Pre-Registered',
-      staffId: (created as any).staffId,
-      tempAccessCode: (created as any).tempAccessCode,
-      joinedDate: (created as any).joined,
-    };
-  } catch (err) {
-    console.error('[staffMasterService] addStaffMaster failed:', err);
-    throw err;
-  }
+  const created = CentralDataService.addStaff({
+    name: record.name,
+    nationalId: record.nationalId,
+    email: record.email,
+    phone: record.phone,
+    tscNumber: record.tscNumber,
+    role: record.role,
+    systemRole: record.systemRole,
+    department: record.department,
+    status: record.status || 'Pre-Registered',
+  });
+  return {
+    id: created.id,
+    name: created.name || '',
+    nationalId: (created as any).nationalId || '',
+    email: created.email || '',
+    phone: created.phone || '',
+    tscNumber: (created as any).tscNumber,
+    role: created.role || '',
+    systemRole: (created as any).systemRole || 'subject_teacher',
+    department: created.department || '',
+    status: (created.status as any) || 'Pre-Registered',
+    staffId: (created as any).staffId,
+    tempAccessCode: (created as any).tempAccessCode,
+    joinedDate: (created as any).joined,
+  };
 };
 
 export const updateStaffMaster = (id: string, updates: Partial<MasterStaffRecord>): void => {
