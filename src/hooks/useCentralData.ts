@@ -288,6 +288,22 @@ export function verifyStaffLogin(identifier: string, pass: string): { success: b
   };
 }
 
+export function activateStaffMaster(id: string): boolean {
+  const staff = centralGetStaff();
+  let found = false;
+  const updated = staff.map((s: any) => {
+    if (s.id === id) {
+      found = true;
+      return { ...s, status: 'Active', isArchived: false };
+    }
+    return s;
+  });
+  if (found) {
+    centralSaveStaff(updated);
+  }
+  return found;
+}
+
 export const getActiveLearners = centralGetLearners;
 export const getActiveStaff = centralGetStaff;
 export const getActiveTeachers = centralGetStaff;

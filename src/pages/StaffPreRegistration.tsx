@@ -17,15 +17,13 @@ import { PreRegisteredStaff, AccessStatus, SystemRole, SYSTEM_ROLE_LABELS } from
 import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
 import {
   getStaffMaster,
-  addStaffMaster,
-  updateStaffMaster,
-  deleteStaffMaster,
+  addStaffRecord as addStaffMaster,
+  updateStaffRecord,
+  deleteStaffRecord as deleteStaffMaster,
   activateStaffMaster,
-  initializeStaffMaster,
   STAFF_MASTER_KEY,
-  type MasterStaffRecord,
-} from '@/services/staffMasterService';
-import { notifyDataChanged } from '@/utils/storage';
+} from '@/hooks/useCentralData';
+import { notifyDataChanged } from '@/hooks/useCentralData';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

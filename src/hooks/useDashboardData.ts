@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getLocalStorage, tryParse } from '@/utils/storageUtils';
-import { STAFF_MASTER_KEY, getStaffMaster } from '@/services/staffMasterService';
+import { getStaffMaster } from '@/hooks/useCentralData';
+const STAFF_MASTER_KEY = 'munyaka_staff_v2';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

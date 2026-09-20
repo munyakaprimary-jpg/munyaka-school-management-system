@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
 import BackButton from '@/components/ui/BackButton';
-import { addStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
+import { addStaffRecord as addStaffMaster } from '@/hooks/useCentralData';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 const STAFF_LOCAL_KEY = 'staff_local';

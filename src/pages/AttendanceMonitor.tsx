@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { getStaffMaster, initializeStaffMaster, isTeachingRole } from '@/services/staffMasterService';
+import { getStaffMaster } from '@/hooks/useCentralData';
 
 interface AttendanceRecord {
   id: string;
