@@ -1,8 +1,3 @@
-/**
- * staffMasterService.ts — Unified fallback adapter for legacy staffMasterService imports
- * Routes all queries and mutations through CentralDataService and unified persistent storage.
- */
-
 import { CentralDataService, STORAGE_KEYS } from './centralDataService';
 
 export const STAFF_MASTER_KEY = STORAGE_KEYS.STAFF;
@@ -130,6 +125,15 @@ export const updateStaffMaster = (id: string, updates: Partial<MasterStaffRecord
     window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
     window.dispatchEvent(new Event('munyaka:data-changed'));
   }
+};
+
+export const deleteStaffMaster = (id: string): void => {
+  const staff = getStaffMaster();
+  const filtered = staff.filter(s => s.id !== id);
+  CentralDataService.saveStaff(filtered as any);
+  window.dispatchEvent(new Event('staff-changed'));
+  window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
+  window.dispatchEvent(new Event('munyaka:data-changed'));
 };
 
 export const activateStaffMaster = (id: string): void => {
