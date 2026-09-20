@@ -40,16 +40,33 @@ export const staffService = {
         const raw = localStorage.getItem(key);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            // Ensure canonical key is populated
-            localStorage.setItem('munyaka_staff_v2', JSON.stringify(parsed));
-            return parsed;
+          if (Array.isArray(parsed)) {
+            // Filter out unnamed placeholder staff permanently
+            const cleaned = parsed.filter((s: any) => {
+              const name = String(s.name || s.fullName || '').trim().toLowerCase();
+              const sId = String(s.id || '').trim();
+              if (name === 'unnamed staff' || name === '' || sId === 'MUNYAKA-3304') {
+                return false;
+              }
+              return true;
+            });
+
+            // Update storage to permanently purge unnamed records
+            localStorage.setItem(key, JSON.stringify(cleaned));
+            if (cleaned.length > 0 || parsed.length > 0) {
+              return cleaned;
+            }
           }
         }
       }
 
-      // Fallback to initial seed data
-      const seed = (initialSeedData.staff as StaffMember[]) || [];
+      // Fallback to initial seed data, also filtering out unnamed staff
+      const seed = ((initialSeedData.staff as StaffMember[]) || []).filter((s: any) => {
+        const name = String(s.name || s.fullName || '').trim().toLowerCase();
+        const sId = String(s.id || '').trim();
+        return name !== 'unnamed staff' && name !== '' && sId !== 'MUNYAKA-3304';
+      });
+
       if (seed.length > 0) {
         localStorage.setItem('munyaka_staff_v2', JSON.stringify(seed));
         localStorage.setItem('munyaka_staff_directory', JSON.stringify(seed));
@@ -57,7 +74,7 @@ export const staffService = {
       return seed;
     } catch (err) {
       console.error('[StaffService] Error loading staff:', err);
-      return (initialSeedData.staff as StaffMember[]) || [];
+      return [];
     }
   },
 
