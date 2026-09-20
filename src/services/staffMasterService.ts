@@ -1,9 +1,4 @@
-/**
- * Staff Master Service — Subsumed by centralized `useCentralData.ts` and `db.ts`.
- * Preserved as compatibility wrapper for legacy imports.
- */
-
-import { centralGetStaff, centralSaveStaff } from '@/hooks/useCentralData';
+import { centralGetStaff, centralSaveStaff, verifyStaffLogin as centralVerifyStaffLogin } from '@/hooks/useCentralData';
 
 export const STAFF_MASTER_KEY = 'munyaka_staff_v2';
 export const STAFF_PREREG_KEY = 'munyaka_staff_prereg';
@@ -132,3 +127,18 @@ export function getCategorizedMetrics(activeSchoolId?: string | null): Categoriz
 export function getStaffMasterCount(activeSchoolId?: string | null): number {
   return getStaffMaster(activeSchoolId).length;
 }
+
+export function verifyStaffLogin(identifier: string, pass: string) {
+  return centralVerifyStaffLogin(identifier, pass);
+}
+
+export function isTeachingRole(role?: string): boolean {
+  if (!role) return false;
+  const r = role.toLowerCase();
+  return r.includes('teach') || r.includes('educator') || r.includes('principal') || r.includes('ict');
+}
+
+export function addStaffMaster(record: any) {
+  return addStaffRecord(record);
+}
+

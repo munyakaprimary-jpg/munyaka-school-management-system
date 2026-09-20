@@ -38,7 +38,7 @@ import { cn } from '@/lib/utils';
 import { teacherLogin, checkServerHealth } from '@/services/mobileAuthService';
 import { getApiBaseUrl } from '@/lib/apiBase';
 import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
-import { verifyStaffLogin } from '@/services/staffMasterService';
+import { verifyStaffLogin } from '@/hooks/useCentralData';
 import {
   MUNYAKA_ADMIN_PASSWORD,
   DEFAULT_ADMIN_PASSWORD,
