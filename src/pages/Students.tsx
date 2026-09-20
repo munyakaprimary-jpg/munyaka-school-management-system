@@ -151,8 +151,6 @@ export default function Students() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   
   const [fullName, setFullName] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
