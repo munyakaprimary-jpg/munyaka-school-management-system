@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CentralDataService } from '../services/centralDataService';
+import { exportAllData, parseAndImportBackup, downloadDatabaseBackup } from '@/utils/storage';
 import { Download, Upload, Users, GraduationCap, Briefcase, CheckCircle2, RefreshCw, AlertCircle, Database } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -52,20 +53,8 @@ export default function CentralDataPage() {
 
   const handleExportJsonBackup = () => {
     try {
-      const backupObj: Record<string, any> = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) {
-          try {
-            const val = localStorage.getItem(key);
-            if (val) backupObj[key] = JSON.parse(val);
-          } catch {
-            backupObj[key] = localStorage.getItem(key);
-          }
-        }
-      }
-
-      const jsonStr = JSON.stringify(backupObj, null, 2);
+      const backup = exportAllData();
+      const jsonStr = JSON.stringify(backup, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -93,29 +82,23 @@ export default function CentralDataPage() {
     reader.onload = (event) => {
       try {
         const content = event.target?.result as string;
-        const parsed = JSON.parse(content);
-        if (!parsed || typeof parsed !== 'object') {
-          throw new Error('Invalid JSON backup format.');
+        const result = parseAndImportBackup(content);
+
+        if (!result.success) {
+          throw new Error(result.errors.join('; ') || 'Failed to restore backup.');
         }
 
         setIsRestoring(true);
-        for (const [key, value] of Object.entries(parsed)) {
-          const stringVal = typeof value === 'string' ? value : JSON.stringify(value);
-          localStorage.setItem(key, stringVal);
-          CentralDataService.setData(key, value);
-        }
-
-        showSuccess("Backup successfully restored! Reloading application...");
+        showSuccess(`Backup successfully restored! ${result.keysRestored.length} data areas restored. Reloading application...`);
         setTimeout(() => {
           window.location.reload();
-        }, 1200);
+        }, 800);
       } catch (err) {
         setIsRestoring(false);
-        showError("Failed to restore backup: Invalid JSON file.");
+        showError(err instanceof Error ? err.message : "Failed to restore backup: Invalid JSON file.");
       }
     };
     reader.readAsText(file);
-    // Reset input
     e.target.value = '';
   };
 
@@ -144,12 +127,12 @@ export default function CentralDataPage() {
             {isRestoring ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
             Restore JSON Backup
           </Button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileRestoreChange} 
-            accept=".json" 
-            className="hidden" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileRestoreChange}
+            accept=".json"
+            className="hidden"
           />
         </div>
       </div>

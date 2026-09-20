@@ -38,10 +38,6 @@ import { idbStore } from './idbStore';
 import { SCHEMA_META_KEY } from './schemaMigrations';
 import { getLocalStorage, safeParse, isQuotaExceeded, handleQuotaError } from '@/utils/storageUtils';
 
-// ─── Safe localStorage helpers ──────────────────────────────────────────────
-// safeLocalStorage and safeParse are now imported from @/utils/storageUtils
-// so all write paths in this codebase share a single quota-error handler.
-
 // ─── In-memory cache ────────────────────────────────────────────────────────
 
 const memoryCache = new Map<string, unknown>();
@@ -57,7 +53,7 @@ function cacheSet<T>(key: string, value: T): void {
   memoryCache.set(key, value);
 }
 
-// ─── Read (localStorage-first, cache-warmed) ───────────────────────────────
+// ─── Read (localStorage-first, cache-warmed) ────────────────────────────────
 
 /**
  * Read a value from storage. Returns `fallback` if not found.
@@ -305,7 +301,7 @@ async function _idbDeleteByKey(key: string): Promise<void> {
   if (!storeName) return;
   // We can't know the IDB key without parsing the data, so we clear the store.
   // This is acceptable because this function is only called from removeStorage()
-  // which is typically for manual user actions (e.g., clearing an individual record).
+  // which is typically for manual user actions (e.g. clearing an individual record).
   await idbStore.clearStore(storeName);
 }
 
@@ -330,15 +326,17 @@ export function hydrateFromSeed(): void {
     }
   };
 
-  // Learners — NEVER pre-seed. The store starts empty and is populated
-  // only when an admin registers a learner through the UI.
-  seedIfAbsent('school_learners_data', []);
-  seedIfAbsent('munyaka_students', []);
+  // Learners — seed from the hardcoded initialSeedData snapshot on clean installs.
+  if (Array.isArray(INITIAL_SEED_DATA?.students) && INITIAL_SEED_DATA.students.length > 0) {
+    seedIfAbsent('school_learners_data', INITIAL_SEED_DATA.students);
+    seedIfAbsent('munyaka_students', INITIAL_SEED_DATA.students);
+  }
 
-  // Staff — also starts empty. Staff are populated through the Staff
-  // pre-registration flow and the Add Staff modal.
-  seedIfAbsent('munyaka_staff_directory', []);
-  seedIfAbsent('munyaka_staff', []);
+  // Staff — also seeded from the hardcoded initialSeedData snapshot.
+  if (Array.isArray(INITIAL_SEED_DATA?.staff) && INITIAL_SEED_DATA.staff.length > 0) {
+    seedIfAbsent('munyaka_staff_directory', INITIAL_SEED_DATA.staff);
+    seedIfAbsent('munyaka_staff', INITIAL_SEED_DATA.staff);
+  }
 
   // Staff pre-registration
   if (Array.isArray((INITIAL_SEED_DATA as any).staffPrereg)) {
@@ -525,7 +523,7 @@ export const STORAGE_KEYS = {
 
 export const CURRENT_SCHEMA_VERSION_PERSISTENT = 'persistent-storage-v1';
 
-// ─── Typed read helpers ──────────────────────────────────────────────────────
+// ─── Typed read helpers ─────────────────────────────────────────────────────
 
 export function getStudents(): Student[] {
   return readStorage<Student[]>(STORAGE_KEYS.STUDENTS, []);

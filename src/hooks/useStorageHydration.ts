@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { initialSeedData } from '@/data/initialSeedData';
 
-/**
- * Key mapping from initialSeedData fields to their respective LocalStorage keys.
- */
+/** Key mapping from initialSeedData fields to their respective LocalStorage keys. */
 const KEY_MAPPING: Record<string, string> = {
-  students: 'munyaka_learners',
-  classes: 'munyaka_classes',
-  streams: 'munyaka_streams',
+  students: 'munyaka_students',
+  classes: 'munyaka_grades',
+  streams: 'munyaka_grades',
   learningAreas: 'munyaka_learning_areas',
-  exams: 'munyaka_exams',
-  assessments: 'munyaka_assessments',
+  exams: 'munyaka_exam_types',
+  assessments: 'munyaka_assessment_scores',
   gradingScales: 'munyaka_grading_scales',
   reportCards: 'munyaka_report_cards',
   staff: 'munyaka_staff',
@@ -24,12 +22,10 @@ const KEY_MAPPING: Record<string, string> = {
   ictLabEquipment: 'munyaka_ict_lab',
   storeInventory: 'munyaka_store_items',
   attendance: 'munyaka_attendance',
-  schoolSettings: 'munyaka_school_settings',
+  schoolSettings: 'munyaka_system_settings_v3',
 };
 
-/**
- * Hydrates localStorage from initialSeedData on first app boot or when uninitialized on Android / Web.
- */
+/** Hydrates localStorage from initialSeedData on first app boot or when uninitialized on Android / Web. */
 export function hydrateFromInitialSeed(): void {
   try {
     const isInitialized = localStorage.getItem('munyaka_initialized') === 'true';
@@ -63,6 +59,7 @@ export function hydrateFromInitialSeed(): void {
       };
 
       // Iterate through all keys in initialSeedData and write them directly into localStorage
+      // using the canonical KEY_MAPPING so all modules read from the same namespace.
       Object.entries(snapshot).forEach(([key, value]) => {
         const localStorageKey = KEY_MAPPING[key] || `munyaka_${key}`;
         if (value !== undefined) {
@@ -85,9 +82,7 @@ export function hydrateFromInitialSeed(): void {
   }
 }
 
-/**
- * Global React Hook for automatic first-boot storage hydration.
- */
+/** Global React Hook for automatic first-boot storage hydration. */
 export function useStorageHydration() {
   const [hydrated, setHydrated] = useState(false);
 

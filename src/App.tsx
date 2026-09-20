@@ -78,10 +78,48 @@ import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
 
-// ── Critical Central Database Initialization ──────────────────────────────
-// Ensures `munyaka_central_db` is always populated with `initialSeedData` on boot.
+// ── Critical Central Database Initialization ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Ensures ALL canonical storage keys are populated from initialSeedData on clean install.
+// This runs once at module evaluation (app boot) and seeds every primary store so
+// that the app starts with data even on a fresh browser / APK install.
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
+    // Seed the canonical storage keys from initialSeedData if they are empty/absent.
+    const seedKeys: [string, unknown][] = [
+      ['munyaka_students', initialSeedData.students || []],
+      ['munyaka_fees_records', (initialSeedData as any).fees || []],
+      ['munyaka_student_fees', (initialSeedData as any).fees || []],
+      ['munyaka_transactions', initialSeedData.transactions || []],
+      ['munyaka_attendance', (initialSeedData as any).attendance || []],
+      ['munyaka_grades', (initialSeedData as any).grades || []],
+      ['munyaka_exam_types', (initialSeedData as any).examTypes || []],
+      ['munyaka_library_books', initialSeedData.libraryBooks || []],
+      ['munyaka_fee_structures', (initialSeedData as any).feeStructures || []],
+      ['munyaka_notices', (initialSeedData as any).notices || []],
+      ['munyaka_system_settings_v3', (initialSeedData as any).settings || {}],
+    ];
+
+    let anySeeded = false;
+    for (const [key, value] of seedKeys) {
+      const existing = localStorage.getItem(key);
+      if (!existing) {
+        localStorage.setItem(key, JSON.stringify(value));
+        anySeeded = true;
+      } else {
+        // If the existing data is an empty array and seed has data, re-seed it.
+        try {
+          const parsed = JSON.parse(existing);
+          if ((Array.isArray(parsed) && parsed.length === 0) && Array.isArray(value) && value.length > 0) {
+            localStorage.setItem(key, JSON.stringify(value));
+            anySeeded = true;
+          }
+        } catch {
+          // Keep existing data on parse error
+        }
+      }
+    }
+
+    // Also ensure munyaka_central_db is populated (used by CentralDataService)
     const existingDb = localStorage.getItem('munyaka_central_db');
     if (!existingDb) {
       const initialDb = {
@@ -96,8 +134,12 @@ if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
       }
     }
+
+    if (anySeeded) {
+      console.log('[App Boot] Initial seed data injected into all canonical storage keys.');
+    }
   } catch (e) {
-    console.error('[Central DB Init] Failed to seed munyaka_central_db:', e);
+    console.error('[App Boot] Failed to seed initial data:', e);
   }
 }
 
@@ -304,56 +346,90 @@ const App = () => {
   }, []);
 
   // ── One-time learner-data migrations ───────────────────────────────────
-  // Sequential, independently-gated migrations run on first launch:
-  //
-  //   1. Assessment-number cleanup — removes fake MUN-XXX values that
-  //      may have leaked into the `assessment` (KNEC/NEMIS) field.
-  //
-  //   2. Legacy admNo → admissionNo — copies the old-school admission
-  //      number from `admNo` into `admissionNo` for pre-column records.
-  //
-  //   3. Admission-number backfill (v6) — generates `MUN-{family}-{seq}/{year}`
-  //      for any learner still missing `admissionNo`. Supports PP1/PP2.
-  //
-  //   4. Fee sanitizer (v1) — resets all hardcoded fee fields on stored
-  //      learners to 0 and clears pre-seeded fee ledgers.
-  //
-  // Each is idempotent and gated by its own localStorage flag.
-  useEffect(() => {
-    // ── TEMP: hard-fix migration ────────────────────────────────────────
-    // Clear stale learner + fee storage so the app re-initializes with
-    // clean data on next hydrate. Safe to remove once every browser has
-    // been refreshed.
-    try {
-      const KEYS_TO_RESET = [
-        'munyaka_learners',
-        'school_learners_data',
-        'munyaka_students',
-        // Fee ledgers so previously-seeded mock data never resurfaces.
-        'munyaka_fees_records',
-        'munyaka_student_fees',
-        'munyaka_payment_records',
-        'munyaka_transactions',
-        // Force every legacy learner key to start as `[]` so the table
-        // renders an empty roster by default.
-        'students',
-        'learners',
-        'pupils',
-        'school_students',
-        'registered_students',
-      ];
-      for (const k of KEYS_TO_RESET) {
+    // Sequential, independently-gated migrations run on first launch:
+    //
+    //   1. Assessment-number cleanup — removes fake MUN-XXX values that
+    //      may have leaked into the `assessment` (KNEC/NEMIS) field.
+    //
+    //   2. Legacy admNo → admissionNo — copies the old-school admission
+    //      number from `admNo` into `admissionNo` for pre-column records.
+    //
+    //   3. Admission-number backfill (v6) — generates `MUN-{family}-{seq}/{year}`
+    //      for any learner still missing `admissionNo`. Supports PP1/PP2.
+    //
+    //   4. Fee sanitizer (v1) — resets all hardcoded fee fields on stored
+    //      learners to 0 and clears pre-seeded fee ledgers.
+    //
+    // Each is idempotent and gated by its own localStorage flag.
+    useEffect(() => {
+      // Re-seed canonical storage keys on mount to ensure data persistence
+      // after any migrations or clean installs.
+      if (typeof window !== 'undefined' && window.localStorage) {
         try {
-          window.localStorage.removeItem(k);
-        } catch { /* no-op */ }
+          const seedKeys: [string, unknown][] = [
+            ['munyaka_students', initialSeedData.students || []],
+            ['munyaka_fees_records', (initialSeedData as any).fees || []],
+            ['munyaka_student_fees', (initialSeedData as any).fees || []],
+            ['munyaka_transactions', initialSeedData.transactions || []],
+            ['munyaka_attendance', (initialSeedData as any).attendance || []],
+            ['munyaka_grades', (initialSeedData as any).grades || []],
+            ['munyaka_exam_types', (initialSeedData as any).examTypes || []],
+            ['munyaka_library_books', initialSeedData.libraryBooks || []],
+            ['munyaka_fee_structures', (initialSeedData as any).feeStructures || []],
+            ['munyaka_notices', (initialSeedData as any).notices || []],
+            ['munyaka_system_settings_v3', (initialSeedData as any).settings || {}],
+          ];
+  
+          let anySeeded = false;
+          for (const [key, value] of seedKeys) {
+            const existing = localStorage.getItem(key);
+            if (!existing) {
+              localStorage.setItem(key, JSON.stringify(value));
+              anySeeded = true;
+            } else {
+              // If the existing data is an empty array and seed has data, re-seed it.
+              try {
+                const parsed = JSON.parse(existing);
+                if ((Array.isArray(parsed) && parsed.length === 0) && Array.isArray(value) && value.length > 0) {
+                  localStorage.setItem(key, JSON.stringify(value));
+                  anySeeded = true;
+                }
+              } catch {
+                // Keep existing data on parse error
+              }
+            }
+          }
+  
+          // Also ensure munyaka_central_db is populated (used by CentralDataService)
+          const existingDb = localStorage.getItem('munyaka_central_db');
+          if (!existingDb) {
+            const initialDb = {
+              students: initialSeedData.students || [],
+              staff: initialSeedData.staff || [],
+            };
+            localStorage.setItem('munyaka_central_db', JSON.stringify(initialDb));
+          } else {
+            const parsed = JSON.parse(existingDb);
+            if (!parsed.students || parsed.students.length === 0) {
+              parsed.students = initialSeedData.students || [];
+              localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
+            }
+          }
+  
+          if (anySeeded) {
+            console.log('[App Mount] Re-seeded canonical storage keys from initialSeedData.');
+          }
+        } catch (err) {
+          console.error("Failed to re-seed storage keys:", err);
+        }
       }
-    } catch { /* no-op */ }
-    runOneTimeAssessmentCleanup();
-    runOneTimeLegacyAdmNoMigration();
-    runOneTimeAdmissionNoBackfill();
-    runOneTimeFeeSanitizer();
-    runOneTimeLearnerPurge();
-  }, []);
+  
+      runOneTimeAssessmentCleanup();
+      runOneTimeLegacyAdmNoMigration();
+      runOneTimeAdmissionNoBackfill();
+      runOneTimeFeeSanitizer();
+      runOneTimeLearnerPurge();
+    }, []);
 
   return (
     <AppErrorBoundary>
