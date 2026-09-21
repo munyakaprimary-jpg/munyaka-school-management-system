@@ -501,26 +501,27 @@ export default function Settings() {
                     <Button
                       type="button"
                       variant="destructive"
-                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer z-50 relative pointer-events-auto shadow-md hover:shadow-lg"
-                      onClick={() => {
-                        const password = window.prompt("Enter Admin Password to reset database:");
-                        if (password === null) return; // Cancelled
+                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer z-50 relative pointer-events-auto"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log("Reset clicked");
+                        const passwordInput = window.prompt("Enter Admin Password to reset database:");
+                        if (passwordInput === null) return;
                         
-                        const trimmedPass = password.trim();
+                        const trimmedPass = passwordInput.trim();
                         const adminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka2026';
                         const ownerPass = localStorage.getItem('munyaka_owner_pass') || 'munyaka2026';
 
-                        if (trimmedPass === adminPass || trimmedPass === ownerPass || trimmedPass === 'admin123' || trimmedPass === 'admin' || trimmedPass === 'munyaka5239') {
-                          if (window.confirm("WARNING: This will wipe all local storage and reset database caches. Proceed?")) {
-                            clearAllStorage();
-                            UnifiedDataStorage.clearAll();
-                            showSuccess('Database successfully reset and re-initializing...');
-                            setTimeout(() => {
-                              window.location.reload();
-                            }, 800);
-                          }
+                        if (trimmedPass === adminPass || trimmedPass === ownerPass || trimmedPass === 'munyaka5239') {
+                          clearAllStorage();
+                          UnifiedDataStorage.clearAll();
+                          showSuccess('Database successfully reset and re-initializing...');
+                          setTimeout(() => {
+                            window.location.reload();
+                          }, 800);
                         } else {
-                          window.alert("Incorrect admin password.");
+                          showError('Incorrect admin password. Database reset aborted.');
                         }
                       }}
                     >
