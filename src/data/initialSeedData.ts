@@ -53,6 +53,24 @@ export const initialSeedData = {
       "phoneNumber": "0789456778",
       "phone": "0789456778",
       "createdAt": "2026-09-19T13:55:47.758Z"
+    },
+    {
+      "id": "1789826147759",
+      "name": "SARAH AUMA",
+      "fullName": "SARAH AUMA",
+      "admissionNumber": "MUN-G1-002-2026",
+      "admNo": "MUN-G1-002-2026",
+      "assessmentNumber": "ASS-1002",
+      "assessmentNo": "ASS-1002",
+      "assessment": "ASS-1002",
+      "gender": "Female",
+      "grade": "Grade 1",
+      "stream": "North",
+      "parentName": "JOHN AUMA",
+      "guardian": "JOHN AUMA",
+      "phoneNumber": "0722334455",
+      "phone": "0722334455",
+      "createdAt": "2026-09-19T13:55:47.758Z"
     }
   ],
   "learners": [
@@ -109,9 +127,70 @@ export const initialSeedData = {
       "phoneNumber": "0789456778",
       "phone": "0789456778",
       "createdAt": "2026-09-19T13:55:47.758Z"
+    },
+    {
+      "id": "1789826147759",
+      "name": "SARAH AUMA",
+      "fullName": "SARAH AUMA",
+      "admissionNumber": "MUN-G1-002-2026",
+      "admNo": "MUN-G1-002-2026",
+      "assessmentNumber": "ASS-1002",
+      "assessmentNo": "ASS-1002",
+      "assessment": "ASS-1002",
+      "gender": "Female",
+      "grade": "Grade 1",
+      "stream": "North",
+      "parentName": "JOHN AUMA",
+      "guardian": "JOHN AUMA",
+      "phoneNumber": "0722334455",
+      "phone": "0722334455",
+      "createdAt": "2026-09-19T13:55:47.758Z"
     }
   ],
-  "staff": [],
+  "staff": [
+    {
+      "id": "staff_1",
+      "staffId": "T001",
+      "name": "John Kamau",
+      "fullName": "John Kamau",
+      "full_name": "John Kamau",
+      "role": "Class Teacher",
+      "staffCategory": "TEACHING",
+      "staff_category": "TEACHING",
+      "department": "Academics",
+      "email": "john.kamau@munyaka.ac.ke",
+      "phoneNumber": "+254700112233",
+      "status": "Active"
+    },
+    {
+      "id": "staff_2",
+      "staffId": "NT001",
+      "name": "Peter Otieno",
+      "fullName": "Peter Otieno",
+      "full_name": "Peter Otieno",
+      "role": "Accountant",
+      "staffCategory": "NON_TEACHING",
+      "staff_category": "NON_TEACHING",
+      "department": "Finance",
+      "email": "peter.otieno@munyaka.ac.ke",
+      "phoneNumber": "+254722334455",
+      "status": "Active"
+    },
+    {
+      "id": "staff_3",
+      "staffId": "NT002",
+      "name": "Mary Mutua",
+      "fullName": "Mary Mutua",
+      "full_name": "Mary Mutua",
+      "role": "Secretary",
+      "staffCategory": "NON_TEACHING",
+      "staff_category": "NON_TEACHING",
+      "department": "Administration",
+      "email": "mary.mutua@munyaka.ac.ke",
+      "phoneNumber": "+254733445566",
+      "status": "Active"
+    }
+  ],
   "exams": [],
   "libraryBooks": [],
   "transactions": []
