@@ -348,7 +348,7 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
     const item: ContentItem = {
       id,
       title: form.title.trim(),
-      description: form.body?.substring(0, 200) || effectiveBody.substring(0, 200),
+      description: effectiveBody.substring(0, 200),
       grade: gradeNum,
       strand: form.strand as StrandCategory,
       subStrand: form.subStrand.trim() || (form.strand as StrandCategory),
