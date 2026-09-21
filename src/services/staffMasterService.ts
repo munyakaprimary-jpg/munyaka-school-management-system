@@ -52,8 +52,17 @@ export const TEACHING_SYSTEM_ROLES: MasterSystemRole[] = [
 
 export const isNonTeachingDesignation = (role: string): boolean => {
   const r = (role || '').toLowerCase();
-  // Ensure teaching and educational designations are NEVER flagged as non-teaching
-  if (r.includes('teacher') || r.includes('head') || r.includes('senior') || r.includes('educator') || r.includes('tutor') || r.includes('instructor')) {
+  // Ensure all teaching designations (including Class Teacher, Subject Teacher, Senior Teacher, Head Teacher, Deputy Head Teacher)
+  // are strictly recognized as teaching and NEVER flagged as non-teaching.
+  if (
+    r.includes('teacher') ||
+    r.includes('head') ||
+    r.includes('senior') ||
+    r.includes('educator') ||
+    r.includes('tutor') ||
+    r.includes('instructor') ||
+    r.includes('deputy')
+  ) {
     return false;
   }
   return r.includes('librarian') || r.includes('bursar') || r.includes('store') || r.includes('accountant') || r.includes('secretary') || r.includes('support') || r.includes('nurse') || r.includes('security') || r.includes('catering');
@@ -69,12 +78,13 @@ export const mapDesignationToSystemRole = (role: string): MasterSystemRole => {
   if (r.includes('deputy')) return 'head_teacher';
   if (r.includes('senior')) return 'senior_teacher';
   if (r.includes('class')) return 'class_teacher';
-  if (r.includes('subject') || r.includes('teacher') || r.includes('educator') || r.includes('tutor')) return 'subject_teacher';
+  if (r.includes('subject') || r.includes('teacher') || r.includes('educator') || r.includes('tutor') || r.includes('instructor')) return 'subject_teacher';
   if (r.includes('librarian')) return 'librarian';
   if (r.includes('bursar') || r.includes('account')) return 'bursar';
   if (r.includes('store')) return 'storekeeper';
   if (r.includes('lab')) return 'lab_assistant';
   if (r.includes('ict')) return 'ict_technician';
+  if (r.includes('support') || r.includes('cook') || r.includes('secretary')) return 'support_staff';
   return 'subject_teacher';
 };
 
