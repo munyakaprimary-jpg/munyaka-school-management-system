@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
 import SecurityAuthTab from '@/components/settings/SecurityAuthTab';
+import Modal from '@/components/ui/Modal';
 import {
   Building,
   Lock,
@@ -131,6 +132,10 @@ export default function Settings() {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isResetAuthOpen, setIsResetAuthOpen] = useState(false);
+  const [resetAdminPassword, setResetAdminPassword] = useState('');
+  const [resetAuthError, setResetAuthError] = useState('');
+  const [isVerifyingReset, setIsVerifyingReset] = useState(false);
 
   useEffect(() => {
     try {
@@ -497,14 +502,9 @@ export default function Settings() {
                       variant="destructive"
                       className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white"
                       onClick={() => {
-                        if (window.confirm("WARNING: Are you sure you want to completely reset the local database? All current offline data will be cleared and reset to fresh defaults.")) {
-                          clearAllData();
-                          UnifiedDataStorage.clearAll();
-                          showSuccess('Database wiped. Re-initializing application...');
-                          setTimeout(() => {
-                            window.location.reload();
-                          }, 800);
-                        }
+                        setResetAdminPassword('');
+                        setResetAuthError('');
+                        setIsResetAuthOpen(true);
                       }}
                     >
                       Clear & Reset
