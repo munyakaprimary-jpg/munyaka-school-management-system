@@ -1,4 +1,20 @@
 export const initialSeedData = {
+  "assessmentScores": {
+    "Grade 1": {
+      "Mathematics": [
+        {
+          "studentId": "1789826147758",
+          "admissionNumber": "MUN-G1-001-2026",
+          "studentName": "PETER MWANGI",
+          "marks": 85,
+          "grade": "EE",
+          "teacherRemarks": "Excellent performance in number work.",
+          "term": "Term 1",
+          "year": "2026"
+        }
+      ]
+    }
+  },
   "students": [
     {
       "id": "1789839549470",
@@ -195,10 +211,22 @@ export const initialSeedData = {
     {
       "id": "exam_1",
       "title": "Term 1 End of Term Examination 2026",
+      "examName": "Term 1 End of Term Examination 2026",
       "term": "Term 1",
       "year": 2026,
       "grade": "Grade 1",
-      "status": "Published"
+      "status": "Published",
+      "date": "2026-04-10"
+    },
+    {
+      "id": "exam_2",
+      "title": "Term 1 Mid-Term Assessment 2026",
+      "examName": "Term 1 Mid-Term Assessment 2026",
+      "term": "Term 1",
+      "year": 2026,
+      "grade": "Grade 6",
+      "status": "Published",
+      "date": "2026-02-28"
     }
   ],
   "libraryBooks": [
