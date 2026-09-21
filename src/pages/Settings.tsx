@@ -502,15 +502,16 @@ export default function Settings() {
                       type="button"
                       variant="destructive"
                       className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer z-10 relative"
-                      onClick={() => {
-                        const passwordInput = window.prompt("Enter Admin Password to reset database:");
-                        if (passwordInput === null) return;
-                        
-                        const trimmedPass = passwordInput.trim();
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const pass = window.prompt("Enter Admin Password to reset database:");
+                        if (pass === null) return; // cancelled
                         const adminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka2026';
                         const ownerPass = localStorage.getItem('munyaka_owner_pass') || 'munyaka2026';
+                        const passTrimmed = pass.trim();
 
-                        if (trimmedPass === adminPass || trimmedPass === ownerPass || trimmedPass === 'munyaka5239') {
+                        if (passTrimmed === adminPass || passTrimmed === ownerPass || passTrimmed === 'munyaka5239') {
                           clearAllStorage();
                           UnifiedDataStorage.clearAll();
                           showSuccess('Database successfully reset and re-initializing...');
