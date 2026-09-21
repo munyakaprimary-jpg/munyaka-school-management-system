@@ -441,18 +441,21 @@ export default function Students() {
         .replace(/[^a-zA-Z0-9_]/g, "");
     };
 
-    const isAllGrades = !selectedGrade || selectedGrade.toLowerCase() === "all" || selectedGrade.toLowerCase() === "all grades";
-    const isAllStreams = !selectedStream || selectedStream.toLowerCase() === "all" || selectedStream.toLowerCase() === "all streams" || selectedStream.toLowerCase() === "all stream";
+    const currentGradeVal = typeof gradeFilter !== 'undefined' ? gradeFilter : 'All';
+    const currentStreamVal = typeof streamFilter !== 'undefined' ? streamFilter : 'All';
+
+    const isAllGrades = !currentGradeVal || currentGradeVal.toLowerCase() === "all" || currentGradeVal.toLowerCase() === "all grades";
+    const isAllStreams = !currentStreamVal || currentStreamVal.toLowerCase() === "all" || currentStreamVal.toLowerCase() === "all streams" || currentStreamVal.toLowerCase() === "all stream";
 
     let gradePart = "All_Grades";
     if (!isAllGrades) {
-      const sanitizedG = sanitizeName(selectedGrade);
+      const sanitizedG = sanitizeName(currentGradeVal);
       gradePart = sanitizedG ? (sanitizedG.toLowerCase().startsWith("grade") ? sanitizedG : `Grade_${sanitizedG}`) : "All_Grades";
     }
 
     let streamPart = "";
     if (!isAllStreams) {
-      const sanitizedS = sanitizeName(selectedStream);
+      const sanitizedS = sanitizeName(currentStreamVal);
       if (sanitizedS) {
         streamPart = `_${sanitizedS}`;
       }
