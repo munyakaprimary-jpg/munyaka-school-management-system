@@ -1293,6 +1293,11 @@ export const ROLE_DASHBOARD_WIDGETS: Record<Role, WidgetKey[]> = {
   ],
   non_teaching_staff: ["systemStatus"],
   support_staff: ["systemStatus"],
+    "networkQuotas",
+    "systemStatus",
+  ],
+  non_teaching_staff: ["systemStatus"],
+  support_staff: ["systemStatus"],
 
   parent: ["totalActiveEnrollment"],
   student: ["todayAttendance"],
