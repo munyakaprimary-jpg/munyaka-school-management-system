@@ -501,8 +501,11 @@ export default function Settings() {
                     <Button
                       type="button"
                       variant="destructive"
-                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer z-10 relative"
-                      onClick={() => {
+                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer z-50 relative pointer-events-auto"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log("Reset clicked");
                         const passwordInput = window.prompt("Enter Admin Password to reset database:");
                         if (passwordInput === null) return;
                         
