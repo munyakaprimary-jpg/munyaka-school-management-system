@@ -124,14 +124,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
 
     if (isAdminRole) {
-      return menuItems.filter(item => {
-        if (item.path === '/study-corner') return true;
-        const itemRoles = item?.roles ?? [];
-        if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
-          return false;
-        }
-        return true;
-      }).map(item => {
+      return menuItems.map(item => {
         if (item.path === '/') return { ...item, label: 'Admin Dashboard' };
         return item;
       });
@@ -194,22 +187,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       isTeacherRole(role, staffCategory, specialties);
 
     if (isTeacher) {
-      return menuItems.filter(item => {
-        if (item?.global) return true;
-        const itemRoles = (item?.roles || []).map((r: string) => String(r).toUpperCase());
-        return (
-          itemRoles.includes('TEACHER') ||
-          itemRoles.includes('CLASS_TEACHER') ||
-          itemRoles.includes('CLASS TEACHER') ||
-          itemRoles.includes('SUBJECT_TEACHER') ||
-          itemRoles.includes('SUBJECT TEACHER') ||
-          itemRoles.includes('HEAD_TEACHER') ||
-          itemRoles.includes('HEAD TEACHER') ||
-          itemRoles.includes('SENIOR TEACHER') ||
-          itemRoles.includes('TEACHING') ||
-          itemRoles.includes('ADMIN')
-        );
-      }).map(item => {
+      return menuItems.map(item => {
         if (item?.path === '/') {
           return { ...item, label: "Teacher's Dashboard" };
         }
