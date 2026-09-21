@@ -30,10 +30,10 @@ export const AdminDashboardComponent: React.FC = () => {
     const junior = learners.length - primary.length;
 
     setTotalStudents(learners.length);
-    setTeachingStaffCount(teaching.length > 0 ? teaching.length : 2);
-    setNonTeachingStaffCount(nonTeaching.length > 0 ? nonTeaching.length : 6);
-    setPrimaryCount(primary.length > 0 ? primary.length : learners.length);
-    setJuniorCount(junior > 0 ? junior : 0);
+    setTeachingStaffCount(teaching.length);
+    setNonTeachingStaffCount(nonTeaching.length);
+    setPrimaryCount(primary.length);
+    setJuniorCount(junior);
   }, []);
 
   return (
