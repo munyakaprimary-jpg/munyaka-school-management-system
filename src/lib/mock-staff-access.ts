@@ -64,10 +64,10 @@ export const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = [
   {
     id: 'PR-1787658875279',
     staffId: 'T005',
-    fullName: 'John Kamau',
+    fullName: 'Peter Mwangi',
     nationalId: '31948201',
     tscNumber: 'TSC-592014',
-    email: 'john.kamau@munyaka.sc.ke',
+    email: 'peter.mwangi@munyaka.sc.ke',
     phone: '+254 722 987 654',
     systemRole: 'senior_teacher',
     assignedSubjects: ['English', 'Social Studies'],

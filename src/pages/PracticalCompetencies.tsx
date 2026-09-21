@@ -107,7 +107,7 @@ const MOCK_PROJECTS: ProjectRecord[] = [
     submissionsGraded: 38, 
     status: "Completed", 
     dueDate: "2024-10-20",
-    createdBy: "Mr. John Kamau",
+    createdBy: "Mr. David Kimani",
     createdDate: "2024-09-15"
   },
   { 

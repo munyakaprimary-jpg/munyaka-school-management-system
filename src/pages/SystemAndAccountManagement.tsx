@@ -84,7 +84,7 @@ const LAB_RESERVATIONS_KEY = 'munyaka_lab_reservations';
 // --- Default Seed Data (used only when localStorage is empty) ---
 const DEFAULT_USERS: SystemUser[] = [
   { id: "USR-001", name: "Grace Njeri", role: "Admin", username: "grace.njeri@munyaka.sc.ke", lastLogin: "10 mins ago", status: "Active" },
-  { id: "USR-042", name: "John Kamau", role: "Teacher", username: "john.kamau", lastLogin: "2 hours ago", status: "Active" },
+  { id: "USR-042", name: "David Kimani", role: "Teacher", username: "david.kimani", lastLogin: "2 hours ago", status: "Active" },
   { id: "USR-108", name: "Brian Kiptoo", role: "Student", username: "A827361", lastLogin: "Yesterday", status: "Active" },
   { id: "USR-005", name: "Peter Omondi", role: "Lab Tech", username: "peter.tech", lastLogin: "Just now", status: "Disabled" },
 ];
