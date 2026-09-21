@@ -501,19 +501,24 @@ export default function Settings() {
                     <Button
                       type="button"
                       variant="destructive"
-                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer relative z-50 pointer-events-auto"
-                      onClick={() => {
-                        const pwd = window.prompt("Enter admin password:");
-                        if (pwd === null) return;
-                        if (pwd === "admin" || pwd === "munyaka2026" || pwd === "munyaka5239") {
-                          localStorage.clear();
-                          sessionStorage.clear();
-                          showSuccess('Database successfully reset. Reloading...');
+                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer z-10 relative"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const pwd = window.prompt("Enter Admin Password to confirm database reset:");
+                        if (pwd === null) return; // cancelled
+                        const adminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka2026';
+                        const ownerPass = localStorage.getItem('munyaka_owner_pass') || 'munyaka2026';
+
+                        if (pwd.trim() === adminPass || pwd.trim() === ownerPass || pwd.trim() === 'munyaka5239') {
+                          clearAllStorage();
+                          UnifiedDataStorage.clearAll();
+                          showSuccess('Database successfully reset and re-initializing...');
                           setTimeout(() => {
                             window.location.reload();
                           }, 800);
                         } else {
-                          showError('Incorrect password. Reset cancelled.');
+                          showError('Incorrect admin password. Database reset aborted.');
                         }
                       }}
                     >
