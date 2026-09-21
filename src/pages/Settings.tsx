@@ -26,7 +26,7 @@ import {
   Trash2,
   AlertTriangle
 } from 'lucide-react';
-import { exportAllData, parseAndImportBackup, clearAllData } from '@/utils/storage';
+import { exportAllData, parseAndImportBackup, clearAllStorage as clearAllData } from '@/utils/storage';
 import { UnifiedDataStorage } from '@/services/unifiedDataStorage';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
