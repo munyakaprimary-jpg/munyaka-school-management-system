@@ -176,7 +176,6 @@ const StaffPreRegistration = () => {
     try {
       deleteStaffMaster(id);
       showSuccess('Staff record deleted.');
-      }
     } catch (err) {
       showError('Failed to delete staff.');
       console.error('[StaffPreRegistration] handleDeleteStaff:', err);
@@ -187,7 +186,6 @@ const StaffPreRegistration = () => {
     try {
       activateStaffMaster(id);
       showSuccess('Staff activated successfully.');
-      }
     } catch (err) {
       showError('Failed to activate staff.');
       console.error('[StaffPreRegistration] handleActivateStaff:', err);
