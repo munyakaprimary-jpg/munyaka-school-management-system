@@ -23,12 +23,9 @@ import {
   Check,
   X,
   Download,
-  Upload,
-  Trash2,
-  AlertTriangle
+  Upload
 } from 'lucide-react';
-import { exportAllData, parseAndImportBackup, clearAllStorage as clearAllData } from '@/utils/storage';
-import { UnifiedDataStorage } from '@/services/unifiedDataStorage';
+import { exportAllData, parseAndImportBackup } from '@/utils/storage';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
 const RBAC_STORAGE_KEY = 'munyaka_rbac_permissions';
@@ -488,35 +485,6 @@ export default function Settings() {
                         <span>Upload & Restore</span>
                       </Button>
                     </label>
-                  </div>
-
-                  {/* Reset Database */}
-                  <div className="p-5 border border-red-200 bg-red-50/40 rounded-2xl flex flex-col justify-between space-y-3">
-                    <div>
-                      <div className="flex items-center gap-2 text-red-600 font-bold mb-1">
-                        <Trash2 size={18} /> Reset Database
-                      </div>
-                      <p className="text-xs text-red-700">Wipe local storage and IndexedDB caches for fresh seed re-initialization.</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer z-10 relative"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (window.confirm("WARNING: Are you sure you want to wipe local storage and reset database caches? This action cannot be undone.")) {
-                          clearAllStorage();
-                          UnifiedDataStorage.clearAll();
-                          showSuccess('Database successfully reset and re-initializing...');
-                          setTimeout(() => {
-                            window.location.reload();
-                          }, 800);
-                        }
-                      }}
-                    >
-                      Clear & Reset
-                    </Button>
                   </div>
                 </div>
               </div>
