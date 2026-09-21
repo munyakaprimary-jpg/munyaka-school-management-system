@@ -515,23 +515,25 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
                     errors.grade ? "border-red-400 bg-red-50" : "border-gray-200"
                   }`}
                 >
-                  <optgroup label="──────────────────────────">
-                    <option value="" disabled>Select grade…</option>
+                  <option value="" disabled>Select grade…</option>
+                  <optgroup label="Pre-Primary (PP1–PP2)">
+                    <option value="PP1">PP1</option>
+                    <option value="PP2">PP2</option>
                   </optgroup>
-                  <optgroup label="◀ Lower Primary (Grades 1–3)">
-                    <option value="1">Grade 1</option>
-                    <option value="2">Grade 2</option>
-                    <option value="3">Grade 3</option>
+                  <optgroup label="Lower Primary (Grades 1–3)">
+                    <option value="Grade 1">Grade 1</option>
+                    <option value="Grade 2">Grade 2</option>
+                    <option value="Grade 3">Grade 3</option>
                   </optgroup>
-                  <optgroup label="◀ Upper Primary (Grades 4–6)">
-                    {gradeLevels.filter((g) => Number(g) >= 4 && Number(g) <= 6).map((g) => (
-                      <option key={g} value={g}>Grade {g}</option>
-                    ))}
+                  <optgroup label="Upper Primary (Grades 4–6)">
+                    <option value="Grade 4">Grade 4</option>
+                    <option value="Grade 5">Grade 5</option>
+                    <option value="Grade 6">Grade 6</option>
                   </optgroup>
-                  <optgroup label="◀ Junior Secondary (Grades 7–9)">
-                    {gradeLevels.filter((g) => Number(g) >= 7).map((g) => (
-                      <option key={g} value={g}>Grade {g}</option>
-                    ))}
+                  <optgroup label="Junior Secondary (Grades 7–9)">
+                    <option value="Grade 7">Grade 7</option>
+                    <option value="Grade 8">Grade 8</option>
+                    <option value="Grade 9">Grade 9</option>
                   </optgroup>
                 </select>
                 {errors.grade && (
