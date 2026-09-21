@@ -219,13 +219,13 @@ const Staff = () => {
 
   // Handle role/designation changes and sync system role
   const handleRoleChange = (designation: string) => {
-    const mappedRole = mapDesignationToSystemRole(designation);
-    const isNonTeaching = mappedRole ? isNonTeachingDesignation(designation) : false;
+    const mappedRole = mapDesignationToSystemRole(designation) || 'subject_teacher';
+    const isNonTeaching = isNonTeachingDesignation(designation);
     
     setFormData(prev => ({
       ...prev,
       role: designation,
-      systemRole: mappedRole || prev.systemRole,
+      systemRole: mappedRole,
     }));
     setShowTeachingFields(!isNonTeaching);
   };
@@ -637,13 +637,10 @@ const Staff = () => {
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation *</Label>
                 <select
-                  value={formData.role}
+                  value={formData.role || 'Subject Teacher'}
                   onChange={(e) => {
                     const val = e.target.value;
-                    const systemRole = mapDesignationToSystemRole(val);
-                    const isNonTeaching = isNonTeachingDesignation(val);
-                    setFormData({ ...formData, role: val, systemRole: systemRole as any });
-                    setShowTeachingFields(!isNonTeaching);
+                    handleRoleChange(val);
                   }}
                   required
                   className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm h-12"
