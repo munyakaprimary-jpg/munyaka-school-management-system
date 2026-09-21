@@ -191,9 +191,51 @@ export const initialSeedData = {
       "status": "Active"
     }
   ],
-  "exams": [],
-  "libraryBooks": [],
-  "transactions": []
+  "exams": [
+    {
+      "id": "exam_1",
+      "title": "Term 1 End of Term Examination 2026",
+      "term": "Term 1",
+      "year": 2026,
+      "grade": "Grade 1",
+      "status": "Published"
+    }
+  ],
+  "libraryBooks": [
+    {
+      "id": "book_1",
+      "title": "Kiswahili Dictionary",
+      "author": "K.I.C.D.",
+      "category": "Languages",
+      "totalCopies": 10,
+      "availableCopies": 8,
+      "isbn": "9789966000011"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "tx_1",
+      "studentId": "1789826147758",
+      "studentName": "PETER MWANGI",
+      "admissionNumber": "MUN-G1-001-2026",
+      "amount": 5000,
+      "category": "Tuition Fee",
+      "method": "M-PESA",
+      "ref": "QHJ8923XYZ",
+      "date": "2026-01-15",
+      "status": "Completed"
+    }
+  ],
+  "ictAssets": [
+    {
+      "id": "ict_1",
+      "assetTag": "ICT-TAB-001",
+      "name": "Student Learning Tablet 1",
+      "category": "Tablet",
+      "status": "Available",
+      "serialNumber": "TAB9982341"
+    }
+  ],
 };
 
 (initialSeedData as any).learners = initialSeedData.students;
