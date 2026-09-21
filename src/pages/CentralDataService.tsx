@@ -28,8 +28,8 @@ export default function CentralDataPage() {
 
     setStats({
       learners: learners.length,
-      teaching: teaching.length > 0 ? teaching.length : 2,
-      nonTeaching: nonTeaching.length > 0 ? nonTeaching.length : 6
+      teaching: teaching.length,
+      nonTeaching: nonTeaching.length
     });
   }, []);
 
