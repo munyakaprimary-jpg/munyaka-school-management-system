@@ -467,11 +467,10 @@ const Login: React.FC = () => {
 
       // ── Offline authentication failed against master staff ledger ───────────────────
       console.error(
-        `[Login] Master staff ledger offline authentication failed — reason: ${offlineResult.reason || 'UNKNOWN'}, ` +
-        `message: ${offlineResult.message}`
+        `[Login] Master staff ledger offline authentication failed — error: ${offlineResult.error || 'UNKNOWN'}`
       );
 
-      const errorMessage = offlineResult.message || 'Invalid credentials or account not found in master staff ledger.';
+      const errorMessage = offlineResult.error || 'Invalid credentials or account not found in master staff ledger.';
 
       setStaffAuthError(errorMessage);
       showError(errorMessage);
