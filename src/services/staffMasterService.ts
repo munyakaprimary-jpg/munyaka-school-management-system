@@ -52,7 +52,11 @@ export const TEACHING_SYSTEM_ROLES: MasterSystemRole[] = [
 
 export const isNonTeachingDesignation = (role: string): boolean => {
   const r = (role || '').toLowerCase();
-  return r.includes('librarian') || r.includes('bursar') || r.includes('store') || r.includes('lab') || r.includes('ict') || r.includes('support');
+  // Ensure teaching and educational designations are NEVER flagged as non-teaching
+  if (r.includes('teacher') || r.includes('head') || r.includes('senior') || r.includes('educator') || r.includes('tutor') || r.includes('instructor')) {
+    return false;
+  }
+  return r.includes('librarian') || r.includes('bursar') || r.includes('store') || r.includes('accountant') || r.includes('secretary') || r.includes('support') || r.includes('nurse') || r.includes('security') || r.includes('catering');
 };
 
 export const isLibrarianDesignation = (role: string): boolean => {
@@ -61,9 +65,11 @@ export const isLibrarianDesignation = (role: string): boolean => {
 
 export const mapDesignationToSystemRole = (role: string): MasterSystemRole => {
   const r = (role || '').toLowerCase();
-  if (r.includes('head')) return 'head_teacher';
+  if (r.includes('head') && !r.includes('subject') && !r.includes('class')) return 'head_teacher';
+  if (r.includes('deputy')) return 'head_teacher';
   if (r.includes('senior')) return 'senior_teacher';
   if (r.includes('class')) return 'class_teacher';
+  if (r.includes('subject') || r.includes('teacher') || r.includes('educator') || r.includes('tutor')) return 'subject_teacher';
   if (r.includes('librarian')) return 'librarian';
   if (r.includes('bursar') || r.includes('account')) return 'bursar';
   if (r.includes('store')) return 'storekeeper';

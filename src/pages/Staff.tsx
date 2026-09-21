@@ -674,7 +674,7 @@ const Staff = () => {
                     )}
                   </p>
                 )}
-                {!showTeachingFields && (
+                {!showTeachingFields && !formData.role.toLowerCase().includes('teacher') && !formData.role.toLowerCase().includes('educator') && (
                   <p className="text-xs text-amber-600 font-medium flex items-center gap-1 mt-1">
                     <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
                     Non-teaching designation — teaching fields will be cleared on save
