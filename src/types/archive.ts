@@ -54,6 +54,11 @@ export interface TransferredLearnerArchive {
   certificateNumber: string;     // TRF-YYYY-####
   feeBalanceAtExit: number;
   isFeeCleared: boolean;
+  feesStatus?: string;
+  feesBalance?: string;
+  textbookStatus?: string;
+  textbookDetails?: string;
+  propertyNotes?: string;
 
   // ── Audit trail ────────────────────────────────────────────────────────
   audit: ArchiveAuditMetadata;

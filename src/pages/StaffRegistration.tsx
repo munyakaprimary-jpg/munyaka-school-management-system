@@ -93,7 +93,6 @@ const StaffRegistration = () => {
     try {
       initializeStaffMaster();
       addStaffMaster({
-        id: staffId,
         name: formData.fullName,
         email: formData.email,
         phone: formData.phone,
@@ -103,7 +102,7 @@ const StaffRegistration = () => {
         tempAccessCode: `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`,
         schoolId: 'munyaka-sc',
         status: 'Active'
-      });
+      } as any);
     } catch (err) {
       console.error('[StaffRegistration] staffMasterService sync failed:', err);
     }

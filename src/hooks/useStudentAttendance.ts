@@ -65,7 +65,7 @@ export const useStudentAttendance = (studentId: string | null) => {
       studentId,
       date,
       session,
-      status,
+      status: status as any,
       arrivalTime: session === 'morning' ? now : undefined,
       departureTime: session === 'afternoon' ? now : undefined,
       notes: session === 'morning' ? notes : undefined,

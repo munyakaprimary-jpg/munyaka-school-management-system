@@ -66,6 +66,7 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
       arrivalTime: now,
       verifiedLat: lat,
       verifiedLng: lng,
+      status: 'present' as any,
     };
 
     const result = await localData.teacherAttend.save(newRecord);
@@ -111,6 +112,7 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
       earlyDepartureReason: validation.valid ? reason : undefined,
       verifiedLat: lat,
       verifiedLng: lng,
+      status: 'present' as any,
     };
 
     const result = await localData.teacherAttend.save(updatedRecord);

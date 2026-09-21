@@ -985,13 +985,8 @@ const StudentProfile = () => {
                     console.error('[StudentProfile] Failed to mark learner as TRANSFERRED:', err);
                   }
       
-                  // 2. Update local React state so the profile view reflects the
-                  //    new status immediately.
-                  setActiveLearner((prev) =>
-                    prev && prev.id === studentId
-                      ? ({ ...prev, status: 'Transferred' as const } as ProfileLearner)
-                      : prev,
-                  );
+                  // Force refresh or reload state
+                  window.location.reload();
       
                   // 3. Refresh the certificate reference so the
                   //    "Download Clearance Certificate" button appears.

@@ -56,7 +56,7 @@ function toPreReg(record: MasterStaffRecord): PreRegisteredStaff {
     assignedStream: record.assignedStream,
     assignedSubjects: record.assignedSubjects,
     gender: record.gender,
-    salary: record.salary,
+    salary: Number(record.salary) || 0,
     joinedDate: record.joinedDate,
     emergencyContact: record.emergencyContact,
     emergencyName: record.emergencyName,
@@ -151,7 +151,7 @@ const StaffPreRegistration = () => {
         assignedStream: formData.assignedStream,
         assignedSubjects: formData.assignedSubjects || [],
         gender: formData.gender,
-        salary: formData.salary,
+        salary: Number(formData.salary) || 0,
         joinedDate: formData.joinedDate || new Date().toISOString().split('T')[0],
         emergencyContact: formData.emergencyContact,
         emergencyName: formData.emergencyName,
@@ -174,9 +174,8 @@ const StaffPreRegistration = () => {
 
   const handleDeleteStaff = useCallback((id: string) => {
     try {
-      const ok = deleteStaffMaster(id);
-      if (ok) {
-        showSuccess('Staff record deleted.');
+      deleteStaffMaster(id);
+      showSuccess('Staff record deleted.');
       }
     } catch (err) {
       showError('Failed to delete staff.');
@@ -186,9 +185,8 @@ const StaffPreRegistration = () => {
 
   const handleActivateStaff = useCallback((id: string) => {
     try {
-      const updated = activateStaffMaster(id);
-      if (updated) {
-        showSuccess('Staff activated successfully.');
+      activateStaffMaster(id);
+      showSuccess('Staff activated successfully.');
       }
     } catch (err) {
       showError('Failed to activate staff.');

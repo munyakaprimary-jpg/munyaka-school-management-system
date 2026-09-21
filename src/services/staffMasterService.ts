@@ -108,9 +108,24 @@ export const getStaffMetrics = (_schoolId?: string | null) => {
 
 export const getCategorizedMetrics = (_schoolId?: string | null) => {
   const staff = getStaffMaster();
-  const teaching = staff.filter(s => TEACHING_SYSTEM_ROLES.includes(s.systemRole)).length;
-  const nonTeaching = staff.length - teaching;
-  return { teaching, nonTeaching };
+  const teachingStaff = staff.filter(s => TEACHING_SYSTEM_ROLES.includes(s.systemRole));
+  const nonTeachingStaff = staff.filter(s => !TEACHING_SYSTEM_ROLES.includes(s.systemRole));
+  const teachingTotal = teachingStaff.length;
+  const teachingActive = teachingStaff.filter(s => s.status === 'Active').length;
+  const teachingPending = teachingTotal - teachingActive;
+  const nonTeachingTotal = nonTeachingStaff.length;
+  const nonTeachingActive = nonTeachingStaff.filter(s => s.status === 'Active').length;
+  const nonTeachingPending = nonTeachingTotal - nonTeachingActive;
+  return {
+    teachingTotal,
+    teachingActive,
+    teachingPending,
+    nonTeachingTotal,
+    nonTeachingActive,
+    nonTeachingPending,
+    teaching: teachingTotal,
+    nonTeaching: nonTeachingTotal,
+  };
 };
 
 export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' | 'tempAccessCode' | 'joinedDate'>): MasterStaffRecord => {

@@ -886,7 +886,7 @@ export default function Students() {
         <TransferInModal
           isOpen={isTransferInModalOpen}
           onClose={() => setIsTransferInModalOpen(false)}
-          onSuccess={() => {
+          onTransferInComplete={() => {
             setIsTransferInModalOpen(false);
             window.location.reload();
           }}

@@ -86,6 +86,8 @@ export interface CategorizedStaffMetrics {
   nonTeachingTotal: number;
   nonTeachingActive: number;
   nonTeachingPending: number;
+  teaching?: number;
+  nonTeaching?: number;
 }
 
 const STORAGE_KEYS = {

@@ -341,7 +341,7 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
 
       case "pdf_link":
         // Treat body as a URL or descriptive note
-        notes = [effectiveBody];
+        notes = effectiveBody;
         break;
     }
 
