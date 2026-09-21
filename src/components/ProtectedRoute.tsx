@@ -25,7 +25,18 @@ const ProtectedRoute = ({
   // Map roles for robust checking
   const isOwnerOrSuper = rawRole === 'owner' || rawRole === 'super_admin' || rawRole === 'super';
   const isAdmin = rawRole === 'admin' || rawRole === 'administrator';
-  const isTeacher = rawRole === 'teacher' || rawRole === 'head_teacher' || rawRole === 'subject_teacher';
+  const isTeacher = rawRole === 'teacher' ||
+                    rawRole === 'head_teacher' ||
+                    rawRole === 'subject_teacher' ||
+                    rawRole === 'class_teacher' ||
+                    rawRole === 'teacher_grade_1' ||
+                    rawRole === 'teacher_grade_2' ||
+                    rawRole === 'teacher_grade_3' ||
+                    rawRole === 'teacher_grade_4' ||
+                    rawRole === 'teacher_grade_5' ||
+                    rawRole === 'teacher_grade_6' ||
+                    rawRole === 'teacher_grade_7' ||
+                    rawRole === 'teacher_grade_8';
   const isNonTeaching = rawRole === 'librarian' || rawRole === 'ict_technician' || rawRole === 'bursar' || rawRole === 'support_staff' || rawRole === 'store_keeper' || rawRole === 'accountant';
 
   // CRITICAL SECURITY FIX: Non-teaching staff (like Librarian, ICT Technician) MUST NEVER access Owner Dashboard or Console
