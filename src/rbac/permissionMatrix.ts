@@ -1236,6 +1236,27 @@ export const ROLE_DASHBOARD_WIDGETS: Record<Role, WidgetKey[]> = {
     "todayLessonSchedule",
   ],
 
+  senior_teacher: [
+    "totalStudents",
+    "totalTeachers",
+    "todayAttendance",
+    "feesCollected",
+  ],
+
+  class_teacher: [
+    "myAssignedClassCount",
+    "myClassAttendanceRate",
+    "pendingMarks",
+    "todayLessonSchedule",
+  ],
+
+  subject_teacher: [
+    "myAssignedClassCount",
+    "myClassAttendanceRate",
+    "pendingMarks",
+    "todayLessonSchedule",
+  ],
+
   teacher: [
     "myAssignedClassCount",
     "myClassAttendanceRate",
@@ -1391,5 +1412,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   support_staff: "Support Staff",
   parent: "Parent",
   student: "Student",
+  owner: "Owner",
+};
   owner: "Owner",
 };
