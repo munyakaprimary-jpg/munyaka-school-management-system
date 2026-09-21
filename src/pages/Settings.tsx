@@ -499,12 +499,20 @@ export default function Settings() {
                       <p className="text-xs text-red-700">Wipe local storage and IndexedDB caches for fresh seed re-initialization.</p>
                     </div>
                     <Button
+                      type="button"
                       variant="destructive"
-                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white"
-                      onClick={() => {
-                        setResetAdminPassword('');
-                        setResetAuthError('');
-                        setIsResetAuthOpen(true);
+                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer z-10 relative"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (window.confirm("WARNING: Are you sure you want to wipe local storage and reset database caches? This action cannot be undone.")) {
+                          clearAllStorage();
+                          UnifiedDataStorage.clearAll();
+                          showSuccess('Database successfully reset and re-initializing...');
+                          setTimeout(() => {
+                            window.location.reload();
+                          }, 800);
+                        }
                       }}
                     >
                       Clear & Reset
