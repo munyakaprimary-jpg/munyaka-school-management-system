@@ -285,10 +285,10 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
 
     // Determine difficulty from grade
     const difficulty: ContentItem["difficulty"] =
-      gradeNum <= 3 ? "beginner" : gradeNum <= 6 ? "intermediate" : "advanced";
+      gradeNum <= 3 ? "Easy" : gradeNum <= 6 ? "Medium" : "Hard";
 
     // Parse body based on content type
-    let notes: string[] = [];
+    let notes: string | string[] = "";
     let memoryVerses: MemoryVerse[] | undefined;
     let revisionQuestions: RevisionQuestion[] | undefined;
 
@@ -308,11 +308,14 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
           .split("\n")
           .map((l) => l.trim())
           .filter((l) => l.length > 0)
-          .map((l) => {
+          .map((l, idx) => {
             const parts = l.split("|").map((p) => p.trim());
+            const textVal = parts.slice(1).join(" | ") || parts[0] || "";
             return {
+              id: `mv-${timestamp}-${idx}`,
               reference: parts[0] || "Scripture",
-              text: parts.slice(1).join(" | ") || parts[0] || "",
+              verse: textVal,
+              text: textVal,
             };
           });
         break;
@@ -324,9 +327,10 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
           .split("\n")
           .map((l) => l.trim())
           .filter((l) => l.length > 0)
-          .map((l) => {
+          .map((l, idx) => {
             const parts = l.split("|").map((p) => p.trim());
             return {
+              id: `rq-${timestamp}-${idx}`,
               question: parts[0] || "",
               answer: parts[1] || "",
               rubric: parts[2] || undefined,

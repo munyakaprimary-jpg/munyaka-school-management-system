@@ -55,6 +55,7 @@ export interface MemoryVerse {
   id: string;
   reference: string;
   verse: string;
+  text?: string;
 }
 
 export interface RevisionQuestion {
@@ -62,6 +63,7 @@ export interface RevisionQuestion {
   question: string;
   options?: string[];
   answer: string;
+  rubric?: string;
 }
 
 export type AssessmentType = string;

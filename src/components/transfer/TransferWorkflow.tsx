@@ -568,8 +568,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           feeBalanceAtExit: student.feeBalance ?? 0,
           isFeeCleared: (student.feeBalance ?? 0) <= 0,
           // Central Storage Sync clearance fields as requested
-          feesStatus: transferData.feesStatus || 'Fully Cleared',
-          feesBalance: transferData.feesBalance || 'KES 0',
+                    feesStatus: (transferData.feesStatus || 'Fully Cleared') as any,
+                    feesBalance: transferData.feesBalance || 'KES 0',
           textbookStatus: transferData.textbookStatus || 'Accounted',
           textbookDetails: transferData.textbookDetails || '',
           propertyNotes: transferData.propertyNotes || '',

@@ -57,6 +57,23 @@ export const CentralDataService = {
     };
     return JSON.stringify(backup, null, 2);
   },
+
+  isTermLocked: (termKey: string): boolean => {
+    const locked = UnifiedDataStorage.get<Record<string, boolean>>('munyaka_locked_terms_map', {});
+    if (locked[termKey]) return true;
+    const legacy = UnifiedDataStorage.get<string[]>('munyaka_archived_terms', []);
+    return legacy.includes(termKey);
+  },
+
+  getMarks: (examId?: string): any => {
+    const records = UnifiedDataStorage.get<any>(STORAGE_KEYS.MARKS, {});
+    if (examId) return records[examId] || {};
+    return records;
+  },
+
+  saveMarks: (records: any): void => {
+    UnifiedDataStorage.set(STORAGE_KEYS.MARKS, records);
+  },
   
   restoreSnapshot: async (snapshot: string) => {
     try {

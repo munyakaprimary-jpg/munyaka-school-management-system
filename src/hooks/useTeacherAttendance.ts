@@ -10,8 +10,11 @@ export interface TeacherAttendanceRecord {
   teacherId: string;
   date: string;
   status: 'present' | 'absent' | 'late';
-  checkInTime?: string;
-  checkOutTime?: string;
+  arrivalTime?: string;
+  departureTime?: string;
+  earlyDepartureReason?: string;
+  verifiedLat?: number;
+  verifiedLng?: number;
 }
 
 export const useTeacherAttendance = (currentLocation: { lat: number; lng: number } | null) => {
@@ -67,7 +70,7 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
 
     const result = await localData.teacherAttend.save(newRecord);
 
-    if (result.ok) {
+    if (result) {
       setRecord({
         student_id: '',
         teacher_id: user.id,
@@ -112,7 +115,7 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
 
     const result = await localData.teacherAttend.save(updatedRecord);
 
-    if (result.ok) {
+    if (result) {
       setRecord(prev => prev ? {
         ...prev,
         departure_time: now,
