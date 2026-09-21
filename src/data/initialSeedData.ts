@@ -1,4 +1,21 @@
 export const initialSeedData = {
+  "grades": [
+    {
+      "id": "grade_1",
+      "name": "Grade 1",
+      "streams": ["North", "South", "Green"]
+    },
+    {
+      "id": "grade_2",
+      "name": "Grade 2",
+      "streams": ["Blue", "Red", "East"]
+    },
+    {
+      "id": "grade_6",
+      "name": "Grade 6",
+      "streams": ["BLUE", "GREEN", "RED"]
+    }
+  ],
   "assessmentScores": {
     "Grade 1": {
       "Mathematics": [
