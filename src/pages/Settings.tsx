@@ -491,18 +491,20 @@ export default function Settings() {
                   </div>
 
                   {/* Reset Database */}
-                  <div className="p-5 border border-red-200 bg-red-50/40 rounded-2xl flex flex-col justify-between space-y-3">
+                  <div className="p-5 border border-red-200 bg-red-50/40 rounded-2xl flex flex-col justify-between space-y-3" style={{ pointerEvents: 'auto' }}>
                     <div>
                       <div className="flex items-center gap-2 text-red-600 font-bold mb-1">
                         <Trash2 size={18} /> Reset Database
                       </div>
                       <p className="text-xs text-red-700">Wipe local storage and IndexedDB caches for fresh seed re-initialization.</p>
                     </div>
-                    <Button
+                    <button
                       type="button"
-                      variant="destructive"
-                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white cursor-pointer z-50 relative pointer-events-auto shadow-md hover:shadow-lg"
-                      onClick={() => {
+                      style={{ pointerEvents: 'auto', zIndex: 9999, position: 'relative', cursor: 'pointer' }}
+                      className="w-full py-3 px-4 rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white text-sm shadow-md transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         const password = window.prompt("Enter Admin Password to reset database:");
                         if (password === null) return; // Cancelled
                         
@@ -514,10 +516,8 @@ export default function Settings() {
                           if (window.confirm("WARNING: This will wipe all local storage and reset database caches. Proceed?")) {
                             clearAllStorage();
                             UnifiedDataStorage.clearAll();
-                            showSuccess('Database successfully reset and re-initializing...');
-                            setTimeout(() => {
-                              window.location.reload();
-                            }, 800);
+                            alert("Database successfully reset and re-initializing...");
+                            window.location.reload();
                           }
                         } else {
                           window.alert("Incorrect admin password.");
@@ -525,7 +525,7 @@ export default function Settings() {
                       }}
                     >
                       Clear & Reset
-                    </Button>
+                    </button>
                   </div>
                 </div>
               </div>
