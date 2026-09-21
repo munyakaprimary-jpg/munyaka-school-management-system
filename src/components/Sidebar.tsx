@@ -189,19 +189,25 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       rawRole.includes('INSTRUCTOR') ||
       rawRole === 'SUBJECT TEACHER' ||
       rawRole === 'CLASS TEACHER' ||
+      rawRole === 'SENIOR TEACHER' ||
+      rawRole === 'HEAD TEACHER' ||
       isTeacherRole(role, staffCategory, specialties);
 
     if (isTeacher) {
       return menuItems.filter(item => {
-        if (item?.path === '/study-corner') return true;
         if (item?.global) return true;
         const itemRoles = (item?.roles || []).map((r: string) => String(r).toUpperCase());
         return (
           itemRoles.includes('TEACHER') ||
           itemRoles.includes('CLASS_TEACHER') ||
+          itemRoles.includes('CLASS TEACHER') ||
           itemRoles.includes('SUBJECT_TEACHER') ||
+          itemRoles.includes('SUBJECT TEACHER') ||
           itemRoles.includes('HEAD_TEACHER') ||
-          itemRoles.includes('TEACHING')
+          itemRoles.includes('HEAD TEACHER') ||
+          itemRoles.includes('SENIOR TEACHER') ||
+          itemRoles.includes('TEACHING') ||
+          itemRoles.includes('ADMIN')
         );
       }).map(item => {
         if (item?.path === '/') {
