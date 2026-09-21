@@ -493,7 +493,7 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
                   >
                     <option value="">Select subject…</option>
                     {strandCategories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
                     ))}
                   </select>
                 )}
