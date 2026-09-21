@@ -432,6 +432,35 @@ export default function Students() {
       return;
     }
 
+    // Sanitize string helper: replace spaces with underscores and remove special characters
+    const sanitizeName = (str: string) => {
+      if (!str) return "";
+      return str
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-zA-Z0-9_]/g, "");
+    };
+
+    const isAllGrades = !selectedGrade || selectedGrade.toLowerCase() === "all" || selectedGrade.toLowerCase() === "all grades";
+    const isAllStreams = !selectedStream || selectedStream.toLowerCase() === "all" || selectedStream.toLowerCase() === "all streams" || selectedStream.toLowerCase() === "all stream";
+
+    let gradePart = "All_Grades";
+    if (!isAllGrades) {
+      const sanitizedG = sanitizeName(selectedGrade);
+      gradePart = sanitizedG ? (sanitizedG.toLowerCase().startsWith("grade") ? sanitizedG : `Grade_${sanitizedG}`) : "All_Grades";
+    }
+
+    let streamPart = "";
+    if (!isAllStreams) {
+      const sanitizedS = sanitizeName(selectedStream);
+      if (sanitizedS) {
+        streamPart = `_${sanitizedS}`;
+      }
+    }
+
+    const todayDate = new Date().toISOString().slice(0, 10);
+    const downloadFilename = `Munyaka_Learners_${gradePart}${streamPart}_${todayDate}.csv`;
+
     // CSV Headers
     const headers = ["Admission No", "Assessment No", "Full Name", "Grade", "Stream", "Gender", "Parent Name", "Phone Number"];
     
@@ -455,7 +484,7 @@ export default function Students() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Munyaka_Learners_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", downloadFilename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
