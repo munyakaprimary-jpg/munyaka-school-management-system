@@ -64,7 +64,7 @@ const ProtectedRoute = ({
       if (ar === rawRole) return true;
       if (ar === 'owner' && isOwnerOrSuper) return true;
       if (ar === 'admin' && (isAdmin || isOwnerOrSuper)) return true;
-      if (ar === 'teacher' && isTeacher) return true;
+      if (ar === 'teacher' && (isTeacher || isAdmin || isOwnerOrSuper)) return true;
       return false;
     });
 
