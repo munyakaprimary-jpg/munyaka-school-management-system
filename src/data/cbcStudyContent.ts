@@ -1,4 +1,7 @@
-export type SC = string;
+export interface SC {
+  id: string;
+  name: string;
+}
 
 export interface Att {
   id: string;
@@ -33,7 +36,7 @@ export interface CI {
 }
 
 export type ContentItem = CI;
-export type StrandCategory = SC;
+export type StrandCategory = string;
 export type Attachment = Att;
 
 export const strandCategories: SC[] = [

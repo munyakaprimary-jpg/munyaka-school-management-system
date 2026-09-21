@@ -4,6 +4,7 @@ import {
   gradeLevels,
   type ContentItem,
   type StrandCategory,
+  type SC,
 } from "@/data/cbcStudyContent";
 import { initialSeedData } from "@/data/initialSeedData";
 import {
