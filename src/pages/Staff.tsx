@@ -642,15 +642,27 @@ const Staff = () => {
                     const val = e.target.value;
                     let systemRole = 'subject_teacher';
                     const lower = val.toLowerCase();
-                    if (lower.includes('head')) systemRole = 'head_teacher';
-                    else if (lower.includes('deputy')) systemRole = 'deputy_head';
-                    else if (lower.includes('class')) systemRole = 'class_teacher';
-                    else if (lower.includes('senior')) systemRole = 'senior_teacher';
-                    else if (lower.includes('bursar') || lower.includes('account')) systemRole = 'bursar';
-                    else if (lower.includes('secret')) systemRole = 'secretary';
-                    else if (lower.includes('librar')) systemRole = 'librarian';
-                    else if (lower.includes('ict')) systemRole = 'ict_technician';
-                    else if (lower.includes('cook') || lower.includes('support') || lower.includes('subordinate')) systemRole = 'support_staff';
+                    if (lower.includes('class')) {
+                      systemRole = 'class_teacher';
+                    } else if (lower.includes('head')) {
+                      systemRole = 'head_teacher';
+                    } else if (lower.includes('deputy')) {
+                      systemRole = 'head_teacher';
+                    } else if (lower.includes('senior')) {
+                      systemRole = 'senior_teacher';
+                    } else if (lower.includes('bursar') || lower.includes('account')) {
+                      systemRole = 'bursar';
+                    } else if (lower.includes('librar')) {
+                      systemRole = 'librarian';
+                    } else if (lower.includes('ict')) {
+                      systemRole = 'ict_technician';
+                    } else if (lower.includes('secret')) {
+                      systemRole = 'secretary';
+                    } else if (lower.includes('cook') || lower.includes('support') || lower.includes('subordinate')) {
+                      systemRole = 'support_staff';
+                    } else {
+                      systemRole = 'subject_teacher';
+                    }
                     setFormData({ ...formData, role: val, systemRole: systemRole as any });
                   }}
                   required
