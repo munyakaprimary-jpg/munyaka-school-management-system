@@ -640,30 +640,10 @@ const Staff = () => {
                   value={formData.role}
                   onChange={(e) => {
                     const val = e.target.value;
-                    let systemRole = 'subject_teacher';
-                    const lower = val.toLowerCase();
-                    if (lower.includes('class')) {
-                      systemRole = 'class_teacher';
-                    } else if (lower.includes('head')) {
-                      systemRole = 'head_teacher';
-                    } else if (lower.includes('deputy')) {
-                      systemRole = 'head_teacher';
-                    } else if (lower.includes('senior')) {
-                      systemRole = 'senior_teacher';
-                    } else if (lower.includes('bursar') || lower.includes('account')) {
-                      systemRole = 'bursar';
-                    } else if (lower.includes('librar')) {
-                      systemRole = 'librarian';
-                    } else if (lower.includes('ict')) {
-                      systemRole = 'ict_technician';
-                    } else if (lower.includes('secret')) {
-                      systemRole = 'secretary';
-                    } else if (lower.includes('cook') || lower.includes('support') || lower.includes('subordinate')) {
-                      systemRole = 'support_staff';
-                    } else {
-                      systemRole = 'subject_teacher';
-                    }
+                    const systemRole = mapDesignationToSystemRole(val);
+                    const isNonTeaching = isNonTeachingDesignation(val);
                     setFormData({ ...formData, role: val, systemRole: systemRole as any });
+                    setShowTeachingFields(!isNonTeaching);
                   }}
                   required
                   className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm h-12"
