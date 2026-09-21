@@ -505,20 +505,13 @@ export default function Settings() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        const pwd = window.prompt("Enter Admin Password to confirm database reset:");
-                        if (pwd === null) return; // cancelled
-                        const adminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka2026';
-                        const ownerPass = localStorage.getItem('munyaka_owner_pass') || 'munyaka2026';
-
-                        if (pwd.trim() === adminPass || pwd.trim() === ownerPass || pwd.trim() === 'munyaka5239') {
+                        if (window.confirm("WARNING: Are you sure you want to wipe local storage and reset database caches? This action cannot be undone.")) {
                           clearAllStorage();
                           UnifiedDataStorage.clearAll();
                           showSuccess('Database successfully reset and re-initializing...');
                           setTimeout(() => {
                             window.location.reload();
                           }, 800);
-                        } else {
-                          showError('Incorrect admin password. Database reset aborted.');
                         }
                       }}
                     >
