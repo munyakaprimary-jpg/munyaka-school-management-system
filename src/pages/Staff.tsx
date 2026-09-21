@@ -638,19 +638,33 @@ const Staff = () => {
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation *</Label>
                 <select
                   value={formData.role}
-                  onChange={(e) => handleRoleChange(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    let systemRole = 'subject_teacher';
+                    const lower = val.toLowerCase();
+                    if (lower.includes('head')) systemRole = 'head_teacher';
+                    else if (lower.includes('deputy')) systemRole = 'deputy_head';
+                    else if (lower.includes('class')) systemRole = 'class_teacher';
+                    else if (lower.includes('senior')) systemRole = 'senior_teacher';
+                    else if (lower.includes('bursar') || lower.includes('account')) systemRole = 'bursar';
+                    else if (lower.includes('secret')) systemRole = 'secretary';
+                    else if (lower.includes('librar')) systemRole = 'librarian';
+                    else if (lower.includes('ict')) systemRole = 'ict_technician';
+                    else if (lower.includes('cook') || lower.includes('support') || lower.includes('subordinate')) systemRole = 'support_staff';
+                    setFormData({ ...formData, role: val, systemRole: systemRole as any });
+                  }}
                   required
                   className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm h-12"
                 >
-                  <option value="SUBJECT TEACHER">SUBJECT TEACHER</option>
-                  <option value="CLASS TEACHER">CLASS TEACHER</option>
-                  <option value="ICT TEACHER">ICT TEACHER</option>
-                  <option value="ICT TECHNICIAN">ICT TECHNICIAN</option>
-                  <option value="LIBRARIAN">LIBRARIAN</option>
-                  <option value="LIBRARY TEACHER">LIBRARY TEACHER</option>
-                  <option value="ADMINISTRATOR">ADMINISTRATOR</option>
-                  <option value="DEPUTY HEAD TEACHER">DEPUTY HEAD TEACHER</option>
-                  <option value="HEAD TEACHER">HEAD TEACHER</option>
+                  <option value="Subject Teacher">Subject Teacher</option>
+                  <option value="Class Teacher">Class Teacher</option>
+                  <option value="Senior Teacher">Senior Teacher</option>
+                  <option value="Head Teacher">Head Teacher</option>
+                  <option value="Deputy Head Teacher">Deputy Head Teacher</option>
+                  <option value="Bursar">Bursar</option>
+                  <option value="Librarian">Librarian</option>
+                  <option value="ICT Technician">ICT Technician</option>
+                  <option value="Support Staff">Support Staff</option>
                 </select>
                 {formData.systemRole && (
                   <p className="text-xs text-slate-500 font-medium">
