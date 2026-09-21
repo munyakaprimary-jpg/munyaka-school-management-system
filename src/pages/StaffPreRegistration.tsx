@@ -160,7 +160,7 @@ const StaffPreRegistration = () => {
         status: 'Pre-Registered',
         datePreRegistered: formData.datePreRegistered || new Date().toISOString().split('T')[0],
         profileComplete: false,
-      });
+      } as any);
       // staffMasterService already called broadcast() — no extra notify needed
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('munyaka_data_changed'));

@@ -296,7 +296,7 @@ let _adapter: StorageAdapter | null = null;
 async function getAdapter(): Promise<StorageAdapter> {
   if (_adapter) return _adapter;
 
-  if (Capacitor.isNative?.()) {
+  if ((Capacitor as any).isNative?.()) {
     _adapter = new CapacitorPreferencesAdapter();
   } else {
     _adapter = new WebStorageAdapter();
@@ -874,7 +874,7 @@ export const UnifiedDataService = {
 
   /** Get approximate storage size for a single key, in bytes. */
   getKeySize: async (key: string): Promise<number> => {
-    if (Capacitor.isNative?.()) {
+    if ((Capacitor as any).isNative?.()) {
       const adapter = await getAdapter();
       const all = await adapter.getAll?.();
       if (all && key in all) {
@@ -900,7 +900,7 @@ export const UnifiedDataService = {
 
 // ─── Re-export types ───────────────────────────────────────────
 
-export type { StorageAdapter, StorageInfo, DatabaseBackup, ImportResult, HydrationReport };
+export type { StorageAdapter };
 
 // ─── Convenience default export ───────────────────────────────────────
 

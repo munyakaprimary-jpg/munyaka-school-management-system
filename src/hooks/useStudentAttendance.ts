@@ -8,7 +8,13 @@ export interface StudentAttendanceRecord {
   id?: string;
   studentId: string;
   date: string;
-  status: 'present' | 'absent' | 'late';
+  session?: string;
+  status: 'present' | 'absent' | 'late' | 'Present' | 'Absent' | 'Late' | 'Excused';
+  arrivalTime?: string;
+  departureTime?: string;
+  notes?: string;
+  verifiedLat?: number;
+  verifiedLng?: number;
   term?: string;
   year?: string;
 }
@@ -64,7 +70,6 @@ export const useStudentAttendance = (studentId: string | null) => {
       id: `${studentId}-${date}-${session}`,
       studentId,
       date,
-      session,
       status: status as any,
       arrivalTime: session === 'morning' ? now : undefined,
       departureTime: session === 'afternoon' ? now : undefined,

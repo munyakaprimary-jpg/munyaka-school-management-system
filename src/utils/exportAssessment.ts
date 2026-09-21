@@ -102,7 +102,8 @@ export function buildAssessmentHtml(item: ContentItem): string {
   const subStrand = item.subStrand?.trim() || item.strand;
   const timestamp = formatTimestamp();
 
-  const notesList = (item.notes ?? [])
+  const notesArr = Array.isArray(item.notes) ? item.notes : (item.notes ? [item.notes] : []);
+  const notesList = notesArr
     .map((n) => `<li>${escapeHtml(n)}</li>`)
     .join("\n");
 
@@ -369,11 +370,12 @@ export function buildAssessmentText(item: ContentItem): string {
   lines.push("suggested answers. This is an offline CBC study resource.");
   lines.push("");
 
-  if (item.notes?.length) {
+  const notesArr = Array.isArray(item.notes) ? item.notes : (item.notes ? [item.notes] : []);
+  if (notesArr.length) {
     lines.push("-".repeat(72));
     lines.push("KEY LEARNING NOTES");
     lines.push("-".repeat(72));
-    item.notes.forEach((n, i) => lines.push(`  ${i + 1}. ${n}`));
+    notesArr.forEach((n, i) => lines.push(`  ${i + 1}. ${n}`));
     lines.push("");
   }
 
