@@ -689,8 +689,21 @@ const Staff = () => {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Email</Label>
-                  <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="email@school.ac.ke" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+                  <div className="flex rounded-xl overflow-hidden bg-slate-50 border-none shadow-sm h-12">
+                    <Input
+                      type="text"
+                      value={formData.email.includes('@') ? formData.email.split('@')[0] : formData.email}
+                      onChange={e => {
+                        const prefix = e.target.value.trim();
+                        setFormData({ ...formData, email: prefix ? `${prefix}@munyaka.sc.ke` : '' });
+                      }}
+                      placeholder="e.g. j.ndiki"
+                      className="flex-1 bg-transparent border-none font-bold h-12 focus-visible:ring-0 px-4"
+                    />
+                    <div className="flex items-center px-4 bg-slate-200/70 text-slate-600 font-bold text-xs select-none border-l border-slate-300">
+                      @munyaka.sc.ke
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">
