@@ -10,18 +10,24 @@ import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
 import SecurityAuthTab from '@/components/settings/SecurityAuthTab';
-import { 
-  Building, 
-  Lock, 
-  Database, 
-  Save, 
+import {
+  Building,
+  Lock,
+  Database,
+  Save,
   RefreshCw,
   Server,
   Shield,
   Users,
   Check,
-  X
+  X,
+  Download,
+  Upload,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
+import { exportAllData, parseAndImportBackup, clearAllData } from '@/utils/storage';
+import { UnifiedDataStorage } from '@/services/unifiedDataStorage';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
 const RBAC_STORAGE_KEY = 'munyaka_rbac_permissions';
@@ -373,7 +379,7 @@ export default function Settings() {
               <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
                 <Database className="text-indigo-600" size={22} /> Database & Backups
               </CardTitle>
-              <CardDescription>Permanent storage persistence status and cloud backup configurations.</CardDescription>
+              <CardDescription>Permanent storage persistence status, backup creation, and database recovery.</CardDescription>
             </CardHeader>
             <CardContent className="px-0 pt-6 space-y-6">
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border">
@@ -401,6 +407,110 @@ export default function Settings() {
                   </div>
                 </div>
                 <span className="bg-emerald-600 text-white font-bold text-xs px-3 py-1 rounded-full">Healthy</span>
+              </div>
+
+              {/* Data Operations */}
+              <div className="pt-4 border-t space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">Manual Data Management</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Backup Export */}
+                  <div className="p-5 border rounded-2xl bg-white shadow-sm flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex items-center gap-2 text-indigo-600 font-bold mb-1">
+                        <Download size={18} /> Export Backup
+                      </div>
+                      <p className="text-xs text-muted-foreground">Download a complete JSON snapshot of learners, staff, marks, and settings.</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold"
+                      onClick={() => {
+                        try {
+                          const backup = exportAllData();
+                          const jsonStr = JSON.stringify(backup, null, 2);
+                          const blob = new Blob([jsonStr], { type: 'application/json' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `munyaka_system_backup_${new Date().toISOString().slice(0, 10)}.json`;
+                          a.click();
+                          URL.revokeObjectURL(a.href);
+                          showSuccess('Backup exported successfully!');
+                        } catch {
+                          showError('Failed to generate database backup.');
+                        }
+                      }}
+                    >
+                      Backup Now
+                    </Button>
+                  </div>
+
+                  {/* Restore / Import */}
+                  <div className="p-5 border rounded-2xl bg-white shadow-sm flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex items-center gap-2 text-emerald-600 font-bold mb-1">
+                        <Upload size={18} /> Restore Data
+                      </div>
+                      <p className="text-xs text-muted-foreground">Restore database state from an existing JSON backup archive.</p>
+                    </div>
+                    <label className="w-full">
+                      <input
+                        type="file"
+                        accept=".json"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            try {
+                              const content = event.target?.result as string;
+                              const res = parseAndImportBackup(content);
+                              if (res.success) {
+                                showSuccess(`Restored successfully! Reloading...`);
+                                setTimeout(() => window.location.reload(), 1000);
+                              } else {
+                                showError(res.errors.join('; ') || 'Invalid backup file format.');
+                              }
+                            } catch {
+                              showError('Error reading backup file.');
+                            }
+                          };
+                          reader.readAsText(file);
+                        }}
+                      />
+                      <Button asChild variant="outline" className="w-full rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold cursor-pointer">
+                        <span>Upload & Restore</span>
+                      </Button>
+                    </label>
+                  </div>
+
+                  {/* Reset Database */}
+                  <div className="p-5 border border-red-200 bg-red-50/40 rounded-2xl flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex items-center gap-2 text-red-600 font-bold mb-1">
+                        <Trash2 size={18} /> Reset Database
+                      </div>
+                      <p className="text-xs text-red-700">Wipe local storage and IndexedDB caches for fresh seed re-initialization.</p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      className="w-full rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white"
+                      onClick={() => {
+                        if (window.confirm("WARNING: Are you sure you want to completely reset the local database? All current offline data will be cleared and reset to fresh defaults.")) {
+                          clearAllData();
+                          UnifiedDataStorage.clearAll();
+                          showSuccess('Database wiped. Re-initializing application...');
+                          setTimeout(() => {
+                            window.location.reload();
+                          }, 800);
+                        }
+                      }}
+                    >
+                      Clear & Reset
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
