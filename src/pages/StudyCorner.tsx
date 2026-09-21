@@ -808,18 +808,18 @@ function FilterPills({
   selected,
   onToggle,
 }: {
-  categories: StrandCategory[];
+  categories: SC[];
   selected: StrandCategory[];
-  onToggle: (c: StrandCategory) => void;
+  onToggle: (c: SC) => void;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
       {categories.map((cat) => {
-        const active = selected.includes(cat);
-        const meta = getStrandMeta(cat);
+        const active = selected.includes(cat.name);
+        const meta = getStrandMeta(cat.name as StrandCategory);
         return (
           <button
-            key={cat}
+            key={cat.id}
             onClick={() => onToggle(cat)}
             className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
               active
@@ -828,7 +828,7 @@ function FilterPills({
             }`}
           >
             {meta.icon}
-            {cat}
+            {cat.name}
           </button>
         );
       })}
@@ -1076,11 +1076,12 @@ export default function StudyCorner() {
     );
   }, []);
 
-  const toggleStrand = useCallback((strand: StrandCategory) => {
+  const toggleStrand = useCallback((strand: SC) => {
+    const strandName = strand.name;
     setSelectedStrands((prev) =>
-      prev.includes(strand)
-        ? prev.filter((s) => s !== strand)
-        : [...prev, strand]
+      prev.includes(strandName)
+        ? prev.filter((s) => s !== strandName)
+        : [...prev, strandName]
     );
   }, []);
 
@@ -1161,18 +1162,18 @@ export default function StudyCorner() {
                 All
               </button>
               {strandCategories.map((cat) => {
-                const meta = getStrandMeta(cat);
-                const active = selectedStrands.length === 1 && selectedStrands[0] === cat;
+                const meta = getStrandMeta(cat.name as StrandCategory);
+                const active = selectedStrands.length === 1 && selectedStrands[0] === cat.name;
                 // Use itemCategory so that assessment items (whose strand may differ
                 // from "Assessments & Quizzes") are counted under the correct tab.
                 const count = allContent.filter(
-                  (i) => (cat === "Assessments & Quizzes" ? isAssessmentItem(i) : i.strand === cat)
+                  (i) => (cat.name === "Assessments & Quizzes" ? isAssessmentItem(i) : i.strand === cat.name)
                 ).length;
                 return (
                   <button
-                    key={typeof cat === 'string' ? cat : (cat.id || cat.name)}
+                    key={cat.id}
                     onClick={() =>
-                      setSelectedStrands(active ? [] : [cat])
+                      setSelectedStrands(active ? [] : [cat.name])
                     }
                     className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap ${
                       active
@@ -1181,7 +1182,7 @@ export default function StudyCorner() {
                     }`}
                   >
                     {meta.icon}
-                    {typeof cat === 'string' ? cat : (cat.name || cat.id)}
+                    {cat.name}
                     {count > 0 && (
                       <span
                         className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-full ${
