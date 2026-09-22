@@ -854,8 +854,8 @@ export default function StudyCorner() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [preSelectedStrand, setPreSelectedStrand] = useState<StrandCategory | undefined>(undefined);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
+  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
 
   // Custom materials loaded from localStorage.
   // Listen to both:
