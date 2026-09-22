@@ -176,18 +176,19 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     }
 
     // ── Flexible Teacher / Subject Teacher / Head Teacher Helper check ─────
-    const rawRole = (user?.role || '').toUpperCase().trim();
+    const cleanRole = String(user?.role || '').toLowerCase().trim();
     const isTeacher =
-      rawRole.includes('TEACHER') ||
-      rawRole.includes('INSTRUCTOR') ||
-      rawRole === 'SUBJECT TEACHER' ||
-      rawRole === 'CLASS TEACHER' ||
-      rawRole === 'SENIOR TEACHER' ||
-      rawRole === 'HEAD TEACHER' ||
+      cleanRole.includes('teacher') ||
+      cleanRole.includes('instructor') ||
+      cleanRole === 'class teacher' ||
+      cleanRole === 'subject teacher' ||
+      cleanRole === 'senior teacher' ||
+      cleanRole === 'head teacher' ||
+      ['admin', 'head teacher', 'class teacher', 'teacher'].includes(cleanRole) ||
       isTeacherRole(role, staffCategory, specialties);
 
-    if (isTeacher) {
-      // Teachers and Class Teachers get a comprehensive teaching & oversight menu
+    if (isTeacher || isAdminRole) {
+      // Teachers, Class Teachers, and Admins get a comprehensive standard operational menu
       const teacherAllowedPaths = [
         '/',
         '/games',
@@ -216,7 +217,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       const items = menuItems.filter(item => teacherAllowedPaths.includes(item.path));
       return items.map(item => {
         if (item?.path === '/') {
-          return { ...item, label: "Teacher's Dashboard" };
+          return { ...item, label: isAdminRole ? 'Admin Dashboard' : "Teacher's Dashboard" };
         }
         return item;
       });
