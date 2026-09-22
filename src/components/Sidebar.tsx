@@ -168,6 +168,22 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       if (item.path === '/') return true;
       if (item.global) return true;
 
+      const isAdminOrOwner = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner';
+      
+      // CRITICAL FIX: Hard-filter out Central Data, Grades & Streams, and Staff Directory for non-admin accounts
+      if (!isAdminOrOwner) {
+        if (
+          item.label.includes("Central Data") ||
+          item.label.includes("Grades & Streams") ||
+          item.label.includes("Staff Directory") ||
+          item.path === '/central-data' ||
+          item.path === '/grades' ||
+          item.path === '/staff'
+        ) {
+          return false;
+        }
+      }
+
       // STRICTLY HIDE ADMIN-ONLY MENUS FROM TEACHERS:
       // Central Data & APK (/central-data), Grades & Streams (/grades), Staff Directory (/staff)
       const isTeacherVariant = isTeacherRole(role, userObj.staffCategory, userObj.specialties) || 
