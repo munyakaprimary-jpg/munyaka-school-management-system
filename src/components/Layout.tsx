@@ -129,19 +129,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // based on the user's session role.  Only one Dashboard entry exists.
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
-    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
     { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin', 'head_teacher'] },
-    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
+    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
                     { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
         { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
-        { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
+        { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'] },
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
@@ -202,6 +199,28 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   
         // Global items are visible to every authenticated user.
         if (item.global) return true;
+
+        // Check if user is a teacher or non-admin staff
+        const isTeacherVariant = roleLower.includes('teacher') || roleLower.includes('educator') || roleLower === 'class_teacher' || roleLower === 'subject_teacher' || roleLower === 'senior_teacher';
+
+        if (isTeacherVariant) {
+          const forbiddenTeacherPaths = [
+            '/central-data', '/grades', '/staff', '/learning-areas', '/exam-types',
+            '/staff/pre-registration', '/system-management', '/staff/access',
+            '/transferred-archive', '/promote-students', '/admin/control-center',
+            '/dev/tenants', '/payment-management', '/staff/attendance-monitor'
+          ];
+          if (
+            forbiddenTeacherPaths.includes(item.path) ||
+            item.label.includes("Central Data") ||
+            item.label.includes("Grades & Streams") ||
+            item.label.includes("Staff Directory") ||
+            item.label.includes("Learning Areas") ||
+            item.label.includes("Exam Types")
+          ) {
+            return false;
+          }
+        }
   
         // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item
         // EXCEPT owner-only items (e.g. Payment & Subscriptions).
