@@ -423,7 +423,14 @@ export default function PaymentManagement() {
               {/* Global App Lock Toggle Control */}
               {(() => {
                 const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
-                const isGloballyLocked = localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
+                const [isGloballyLocked, setIsGloballyLocked] = useState<boolean>(() => {
+                  try {
+                    return localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
+                  } catch {
+                    return false;
+                  }
+                });
+
                 return (
                   <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border transition-all ${isGloballyLocked ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-emerald-50 border-emerald-200 shadow-sm'}`}>
                     <div className="flex flex-col text-left">
@@ -438,9 +445,18 @@ export default function PaymentManagement() {
                       type="button"
                       onClick={() => {
                         const nextState = !isGloballyLocked;
-                        localStorage.setItem(GLOBAL_LOCK_KEY, nextState ? 'true' : 'false');
-                        window.dispatchEvent(new Event('storage'));
-                        window.location.reload();
+                        setIsGloballyLocked(nextState);
+                        try {
+                          localStorage.setItem(GLOBAL_LOCK_KEY, nextState ? 'true' : 'false');
+                          window.dispatchEvent(new Event('storage'));
+                          if (nextState) {
+                            showSuccess('Global App Lock activated! Teacher apps will now be restricted.');
+                          } else {
+                            showSuccess('Global App Lock deactivated! Teacher apps are now unlocked.');
+                          }
+                        } catch (err) {
+                          console.error('Failed to update global lock state:', err);
+                        }
                       }}
                       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isGloballyLocked ? 'bg-red-600' : 'bg-emerald-600'}`}
                       role="switch"
