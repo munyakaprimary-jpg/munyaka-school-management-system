@@ -472,16 +472,19 @@ const ProfileSettings: React.FC = () => {
 
       {/* ── Change Password Dialog ─────────────────────────────────────────── */}
       <Dialog open={isPassOpen} onOpenChange={setIsPassOpen}>
-        <DialogContent className="rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-md p-6 sm:p-8 rounded-2xl bg-white shadow-2xl border border-slate-100">
+          <DialogHeader className="space-y-1.5 text-left pb-2">
+            <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Key className="w-5 h-5 text-indigo-600" />
+              Change Password
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-500">
               Update your owner account password. Use a strong password with at least 4 characters.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handlePasswordChange} className="space-y-4 mt-2">
-            <div className="space-y-2">
-              <Label htmlFor="old-pass">Current Password</Label>
+          <form onSubmit={handlePasswordChange} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="old-pass" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Current Password</Label>
               <div className="relative">
                 <Input
                   id="old-pass"
@@ -489,20 +492,20 @@ const ProfileSettings: React.FC = () => {
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="rounded-xl pr-10 h-11"
+                  className="w-full h-11 px-3.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowOld(!showOld)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                 >
                   {showOld ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="new-pass">New Password</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-pass" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">New Password</Label>
               <div className="relative">
                 <Input
                   id="new-pass"
@@ -510,20 +513,20 @@ const ProfileSettings: React.FC = () => {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="rounded-xl pr-10 h-11"
+                  className="w-full h-11 px-3.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew(!showNew)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                 >
                   {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirm-pass">Confirm New Password</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm-pass" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Confirm New Password</Label>
               <div className="relative">
                 <Input
                   id="confirm-pass"
@@ -531,31 +534,31 @@ const ProfileSettings: React.FC = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="rounded-xl pr-10 h-11"
+                  className="w-full h-11 px-3.5 pr-10 rounded-xl border border-slate-200 bg-slate-50/50 text-slate-900 text-sm focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                 >
                   {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            <DialogFooter className="mt-4">
+            <DialogFooter className="pt-4 flex items-center justify-end gap-3 sm:space-x-0">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 onClick={() => setIsPassOpen(false)}
-                className="rounded-xl font-bold"
+                className="px-4 py-2.5 h-11 rounded-xl border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isPassUpdating || !oldPassword || !newPassword || !confirmPassword}
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold"
+                className="px-5 py-2.5 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-lg shadow-indigo-200 transition-all"
               >
                 {isPassUpdating ? <Loader2 size={15} className="animate-spin mr-2" /> : null}
                 Update Password
