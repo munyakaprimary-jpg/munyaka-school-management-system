@@ -121,12 +121,28 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     // Check if user is a teacher or non-admin staff
     const isTeacherVariant = isTeacherRole(role, userObj.staffCategory, userObj.specialties) ||
       resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' ||
-      resolvedR === 'senior_teacher' || roleLower.includes('teacher') || roleLower.includes('educator') || roleLower.includes('class teacher');
+      resolvedR === 'senior_teacher' || roleLower.includes('teacher') || roleLower.includes('educator') || roleLower.includes('class teacher') || roleLower === 'class_teacher';
 
     const isAdminOrOwner = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin');
 
+    // If user is a teacher (like Joseph Wachira / CLASS TEACHER), return ONLY the permitted teacher menu items directly!
+    if (isTeacherVariant && !isAdminOrOwner) {
+      const teacherPaths = [
+        '/', '/students', '/communication', '/notices',
+        '/timetable', '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
+        '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
+        '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
+        '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile',
+        '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list'
+      ];
+      const items = menuItems.filter(item => teacherPaths.includes(item.path));
+      return teacherPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
+        ...item,
+        label: item?.path === '/' ? "Teacher's Dashboard" : item?.label
+      }));
+    }
+
     // Owner specific menu
-    if (roleLower === 'owner') {
       const roleFiltered = menuItems.filter(item => {
         if (item.path === '/study-corner') return true;
         if (item?.global) return true;
