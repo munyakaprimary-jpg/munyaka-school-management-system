@@ -5,7 +5,13 @@
 
 export function normalizeRole(role?: string): string {
   if (!role) return '';
-  return String(role).trim().toUpperCase();
+  const r = String(role).trim().toUpperCase();
+  if (r === 'CLASS TEACHER' || r === 'CLASSTEACHER' || r === 'CLASS_TEACHER') return 'CLASS_TEACHER';
+  if (r === 'SUBJECT TEACHER' || r === 'SUBJECTTEACHER' || r === 'SUBJECT_TEACHER') return 'SUBJECT_TEACHER';
+  if (r === 'SENIOR TEACHER' || r === 'SENIOR_TEACHER') return 'SENIOR_TEACHER';
+  if (r === 'HEAD TEACHER' || r === 'HEADTEACHER' || r === 'HEAD_TEACHER') return 'HEAD_TEACHER';
+  if (r === 'TEACHER' || r === 'TEACHERS') return 'TEACHER';
+  return r;
 }
 
 export function isTeacherRole(role?: string, staffCategory?: string, specialties?: string[] | string): boolean {

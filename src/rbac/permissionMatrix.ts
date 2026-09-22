@@ -74,14 +74,15 @@ export type Role = (typeof ROLES)[keyof typeof ROLES];
  *  The canonical identifier stored in auth is always "admin". */
 export const normalizeAdmin = (role?: string | null): Role | null => {
   if (!role) return null;
-  const r = role.toLowerCase();
-  if (r === "admin" || r === "super_admin") return ROLES.ADMIN;
-  if (r === "head_teacher" || r === "headteacher") return ROLES.HEAD_TEACHER;
-  if (r === "senior_teacher") return ROLES.SENIOR_TEACHER;
-  if (r === "class_teacher") return ROLES.CLASS_TEACHER;
-  if (r === "subject_teacher") return ROLES.SUBJECT_TEACHER;
-  if (r === "ict_teacher" || r === "ict_technician") return ROLES.ICT_TEACHER;
-  if (r === "librarian" || r === "library_staff") return ROLES.LIBRARIAN;
+  const r = role.toLowerCase().trim();
+  if (r === "admin" || r === "super_admin" || r === "administrator") return ROLES.ADMIN;
+  if (r === "head_teacher" || r === "headteacher" || r === "head teacher") return ROLES.HEAD_TEACHER;
+  if (r === "senior_teacher" || r === "senior teacher") return ROLES.SENIOR_TEACHER;
+  if (r === "class_teacher" || r === "class teacher" || r === "classteacher") return ROLES.CLASS_TEACHER;
+  if (r === "subject_teacher" || r === "subject teacher" || r === "subjectteacher") return ROLES.SUBJECT_TEACHER;
+  if (r === "teacher" || r === "teachers") return ROLES.TEACHER;
+  if (r === "ict_teacher" || r === "ict_technician" || r === "ict teacher") return ROLES.ICT_TEACHER;
+  if (r === "librarian" || r === "library_staff" || r === "library teacher") return ROLES.LIBRARIAN;
   if (r === "storekeeper" || r === "stores") return ROLES.STOREKEEPER;
   if (r === "lab_assistant" || r === "science_lab_assistant") return ROLES.LAB_ASSISTANT;
   if (r === "ict_tech" || r === "ict_lab_technician") return ROLES.ICT_TECH;
@@ -583,16 +584,16 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     mark_student_attendance: true,
     enter_marks: true,
     view_results_analysis: true,
-    manage_timetable: null,
+    manage_timetable: true,
     manage_learners: true,
     execute_transfers: null,
     view_learner_archive: true,
     view_attendance_trends: true,
     manage_staff_attendance: null,
     collect_fees: null,
-    view_fee_reports: null,
-    view_recent_alerts: null,
-    publish_notices: null,
+    view_fee_reports: true,
+    view_recent_alerts: true,
+    publish_notices: true,
     manage_staff_accounts: null,
     promote_students: null,
     manage_subscription: null,
@@ -600,29 +601,29 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     manage_ict_systems: null,
     access_portal_logins: null,
     access_network_quotas: null,
-    access_lab_schedules: null,
+    access_lab_schedules: true,
     edit_school_settings: null,
     access_central_data: true,
-    manage_parent_access: null,
+    manage_parent_access: true,
     // Academic permissions
     access_cbc_assessment: true,
     access_marksheet_entries: true,
     class_teacher_register_override: true,
-    // Support staff module permissions
-    access_library_catalog: null,
-    access_book_checkout: null,
-    access_inventory_logs: null,
+    // Library & Study Corner
+    access_library_catalog: true,
+    access_book_checkout: true,
+    access_inventory_logs: true,
     access_stock_requisitions: null,
     access_inventory_audits: null,
     access_supply_requests: null,
-    access_science_lab_inventory: null,
-    access_reagent_logs: null,
-    access_maintenance_requests: null,
-    access_computer_lab_assets: null,
-    access_it_tickets: null,
-    access_device_assignment: null,
-    access_duty_roster: null,
-    access_internal_messaging: null,
+    access_science_lab_inventory: true,
+    access_reagent_logs: true,
+    access_maintenance_requests: true,
+    access_computer_lab_assets: false,
+    access_it_tickets: true,
+    access_device_assignment: false,
+    access_duty_roster: true,
+    access_internal_messaging: true,
   },
 
   class_teacher: {
@@ -630,16 +631,16 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     mark_student_attendance: true,
     enter_marks: true,
     view_results_analysis: true,
-    manage_timetable: null,
+    manage_timetable: true,
     manage_learners: true,
     execute_transfers: null,
     view_learner_archive: true,
     view_attendance_trends: true,
     manage_staff_attendance: null,
     collect_fees: null,
-    view_fee_reports: null,
-    view_recent_alerts: null,
-    publish_notices: null,
+    view_fee_reports: true,
+    view_recent_alerts: true,
+    publish_notices: true,
     manage_staff_accounts: null,
     promote_students: null,
     manage_subscription: null,
@@ -647,29 +648,76 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     manage_ict_systems: null,
     access_portal_logins: null,
     access_network_quotas: null,
-    access_lab_schedules: null,
+    access_lab_schedules: true,
     edit_school_settings: null,
     access_central_data: true,
-    manage_parent_access: null,
+    manage_parent_access: true,
     // Academic permissions
     access_cbc_assessment: true,
     access_marksheet_entries: true,
     class_teacher_register_override: true,
-    // Support staff module permissions
-    access_library_catalog: null,
-    access_book_checkout: null,
-    access_inventory_logs: null,
+    // Library & Study Corner
+    access_library_catalog: true,
+    access_book_checkout: true,
+    access_inventory_logs: true,
     access_stock_requisitions: null,
     access_inventory_audits: null,
     access_supply_requests: null,
-    access_science_lab_inventory: null,
-    access_reagent_logs: null,
-    access_maintenance_requests: null,
-    access_computer_lab_assets: null,
-    access_it_tickets: null,
-    access_device_assignment: null,
-    access_duty_roster: null,
-    access_internal_messaging: null,
+    access_science_lab_inventory: true,
+    access_reagent_logs: true,
+    access_maintenance_requests: true,
+    access_computer_lab_assets: false,
+    access_it_tickets: true,
+    access_device_assignment: false,
+    access_duty_roster: true,
+    access_internal_messaging: true,
+  },
+
+  subject_teacher: {
+    view_operational_dashboard: true,
+    mark_student_attendance: true,
+    enter_marks: true,
+    view_results_analysis: true,
+    manage_timetable: true,
+    manage_learners: true,
+    execute_transfers: null,
+    view_learner_archive: true,
+    view_attendance_trends: true,
+    manage_staff_attendance: null,
+    collect_fees: null,
+    view_fee_reports: true,
+    view_recent_alerts: true,
+    publish_notices: true,
+    manage_staff_accounts: null,
+    promote_students: null,
+    manage_subscription: null,
+    manage_billing: null,
+    manage_ict_systems: null,
+    access_portal_logins: null,
+    access_network_quotas: null,
+    access_lab_schedules: true,
+    edit_school_settings: null,
+    access_central_data: true,
+    manage_parent_access: true,
+    // Academic permissions
+    access_cbc_assessment: true,
+    access_marksheet_entries: true,
+    class_teacher_register_override: false,
+    // Library & Study Corner
+    access_library_catalog: true,
+    access_book_checkout: true,
+    access_inventory_logs: true,
+    access_stock_requisitions: null,
+    access_inventory_audits: null,
+    access_supply_requests: null,
+    access_science_lab_inventory: true,
+    access_reagent_logs: true,
+    access_maintenance_requests: true,
+    access_computer_lab_assets: false,
+    access_it_tickets: true,
+    access_device_assignment: false,
+    access_duty_roster: true,
+    access_internal_messaging: true,
   },
 
   /* ───────────── BURSAR: fees, payments, ledger logs ───────────── */
@@ -1149,6 +1197,12 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
 /** Resolve a role string to a canonical Role, normalising admin aliases. */
 export function resolveRole(role?: string | null): Role | null {
   if (!role) return null;
+  const normalized = String(role).trim().toLowerCase();
+  if (normalized === "class teacher" || normalized === "classteacher" || normalized === "class_teacher") return ROLES.CLASS_TEACHER;
+  if (normalized === "subject teacher" || normalized === "subjectteacher" || normalized === "subject_teacher") return ROLES.SUBJECT_TEACHER;
+  if (normalized === "senior teacher" || normalized === "seniortheater" || normalized === "senior_teacher") return ROLES.SENIOR_TEACHER;
+  if (normalized === "head teacher" || normalized === "headteacher" || normalized === "head_teacher") return ROLES.HEAD_TEACHER;
+  if (normalized === "teacher" || normalized === "teachers") return ROLES.TEACHER;
   return normalizeAdmin(role);
 }
 

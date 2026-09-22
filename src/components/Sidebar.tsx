@@ -50,7 +50,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
-import { isTeacherRole, isIctRole, isLibrarianRole } from '@/utils/roleHelper';
+import { isTeacherRole, isIctRole, isLibrarianRole, normalizeRole } from '@/utils/roleHelper';
+import { roleHas, resolveRole, ROUTE_PERMISSIONS } from '@/rbac/permissionMatrix';
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -117,6 +118,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     const userObj = (user || {}) as Record<string, any>;
     const role = (userObj.role ?? '') as string;
     const roleLower = String(role).toLowerCase().trim();
+    const resolvedR = resolveRole(role);
     const dashboardItem = menuItems.find(item => item.path === '/');
 
     // Owner specific menu
@@ -166,15 +168,44 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       }));
     }
 
-    // For ALL OTHER ROLES (including "CLASS TEACHER", "TEACHER", "HEAD TEACHER", "ADMIN", etc.),
-    // return the complete standard operational educator menu set (hiding only owner-exclusive modules like payment-management).
-    const excludedForEducators = ['/payment-management', '/dev/tenants'];
-    const educatorMenu = menuItems.filter(item => !excludedForEducators.includes(item.path));
+    // RBAC & Permission Mapping for all staff/teachers/admins
+    return menuItems.filter(item => {
+      if (item.path === '/') return true;
+      if (item.global) return true;
+      if (roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'head_teacher' || roleLower === 'headteacher') {
+        return !['/payment-management', '/dev/tenants'].includes(item.path);
+      }
+      
+      // Check if item has explicit roles array matching resolved role or roleLower
+      const rolesList = (item.roles || []).map(r => String(r).toLowerCase());
+      if (rolesList.includes(roleLower) || (resolvedR && rolesList.includes(resolvedR))) {
+        return true;
+      }
 
-    return educatorMenu.map(item => {
+      // Check RBAC permission matrix for path
+      const permKey = ROUTE_PERMISSIONS[item.path];
+      if (permKey) {
+        return roleHas(role, permKey);
+      }
+
+      // If user is any teacher variant (Teacher, Class Teacher, Subject Teacher, etc.),
+      // allow standard operational modules: dashboard, students, grades, learning-areas, communication, notices, timetable, attendance, student-attendance, staff-check-in, staff-attendance, assessments, marked-scripts, analysis, digital-hub, digital-skills, practical-competencies, portfolio, study-corner, inventory, fees, reports.
+      if (isTeacherRole(role, userObj.staffCategory, userObj.specialties) || resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' || resolvedR === 'senior_teacher' || resolvedR === 'head_teacher' || roleLower.includes('teacher') || roleLower.includes('educator')) {
+        const allowedTeacherPaths = [
+          '/', '/students', '/grades', '/learning-areas', '/communication', '/notices',
+          '/timetable', '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
+          '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
+          '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
+          '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile'
+        ];
+        return allowedTeacherPaths.includes(item.path);
+      }
+
+      return rolesList.includes('admin');
+    }).map(item => {
       if (item?.path === '/') {
-        const isAdmin = roleLower.includes('admin');
-        return { ...item, label: isAdmin ? 'Admin Dashboard' : "Teacher's Dashboard" };
+        const isAdminOrHead = roleLower.includes('admin') || roleLower.includes('head');
+        return { ...item, label: isAdminOrHead ? 'Dashboard' : "Teacher's Dashboard" };
       }
       return item;
     });
