@@ -182,7 +182,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         const forbiddenTeacherPaths = [
           '/central-data', '/grades', '/staff', '/learning-areas', '/exam-types',
           '/staff/pre-registration', '/system-management', '/staff/access',
-          '/transferred-archive', '/promote-students', '/admin/control-center'
+          '/transferred-archive', '/promote-students', '/admin/control-center',
+          '/dev/tenants', '/payment-management', '/staff/attendance-monitor'
         ];
         if (
           forbiddenTeacherPaths.includes(item.path) ||
@@ -190,7 +191,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           item.label.includes("Grades & Streams") ||
           item.label.includes("Staff Directory") ||
           item.label.includes("Learning Areas") ||
-          item.label.includes("Exam Types")
+          item.label.includes("Exam Types") ||
+          item.label.includes("Payment") ||
+          item.label.includes("Tenants")
         ) {
           return false;
         }
