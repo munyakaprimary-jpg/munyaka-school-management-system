@@ -43,8 +43,8 @@ export default function PaymentManagement() {
 
   // Custom Term Sub-Modal State
   const [isCustomTermModalOpen, setIsCustomTermModalOpen] = useState(false);
-  const [customMonths, setCustomMonths] = useState('3');
-  const [baseMonthlyRate, setBaseMonthlyRate] = useState(10000); // KES 10,000 per month standard rate
+  const [customMonths, setCustomMonths] = useState<string>('3');
+  const [monthlyRate, setMonthlyRate] = useState<number>(10000); // KES 10,000 per month standard rate
 
   // Global App Lock Toggle State
   const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
@@ -782,7 +782,41 @@ export default function PaymentManagement() {
               
               setSubscriptions(prev => prev.map(s => {
                 if (s.school === paymentCampus) {
-                  return { ...s, status: 'Active', expires: '2027-03-31' };
+                  let monthsToAdd = 12;
+                  if (paymentPeriod.includes('6 Months')) {
+                    monthsToAdd = 6;
+                  } else if (paymentPeriod.startsWith('Custom Term')) {
+                    const match = paymentPeriod.match(/\((\d+)\s+Months?\)/);
+                    if (match) {
+                      monthsToAdd = parseInt(match[1]) || 3;
+                    }
+                  }
+
+                  const base = s.expires && new Date(s.expires) > new Date() ? new Date(s.expires) : new Date();
+                  base.setMonth(base.getMonth() + monthsToAdd);
+                  const newExpiry = base.toISOString().split('T')[0];
+
+                  const updatedSub = { ...s, status: 'Active', expires: newExpiry };
+                  try {
+                    const centralRaw = localStorage.getItem('munyaka_central_db');
+                    if (centralRaw) {
+                      const centralDb = JSON.parse(centralRaw);
+                      if (Array.isArray(centralDb.campuses)) {
+                        centralDb.campuses = centralDb.campuses.map((cs: any) => cs.school === paymentCampus ? updatedSub : cs);
+                        localStorage.setItem('munyaka_central_db', JSON.stringify(centralDb));
+                      }
+                    }
+                    const saved = localStorage.getItem('munyaka_registered_campuses');
+                    if (saved) {
+                      const parsed = JSON.parse(saved);
+                      if (Array.isArray(parsed)) {
+                        const newCampuses = parsed.map((cs: any) => cs.school === paymentCampus ? updatedSub : cs);
+                        localStorage.setItem('munyaka_registered_campuses', JSON.stringify(newCampuses));
+                      }
+                    }
+                  } catch {}
+
+                  return updatedSub;
                 }
                 return s;
               }));
@@ -927,6 +961,118 @@ export default function PaymentManagement() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Term Sub-Modal */}
+      {isCustomTermModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 flex flex-col">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Custom Billing Term & Extension</h3>
+                <p className="text-xs text-slate-500 font-medium">Specify exact duration in months</p>
+              </div>
+              <button
+                onClick={() => setIsCustomTermModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-200/60 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase text-slate-600">Select or Enter Duration (Months)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="60"
+                    value={customMonths}
+                    onChange={(e) => setCustomMonths(e.target.value)}
+                    className="h-12 bg-slate-50 font-bold text-lg text-indigo-600"
+                    placeholder="e.g. 3"
+                  />
+                  <span className="text-sm font-bold text-slate-700 shrink-0">Months</span>
+                </div>
+
+                {/* Quick select pills */}
+                <div className="flex flex-wrap gap-1.5 pt-2">
+                  {[1, 2, 3, 4, 6, 9, 12, 24].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setCustomMonths(String(m))}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        Number(customMonths) === m
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {m} {m === 1 ? 'Month' : 'Months'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dynamic Calculation Preview */}
+              <div className="bg-gradient-to-br from-indigo-50/70 to-slate-50 border border-indigo-100/80 rounded-2xl p-4 space-y-3">
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-700">Dynamic Payment & Expiry Preview</p>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="bg-white/80 p-3 rounded-xl border border-indigo-50">
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Calculated Amount</p>
+                    <p className="font-extrabold text-sm text-emerald-600 mt-0.5">
+                      KES {(Number(customMonths || 1) * 10000).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="bg-white/80 p-3 rounded-xl border border-indigo-50">
+                    <p className="text-[10px] uppercase font-bold text-slate-400">New Expiry Date</p>
+                    <p className="font-extrabold text-sm text-slate-900 mt-0.5">
+                      {(() => {
+                        try {
+                          const months = parseInt(customMonths) || 1;
+                          const currentSub = subscriptions.find((s: any) => s.school === paymentCampus);
+                          const base = currentSub && currentSub.expires && new Date(currentSub.expires) > new Date()
+                            ? new Date(currentSub.expires)
+                            : new Date();
+                          base.setMonth(base.getMonth() + months);
+                          return base.toISOString().split('T')[0];
+                        } catch {
+                          return '2027-03-31';
+                        }
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCustomTermModalOpen(false)}
+                className="rounded-xl text-xs font-semibold h-10 px-4"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  const m = parseInt(customMonths) || 1;
+                  const calculatedAmt = m * 10000;
+                  setPaymentPeriod(`Custom Term (${m} Months)`);
+                  setPaymentAmount(String(calculatedAmt));
+                  setIsCustomTermModalOpen(false);
+                  showSuccess(`Applied custom term of ${m} months (KES ${calculatedAmt.toLocaleString()})`);
+                }}
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-10 px-6 shadow-sm"
+              >
+                Apply Custom Term
+              </Button>
+            </div>
           </div>
         </div>
       )}
