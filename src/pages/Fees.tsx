@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
-import { CreditCard, ArrowUpRight, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck, FileText, Edit, Database, Trash2 } from 'lucide-react';
+import { CreditCard, ArrowUpRight, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck, FileText, Edit, Database } from 'lucide-react';
 import { GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -331,6 +331,63 @@ const Fees = () => {
       stream: currentUser?.stream || currentUser?.assignedStream || ''
     };
   }, [isClassTeacher, currentUser]);
+
+  const teacherAssignedGradeStream = useMemo(() => {
+    if (!isClassTeacher) return null;
+    return {
+      grade: currentUser?.grade || currentUser?.assignedGrade || currentUser?.classAssigned || '',
+      stream: currentUser?.stream || currentUser?.assignedStream || ''
+    };
+  }, [isClassTeacher, currentUser]);
+
+  // Current user role & permissions check
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : { role: 'admin' };
+    } catch {
+      return { role: 'admin' };
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+        if (stored) setCurrentUser(JSON.parse(stored));
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const isClassTeacher = useMemo(() => {
+    const r = String(currentUser?.role || currentUser?.staffCategory || '').toLowerCase();
+    return r.includes('teacher') || r === 'class_teacher' || r === 'subject_teacher' || r === 'senior_teacher';
+  }, [currentUser]);
+
+  const teacherAssignedGradeStream = useMemo(() => {
+    if (!isClassTeacher) return null;
+    return {
+      grade: currentUser?.grade || currentUser?.assignedGrade || currentUser?.classAssigned || '',
+      stream: currentUser?.stream || currentUser?.assignedStream || ''
+    };
+  }, [isClassTeacher, currentUser]);
+
+  // Current user role & permissions check
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : { role: 'admin' };
+    } catch {
+      return { role: 'admin' };
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
         if (stored) setCurrentUser(JSON.parse(stored));
       } catch {}
     };
@@ -1172,17 +1229,15 @@ const Fees = () => {
                             >
                               <FileDown size={16} />
                             </Button>
-                            {!isClassTeacher && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
-                                onClick={() => handleOpenEditModal(fee)}
-                                title="Edit Fee Record"
-                              >
-                                <Edit size={16} />
-                              </Button>
-                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" 
+                              onClick={() => handleOpenEditModal(fee)}
+                              title="Edit Fee Record"
+                            >
+                              <Edit size={16} />
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -1205,9 +1260,6 @@ const Fees = () => {
                   <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                   <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Method</th>
                   <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
-                  {!isClassTeacher && (
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
-                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1222,26 +1274,6 @@ const Fees = () => {
                       <td className="px-5 py-3.5 text-right font-semibold text-emerald-600">
                         KES {tx.amount.toLocaleString()} <ArrowUpRight size={14} className="inline ml-1" />
                       </td>
-                      {!isClassTeacher && (
-                        <td className="px-5 py-3.5 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
-                            onClick={() => {
-                              if (window.confirm("Are you sure you want to delete this payment transaction?")) {
-                                const nextLocal = localTransactions.filter(t => t.id !== tx.id);
-                                setLocalTransactions(nextLocal);
-                                localStorage.setItem(TX_KEY, JSON.stringify(nextLocal));
-                                showSuccess("Transaction deleted.");
-                              }
-                            }}
-                            title="Delete Transaction"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </td>
-                      )}
                     </tr>
                   ))
                 ) : (
@@ -1267,11 +1299,12 @@ const Fees = () => {
                             <CreditCard size={13} /> Record First Payment
                           </Button>
                         )}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
             </div>
           </Card>
         </TabsContent>
