@@ -1376,8 +1376,8 @@ const Attendance = () => {
             <Calendar size={24} />
           </div>
           <div className="min-w-0">
-            <h1 className="text-3xl font-black tracking-tight text-slate-900 whitespace-normal break-words">Attendance</h1>
-            <p className="text-sm text-slate-500 font-medium break-words hyphens-auto">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Attendance</h1>
+            <p className="text-xs text-slate-500 font-medium break-words hyphens-auto">
               {isTeacherRole
                 ? 'Mark daily attendance for each class.'
                 : viewMode === 'marking'
@@ -1511,8 +1511,8 @@ const Attendance = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
 
           {/* Date Picker */}
-          <div className="md:col-span-3 space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+          <div className="md:col-span-3 space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
               Date
             </label>
             <div className="relative">
@@ -1520,44 +1520,44 @@ const Attendance = () => {
                 type="date"
                 value={filters.date}
                 onChange={(e) => setFilters({...filters, date: e.target.value})}
-                className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                className="w-full pl-9 pr-2 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
               />
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+              <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
             </div>
           </div>
 
           {/* Grade Dropdown */}
-                    <div className="md:col-span-3 space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                    <div className="md:col-span-3 space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
                         Grade
                       </label>
                       <Select
                         value={filters.grade}
                         onValueChange={(val) => setFilters(prev => ({ ...prev, grade: val, stream: '' }))}
                       >
-                        <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold text-slate-700">
+                        <SelectTrigger className="h-9 rounded-xl bg-slate-50 border-slate-200 text-xs font-bold text-slate-700">
                           <SelectValue placeholder="Select Grade" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Grades</SelectItem>
-                          <SelectItem value="PP1">PP1</SelectItem>
-                          <SelectItem value="PP2">PP2</SelectItem>
-                          <SelectItem value="Grade 1">Grade 1</SelectItem>
-                          <SelectItem value="Grade 2">Grade 2</SelectItem>
-                          <SelectItem value="Grade 3">Grade 3</SelectItem>
-                          <SelectItem value="Grade 4">Grade 4</SelectItem>
-                          <SelectItem value="Grade 5">Grade 5</SelectItem>
-                          <SelectItem value="Grade 6">Grade 6</SelectItem>
-                          <SelectItem value="Grade 7">Grade 7</SelectItem>
-                          <SelectItem value="Grade 8">Grade 8</SelectItem>
-                          <SelectItem value="Grade 9">Grade 9</SelectItem>
+                          <SelectItem value="all" className="text-xs">All Grades</SelectItem>
+                          <SelectItem value="PP1" className="text-xs">PP1</SelectItem>
+                          <SelectItem value="PP2" className="text-xs">PP2</SelectItem>
+                          <SelectItem value="Grade 1" className="text-xs">Grade 1</SelectItem>
+                          <SelectItem value="Grade 2" className="text-xs">Grade 2</SelectItem>
+                          <SelectItem value="Grade 3" className="text-xs">Grade 3</SelectItem>
+                          <SelectItem value="Grade 4" className="text-xs">Grade 4</SelectItem>
+                          <SelectItem value="Grade 5" className="text-xs">Grade 5</SelectItem>
+                          <SelectItem value="Grade 6" className="text-xs">Grade 6</SelectItem>
+                          <SelectItem value="Grade 7" className="text-xs">Grade 7</SelectItem>
+                          <SelectItem value="Grade 8" className="text-xs">Grade 8</SelectItem>
+                          <SelectItem value="Grade 9" className="text-xs">Grade 9</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
           
                     {/* Stream Dropdown — dynamically filtered by selected Grade */}
-                    <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                    <div className="md:col-span-2 space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
                         Stream
                       </label>
                       <Select
@@ -1567,7 +1567,7 @@ const Attendance = () => {
                       >
                         <SelectTrigger
                           className={cn(
-                            "h-11 rounded-xl border-slate-200 font-bold text-slate-700",
+                            "h-9 rounded-xl border-slate-200 text-xs font-bold text-slate-700",
                             isStreamDisabled
                               ? "bg-slate-100 opacity-60 cursor-not-allowed"
                               : "bg-slate-50"
@@ -1576,15 +1576,15 @@ const Attendance = () => {
                           <SelectValue placeholder={isStreamDisabled ? "Select a grade first" : "All Streams"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">All Streams</SelectItem>
+                          <SelectItem value="all" className="text-xs">All Streams</SelectItem>
                           {availableStreams.map(stream => (
-                            <SelectItem key={stream} value={stream}>
+                            <SelectItem key={stream} value={stream} className="text-xs">
                               {stream}
                             </SelectItem>
                           ))}
                           {availableStreams.length === 0 && !isStreamDisabled && (
-                            <SelectItem value="__none__" disabled>
-                              No streams configured for this grade
+                            <SelectItem value="__none__" disabled className="text-xs">
+                              No streams configured
                             </SelectItem>
                           )}
                         </SelectContent>
@@ -1947,76 +1947,76 @@ const Attendance = () => {
             <div className="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/40">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                 {/* Grade Select */}
-                <div className="md:col-span-3 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                <div className="md:col-span-3 space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
                     Grade
                   </label>
                   <Select value={ovGrade} onValueChange={setOvGrade}>
-                    <SelectTrigger className="h-11 rounded-xl bg-white border-slate-200 font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500">
+                    <SelectTrigger className="h-9 rounded-xl bg-white border-slate-200 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500">
                       <SelectValue placeholder="All Grades" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Grades</SelectItem>
-                      <SelectItem value="PP1">PP1</SelectItem>
-                      <SelectItem value="PP2">PP2</SelectItem>
-                      <SelectItem value="Grade 1">Grade 1</SelectItem>
-                      <SelectItem value="Grade 2">Grade 2</SelectItem>
-                      <SelectItem value="Grade 3">Grade 3</SelectItem>
-                      <SelectItem value="Grade 4">Grade 4</SelectItem>
-                      <SelectItem value="Grade 5">Grade 5</SelectItem>
-                      <SelectItem value="Grade 6">Grade 6</SelectItem>
-                      <SelectItem value="Grade 7">Grade 7</SelectItem>
-                      <SelectItem value="Grade 8">Grade 8</SelectItem>
-                      <SelectItem value="Grade 9">Grade 9</SelectItem>
+                      <SelectItem value="all" className="text-xs">All Grades</SelectItem>
+                      <SelectItem value="PP1" className="text-xs">PP1</SelectItem>
+                      <SelectItem value="PP2" className="text-xs">PP2</SelectItem>
+                      <SelectItem value="Grade 1" className="text-xs">Grade 1</SelectItem>
+                      <SelectItem value="Grade 2" className="text-xs">Grade 2</SelectItem>
+                      <SelectItem value="Grade 3" className="text-xs">Grade 3</SelectItem>
+                      <SelectItem value="Grade 4" className="text-xs">Grade 4</SelectItem>
+                      <SelectItem value="Grade 5" className="text-xs">Grade 5</SelectItem>
+                      <SelectItem value="Grade 6" className="text-xs">Grade 6</SelectItem>
+                      <SelectItem value="Grade 7" className="text-xs">Grade 7</SelectItem>
+                      <SelectItem value="Grade 8" className="text-xs">Grade 8</SelectItem>
+                      <SelectItem value="Grade 9" className="text-xs">Grade 9</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Stream Select */}
-                <div className="md:col-span-3 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                <div className="md:col-span-3 space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
                     Stream
                   </label>
                   <Select value={ovStream} onValueChange={setOvStream}>
-                    <SelectTrigger className="h-11 rounded-xl bg-white border-slate-200 font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500">
+                    <SelectTrigger className="h-9 rounded-xl bg-white border-slate-200 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500">
                       <SelectValue placeholder="All Streams" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Streams</SelectItem>
-                      <SelectItem value="YELLOW">Yellow</SelectItem>
-                      <SelectItem value="BLUE">Blue</SelectItem>
-                      <SelectItem value="GREEN">Green</SelectItem>
-                      <SelectItem value="RED">Red</SelectItem>
-                      <SelectItem value="ALPHA">Alpha</SelectItem>
-                      <SelectItem value="BETA">Beta</SelectItem>
-                      <SelectItem value="MERCURY">Mercury</SelectItem>
-                      <SelectItem value="VENUS">Venus</SelectItem>
-                      <SelectItem value="JUPITER">Jupiter</SelectItem>
-                      <SelectItem value="NEPTUNE">Neptune</SelectItem>
+                      <SelectItem value="all" className="text-xs">All Streams</SelectItem>
+                      <SelectItem value="YELLOW" className="text-xs">Yellow</SelectItem>
+                      <SelectItem value="BLUE" className="text-xs">Blue</SelectItem>
+                      <SelectItem value="GREEN" className="text-xs">Green</SelectItem>
+                      <SelectItem value="RED" className="text-xs">Red</SelectItem>
+                      <SelectItem value="ALPHA" className="text-xs">Alpha</SelectItem>
+                      <SelectItem value="BETA" className="text-xs">Beta</SelectItem>
+                      <SelectItem value="MERCURY" className="text-xs">Mercury</SelectItem>
+                      <SelectItem value="VENUS" className="text-xs">Venus</SelectItem>
+                      <SelectItem value="JUPITER" className="text-xs">Jupiter</SelectItem>
+                      <SelectItem value="NEPTUNE" className="text-xs">Neptune</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Search Input */}
-                <div className="md:col-span-4 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                <div className="md:col-span-4 space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
                     Search
                   </label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                     <Input
                       type="text"
-                      placeholder="Search Grade, Stream, or Teacher..."
+                      placeholder="Search Grade, Stream..."
                       value={ovSearch}
                       onChange={(e) => setOvSearch(e.target.value)}
-                      className="pl-10 h-11 rounded-xl bg-white border-slate-200 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                      className="pl-9 h-9 rounded-xl bg-white border-slate-200 text-xs font-medium text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
                     />
                   </div>
                 </div>
 
                 {/* Reset Filters Button */}
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
                     &nbsp;
                   </label>
                   <Button
@@ -2027,22 +2027,22 @@ const Attendance = () => {
                       setOvDate(getTodayDateStr());
                     }}
                     variant="outline"
-                    className="w-full h-11 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm gap-2 focus:ring-2 focus:ring-indigo-100"
+                    className="w-full h-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs gap-1.5 focus:ring-2 focus:ring-indigo-100"
                   >
-                    <RefreshCw size={14} />
-                    Reset Filters
+                    <RefreshCw size={13} />
+                    Reset
                   </Button>
                 </div>
               </div>
             </div>
 
-            <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-600 shrink-0">
-                  <BarChart3 size={22} />
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-xl bg-indigo-100 text-indigo-600 shrink-0">
+                  <BarChart3 size={18} />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                  <h2 className="text-base font-bold text-slate-900 tracking-tight">
                     {sectionTitle}
                   </h2>
                   <p className="text-xs text-slate-500 font-medium">
@@ -2159,64 +2159,64 @@ const Attendance = () => {
 
             <div className="p-2">
               <DualScrollContainer>
-              <table className="w-full text-sm text-left border-collapse min-w-[800px]">
+              <table className="w-full text-xs text-left border-collapse min-w-[760px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-6 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500">Class / Stream</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Learners</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-amber-600 text-center">Morning Roll</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-amber-600 text-center">Morning Present</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center">Afternoon Roll</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center">Afternoon Present</th>
-                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Rate</th>
+                    <th className="px-4 py-2 font-black text-[10px] uppercase tracking-wider text-slate-500">CLASS / STREAM</th>
+                    <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-slate-500 text-center">LEARNERS</th>
+                    <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-amber-600 text-center">MORNING ROLL</th>
+                    <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-amber-600 text-center">MORNING PRESENT</th>
+                    <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-indigo-600 text-center">AFTERNOON ROLL</th>
+                    <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-indigo-600 text-center">AFTERNOON PRESENT</th>
+                    <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-slate-500 text-center">RATE</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredStreamSummaries.length > 0 ? filteredStreamSummaries.map((s) => (
                     <tr key={`${s.grade}-${s.stream}`} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0">
-                            <Layers size={16} />
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0">
+                            <Layers size={14} />
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900 text-sm">{s.grade}</p>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{s.stream}</p>
+                            <p className="font-bold text-slate-900 text-xs leading-tight">{s.grade}</p>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-tight">{s.stream}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-center font-bold text-slate-700">{s.totalLearners}</td>
-                      <td className="px-4 py-4 text-center">
+                      <td className="px-3 py-2.5 text-center font-bold text-slate-700 text-xs">{s.totalLearners}</td>
+                      <td className="px-3 py-2.5 text-center">
                         {s.morningCompleted ? (
-                          <Badge variant="outline" className="rounded-lg bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[10px] uppercase tracking-widest">
-                            <CheckCircle2 size={11} className="mr-1" /> Submitted
+                          <Badge variant="outline" className="rounded-md px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[9px] uppercase tracking-wider inline-flex items-center">
+                            <CheckCircle2 size={10} className="mr-0.5 shrink-0" /> Submitted
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="rounded-lg bg-amber-50 text-amber-700 border-amber-200 font-black text-[10px] uppercase tracking-widest">
-                            <Clock size={11} className="mr-1" /> Pending
+                          <Badge variant="outline" className="rounded-md px-1.5 py-0.5 bg-amber-50 text-amber-700 border-amber-200 font-bold text-[9px] uppercase tracking-wider inline-flex items-center">
+                            <Clock size={10} className="mr-0.5 shrink-0" /> Pending
                           </Badge>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-center font-bold text-slate-700">
+                      <td className="px-3 py-2.5 text-center font-bold text-slate-700 text-xs">
                         {s.morningCompleted ? `${s.morningPresent}/${s.totalLearners}` : '—'}
                       </td>
-                      <td className="px-4 py-4 text-center">
+                      <td className="px-3 py-2.5 text-center">
                         {s.afternoonCompleted ? (
-                          <Badge variant="outline" className="rounded-lg bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[10px] uppercase tracking-widest">
-                            <CheckCircle2 size={11} className="mr-1" /> Submitted
+                          <Badge variant="outline" className="rounded-md px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[9px] uppercase tracking-wider inline-flex items-center">
+                            <CheckCircle2 size={10} className="mr-0.5 shrink-0" /> Submitted
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="rounded-lg bg-amber-50 text-amber-700 border-amber-200 font-black text-[10px] uppercase tracking-widest">
-                            <Clock size={11} className="mr-1" /> Pending
+                          <Badge variant="outline" className="rounded-md px-1.5 py-0.5 bg-amber-50 text-amber-700 border-amber-200 font-bold text-[9px] uppercase tracking-wider inline-flex items-center">
+                            <Clock size={10} className="mr-0.5 shrink-0" /> Pending
                           </Badge>
                         )}
                       </td>
-                      <td className="px-4 py-4 text-center font-bold text-slate-700">
+                      <td className="px-3 py-2.5 text-center font-bold text-slate-700 text-xs">
                         {s.afternoonCompleted ? `${s.afternoonPresent}/${s.totalLearners}` : '—'}
                       </td>
-                      <td className="px-4 py-4 text-center">
-                        <div className="flex items-center gap-2 justify-center">
-                          <div className="w-20 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                      <td className="px-3 py-2.5 text-center">
+                        <div className="flex items-center gap-1.5 justify-center">
+                          <div className="w-16 bg-slate-200 h-1.5 rounded-full overflow-hidden">
                             <div
                               className={cn(
                                 "h-full rounded-full transition-all",
@@ -2226,7 +2226,7 @@ const Attendance = () => {
                             />
                           </div>
                           <span className={cn(
-                            "text-xs font-black tabular-nums",
+                            "text-xs font-bold tabular-nums",
                             s.rate >= 90 ? "text-emerald-700" : s.rate >= 70 ? "text-amber-700" : "text-rose-700"
                           )}>
                             {s.rate}%
