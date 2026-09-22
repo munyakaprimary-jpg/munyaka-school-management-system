@@ -858,7 +858,9 @@ export default function StudyCorner() {
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Custom materials loaded from localStorage.
+  // Attachment preview render inside ReaderModal or separate preview modal
+  const [activePreviewItem, setActivePreviewItem] = useState<ContentItem | null>(null);
+  const [previewZoom, setPreviewZoom] = useState<number>(100);
   // Listen to both:
   //   1. The native "storage" event (fires in OTHER tabs when localStorage
   //      changes — browsers don't fire it in the originating tab).
@@ -1094,7 +1096,8 @@ export default function StudyCorner() {
   }, []);
 
   const handleOpenAttachment = useCallback((att: Attachment) => {
-    openAttachment(att);
+    setPreviewAttachment(att);
+    setZoomLevel(100);
   }, []);
 
   const handleDownloadAllForGrade = useCallback(async () => {
@@ -1629,6 +1632,150 @@ export default function StudyCorner() {
           isDownloading={isDownloading}
           onOpenAttachment={handleOpenAttachment}
         />
+      )}
+
+      {previewAttachment && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                  📄
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 line-clamp-1">{previewAttachment.fileName || 'Study Document'}</h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Uploaded Document {previewAttachment.fileSize ? `• ${previewAttachment.fileSize}` : ''}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = previewAttachment.dataUrl;
+                    link.download = previewAttachment.fileName || 'study-document';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm"
+                  title="Download File"
+                >
+                  <span>📥 Download</span>
+                </button>
+                <button
+                  onClick={() => setPreviewAttachment(null)}
+                  className="w-9 h-9 rounded-xl bg-slate-200/70 hover:bg-slate-300 text-slate-700 flex items-center justify-center transition-all font-bold text-sm ml-2"
+                  title="Close"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Zoom controls for files */}
+            <div className="px-6 py-2 bg-slate-100/70 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600">
+              <span className="font-medium">In-App Document Preview Viewer</span>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500">Zoom: {zoomLevel}%</span>
+                <button
+                  onClick={() => setZoomLevel(z => Math.max(50, z - 25))}
+                  className="px-2 py-1 bg-white border border-slate-300 rounded font-bold hover:bg-slate-50 shadow-xs"
+                >
+                  -
+                </button>
+                <button
+                  onClick={() => setZoomLevel(100)}
+                  className="px-2 py-1 bg-white border border-slate-300 rounded font-medium hover:bg-slate-50 shadow-xs"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={() => setZoomLevel(z => Math.min(200, z + 25))}
+                  className="px-2 py-1 bg-white border border-slate-300 rounded font-bold hover:bg-slate-50 shadow-xs"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Viewer body */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+              <div className="max-w-4xl mx-auto bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                {previewAttachment.dataUrl ? (
+                  previewAttachment.dataUrl.startsWith('data:image/') || previewAttachment.dataUrl.match(/\.(png|jpg|jpeg|webp|gif|svg)$/i) ? (
+                    <div className="flex justify-center overflow-auto p-4 bg-slate-900 rounded-xl">
+                      <img
+                        src={previewAttachment.dataUrl}
+                        alt={previewAttachment.fileName}
+                        style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
+                        className="max-h-[60vh] object-contain transition-transform duration-150 rounded"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-[70vh] border border-slate-200 rounded-xl overflow-hidden bg-slate-100">
+                      <iframe
+                        src={previewAttachment.dataUrl}
+                        title={previewAttachment.fileName}
+                        className="w-full h-full border-0"
+                      />
+                    </div>
+                  )
+                ) : (
+                  <div className="text-center py-12 space-y-4">
+                    <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
+                      📄
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-base">{previewAttachment.fileName || 'Study Document'}</h3>
+                      <p className="text-xs text-slate-500 mt-1">File Size: {previewAttachment.fileSize || 'Standard Document'}</p>
+                    </div>
+                    <div className="pt-2">
+                      <button
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = previewAttachment.dataUrl;
+                          link.download = previewAttachment.fileName || 'study-document';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                      >
+                        📥 Download File for Offline Access
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <button
+                onClick={() => setPreviewAttachment(null)}
+                className="px-5 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all"
+              >
+                Close Preview
+              </button>
+              <button
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = previewAttachment.dataUrl;
+                  link.download = previewAttachment.fileName || 'study-document';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all"
+              >
+                📥 Download
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Add Material Modal */}
