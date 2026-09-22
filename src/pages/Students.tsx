@@ -42,11 +42,10 @@ export default function Students() {
   const [resetError, setResetError] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
 
-  // Check if current user is admin/owner
-  const isUserAdminOrOwner = useMemo(() => {
+  // Check if current user is admin/super_admin
+  const isUserAdminOrSuperAdmin = useMemo(() => {
     const role = String(activeUser?.role || activeUser?.staffCategory || '').toLowerCase();
-    if (!role) return true;
-    return role === 'admin' || role === 'super_admin' || role === 'owner' || role === 'head_teacher';
+    return role === 'admin' || role === 'super_admin';
   }, [activeUser]);
 
   // Database Reset Handler (Verified via Admin Password Modal)
@@ -682,14 +681,18 @@ export default function Students() {
           </div>
           <div className="flex items-center gap-4 mt-2">
             <span className="text-sm font-medium text-slate-600">{activeCount} active learners</span>
-            <span className="text-slate-300">•</span>
-            <Link
-              to="/learners/archive"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 transition-colors"
-            >
-              <Archive className="w-3.5 h-3.5" />
-              View Transferred Archive
-            </Link>
+            {isUserAdminOrSuperAdmin && (
+              <>
+                <span className="text-slate-300">•</span>
+                <Link
+                  to="/learners/archive"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 transition-colors"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  View Transferred Archive
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
@@ -713,14 +716,16 @@ export default function Students() {
             Print
           </Button>
 
-          <Button
-            onClick={() => setIsTransferInModalOpen(true)}
-            variant="outline"
-            className="rounded-full border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold text-xs px-4 py-2"
-          >
-            <ArrowRightLeft className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
-            Transfer In Learner
-          </Button>
+          {isUserAdminOrSuperAdmin && (
+            <Button
+              onClick={() => setIsTransferInModalOpen(true)}
+              variant="outline"
+              className="rounded-full border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold text-xs px-4 py-2"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
+              Transfer In Learner
+            </Button>
+          )}
 
           <Button
             onClick={handleOpenAddModal}
@@ -730,7 +735,7 @@ export default function Students() {
             + Add Learner
           </Button>
 
-          {isUserAdminOrOwner && (
+          {isUserAdminOrSuperAdmin && (
             <Button
               onClick={() => {
                 setAdminPasswordInput('');
