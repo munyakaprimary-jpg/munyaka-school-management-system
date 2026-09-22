@@ -41,6 +41,11 @@ export default function PaymentManagement() {
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentNotes, setPaymentNotes] = useState('Official annual software license renewal');
 
+  // Custom Term Sub-Modal State
+  const [isCustomTermModalOpen, setIsCustomTermModalOpen] = useState(false);
+  const [customMonths, setCustomMonths] = useState('3');
+  const [baseMonthlyRate, setBaseMonthlyRate] = useState(10000); // KES 10,000 per month standard rate
+
   // Global App Lock Toggle State
   const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
   const [isGloballyLocked, setIsGloballyLocked] = useState<boolean>(() => {
@@ -846,15 +851,39 @@ export default function PaymentManagement() {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[11px] font-bold uppercase text-slate-500">Billing Period / Extension</Label>
-                    <select
-                      value={paymentPeriod}
-                      onChange={(e) => setPaymentPeriod(e.target.value)}
-                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
-                    >
-                      <option value="1 Year Extension">1 Year Extension</option>
-                      <option value="6 Months Extension">6 Months Extension</option>
-                      <option value="Custom Term">Custom Term</option>
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={paymentPeriod}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === 'Custom Term') {
+                            setIsCustomTermModalOpen(true);
+                          } else {
+                            setPaymentPeriod(val);
+                            if (val === '1 Year Extension') {
+                              setPaymentAmount('120000');
+                            } else if (val === '6 Months Extension') {
+                              setPaymentAmount('65000');
+                            }
+                          }
+                        }}
+                        className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
+                      >
+                        <option value="1 Year Extension">1 Year Extension</option>
+                        <option value="6 Months Extension">6 Months Extension</option>
+                        <option value="Custom Term">Custom Term {paymentPeriod.startsWith('Custom') ? `(${paymentPeriod})` : ''}</option>
+                      </select>
+                      {paymentPeriod.startsWith('Custom') && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsCustomTermModalOpen(true)}
+                          className="h-10 px-3 text-xs font-bold rounded-xl border-indigo-200 text-indigo-600 shrink-0 bg-indigo-50/50 hover:bg-indigo-100"
+                        >
+                          Edit Term
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
