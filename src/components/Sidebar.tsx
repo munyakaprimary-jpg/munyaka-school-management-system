@@ -1,50 +1,45 @@
-"use client";
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useRef } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import {
-  LayoutDashboard,
-  Users,
-  Layers,
-  BookOpen,
-  Award,
-  Contact2,
-  Key,
-  MessageSquare,
-  Bell,
-  Calendar,
-  ClipboardCheck,
-  Clock,
-  FileSpreadsheet,
-  BarChart3,
-  FolderHeart,
-  Library,
-  Box,
-  Wallet,
-  FileText,
-  Settings,
-  School,
-  Laptop,
-  Monitor,
-  User,
-  Keyboard,
-  Target,
-  Database,
-  Fingerprint,
-  CreditCard,
+import { 
+  LayoutDashboard, 
+  Users, 
+  Layers, 
+  BookOpen, 
+  Award, 
+  Contact2, 
+  Key, 
+  School, 
+  CreditCard, 
+  User, 
+  MessageSquare, 
+  Bell, 
+  Clock, 
+  CheckSquare, 
+  ClipboardCheck, 
+  LogIn, 
+  Fingerprint, 
+  FileSpreadsheet, 
+  FileText, 
+  BarChart3, 
+  Laptop, 
+  Monitor, 
+  Keyboard, 
+  Target, 
+  FolderHeart, 
+  Library, 
+  Box, 
+  Wallet, 
+  Shield, 
+  UserCheck, 
+  Archive, 
+  ArrowUpCircle, 
+  Settings, 
   Gamepad2,
-  CheckSquare,
-  LogIn,
-  Shield,
-  UserCheck,
-  Archive,
-  ArrowUpCircle,
   ChevronLeft,
   ChevronRight,
-  Menu,
-  X,
-  LogOut
+  LogOut,
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -74,8 +69,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'] },
-    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
-    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
+    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
@@ -172,6 +167,20 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     return menuItems.filter(item => {
       if (item.path === '/') return true;
       if (item.global) return true;
+
+      // STRICTLY HIDE ADMIN-ONLY MENUS FROM TEACHERS:
+      // Central Data & APK (/central-data), Grades & Streams (/grades), Staff Directory (/staff)
+      const isTeacherVariant = isTeacherRole(role, userObj.staffCategory, userObj.specialties) || 
+        resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' || 
+        resolvedR === 'senior_teacher' || roleLower.includes('teacher') || roleLower.includes('educator');
+
+      if (isTeacherVariant) {
+        const adminOnlyPaths = ['/central-data', '/grades', '/staff', '/staff/pre-registration', '/system-management', '/staff/access', '/transferred-archive', '/promote-students'];
+        if (adminOnlyPaths.includes(item.path)) {
+          return false;
+        }
+      }
+
       if (roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'head_teacher' || roleLower === 'headteacher') {
         return !['/payment-management', '/dev/tenants'].includes(item.path);
       }
@@ -189,10 +198,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       }
 
       // If user is any teacher variant (Teacher, Class Teacher, Subject Teacher, etc.),
-      // allow: Student Directory, Timetable, Student Attendance, Daily Check-In, Enter Marks, Exam tools, Report Cards, Digital Competencies, Study Corner, Communication, etc.
-      if (isTeacherRole(role, userObj.staffCategory, userObj.specialties) || resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' || resolvedR === 'senior_teacher' || resolvedR === 'head_teacher' || roleLower.includes('teacher') || roleLower.includes('educator')) {
+      // allow operational modules but EXCLUDE admin-only modules
+      if (isTeacherVariant) {
         const allowedTeacherPaths = [
-          '/', '/students', '/grades', '/learning-areas', '/communication', '/notices',
+          '/', '/students', '/communication', '/notices',
           '/timetable', '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
           '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
           '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
@@ -248,37 +257,39 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
             return (
               <div key={idx}>
-                <Link
+                <NavLink
                   to={item.path}
                   className={cn(
-                    "flex items-center gap-3.5 px-3.5 py-3 rounded-2xl font-bold text-sm transition-all group",
-                    isActive
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                    "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
+                    isActive 
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25" 
+                      : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
                   )}
+                  title={isCollapsed ? item.label : undefined}
                 >
-                  <Icon size={20} className={cn("shrink-0 transition-transform group-hover:scale-110", isActive ? "text-white" : "text-slate-400 group-hover:text-blue-400")} />
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </Link>
-                {!isCollapsed && item.subItems && isActive && (
-                  <div className="ml-9 mt-1 space-y-1 border-l-2 border-blue-500/30 pl-3">
-                    {item.subItems.map((sub: any, sIdx: number) => {
-                      if (sub.roles && user) {
-                        const r = String((user as any).role || '').toLowerCase();
-                        if (!sub.roles.includes(r)) return null;
-                      }
+                  <Icon size={20} className={cn("transition-transform group-hover:scale-110 shrink-0", isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200")} />
+                  {!isCollapsed && <span className="truncate flex-1">{item.label}</span>}
+                  {isActive && !isCollapsed && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0" />
+                  )}
+                </NavLink>
+
+                {/* Subitems if any */}
+                {!isCollapsed && (item as any).subItems && isActive && (
+                  <div className="ml-8 mt-1 space-y-1 border-l-2 border-slate-800 pl-3">
+                    {(item as any).subItems.map((sub: any, sIdx: number) => {
                       const isSubActive = activePath === sub.path;
                       return (
-                        <Link
+                        <NavLink
                           key={sIdx}
                           to={sub.path}
                           className={cn(
-                            "block py-2 px-3 rounded-xl text-xs font-bold transition-all",
-                            isSubActive ? "text-blue-400 bg-blue-500/10" : "text-slate-400 hover:text-white hover:bg-slate-800/40"
+                            "block py-1.5 px-2.5 rounded-lg text-xs font-medium transition-colors",
+                            isSubActive ? "text-blue-400 bg-blue-500/10 font-bold" : "text-slate-400 hover:text-slate-200"
                           )}
                         >
                           {sub.label}
-                        </Link>
+                        </NavLink>
                       );
                     })}
                   </div>
@@ -288,137 +299,52 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           })}
         </div>
 
+        {/* Sidebar Footer / User Profile */}
         <div className="p-4 border-t border-slate-800 bg-slate-900/50">
-          {!isCollapsed && user && (
-            <div className="mb-3 px-3 py-2 bg-slate-950 rounded-2xl border border-slate-800 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center text-xs">
-                {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+          {!isCollapsed ? (
+            <div className="flex items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-700 flex items-center justify-center text-white font-bold text-sm shrink-0 border border-slate-700">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-200 truncate">{user?.name || 'User'}</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider truncate">{user?.role || 'Staff'}</p>
+                </div>
               </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-white truncate">{user.name || user.email}</p>
-                <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">{user.role}</p>
+              <div className="flex items-center gap-1 shrink-0">
+                <NotificationBell />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl h-8 w-8"
+                  title="Logout"
+                >
+                  <LogOut size={16} />
+                </Button>
               </div>
             </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              <NotificationBell />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl"
+                title="Logout"
+              >
+                <LogOut size={16} />
+              </Button>
+            </div>
           )}
-          <button
-            onClick={handleLogout}
-            className={cn(
-              "w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-rose-400 hover:text-white hover:bg-rose-600/20 font-bold text-sm transition-all",
-              isCollapsed && "justify-center"
-            )}
-          >
-            <LogOut size={20} />
-            {!isCollapsed && <span>Sign Out</span>}
-          </button>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-hidden">
-        <header className="md:hidden h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20">
-          <button
-            onClick={() => setIsOpen(true)}
-            className="w-10 h-10 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center"
-          >
-            <Menu size={20} />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-sm">
-              M
-            </div>
-            <span className="font-black text-white text-sm">MUNYAKA</span>
-          </div>
-          <NotificationBell />
-        </header>
-
-        {isOpen && (
-          <div className="fixed inset-0 z-50 flex md:hidden">
-            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
-            <div className="relative w-72 bg-slate-900 border-r border-slate-800 flex flex-col h-full shadow-2xl z-10 animate-in slide-in-from-left duration-200">
-              <div className="p-5 flex items-center justify-between border-b border-slate-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg">
-                    M
-                  </div>
-                  <div>
-                    <h1 className="font-black text-white text-sm">MUNYAKA</h1>
-                    <p className="text-[10px] text-slate-400 font-semibold uppercase">School Portal</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
-                {filteredMenu.map((item, idx) => {
-                  const Icon = item.icon;
-                  const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
-                  return (
-                    <div key={idx}>
-                      <Link
-                        to={item.path}
-                        onClick={() => setIsOpen(false)}
-                        className={cn(
-                          "flex items-center gap-3.5 px-3.5 py-3 rounded-2xl font-bold text-sm transition-all",
-                          isActive
-                            ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                            : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-                        )}
-                      >
-                        <Icon size={20} className={isActive ? "text-white" : "text-slate-400"} />
-                        <span>{item.label}</span>
-                      </Link>
-                      {item.subItems && isActive && (
-                        <div className="ml-9 mt-1 space-y-1 border-l-2 border-blue-500/30 pl-3">
-                          {item.subItems.map((sub: any, sIdx: number) => {
-                            if (sub.roles && user) {
-                              const r = String((user as any).role || '').toLowerCase();
-                              if (!sub.roles.includes(r)) return null;
-                            }
-                            const isSubActive = activePath === sub.path;
-                            return (
-                              <Link
-                                key={sIdx}
-                                to={sub.path}
-                                onClick={() => setIsOpen(false)}
-                                className={cn(
-                                  "block py-2 px-3 rounded-xl text-xs font-bold transition-all",
-                                  isSubActive ? "text-blue-400 bg-blue-500/10" : "text-slate-400 hover:text-white"
-                                )}
-                              >
-                                {sub.label}
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="p-4 border-t border-slate-800 bg-slate-900/50">
-                <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    handleLogout();
-                  }}
-                  className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-rose-400 hover:bg-rose-600/20 font-bold text-sm transition-all justify-center"
-                >
-                  <LogOut size={20} />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <main className="flex-1 overflow-y-auto bg-slate-50 text-slate-900">
-          {children}
-        </main>
+      {/* Main Content Viewport */}
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-y-auto">
+        {children}
       </div>
     </div>
   );
