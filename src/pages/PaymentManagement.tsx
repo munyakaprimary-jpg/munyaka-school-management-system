@@ -274,7 +274,19 @@ export default function PaymentManagement() {
                 <Button
                   onClick={() => {
                     setPaymentCampus('Munyaka Primary & Junior School');
-                    setPaymentAmount(String(allocatedSeats * 250));
+                    let computed = allocatedSeats * 250 * 12;
+                    try {
+                      const centralRaw = localStorage.getItem('munyaka_central_db');
+                      if (centralRaw) {
+                        const centralDb = JSON.parse(centralRaw);
+                        const learners = Array.isArray(centralDb.students) ? centralDb.students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED') : [];
+                        const staffList = Array.isArray(centralDb.staff) ? centralDb.staff : [];
+                        const totalActive = (learners.length + staffList.length) > 0 ? (learners.length + staffList.length) : allocatedSeats;
+                        computed = totalActive * 250 * 12;
+                      }
+                    } catch {}
+                    setPaymentAmount(String(computed));
+                    setPaymentPeriod('1 Year Extension');
                     setIsPaymentModalOpen(true);
                   }}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-sm"
@@ -319,24 +331,37 @@ export default function PaymentManagement() {
                           </div>
 
                           <div className="flex items-center justify-between md:justify-end gap-2.5">
-                            <div className="text-right">
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Annual Subtotal</p>
-                              <p className="font-extrabold text-slate-900 text-xs">KES {subtotal.toLocaleString()}</p>
-                            </div>
-                            <Badge className={sub.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-0.5' : 'bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-0.5'}>
-                              {sub.status}
-                            </Badge>
-                            <div className="flex items-center gap-1.5">
-                              <Button
-                                onClick={() => {
-                                  setPaymentCampus(sub.school);
-                                  setPaymentAmount(String(subtotal));
-                                  setIsPaymentModalOpen(true);
-                                }}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm"
-                              >
-                                Record Payment
-                              </Button>
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Annual Subtotal</p>
+                            <p className="font-extrabold text-slate-900 text-xs">KES {subtotal.toLocaleString()}</p>
+                          </div>
+                          <Badge className={sub.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-0.5' : 'bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-0.5'}>
+                            {sub.status}
+                          </Badge>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              onClick={() => {
+                                setPaymentCampus(sub.school);
+                                // Dynamically compute amount based on campus learner count & monthly fee from munyaka_central_db
+                                let computedAmt = subtotal;
+                                try {
+                                  const centralRaw = localStorage.getItem('munyaka_central_db');
+                                  if (centralRaw) {
+                                    const centralDb = JSON.parse(centralRaw);
+                                    const learners = Array.isArray(centralDb.students) ? centralDb.students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED') : [];
+                                    const staffList = Array.isArray(centralDb.staff) ? centralDb.staff : [];
+                                    const count = (learners.length + staffList.length) > 0 ? (learners.length + staffList.length) : seatCount;
+                                    computedAmt = count * 250 * 12; // 12 months standard annual fee
+                                  }
+                                } catch {}
+                                setPaymentAmount(String(computedAmt));
+                                setPaymentPeriod('1 Year Extension');
+                                setIsPaymentModalOpen(true);
+                              }}
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm"
+                            >
+                              Record Payment
+                            </Button>
                               <Button
                                 variant="outline"
                                 onClick={() => setActiveTab('seats')}
