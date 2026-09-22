@@ -114,32 +114,32 @@ export default function PaymentManagement() {
   return (
     <div className="space-y-8 animate-in fade-in pb-12 max-w-7xl mx-auto">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="flex items-center gap-2.5 mb-3">
-              <span className="px-3 py-1 bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldCheck size={14} className="text-emerald-400" /> Owner Billing & License Hub
+            <div className="flex flex-wrap items-center gap-2 mb-2.5">
+              <span className="px-2.5 py-0.5 bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 rounded-full text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck size={13} className="text-emerald-400" /> Owner Billing & License Hub
               </span>
-              <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-full text-xs font-bold">
+              <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-full text-[11px] font-bold">
                 System Active
               </span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight">Payment & Subscriptions</h1>
-            <p className="text-indigo-200 text-sm mt-2 max-w-2xl font-medium">
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Payment & Subscriptions</h1>
+            <p className="text-indigo-200 text-xs md:text-sm mt-1.5 max-w-2xl font-medium leading-relaxed">
               Manage multi-campus software licenses, real-time learner seat allocations, monthly payment settings, M-Pesa payment gateways, and subscription renewals.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-center">
-              <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider">Active Campuses</p>
-              <p className="text-2xl font-black mt-1">3 Campuses</p>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-3 text-center min-w-[100px]">
+              <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Campuses</p>
+              <p className="text-lg md:text-xl font-black mt-0.5">3 Campuses</p>
             </div>
-            <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-center">
-              <p className="text-xs text-indigo-200 font-bold uppercase tracking-wider">Seat Allocation</p>
-              <p className="text-2xl font-black mt-1 text-emerald-400">{allocatedSeats} / {maxSeats}</p>
+            <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-3 text-center min-w-[120px]">
+              <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Seats</p>
+              <p className="text-lg md:text-xl font-black mt-0.5 text-emerald-400">{allocatedSeats} / {maxSeats}</p>
             </div>
           </div>
         </div>

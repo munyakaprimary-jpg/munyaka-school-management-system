@@ -13,12 +13,11 @@
  *  ROLE TAXONOMY
  *  ───────────────────────────────────────────────────────────────────────────
  *  admin        → SCHOOL ADMINISTRATOR. Full unrestricted access to every
-  *                  module, widget, route, sidebar entry, and operational
-  *                  control surface in the school system.  Super-set of
-  *                  HEADTEACHER + BURSAR + ICT.
-  *
-  *                  NOTE: The canonical identifier stored in auth is "admin".
+ *                  module, widget, route, sidebar entry, and operational
+ *                  control surface in the school system.  Super-set of
+ *                  HEADTEACHER + BURSAR + ICT.
  *
+ *                  NOTE: The canonical identifier stored in auth is "admin".
  *  owner        → PLATFORM BILLING OWNER. Completely separate from admin.
  *                  Has NO operational access. Can see subscription/billing
  *                  widgets, the payment-management page, and the owner
@@ -1144,12 +1143,8 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     access_computer_lab_assets: null,
     access_it_tickets: null,
     access_device_assignment: null,
-  },
+  }
 };
-
-/* ──────────────────────────────────────────────────────────────────────────
- *  4.  PUBLIC GUARD HELPERS
- * ──────────────────────────────────────────────────────────────────────── */
 
 /** Resolve a role string to a canonical Role, normalising admin aliases. */
 export function resolveRole(role?: string | null): Role | null {
