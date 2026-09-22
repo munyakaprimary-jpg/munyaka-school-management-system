@@ -116,20 +116,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const filteredMenu = React.useMemo(() => {
     const userObj = (user || {}) as Record<string, any>;
     const role = (userObj.role ?? '') as string;
-    const staffCategory = (userObj.staffCategory ?? '') as string;
-    const specialties = userObj.specialties;
-    const roleLower = String(role).toLowerCase();
-
+    const roleLower = String(role).toLowerCase().trim();
     const dashboardItem = menuItems.find(item => item.path === '/');
-    const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
 
-    if (isAdminRole) {
-      return menuItems.map(item => {
-        if (item.path === '/') return { ...item, label: 'Admin Dashboard' };
-        return item;
-      });
-    }
-
+    // Owner specific menu
     if (roleLower === 'owner') {
       const roleFiltered = menuItems.filter(item => {
         if (item.path === '/study-corner') return true;
@@ -158,6 +148,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       return ordered;
     }
 
+    // Student specific menu
     if (roleLower === 'student' || roleLower === 'learner') {
       const learnerPaths = ['/', '/attendance/students', '/reports', '/fees', '/study-corner', '/games'];
       const labels: Record<string, string> = {
@@ -175,71 +166,17 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       }));
     }
 
-    // ── Flexible Teacher / Subject Teacher / Head Teacher Helper check ─────
-    const cleanRole = String(user?.role || '').toLowerCase().trim();
-    const isTeacher =
-      cleanRole.includes('teacher') ||
-      cleanRole.includes('instructor') ||
-      cleanRole === 'class teacher' ||
-      cleanRole === 'subject teacher' ||
-      cleanRole === 'senior teacher' ||
-      cleanRole === 'head teacher' ||
-      ['admin', 'head teacher', 'class teacher', 'teacher'].includes(cleanRole) ||
-      isTeacherRole(role, staffCategory, specialties);
+    // For ALL OTHER ROLES (including "CLASS TEACHER", "TEACHER", "HEAD TEACHER", "ADMIN", etc.),
+    // return the complete standard operational educator menu set (hiding only owner-exclusive modules like payment-management).
+    const excludedForEducators = ['/payment-management', '/dev/tenants'];
+    const educatorMenu = menuItems.filter(item => !excludedForEducators.includes(item.path));
 
-    if (isTeacher || isAdminRole) {
-      // Teachers, Class Teachers, and Admins get a comprehensive standard operational menu
-      const teacherAllowedPaths = [
-        '/',
-        '/games',
-        '/students',
-        '/grades',
-        '/learning-areas',
-        '/communication',
-        '/notices',
-        '/timetable',
-        '/attendance',
-        '/attendance/students',
-        '/staff/check-in',
-        '/assessments',
-        '/assessments/marked-scripts',
-        '/analysis',
-        '/digital-hub',
-        '/digital-skills',
-        '/practical-competencies',
-        '/portfolio',
-        '/study-corner',
-        '/inventory',
-        '/fees',
-        '/reports',
-        '/settings'
-      ];
-      const items = menuItems.filter(item => teacherAllowedPaths.includes(item.path));
-      return items.map(item => {
-        if (item?.path === '/') {
-          return { ...item, label: isAdminRole ? 'Admin Dashboard' : "Teacher's Dashboard" };
-        }
-        return item;
-      });
-    }
-
-    if (isIctRole(role, specialties)) {
-      return menuItems.filter(item => {
-        if (item?.path === '/' || item?.path === '/games' || item?.path === '/ict-lab') return true;
-        return false;
-      });
-    }
-
-    if (isLibrarianRole(role, specialties)) {
-      return menuItems.filter(item => {
-        if (item?.path === '/' || item?.path === '/games' || item?.path === '/library' || item?.path === '/study-corner') return true;
-        return false;
-      });
-    }
-
-    return menuItems.filter(item => {
-      if (item?.global) return true;
-      return (item?.roles || []).map((r: string) => String(r).toLowerCase()).includes(roleLower);
+    return educatorMenu.map(item => {
+      if (item?.path === '/') {
+        const isAdmin = roleLower.includes('admin');
+        return { ...item, label: isAdmin ? 'Admin Dashboard' : "Teacher's Dashboard" };
+      }
+      return item;
     });
   }, [user]);
 
