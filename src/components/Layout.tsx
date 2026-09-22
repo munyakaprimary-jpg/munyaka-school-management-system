@@ -193,7 +193,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const filteredMenu = menuItems.filter(item => {
         if (!user) return false;
         const role = user.role ?? '';
-        const roleLower = role.toLowerCase().trim();
+        const roleLower = role.toLowerCase();
   
         // Bypass role filtering for Study Corner
         if (item.path === '/study-corner') {
@@ -221,18 +221,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         return item.roles.map(r => r.toLowerCase()).includes('owner');
       }
 
-      // Check if user has teacher role variations (e.g., 'class teacher', 'subject teacher', 'head teacher', 'teacher')
-      const isTeacherRole =
-        roleLower.includes('teacher') ||
-        roleLower.includes('instructor') ||
-        roleLower === 'class teacher' ||
-        roleLower === 'subject teacher';
-
-      const roleMatches =
-        item.roles.map(r => r.toLowerCase()).includes(roleLower) ||
-        (isTeacherRole && item.roles.map(r => r.toLowerCase()).includes('teacher'));
-
-      if (!roleMatches) return false;
+      // Check if user has the required role
+      if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
 
       // Route-level denylist guard
       const blocked = BLOCKED_ROUTES[item.path];

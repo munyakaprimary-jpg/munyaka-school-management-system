@@ -173,7 +173,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
     return educatorMenu.map(item => {
       if (item?.path === '/') {
-        const isAdmin = roleLower.includes('admin') || roleLower === 'super_admin';
+        const isAdmin = roleLower.includes('admin');
         return { ...item, label: isAdmin ? 'Admin Dashboard' : "Teacher's Dashboard" };
       }
       return item;
