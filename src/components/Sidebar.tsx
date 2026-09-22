@@ -69,10 +69,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'] },
-    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
+    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin'] },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
-    { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin', 'head_teacher'] },
+    { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: School, label: 'Developer Hub / Tenants', path: '/dev/tenants', roles: ['owner', 'admin'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
@@ -176,9 +176,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           item.label.includes("Central Data") ||
           item.label.includes("Grades & Streams") ||
           item.label.includes("Staff Directory") ||
+          item.label.includes("Learning Areas") ||
+          item.label.includes("Exam Types") ||
           item.path === '/central-data' ||
           item.path === '/grades' ||
-          item.path === '/staff'
+          item.path === '/staff' ||
+          item.path === '/learning-areas' ||
+          item.path === '/exam-types'
         ) {
           return false;
         }
@@ -191,7 +195,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         resolvedR === 'senior_teacher' || roleLower.includes('teacher') || roleLower.includes('educator');
 
       if (isTeacherVariant) {
-        const adminOnlyPaths = ['/central-data', '/grades', '/staff', '/staff/pre-registration', '/system-management', '/staff/access', '/transferred-archive', '/promote-students'];
+        const adminOnlyPaths = ['/central-data', '/grades', '/staff', '/learning-areas', '/exam-types', '/staff/pre-registration', '/system-management', '/staff/access', '/transferred-archive', '/promote-students'];
         if (adminOnlyPaths.includes(item.path)) {
           return false;
         }
