@@ -1,307 +1,221 @@
-"use client";
-
-import React, { useState } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Clock, Settings2, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { 
+  Calendar as CalendarIcon, 
+  Clock, 
+  Plus, 
+  Printer, 
+  Download, 
+  ChevronDown, 
+  Sparkles,
+  BookOpen,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
 import { useTimetable } from '@/hooks/useTimetable';
 import { useAuth } from '@/context/AuthContext';
+import { isTeacherRole } from '@/utils/roleHelper';
 import TimeSlotModal from '@/components/timetable/TimeSlotModal';
 import LessonDrawer from '@/components/timetable/LessonDrawer';
 import InlineTimeCell from '@/components/timetable/InlineTimeCell';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
-const DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-const CATEGORY_STYLES: Record<string, { bg: string; text: string; border: string; labelBg: string }> = {
-  'Break':            { bg: 'bg-amber-50',    text: 'text-amber-700',    border: 'border-amber-200',    labelBg: 'bg-amber-100' },
-  'Lunch Break':     { bg: 'bg-orange-50',   text: 'text-orange-700',   border: 'border-orange-200',   labelBg: 'bg-orange-100' },
-  'Games / PE':       { bg: 'bg-green-50',    text: 'text-green-700',    border: 'border-green-200',    labelBg: 'bg-green-100' },
-  'Assembly':         { bg: 'bg-purple-50',   text: 'text-purple-700',   border: 'border-purple-200',   labelBg: 'bg-purple-100' },
-  'Pastoral / Clubs': { bg: 'bg-violet-50',   text: 'text-violet-700',   border: 'border-violet-200',   labelBg: 'bg-violet-100' },
-};
-
-const getCategoryStyle = (category: string | null) => {
-  if (!category) return null;
-  return CATEGORY_STYLES[category] ?? { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200', labelBg: 'bg-cyan-100' };
-};
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 const Timetable = () => {
   const { user } = useAuth();
-  const isReadOnly = user?.role === 'teacher';
+  const userRole = user?.role || '';
+  const isTeacher = isTeacherRole(userRole, user?.staffCategory, user?.specialties) || 
+    String(userRole).toLowerCase().includes('teacher') || String(userRole).toLowerCase().includes('class_teacher');
 
   const {
-    grades,
     selectedGrade,
     setSelectedGrade,
+    grades,
     timeSlots,
     entries,
+    updateEntry,
     addTimeSlot,
     updateTimeSlot,
-    updateSlotTimes,
     deleteTimeSlot,
-    setLesson,
-    deleteLesson,
+    resetTimetable,
   } = useTimetable();
 
-  const [slotModalOpen, setSlotModalOpen] = useState(false);
-  const [lessonDrawerOpen, setLessonDrawerOpen] = useState(false);
-  const [selectedCell, setSelectedCell] = useState<{ slotIndex: number; day: string } | null>(null);
+  const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
+  const [editingSlot, setEditingSlot] = useState<any>(null);
+  const [selectedCell, setSelectedCell] = useState<{ day: string; slotId: string } | null>(null);
 
-  const handleCellClick = (slotIndex: number, day: string) => {
-    if (isReadOnly) return;
-    setSelectedCell({ slotIndex, day });
-    setLessonDrawerOpen(true);
+  const handleCellClick = (day: string, slotId: string) => {
+    if (isTeacher) return; // Strict read-only for teachers
+    setSelectedCell({ day, slotId });
   };
 
-  const handleSaveLesson = (subject: string, colorClass?: string, teacherId?: string, teacherName?: string) => {
-    if (isReadOnly) return;
-    if (selectedCell) {
-      setLesson(selectedCell.slotIndex, selectedCell.day, subject, colorClass, teacherId, teacherName);
-      setLessonDrawerOpen(false);
-      setSelectedCell(null);
-    }
-  };
-
-  const handleDeleteLesson = () => {
-    if (isReadOnly) return;
-    if (selectedCell) {
-      deleteLesson(selectedCell.slotIndex, selectedCell.day);
-      setLessonDrawerOpen(false);
-      setSelectedCell(null);
-    }
-  };
-
-  const selectedSlot = selectedCell ? timeSlots[selectedCell.slotIndex] : null;
-  const currentEntry = selectedCell && entries[selectedCell.slotIndex]
-    ? entries[selectedCell.slotIndex][selectedCell.day]
+  const currentEntry = selectedCell
+    ? entries.find(e => e.day === selectedCell.day && e.slotId === selectedCell.slotId)
     : null;
 
-  const timeLabel = selectedSlot
-    ? `${selectedSlot.startTime} – ${selectedSlot.endTime}`
-    : '';
-
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">School Timetable</h1>
-          <p className="text-muted-foreground">
-            {isReadOnly ? 'View weekly schedules for different grades.' : 'Manage and view weekly schedules for different grades.'}
+    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full font-sans">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">
+            <CalendarIcon size={14} /> School Timetable & Schedule
+          </div>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900">
+            {isTeacher ? 'My Class Timetable' : 'School Timetable Management'}
+          </h1>
+          <p className="text-slate-500 text-sm">
+            {isTeacher 
+              ? `Read-only weekly timetable schedule for ${selectedGrade}.` 
+              : 'Configure time slots, assign learning areas, and manage weekly class schedules.'}
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" className="rounded-xl" onClick={() => window.print()}>
-            <Printer size={18} className="mr-2" /> Print
-          </Button>
-          {!isReadOnly && (
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+            <SelectTrigger className="w-[180px] rounded-xl font-bold border-slate-200">
+              <SelectValue placeholder="Select Grade" />
+            </SelectTrigger>
+            <SelectContent>
+              {grades.map(g => (
+                <SelectItem key={g.id} value={g.name} className="font-medium">
+                  {g.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {!isTeacher && (
             <Button
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100"
-              onClick={() => setSlotModalOpen(true)}
+              onClick={() => { setEditingSlot(null); setIsSlotModalOpen(true); }}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md flex items-center gap-2"
             >
-              <Settings2 size={18} className="mr-2" /> Manage Slots
+              <Plus size={16} /> Manage Slots
             </Button>
           )}
+
+          <Button
+            variant="outline"
+            onClick={() => window.print()}
+            className="rounded-xl font-bold border-slate-200 flex items-center gap-2"
+          >
+            <Printer size={16} /> Print Timetable
+          </Button>
         </div>
       </div>
 
-      {/* Grade Selector */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-          <SelectTrigger className="rounded-2xl h-12 bg-white border-none shadow-sm">
-            <SelectValue placeholder="Select Grade" />
-          </SelectTrigger>
-          <SelectContent>
-            {grades.map((grade) => (
-              <SelectItem key={grade.id} value={grade.id}>
-                {grade.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Timetable Grid */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-center border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 border-b">
-                  <th className="px-4 py-5 font-black text-slate-400 uppercase tracking-widest text-[10px] w-44">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <Clock size={12} /> Time
-                    </div>
+      {/* Timetable Grid View */}
+      <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">Time / Day</th>
+                {DAYS.map(day => (
+                  <th key={day} className="p-4 text-xs font-bold uppercase tracking-wider text-slate-700 text-center">
+                    {day}
                   </th>
-                  {DAY_LABELS.map((day) => (
-                    <th key={day} className="px-4 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">
-                      {day}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {timeSlots.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-16">
-                      <div className="text-center space-y-3">
-                        <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 flex items-center justify-center">
-                          <Clock className="w-8 h-8 text-slate-400" />
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {timeSlots.map(slot => {
+                const isCategorySlot = slot.category && slot.category !== 'normal';
+                if (isCategorySlot) {
+                  return (
+                    <tr key={slot.id} className="bg-slate-50/80">
+                      <td className="p-4 pl-6 font-mono text-xs text-slate-500">
+                        {slot.startTime} - {slot.endTime}
+                      </td>
+                      <td colSpan={DAYS.length} className="p-4 text-center">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-bold text-xs">
+                          <Clock size={14} /> {slot.label || slot.category.toUpperCase()} ({slot.startTime} - {slot.endTime})
                         </div>
-                        <div>
-                          <p className="text-slate-600 font-semibold">No time slots configured</p>
-                          <p className="text-slate-400 text-sm mt-1">
-                            {isReadOnly
-                              ? 'No schedule has been set up yet.'
-                              : 'Click "Manage Slots" to add your first period'}
-                          </p>
-                        </div>
-                        {!isReadOnly && (
-                          <Button onClick={() => setSlotModalOpen(true)} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
-                            <Plus size={16} className="mr-2" /> Add Time Slot
-                          </Button>
-                        )}
-                      </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return (
+                  <tr key={slot.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 pl-6 align-top">
+                      <div className="font-bold text-slate-800 text-sm">{slot.label || 'Lesson'}</div>
+                      <div className="font-mono text-xs text-slate-400 mt-0.5">{slot.startTime} - {slot.endTime}</div>
                     </td>
-                  </tr>
-                ) : (
-                  timeSlots.map((slot, slotIndex) => {
-                    const isCategory = !!slot.category;
-                    const catStyle = getCategoryStyle(slot.category);
-
-                    if (isCategory) {
-                      // ── Special category row: full-width spanning label ──────────────
+                    {DAYS.map(day => {
+                      const entry = entries.find(e => e.day === day && e.slotId === slot.id);
                       return (
-                        <tr key={slot.id} className="hover:opacity-95 transition-opacity">
-                          <InlineTimeCell
-                            slot={slot}
-                            periodNumber={slotIndex + 1}
-                            isReadOnly={isReadOnly}
-                            onSave={(st, et, cat) => updateSlotTimes(slot.id, st, et, cat)}
-                            onDelete={() => deleteTimeSlot(slot.id)}
-                          />
-                          <td
-                            colSpan={5}
-                            className={`px-4 py-5 border-l border-slate-100 ${catStyle?.bg ?? 'bg-slate-50'}`}
+                        <td key={day} className="p-3 align-top border-l border-slate-100">
+                          <div
+                            onClick={() => handleCellClick(day, slot.id)}
+                            className={`p-3 rounded-2xl border transition-all ${
+                              isTeacher 
+                                ? 'bg-slate-50/60 border-slate-100 cursor-default shadow-none' 
+                                : 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
+                            }`}
                           >
-                            <div className="flex items-center justify-center gap-4">
-                              <span className={`inline-flex items-center gap-1.5 px-5 py-2 rounded-2xl text-sm font-bold border ${catStyle?.labelBg ?? 'bg-slate-100'} ${catStyle?.border ?? 'border-slate-200'} ${catStyle?.text ?? 'text-slate-600'}`}>
-                                <span>★</span>
-                                {slot.category}
-                              </span>
-                              <span className={`text-xs font-semibold ${catStyle?.text ?? 'text-slate-500'}`}>
-                                {slot.startTime} – {slot.endTime}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    }
-
-                    // ── Regular lesson row ─────────────────────────────────────────
-                    return (
-                      <tr key={slot.id} className="hover:bg-slate-50/30 transition-colors">
-                        <InlineTimeCell
-                          slot={slot}
-                          periodNumber={slotIndex + 1}
-                          isReadOnly={isReadOnly}
-                          onSave={(st, et, cat) => updateSlotTimes(slot.id, st, et, cat)}
-                          onDelete={() => deleteTimeSlot(slot.id)}
-                        />
-                        {DAYS.map((day) => {
-                          const entry = entries[slotIndex]?.[day];
-                          if (isReadOnly) {
-                            return (
-                              <td key={day} className="px-3 py-3">
-                                <div
-                                  className={`w-full min-h-[64px] p-2.5 rounded-2xl text-xs font-bold flex flex-col items-center justify-center ${
-                                    entry?.color || 'bg-slate-50 text-slate-400'
-                                  }`}
-                                >
-                                  <span className="block truncate">
-                                    {entry?.subject || <span className="text-slate-300">—</span>}
-                                  </span>
-                                  {entry?.teacherName && (
-                                    <span className="text-[10px] font-medium text-emerald-700 mt-0.5 truncate">
-                                      {entry.teacherName}
-                                    </span>
-                                  )}
+                            {entry?.subject ? (
+                              <div className="space-y-1">
+                                <div className="font-bold text-slate-900 text-sm flex items-center justify-between">
+                                  <span>{entry.subject}</span>
+                                  {!isTeacher && <Badge className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0">Active</Badge>}
                                 </div>
-                              </td>
-                            );
-                          }
-                          return (
-                            <td key={day} className="px-3 py-3">
-                              <button
-                                onClick={() => handleCellClick(slotIndex, day)}
-                                className={`w-full min-h-[64px] p-2.5 rounded-2xl text-xs font-bold transition-all hover:scale-[1.02] hover:shadow-md flex flex-col items-center justify-center ${
-                                  entry?.color || 'bg-slate-100 text-slate-400 hover:bg-indigo-50'
-                                }`}
-                              >
-                                <span className="block truncate">
-                                  {entry?.subject || (
-                                    <span className="flex items-center justify-center gap-1 text-slate-400">
-                                      <Plus size={12} /> Add
-                                    </span>
-                                  )}
-                                </span>
-                                {entry?.teacherName && (
-                                  <span className="text-[10px] font-medium text-emerald-700 mt-0.5 truncate">
-                                    {entry.teacherName}
-                                  </span>
+                                {entry.teacher && (
+                                  <div className="text-xs text-slate-500 font-medium">{entry.teacher}</div>
                                 )}
-                              </button>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
+                                {entry.room && (
+                                  <div className="text-[10px] text-slate-400 font-mono">Room: {entry.room}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="py-2 text-center text-slate-300 text-xs font-medium">
+                                {isTeacher ? '—' : '+ Assign Lesson'}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </Card>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 px-2">
-        <span className="font-semibold">Tip:</span>
-        <span>
-          {isReadOnly
-            ? 'This is a read-only view. Contact an administrator to update the schedule.'
-            : 'Click any lesson cell to assign a subject. Hover the time column to inline-edit a period or change its type (regular, break, lunch, etc.).'}
-        </span>
-      </div>
-
-      {/* Modals */}
-      {!isReadOnly && (
-        <TimeSlotModal
-          open={slotModalOpen}
-          onClose={() => setSlotModalOpen(false)}
-          timeSlots={timeSlots}
-          onAdd={addTimeSlot}
-          onUpdate={updateTimeSlot}
-          onDelete={deleteTimeSlot}
+      {/* Lesson Drawer / Modal for admins */}
+      {!isTeacher && selectedCell && (
+        <LessonDrawer
+          isOpen={Boolean(selectedCell)}
+          onClose={() => setSelectedCell(null)}
+          day={selectedCell.day}
+          slotId={selectedCell.slotId}
+          entry={currentEntry}
+          onSave={updates => {
+            if (selectedCell) {
+              updateEntry(selectedCell.day, selectedCell.slotId, updates);
+              setSelectedCell(null);
+            }
+          }}
         />
       )}
 
-      <LessonDrawer
-        open={lessonDrawerOpen}
-        onClose={() => {
-          setLessonDrawerOpen(false);
-          setSelectedCell(null);
-        }}
-        isReadOnly={isReadOnly}
-        day={selectedCell?.day || null}
-        slotIndex={selectedCell?.slotIndex ?? null}
-        timeLabel={timeLabel}
-        currentEntry={currentEntry}
-        onSave={handleSaveLesson}
-        onDelete={handleDeleteLesson}
-      />
+      {/* Time Slot Modal for admins */}
+      {!isTeacher && isSlotModalOpen && (
+        <TimeSlotModal
+          isOpen={isSlotModalOpen}
+          onClose={() => setIsSlotModalOpen(false)}
+          timeSlots={timeSlots}
+          onAddSlot={addTimeSlot}
+          onUpdateSlot={updateTimeSlot}
+          onDeleteSlot={deleteTimeSlot}
+        />
+      )}
     </div>
   );
 };
