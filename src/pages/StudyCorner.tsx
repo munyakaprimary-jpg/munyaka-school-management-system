@@ -858,6 +858,21 @@ export default function StudyCorner() {
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Listen for open_document_preview custom event from AddMaterialModal
+  useEffect(() => {
+    const handlePreviewEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<Attachment>;
+      if (customEvent.detail) {
+        setPreviewAttachment(customEvent.detail);
+        setZoomLevel(100);
+      }
+    };
+    window.addEventListener("open_document_preview", handlePreviewEvent as EventListener);
+    return () => {
+      window.removeEventListener("open_document_preview", handlePreviewEvent as EventListener);
+    };
+  }, []);
+
   // Attachment preview render inside ReaderModal or separate preview modal
   const [activePreviewItem, setActivePreviewItem] = useState<ContentItem | null>(null);
   const [previewZoom, setPreviewZoom] = useState<number>(100);
