@@ -56,6 +56,16 @@ export default function PaymentManagement() {
     }
   });
 
+  const handleToggleGlobalLock = (locked: boolean) => {
+    setIsGloballyLocked(locked);
+    try {
+      localStorage.setItem(GLOBAL_LOCK_KEY, locked ? 'true' : 'false');
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('global_lock_changed', { detail: { locked } }));
+    } catch {}
+    showSuccess(locked ? 'System globally LOCKED. All non-owner staff accounts are now restricted.' : 'System globally UNLOCKED. Teacher and staff access restored.');
+  };
+
   // Real Data from munyaka_central_db (Learners and Staff)
   const { totalActiveStudents, totalActiveStaff, totalCapacity, availableSlots } = useMemo(() => {
     try {
@@ -526,7 +536,42 @@ export default function PaymentManagement() {
 
       {/* Tab 3: Monthly Payment Setting (Powered by real central DB active student calculations) */}
       {activeTab === 'monthly' && (
-        <Card className="border border-slate-200 shadow-sm rounded-3xl p-8 bg-white animate-in fade-in space-y-6">
+        <div className="space-y-6">
+          {/* Global App Lock & SaaS Billing Master Toggle Card */}
+          <Card className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white shadow-2xl p-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className={`p-2 rounded-xl ${isGloballyLocked ? 'bg-rose-500/25 text-rose-400' : 'bg-emerald-500/25 text-emerald-400'}`}>
+                    {isGloballyLocked ? <CreditCard size={22} /> : <Calendar size={22} />}
+                  </div>
+                  <h3 className="text-lg font-black tracking-tight">Global System Lock Switch</h3>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${isGloballyLocked ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'}`}>
+                    {isGloballyLocked ? 'LOCKED' : 'ACTIVE / UNLOCKED'}
+                  </span>
+                </div>
+                <p className="text-xs text-indigo-200">
+                  Instantly lock or unlock all institutional staff &amp; teacher access across the portal. When toggled to <strong>Locked</strong>, all teacher and staff accounts (such as Joseph Wachira) will immediately see the active system restriction lock screen.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-200">
+                  {isGloballyLocked ? 'System Locked' : 'System Unlocked'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleGlobalLock(!isGloballyLocked)}
+                  className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none ${isGloballyLocked ? 'bg-rose-600' : 'bg-emerald-600'}`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${isGloballyLocked ? 'translate-x-8' : 'translate-x-1'}`}
+                  />
+                </button>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="border border-slate-200 shadow-sm rounded-3xl p-8 bg-white animate-in fade-in space-y-6">
           <CardHeader className="p-0 border-b border-slate-100 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
