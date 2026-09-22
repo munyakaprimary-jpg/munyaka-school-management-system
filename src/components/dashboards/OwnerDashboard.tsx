@@ -914,6 +914,33 @@ const OwnerDashboard: React.FC = () => {
     ? 'from-indigo-600 via-violet-600 to-fuchsia-600'
     : 'from-blue-600 via-cyan-600 to-teal-500';
 
+  // Global Lock state management
+  const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
+  const [isGloballyLocked, setIsGloballyLocked] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleGlobalLock = (checked: boolean) => {
+    setIsGloballyLocked(checked);
+    try {
+      localStorage.setItem(GLOBAL_LOCK_KEY, checked ? 'true' : 'false');
+      // Dispatch storage event / custom event so other connected tabs/windows or teacher apps sync immediately
+      window.dispatchEvent(new Event('storage'));
+      if (checked) {
+        showSuccess('Global App Lock activated! All connected teacher apps are now locked.');
+      } else {
+        showSuccess('Global App Lock deactivated! Teacher apps are now unlocked.');
+      }
+    } catch (err) {
+      console.error('Failed to save global lock state:', err);
+      showError('Could not update Global App Lock status.');
+    }
+  };
+
   const hasBillingRows = billingRows.length > 0;
   const hasPaidRow = billingRows.some((r) => r.status === 'paid');
 

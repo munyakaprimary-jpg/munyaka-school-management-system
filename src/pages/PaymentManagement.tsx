@@ -412,10 +412,47 @@ export default function PaymentManagement() {
       {activeTab === 'monthly' && (
         <Card className="border border-slate-200 shadow-sm rounded-3xl p-8 bg-white animate-in fade-in space-y-6">
           <CardHeader className="p-0 border-b border-slate-100 pb-4">
-            <CardTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
-              <Calendar className="text-indigo-600" size={24} /> Monthly Payment & Billing Setting
-            </CardTitle>
-            <p className="text-xs text-slate-500 font-medium mt-1">Calculated automatically from {allocatedSeats} active registered learners in the central database.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
+                  <Calendar className="text-indigo-600" size={24} /> Monthly Payment & Billing Setting
+                </CardTitle>
+                <p className="text-xs text-slate-500 font-medium mt-1">Calculated automatically from {allocatedSeats} active registered learners in the central database.</p>
+              </div>
+
+              {/* Global App Lock Toggle Control */}
+              {(() => {
+                const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
+                const isGloballyLocked = localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
+                return (
+                  <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border transition-all ${isGloballyLocked ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-emerald-50 border-emerald-200 shadow-sm'}`}>
+                    <div className="flex flex-col text-left">
+                      <span className={`text-xs font-bold uppercase tracking-wider ${isGloballyLocked ? 'text-red-700' : 'text-emerald-700'}`}>
+                        {isGloballyLocked ? '🔴 Teacher Apps Locked' : '🟢 Teacher Apps Unlocked'}
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        {isGloballyLocked ? 'All connected teacher app sessions are restricted' : 'All teacher app sessions are fully active'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextState = !isGloballyLocked;
+                        localStorage.setItem(GLOBAL_LOCK_KEY, nextState ? 'true' : 'false');
+                        window.dispatchEvent(new Event('storage'));
+                        window.location.reload();
+                      }}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isGloballyLocked ? 'bg-red-600' : 'bg-emerald-600'}`}
+                      role="switch"
+                      aria-checked={isGloballyLocked}
+                      title={isGloballyLocked ? 'Click to Unlock Teacher Apps' : 'Click to Lock Teacher Apps'}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${isGloballyLocked ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
           </CardHeader>
 
           <CardContent className="p-0 space-y-6 pt-2">
