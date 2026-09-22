@@ -356,7 +356,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const normalizedEmail = normalizeEmail(inputEmail);
     const normalizedStaffId = cleanInput;
 
-    // Check if school owner login (email munyakaprimary@gmail.com or role admin/owner)
+    let foundUser = users[normalizedEmail] || users[normalizedStaffId];
     const isOwnerOrAdminLogin = cleanInput.includes('munyakaprimary') || cleanInput === 'admin' || cleanInput === 'owner';
     
     // Also grab active admin password from storage / configuration
