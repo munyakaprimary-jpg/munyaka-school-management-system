@@ -73,6 +73,16 @@ export default function PaymentManagement() {
   // Monthly billing setting state
   const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState(1200);
   const [autoDebitEnabled, setAutoDebitEnabled] = useState(true);
+  const [paymentDueDate, setPaymentDueDate] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_payment_due_date');
+      if (saved) return saved;
+    } catch {}
+    // Default to end of current month
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return lastDay.toISOString().split('T')[0];
+  });
 
   const [subscriptions, setSubscriptions] = useState([
     { id: 1, school: 'Munyaka Primary & Junior School', tier: 'Enterprise Tier', status: 'Active', expires: '2026-12-31', amount: 'KES 120,000' },
@@ -491,10 +501,10 @@ export default function PaymentManagement() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-500">Monthly License Fee Per Student (KES)</Label>
-                <Input 
+                <Input
                   type="number"
                   value={monthlyFeePerStudent}
                   onChange={(e) => setMonthlyFeePerStudent(Number(e.target.value))}
@@ -503,8 +513,18 @@ export default function PaymentManagement() {
               </div>
 
               <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-500">Monthly Payment Due Date</Label>
+                <Input
+                  type="date"
+                  value={paymentDueDate}
+                  onChange={(e) => setPaymentDueDate(e.target.value)}
+                  className="h-12 bg-slate-50 border-slate-200 font-bold text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-500">Automated Monthly Direct Debit</Label>
-                <select 
+                <select
                   value={autoDebitEnabled ? 'yes' : 'no'}
                   onChange={(e) => setAutoDebitEnabled(e.target.value === 'yes')}
                   className="w-full h-12 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800"
@@ -515,6 +535,37 @@ export default function PaymentManagement() {
               </div>
             </div>
 
+            {/* Overdue Warning / Eligibility Indicator */}
+            {(() => {
+              const todayStr = new Date().toISOString().split('T')[0];
+              const isOverdue = paymentDueDate && todayStr > paymentDueDate;
+              return (
+                <div className={`border rounded-2xl p-5 flex items-start gap-3 ${isOverdue ? 'bg-red-50 border-red-200 text-red-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
+                  {isOverdue ? (
+                    <Calendar className="shrink-0 text-red-600 mt-0.5" size={20} />
+                  ) : (
+                    <Calendar className="shrink-0 text-emerald-600 mt-0.5" size={20} />
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="font-bold text-xs uppercase tracking-wider">
+                        {isOverdue ? '⚠️ Payment Due Date Passed (Eligible for App Lock)' : '✅ Payment Status: Current'}
+                      </p>
+                      <Badge className={isOverdue ? 'bg-red-200 text-red-800 font-bold text-[10px]' : 'bg-emerald-200 text-emerald-800 font-bold text-[10px]'}>
+                        Due: {paymentDueDate}
+                      </Badge>
+                    </div>
+                    <p className="text-xs mt-1">
+                      {isOverdue
+                        ? `The scheduled due date (${paymentDueDate}) has passed. You can now toggle "Teacher Apps Locked" above to restrict access until payment is settled.`
+                        : `Current payment deadline is ${paymentDueDate}. Teacher apps remain fully active under normal operational terms.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3 text-amber-900">
               <DollarSign className="shrink-0 text-amber-600 mt-0.5" size={20} />
               <div>
@@ -524,8 +575,13 @@ export default function PaymentManagement() {
             </div>
 
             <div className="flex justify-end pt-4 border-t border-slate-100">
-              <Button 
-                onClick={() => showSuccess('Monthly payment settings saved successfully.')}
+              <Button
+                onClick={() => {
+                  try {
+                    localStorage.setItem('munyaka_payment_due_date', paymentDueDate);
+                  } catch {}
+                  showSuccess('Monthly payment settings & due date saved successfully.');
+                }}
                 className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-8"
               >
                 Save Monthly Billing Rules
