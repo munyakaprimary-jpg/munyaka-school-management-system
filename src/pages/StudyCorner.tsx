@@ -1740,7 +1740,7 @@ export default function StudyCorner() {
                       previewAttachment.fileName?.match(/\.pdf$/i) ||
                       previewAttachment.type?.includes('pdf') ||
                       previewAttachment.dataUrl.startsWith('data:text/') ||
-                      previewAttachment.fileName?.match/\.(txt|md|csv)$/i) ||
+                      previewAttachment.fileName?.match(/\.(txt|md|csv)$/i) ||
                       previewAttachment.type?.includes('text') ? (
                     <div className="w-full h-[70vh] border border-slate-200 rounded-xl overflow-hidden bg-slate-100">
                       <iframe
