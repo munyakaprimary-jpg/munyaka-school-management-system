@@ -116,16 +116,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     const resolvedR = resolveRole(role);
     const dashboardItem = menuItems.find(item => item.path === '/');
 
-    console.log('[Sidebar] Current User Auth State:', { name: userObj.name, role, roleLower, resolvedR });
-
-    // Check if user is a teacher or non-admin staff
-    const isTeacherVariant = isTeacherRole(role, userObj.staffCategory, userObj.specialties) ||
-      resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' ||
+    const isTeacherVariant = isTeacherRole(role, userObj.staffCategory, userObj.specialties) || 
+      resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' || 
       resolvedR === 'senior_teacher' || roleLower.includes('teacher') || roleLower.includes('educator') || roleLower.includes('class teacher') || roleLower === 'class_teacher';
 
     const isAdminOrOwner = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin');
 
-    // If user is a teacher (like Joseph Wachira / CLASS TEACHER), return ONLY the permitted teacher menu items directly!
     if (isTeacherVariant && !isAdminOrOwner) {
       const teacherPaths = [
         '/', '/students', '/communication', '/notices',
@@ -142,8 +138,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       }));
     }
 
-    // Owner specific menu
     if (roleLower === 'owner') {
+      const roleFiltered = menuItems.filter(item => {
         if (item.path === '/study-corner') return true;
         if (item?.global) return true;
         return (item?.roles || []).map((r: string) => String(r).toLowerCase()).includes('owner');
@@ -170,7 +166,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       return ordered;
     }
 
-    // Student specific menu
     if (roleLower === 'student' || roleLower === 'learner' || roleLower === 'parent') {
       const learnerPaths = ['/', '/attendance/students', '/timetable', '/reports', '/study-corner', '/games'];
       const labels: Record<string, string> = {
@@ -188,42 +183,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       }));
     }
 
-    // RBAC & Permission Mapping for all staff/teachers/admins
     return menuItems.filter(item => {
       if (item.path === '/') return true;
       if (item.global) return true;
-
-      // EXPLICIT CHECK: If user is a teacher, unconditionally reject admin-only paths & titles
-      if (isTeacherVariant) {
-        const forbiddenTeacherPaths = [
-          '/central-data', '/grades', '/staff', '/learning-areas', '/exam-types',
-          '/staff/pre-registration', '/system-management', '/staff/access',
-          '/transferred-archive', '/promote-students', '/admin/control-center',
-          '/dev/tenants', '/payment-management', '/staff/attendance-monitor'
-        ];
-        if (
-          forbiddenTeacherPaths.includes(item.path) ||
-          item.label.includes("Central Data") ||
-          item.label.includes("Grades & Streams") ||
-          item.label.includes("Staff Directory") ||
-          item.label.includes("Learning Areas") ||
-          item.label.includes("Exam Types") ||
-          item.label.includes("Payment") ||
-          item.label.includes("Tenants")
-        ) {
-          return false;
-        }
-
-        const allowedTeacherPaths = [
-          '/', '/students', '/communication', '/notices',
-          '/timetable', '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
-          '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
-          '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
-          '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile',
-          '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list'
-        ];
-        return allowedTeacherPaths.includes(item.path);
-      }
 
       if (!isAdminOrOwner) {
         if (
@@ -246,13 +208,11 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         return !['/payment-management', '/dev/tenants'].includes(item.path);
       }
       
-      // Check if item has explicit roles array matching resolved role or roleLower
       const rolesList = (item.roles || []).map(r => String(r).toLowerCase());
       if (rolesList.includes(roleLower) || (resolvedR && rolesList.includes(resolvedR))) {
         return true;
       }
 
-      // Check RBAC permission matrix for path
       const permKey = ROUTE_PERMISSIONS[item.path];
       if (permKey) {
         return roleHas(role, permKey);
@@ -321,7 +281,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                   )}
                 </NavLink>
 
-                {/* Subitems if any */}
                 {!isCollapsed && (item as any).subItems && isActive && (
                   <div className="ml-8 mt-1 space-y-1 border-l-2 border-slate-800 pl-3">
                     {(item as any).subItems.map((sub: any, sIdx: number) => {
@@ -346,7 +305,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           })}
         </div>
 
-        {/* Sidebar Footer / User Profile */}
         <div className="p-4 border-t border-slate-800 bg-slate-900/50">
           {!isCollapsed ? (
             <div className="flex items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
@@ -389,13 +347,11 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         </div>
       </aside>
 
-      {/* Main Content Viewport */}
       <div className="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-y-auto">
         {children}
       </div>
     </div>
-  };
-  
-  export default Sidebar;
+  );
+};
 
 export default Sidebar;
