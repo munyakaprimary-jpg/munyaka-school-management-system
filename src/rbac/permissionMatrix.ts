@@ -1191,8 +1191,7 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     access_computer_lab_assets: null,
     access_it_tickets: null,
     access_device_assignment: null,
-  }
-};
+  };
 
 /** Resolve a role string to a canonical Role, normalising admin aliases. */
 export function resolveRole(role?: string | null): Role | null {
