@@ -115,16 +115,6 @@ export default function PaymentManagement() {
     setCampusToDelete(null);
   };
 
-  const [campusToDelete, setCampusToDelete] = useState<{ id: number; school: string } | null>(null);
-
-  const confirmDeleteCampus = () => {
-    if (!campusToDelete) return;
-    const updated = subscriptions.filter(sub => sub.id !== campusToDelete.id);
-    setSubscriptions(updated);
-    showSuccess(`Successfully removed "${campusToDelete.school}" campus and associated billing records.`);
-    setCampusToDelete(null);
-  };
-
   const handleMpesaCheckout = (e: React.FormEvent) => {
     e.preventDefault();
     if (!mpesaNumber || mpesaNumber.length < 10) {
@@ -881,6 +871,61 @@ export default function PaymentManagement() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Campus Confirmation Modal */}
+      {campusToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-6 relative border border-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center font-bold">
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Remove Campus & Subscriptions</h3>
+                  <p className="text-xs text-slate-500 font-medium">Confirmation Required</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCampusToDelete(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center font-bold text-sm transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                Are you sure you want to remove <strong className="text-slate-900 font-bold">{campusToDelete.school}</strong>?
+              </p>
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 text-xs text-rose-800 space-y-1">
+                <p className="font-bold">⚠️ Warning:</p>
+                <p className="text-[11px] leading-relaxed">
+                  This action will delete its associated seat allocations, active licenses, and billing records from the central database. This cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCampusToDelete(null)}
+                className="text-xs font-semibold px-4 py-2.5 rounded-xl border-slate-200"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmDeleteCampus}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md shadow-rose-100 flex items-center gap-2"
+              >
+                Yes, Remove Campus
+              </Button>
+            </div>
           </div>
         </div>
       )}
