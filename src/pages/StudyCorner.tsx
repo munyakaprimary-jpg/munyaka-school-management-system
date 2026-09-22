@@ -864,22 +864,65 @@ export default function StudyCorner() {
   //   2. A custom DOM event dispatched by AddMaterialModal right after it
   //      writes to localStorage. This gives us the same-tab refresh we need
   //      so the new assessment appears under the tab instantly without a reload.
-  const [customItems, setCustomItems] = useState<ContentItem[]>(() => loadCustomMaterials());
+  const [customItems, setCustomItems] = useState<ContentItem[]>(() => {
+    try {
+      const items = loadCustomMaterials();
+      // Also check munyaka_central_db directly
+      const centralRaw = localStorage.getItem('munyaka_central_db');
+      if (centralRaw) {
+        const centralDb = JSON.parse(centralRaw);
+        const centralMaterials = centralDb.studyMaterials || centralDb.materials || [];
+        if (Array.isArray(centralMaterials) && centralMaterials.length > 0) {
+          const existingIds = new Set(items.map(i => i.id));
+          for (const m of centralMaterials) {
+            if (m && m.id && !existingIds.has(m.id)) {
+              items.push(m);
+              existingIds.add(m.id);
+            }
+          }
+        }
+      }
+      return items;
+    } catch {
+      return loadCustomMaterials();
+    }
+  });
 
   const refreshCustomItems = useCallback(() => {
-    setCustomItems(loadCustomMaterials());
+    try {
+      const items = loadCustomMaterials();
+      const centralRaw = localStorage.getItem('munyaka_central_db');
+      if (centralRaw) {
+        const centralDb = JSON.parse(centralRaw);
+        const centralMaterials = centralDb.studyMaterials || centralDb.materials || [];
+        if (Array.isArray(centralMaterials) && centralMaterials.length > 0) {
+          const existingIds = new Set(items.map(i => i.id));
+          for (const m of centralMaterials) {
+            if (m && m.id && !existingIds.has(m.id)) {
+              items.push(m);
+              existingIds.add(m.id);
+            }
+          }
+        }
+      }
+      setCustomItems(items);
+    } catch {
+      setCustomItems(loadCustomMaterials());
+    }
   }, []);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === LS_CUSTOM_MATERIALS) refreshCustomItems();
+      if (e.key === LS_CUSTOM_MATERIALS || e.key === 'munyaka_central_db') refreshCustomItems();
     };
     const onCustomUpdate = () => refreshCustomItems();
     window.addEventListener("storage", onStorage);
     window.addEventListener(CUSTOM_MATERIALS_EVENT, onCustomUpdate);
+    const interval = setInterval(refreshCustomItems, 2000);
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener(CUSTOM_MATERIALS_EVENT, onCustomUpdate);
+      clearInterval(interval);
     };
   }, [refreshCustomItems]);
 

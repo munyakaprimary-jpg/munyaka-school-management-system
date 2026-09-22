@@ -37,6 +37,8 @@ import {
 } from "@/utils/attachmentHelpers";
 
 const LS_KEY = "custom_study_materials";
+export const STUDY_MATERIALS_DB_KEY = "custom_study_materials";
+export const CENTRAL_DB_KEY = "munyaka_central_db";
 
 export type ContentType = "notes" | "memory_verse" | "practice_questions" | "pdf_link" | "assessment";
 
@@ -65,7 +67,34 @@ const CONTENT_TYPES: { value: ContentType; label: string; icon: React.ReactNode 
 
 export function loadCustomMaterials(): ContentItem[] {
   try {
-    return JSON.parse(localStorage.getItem(LS_KEY) ?? "[]");
+    let items: ContentItem[] = [];
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) items = parsed;
+    }
+
+    // Also check munyaka_central_db central database
+    const centralRaw = localStorage.getItem(CENTRAL_DB_KEY);
+    if (centralRaw) {
+      try {
+        const centralDb = JSON.parse(centralRaw);
+        const centralMaterials = centralDb.studyMaterials || centralDb.materials || [];
+        if (Array.isArray(centralMaterials) && centralMaterials.length > 0) {
+          const existingIds = new Set(items.map(i => i.id));
+          for (const m of centralMaterials) {
+            if (m && m.id && !existingIds.has(m.id)) {
+              items.push(m);
+              existingIds.add(m.id);
+            }
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return items;
   } catch {
     return [];
   }
@@ -73,18 +102,23 @@ export function loadCustomMaterials(): ContentItem[] {
 
 export function saveCustomMaterial(item: ContentItem): void {
   const existing = loadCustomMaterials();
-  // Ensure the legacy `category` field mirrors `strand` so older consumers
-  // (and the requirement that assessments be tagged with
-  // category === "Assessments & Quizzes") keep working alongside the
-  // new unified `strand` field.
   const enriched = {
     ...item,
     category: (item as any).category ?? item.strand,
   };
-  localStorage.setItem(LS_KEY, JSON.stringify([enriched, ...existing]));
-  // Notify same-tab listeners (e.g., the StudyCorner page) that
-  // `custom_study_materials` was updated so they can refresh their state
-  // and the new material shows up immediately under the correct tab.
+  const updated = [enriched, ...existing.filter(i => i.id !== enriched.id)];
+  localStorage.setItem(LS_KEY, JSON.stringify(updated));
+
+  // Sync to munyaka_central_db central database
+  try {
+    const centralRaw = localStorage.getItem(CENTRAL_DB_KEY);
+    const centralDb = centralRaw ? JSON.parse(centralRaw) : {};
+    centralDb.studyMaterials = updated;
+    localStorage.setItem(CENTRAL_DB_KEY, JSON.stringify(centralDb));
+  } catch {
+    /* ignore */
+  }
+
   window.dispatchEvent(new CustomEvent("custom_study_materials_updated"));
 }
 
