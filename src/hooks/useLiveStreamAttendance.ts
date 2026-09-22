@@ -38,6 +38,7 @@ export interface StreamAttendanceRecord {
   morningPresent: number;
   afternoonPresent: number;
   rate: number;        // combined morning+afternoon present %
+  learners: Array<{ id: string; name: string }>;
 }
 
 interface LiveRegisterEntry {
@@ -135,6 +136,7 @@ export const useLiveStreamAttendance = (
         grade: string;
         stream: string;
         studentIds: Set<string>;
+        learners: Array<{ id: string; name: string }>;
       }>();
 
       for (const s of active) {
@@ -144,15 +146,25 @@ export const useLiveStreamAttendance = (
 
         const key = `${grade}::${stream}`;
         if (!gradeStreamMap.has(key)) {
-          gradeStreamMap.set(key, { grade, stream, studentIds: new Set() });
+          gradeStreamMap.set(key, { grade, stream, studentIds: new Set(), learners: [] });
         }
-        gradeStreamMap.get(key)!.studentIds.add(s.id);
+        const entry = gradeStreamMap.get(key)!;
+        entry.studentIds.add(s.id);
+        entry.learners.push({
+          id: s.id,
+          name: s.name || 'Unnamed Learner',
+        });
+      }
+
+      // Sort learners alphabetically by name for each stream
+      for (const [, data] of gradeStreamMap) {
+        data.learners.sort((a, b) => a.name.localeCompare(b.name));
       }
 
       // ── 3. For each grade+stream, read the v2 register for selectedDate ─────
       const results: StreamAttendanceRecord[] = [];
 
-      for (const [, { grade, stream, studentIds }] of gradeStreamMap) {
+      for (const [, { grade, stream, studentIds, learners }] of gradeStreamMap) {
         // Build the storage key — stream in the key uses underscores (no spaces)
         const v2Key = buildV2Key(grade, stream, selectedDate);
         const registerRaw = ls.getItem(v2Key);
@@ -239,6 +251,7 @@ export const useLiveStreamAttendance = (
           morningPresent,
           afternoonPresent,
           rate,
+          learners,
         });
       }
 
