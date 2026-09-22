@@ -1110,8 +1110,8 @@ export default function StudyCorner() {
     printAssessment(item);
   }, []);
 
-  const handleOpenAttachment = useCallback((att: Attachment) => {
-    if (!att || !att.dataUrl) return;
+  const handleOpenAttachment = useCallback((att: Attachment | null | undefined) => {
+    if (!att || !att?.dataUrl) return;
     setPreviewAttachment(att);
     setZoomLevel(100);
   }, []);

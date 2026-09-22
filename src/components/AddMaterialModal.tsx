@@ -168,14 +168,14 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof NewMaterialForm | "attachment", string>>>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [isReadingFile, setIsReadingFile] = useState(false);
-  const [isDragOverScheme, setIsDragOverScheme] = useState(false);
-  const [isReadingScheme, setIsReadingScheme] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const schemeInputRef = useRef<HTMLInputElement>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [saved, setSaved] = useState<boolean>(false);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
+  const [isReadingFile, setIsReadingFile] = useState<boolean>(false);
+  const [isDragOverScheme, setIsDragOverScheme] = useState<boolean>(false);
+  const [isReadingScheme, setIsReadingScheme] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const schemeInputRef = useRef<HTMLInputElement | null>(null);
 
   const isAssessment = form.strand === "Assessments & Quizzes" || form.contentType === "assessment";
   const effectiveContentType =
