@@ -84,7 +84,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student'] },
     { icon: Clock, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
-    { icon: CheckSquare, label: 'Attendance Management', path: '/attendance', roles: ['admin'] },
+    { icon: CheckSquare, label: 'Attendance Management', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'bursar'] },
     { icon: Fingerprint, label: 'Staff Attendance', path: '/staff/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'],
@@ -103,7 +103,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'librarian', 'library_teacher'] },
     { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student', 'parent', 'librarian', 'library_teacher'] },
-    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
+    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
     { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
@@ -187,7 +187,34 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       isTeacherRole(role, staffCategory, specialties);
 
     if (isTeacher) {
-      return menuItems.map(item => {
+      // Teachers and Class Teachers get a comprehensive teaching & oversight menu
+      const teacherAllowedPaths = [
+        '/',
+        '/games',
+        '/students',
+        '/grades',
+        '/learning-areas',
+        '/communication',
+        '/notices',
+        '/timetable',
+        '/attendance',
+        '/attendance/students',
+        '/staff/check-in',
+        '/assessments',
+        '/assessments/marked-scripts',
+        '/analysis',
+        '/digital-hub',
+        '/digital-skills',
+        '/practical-competencies',
+        '/portfolio',
+        '/study-corner',
+        '/inventory',
+        '/fees',
+        '/reports',
+        '/settings'
+      ];
+      const items = menuItems.filter(item => teacherAllowedPaths.includes(item.path));
+      return items.map(item => {
         if (item?.path === '/') {
           return { ...item, label: "Teacher's Dashboard" };
         }
