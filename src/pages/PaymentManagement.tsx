@@ -40,6 +40,16 @@ export default function PaymentManagement() {
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentNotes, setPaymentNotes] = useState('Official annual software license renewal');
 
+  // Global App Lock Toggle State
+  const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
+  const [isGloballyLocked, setIsGloballyLocked] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
   // Real Data from munyaka_central_db
   const centralStudents = useMemo(() => {
     try {
@@ -422,15 +432,6 @@ export default function PaymentManagement() {
 
               {/* Global App Lock Toggle Control */}
               {(() => {
-                const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
-                const [isGloballyLocked, setIsGloballyLocked] = useState<boolean>(() => {
-                  try {
-                    return localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
-                  } catch {
-                    return false;
-                  }
-                });
-
                 return (
                   <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border transition-all ${isGloballyLocked ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-emerald-50 border-emerald-200 shadow-sm'}`}>
                     <div className="flex flex-col text-left">
