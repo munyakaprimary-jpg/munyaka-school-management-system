@@ -143,7 +143,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     }
 
     // Owner specific menu
-      const roleFiltered = menuItems.filter(item => {
+    if (roleLower === 'owner') {
         if (item.path === '/study-corner') return true;
         if (item?.global) return true;
         return (item?.roles || []).map((r: string) => String(r).toLowerCase()).includes('owner');
@@ -394,7 +394,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         {children}
       </div>
     </div>
-  );
-};
+  };
+  
+  export default Sidebar;
 
 export default Sidebar;
