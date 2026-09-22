@@ -348,6 +348,18 @@ export function isExemptRole(role: string | null | undefined): boolean {
 
 /** True if the app should show the license gate to the current user. */
 export function shouldShowLicenseGate(opts: { currentRole?: string | null } = {}): boolean {
+  try {
+    const globalLock = localStorage.getItem('munyaka_global_app_lock');
+    const role = opts.currentRole || currentAuthRole() || '';
+    const isOwnerOrAdmin = isExemptRole(role) || role.toLowerCase() === 'admin' || role.toLowerCase() === 'owner';
+
+    if (globalLock === 'true' && !isOwnerOrAdmin) {
+      return true;
+    }
+  } catch {
+    /* fallback */
+  }
+
   if (isExemptRole(opts.currentRole ?? currentAuthRole())) {
     // Exempt role: only show the gate if there is no active license at
     // all (so a fresh install with no key still shows the lock screen
