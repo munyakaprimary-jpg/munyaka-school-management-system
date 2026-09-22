@@ -298,6 +298,184 @@ const Fees = () => {
   // File download state
   const statementExport = useFileDownload();
 
+  // Current user role & permissions check
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : { role: 'admin' };
+    } catch {
+      return { role: 'admin' };
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+        if (stored) setCurrentUser(JSON.parse(stored));
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const isClassTeacher = useMemo(() => {
+    const r = String(currentUser?.role || currentUser?.staffCategory || '').toLowerCase();
+    return r.includes('teacher') || r === 'class_teacher' || r === 'subject_teacher' || r === 'senior_teacher';
+  }, [currentUser]);
+
+  const teacherAssignedGradeStream = useMemo(() => {
+    if (!isClassTeacher) return null;
+    return {
+      grade: currentUser?.grade || currentUser?.assignedGrade || currentUser?.classAssigned || '',
+      stream: currentUser?.stream || currentUser?.assignedStream || ''
+    };
+  }, [isClassTeacher, currentUser]);
+
+  const teacherAssignedGradeStream = useMemo(() => {
+    if (!isClassTeacher) return null;
+    return {
+      grade: currentUser?.grade || currentUser?.assignedGrade || currentUser?.classAssigned || '',
+      stream: currentUser?.stream || currentUser?.assignedStream || ''
+    };
+  }, [isClassTeacher, currentUser]);
+
+  // Current user role & permissions check
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : { role: 'admin' };
+    } catch {
+      return { role: 'admin' };
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+        if (stored) setCurrentUser(JSON.parse(stored));
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const isClassTeacher = useMemo(() => {
+    const r = String(currentUser?.role || currentUser?.staffCategory || '').toLowerCase();
+    return r.includes('teacher') || r === 'class_teacher' || r === 'subject_teacher' || r === 'senior_teacher';
+  }, [currentUser]);
+
+  const teacherAssignedGradeStream = useMemo(() => {
+    if (!isClassTeacher) return null;
+    return {
+      grade: currentUser?.grade || currentUser?.assignedGrade || currentUser?.classAssigned || '',
+      stream: currentUser?.stream || currentUser?.assignedStream || ''
+    };
+  }, [isClassTeacher, currentUser]);
+
+  // Current user role & permissions check
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : { role: 'admin' };
+    } catch {
+      return { role: 'admin' };
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+        if (stored) setCurrentUser(JSON.parse(stored));
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const isClassTeacher = useMemo(() => {
+    const r = String(currentUser?.role || currentUser?.staffCategory || '').toLowerCase();
+    return r.includes('teacher') || r === 'class_teacher' || r === 'subject_teacher' || r === 'senior_teacher';
+  }, [currentUser]);
+
+  const teacherAssignedGradeStream = useMemo(() => {
+    if (!isClassTeacher) return null;
+    return {
+      grade: currentUser?.grade || currentUser?.assignedGrade || currentUser?.classAssigned || '',
+      stream: currentUser?.stream || currentUser?.assignedStream || ''
+    };
+  }, [isClassTeacher, currentUser]);
+
+  // Current user role & permissions check
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : { role: 'admin' };
+    } catch {
+      return { role: 'admin' };
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+        if (stored) setCurrentUser(JSON.parse(stored));
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const isClassTeacher = useMemo(() => {
+    const r = String(currentUser?.role || currentUser?.staffCategory || '').toLowerCase();
+    return r.includes('teacher') || r === 'class_teacher' || r === 'subject_teacher' || r === 'senior_teacher';
+  }, [currentUser]);
+
+  const teacherAssignedGradeStream = useMemo(() => {
+    if (!isClassTeacher) return null;
+    return {
+      grade: currentUser?.grade || currentUser?.assignedGrade || currentUser?.classAssigned || '',
+      stream: currentUser?.stream || currentUser?.assignedStream || ''
+    };
+  }, [isClassTeacher, currentUser]);
+
+  // Current user role & permissions check
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : { role: 'admin' };
+    } catch {
+      return { role: 'admin' };
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
+        if (stored) setCurrentUser(JSON.parse(stored));
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const isClassTeacher = useMemo(() => {
+    const r = String(currentUser?.role || currentUser?.staffCategory || '').toLowerCase();
+    return r.includes('teacher') || r === 'class_teacher' || r === 'subject_teacher' || r === 'senior_teacher';
+  }, [currentUser]);
+
+  const teacherAssignedGradeStream = useMemo(() => {
+    if (!isClassTeacher) return null;
+    return {
+      grade: currentUser?.grade || currentUser?.assignedGrade || currentUser?.classAssigned || '',
+      stream: currentUser?.stream || currentUser?.assignedStream || ''
+    };
+  }, [isClassTeacher, currentUser]);
+
   // ── Data persistence effects ───────────────────────────────────────────────
   
   useEffect(() => {
