@@ -105,6 +105,26 @@ export default function PaymentManagement() {
     { id: 3, school: 'Kapsabet Annex Campus', tier: 'Starter Tier', status: 'Pending Renewal', expires: '2026-03-01', amount: 'KES 35,000' },
   ]);
 
+  const [campusToDelete, setCampusToDelete] = useState<{ id: number; school: string } | null>(null);
+
+  const confirmDeleteCampus = () => {
+    if (!campusToDelete) return;
+    const updated = subscriptions.filter(sub => sub.id !== campusToDelete.id);
+    setSubscriptions(updated);
+    showSuccess(`Successfully removed "${campusToDelete.school}" campus and associated billing records.`);
+    setCampusToDelete(null);
+  };
+
+  const [campusToDelete, setCampusToDelete] = useState<{ id: number; school: string } | null>(null);
+
+  const confirmDeleteCampus = () => {
+    if (!campusToDelete) return;
+    const updated = subscriptions.filter(sub => sub.id !== campusToDelete.id);
+    setSubscriptions(updated);
+    showSuccess(`Successfully removed "${campusToDelete.school}" campus and associated billing records.`);
+    setCampusToDelete(null);
+  };
+
   const handleMpesaCheckout = (e: React.FormEvent) => {
     e.preventDefault();
     if (!mpesaNumber || mpesaNumber.length < 10) {
@@ -246,62 +266,76 @@ export default function PaymentManagement() {
               <CardHeader className="bg-slate-50/70 border-b border-slate-100 px-5 py-3.5">
                 <CardTitle className="text-sm font-bold text-slate-900 flex items-center justify-between">
                   <span>Registered Campuses & Per-Seat Tiers</span>
-                  <Badge className="bg-indigo-100 text-indigo-700 font-bold px-2.5 py-0.5 text-xs">3 Active</Badge>
+                  <Badge className="bg-indigo-100 text-indigo-700 font-bold px-2.5 py-0.5 text-xs">{subscriptions.length} Active</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y divide-slate-100 text-xs">
-                  {subscriptions.map((sub) => {
-                    const isMain = sub.id === 1;
-                    const subtotal = isMain ? allocatedSeats * 250 : (sub.school.includes('Eldoret') ? 180 * 250 : 120 * 250);
-                    const seatCount = isMain ? allocatedSeats : (sub.school.includes('Eldoret') ? 180 : 120);
+                  {subscriptions.length === 0 ? (
+                    <div className="p-8 text-center text-slate-500 font-medium">
+                      No active campuses registered. Add a campus to manage per-seat subscriptions.
+                    </div>
+                  ) : (
+                    subscriptions.map((sub) => {
+                      const isMain = sub.id === 1;
+                      const subtotal = isMain ? allocatedSeats * 250 : (sub.school.includes('Eldoret') ? 180 * 250 : 120 * 250);
+                      const seatCount = isMain ? allocatedSeats : (sub.school.includes('Eldoret') ? 180 : 120);
 
-                    return (
-                      <div key={sub.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shrink-0 font-bold">
-                            <Building2 size={20} />
+                      return (
+                        <div key={sub.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shrink-0 font-bold">
+                              <Building2 size={20} />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-900 text-sm">{sub.school}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge className="bg-slate-100 text-slate-700 font-semibold text-[11px] px-2 py-0.5">{seatCount} Active Seats @ KES 250 / seat</Badge>
+                                <span className="text-[11px] text-slate-400 font-medium">Expires: {sub.expires}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-bold text-slate-900 text-sm">{sub.school}</h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge className="bg-slate-100 text-slate-700 font-semibold text-[11px] px-2 py-0.5">{seatCount} Active Seats @ KES 250 / seat</Badge>
-                              <span className="text-[11px] text-slate-400 font-medium">Expires: {sub.expires}</span>
+
+                          <div className="flex items-center justify-between md:justify-end gap-2.5">
+                            <div className="text-right">
+                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Annual Subtotal</p>
+                              <p className="font-extrabold text-slate-900 text-xs">KES {subtotal.toLocaleString()}</p>
+                            </div>
+                            <Badge className={sub.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-0.5' : 'bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-0.5'}>
+                              {sub.status}
+                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                onClick={() => {
+                                  setPaymentCampus(sub.school);
+                                  setPaymentAmount(String(subtotal));
+                                  setIsPaymentModalOpen(true);
+                                }}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm"
+                              >
+                                Record Payment
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => setActiveTab('seats')}
+                                className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-slate-200"
+                              >
+                                Manage Seats
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => setCampusToDelete({ id: sub.id, school: sub.school })}
+                                className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                                title="Remove Campus"
+                              >
+                                <Trash2 size={13} />
+                              </Button>
                             </div>
                           </div>
                         </div>
-
-                        <div className="flex items-center justify-between md:justify-end gap-2.5">
-                          <div className="text-right">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Annual Subtotal</p>
-                            <p className="font-extrabold text-slate-900 text-xs">KES {subtotal.toLocaleString()}</p>
-                          </div>
-                          <Badge className={sub.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-0.5' : 'bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-0.5'}>
-                            {sub.status}
-                          </Badge>
-                          <div className="flex items-center gap-1.5">
-                            <Button
-                              onClick={() => {
-                                setPaymentCampus(sub.school);
-                                setPaymentAmount(String(subtotal));
-                                setIsPaymentModalOpen(true);
-                              }}
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm"
-                            >
-                              Record Payment
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => setActiveTab('seats')}
-                              className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-slate-200"
-                            >
-                              Manage Seats
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </CardContent>
             </Card>
