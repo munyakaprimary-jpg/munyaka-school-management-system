@@ -151,13 +151,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     }
 
     // Student specific menu
-    if (roleLower === 'student' || roleLower === 'learner') {
-      const learnerPaths = ['/', '/attendance/students', '/reports', '/fees', '/study-corner', '/games'];
+    if (roleLower === 'student' || roleLower === 'learner' || roleLower === 'parent') {
+      const learnerPaths = ['/', '/attendance/students', '/timetable', '/reports', '/study-corner', '/games'];
       const labels: Record<string, string> = {
         '/': 'Overview',
         '/attendance/students': 'Attendance',
-        '/reports': 'Reports & Marksheets',
-        '/fees': 'Fees',
+        '/timetable': 'Timetable',
+        '/reports': 'Report Cards',
         '/study-corner': 'Study Corner',
         '/games': 'Games Hub',
       };
@@ -189,14 +189,15 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       }
 
       // If user is any teacher variant (Teacher, Class Teacher, Subject Teacher, etc.),
-      // allow standard operational modules: dashboard, students, grades, learning-areas, communication, notices, timetable, attendance, student-attendance, staff-check-in, staff-attendance, assessments, marked-scripts, analysis, digital-hub, digital-skills, practical-competencies, portfolio, study-corner, inventory, fees, reports.
+      // allow: Student Directory, Timetable, Student Attendance, Daily Check-In, Enter Marks, Exam tools, Report Cards, Digital Competencies, Study Corner, Communication, etc.
       if (isTeacherRole(role, userObj.staffCategory, userObj.specialties) || resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' || resolvedR === 'senior_teacher' || resolvedR === 'head_teacher' || roleLower.includes('teacher') || roleLower.includes('educator')) {
         const allowedTeacherPaths = [
           '/', '/students', '/grades', '/learning-areas', '/communication', '/notices',
           '/timetable', '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
           '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
           '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
-          '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile'
+          '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile',
+          '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list'
         ];
         return allowedTeacherPaths.includes(item.path);
       }
