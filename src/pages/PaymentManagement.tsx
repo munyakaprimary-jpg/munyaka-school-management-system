@@ -100,11 +100,28 @@ export default function PaymentManagement() {
     return lastDay.toISOString().split('T')[0];
   });
 
-  const [subscriptions, setSubscriptions] = useState([
-    { id: 1, school: 'Munyaka Primary & Junior School', tier: 'Enterprise Tier', status: 'Active', expires: '2026-12-31', amount: 'KES 120,000' },
-    { id: 2, school: 'Eldoret Junior Academy', tier: 'Standard Tier', status: 'Active', expires: '2026-08-15', amount: 'KES 65,000' },
-    { id: 3, school: 'Kapsabet Annex Campus', tier: 'Starter Tier', status: 'Pending Renewal', expires: '2026-03-01', amount: 'KES 35,000' },
-  ]);
+  // Campuses data initialized or loaded from munyaka_central_db or localStorage
+  const [subscriptions, setSubscriptions] = useState(() => {
+    try {
+      const centralRaw = localStorage.getItem('munyaka_central_db');
+      if (centralRaw) {
+        const centralDb = JSON.parse(centralRaw);
+        if (Array.isArray(centralDb.campuses) && centralDb.campuses.length > 0) {
+          return centralDb.campuses;
+        }
+      }
+      const saved = localStorage.getItem('munyaka_registered_campuses');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [
+      { id: 1, school: 'Munyaka Primary & Junior School', tier: 'Enterprise Tier', status: 'Active', expires: '2026-12-31', amount: 'KES 120,000' },
+      { id: 2, school: 'Eldoret Junior Academy', tier: 'Standard Tier', status: 'Active', expires: '2026-08-15', amount: 'KES 65,000' },
+      { id: 3, school: 'Kapsabet Annex Campus', tier: 'Starter Tier', status: 'Pending Renewal', expires: '2026-03-01', amount: 'KES 35,000' },
+    ];
+  });
 
   const [campusToDelete, setCampusToDelete] = useState<{ id: number; school: string } | null>(null);
 
@@ -112,6 +129,15 @@ export default function PaymentManagement() {
     if (!campusToDelete) return;
     const updated = subscriptions.filter(sub => sub.id !== campusToDelete.id);
     setSubscriptions(updated);
+    try {
+      localStorage.setItem('munyaka_registered_campuses', JSON.stringify(updated));
+      const centralRaw = localStorage.getItem('munyaka_central_db');
+      if (centralRaw) {
+        const centralDb = JSON.parse(centralRaw);
+        centralDb.campuses = updated;
+        localStorage.setItem('munyaka_central_db', JSON.stringify(centralDb));
+      }
+    } catch {}
     showSuccess(`Successfully removed "${campusToDelete.school}" campus and associated billing records.`);
     setCampusToDelete(null);
   };
@@ -161,7 +187,7 @@ export default function PaymentManagement() {
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-3 text-center min-w-[100px]">
               <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Campuses</p>
-              <p className="text-lg md:text-xl font-black mt-0.5">3 Campuses</p>
+              <p className="text-lg md:text-xl font-black mt-0.5">{subscriptions.length} Campuses</p>
             </div>
             <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-3 text-center min-w-[120px]">
               <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Seats (L+S)</p>
