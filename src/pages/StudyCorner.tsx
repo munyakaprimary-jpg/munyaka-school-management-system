@@ -1111,6 +1111,7 @@ export default function StudyCorner() {
   }, []);
 
   const handleOpenAttachment = useCallback((att: Attachment) => {
+    if (!att || !att.dataUrl) return;
     setPreviewAttachment(att);
     setZoomLevel(100);
   }, []);
