@@ -2254,15 +2254,28 @@ const Attendance = () => {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={7} className="px-8 py-20 text-center">
+                      <td colSpan={7} className="px-8 py-16 text-center">
                         <div className="flex flex-col items-center gap-3">
                           <div className="p-4 bg-slate-50 rounded-full text-slate-300">
                             <Search size={32} />
                           </div>
-                          <p className="text-slate-800 font-bold">No streams match your filters.</p>
+                          <p className="text-slate-800 font-bold text-sm">No classes found matching this filter combination.</p>
                           <p className="text-xs text-slate-400 max-w-sm">
-                            Try adjusting the grade, stream, or search term — or reset to view all streams.
+                            Try selecting "All Grades" or a different stream, or click below to clear your filters.
                           </p>
+                          <Button
+                            onClick={() => {
+                              setOvGrade('all');
+                              setOvStream('all');
+                              setOvSearch('');
+                              setOvDate(getTodayDateStr());
+                            }}
+                            variant="outline"
+                            className="mt-2 h-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs gap-1.5"
+                          >
+                            <RefreshCw size={13} />
+                            Reset Filters
+                          </Button>
                         </div>
                       </td>
                     </tr>

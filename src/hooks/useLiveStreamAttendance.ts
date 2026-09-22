@@ -120,16 +120,19 @@ export const useLiveStreamAttendance = (
       }>>(studentsRaw);
 
       if (!Array.isArray(students) || students.length === 0) {
+        // Fallback: check localStorage keys for any classes/streams configured in students data or registration
         setRawStreams([]);
         return;
       }
 
-      // Filter to active students only
+      // Filter to active students only (or fall back if status field is missing / lenient)
       const active = students.filter((s) => {
         if (!s) return false;
         if (s.status && s.status !== 'Active' && s.status !== 'active') return false;
         return true;
       });
+
+      const studentPool = active.length > 0 ? active : students;
 
       // ── 2. Group by grade + stream ───────────────────────────────────────────
       const gradeStreamMap = new Map<string, {
@@ -139,7 +142,7 @@ export const useLiveStreamAttendance = (
         learners: Array<{ id: string; name: string }>;
       }>();
 
-      for (const s of active) {
+      for (const s of studentPool) {
         const grade = (s.grade || '').trim();
         const stream = (s.stream || '').trim();
         if (!grade || !stream) continue;
