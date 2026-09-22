@@ -1720,22 +1720,64 @@ export default function StudyCorner() {
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
               <div className="max-w-4xl mx-auto bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
                 {previewAttachment.dataUrl ? (
-                  previewAttachment.dataUrl.startsWith('data:image/') || previewAttachment.dataUrl.match(/\.(png|jpg|jpeg|webp|gif|svg)$/i) ? (
+                  previewAttachment.dataUrl.startsWith('data:image/') ||
+                  previewAttachment.fileName?.match(/\.(png|jpg|jpeg|webp|gif|svg)$/i) ||
+                  previewAttachment.type?.includes('image') ? (
                     <div className="flex justify-center overflow-auto p-4 bg-slate-900 rounded-xl">
                       <img
-                        src={previewAttachment.dataUrl}
-                        alt={previewAttachment.fileName}
+                        src={
+                          previewAttachment.dataUrl.startsWith('data:')
+                            ? previewAttachment.dataUrl
+                            : `data:${previewAttachment.type || 'image/png'};base64,${previewAttachment.dataUrl}`
+                        }
+                        alt={previewAttachment.fileName || 'Preview'}
                         style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
-                        className="max-h-[60vh] object-contain transition-transform duration-150 rounded"
+                        className="max-h-[70vh] max-w-full object-contain transition-transform duration-150 rounded"
+                      />
+                    </div>
+                  ) : previewAttachment.dataUrl.startsWith('data:application/pdf') ||
+                      previewAttachment.fileName?.match(/\.pdf$/i) ||
+                      previewAttachment.type?.includes('pdf') ||
+                      previewAttachment.dataUrl.startsWith('data:text/') ||
+                      previewAttachment.fileName?.match/\.(txt|md|csv)$/i) ||
+                      previewAttachment.type?.includes('text') ? (
+                    <div className="w-full h-[70vh] border border-slate-200 rounded-xl overflow-hidden bg-slate-100">
+                      <iframe
+                        src={
+                          previewAttachment.dataUrl.startsWith('data:')
+                            ? previewAttachment.dataUrl
+                            : `data:${previewAttachment.type || 'application/pdf'};base64,${previewAttachment.dataUrl}`
+                        }
+                        title="Study Document Preview"
+                        className="w-full h-[70vh] border-0"
                       />
                     </div>
                   ) : (
-                    <div className="w-full h-[70vh] border border-slate-200 rounded-xl overflow-hidden bg-slate-100">
-                      <iframe
-                        src={previewAttachment.dataUrl}
-                        title={previewAttachment.fileName}
-                        className="w-full h-full border-0"
-                      />
+                    <div className="text-center py-12 space-y-4">
+                      <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
+                        📄
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-base">{previewAttachment.fileName || 'Study Document'}</h3>
+                        <p className="text-xs text-slate-500 mt-1">File Type: {previewAttachment.type || 'Document'} {previewAttachment.fileSize ? `• ${previewAttachment.fileSize}` : ''}</p>
+                      </div>
+                      <div className="pt-2">
+                        <button
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = previewAttachment.dataUrl.startsWith('data:')
+                              ? previewAttachment.dataUrl
+                              : `data:${previewAttachment.type || 'application/octet-stream'};base64,${previewAttachment.dataUrl}`;
+                            link.download = previewAttachment.fileName || 'study-document';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                        >
+                          📥 Download to View
+                        </button>
+                      </div>
                     </div>
                   )
                 ) : (
@@ -1751,7 +1793,7 @@ export default function StudyCorner() {
                       <button
                         onClick={() => {
                           const link = document.createElement('a');
-                          link.href = previewAttachment.dataUrl;
+                          link.href = previewAttachment.dataUrl || '#';
                           link.download = previewAttachment.fileName || 'study-document';
                           document.body.appendChild(link);
                           link.click();
@@ -1759,7 +1801,7 @@ export default function StudyCorner() {
                         }}
                         className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
                       >
-                        📥 Download File for Offline Access
+                        📥 Download to View
                       </button>
                     </div>
                   </div>
