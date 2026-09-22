@@ -116,6 +116,15 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     const resolvedR = resolveRole(role);
     const dashboardItem = menuItems.find(item => item.path === '/');
 
+    console.log('[Sidebar] Current User Auth State:', { name: userObj.name, role, roleLower, resolvedR });
+
+    // Check if user is a teacher or non-admin staff
+    const isTeacherVariant = isTeacherRole(role, userObj.staffCategory, userObj.specialties) ||
+      resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' ||
+      resolvedR === 'senior_teacher' || roleLower.includes('teacher') || roleLower.includes('educator') || roleLower.includes('class teacher');
+
+    const isAdminOrOwner = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin');
+
     // Owner specific menu
     if (roleLower === 'owner') {
       const roleFiltered = menuItems.filter(item => {
@@ -168,9 +177,35 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       if (item.path === '/') return true;
       if (item.global) return true;
 
-      const isAdminOrOwner = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner';
-      
-      // CRITICAL FIX: Hard-filter out Central Data, Grades & Streams, and Staff Directory for non-admin accounts
+      // EXPLICIT CHECK: If user is a teacher, unconditionally reject admin-only paths & titles
+      if (isTeacherVariant) {
+        const forbiddenTeacherPaths = [
+          '/central-data', '/grades', '/staff', '/learning-areas', '/exam-types',
+          '/staff/pre-registration', '/system-management', '/staff/access',
+          '/transferred-archive', '/promote-students', '/admin/control-center'
+        ];
+        if (
+          forbiddenTeacherPaths.includes(item.path) ||
+          item.label.includes("Central Data") ||
+          item.label.includes("Grades & Streams") ||
+          item.label.includes("Staff Directory") ||
+          item.label.includes("Learning Areas") ||
+          item.label.includes("Exam Types")
+        ) {
+          return false;
+        }
+
+        const allowedTeacherPaths = [
+          '/', '/students', '/communication', '/notices',
+          '/timetable', '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
+          '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
+          '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
+          '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile',
+          '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list'
+        ];
+        return allowedTeacherPaths.includes(item.path);
+      }
+
       if (!isAdminOrOwner) {
         if (
           item.label.includes("Central Data") ||
@@ -188,20 +223,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      // STRICTLY HIDE ADMIN-ONLY MENUS FROM TEACHERS:
-      // Central Data & APK (/central-data), Grades & Streams (/grades), Staff Directory (/staff)
-      const isTeacherVariant = isTeacherRole(role, userObj.staffCategory, userObj.specialties) || 
-        resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' || 
-        resolvedR === 'senior_teacher' || roleLower.includes('teacher') || roleLower.includes('educator');
-
-      if (isTeacherVariant) {
-        const adminOnlyPaths = ['/central-data', '/grades', '/staff', '/learning-areas', '/exam-types', '/staff/pre-registration', '/system-management', '/staff/access', '/transferred-archive', '/promote-students'];
-        if (adminOnlyPaths.includes(item.path)) {
-          return false;
-        }
-      }
-
-      if (roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'head_teacher' || roleLower === 'headteacher') {
+      if (isAdminOrOwner) {
         return !['/payment-management', '/dev/tenants'].includes(item.path);
       }
       
@@ -215,20 +237,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       const permKey = ROUTE_PERMISSIONS[item.path];
       if (permKey) {
         return roleHas(role, permKey);
-      }
-
-      // If user is any teacher variant (Teacher, Class Teacher, Subject Teacher, etc.),
-      // allow operational modules but EXCLUDE admin-only modules
-      if (isTeacherVariant) {
-        const allowedTeacherPaths = [
-          '/', '/students', '/communication', '/notices',
-          '/timetable', '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
-          '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
-          '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
-          '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile',
-          '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list'
-        ];
-        return allowedTeacherPaths.includes(item.path);
       }
 
       return rolesList.includes('admin');
