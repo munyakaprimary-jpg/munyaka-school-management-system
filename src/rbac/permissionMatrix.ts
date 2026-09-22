@@ -1292,14 +1292,9 @@ export const ROLE_DASHBOARD_WIDGETS: Record<Role, WidgetKey[]> = {
     "systemStatus",
   ],
   non_teaching_staff: ["systemStatus"],
-  support_staff: ["systemStatus"],
-    "networkQuotas",
-    "systemStatus",
-  ],
-  non_teaching_staff: ["systemStatus"],
-  support_staff: ["systemStatus"],
-
-  parent: ["totalActiveEnrollment"],
+    support_staff: ["systemStatus"],
+  
+    parent: ["totalActiveEnrollment"],
   student: ["todayAttendance"],
 
   // OWNER: billing/subscription metrics only — NO operational widgets
@@ -1417,7 +1412,5 @@ export const ROLE_LABELS: Record<Role, string> = {
   support_staff: "Support Staff",
   parent: "Parent",
   student: "Student",
-  owner: "Owner",
-};
   owner: "Owner",
 };
