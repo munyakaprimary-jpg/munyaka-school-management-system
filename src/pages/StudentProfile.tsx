@@ -82,17 +82,28 @@ const StudentProfile = () => {
 
   const activeLearner = useMemo(() => {
     try {
+      const stored = getStoredLearners();
       const rawDb = localStorage.getItem('munyaka_central_db');
       const db = rawDb ? JSON.parse(rawDb) : {};
-      const studentsList = Array.isArray(db.students) ? db.students : [];
+      const centralStudents = Array.isArray(db.students) ? db.students : [];
 
-      return studentsList.find((s: any) =>
+      const combined = [...stored, ...centralStudents];
+      const decodedId = id ? decodeURIComponent(id) : '';
+
+      return combined.find((s: any) =>
         String(s.id) === String(id) ||
+        String(s.id) === String(decodedId) ||
+        String(s.admNo) === String(id) ||
+        String(s.admNo) === String(decodedId) ||
         String(s.admissionNo) === String(id) ||
+        String(s.admissionNo) === String(decodedId) ||
         String(s.admissionNumber) === String(id) ||
+        String(s.admissionNumber) === String(decodedId) ||
         String(s.assessmentNo) === String(id) ||
+        String(s.assessmentNo) === String(decodedId) ||
         String(s.assessment) === String(id) ||
-        encodeURIComponent(s.admissionNo) === id
+        String(s.assessment) === String(decodedId) ||
+        String(s.name || '').toLowerCase() === String(decodedId).toLowerCase()
       ) || null;
     } catch (e) {
       return null;
