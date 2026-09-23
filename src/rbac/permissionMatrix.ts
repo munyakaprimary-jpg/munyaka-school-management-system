@@ -38,6 +38,7 @@ export const PERMISSIONS = {
   MANAGE_CENTRAL_DATA: 'manage_central_data',
   MANAGE_STAFF_DIRECTORY: 'manage_staff_directory',
   MANAGE_TIMETABLE_ADMIN: 'manage_timetable_admin',
+  MANAGE_ICT_LAB: 'manage_ict_lab',
 } as const;
 
 export const ROUTE_PERMISSIONS: Record<string, string> = {
@@ -56,6 +57,12 @@ export const ROUTE_PERMISSIONS: Record<string, string> = {
   '/admin/control-center': PERMISSIONS.MANAGE_LEARNERS, // Example mapping
   '/dev/tenants': PERMISSIONS.MANAGE_SUBSCRIPTION,
   '/payment-management': PERMISSIONS.MANAGE_FINANCES,
+  '/ict-lab': PERMISSIONS.MANAGE_ICT_LAB,
+  '/digital-hub': PERMISSIONS.VIEW_DASHBOARD,
+  '/digital-skills': PERMISSIONS.VIEW_DASHBOARD,
+  '/study-corner': PERMISSIONS.VIEW_DASHBOARD,
+  '/notices': PERMISSIONS.VIEW_DASHBOARD,
+  '/staff/check-in': PERMISSIONS.TAKE_ATTENDANCE,
 } as const;
 
 export function resolveRole(role?: string): string {
@@ -64,6 +71,8 @@ export function resolveRole(role?: string): string {
   if (r.includes('admin')) return 'admin';
   if (r.includes('owner')) return 'owner';
   if (r.includes('head')) return 'head_teacher';
+  if (r.includes('ict_technician') || r.includes('ict technician')) return 'ict_technician';
+  if (r.includes('ict')) return 'ict_teacher';
   if (r.includes('teacher') || r.includes('educator')) return 'teacher';
   if (r.includes('bursar') || r.includes('accountant')) return 'bursar';
   if (r.includes('parent')) return 'parent';
@@ -129,6 +138,17 @@ export function roleHas(role?: string, permission?: string): boolean {
       PERMISSIONS.VIEW_REPORTS,
     ];
     return studentParentPermissions.includes(permission as any);
+  }
+
+  // ICT Technician permissions
+  if (resolved === 'ict_technician' || resolved === 'ict_teacher') {
+    const ictPermissions = [
+      PERMISSIONS.VIEW_DASHBOARD,
+      PERMISSIONS.MANAGE_ICT_LAB,
+      PERMISSIONS.TAKE_ATTENDANCE,
+      PERMISSIONS.VIEW_REPORTS,
+    ];
+    return ictPermissions.includes(permission as any) || permission === PERMISSIONS.VIEW_DASHBOARD;
   }
   
   return false;
@@ -210,6 +230,16 @@ export function permissionsForRole(role?: string): Record<string, boolean> {
       PERMISSIONS.VIEW_REPORTS,
     ];
     studentParentPermissions.forEach(perm => {
+      permissions[perm] = true;
+    });
+  } else if (resolved === 'ict_technician' || resolved === 'ict_teacher') {
+    const ictPermissions = [
+      PERMISSIONS.VIEW_DASHBOARD,
+      PERMISSIONS.MANAGE_ICT_LAB,
+      PERMISSIONS.TAKE_ATTENDANCE,
+      PERMISSIONS.VIEW_REPORTS,
+    ];
+    ictPermissions.forEach(perm => {
       permissions[perm] = true;
     });
   }

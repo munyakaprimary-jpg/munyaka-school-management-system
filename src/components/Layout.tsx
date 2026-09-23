@@ -141,12 +141,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
         { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher'] },
         { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication', roles: ['teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'ict_technician', 'ict_teacher'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
         { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
         { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     // Staff Attendance
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'ict_technician', 'ict_teacher'] },
     { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher'] },
     { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['admin', 'head_teacher'] },
     // Academic Assessment & Analysis
@@ -161,13 +161,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     { icon: ClipboardList, label: 'All Set Exams', path: '/assessments/list', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
     // Digital Hub & ICT
-    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
-    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher'] },
-    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'ict_technician', 'ict_teacher'] },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher', 'ict_technician', 'ict_teacher'] },
+    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'ict_technician', 'ict_teacher'] },
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
-        { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'parent', 'librarian'] },
+        { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'parent', 'librarian', 'ict_technician', 'ict_teacher'] },
         { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'] },
@@ -226,6 +226,22 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           ) {
             return false;
           }
+        }
+
+        const isIctVariant = roleLower.includes('ict_technician') || roleLower.includes('ict_teacher') || roleLower.includes('ict technician');
+        if (isIctVariant) {
+          const allowedIctPaths = [
+            '/dashboard',
+            '/notices',
+            '/staff/check-in',
+            '/digital-hub',
+            '/digital-skills',
+            '/ict-lab',
+            '/study-corner',
+            '/games',
+            '/settings'
+          ];
+          return allowedIctPaths.includes(item.path);
         }
   
         // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item
