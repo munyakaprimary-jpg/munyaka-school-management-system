@@ -855,6 +855,7 @@ export default function StudyCorner() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [preSelectedStrand, setPreSelectedStrand] = useState<StrandCategory | undefined>(undefined);
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -1660,9 +1661,9 @@ export default function StudyCorner() {
                   📄
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 line-clamp-1">{previewAttachment.fileName || 'Study Document'}</h2>
+                  <h2 className="text-lg font-bold text-slate-900 line-clamp-1">{previewAttachment.name || (previewAttachment as any).fileName || 'Study Document'}</h2>
                   <p className="text-xs text-slate-500 font-medium">
-                    Uploaded Document {previewAttachment.fileSize ? `• ${previewAttachment.fileSize}` : ''}
+                    Uploaded Document {previewAttachment.size || (previewAttachment as any).fileSize ? `• ${previewAttachment.size || (previewAttachment as any).fileSize}` : ''}
                   </p>
                 </div>
               </div>
@@ -1671,7 +1672,7 @@ export default function StudyCorner() {
                   onClick={() => {
                     const link = document.createElement('a');
                     link.href = previewAttachment.dataUrl;
-                    link.download = previewAttachment.fileName || 'study-document';
+                    link.download = previewAttachment.name || (previewAttachment as any).fileName || 'study-document';
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -1724,7 +1725,7 @@ export default function StudyCorner() {
                   (() => {
                     const rawUrl = previewAttachment.dataUrl;
                     const mime = previewAttachment.type || (rawUrl.startsWith('data:') ? rawUrl.split(';')[0].replace('data:', '') : '');
-                    const name = previewAttachment.fileName || 'document';
+                    const name = previewAttachment.name || (previewAttachment as any).fileName || 'document';
                     
                     const isImage =
                       mime.includes('image') ||
@@ -1775,7 +1776,7 @@ export default function StudyCorner() {
                         <div>
                           <h3 className="font-bold text-slate-900 text-base">{name}</h3>
                           <p className="text-xs text-slate-500 mt-1">
-                            Type: {mime || 'Document'} {previewAttachment.fileSize ? `• ${previewAttachment.fileSize}` : ''}
+                            Type: {mime || 'Document'} {previewAttachment.size || (previewAttachment as any).fileSize ? `• ${previewAttachment.size || (previewAttachment as any).fileSize}` : ''}
                           </p>
                         </div>
                         <div className="pt-2">
@@ -1802,15 +1803,15 @@ export default function StudyCorner() {
                       📄
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-900 text-base">{previewAttachment.fileName || 'Study Document'}</h3>
-                      <p className="text-xs text-slate-500 mt-1">File Size: {previewAttachment.fileSize || 'Standard Document'}</p>
+                      <h3 className="font-bold text-slate-900 text-base">{previewAttachment.name || (previewAttachment as any).fileName || 'Study Document'}</h3>
+                      <p className="text-xs text-slate-500 mt-1">File Size: {previewAttachment.size || (previewAttachment as any).fileSize || 'Standard Document'}</p>
                     </div>
                     <div className="pt-2">
                       <button
                         onClick={() => {
                           const link = document.createElement('a');
                           link.href = previewAttachment.dataUrl || '#';
-                          link.download = previewAttachment.fileName || 'study-document';
+                          link.download = previewAttachment.name || (previewAttachment as any).fileName || 'study-document';
                           document.body.appendChild(link);
                           link.click();
                           document.body.removeChild(link);
@@ -1837,7 +1838,7 @@ export default function StudyCorner() {
                 onClick={() => {
                   const link = document.createElement('a');
                   link.href = previewAttachment.dataUrl;
-                  link.download = previewAttachment.fileName || 'study-document';
+                  link.download = previewAttachment.name || (previewAttachment as any).fileName || 'study-document';
                   document.body.appendChild(link);
                   link.click();
                   document.body.removeChild(link);
