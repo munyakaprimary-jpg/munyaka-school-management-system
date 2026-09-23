@@ -18,7 +18,9 @@ import {
   Wifi,
   Database,
   GraduationCap,
-  CheckSquare
+  CheckSquare,
+  XCircle,
+  HelpCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,12 +30,32 @@ import { useCentralData } from '@/hooks/useCentralData';
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { totalStudents, totalTeachers } = useCentralData();
+  const { totalStudents } = useCentralData();
   const isOnline = true;
 
   const teacherName = user?.name || 'Teacher';
   const teacherRole = user?.role || 'Class Teacher';
-  const assignedClass = (user as any)?.assignedClass || 'Grade 4 Green';
+  const assignedClass = (user as any)?.assignedClass || 'Grade 4 Blue';
+
+  // Today's date formatted
+  const todayFormatted = new Date().toLocaleDateString('en-KE', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+
+  // Mock live attendance statistics for assigned stream today
+  const attendanceStats = {
+    total: 35,
+    present: 32,
+    absent: 2,
+    excused: 1,
+    unmarked: 0,
+    percentage: 91
+  };
+
+  const isAttendanceMarkedToday = attendanceStats.present + attendanceStats.absent + attendanceStats.excused > 0;
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full font-sans">
@@ -58,7 +80,7 @@ const TeacherDashboard: React.FC = () => {
           <div className="flex flex-wrap items-center gap-3">
             <Button
               onClick={() => navigate('/attendance')}
-              className="bg-white text-blue-900 hover:bg-blue-50 font-bold px-5 py-3 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
+              className="bg-white text-blue-900 hover:bg-blue-50 font-bold px-5 py-3 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 cursor-pointer"
             >
               <ClipboardCheck size={18} className="text-blue-600" />
               Take Attendance
@@ -66,7 +88,7 @@ const TeacherDashboard: React.FC = () => {
             <Button
               onClick={() => navigate('/assessments')}
               variant="outline"
-              className="bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold px-5 py-3 rounded-2xl backdrop-blur-md transition-transform active:scale-95 flex items-center gap-2"
+              className="bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold px-5 py-3 rounded-2xl backdrop-blur-md transition-transform active:scale-95 flex items-center gap-2 cursor-pointer"
             >
               <FileSpreadsheet size={18} className="text-blue-300" />
               Enter Marks
@@ -75,13 +97,110 @@ const TeacherDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* ── CLASS ATTENDANCE DISPLAY WIDGET ────────────────────────────────── */}
+      <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden border-2 border-blue-100">
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50/50 to-white p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-600 text-white">
+                {assignedClass}
+              </span>
+              <span className="text-xs font-bold text-slate-500">{todayFormatted}</span>
+            </div>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">
+              Today's Class Attendance
+            </h2>
+          </div>
+          <Button
+            onClick={() => navigate('/attendance')}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-2xl shadow-sm text-xs flex items-center gap-2 cursor-pointer transition-all"
+          >
+            <ClipboardCheck size={16} />
+            {isAttendanceMarkedToday ? "Update Register" : "Take Today's Attendance"}
+          </Button>
+        </div>
+
+        <CardContent className="p-6 space-y-6">
+          {/* Unmarked Alert Banner if applicable */}
+          {!isAttendanceMarkedToday && (
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+              <AlertCircle size={18} className="text-amber-600 shrink-0" />
+              <span>Roll call for today has not been submitted yet. Please take attendance below.</span>
+            </div>
+          )}
+
+          {/* 4 Attendance Summary Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Present</p>
+                <h4 className="text-2xl font-black text-emerald-900 mt-0.5">{attendanceStats.present}</h4>
+                <p className="text-[10px] text-emerald-600 font-medium">In classroom</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                <CheckCircle2 size={20} />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-rose-700">Absent</p>
+                <h4 className="text-2xl font-black text-rose-900 mt-0.5">{attendanceStats.absent}</h4>
+                <p className="text-[10px] text-rose-600 font-medium">Unexcused absence</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                <XCircle size={20} />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">Excused / Sick</p>
+                <h4 className="text-2xl font-black text-amber-900 mt-0.5">{attendanceStats.excused}</h4>
+                <p className="text-[10px] text-amber-600 font-medium">Medical / Permission</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                <HelpCircle size={20} />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Pending / Unmarked</p>
+                <h4 className="text-2xl font-black text-slate-900 mt-0.5">{attendanceStats.unmarked}</h4>
+                <p className="text-[10px] text-slate-500 font-medium">Awaiting check-in</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center">
+                <Clock size={20} />
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Roll Call Status Bar */}
+          <div className="space-y-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+              <span>Roll Call Progress ({assignedClass})</span>
+              <span className="text-blue-600 font-black">
+                {attendanceStats.present + attendanceStats.absent + attendanceStats.excused} / {attendanceStats.total} Learners Marked · {attendanceStats.percentage}%
+              </span>
+            </div>
+            <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden shadow-inner">
+              <div 
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 h-full rounded-full transition-all duration-500" 
+                style={{ width: `${attendanceStats.percentage}%` }}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Summary Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <Card className="rounded-3xl border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6 flex items-center justify-between">
             <div className="space-y-1">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Assigned Learners</p>
-              <h3 className="text-3xl font-black text-slate-900">{totalStudents > 0 ? totalStudents : '42'}</h3>
+              <h3 className="text-3xl font-black text-slate-900">{totalStudents > 0 ? totalStudents : '35'}</h3>
               <p className="text-xs font-medium text-emerald-600 flex items-center gap-1 mt-1">
                 <CheckCircle2 size={12} /> Active in {assignedClass}
               </p>
@@ -96,9 +215,9 @@ const TeacherDashboard: React.FC = () => {
           <CardContent className="p-6 flex items-center justify-between">
             <div className="space-y-1">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Today's Attendance</p>
-              <h3 className="text-3xl font-black text-slate-900">39 / 42</h3>
+              <h3 className="text-3xl font-black text-slate-900">{attendanceStats.present} / {attendanceStats.total}</h3>
               <p className="text-xs font-medium text-blue-600 flex items-center gap-1 mt-1">
-                <Clock size={12} /> Roll call marked
+                <Clock size={12} /> {attendanceStats.percentage}% present rate
               </p>
             </div>
             <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
@@ -148,7 +267,7 @@ const TeacherDashboard: React.FC = () => {
           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Teaching Tools</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <div 
             onClick={() => navigate('/attendance')}
             className="group cursor-pointer bg-white p-6 rounded-3xl border border-slate-200 hover:border-blue-500 hover:shadow-xl transition-all duration-200 flex flex-col justify-between"
@@ -184,8 +303,6 @@ const TeacherDashboard: React.FC = () => {
               <span>Enter Marks</span> <ArrowRight size={14} />
             </div>
           </div>
-
-          {/* Timetable card removed for teachers */}
 
           <div 
             onClick={() => navigate('/students')}
@@ -288,7 +405,7 @@ const TeacherDashboard: React.FC = () => {
           <div className="p-6 pt-0">
             <Button 
               onClick={() => navigate('/study-corner')}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-2xl shadow-lg flex items-center justify-center gap-2"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-2xl shadow-lg flex items-center justify-center gap-2 cursor-pointer"
             >
               <BookOpen size={16} /> Open Study Corner & E-Resources
             </Button>
