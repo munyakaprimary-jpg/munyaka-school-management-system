@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AddMaterialModal, { loadCustomMaterials } from "@/components/AddMaterialModal";
+import { getAllStudyMaterialsIdb } from "@/services/studyMaterialsIdb";
 import {
   exportAssessment,
   printAssessment,
@@ -885,50 +886,45 @@ export default function StudyCorner() {
   //      so the new assessment appears under the tab instantly without a reload.
   const [customItems, setCustomItems] = useState<ContentItem[]>(() => {
     try {
-      const items = loadCustomMaterials();
-      // Also check munyaka_central_db directly
-      const centralRaw = localStorage.getItem('munyaka_central_db');
-      if (centralRaw) {
-        const centralDb = JSON.parse(centralRaw);
-        const centralMaterials = centralDb.studyMaterials || centralDb.materials || [];
-        if (Array.isArray(centralMaterials) && centralMaterials.length > 0) {
-          const existingIds = new Set(items.map(i => i.id));
-          for (const m of centralMaterials) {
-            if (m && m.id && !existingIds.has(m.id)) {
-              items.push(m);
-              existingIds.add(m.id);
-            }
-          }
-        }
-      }
-      return items;
-    } catch {
       return loadCustomMaterials();
+    } catch {
+      return [];
     }
   });
 
-  const refreshCustomItems = useCallback(() => {
+  const refreshCustomItems = useCallback(async () => {
     try {
-      const items = loadCustomMaterials();
+      const idbItems = await getAllStudyMaterialsIdb();
+      const localStorageItems = loadCustomMaterials();
+      
+      const map = new Map<string, ContentItem>();
+      for (const item of localStorageItems) {
+        if (item && item.id) map.set(item.id, item);
+      }
+      for (const item of idbItems) {
+        if (item && item.id) map.set(item.id, item);
+      }
+
       const centralRaw = localStorage.getItem('munyaka_central_db');
       if (centralRaw) {
         const centralDb = JSON.parse(centralRaw);
         const centralMaterials = centralDb.studyMaterials || centralDb.materials || [];
-        if (Array.isArray(centralMaterials) && centralMaterials.length > 0) {
-          const existingIds = new Set(items.map(i => i.id));
+        if (Array.isArray(centralMaterials)) {
           for (const m of centralMaterials) {
-            if (m && m.id && !existingIds.has(m.id)) {
-              items.push(m);
-              existingIds.add(m.id);
-            }
+            if (m && m.id) map.set(m.id, m);
           }
         }
       }
-      setCustomItems(items);
+
+      setCustomItems(Array.from(map.values()));
     } catch {
       setCustomItems(loadCustomMaterials());
     }
   }, []);
+
+  useEffect(() => {
+    refreshCustomItems();
+  }, [refreshCustomItems]);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {

@@ -242,6 +242,15 @@ export const IDB_SCHEMA: IdbDialect = {
       keyPath: 'id',
       indexes: [{ name: 'status', keyPath: 'status' }],
     },
+    // ── Study Corner / Resources stores ──────────────────────────────────
+    study_materials: {
+      keyPath: 'id',
+      indexes: [
+        { name: 'grade', keyPath: 'grade' },
+        { name: 'strand', keyPath: 'strand' },
+        { name: 'category', keyPath: 'category' },
+      ],
+    },
     schema_meta: {
       keyPath: 'key',
     },

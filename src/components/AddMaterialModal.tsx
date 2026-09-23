@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import {
+  saveStudyMaterialIdb,
+} from "@/services/studyMaterialsIdb";
+import {
   X,
   BookOpen,
   FileText,
@@ -108,6 +111,11 @@ export function saveCustomMaterial(item: ContentItem): void {
   };
   const updated = [enriched, ...existing.filter(i => i.id !== enriched.id)];
   localStorage.setItem(LS_KEY, JSON.stringify(updated));
+
+  // Save to IndexedDB for robust offline persistence
+  saveStudyMaterialIdb(enriched).catch(err => {
+    console.error("[AddMaterialModal] Failed to save to IndexedDB:", err);
+  });
 
   // Sync to munyaka_central_db central database
   try {
