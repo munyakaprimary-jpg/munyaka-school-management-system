@@ -320,16 +320,23 @@ const Staff = () => {
     setIsSaving(false);
   };
 
-  // ── Bulk activation — via staffMasterService ─────────────────────────────────
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filteredStaff.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(filteredStaff.map(s => s.id)));
+  // ── Bulk activation & Row Selection Handlers ──────────────────────────────
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(filteredStaff.map(s => s.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
   };
 
   const toggleSelectOne = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   };
