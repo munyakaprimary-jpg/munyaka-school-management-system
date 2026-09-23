@@ -132,6 +132,11 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile',
         '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list'
       ];
+      // Ensure '/communication' is explicitly present in the teacher menu items
+      const hasCommunication = teacherPaths.includes('/communication');
+      if (!hasCommunication) {
+        teacherPaths.push('/communication');
+      }
       const items = menuItems.filter(item => teacherPaths.includes(item.path));
       return teacherPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
         ...item,
