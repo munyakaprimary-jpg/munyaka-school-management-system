@@ -103,12 +103,30 @@ const StaffPreRegistration = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteAuthOpen, setIsDeleteAuthOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+
+  // Toggle selection for single staff
+  const toggleSelectStaff = (id: string, e?: React.MouseEvent | React.ChangeEvent) => {
+    e?.stopPropagation();
+    setSelectedStaffIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  // Toggle select all visible
+  const toggleSelectAll = () => {
+    if (selectedStaffIds.length === filteredStaff.length && filteredStaff.length > 0) {
+      setSelectedStaffIds([]);
+    } else {
+      setSelectedStaffIds(filteredStaff.map((s) => s.id));
+    }
+  };
 
   // ── Pre-computed lookup sets for AddPreRegModal ─────────────────────────────
   const existingNatIds = useMemo(() => new Set(staffList.map(s => s.nationalId)), [staffList]);
