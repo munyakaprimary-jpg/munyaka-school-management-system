@@ -856,17 +856,35 @@ export default function StudyCorner() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [preSelectedStrand, setPreSelectedStrand] = useState<StrandCategory | undefined>(undefined);
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
+  const [resolvedDataUrl, setResolvedDataUrl] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Listen for open_document_preview custom event from AddMaterialModal
   useEffect(() => {
-    const handlePreviewEvent = (e: Event) => {
+    const handlePreviewEvent = async (e: Event) => {
       const customEvent = e as CustomEvent<Attachment>;
       if (customEvent.detail) {
+        setIsLoadingPreview(true);
         setPreviewAttachment(customEvent.detail);
         setZoomLevel(100);
+        
+        let url = customEvent.detail.dataUrl || customEvent.detail.url || '';
+        if (!url && customEvent.detail.id) {
+          try {
+            const allIdb = await getAllStudyMaterialsIdb();
+            const foundMat = allIdb.find(m => m.id === customEvent.detail.id || m.attachment?.id === customEvent.detail.id);
+            if (foundMat?.attachment?.dataUrl) {
+              url = foundMat.attachment.dataUrl;
+            }
+          } catch {
+            // fallback
+          }
+        }
+        setResolvedDataUrl(url);
+        setIsLoadingPreview(false);
       }
     };
     window.addEventListener("open_document_preview", handlePreviewEvent as EventListener);
@@ -1107,10 +1125,26 @@ export default function StudyCorner() {
     printAssessment(item);
   }, []);
 
-  const handleOpenAttachment = useCallback((att: Attachment | null | undefined) => {
-    if (!att || !att?.dataUrl) return;
+  const handleOpenAttachment = useCallback(async (att: Attachment | null | undefined) => {
+    if (!att) return;
+    setIsLoadingPreview(true);
     setPreviewAttachment(att);
     setZoomLevel(100);
+
+    let url = att.dataUrl || att.url || '';
+    if (!url && att.id) {
+      try {
+        const allIdb = await getAllStudyMaterialsIdb();
+        const foundMat = allIdb.find(m => m.id === att.id || m.attachment?.id === att.id);
+        if (foundMat?.attachment?.dataUrl) {
+          url = foundMat.attachment.dataUrl;
+        }
+      } catch {
+        // fallback
+      }
+    }
+    setResolvedDataUrl(url);
+    setIsLoadingPreview(false);
   }, []);
 
   const handleDownloadAllForGrade = useCallback(async () => {
@@ -1659,28 +1693,29 @@ export default function StudyCorner() {
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 line-clamp-1">{previewAttachment.name || (previewAttachment as any).fileName || 'Study Document'}</h2>
                   <p className="text-xs text-slate-500 font-medium">
-                    Uploaded Document {previewAttachment.size || (previewAttachment as any).fileSize ? `• ${previewAttachment.size || (previewAttachment as any).fileSize}` : ''}
+                    Uploaded Document {previewAttachment.size || (previewAttachment as any).fileSize ? `• ${formatBytes(previewAttachment.size || (previewAttachment as any).fileSize || 0)}` : ''}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
+                    const dataUri = previewAttachment.dataUrl || (previewAttachment as any).url || '#';
                     const link = document.createElement('a');
-                    link.href = previewAttachment.dataUrl;
+                    link.href = dataUri;
                     link.download = previewAttachment.name || (previewAttachment as any).fileName || 'study-document';
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
                   }}
-                  className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm"
+                  className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
                   title="Download File"
                 >
                   <span>📥 Download</span>
                 </button>
                 <button
                   onClick={() => setPreviewAttachment(null)}
-                  className="w-9 h-9 rounded-xl bg-slate-200/70 hover:bg-slate-300 text-slate-700 flex items-center justify-center transition-all font-bold text-sm ml-2"
+                  className="w-9 h-9 rounded-xl bg-slate-200/70 hover:bg-slate-300 text-slate-700 flex items-center justify-center transition-all font-bold text-sm ml-2 cursor-pointer"
                   title="Close"
                 >
                   ✕
