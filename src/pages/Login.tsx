@@ -543,7 +543,7 @@ const Login: React.FC = () => {
 
           {/* ── Portal Access Tabs ── */}
           <Tabs defaultValue="staff" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
+            <TabsList className="grid w-full grid-cols-3 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
                           <TabsTrigger
                             value="admin"
                             className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
@@ -565,16 +565,8 @@ const Login: React.FC = () => {
                 className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
               >
                 <User size={12} className="mr-1 shrink-0" />
-                <span className="hidden sm:inline">Teacher</span>
+                <span className="hidden sm:inline">Staff</span>
                 <span className="sm:hidden">Staff</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="support"
-                className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-orange-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-              >
-                <Briefcase size={12} className="mr-1 shrink-0" />
-                <span className="hidden sm:inline">Support</span>
-                <span className="sm:hidden">Support</span>
               </TabsTrigger>
             </TabsList>
 
@@ -841,88 +833,7 @@ const Login: React.FC = () => {
               </Card>
             </TabsContent>
 
-            {/* ── SUPPORT STAFF TAB ── */}
-            <TabsContent value="support" className="mt-4">
-              <div className="space-y-4">
-                {/* Login Form for Support Staff */}
-                <Card className="border-none shadow-lg rounded-2xl bg-white overflow-hidden mt-2">
-                  <CardContent className="p-5 space-y-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-black text-slate-800">Support &amp; Staff Sign In</h3>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">Enter your credentials below</p>
-                    </div>
-                    
-                    {staffAuthError && (
-                      <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2 text-rose-600 text-xs font-bold">
-                        <ShieldAlert size={16} className="shrink-0" />
-                        <span>{staffAuthError}</span>
-                      </div>
-                    )}
-
-                    <form onSubmit={handleStaffLogin} className="space-y-4">
-                      {/* Email Address */}
-                      <div className="space-y-2">
-                        <Label htmlFor="staff-id" className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Email / Staff ID
-                        </Label>
-                        <div className="relative">
-                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                          <Input
-                            id="staff-id"
-                            type="email"
-                            inputMode="email"
-                            autoCapitalize="none"
-                            value={staffId}
-                            onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                            placeholder="your.email@munyaka.sc.ke"
-                            autoComplete="username"
-                            className="h-11 pl-11 pr-4 rounded-xl bg-slate-50 border-none font-bold text-sm focus:bg-white focus:ring-2 focus:ring-orange-200"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Password */}
-                      <div className="space-y-2">
-                        <Label htmlFor="staff-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Access Code
-                        </Label>
-                        <div className="relative">
-                          <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                          <Input
-                            id="staff-password"
-                            type={showStaffPassword ? 'text' : 'password'}
-                            value={staffPassword}
-                            onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                            placeholder="Enter your access code"
-                            autoComplete="current-password"
-                            className="h-11 pl-11 pr-11 rounded-xl bg-slate-50 border-none font-bold text-sm focus:bg-white focus:ring-2 focus:ring-orange-200"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowStaffPassword(!showStaffPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                          >
-                            {showStaffPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <Button
-                        type="submit"
-                        disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
-                        className="w-full h-11 rounded-xl text-white font-bold text-sm shadow-lg gap-2 transition-all active:scale-95 bg-orange-600 hover:bg-orange-700 shadow-orange-100"
-                      >
-                        {isStaffVerifying ? (
-                          <><Loader2 className="animate-spin" size={16} /> Signing In...</>
-                        ) : (
-                          <><Unlock size={16} /> Sign In</>
-                        )}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
+            {/* ── SUPPORT STAFF TAB (Removed top tab; support staff authenticate via unified Staff tab) ── */}
           </Tabs>
 
           {/* ── Parent & Student Portal Link ── */}
