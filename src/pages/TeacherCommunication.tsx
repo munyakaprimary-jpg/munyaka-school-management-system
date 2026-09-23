@@ -10,136 +10,305 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
-import { MessageSquare, Mail, Send, History, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, Mail, Send, History, CheckCircle2, Users, Bell, Sparkles } from 'lucide-react';
 import { CentralDataService } from '@/services/centralDataService';
 import { showSuccess } from '@/utils/toast';
 import { useNotifications } from '@/components/ui/notification-provider';
 
-interface TeacherMessageRecord {
+interface TeacherMessage {
   id: string;
-  recipient: string;
+  recipientGroup: string;
   subject: string;
-  type: string;
+  channel: 'SMS' | 'WhatsApp' | 'Portal Notice';
   date: string;
   status: string;
+  content: string;
 }
 
-const TEACHER_COMM_STORAGE_KEY = 'munyaka_teacher_communication_logs';
+const STORAGE_KEY = 'munyaka_teacher_portal_messages_v1';
 
-const loadTeacherMessages = (): TeacherMessageRecord[] => {
-  try {
-    const raw = CentralDataService.getData<TeacherMessageRecord[]>(TEACHER_COMM_STORAGE_KEY, []);
-    if (raw && raw.length > 0) return raw;
-    return [
-      { id: 'tmsg-1', recipient: 'Grade Parents', subject: 'Class Assessment Updates', type: 'Announcement', date: 'Yesterday', status: 'Published' },
-      { id: 'tmsg-2', recipient: 'Class Stream A', subject: 'Homework Reminders', type: 'SMS', date: '3 days ago', status: 'Delivered' }
-    ];
-  } catch {
-    return [];
-  }
-};
-
-const saveTeacherMessages = (messages: TeacherMessageRecord[]) => {
-  try {
-    CentralDataService.setData(TEACHER_COMM_STORAGE_KEY, messages);
-  } catch {}
+const getInitialMessages = (): TeacherMessage[] => {
+  const saved = CentralDataService.getData<TeacherMessage[]>(STORAGE_KEY, []);
+  if (saved && saved.length > 0) return saved;
+  return [
+    {
+      id: 'tm-1',
+      recipientGroup: 'Grade 4 Parents (All Streams)',
+      subject: 'Upcoming Mathematics Assessment Reminder',
+      channel: 'SMS',
+      date: 'Today, 08:30 AM',
+      status: 'Delivered',
+      content: 'Dear parents, please note that Grade 4 Mathematics assessment will take place this Thursday. Kindly ensure revision materials are reviewed.'
+    },
+    {
+      id: 'tm-2',
+      recipientGroup: 'Class 4A Students & Parents',
+      subject: 'Science Practical Project Submission',
+      channel: 'Portal Notice',
+      date: 'Yesterday, 02:15 PM',
+      status: 'Published',
+      content: 'Reminder to all learners in Class 4A to bring recycled materials for the science practical activity.'
+    }
+  ];
 };
 
 const TeacherCommunication = () => {
-  const [activeTab, setActiveTab] = useState("outreach");
-  const [messagesList, setMessagesList] = useState<TeacherMessageRecord[]>(loadTeacherMessages());
-  const [isOpen, setIsOpen] = useState(false);
-  const [msgType, setMsgType] = useState<'SMS' | 'Announcement'>('Announcement');
-  const [recipient, setRecipient] = useState("My Class Parents");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [activeTab, setActiveTab] = useState<'compose' | 'history'>('compose');
+  const [messages, setMessages] = useState<TeacherMessage[]>(getInitialMessages());
+  const [channel, setChannel] = useState<'SMS' | 'WhatsApp' | 'Portal Notice'>('SMS');
+  const [recipientGroup, setRecipientGroup] = useState('Grade 4 Parents (All Streams)');
+  const [subject, setSubject] = useState('');
+  const [content, setContent] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<TeacherMessage | null>(null);
   const { addNotification } = useNotifications();
 
-  const handleOpenCompose = (type: 'SMS' | 'Announcement') => {
-    setMsgType(type);
-    setSubject(type === 'Announcement' ? "Class Update & Homework Notice" : "Important Class Reminder");
-    setIsOpen(true);
-  };
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !content.trim()) return;
 
-  const handleSend = () => {
-    if (!String(subject || '').trim() || !String(body || '').trim()) return;
-    const newMsg = { 
-      id: Date.now().toString(), 
-      recipient, 
-      subject, 
-      type: msgType, 
-      date: "Just now", 
-      status: "Delivered" 
+    const newMessage: TeacherMessage = {
+      id: 'tm-' + Date.now(),
+      recipientGroup,
+      subject: subject.trim(),
+      channel,
+      date: 'Just now',
+      status: 'Delivered',
+      content: content.trim()
     };
-    const updated = [newMsg, ...messagesList];
-    setMessagesList(updated);
-    saveTeacherMessages(updated);
-    setIsOpen(false);
-    setSubject(""); 
-    setBody("");
-    showSuccess(`Teacher ${msgType} sent successfully to ${recipient}!`);
 
-    (addNotification as any)({
-      title: `Teacher ${msgType} Sent`,
-      message: `Sent to ${recipient}: ${subject}`,
+    const updated = [newMessage, ...messages];
+    setMessages(updated);
+    CentralDataService.setData(STORAGE_KEY, updated);
+
+    showSuccess(`Successfully sent ${channel} to ${recipientGroup}!`);
+    addNotification({
+      title: `Teacher ${channel} Sent`,
+      message: `Sent to ${recipientGroup}: ${subject}`,
+      priority: 'medium',
     });
+
+    setSubject('');
+    setContent('');
+    setActiveTab('history');
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-6 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-600 to-teal-700 p-8 rounded-[2.5rem] text-white shadow-xl shadow-emerald-900/10">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Teacher Communication Portal</h1>
-          <p className="text-muted-foreground">Communicate with students and parents in your assigned classes.</p>
+          <div className="flex items-center gap-2 mb-2">
+            <Badge className="bg-emerald-500/30 text-white border-white/20 font-bold px-3 py-1">Teacher Portal</Badge>
+            <Badge className="bg-white/20 text-white border-transparent font-bold">Direct Parent & Student Link</Badge>
+          </div>
+          <h1 className="text-3xl font-black tracking-tight">Teacher Communication Center</h1>
+          <p className="text-emerald-100 text-sm mt-1 max-w-xl">
+            Broadcast announcements, dispatch SMS notifications, and share updates directly with parents and learners in your assigned classes.
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="rounded-2xl border-slate-200 gap-2" onClick={() => setActiveTab("logs")}><History size={18} /> Message Log</Button>
-          <Button className="rounded-2xl shadow-lg bg-emerald-600 hover:bg-emerald-700 gap-2" onClick={() => handleOpenCompose('Announcement')}><Send size={18} /> New Notice</Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => setActiveTab('compose')}
+            className={`rounded-2xl font-bold gap-2 ${activeTab === 'compose' ? 'bg-white text-emerald-800 hover:bg-emerald-50' : 'bg-emerald-700/60 text-white hover:bg-emerald-700'}`}
+          >
+            <Send size={16} /> Compose Message
+          </Button>
+          <Button
+            onClick={() => setActiveTab('history')}
+            className={`rounded-2xl font-bold gap-2 ${activeTab === 'history' ? 'bg-white text-emerald-800 hover:bg-emerald-50' : 'bg-emerald-700/60 text-white hover:bg-emerald-700'}`}
+          >
+            <History size={16} /> History ({messages.length})
+          </Button>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
-          <TabsTrigger value="outreach" className="rounded-xl px-8 h-full font-bold text-xs">Outreach</TabsTrigger>
-          <TabsTrigger value="logs" className="rounded-xl px-8 h-full font-bold text-xs">Message Log</TabsTrigger>
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full space-y-6">
+        <TabsList className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 h-14 inline-flex gap-2">
+          <TabsTrigger value="compose" className="rounded-xl px-6 h-full font-bold text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
+            <Send size={16} className="mr-2" /> Compose & Send
+          </TabsTrigger>
+          <TabsTrigger value="history" className="rounded-xl px-6 h-full font-bold text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
+            <History size={16} className="mr-2" /> Message History
+          </TabsTrigger>
         </TabsList>
-        <TabsContent value="outreach" className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="rounded-[2rem] bg-white p-10 text-center hover:shadow-md cursor-pointer group" onClick={() => handleOpenCompose('SMS')}>
-            <div className="w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><MessageSquare size={36} /></div>
-            <h3 className="text-xl font-bold text-slate-900">Send Parent SMS</h3>
-            <p className="text-sm text-slate-500 mt-2">Send instant SMS alerts to parents of your class.</p>
-          </Card>
-          <Card className="rounded-[2rem] bg-white p-10 text-center hover:shadow-md cursor-pointer group" onClick={() => handleOpenCompose('Announcement')}>
-            <div className="w-20 h-20 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><Mail size={36} /></div>
-            <h3 className="text-xl font-bold text-slate-900">Class Announcement</h3>
-            <p className="text-sm text-slate-500 mt-2">Publish announcements for your students and parents.</p>
-          </Card>
+
+        <TabsContent value="compose" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left: Quick Templates */}
+            <div className="space-y-4">
+              <Card className="rounded-[2rem] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Sparkles size={18} className="text-emerald-500" /> Quick Templates
+                </h3>
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubject('Homework & Assignment Reminder');
+                      setContent('Dear parents, kindly ensure your child completes the assigned revision exercises before tomorrow morning.');
+                    }}
+                    className="w-full text-left p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-slate-100 dark:border-slate-700 transition-all text-xs font-bold text-slate-700 dark:text-slate-200"
+                  >
+                    📝 Homework Reminder
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubject('Upcoming Assessment Notice');
+                      setContent('Please note that our class evaluation test is scheduled for this week. Regular attendance and punctuality are vital.');
+                    }}
+                    className="w-full text-left p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-slate-100 dark:border-slate-700 transition-all text-xs font-bold text-slate-700 dark:text-slate-200"
+                  >
+                    📊 Assessment Notice
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSubject('Class Meeting Invitation');
+                      setContent('We invite all parents for our end-of-month class progress review meeting this Friday at 2:00 PM.');
+                    }}
+                    className="w-full text-left p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-slate-100 dark:border-slate-700 transition-all text-xs font-bold text-slate-700 dark:text-slate-200"
+                  >
+                    🤝 Parent Meeting Invite
+                  </button>
+                </div>
+              </Card>
+
+              <Card className="rounded-[2rem] border-slate-200 dark:border-slate-800 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-sm p-6">
+                <h4 className="font-bold text-emerald-900 dark:text-emerald-300 text-sm mb-1">Teacher Communication Guidelines</h4>
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                  All messages sent here are logged securely in the school database and dispatched to verified parent contacts instantly.
+                </p>
+              </Card>
+            </div>
+
+            {/* Right: Compose Form */}
+            <div className="lg:col-span-2">
+              <Card className="rounded-[2.5rem] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl p-8">
+                <form onSubmit={handleSendMessage} className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Communication Channel</Label>
+                      <Select value={channel} onValueChange={(v: any) => setChannel(v)}>
+                        <SelectTrigger className="rounded-2xl h-12 border-slate-200 dark:border-slate-700 font-bold">
+                          <SelectValue placeholder="Select channel" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl">
+                          <SelectItem value="SMS">📱 SMS Notification</SelectItem>
+                          <SelectItem value="WhatsApp">💬 WhatsApp Broadcast</SelectItem>
+                          <SelectItem value="Portal Notice">📢 Portal Notice</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Recipient Group</Label>
+                      <Select value={recipientGroup} onValueChange={setRecipientGroup}>
+                        <SelectTrigger className="rounded-2xl h-12 border-slate-200 dark:border-slate-700 font-bold">
+                          <SelectValue placeholder="Select recipient" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl">
+                          <SelectItem value="Grade 4 Parents (All Streams)">Grade 4 Parents (All Streams)</SelectItem>
+                          <SelectItem value="Class 4A Students & Parents">Class 4A Students & Parents</SelectItem>
+                          <SelectItem value="Class 4B Stream Parents">Class 4B Stream Parents</SelectItem>
+                          <SelectItem value="Junior Secondary Parents">Junior Secondary Parents</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Subject / Headline</Label>
+                    <Input
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="e.g. Important update regarding class activities..."
+                      required
+                      className="rounded-2xl h-12 border-slate-200 dark:border-slate-700 font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Message Content</Label>
+                    <Textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="Write your message details here..."
+                      required
+                      className="rounded-2xl border-slate-200 dark:border-slate-700 min-h-[160px] p-4 text-sm font-medium"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 shadow-lg shadow-emerald-600/25 gap-2"
+                    >
+                      <Send size={18} /> Dispatch Message
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
-        <TabsContent value="logs">
-          <Card className="rounded-3xl bg-white overflow-hidden">
+
+        <TabsContent value="history">
+          <Card className="rounded-[2.5rem] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden">
             <CardContent className="p-0">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-lg">Dispatched Messages History</h3>
+                  <p className="text-xs text-slate-500">Review all previously sent communications and announcements.</p>
+                </div>
+                <Badge className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold px-3 py-1">
+                  {messages.length} Records
+                </Badge>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-max">
                   <thead>
-                    <tr className="bg-slate-50/50 border-b">
-                      <th className="px-8 py-5 text-left font-black text-slate-400 text-[10px]">Recipient</th>
-                      <th className="px-8 py-5 text-left font-black text-slate-400 text-[10px]">Subject</th>
-                      <th className="px-8 py-5 text-center font-black text-slate-400 text-[10px]">Type</th>
-                      <th className="px-8 py-5 text-right font-black text-slate-400 text-[10px]">Status</th>
+                    <tr className="bg-slate-50/75 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                      <th className="px-6 py-4 text-left">Recipient Group</th>
+                      <th className="px-6 py-4 text-left">Subject</th>
+                      <th className="px-6 py-4 text-center">Channel</th>
+                      <th className="px-6 py-4 text-center">Date</th>
+                      <th className="px-6 py-4 text-right">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
-                    {messagesList.map((msg) => (
-                      <tr key={msg.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-8 py-6 font-bold">{msg.recipient}</td>
-                        <td className="px-8 py-6 font-medium">{msg.subject}</td>
-                        <td className="px-8 py-6 text-center"><Badge variant="outline">{msg.type}</Badge></td>
-                        <td className="px-8 py-6 text-right"><Badge className="bg-emerald-50 text-emerald-700 border-emerald-200"><CheckCircle2 size={12} className="mr-1.5" /> {msg.status}</Badge></td>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                    {messages.map((msg) => (
+                      <tr
+                        key={msg.id}
+                        onClick={() => { setSelectedMessage(msg); setIsModalOpen(true); }}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
+                      >
+                        <td className="px-6 py-5 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          <Users size={16} className="text-emerald-500" /> {msg.recipientGroup}
+                        </td>
+                        <td className="px-6 py-5 text-slate-700 dark:text-slate-300 font-semibold">{msg.subject}</td>
+                        <td className="px-6 py-5 text-center">
+                          <Badge variant="outline" className="font-bold text-xs">
+                            {msg.channel}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-5 text-center text-slate-500 text-xs">{msg.date}</td>
+                        <td className="px-6 py-5 text-right">
+                          <Badge className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 gap-1 font-bold">
+                            <CheckCircle2 size={12} /> {msg.status}
+                          </Badge>
+                        </td>
                       </tr>
                     ))}
-                    {messagesList.length === 0 && (
+                    {messages.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="text-center py-12 text-slate-400 font-medium">No messages sent yet.</td>
+                        <td colSpan={5} className="text-center py-16 text-slate-400 font-medium">
+                          No messages sent yet. Use the compose tab to send your first notification.
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -150,32 +319,35 @@ const TeacherCommunication = () => {
         </TabsContent>
       </Tabs>
 
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`Compose ${msgType}`}>
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label>Recipient Group</Label>
-            <Select value={recipient} onValueChange={setRecipient}>
-              <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select group" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="My Class Parents">My Class Parents</SelectItem>
-                <SelectItem value="Grade Students">All Grade Students</SelectItem>
-                <SelectItem value="Specific Stream">Specific Stream A/B</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* Message Details Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Message Details">
+        {selectedMessage && (
+          <div className="space-y-6 py-2">
+            <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400">Recipient Group</p>
+                <p className="font-bold text-sm text-slate-900 dark:text-white mt-0.5">{selectedMessage.recipientGroup}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400">Channel</p>
+                <p className="font-bold text-sm text-slate-900 dark:text-white mt-0.5">{selectedMessage.channel}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-slate-400">Subject</p>
+              <p className="font-bold text-base text-slate-900 dark:text-white mt-1">{selectedMessage.subject}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-slate-400">Full Content</p>
+              <div className="mt-1 p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                {selectedMessage.content}
+              </div>
+            </div>
+            <div className="flex justify-end pt-4">
+              <Button onClick={() => setIsModalOpen(false)} className="rounded-xl font-bold">Close</Button>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Subject / Title</Label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Message subject..." className="rounded-xl" />
-          </div>
-          <div className="space-y-2">
-            <Label>Message Body</Label>
-            <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write your message here..." className="rounded-xl min-h-[120px]" />
-          </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setIsOpen(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={handleSend} className="rounded-xl bg-emerald-600 hover:bg-emerald-700">Send {msgType}</Button>
-          </div>
-        </div>
+        )}
       </Modal>
     </div>
   );
