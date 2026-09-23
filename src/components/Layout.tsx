@@ -133,6 +133,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin'] },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
+    { icon: Users, label: 'Staff Directory', path: '/staff', roles: ['admin'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
@@ -141,7 +142,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
-        { icon: Users, label: 'Staff Directory', path: '/staff', roles: ['admin'] },
         { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
         { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     // Staff Attendance
