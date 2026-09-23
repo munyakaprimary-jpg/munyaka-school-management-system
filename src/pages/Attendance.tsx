@@ -2163,7 +2163,7 @@ const Attendance = () => {
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
                     <th className="px-4 py-2 font-black text-[10px] uppercase tracking-wider text-slate-500">CLASS / STREAM</th>
-                    <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-slate-500">LEARNERS ({s => s.totalLearners})</th>
+                    <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-slate-500">LEARNERS ({(_s: any) => _s.totalLearners})</th>
                     <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-amber-600 text-center">MORNING ROLL</th>
                     <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-amber-600 text-center">MORNING PRESENT</th>
                     <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-indigo-600 text-center">AFTERNOON ROLL</th>

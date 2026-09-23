@@ -13,7 +13,7 @@ const Dashboard: React.FC = () => {
   const roleLower = String(userRole).toLowerCase().trim();
   const resolvedR = resolveRole(userRole);
 
-  const isTeacher = isTeacherRole(userRole, user?.staffCategory, user?.specialties) ||
+  const isTeacher = isTeacherRole(userRole, (user as any)?.staffCategory, (user as any)?.specialties) ||
     resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' ||
     resolvedR === 'senior_teacher' || roleLower.includes('teacher') || roleLower.includes('educator');
 

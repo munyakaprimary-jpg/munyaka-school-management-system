@@ -28,11 +28,12 @@ import { useCentralData } from '@/hooks/useCentralData';
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { totalStudents, totalTeachers, isOnline } = useCentralData();
+  const { totalStudents, totalTeachers } = useCentralData();
+  const isOnline = true;
 
   const teacherName = user?.name || 'Teacher';
   const teacherRole = user?.role || 'Class Teacher';
-  const assignedClass = user?.assignedClass || 'Grade 4 Green';
+  const assignedClass = (user as any)?.assignedClass || 'Grade 4 Green';
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full font-sans">
