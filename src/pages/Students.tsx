@@ -36,6 +36,29 @@ export default function Students() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [selectedStudentForTransfer, setSelectedStudentForTransfer] = useState<any | null>(null);
 
+  // Row Selection State for Bulk Actions
+  const [selectedLearnerIds, setSelectedLearnerIds] = useState<string[]>([]);
+
+  // Clear selections when filters or search change
+  useEffect(() => {
+    setSelectedLearnerIds([]);
+  }, [searchTerm, gradeFilter, streamFilter]);
+
+  const toggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = filteredStudents.map((s, idx) => String(s.id || s.admissionNumber || s.admNo || idx));
+      setSelectedLearnerIds(allIds);
+    } else {
+      setSelectedLearnerIds([]);
+    }
+  };
+
+  const toggleSelectLearner = (id: string) => {
+    setSelectedLearnerIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
   // Admin Password Modal State for Reset Database
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
