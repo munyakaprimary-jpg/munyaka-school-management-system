@@ -64,7 +64,6 @@ export function resolveRole(role?: string): string {
   if (r.includes('admin')) return 'admin';
   if (r.includes('owner')) return 'owner';
   if (r.includes('head')) return 'head_teacher';
-  if (r.includes('ict technician') || r.includes('ict_technician')) return 'ict_technician';
   if (r.includes('teacher') || r.includes('educator')) return 'teacher';
   if (r.includes('bursar') || r.includes('accountant')) return 'bursar';
   if (r.includes('parent')) return 'parent';
@@ -123,17 +122,6 @@ export function roleHas(role?: string, permission?: string): boolean {
     return teacherPermissions.includes(permission as any);
   }
   
-  // ICT Technician permissions
-  if (resolved === 'ict_technician') {
-    const ictTechPermissions = [
-      PERMISSIONS.VIEW_DASHBOARD,
-      PERMISSIONS.TAKE_ATTENDANCE,
-      PERMISSIONS.VIEW_REPORTS,
-      PERMISSIONS.COMMUNICATE,
-    ];
-    return ictTechPermissions.includes(permission as any);
-  }
-
   // Student and parent have limited access
   if (resolved === 'student' || resolved === 'parent') {
     const studentParentPermissions = [
@@ -213,16 +201,6 @@ export function permissionsForRole(role?: string): Record<string, boolean> {
       PERMISSIONS.COMMUNICATE,
     ];
     teacherPermissions.forEach(perm => {
-      permissions[perm] = true;
-    });
-  } else if (resolved === 'ict_technician') {
-    const ictTechPermissions = [
-      PERMISSIONS.VIEW_DASHBOARD,
-      PERMISSIONS.TAKE_ATTENDANCE,
-      PERMISSIONS.VIEW_REPORTS,
-      PERMISSIONS.COMMUNICATE,
-    ];
-    ictTechPermissions.forEach(perm => {
       permissions[perm] = true;
     });
   } else if (resolved === 'student' || resolved === 'parent') {
