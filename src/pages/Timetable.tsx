@@ -77,12 +77,12 @@ const Timetable = () => {
 
         <div className="flex flex-wrap items-center gap-3">
           <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-            <SelectTrigger className="w-[180px] rounded-xl font-bold border-slate-200">
-              <SelectValue placeholder="Select Grade" />
+            <SelectTrigger className="w-[220px] rounded-xl font-bold border-slate-200">
+              <SelectValue placeholder="Select Grade / Stream" />
             </SelectTrigger>
             <SelectContent>
               {grades.map(g => (
-                <SelectItem key={g.id} value={g.name} className="font-medium">
+                <SelectItem key={g.id} value={g.id} className="font-medium">
                   {g.name}
                 </SelectItem>
               ))}

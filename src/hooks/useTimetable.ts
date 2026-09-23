@@ -171,25 +171,30 @@ export function useTimetable() {
       const streamsForGrade = configStreamsMap[matchKey] || [];
       if (streamsForGrade.length > 0) {
         streamsForGrade.forEach(s => {
-          const name = `${g} - ${s}`;
-          const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          const name = `${g} ${s}`;
+          const id = name;
           list.push({ id, name });
         });
       } else {
-        const id = g.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const id = g;
         list.push({ id, name: g });
       }
     });
     if (list.length === 0) {
       return [
-        { id: 'grade-4-blue', name: 'Grade 4 - Blue' },
-        { id: 'grade-5-blue', name: 'Grade 5 - Blue' },
+        { id: 'Grade 4 Green', name: 'Grade 4 Green' },
+        { id: 'Grade 4 Yellow', name: 'Grade 4 Yellow' },
+        { id: 'Grade 5 Red', name: 'Grade 5 Red' },
+        { id: 'Grade 6 Blue', name: 'Grade 6 Blue' },
+        { id: 'Grade 7 Mercury', name: 'Grade 7 Mercury' },
+        { id: 'Grade 7 Venus', name: 'Grade 7 Venus' },
+        { id: 'Grade 8 North', name: 'Grade 8 North' },
       ];
     }
     return list;
   })();
 
-  const [selectedGrade, setSelectedGrade] = useState<string>(() => grades[0]?.id || 'grade-4-blue');
+  const [selectedGrade, setSelectedGrade] = useState<string>(() => grades[0]?.id || 'Grade 4 Green');
 
   // Ensure selectedGrade is valid when grades change
   useEffect(() => {
