@@ -1745,11 +1745,11 @@ const Attendance = () => {
                     <p className="font-bold text-sm">Register Cutoff {isMorningPastCutoff && isAfternoonPastCutoff ? 'Exceeded' : 'Reached'}</p>
                     <p className="text-xs text-orange-100">
                       {isMorningPastCutoff && isAfternoonPastCutoff
-                        ? `Morning (${formatCutoffTime(cutoffConfig.morning)}) and Afternoon (${formatCutoffTime(cutoffConfig.afternoon)}) cutoffs have passed`
+                        ? `Morning (${formatCutoffTime(cutoffConfig.morning)}) and Afternoon (${formatCutoffTime(cutoffConfig.afternoon)}) cutoffs have passed.`
                         : isMorningPastCutoff
-                        ? `Morning cutoff (${formatCutoffTime(cutoffConfig.morning)}) has passed`
-                        : `Afternoon cutoff (${formatCutoffTime(cutoffConfig.afternoon)}) has passed`}
-                      {'. '}Contact admin to unlock.
+                        ? `Morning cutoff (${formatCutoffTime(cutoffConfig.morning)}) has passed.`
+                        : `Afternoon cutoff (${formatCutoffTime(cutoffConfig.afternoon)}) has passed.`}
+                      {isAdminRole ? ' Enable admin override to edit.' : ' Please contact the administrator to unlock or adjust the attendance register.'}
                     </p>
                   </div>
                 </div>
