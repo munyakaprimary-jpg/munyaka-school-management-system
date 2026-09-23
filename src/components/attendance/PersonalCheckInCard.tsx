@@ -50,10 +50,10 @@ export const PersonalCheckInCard: React.FC<PersonalCheckInCardProps> = ({
 
   // Check if current time is 12:00 PM (1200 hours) or later
   const isMorningCutoffPassed = useMemo(() => {
-    const now = currentTime;
+    const now = new Date();
     const hours = now.getHours();
     return hours >= 12;
-  }, [currentTime]);
+  }, []);
 
   // Check geolocation permission state when component mounts or after errors
   useEffect(() => {
