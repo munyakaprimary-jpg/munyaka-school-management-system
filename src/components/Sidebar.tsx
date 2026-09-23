@@ -78,7 +78,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: School, label: 'Developer Hub / Tenants', path: '/dev/tenants', roles: ['owner', 'admin'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
     { icon: User, label: 'Profile Settings', path: '/settings/profile', roles: ['admin', 'owner'] },
-    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
+    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher'] },
+    { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication', roles: ['teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student'] },
     { icon: Clock, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
     { icon: CheckSquare, label: 'Attendance Management', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
@@ -125,17 +126,17 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
     if (isTeacherVariant && !isAdminOrOwner) {
       const teacherPaths = [
-        '/', '/students', '/communication', '/notices',
+        '/', '/students', '/teacher-communication', '/notices',
         '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
         '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
         '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
         '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile',
         '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list'
       ];
-      // Ensure '/communication' is explicitly present in the teacher menu items
-      const hasCommunication = teacherPaths.includes('/communication');
-      if (!hasCommunication) {
-        teacherPaths.push('/communication');
+      // Ensure '/teacher-communication' is explicitly present in the teacher menu items
+      const hasTeacherComm = teacherPaths.includes('/teacher-communication');
+      if (!hasTeacherComm) {
+        teacherPaths.push('/teacher-communication');
       }
       const items = menuItems.filter(item => teacherPaths.includes(item.path));
       return teacherPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({

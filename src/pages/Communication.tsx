@@ -54,11 +54,6 @@ const Communication = () => {
   const [body, setBody] = useState("");
   const { addNotification } = useNotifications(); // Get the addNotification function
 
-  // STRICT ACCESS CONTROL: Only admin can access the Dyad communication interface
-  if (user?.role !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
-
   const handleOpenCompose = (type: 'SMS' | 'Email') => {
     setMsgType(type);
     setSubject(type === 'Email' ? "Term 1 Academic Newsletter" : "Notice from School");

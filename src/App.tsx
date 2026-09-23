@@ -69,6 +69,7 @@ import ExamCreatorPage from "./pages/ExamCreatorPage";
 import SetExamsListPage from "./pages/SetExamsListPage";
 import MarkedScriptsPage from "./pages/MarkedScriptsPage";
 import Communication from "./pages/Communication";
+import TeacherCommunication from "./pages/TeacherCommunication";
 import Library from "./pages/Library";
 import Inventory from "./pages/Inventory";
 import { LearnerProvider } from './context/LearnerContext';
@@ -475,7 +476,8 @@ const App = () => {
                       <Route path="/staff-checkin" element={<ProtectedRoute><AppUnlock><Layout><StaffCheckIn /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/attendance-monitor" element={<ProtectedRoute><AppUnlock><Layout><AttendanceMonitor /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/:id" element={<ProtectedRoute><AppUnlock><Layout><StaffProfile /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/communication" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher']}><AppUnlock><Layout><Communication /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/communication" element={<ProtectedRoute><AppUnlock><Layout><Communication /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/teacher-communication" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher']}><AppUnlock><Layout><TeacherCommunication /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/notices" element={<ProtectedRoute><AppUnlock><Layout><NoticeAndEvents defaultTab="announcements" /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/timetable" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><Timetable /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/registration" element={<ProtectedRoute><AppUnlock><Layout><Registration /></Layout></AppUnlock></ProtectedRoute>} />
