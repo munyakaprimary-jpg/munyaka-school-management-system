@@ -48,6 +48,13 @@ export const PersonalCheckInCard: React.FC<PersonalCheckInCardProps> = ({
   const geofenceConfig = useMemo(() => getGeofenceConfig(), []);
   const inGeofence = location ? isWithinGeofence(location.lat, location.lng) : false;
 
+  // Check if current time is 12:00 PM (1200 hours) or later
+  const isMorningCutoffPassed = useMemo(() => {
+    const now = currentTime;
+    const hours = now.getHours();
+    return hours >= 12;
+  }, [currentTime]);
+
   // Check geolocation permission state when component mounts or after errors
   useEffect(() => {
     if (typeof navigator !== "undefined" && navigator.permissions) {
@@ -459,6 +466,10 @@ export const PersonalCheckInCard: React.FC<PersonalCheckInCardProps> = ({
                     <Badge className="bg-emerald-500 text-white font-bold border-none">
                       <CheckCircle2 size={12} className="mr-1" /> Checked In
                     </Badge>
+                  ) : isMorningCutoffPassed ? (
+                    <Badge className="bg-slate-600 text-slate-200 font-bold border-none">
+                      Closed
+                    </Badge>
                   ) : (
                     <Badge className="bg-amber-500/20 text-amber-300 border-none">
                       Pending
@@ -472,6 +483,11 @@ export const PersonalCheckInCard: React.FC<PersonalCheckInCardProps> = ({
                     <p className="text-2xl font-black text-emerald-300">{todayRecord.morning.time}</p>
                     <p className="text-xs text-indigo-200/70">Verified Arrival • Status: Present</p>
                   </div>
+                ) : isMorningCutoffPassed ? (
+                  <div className="space-y-1 bg-slate-900/60 p-4 rounded-2xl border border-slate-700/50 mb-6">
+                    <p className="text-[10px] font-black uppercase text-slate-400">Window Closed</p>
+                    <p className="text-sm font-bold text-slate-300">Morning arrival attendance window closed at 11:59 AM.</p>
+                  </div>
                 ) : (
                   <p className="text-xs text-indigo-200/80 mb-6 leading-relaxed">
                     Mark your morning arrival upon reaching school grounds to record your official shift start time.
@@ -480,11 +496,11 @@ export const PersonalCheckInCard: React.FC<PersonalCheckInCardProps> = ({
               </div>
 
               <Button
-                disabled={isMorningDone || isSubmitting || !inGeofence}
+                disabled={isMorningDone || isMorningCutoffPassed || isSubmitting || !inGeofence}
                 onClick={() => handleAction('morning')}
                 className={`w-full h-14 rounded-2xl font-black text-base transition-all ${
-                  isMorningDone 
-                    ? 'bg-white/10 text-white/50 cursor-not-allowed' 
+                  isMorningDone || isMorningCutoffPassed
+                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                     : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-900/40 active:scale-95'
                 }`}
               >
@@ -492,6 +508,8 @@ export const PersonalCheckInCard: React.FC<PersonalCheckInCardProps> = ({
                   <Loader2 className="animate-spin" size={20} />
                 ) : isMorningDone ? (
                   "Morning Arrival Recorded"
+                ) : isMorningCutoffPassed ? (
+                  "Closed (Window Passed 11:59 AM)"
                 ) : (
                   "Clock In (Morning Arrival)"
                 )}
