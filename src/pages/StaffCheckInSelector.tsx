@@ -14,6 +14,7 @@ interface DirectoryStaff {
   id_no?: string;
   tsc_no?: string;
   tscNo?: string;
+  tscNumber?: string;
   name: string;
   full_name?: string;
   role: string;
@@ -142,18 +143,19 @@ const StaffCheckInSelector = () => {
   // Matches Name, TSC Number, Role/Title, or Staff ID
   const filteredStaff = useMemo(() => {
     const active = staffDirectory.filter(
-      s => s.status === 'Active' || s.status === 'Pre-Registered'
+      s => !s.status || s.status === 'Active' || s.status === 'Pre-Registered' || s.status === 'active'
     );
 
     if (!String(searchQuery || '').trim()) return active;
     
-        const q = String(searchQuery || '').toLowerCase().trim();
+    const q = String(searchQuery || '').toLowerCase().trim();
     return active.filter(staff => {
-      const nameMatch = (staff.name || staff.full_name || '').toLowerCase().includes(q);
-      const tscMatch = (staff.tsc_no || staff.tscNo || '').toLowerCase().includes(q);
-      const roleMatch = (staff.role || staff.designation || '').toLowerCase().includes(q);
-      const idMatch = (staff.id || staff.staff_id || staff.id_no || '').toLowerCase().includes(q);
-      return nameMatch || tscMatch || roleMatch || idMatch;
+      const name = (staff.name || staff.full_name || '').toLowerCase();
+      const tscNo = (staff.tsc_no || staff.tscNo || staff.tscNumber || '').toLowerCase();
+      const role = (staff.role || staff.designation || '').toLowerCase();
+      const id = (staff.id || staff.staff_id || staff.id_no || '').toLowerCase();
+
+      return name.includes(q) || tscNo.includes(q) || role.includes(q) || id.includes(q);
     });
   }, [staffDirectory, searchQuery]);
 
