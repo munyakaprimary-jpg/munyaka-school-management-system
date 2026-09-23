@@ -133,7 +133,7 @@ export function roleHas(role?: string, permission?: string): boolean {
   return false;
 }
 
-export function canAccessPath(role?: string, path: string): boolean {
+export function canAccessPath(role: string | undefined, path: string): boolean {
   if (!role) return false;
   
   const resolved = resolveRole(role);
