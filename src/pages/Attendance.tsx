@@ -225,18 +225,33 @@ const Attendance = () => {
   const userRole = user?.role ?? '';
   const userId = user?.id ?? '';
   const isAdminRole = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'super_admin' || userRole.toLowerCase() === 'owner';
-  const isTeacherRole = userRole.toLowerCase() === 'teacher';
+  const isTeacherRole = userRole.toLowerCase() === 'teacher' || userRole.toLowerCase() === 'class_teacher' || userRole.toLowerCase() === 'subject_teacher' || userRole.toLowerCase() === 'senior_teacher';
+
+  // If user is a teacher with an assigned class/stream, automatically set default filter
+  const assignedClassStr = (user as any)?.assignedClass || '';
+  const initialGrade = useMemo(() => {
+    if (assignedClassStr) {
+      const parts = assignedClassStr.split(' ');
+      if (parts.length >= 2) return `${parts[0]} ${parts[1]}`;
+      return assignedClassStr;
+    }
+    return 'Grade 6';
+  }, [assignedClassStr]);
+
+  const initialStream = useMemo(() => {
+    if (assignedClassStr) {
+      const parts = assignedClassStr.split(' ');
+      if (parts.length >= 3) return parts.slice(2).join(' ').toUpperCase();
+      if (parts.length === 2) return parts[1].toUpperCase();
+    }
+    return 'YELLOW';
+  }, [assignedClassStr]);
 
   // ============================================
   // Role-adaptive view state
   // ============================================
-  // Admins default to the oversight dashboard (roll call completion
-  // metrics, class-wide summaries, aggregate stats). Teachers default
-  // directly to the interactive marking register for their assigned
-  // streams. Admins can flip into the marking view via the prominent
-  // "Manual Register Override" / "Edit Attendance" button.
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (isTeacherRole) return 'marking';
+    if (isTeacherRole && !isAdminRole) return 'marking';
     return 'oversight';
   });
 
@@ -246,8 +261,8 @@ const Attendance = () => {
       const t = new Date();
       return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
     })(),
-    grade: 'Grade 6',
-    stream: 'YELLOW',
+    grade: initialGrade || 'Grade 6',
+    stream: initialStream || 'YELLOW',
   });
 
   // ── Oversight view filters (admin roll call dashboard) ──────
