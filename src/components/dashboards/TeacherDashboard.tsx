@@ -184,23 +184,7 @@ const TeacherDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div 
-            onClick={() => navigate('/timetable')}
-            className="group cursor-pointer bg-white p-6 rounded-3xl border border-slate-200 hover:border-purple-500 hover:shadow-xl transition-all duration-200 flex flex-col justify-between"
-          >
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Calendar size={24} />
-              </div>
-              <h3 className="font-bold text-slate-900 text-lg">View Timetable</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Check weekly lesson schedules, Mathematics, Science & Technology periods.
-              </p>
-            </div>
-            <div className="mt-6 flex items-center gap-2 text-xs font-bold text-purple-600 group-hover:gap-3 transition-all">
-              <span>View Schedule</span> <ArrowRight size={14} />
-            </div>
-          </div>
+          {/* Timetable card removed for teachers */}
 
           <div 
             onClick={() => navigate('/students')}

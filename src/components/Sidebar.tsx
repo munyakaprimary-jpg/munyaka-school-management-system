@@ -80,7 +80,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: User, label: 'Profile Settings', path: '/settings/profile', roles: ['admin', 'owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student'] },
-    { icon: Clock, label: 'Timetable', path: '/timetable', roles: ['admin'] },
+    { icon: Clock, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
     { icon: CheckSquare, label: 'Attendance Management', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'bursar'] },
@@ -168,11 +168,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     }
 
     if (roleLower === 'student' || roleLower === 'learner' || roleLower === 'parent') {
-      const learnerPaths = ['/', '/attendance/students', '/timetable', '/reports', '/study-corner', '/games'];
+      const learnerPaths = ['/', '/attendance/students', '/reports', '/study-corner', '/games'];
       const labels: Record<string, string> = {
         '/': 'Overview',
         '/attendance/students': 'Attendance',
-        '/timetable': 'Timetable',
         '/reports': 'Report Cards',
         '/study-corner': 'Study Corner',
         '/games': 'Games Hub',

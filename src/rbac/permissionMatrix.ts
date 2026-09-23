@@ -102,7 +102,6 @@ export function roleHas(role?: string, permission?: string): boolean {
       PERMISSIONS.MANAGE_STAFF,
       PERMISSIONS.ENTER_MARKS,
       PERMISSIONS.VIEW_REPORTS,
-      PERMISSIONS.MANAGE_TIMETABLE,
       PERMISSIONS.TAKE_ATTENDANCE,
     ];
     return headTeacherPermissions.includes(permission as any);
@@ -115,7 +114,6 @@ export function roleHas(role?: string, permission?: string): boolean {
       PERMISSIONS.MANAGE_STUDENTS,
       PERMISSIONS.ENTER_MARKS,
       PERMISSIONS.VIEW_REPORTS,
-      PERMISSIONS.MANAGE_TIMETABLE,
       PERMISSIONS.TAKE_ATTENDANCE,
     ];
     return teacherPermissions.includes(permission as any);

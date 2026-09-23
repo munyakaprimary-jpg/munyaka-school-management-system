@@ -140,7 +140,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
         { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'] },
-    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
         { icon: Users, label: 'Staff Directory', path: '/staff', roles: ['admin'] },
         { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
         { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
@@ -188,7 +188,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     '/central-data': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'], // admin-only
                                         '/staff': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'], // admin-only
                                         '/payment-management': ['admin'],     // billing-only — admin cannot access billing console
-                                        '/timetable': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'],
+                                        '/timetable': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student', 'bursar', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'],
                   };
 
   const filteredMenu = menuItems.filter(item => {
