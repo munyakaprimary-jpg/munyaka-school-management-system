@@ -1753,13 +1753,45 @@ export default function StudyCorner() {
                     }
 
                     if (isPdfOrText) {
+                      // Ensure correct data URI or blob URL for iframe and embed
+                      let iframeSrc = finalSrc;
+                      if (previewAttachment.dataUrl && previewAttachment.dataUrl.startsWith('data:')) {
+                        try {
+                          const arr = previewAttachment.dataUrl.split(',');
+                          const mimeMatch = arr[0].match(/:(.*?);/);
+                          const mime = mimeMatch ? mimeMatch[1] : (mime || 'application/pdf');
+                          const bstr = atob(arr[1]);
+                          let n = bstr.length;
+                          const u8arr = new Uint8Array(n);
+                          while (n--) {
+                            u8arr[n] = bstr.charCodeAt(n);
+                          }
+                          const blob = new Blob([u8arr], { type: mime });
+                          iframeSrc = URL.createObjectURL(blob);
+                        } catch {
+                          iframeSrc = finalSrc;
+                        }
+                      }
+
                       return (
-                        <div className="w-full h-[70vh] border border-slate-200 rounded-xl overflow-hidden bg-slate-100 flex flex-col">
+                        <div className="w-full h-[70vh] border border-slate-200 rounded-xl overflow-hidden bg-slate-100 flex flex-col relative">
                           <iframe
-                            src={finalSrc}
+                            src={iframeSrc}
                             title={name}
                             className="w-full h-full border-0 bg-white"
                           />
+                          {/* Fallback embed/object link if iframe restricted */}
+                          <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-xs px-3 py-1 rounded-lg border border-slate-200 shadow-xs flex items-center gap-2">
+                            <span className="text-[11px] text-slate-600">Having trouble viewing?</span>
+                            <a
+                              href={iframeSrc}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1"
+                            >
+                              Open in New Tab ↗
+                            </a>
+                          </div>
                         </div>
                       );
                     }
