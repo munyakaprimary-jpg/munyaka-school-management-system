@@ -174,9 +174,25 @@ const StaffCheckInSelector = () => {
       return `${name} — ${role}`;
     }
     if (id) {
-      return `${name} — ID: ${id}`;
+      return `${name} — Staff ID: ${id}`;
     }
     return name;
+  };
+
+  const getStaffIdentifier = (staff: DirectoryStaff): string => {
+    const tsc = staff.tsc_no || staff.tscNo;
+    if (tsc) {
+      return `TSC: ${tsc}`;
+    }
+    const idNo = staff.id_no;
+    if (idNo) {
+      return `National ID: ${idNo}`;
+    }
+    const staffId = staff.id || staff.staff_id;
+    if (staffId) {
+      return `Staff ID: ${staffId}`;
+    }
+    return 'Staff ID: N/A';
   };
 
   const selectedStaff = useMemo(() => {
@@ -578,8 +594,13 @@ const StaffCheckInSelector = () => {
                                                     .toUpperCase()}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                  <p className={`font-black text-sm truncate ${tc.previewName}`}>{getStaffLabel(selectedStaff)}</p>
-                                                  <p className={`text-[11px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5 ${tc.previewRole}`}>
+                                                  <div className="flex items-center gap-2 flex-wrap">
+                                                    <p className={`font-black text-sm truncate ${tc.previewName}`}>{selectedStaff.name || selectedStaff.full_name}</p>
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-400/20">
+                                                      {getStaffIdentifier(selectedStaff)}
+                                                    </span>
+                                                  </div>
+                                                  <p className={`text-[11px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5 ${tc.previewRole} mt-0.5`}>
                                                     {selectedStaff.role || selectedStaff.designation || 'Staff Member'}
                                                   </p>
                                                 </div>
