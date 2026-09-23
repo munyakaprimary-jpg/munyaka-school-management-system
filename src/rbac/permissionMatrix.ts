@@ -39,6 +39,7 @@ export const PERMISSIONS = {
   MANAGE_STAFF_DIRECTORY: 'manage_staff_directory',
   MANAGE_TIMETABLE_ADMIN: 'manage_timetable_admin',
   MANAGE_ICT_LAB: 'manage_ict_lab',
+  MANAGE_LIBRARY: 'manage_library',
 } as const;
 
 export const ROUTE_PERMISSIONS: Record<string, string> = {
@@ -63,6 +64,7 @@ export const ROUTE_PERMISSIONS: Record<string, string> = {
   '/study-corner': PERMISSIONS.VIEW_DASHBOARD,
   '/notices': PERMISSIONS.VIEW_DASHBOARD,
   '/staff/check-in': PERMISSIONS.TAKE_ATTENDANCE,
+  '/library': PERMISSIONS.MANAGE_LIBRARY,
 } as const;
 
 export function resolveRole(role?: string): string {
@@ -149,6 +151,17 @@ export function roleHas(role?: string, permission?: string): boolean {
       PERMISSIONS.VIEW_REPORTS,
     ];
     return ictPermissions.includes(permission as any) || permission === PERMISSIONS.VIEW_DASHBOARD;
+  }
+
+  // Librarian permissions
+  if (resolved === 'librarian' || resolved === 'library_teacher') {
+    const librarianPermissions = [
+      PERMISSIONS.VIEW_DASHBOARD,
+      PERMISSIONS.MANAGE_LIBRARY,
+      PERMISSIONS.TAKE_ATTENDANCE,
+      PERMISSIONS.VIEW_REPORTS,
+    ];
+    return librarianPermissions.includes(permission as any) || permission === PERMISSIONS.VIEW_DASHBOARD;
   }
   
   return false;
@@ -240,6 +253,16 @@ export function permissionsForRole(role?: string): Record<string, boolean> {
       PERMISSIONS.VIEW_REPORTS,
     ];
     ictPermissions.forEach(perm => {
+      permissions[perm] = true;
+    });
+  } else if (resolved === 'librarian' || resolved === 'library_teacher') {
+    const librarianPermissions = [
+      PERMISSIONS.VIEW_DASHBOARD,
+      PERMISSIONS.MANAGE_LIBRARY,
+      PERMISSIONS.TAKE_ATTENDANCE,
+      PERMISSIONS.VIEW_REPORTS,
+    ];
+    librarianPermissions.forEach(perm => {
       permissions[perm] = true;
     });
   }

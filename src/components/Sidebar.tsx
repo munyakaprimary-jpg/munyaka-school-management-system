@@ -208,6 +208,22 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       }));
     }
 
+    if (roleLower.includes('librarian') || roleLower.includes('library')) {
+      const librarianPaths = [
+        '/',
+        '/library',
+        '/study-corner',
+        '/notices',
+        '/staff/check-in',
+        '/settings/profile'
+      ];
+      const items = menuItems.filter(item => librarianPaths.includes(item.path));
+      return librarianPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
+        ...item,
+        label: item?.path === '/' ? 'Library Dashboard' : item?.label
+      }));
+    }
+
     return menuItems.filter(item => {
       if (item.path === '/') return true;
       if (item.global) return true;
@@ -250,7 +266,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       if (item?.path === '/') {
         const isAdminOrHead = roleLower.includes('admin') || roleLower.includes('head');
         const isIct = roleLower.includes('ict');
-        const labelText = isAdminOrHead ? 'Dashboard' : isIct ? 'ICT Dashboard' : "Teacher's Dashboard";
+        const isLib = roleLower.includes('librarian') || roleLower.includes('library');
+        const labelText = isAdminOrHead ? 'Dashboard' : isIct ? 'ICT Dashboard' : isLib ? 'Library Dashboard' : "Teacher's Dashboard";
         return { ...item, label: labelText };
       }
       return item;

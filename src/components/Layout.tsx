@@ -243,6 +243,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           ];
           return allowedIctPaths.includes(item.path);
         }
+
+        const isLibrarianVariant = roleLower.includes('librarian') || roleLower.includes('library');
+        if (isLibrarianVariant) {
+          const allowedLibrarianPaths = [
+            '/dashboard',
+            '/library',
+            '/study-corner',
+            '/notices',
+            '/staff/check-in',
+            '/settings'
+          ];
+          return allowedLibrarianPaths.includes(item.path);
+        }
   
         // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item
         // EXCEPT owner-only items (e.g. Payment & Subscriptions).
