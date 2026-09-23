@@ -25,6 +25,7 @@ export const PERMISSIONS = {
   VIEW_REPORTS: 'view_reports',
   MANAGE_TIMETABLE: 'manage_timetable',
   TAKE_ATTENDANCE: 'take_attendance',
+  COMMUNICATE: 'communicate',
   // Additional permissions for admin-only modules
   VIEW_OPERATIONAL_DASHBOARD: 'view_operational_dashboard',
   MANAGE_LEARNERS: 'manage_learners',
@@ -48,6 +49,7 @@ export const ROUTE_PERMISSIONS: Record<string, string> = {
   '/reports': PERMISSIONS.VIEW_REPORTS,
   '/timetable': PERMISSIONS.MANAGE_TIMETABLE_ADMIN,
   '/attendance': PERMISSIONS.TAKE_ATTENDANCE,
+  '/communication': PERMISSIONS.COMMUNICATE,
   '/central-data': PERMISSIONS.MANAGE_CENTRAL_DATA,
   '/staff/directory': PERMISSIONS.MANAGE_STAFF_DIRECTORY,
   '/system-management': PERMISSIONS.VIEW_OPERATIONAL_DASHBOARD,
@@ -115,6 +117,7 @@ export function roleHas(role?: string, permission?: string): boolean {
       PERMISSIONS.ENTER_MARKS,
       PERMISSIONS.VIEW_REPORTS,
       PERMISSIONS.TAKE_ATTENDANCE,
+      PERMISSIONS.COMMUNICATE,
     ];
     return teacherPermissions.includes(permission as any);
   }
@@ -195,6 +198,7 @@ export function permissionsForRole(role?: string): Record<string, boolean> {
       PERMISSIONS.ENTER_MARKS,
       PERMISSIONS.VIEW_REPORTS,
       PERMISSIONS.TAKE_ATTENDANCE,
+      PERMISSIONS.COMMUNICATE,
     ];
     teacherPermissions.forEach(perm => {
       permissions[perm] = true;
