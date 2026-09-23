@@ -11,7 +11,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { useTimetable } from '@/hooks/useTimetable';
+import { useTimetable, LessonEntry } from '@/hooks/useTimetable';
 import { useAuth } from '@/context/AuthContext';
 import { isTeacherRole } from '@/utils/roleHelper';
 import TimeSlotModal from '@/components/timetable/TimeSlotModal';
@@ -28,8 +28,7 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const Timetable = () => {
   const { user } = useAuth();
   const userRole = user?.role || '';
-  const isTeacher = isTeacherRole(userRole, user?.staffCategory, user?.specialties) || 
-    String(userRole).toLowerCase().includes('teacher') || String(userRole).toLowerCase().includes('class_teacher');
+  const isTeacher = userRole.toLowerCase().includes('teacher') && !userRole.toLowerCase().includes('admin');
 
   const {
     selectedGrade,
@@ -53,9 +52,10 @@ const Timetable = () => {
     setSelectedCell({ day, slotId });
   };
 
-  const currentEntry = selectedCell
-    ? entries.find(e => e.day === selectedCell.day && e.slotId === selectedCell.slotId)
-    : null;
+  const currentSlotIndex = selectedCell ? timeSlots.findIndex(s => s.id === selectedCell.slotId) : -1;
+  const currentEntry = (selectedCell && currentSlotIndex !== -1 && entries[currentSlotIndex]
+    ? (entries[currentSlotIndex][selectedCell.day] || null)
+    : null) as LessonEntry | null;
 
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full font-sans">
@@ -133,7 +133,7 @@ const Timetable = () => {
                       </td>
                       <td colSpan={DAYS.length} className="p-4 text-center">
                         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-bold text-xs">
-                          <Clock size={14} /> {slot.label || slot.category.toUpperCase()} ({slot.startTime} - {slot.endTime})
+                          <Clock size={14} /> {(slot as any).label || slot.category.toUpperCase()} ({slot.startTime} - {slot.endTime})
                         </div>
                       </td>
                     </tr>
@@ -143,7 +143,7 @@ const Timetable = () => {
                 return (
                   <tr key={slot.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-4 pl-6 align-top">
-                      <div className="font-bold text-slate-800 text-sm">{slot.label || 'Lesson'}</div>
+                      <div className="font-bold text-slate-800 text-sm">{(slot as any).label || 'Lesson'}</div>
                       <div className="font-mono text-xs text-slate-400 mt-0.5">{slot.startTime} - {slot.endTime}</div>
                     </td>
                     {DAYS.map(day => {
@@ -191,14 +191,21 @@ const Timetable = () => {
       {/* Lesson Drawer / Modal for admins */}
       {!isTeacher && selectedCell && (
         <LessonDrawer
-          isOpen={Boolean(selectedCell)}
+          open={Boolean(selectedCell)}
           onClose={() => setSelectedCell(null)}
           day={selectedCell.day}
-          slotId={selectedCell.slotId}
-          entry={currentEntry}
-          onSave={updates => {
+          slotIndex={timeSlots.findIndex(s => s.id === selectedCell.slotId)}
+          timeLabel={timeSlots.find(s => s.id === selectedCell.slotId)?.startTime ? `${timeSlots.find(s => s.id === selectedCell.slotId)?.startTime} - ${timeSlots.find(s => s.id === selectedCell.slotId)?.endTime}` : ''}
+          currentEntry={currentEntry}
+          onSave={(subject, color, teacherId, teacherName) => {
             if (selectedCell) {
-              updateEntry(selectedCell.day, selectedCell.slotId, updates);
+              updateEntry(selectedCell.day, selectedCell.slotId, { subject, color, teacherId, teacherName });
+              setSelectedCell(null);
+            }
+          }}
+          onDelete={() => {
+            if (selectedCell) {
+              updateEntry(selectedCell.day, selectedCell.slotId, { subject: '' });
               setSelectedCell(null);
             }
           }}
@@ -208,12 +215,12 @@ const Timetable = () => {
       {/* Time Slot Modal for admins */}
       {!isTeacher && isSlotModalOpen && (
         <TimeSlotModal
-          isOpen={isSlotModalOpen}
+          open={isSlotModalOpen}
           onClose={() => setIsSlotModalOpen(false)}
           timeSlots={timeSlots}
-          onAddSlot={addTimeSlot}
-          onUpdateSlot={updateTimeSlot}
-          onDeleteSlot={deleteTimeSlot}
+          onAdd={(startTime, endTime, category) => addTimeSlot(startTime, endTime, category || 'normal')}
+          onUpdate={(slotId, startTime, endTime, category) => updateTimeSlot(slotId, startTime, endTime, category || 'normal')}
+          onDelete={deleteTimeSlot}
         />
       )}
     </div>

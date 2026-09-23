@@ -388,6 +388,45 @@ export function useTimetable() {
     setSelectedGrade,
     timeSlots: currentTimetable.timeSlots,
     entries: currentTimetable.entries,
+    updateEntry: (day: string, slotId: string, updates: { subject: string; color?: string; teacherId?: string; teacherName?: string }) => {
+      setTimetables(prev => {
+        const current = prev[selectedGrade];
+        if (!current) return prev;
+        const slotIdx = current.timeSlots.findIndex(s => s.id === slotId);
+        if (slotIdx === -1) return prev;
+        const color = updates.color || SUBJECT_COLORS[Math.floor(Math.random() * SUBJECT_COLORS.length)];
+        const newEntry: LessonEntry | null = updates.subject ? {
+          id: crypto.randomUUID(),
+          subject: updates.subject,
+          color,
+          teacherId: updates.teacherId,
+          teacherName: updates.teacherName,
+        } : null;
+
+        const updatedEntries = current.entries.map((entry, idx) => {
+          if (idx === slotIdx) {
+            return { ...entry, [day]: newEntry };
+          }
+          return entry;
+        });
+        const updated = { ...prev, [selectedGrade]: { ...current, entries: updatedEntries } };
+        persistTimetable(updated);
+        return updated;
+      });
+    },
+    resetTimetable: () => {
+      setTimetables(prev => {
+        const updated = {
+          ...prev,
+          [selectedGrade]: {
+            timeSlots: getDefaultTimeSlots(),
+            entries: getDefaultEntries(getDefaultTimeSlots()),
+          },
+        };
+        persistTimetable(updated);
+        return updated;
+      });
+    },
     addTimeSlot,
     updateTimeSlot,
     updateSlotTimes,
