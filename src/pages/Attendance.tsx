@@ -2756,13 +2756,9 @@ const Attendance = () => {
                                       )}
                                     </div>
                                     {liveStudents.length === 0 && (
-                                      <a
-                                        href="/registration"
-                                        className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-10 px-5 shadow-lg shadow-indigo-100 transition-colors"
-                                      >
-                                        <Sparkles size={14} />
-                                        Add Learners
-                                      </a>
+                                      <p className="text-[11px] text-slate-400 font-medium italic mt-2">
+                                        Please contact an administrator to register learners for this class and stream.
+                                      </p>
                                     )}
                                     {String(searchTerm || '').trim() && liveStudents.length > 0 && (
                                       <button
