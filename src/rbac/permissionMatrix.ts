@@ -46,7 +46,7 @@ export const ROUTE_PERMISSIONS: Record<string, string> = {
   '/fees': PERMISSIONS.MANAGE_FINANCES,
   '/assessments': PERMISSIONS.ENTER_MARKS,
   '/reports': PERMISSIONS.VIEW_REPORTS,
-  '/timetable': PERMISSIONS.MANAGE_TIMETABLE,
+  '/timetable': PERMISSIONS.MANAGE_TIMETABLE_ADMIN,
   '/attendance': PERMISSIONS.TAKE_ATTENDANCE,
   '/central-data': PERMISSIONS.MANAGE_CENTRAL_DATA,
   '/staff/directory': PERMISSIONS.MANAGE_STAFF_DIRECTORY,
@@ -182,7 +182,6 @@ export function permissionsForRole(role?: string): Record<string, boolean> {
       PERMISSIONS.MANAGE_STAFF,
       PERMISSIONS.ENTER_MARKS,
       PERMISSIONS.VIEW_REPORTS,
-      PERMISSIONS.MANAGE_TIMETABLE,
       PERMISSIONS.TAKE_ATTENDANCE,
     ];
     headTeacherPermissions.forEach(perm => {
@@ -195,7 +194,6 @@ export function permissionsForRole(role?: string): Record<string, boolean> {
       PERMISSIONS.MANAGE_STUDENTS,
       PERMISSIONS.ENTER_MARKS,
       PERMISSIONS.VIEW_REPORTS,
-      PERMISSIONS.MANAGE_TIMETABLE,
       PERMISSIONS.TAKE_ATTENDANCE,
     ];
     teacherPermissions.forEach(perm => {
