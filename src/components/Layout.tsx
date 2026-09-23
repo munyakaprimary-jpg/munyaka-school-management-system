@@ -140,8 +140,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
         { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'] },
-    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'] },
-    { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin'] },
+        { icon: Users, label: 'Staff Directory', path: '/staff', roles: ['admin'] },
+        { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
+        { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     // Staff Attendance
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
     { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher'] },
@@ -176,16 +178,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // Used to enforce that OWNER cannot access administrative routes like /fees.
   // ADMIN is NEVER in a BLOCKED_ROUTES list — it is always allowed.
   const BLOCKED_ROUTES: Record<string, string[]> = {
-      '/fees': ['owner', 'parent', 'student', 'teacher'],
-      '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
-      '/admin/control-center': ['owner'], // operational route — owner is billing-only
-      '/admin-dashboard': ['owner', 'teacher', 'head_teacher', 'bursar', 'parent', 'student'],
-            '/students': ['owner'],              // operational — owner cannot manage learners
-      '/attendance': ['owner'],            // operational — owner cannot take roll call
-            // '/settings': ['owner'],            // operational — owner has its own profile settings — REMOVED so owner can access Settings
-                  '/central-data': ['owner'],          // operational — owner cannot access central data service
-                  '/payment-management': ['admin'],     // billing-only — admin cannot access billing console
-                };
+        '/fees': ['owner', 'parent', 'student', 'teacher'],
+        '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
+        '/admin/control-center': ['owner'], // operational route — owner is billing-only
+        '/admin-dashboard': ['owner', 'teacher', 'head_teacher', 'bursar', 'parent', 'student'],
+              '/students': ['owner'],              // operational — owner cannot manage learners
+        '/attendance': ['owner'],            // operational — owner cannot take roll call
+              // '/settings': ['owner'],            // operational — owner has its own profile settings — REMOVED so owner can access Settings
+                    '/central-data': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'], // admin-only
+                                        '/staff': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student'], // admin-only
+                                        '/payment-management': ['admin'],     // billing-only — admin cannot access billing console
+                                        '/timetable': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'],
+                  };
 
   const filteredMenu = menuItems.filter(item => {
         if (!user) return false;
@@ -204,12 +208,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         const isTeacherVariant = roleLower.includes('teacher') || roleLower.includes('educator') || roleLower === 'class_teacher' || roleLower === 'subject_teacher' || roleLower === 'senior_teacher';
 
         if (isTeacherVariant) {
-          const forbiddenTeacherPaths = [
-            '/central-data', '/grades', '/staff', '/learning-areas', '/exam-types',
-            '/staff/pre-registration', '/system-management', '/staff/access',
-            '/transferred-archive', '/promote-students', '/admin/control-center',
-            '/dev/tenants', '/payment-management', '/staff/attendance-monitor'
-          ];
+                  const forbiddenTeacherPaths = [
+                    '/central-data', '/grades', '/staff', '/learning-areas', '/exam-types',
+                    '/staff/pre-registration', '/system-management', '/staff/access',
+                    '/transferred-archive', '/promote-students', '/admin/control-center',
+                    '/dev/tenants', '/payment-management', '/staff/attendance-monitor',
+                    '/timetable'
+                  ];
           if (
             forbiddenTeacherPaths.includes(item.path) ||
             item.label.includes("Central Data") ||
@@ -288,7 +293,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
           { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
       { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-            { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+            { icon: Database, label: 'Central', path: '/central-data', roles: ['admin'] },
             { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
             { icon: Gamepad2, label: 'Games', path: '/games', global: true },
                         { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },

@@ -37,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: Server, label: 'Settings', path: '/mobile/settings', roles: ['admin', 'teacher', 'accountant', 'staff', 'student'] },
     { icon: Shield, label: 'Staff Access', path: '/staff/pre-registration', roles: ['admin'] },
   { icon: Key, label: 'Licenses', path: '/licenses', roles: ['admin'] },
-  { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin', 'teacher', 'accountant', 'staff', 'student'] },
+  { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin'] },
   { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin'] },
   { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'teacher', 'student', 'staff', 'librarian'] },
 ];

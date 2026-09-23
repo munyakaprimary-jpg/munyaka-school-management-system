@@ -1,45 +1,46 @@
 import React, { useState, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Layers, 
-  BookOpen, 
-  Award, 
-  Contact2, 
-  Key, 
-  School, 
-  CreditCard, 
-  User, 
-  MessageSquare, 
-  Bell, 
-  Clock, 
-  CheckSquare, 
-  ClipboardCheck, 
-  LogIn, 
-  Fingerprint, 
-  FileSpreadsheet, 
-  FileText, 
-  BarChart3, 
-  Laptop, 
-  Monitor, 
-  Keyboard, 
-  Target, 
-  FolderHeart, 
-  Library, 
-  Box, 
-  Wallet, 
-  Shield, 
-  UserCheck, 
-  Archive, 
-  ArrowUpCircle, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Users,
+  Layers,
+  BookOpen,
+  Award,
+  Contact2,
+  Key,
+  School,
+  CreditCard,
+  User,
+  MessageSquare,
+  Bell,
+  Clock,
+  CheckSquare,
+  ClipboardCheck,
+  LogIn,
+  Fingerprint,
+  FileSpreadsheet,
+  FileText,
+  BarChart3,
+  Laptop,
+  Monitor,
+  Keyboard,
+  Target,
+  FolderHeart,
+  Library,
+  Box,
+  Wallet,
+  Shield,
+  UserCheck,
+  Archive,
+  ArrowUpCircle,
+  Settings,
   Gamepad2,
   ChevronLeft,
   ChevronRight,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -79,7 +80,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: User, label: 'Profile Settings', path: '/settings/profile', roles: ['admin', 'owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student'] },
-    { icon: Clock, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
+    { icon: Clock, label: 'Timetable', path: '/timetable', roles: ['admin'] },
     { icon: CheckSquare, label: 'Attendance Management', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'bursar'] },
@@ -125,7 +126,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     if (isTeacherVariant && !isAdminOrOwner) {
       const teacherPaths = [
         '/', '/students', '/communication', '/notices',
-        '/timetable', '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
+        '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
         '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
         '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
         '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile',
@@ -192,11 +193,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           item.label.includes("Central Data") ||
           item.label.includes("Grades & Streams") ||
           item.label.includes("Staff Directory") ||
+          item.label.includes("Timetable") ||
           item.label.includes("Learning Areas") ||
           item.label.includes("Exam Types") ||
           item.path === '/central-data' ||
           item.path === '/grades' ||
           item.path === '/staff' ||
+          item.path === '/timetable' ||
           item.path === '/learning-areas' ||
           item.path === '/exam-types'
         ) {
