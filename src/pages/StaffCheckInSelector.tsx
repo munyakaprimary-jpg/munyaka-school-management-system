@@ -146,9 +146,9 @@ const StaffCheckInSelector = () => {
       s => !s.status || s.status === 'Active' || s.status === 'Pre-Registered' || s.status === 'active'
     );
 
-    if (!String(searchQuery || '').trim()) return active;
-    
     const q = String(searchQuery || '').toLowerCase().trim();
+    if (!q) return []; // Hide list when search query is empty
+    
     return active.filter(staff => {
       const name = (staff.name || staff.full_name || '').toLowerCase();
       const tscNo = (staff.tsc_no || staff.tscNo || staff.tscNumber || '').toLowerCase();
