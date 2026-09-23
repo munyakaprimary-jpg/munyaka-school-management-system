@@ -98,13 +98,19 @@ export function guessMimeFromName(name: string): string {
   return map[ext] ?? "application/octet-stream";
 }
 
-/** Open an attachment in a new tab — works fully offline. */
+/** Open an attachment in a new tab — works fully offline across web & Capacitor. */
 export function openAttachment(att: Att): void {
   try {
     const targetUrl = att.dataUrl || att.url;
-    const win = window.open(targetUrl, "_blank", "noopener,noreferrer");
-    if (!win) {
-      // Pop-up blocked — fall back to an anchor click.
+    // For data URIs or blob URLs, opening a blank window and writing an iframe
+    // prevents browser popup/navigation blocks on large data: URIs.
+    const win = window.open();
+    if (win) {
+      win.document.write(
+        `<!DOCTYPE html><html><head><title>${att.name || att.title || 'Document'}</title></head>` +
+        `<body style="margin:0;background:#0f172a;"><iframe src="${targetUrl}" style="border:none;width:100vw;height:100vh;" allowfullscreen></iframe></body></html>`
+      );
+    } else {
       const link = document.createElement("a");
       link.href = targetUrl;
       link.download = att.name || att.title || 'download';

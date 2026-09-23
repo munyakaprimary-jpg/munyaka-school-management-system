@@ -1783,14 +1783,28 @@ export default function StudyCorner() {
                           {/* Fallback embed/object link if iframe restricted */}
                           <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-xs px-3 py-1 rounded-lg border border-slate-200 shadow-xs flex items-center gap-2">
                             <span className="text-[11px] text-slate-600">Having trouble viewing?</span>
-                            <a
-                              href={iframeSrc}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1"
+                            <button
+                              onClick={() => {
+                                const dataUri = previewAttachment.dataUrl || finalSrc;
+                                const win = window.open();
+                                if (win) {
+                                  win.document.write(
+                                    `<iframe src="${dataUri}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%; position:absolute;" allowfullscreen></iframe>`
+                                  );
+                                } else {
+                                  const link = document.createElement('a');
+                                  link.href = dataUri;
+                                  link.target = '_blank';
+                                  link.rel = 'noopener noreferrer';
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
+                                }
+                              }}
+                              className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
                             >
                               Open in New Tab ↗
-                            </a>
+                            </button>
                           </div>
                         </div>
                       );
