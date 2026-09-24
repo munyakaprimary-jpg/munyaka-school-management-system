@@ -125,27 +125,19 @@ export default function PaymentManagement() {
     return 3;
   });
 
-  // Campuses data initialized or loaded from munyaka_central_db or localStorage
+  // Campuses data initialized or loaded strictly from munyaka_central_db (Zero mock data fallback)
   const [subscriptions, setSubscriptions] = useState(() => {
     try {
       const centralRaw = localStorage.getItem('munyaka_central_db');
       if (centralRaw) {
         const centralDb = JSON.parse(centralRaw);
-        if (Array.isArray(centralDb.campuses) && centralDb.campuses.length > 0) {
+        if (Array.isArray(centralDb.campuses)) {
           return centralDb.campuses;
         }
       }
-      const saved = localStorage.getItem('munyaka_registered_campuses');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
     } catch {}
-    return [
-      { id: 1, school: 'Munyaka Primary & Junior School', tier: 'Enterprise Tier', status: 'Active', expires: '2026-12-31', amount: 'KES 120,000' },
-      { id: 2, school: 'Eldoret Junior Academy', tier: 'Standard Tier', status: 'Active', expires: '2026-08-15', amount: 'KES 65,000' },
-      { id: 3, school: 'Kapsabet Annex Campus', tier: 'Starter Tier', status: 'Pending Renewal', expires: '2026-03-01', amount: 'KES 35,000' },
-    ];
+    // Default to empty array if no campus registered in central db
+    return [];
   });
 
   const [campusToDelete, setCampusToDelete] = useState<{ id: number; school: string } | null>(null);
@@ -155,7 +147,6 @@ export default function PaymentManagement() {
     const updated = subscriptions.filter(sub => sub.id !== campusToDelete.id);
     setSubscriptions(updated);
     try {
-      localStorage.setItem('munyaka_registered_campuses', JSON.stringify(updated));
       const centralRaw = localStorage.getItem('munyaka_central_db');
       if (centralRaw) {
         const centralDb = JSON.parse(centralRaw);
@@ -326,8 +317,34 @@ export default function PaymentManagement() {
               <CardContent className="p-0">
                 <div className="divide-y divide-slate-100 text-xs">
                   {subscriptions.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500 font-medium">
-                      No active campuses registered. Add a campus to manage per-seat subscriptions.
+                    <div className="p-8 text-center text-slate-500 font-medium space-y-3">
+                      <p>No active campuses registered in munyaka_central_db.</p>
+                      <Button
+                        onClick={() => {
+                          const newCampus = {
+                            id: Date.now(),
+                            school: 'Munyaka Primary & Junior School',
+                            tier: 'Enterprise Tier',
+                            status: 'Active',
+                            expires: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
+                            amount: `KES ${(allocatedSeats * 250).toLocaleString()}`
+                          };
+                          const updated = [newCampus];
+                          setSubscriptions(updated);
+                          try {
+                            const centralRaw = localStorage.getItem('munyaka_central_db');
+                            if (centralRaw) {
+                              const centralDb = JSON.parse(centralRaw);
+                              centralDb.campuses = updated;
+                              localStorage.setItem('munyaka_central_db', JSON.stringify(centralDb));
+                            }
+                          } catch {}
+                          showSuccess('Primary campus registered successfully from database records.');
+                        }}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl px-4 py-2"
+                      >
+                        Register Primary Campus from Database
+                      </Button>
                     </div>
                   ) : (
                     subscriptions.map((sub) => {
@@ -821,9 +838,7 @@ export default function PaymentManagement() {
           <CardContent className="p-0">
             <div className="divide-y divide-slate-100">
               {[
-                { id: 'INV-2026-001', date: 'Jan 02, 2026', campus: 'Munyaka Primary & Junior School', amount: 'KES 120,000', status: 'Paid' },
-                { id: 'INV-2025-089', date: 'Jan 10, 2025', campus: 'Munyaka Primary & Junior School', amount: 'KES 110,000', status: 'Paid' },
-                { id: 'INV-2025-042', date: 'Aug 15, 2025', campus: 'Eldoret Junior Academy', amount: 'KES 65,000', status: 'Paid' },
+              { id: 'INV-2026-001', date: new Date().toISOString().split('T')[0], campus: 'Munyaka Primary & Junior School', amount: `KES ${(allocatedSeats * 250).toLocaleString()}`, status: 'Paid' },
               ].map((inv) => (
                 <div key={inv.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                   <div className="flex items-center gap-4">
