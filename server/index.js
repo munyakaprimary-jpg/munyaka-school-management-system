@@ -4,7 +4,7 @@
 // First install: cd server && npm install
 
 import express from 'express';
-import cors from 'cors';
+const cors = require('cors');
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
@@ -24,35 +24,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'munyaka-lan-jwt-secret-key-2026';
 // Initialize Express
 const app = express();
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (origin === 'http://localhost' || origin === 'capacitor://localhost') {
-      return callback(null, true);
-    }
-    if (origin.startsWith('http://localhost:')) {
-      return callback(null, true);
-    }
-    const lanIpRegex = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
-    if (lanIpRegex.test(origin)) {
-      return callback(null, true);
-    }
-    const anyIpRegex = /^https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/;
-    if (anyIpRegex.test(origin)) {
-      return callback(null, true);
-    }
-    callback(new Error('Not allowed by CORS'));
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false,
-  maxAge: 86400,
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-app.use(express.json({ limit: '50mb' }));
+app.use(cors({ origin: '*' }));
+app.use(express.json());
 
 // Helper to read users db
 function readUsersDb() {
@@ -97,7 +70,7 @@ app.post('/api/devices/heartbeat', (req, res) => {
     const { deviceId, teacherName, role, ipAddress, appVersion, batteryLevel, pendingSyncCount } = req.body;
     
     if (!deviceId) {
-      return res.status(400).json({ success: false, message: 'deviceId is required' });
+      return res.status(400).setHeader('Content-Type', 'application/json').json({ success: false, message: 'deviceId is required' });
     }
 
     const deviceData = {
@@ -114,7 +87,7 @@ app.post('/api/devices/heartbeat', (req, res) => {
 
     connectedDevicesMap.set(deviceId, deviceData);
 
-    res.json({
+    res.status(200).setHeader('Content-Type', 'application/json').json({
       success: true,
       message: 'Heartbeat received successfully',
       serverTime: new Date().toISOString()
@@ -157,7 +130,7 @@ app.get('/api/admin/devices', (req, res) => {
 // HEALTH CHECK ROUTE
 // ============================================
 app.get('/api/ping', (req, res) => {
-  res.json({
+  res.status(200).setHeader('Content-Type', 'application/json').json({
     status: 'online',
     message: 'Connected to Admin Server',
     timestamp: new Date()
