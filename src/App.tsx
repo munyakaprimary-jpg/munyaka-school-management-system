@@ -79,9 +79,23 @@ import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
 import { initializeCentralStorage } from "./utils/centralDbInit";
+import { runBillingAutoLockCheck } from "./utils/billingAutoLock";
 
 // Execute unified central storage initialization on application load
 initializeCentralStorage();
+
+// Execute billing auto-lock check on application boot
+if (typeof window !== 'undefined') {
+  try {
+    runBillingAutoLockCheck();
+    // Set up daily interval for background auto-lock check
+    setInterval(() => {
+      runBillingAutoLockCheck();
+    }, 24 * 60 * 60 * 1000); // 24 hours
+  } catch (err) {
+    console.error('Failed to run billing auto-lock check on boot:', err);
+  }
+}
 
 // ── Critical Central Database Initialization ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Ensures ALL canonical storage keys are populated from initialSeedData on clean install.

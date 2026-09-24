@@ -104,6 +104,28 @@ export default function PaymentManagement() {
     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     return lastDay.toISOString().split('T')[0];
   });
+  const [billingDueDay, setBillingDueDay] = useState<number>(() => {
+    try {
+      const centralRaw = localStorage.getItem('munyaka_central_db');
+      if (centralRaw) {
+        const db = JSON.parse(centralRaw);
+        if (db.billingSettings?.billingDueDay) return db.billingSettings.billingDueDay;
+      }
+    } catch {}
+    return 5;
+  });
+  const [billingGracePeriod, setBillingGracePeriod] = useState<number>(() => {
+    try {
+      const centralRaw = localStorage.getItem('munyaka_central_db');
+      if (centralRaw) {
+        const db = JSON.parse(centralRaw);
+        if (db.billingSettings?.billingGracePeriod !== undefined) return db.billingSettings.billingGracePeriod;
+      }
+    } catch {}
+    return 3;
+  });
+    const [billingDueDay, setBillingDueDay] = useState<number>(5);
+    const [billingGracePeriod, setBillingGracePeriod] = useState<number>(3);
 
   // Campuses data initialized or loaded from munyaka_central_db or localStorage
   const [subscriptions, setSubscriptions] = useState(() => {
@@ -600,38 +622,67 @@ export default function PaymentManagement() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-500">Monthly License Fee Per Student (KES)</Label>
-                <Input
-                  type="number"
-                  value={monthlyFeePerStudent}
-                  onChange={(e) => setMonthlyFeePerStudent(Number(e.target.value))}
-                  className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-500">Monthly Payment Due Date</Label>
-                <Input
-                  type="date"
-                  value={paymentDueDate}
-                  onChange={(e) => setPaymentDueDate(e.target.value)}
-                  className="h-12 bg-slate-50 border-slate-200 font-bold text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-500">Automated Monthly Direct Debit</Label>
-                <select
-                  value={autoDebitEnabled ? 'yes' : 'no'}
-                  onChange={(e) => setAutoDebitEnabled(e.target.value === 'yes')}
-                  className="w-full h-12 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800"
-                >
-                  <option value="yes">Enabled (Auto-charge via M-Pesa / Bank)</option>
-                  <option value="no">Disabled (Manual Invoicing)</option>
-                </select>
-              </div>
-            </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-black uppercase text-slate-500">Monthly License Fee Per Student (KES)</Label>
+                            <Input
+                              type="number"
+                              value={monthlyFeePerStudent}
+                              onChange={(e) => setMonthlyFeePerStudent(Number(e.target.value))}
+                              className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
+                            />
+                          </div>
+            
+                          <div className="space-y-2">
+                            <Label className="text-xs font-black uppercase text-slate-500">Monthly Payment Due Date</Label>
+                            <Input
+                              type="date"
+                              value={paymentDueDate}
+                              onChange={(e) => setPaymentDueDate(e.target.value)}
+                              className="h-12 bg-slate-50 border-slate-200 font-bold text-sm"
+                            />
+                          </div>
+            
+                          <div className="space-y-2">
+                            <Label className="text-xs font-black uppercase text-slate-500">Automated Monthly Direct Debit</Label>
+                            <select
+                              value={autoDebitEnabled ? 'yes' : 'no'}
+                              onChange={(e) => setAutoDebitEnabled(e.target.value === 'yes')}
+                              className="w-full h-12 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800"
+                            >
+                              <option value="yes">Enabled (Auto-charge via M-Pesa / Bank)</option>
+                              <option value="no">Disabled (Manual Invoicing)</option>
+                            </select>
+                          </div>
+                        </div>
+            
+                        {/* Auto-Lock Configuration */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-100">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-black uppercase text-slate-500">Billing Due Day of Month</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="28"
+                              value={billingDueDay}
+                              onChange={(e) => setBillingDueDay(Math.max(1, Math.min(28, Number(e.target.value))))}
+                              className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
+                            />
+                            <p className="text-[10px] text-slate-500">Day of month when payment is due (default: 5th)</p>
+                          </div>
+            
+                          <div className="space-y-2">
+                            <Label className="text-xs font-black uppercase text-slate-500">Grace Period (Days)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="14"
+                              value={billingGracePeriod}
+                              onChange={(e) => setBillingGracePeriod(Math.max(0, Math.min(14, Number(e.target.value))))}
+                              className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
+                            />
+                            <p className="text-[10px] text-slate-500">Days after due date before auto-lock triggers (default: 3 days)</p>
+                          </div>
+                        </div>
 
             {/* Overdue Warning / Eligibility Indicator */}
             {(() => {
@@ -673,18 +724,29 @@ export default function PaymentManagement() {
             </div>
 
             <div className="flex justify-end pt-4 border-t border-slate-100">
-              <Button
-                onClick={() => {
-                  try {
-                    localStorage.setItem('munyaka_payment_due_date', paymentDueDate);
-                  } catch {}
-                  showSuccess('Monthly payment settings & due date saved successfully.');
-                }}
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-8"
-              >
-                Save Monthly Billing Rules
-              </Button>
-            </div>
+                          <Button
+                            onClick={() => {
+                              try {
+                                localStorage.setItem('munyaka_payment_due_date', paymentDueDate);
+                                // Save billing auto-lock settings to munyaka_central_db
+                                const centralRaw = localStorage.getItem('munyaka_central_db');
+                                if (centralRaw) {
+                                  const centralDb = JSON.parse(centralRaw);
+                                  centralDb.billingSettings = {
+                                    billingDueDay,
+                                    billingGracePeriod,
+                                    updatedAt: new Date().toISOString(),
+                                  };
+                                  localStorage.setItem('munyaka_central_db', JSON.stringify(centralDb));
+                                }
+                              } catch {}
+                              showSuccess('Monthly payment settings & due date saved successfully.');
+                            }}
+                            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-8"
+                          >
+                            Save Monthly Billing Rules
+                          </Button>
+                        </div>
           </CardContent>
         </Card>
       )}
