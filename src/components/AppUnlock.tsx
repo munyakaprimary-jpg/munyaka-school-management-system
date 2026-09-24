@@ -33,6 +33,7 @@ import {
 } from '@/services/licenseService';
 import { License, LICENSE_METHOD_LABELS } from '@/types/license';
 import { cn } from '@/lib/utils';
+import BillingWarningBanner from '@/components/BillingWarningBanner';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -374,6 +375,9 @@ const AppUnlock = ({ children, forceShow = false, currentRole }: AppUnlockProps)
   // ── Unlocked: show active license indicator, render children ──
   return (
     <div className="relative">
+      {/* Flashing Warning Banner for Upcoming or Overdue Payment */}
+      <BillingWarningBanner currentRole={authRole} />
+
       {/* Floating license indicator (top-right) */}
       <div className="fixed top-3 right-3 z-50">
         <button
