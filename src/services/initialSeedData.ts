@@ -1,4 +1,4 @@
-export const initialSeedData = {
+{
   "students": [
     {
       "id": "1789881428012",
@@ -180,4 +180,4 @@ export const initialSeedData = {
     }
   },
   "fees": []
-};
+}
