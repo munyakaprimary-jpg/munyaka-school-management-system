@@ -124,8 +124,6 @@ export default function PaymentManagement() {
     } catch {}
     return 3;
   });
-    const [billingDueDay, setBillingDueDay] = useState<number>(5);
-    const [billingGracePeriod, setBillingGracePeriod] = useState<number>(3);
 
   // Campuses data initialized or loaded from munyaka_central_db or localStorage
   const [subscriptions, setSubscriptions] = useState(() => {
