@@ -1794,7 +1794,7 @@ export default function StudyCorner() {
                         try {
                           const arr = previewAttachment.dataUrl.split(',');
                           const mimeMatch = arr[0].match(/:(.*?);/);
-                          const mime = mimeMatch ? mimeMatch[1] : (mime || 'application/pdf');
+                          const mime = mimeMatch ? mimeMatch[1] : 'application/pdf';
                           const bstr = atob(arr[1]);
                           let n = bstr.length;
                           const u8arr = new Uint8Array(n);

@@ -363,13 +363,25 @@ export default function StaffAccessMaster() {
       {showPreRegModal && (
         <AddPreRegModal
           onClose={() => setShowPreRegModal(false)}
-          onAdd={(newStaff) => setStaffList((prev) => [newStaff, ...prev])}
+          onSubmit={(newStaff: any) => setStaffList((prev: any) => [newStaff, ...prev])}
         />
       )}
 
       {inviteModalOpen && inviteTarget && (
         <DispatchInviteModal
-          staff={inviteTarget}
+          staff={{
+            id: inviteTarget.id || '1',
+            staffId: inviteTarget.staffId || inviteTarget.id || '1',
+            fullName: inviteTarget.fullName || inviteTarget.name || '',
+            nationalId: inviteTarget.nationalId || '',
+            email: inviteTarget.email || '',
+            phone: inviteTarget.phone || '',
+            systemRole: (inviteTarget.systemRole || 'teacher') as any,
+            department: inviteTarget.department || 'General',
+            accessKey: inviteTarget.accessKey || 'MUN-KEY',
+            status: inviteTarget.status || 'Active',
+            createdAt: inviteTarget.createdAt || new Date().toISOString()
+          }}
           onClose={() => {
             setInviteModalOpen(false);
             setInviteTarget(null);
