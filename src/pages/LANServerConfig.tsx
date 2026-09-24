@@ -196,30 +196,34 @@ export default function LANServerConfig() {
     }
   };
 
-  const testConnection = async (inputUrl: string) => {
+  const testConnection = async (lanUrl: string) => {
     try {
-      // Clean trailing slashes and spaces
-      const formattedUrl = inputUrl.trim().replace(/\/+$/, '');
+      // Normalize URL string (remove trailing slashes or double dots)
+      const cleanUrl = lanUrl.trim().replace(/\/+$/, '');
       
-      const response = await fetch(`${formattedUrl}/api/ping`, {
+      const response = await fetch(`${cleanUrl}/api/ping`, {
         method: 'GET',
-        headers: { 'Accept': 'application/json' },
+        headers: { 'Accept': 'application/json' }
       });
 
-      const data = await response.json();
-
-      if (response.ok && (data.status === 'online' || data.status === 'ok')) {
-        setStatus('connected');
-        setServerProcess('online');
-        localStorage.setItem(LAN_SERVER_KEY, formattedUrl);
-        return true;
+      if (response.ok) {
+        const data = await response.json();
+        // Match status returned by server endpoint
+        const isOnline = data.status === 'online' || data.status === 'ok';
+        if (isOnline) {
+          setStatus('connected');
+          setServerProcess('online');
+          localStorage.setItem(LAN_SERVER_KEY, cleanUrl);
+        }
+        return isOnline;
       }
-    } catch (err) {
-      console.error('LAN Server Ping Error:', err);
+      return false;
+    } catch (error) {
+      console.error('LAN connection test failed:', error);
       setStatus('offline');
       setServerProcess('offline');
+      return false;
     }
-    return false;
   };
 
   // ── Server Lifecycle Helpers ──────────────────────────────────────────────
