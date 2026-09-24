@@ -24,10 +24,8 @@ export const DEFAULT_CBC_CLUSTERS = [
 ];
 
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
-  "students": [],
-  "staff": [],
-  "attendance": {},
-  "fees": [],
+
+export const initialSeedData = {
   "grades": {},
   "examTypes": [],
   "libraryBooks": [],
