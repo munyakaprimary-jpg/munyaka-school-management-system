@@ -26,16 +26,187 @@ export const DEFAULT_CBC_CLUSTERS = [
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
 export const initialSeedData = {
-  "students": [],
-  "staff": [],
-  "attendance": {},
-  "fees": [],
-  "grades": {},
-  "examTypes": [],
-  "libraryBooks": [],
-  "feeStructures": [],
-  "notices": [],
-  "settings": {}
+  "students": [
+    {
+      "id": "1789881428012",
+      "name": "FRED KAPONDI",
+      "fullName": "FRED KAPONDI",
+      "admissionNumber": "MUN-G1-002-2026",
+      "admNo": "MUN-G1-002-2026",
+      "assessmentNumber": "",
+      "assessmentNo": "",
+      "assessment": "",
+      "gender": "Male",
+      "grade": "GRADE 1",
+      "stream": "GREEN",
+      "parentName": "ANTONY MURIMA",
+      "guardian": "ANTONY MURIMA",
+      "phoneNumber": "0734525612",
+      "phone": "0734525612",
+      "createdAt": "2026-09-20T05:17:08.012Z"
+    },
+    {
+      "id": "1789880616052",
+      "name": "GRACE MUTHONI",
+      "fullName": "GRACE MUTHONI",
+      "admissionNumber": "MUN-G6-002-2026",
+      "admNo": "MUN-G6-002-2026",
+      "assessmentNumber": "A00345678",
+      "assessmentNo": "A00345678",
+      "assessment": "A00345678",
+      "gender": "Female",
+      "grade": "GRADE 6",
+      "stream": "GREEN",
+      "parentName": "MARY IKANYI",
+      "guardian": "MARY IKANYI",
+      "phoneNumber": "0734567345",
+      "phone": "0734567345",
+      "createdAt": "2026-09-20T05:03:36.052Z"
+    },
+    {
+      "id": "1789880087460",
+      "name": "BRIGHTON KIPKOECH",
+      "fullName": "BRIGHTON KIPKOECH",
+      "admissionNumber": "MUN-G6-001-2026",
+      "admNo": "MUN-G6-001-2026",
+      "assessmentNumber": "B003754306",
+      "assessmentNo": "B003754306",
+      "assessment": "B003754306",
+      "gender": "Male",
+      "grade": "GRADE 6",
+      "stream": "BLUE",
+      "parentName": "VIOLA JEPKORIR MAIYO",
+      "guardian": "VIOLA JEPKORIR MAIYO",
+      "phoneNumber": "0713345267",
+      "phone": "0713345267",
+      "createdAt": "2026-09-20T05:09:03.812Z"
+    },
+    {
+      "id": "1789826147758",
+      "name": "PETER MWANGI",
+      "fullName": "PETER MWANGI",
+      "admissionNumber": "MUN-G1-001-2026",
+      "admNo": "MUN-G1-001-2026",
+      "assessmentNumber": "",
+      "assessmentNo": "",
+      "assessment": "",
+      "gender": "Female",
+      "grade": "Grade 1",
+      "stream": "North",
+      "parentName": "ALICE WANJIRU",
+      "guardian": "ALICE WANJIRU",
+      "phoneNumber": "0789456778",
+      "phone": "0789456778",
+      "createdAt": "2026-09-19T13:55:47.758Z"
+    }
+  ],
+  "staff": [
+    {
+      "name": "JAMES NDIKI",
+      "nationalId": "ID-1789969050865",
+      "email": "jndiki@munyaka.sc.ke",
+      "phone": "0740583662",
+      "tscNumber": "327775",
+      "role": "ICT TECHNICIAN",
+      "systemRole": "ict_technician",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1789969050866_xbcva",
+      "full_name": "JAMES NDIKI",
+      "staffId": "MUN-2430",
+      "tempAccessCode": "134082",
+      "joined": "2026-09-21",
+      "assignedSubjects": []
+    },
+    {
+      "name": "ALICE MAINA",
+      "nationalId": "ID-1790072852855",
+      "email": "maina@munyaka.sc.ke",
+      "phone": "0722345567",
+      "tscNumber": "1123345",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790072852855_fys7j",
+      "full_name": "ALICE MAINA",
+      "staffId": "MUN-4881",
+      "tempAccessCode": "313167",
+      "joined": "2026-09-22"
+    },
+    {
+      "name": "ANN NDUTA MBUGUA",
+      "nationalId": "ID-1790157907617",
+      "email": "annmbugua@munyaka.sc.ke",
+      "phone": "0724467137",
+      "tscNumber": "452588",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790157907618_qk42q",
+      "full_name": "ANN NDUTA MBUGUA",
+      "staffId": "MUN-2020",
+      "tempAccessCode": "443492",
+      "joined": "2026-09-23"
+    },
+    {
+      "name": "JANET GATHONI KUNGU",
+      "nationalId": "ID-1790170127489",
+      "email": "janetkungu@munyaka.sc.ke",
+      "phone": "0720869310",
+      "tscNumber": "487406",
+      "role": "LIBRARIAN",
+      "systemRole": "librarian",
+      "department": "Library",
+      "status": "Active",
+      "id": "staff_1790170127489_uw96a",
+      "full_name": "JANET GATHONI KUNGU",
+      "staffId": "MUN-3433",
+      "tempAccessCode": "774938",
+      "joined": "2026-09-23"
+    },
+    {
+      "name": "LAWRENCE NDEGWA GIOSHE",
+      "nationalId": "ID-1790174007943",
+      "email": "lndegwa@munyaka.sc.ke",
+      "phone": "0720583097",
+      "tscNumber": "516570",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790174007943_xtycd",
+      "full_name": "LAWRENCE NDEGWA GIOSHE",
+      "staffId": "MUN-1788",
+      "tempAccessCode": "493306",
+      "joined": "2026-09-23"
+    }
+  ],
+  "attendance": {
+    "Grade 4_Blue_2026-08-26_morning": {
+      "session": "morning",
+      "class": "Grade 4",
+      "stream": "Blue",
+      "date": "2026-08-26",
+      "savedAt": "2026-08-26T07:05:17.006Z"
+    },
+    "Grade 4_all_2026-08-26_morning": {
+      "session": "morning",
+      "class": "Grade 4",
+      "stream": "all",
+      "date": "2026-08-26",
+      "savedAt": "2026-08-26T07:13:13.158Z"
+    },
+    "Grade 6_all_2026-08-26_morning": {
+      "session": "morning",
+      "class": "Grade 6",
+      "stream": "all",
+      "date": "2026-08-26",
+      "savedAt": "2026-08-26T08:56:37.698Z"
+    }
+  },
+  "fees": []
 };
 
 (initialSeedData as any).learners = initialSeedData.students;
