@@ -277,7 +277,7 @@ export default function LANServerConfig() {
           setServerProcess('online');
           setStatus('connected');
           showSuccess('Server online — connected successfully');
-          setTimeout(() => testConnectionSilent(serverUrl), 1000);
+          setTimeout(() => testConnection(serverUrl), 1000);
         } else {
           // Backend binary not reachable.
           setServerProcess('offline');
