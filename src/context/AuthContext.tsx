@@ -13,6 +13,7 @@ import {
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
+import { startHeartbeatService, stopHeartbeatService } from '@/services/deviceHeartbeat';
 
 export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff';
 
@@ -403,6 +404,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.setItem('munyaka_session', JSON.stringify(userData));
         persistCurrentAuthRole(userData.role);
         setUser(userData);
+        try {
+          const serverUrl = localStorage.getItem('lan_server_url') || 'http://10.53.221.196:5000';
+          startHeartbeatService(serverUrl, userData);
+        } catch {}
         showSuccess(`Welcome back, ${userData.name}!`);
         return true;
       }
@@ -841,9 +846,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (newUser) {
       localStorage.setItem('munyaka_session', JSON.stringify(newUser));
       persistCurrentAuthRole(newUser.role);
+      try {
+        const serverUrl = localStorage.getItem('lan_server_url') || 'http://10.53.221.196:5000';
+        startHeartbeatService(serverUrl, newUser);
+      } catch {
+        // no-op
+      }
     } else {
       localStorage.removeItem('munyaka_session');
       persistCurrentAuthRole(null);
+      try {
+        stopHeartbeatService();
+      } catch {
+        // no-op
+      }
     }
     setUser(newUser);
   };

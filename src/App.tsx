@@ -76,6 +76,7 @@ import { LearnerProvider } from './context/LearnerContext';
 import { initialSeedData } from './data/initialSeedData';
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
+import { startHeartbeatService, stopHeartbeatService } from "./services/deviceHeartbeat";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
 import { initializeCentralStorage } from "./utils/centralDbInit";
@@ -94,6 +95,14 @@ if (typeof window !== 'undefined') {
     }, 24 * 60 * 60 * 1000); // 24 hours
   } catch (err) {
     console.error('Failed to run billing auto-lock check on boot:', err);
+  }
+
+  // Start background device heartbeat service on app boot/mount
+  try {
+    const serverUrl = localStorage.getItem('lan_server_url') || 'http://10.53.221.196:5000';
+    startHeartbeatService(serverUrl);
+  } catch (err) {
+    console.error('Failed to start device heartbeat service on boot:', err);
   }
 }
 
