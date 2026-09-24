@@ -26,6 +26,10 @@ export const DEFAULT_CBC_CLUSTERS = [
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
 export const initialSeedData = {
+  "students": [],
+  "staff": [],
+  "attendance": {},
+  "fees": [],
   "grades": {},
   "examTypes": [],
   "libraryBooks": [],
@@ -38,9 +42,9 @@ export const initialSeedData = {
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
-export const mockLearners = initialSeedData.students;
-export const mockStudents = initialSeedData.students;
-export const mockStaff = initialSeedData.staff;
+export const mockLearners = initialSeedData.students || [];
+export const mockStudents = initialSeedData.students || [];
+export const mockStaff = initialSeedData.staff || [];
 export const mockExams = (initialSeedData as any).exams || [];
 export const mockLibrary = (initialSeedData as any).libraryBooks || [];
 export const mockFinances = (initialSeedData as any).fees || [];

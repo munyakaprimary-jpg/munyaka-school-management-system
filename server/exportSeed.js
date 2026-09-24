@@ -9,8 +9,9 @@ const ROOT = path.resolve(__dirname, '..');
 const CENTRAL_DB_FILES = [
   path.join(ROOT, 'server', 'data', 'central_db.json'),
   path.join(ROOT, 'server', 'central_db.json'),
+  path.join(ROOT, 'data', 'central_db.json'),
   path.join(ROOT, 'src', 'data', 'central_db.json'),
-  path.join(ROOT, 'data', 'central_db.json')
+  path.join(ROOT, 'server', 'data', 'users.json')
 ];
 
 const INITIAL_SEED_FILE = path.join(ROOT, 'src', 'data', 'initialSeedData.ts');
@@ -31,13 +32,30 @@ function exportSeed() {
             break;
           }
         } catch (e) {
-          // Ignore and continue searching
+          // Ignore and continue
         }
       }
     }
 
+    // If no external JSON was found, extract/preserve the existing records from initialSeedData.ts if it exists
+    if (!dbData && fs.existsSync(INITIAL_SEED_FILE)) {
+      try {
+        const content = fs.readFileSync(INITIAL_SEED_FILE, 'utf8');
+        // Extract the object literal from initialSeedData = { ... }
+        const match = content.match(/export const initialSeedData =\s*(\{[\s\S]*?\});/);
+        if (match && match[1]) {
+          // Clean up TypeScript cast or comments if any
+          const cleanJson = match[1].replace(/\/\/.*/g, '');
+          // Evaluate safely or parse
+          dbData = eval('(' + cleanJson + ')');
+          foundPath = INITIAL_SEED_FILE;
+        }
+      } catch (e) {
+        console.warn('[ExportSeed] Could not parse existing initialSeedData.ts:', e);
+      }
+    }
+
     if (!dbData) {
-      console.warn('[ExportSeed] No active central_db.json found. Falling back to default empty structure.');
       dbData = {
         students: [],
         staff: [],
@@ -51,9 +69,12 @@ function exportSeed() {
         settings: {}
       };
     } else {
-      console.log(`[ExportSeed] Found active database at: ${foundPath}`);
+      console.log(`[ExportSeed] Using data source from: ${foundPath}`);
       if (!dbData.staff && dbData.users) {
         dbData.staff = dbData.users;
+      }
+      if (Array.isArray(dbData)) {
+        dbData = { students: dbData, staff: [], attendance: {}, fees: [] };
       }
     }
 
@@ -105,7 +126,7 @@ export default initialSeedData;
 `;
 
     fs.writeFileSync(INITIAL_SEED_FILE, fileContent, 'utf8');
-    console.log(`[ExportSeed] Exported ${staffCount} staff, ${studentsCount} students, ${marksCount} marks records to ${INITIAL_SEED_FILE}`);
+    console.log(`[ExportSeed] Successfully bundled and exported ${staffCount} staff, ${studentsCount} students, ${marksCount} marks records into ${INITIAL_SEED_FILE}`);
   } catch (err) {
     console.error('[ExportSeed] Error exporting seed data:', err);
     process.exit(1);
