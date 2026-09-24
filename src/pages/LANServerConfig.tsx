@@ -41,7 +41,7 @@ import {
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { notifyServerUrlChanged } from '@/lib/apiBase';
-import ConnectedTeachersDevices from '@/components/ConnectedTeachersDevices';
+import ConnectedDevicesMonitor from '@/components/server/ConnectedDevicesMonitor';
 
 const LAN_SERVER_KEY = 'lan_server_url';
 const DEFAULT_LAN_URL = 'http://10.53.221.196:5000';
@@ -691,7 +691,7 @@ export default function LANServerConfig() {
       </div>
 
       {/* Connected Teachers Devices Monitoring Dashboard */}
-      <ConnectedTeachersDevices />
+      <ConnectedDevicesMonitor />
 
       {/* Change Port Dialog */}
       <Dialog open={showPortDialog} onOpenChange={setShowPortDialog}>

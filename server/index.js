@@ -132,8 +132,8 @@ app.get('/api/admin/devices', (req, res) => {
 
     for (const [deviceId, device] of connectedDevicesMap.entries()) {
       const diffSeconds = (now.getTime() - new Date(device.lastSeen).getTime()) / 1000;
-      // If no heartbeat in over 45 seconds, set status to Offline
-      const status = diffSeconds > 45 ? 'Offline' : 'Online';
+      // If no heartbeat in over 40 seconds, set status to Offline
+      const status = diffSeconds > 40 ? 'Offline' : 'Online';
 
       devices.push({
         ...device,
