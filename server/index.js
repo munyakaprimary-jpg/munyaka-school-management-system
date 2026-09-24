@@ -77,7 +77,7 @@ function writeUsersDb(db) {
 }
 
 // Helper for temporary password generation (MUNYAKA-XXXX)
-export function generateTemporaryPassword(): string {
+function generateTemporaryPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let randomHex = '';
   for (let i = 0; i < 4; i++) {
