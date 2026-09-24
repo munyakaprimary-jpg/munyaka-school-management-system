@@ -40,11 +40,10 @@ const ProtectedRoute = ({
   const isNonTeaching = rawRole === 'librarian' || rawRole === 'ict_technician' || rawRole === 'bursar' || rawRole === 'support_staff' || rawRole === 'store_keeper' || rawRole === 'accountant';
 
   // CRITICAL SECURITY FIX: Non-teaching staff (like Librarian, ICT Technician) MUST NEVER access Owner Dashboard or Console
-  const isOwnerRoute = location.pathname.startsWith('/owner') || 
-                       location.pathname.startsWith('/dev/') || 
-                       location.pathname === '/tenant-management' || 
-                       location.pathname === '/payment-management' ||
-                       location.pathname === '/lan-config';
+  const isOwnerRoute = location.pathname.startsWith('/owner') ||
+                       location.pathname.startsWith('/dev/') ||
+                       location.pathname === '/tenant-management' ||
+                       location.pathname === '/payment-management';
 
   if (isOwnerRoute && !isOwnerOrSuper && !isAdmin) {
     console.warn('[ProtectedRoute] Security Violation: Non-owner/non-admin staff tried to access Owner/Admin console:', { userRole: rawRole, path: location.pathname });
