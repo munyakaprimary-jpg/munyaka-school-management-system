@@ -137,7 +137,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
-                    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
+                    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner', 'ict_technician', 'ict_teacher'] },
         { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
         { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher'] },
         { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication', roles: ['teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
