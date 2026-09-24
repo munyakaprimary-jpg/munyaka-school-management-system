@@ -183,14 +183,36 @@ export function runBillingAutoLockCheck(): void {
  * Manual override: Unlock teacher apps after payment verification
  * Called when owner manually toggles the switch to UNLOCKED
  */
-export function manualUnlock(): void {
+export function recordPaymentAndUnlock(paymentData: {
+  campus: string;
+  amount: string;
+  method: string;
+  ref: string;
+  period: string;
+  notes: string;
+}): void {
   try {
+    const history = getPaymentHistory();
+    const newRecord: PaymentRecord = {
+      id: `PAY-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      campus: paymentData.campus,
+      method: paymentData.method,
+      ref: paymentData.ref || `REF-${Math.floor(100000 + Math.random() * 900000)}`,
+      amount: paymentData.amount,
+      period: paymentData.period,
+      notes: paymentData.notes,
+      status: 'PAID',
+    };
+    history.unshift(newRecord);
+    localStorage.setItem(BILLING_HISTORY_KEY, JSON.stringify(history));
+
+    // Instantly unlock teacher apps upon successful payment recording
     localStorage.setItem(GLOBAL_LOCK_KEY, 'false');
     window.dispatchEvent(new Event('storage'));
-    showSuccess('Teacher apps manually unlocked. Payment verified.');
+    console.info('[Billing Auto-Lock] Payment recorded as PAID and teacher apps unlocked.');
   } catch (err) {
-    console.error('[Billing Auto-Lock] Manual unlock failed:', err);
-    showError('Failed to unlock teacher apps.');
+    console.error('[Billing Auto-Lock] Failed to record payment & unlock:', err);
   }
 }
 

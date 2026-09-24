@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
 import { 
   CreditCard, 
   ShieldCheck, 
@@ -21,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { showSuccess, showError } from '@/utils/toast';
+import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
 
 export default function PaymentManagement() {
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'seats' | 'monthly' | 'gateways' | 'invoices'>('subscriptions');
@@ -922,6 +923,14 @@ export default function PaymentManagement() {
               } catch {}
 
               showSuccess(`Payment of KES ${amtNum.toLocaleString()} successfully recorded for ${paymentCampus}!`);
+              recordPaymentAndUnlock({
+                campus: paymentCampus,
+                amount: paymentAmount,
+                method: paymentMethod,
+                ref: paymentRef,
+                period: paymentPeriod,
+                notes: paymentNotes
+              });
               setIsPaymentModalOpen(false);
             }} className="flex flex-col flex-1 overflow-hidden">
               {/* Modal Body (Scrollable Area) */}
