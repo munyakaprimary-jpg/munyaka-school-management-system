@@ -168,6 +168,35 @@
   overflow-scrolling: touch;
 }
 
+/* Table-responsive utility: makes any <table> horizontally scrollable on mobile */
+.table-responsive {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Text truncation utility for long labels */
+.text-truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Flex wrap utility */
+.flex-wrap { flex-wrap: wrap; }
+
+/* Compact mobile typography: ensure headings and body text scale gracefully */
+@media (max-width: 768px) {
+  h1 { font-size: 1.25rem !important; }
+  h2 { font-size: 1.125rem !important; }
+  h3 { font-size: 1rem !important; }
+  h4 { font-size: 0.875rem !important; }
+  button, input, select, textarea {
+    font-size: 0.875rem !important;
+  }
+}
+
 .action-bar {
   width: 100%;
   max-width: 100%;
