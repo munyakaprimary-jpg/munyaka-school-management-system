@@ -931,6 +931,8 @@ export default function PaymentManagement() {
                 notes: paymentNotes
               });
               setIsPaymentModalOpen(false);
+              // Force state refresh so global lock toggle and status update instantly
+              setIsGloballyLocked(false);
             }} className="flex flex-col flex-1 overflow-hidden">
               {/* Modal Body (Scrollable Area) */}
               <div className="p-5 overflow-y-auto space-y-4 flex-1">

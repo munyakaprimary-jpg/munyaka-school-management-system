@@ -207,6 +207,17 @@ export function recordPaymentAndUnlock(paymentData: {
     history.unshift(newRecord);
     localStorage.setItem(BILLING_HISTORY_KEY, JSON.stringify(history));
 
+    // Also update central db payment records if present
+    try {
+      const centralRaw = localStorage.getItem(CENTRAL_DB_KEY);
+      if (centralRaw) {
+        const centralDb = JSON.parse(centralRaw);
+        if (!Array.isArray(centralDb.payments)) centralDb.payments = [];
+        centralDb.payments.unshift(newRecord);
+        localStorage.setItem(CENTRAL_DB_KEY, JSON.stringify(centralDb));
+      }
+    } catch {}
+
     // Instantly unlock teacher apps upon successful payment recording
     localStorage.setItem(GLOBAL_LOCK_KEY, 'false');
     window.dispatchEvent(new Event('storage'));
