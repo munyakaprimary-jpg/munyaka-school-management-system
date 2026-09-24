@@ -16,6 +16,7 @@
     "prestart": "tsx server/reset-server.ts",
     "lan-server": "node server/index.js",
     "lan-server:dev": "node --watch server/index.js",
+    "export-seed": "node server/exportSeed.js",
     "setup-lan": "cd server && npm install"
   },
   "dependencies": {

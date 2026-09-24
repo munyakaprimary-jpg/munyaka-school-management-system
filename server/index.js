@@ -30,7 +30,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Helper to read users db
 function readUsersDb() {
@@ -65,8 +66,93 @@ function generateTemporaryPassword() {
 }
 
 // ============================================
-// CONNECTED TEACHERS DEVICES MAP & ENDPOINTS
+// CENTRAL DB DUMP & SYNC ENDPOINTS
 // ============================================
+const CENTRAL_DB_FILE = path.join(ROOT, 'data', 'central_db.json');
+
+function readCentralDb() {
+  try {
+    if (!fs.existsSync(CENTRAL_DB_FILE)) {
+      return {
+        students: [],
+        staff: [],
+        attendance: {},
+        fees: [],
+        grades: {},
+        examTypes: [],
+        libraryBooks: [],
+        feeStructures: [],
+        notices: [],
+        settings: {}
+      };
+    }
+    const data = fs.readFileSync(CENTRAL_DB_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (e) {
+    return {};
+  }
+}
+
+function writeCentralDb(db) {
+  const dir = path.dirname(CENTRAL_DB_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(CENTRAL_DB_FILE, JSON.stringify(db, null, 2), 'utf8');
+}
+
+app.get('/api/central-db/dump', (req, res) => {
+  try {
+    const db = readCentralDb();
+    res.status(200).setHeader('Content-Type', 'application/json').json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      data: db
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post('/api/central-db/sync', (req, res) => {
+  try {
+    const incoming = req.body || {};
+    const db = readCentralDb();
+
+    // Merge or upsert keys from incoming batch
+    for (const [key, value] of Object.entries(incoming)) {
+      if (Array.isArray(value)) {
+        if (!db[key]) db[key] = [];
+        // Merge arrays by ID or item equality
+        const map = new Map();
+        db[key].forEach((item: any) => {
+          const id = item?.id || item?.admissionNumber || item?.staffId || JSON.stringify(item);
+          map.set(id, item);
+        });
+        value.forEach((item: any) => {
+          const id = item?.id || item?.admissionNumber || item?.staffId || JSON.stringify(item);
+          map.set(id, item);
+        });
+        db[key] = Array.from(map.values());
+      } else if (value && typeof value === 'object') {
+        if (!db[key] || typeof db[key] !== 'object') db[key] = {};
+        db[key] = { ...db[key], ...value };
+      } else {
+        db[key] = value;
+      }
+    }
+
+    writeCentralDb(db);
+
+    res.status(200).setHeader('Content-Type', 'application/json').json({
+      success: true,
+      message: 'Central DB batch synchronized successfully',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 const connectedDevicesMap = new Map();
 
 // POST /api/devices/heartbeat
