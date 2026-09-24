@@ -68,11 +68,16 @@ function generateTemporaryPassword() {
 // ============================================
 // CENTRAL DB DUMP & SYNC ENDPOINTS
 // ============================================
-const CENTRAL_DB_FILE = path.join(ROOT, 'data', 'central_db.json');
+const CENTRAL_DB_FILE = path.join(ROOT, 'server', 'data', 'central_db.json');
 
 function readCentralDb() {
   try {
     if (!fs.existsSync(CENTRAL_DB_FILE)) {
+      const altPath = path.join(ROOT, 'data', 'central_db.json');
+      if (fs.existsSync(altPath)) {
+        const data = fs.readFileSync(altPath, 'utf8');
+        return JSON.parse(data);
+      }
       return {
         students: [],
         staff: [],
@@ -99,6 +104,14 @@ function writeCentralDb(db) {
     fs.mkdirSync(dir, { recursive: true });
   }
   fs.writeFileSync(CENTRAL_DB_FILE, JSON.stringify(db, null, 2), 'utf8');
+  // Also mirror to root data directory
+  try {
+    const rootDir = path.join(ROOT, 'data');
+    if (!fs.existsSync(rootDir)) {
+      fs.mkdirSync(rootDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(rootDir, 'central_db.json'), JSON.stringify(db, null, 2), 'utf8');
+  } catch {}
 }
 
 app.get('/api/central-db/dump', (req, res) => {
