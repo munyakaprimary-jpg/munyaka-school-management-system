@@ -24,7 +24,12 @@ const JWT_SECRET = process.env.JWT_SECRET || 'munyaka-lan-jwt-secret-key-2026';
 // Initialize Express
 const app = express();
 
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Helper to read users db
@@ -133,7 +138,7 @@ app.get('/api/ping', (req, res) => {
   res.status(200).setHeader('Content-Type', 'application/json').json({
     status: 'online',
     message: 'Connected to Admin Server',
-    timestamp: new Date()
+    timestamp: new Date().toISOString()
   });
 });
 
