@@ -87,6 +87,73 @@ export function generateTemporaryPassword(): string {
 }
 
 // ============================================
+// CONNECTED TEACHERS DEVICES MAP & ENDPOINTS
+// ============================================
+const connectedDevicesMap = new Map();
+
+// POST /api/devices/heartbeat
+app.post('/api/devices/heartbeat', (req, res) => {
+  try {
+    const { deviceId, teacherName, role, ipAddress, appVersion, batteryLevel, pendingSyncCount } = req.body;
+    
+    if (!deviceId) {
+      return res.status(400).json({ success: false, message: 'deviceId is required' });
+    }
+
+    const deviceData = {
+      deviceId,
+      teacherName: teacherName || 'Teacher',
+      role: role || 'Teacher',
+      ipAddress: ipAddress || req.ip || '192.168.1.50',
+      appVersion: appVersion || 'v1.0.0',
+      batteryLevel: typeof batteryLevel === 'number' ? batteryLevel : 100,
+      pendingSyncCount: typeof pendingSyncCount === 'number' ? pendingSyncCount : 0,
+      lastSeen: new Date(),
+      status: 'Online'
+    };
+
+    connectedDevicesMap.set(deviceId, deviceData);
+
+    res.json({
+      success: true,
+      message: 'Heartbeat received successfully',
+      serverTime: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/admin/devices
+app.get('/api/admin/devices', (req, res) => {
+  try {
+    const now = new Date();
+    const devices = [];
+
+    for (const [deviceId, device] of connectedDevicesMap.entries()) {
+      const diffSeconds = (now.getTime() - new Date(device.lastSeen).getTime()) / 1000;
+      // If no heartbeat in over 45 seconds, set status to Offline
+      const status = diffSeconds > 45 ? 'Offline' : 'Online';
+
+      devices.push({
+        ...device,
+        status,
+        lastSeen: device.lastSeen.toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      count: devices.length,
+      activeCount: devices.filter(d => d.status === 'Online').length,
+      devices
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ============================================
 // HEALTH CHECK ROUTE
 // ============================================
 app.get('/api/ping', (req, res) => {

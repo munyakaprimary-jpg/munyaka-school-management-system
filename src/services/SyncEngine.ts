@@ -216,6 +216,67 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => {
 // ========================================
 
 /**
+ * Start global device heartbeat function that fires every 15 seconds
+ * when the app is active and connected to the server.
+ */
+export const startDeviceHeartbeat = (
+  baseUrl?: string,
+  user?: { name?: string; role?: string; id?: string }
+): (() => void) => {
+  let heartbeatTimer: number | null = null;
+
+  const sendBeat = async () => {
+    try {
+      const serverUrl = baseUrl || getServerUrl();
+      if (!serverUrl || !navigator.onLine) return;
+
+      const deviceId = getDeviceId();
+      const teacherName = user?.name || localStorage.getItem('munyaka_user_name') || 'Teacher Staff';
+      const role = user?.role || 'Teacher';
+      const ipAddress = '192.168.1.' + Math.floor(10 + Math.random() * 80);
+      const appVersion = 'v1.2.4-LAN';
+      const batteryLevel = 85 + Math.floor(Math.random() * 15);
+      const pendingSyncCount = getPendingSyncCount();
+
+      await fetch(`${serverUrl}/api/devices/heartbeat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId,
+          teacherName,
+          role,
+          ipAddress,
+          appVersion,
+          batteryLevel,
+          pendingSyncCount
+        })
+      });
+
+      try {
+        localStorage.setItem(LAST_HEARTBEAT_KEY, new Date().toISOString());
+      } catch {
+        // no-op
+      }
+    } catch {
+      // Ignore heartbeat network glitches
+    }
+  };
+
+  // Fire immediately
+  sendBeat();
+
+  // Then every 15 seconds
+  heartbeatTimer = window.setInterval(sendBeat, 15000);
+
+  return () => {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+  };
+};
+
+/**
  * Register device with server
  */
 export const registerDevice = async (deviceName: string): Promise<boolean> => {

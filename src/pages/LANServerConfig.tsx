@@ -41,6 +41,7 @@ import {
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { notifyServerUrlChanged } from '@/lib/apiBase';
+import ConnectedTeachersDevices from '@/components/ConnectedTeachersDevices';
 
 const LAN_SERVER_KEY = 'lan_server_url';
 const DEFAULT_LAN_URL = 'http://10.53.221.196:5000';
@@ -688,6 +689,9 @@ export default function LANServerConfig() {
       <div className="text-center text-xs text-slate-400 py-2">
         Settings are saved to <span className="font-mono font-bold">localStorage['lan_server_url']</span> and used by the global sync layer.
       </div>
+
+      {/* Connected Teachers Devices Monitoring Dashboard */}
+      <ConnectedTeachersDevices />
 
       {/* Change Port Dialog */}
       <Dialog open={showPortDialog} onOpenChange={setShowPortDialog}>
