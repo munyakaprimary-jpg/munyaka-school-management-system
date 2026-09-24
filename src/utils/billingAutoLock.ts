@@ -1,12 +1,11 @@
 /**
- * Billing Auto-Lock Utility
+ * Billing Auto-Lock Utility (Authoritative Server Time & Anti-Tampering)
  * 
  * Automatically locks teacher apps when payment is overdue based on:
  * - Billing due day of month (default: 5th)
  * - Grace period in days (default: 3 days)
  * - Payment status for current billing cycle
- * 
- * Runs on app startup and can be called daily.
+ * - Trusted authoritative server time (with offline drift detection & anti-tampering)
  */
 
 import { showSuccess, showError } from '@/utils/toast';
@@ -14,6 +13,8 @@ import { showSuccess, showError } from '@/utils/toast';
 const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
 const CENTRAL_DB_KEY = 'munyaka_central_db';
 const BILLING_HISTORY_KEY = 'munyaka_billing_history';
+const LAST_SERVER_TIME_KEY = 'munyaka_last_server_timestamp';
+const LAST_DEVICE_TIME_KEY = 'munyaka_last_device_timestamp';
 
 interface BillingSettings {
   billingDueDay: number;
@@ -31,6 +32,91 @@ interface PaymentRecord {
   period: string;
   notes: string;
   status?: string;
+}
+
+// In-memory server time offset (difference between server time and local device time)
+let cachedServerTimeOffset: number = 0;
+let isServerTimeSynced: boolean = false;
+
+/**
+ * Fetch authoritative server time (with fallback to local device time + drift detection)
+ */
+export async function getAuthoritativeTime(): Promise<Date> {
+  const localNow = Date.now();
+  
+  try {
+    const serverTimeEndpoint = '/api/server-time';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+    
+    const response = await fetch(serverTimeEndpoint, { 
+      signal: controller.signal,
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.timestamp) {
+        const serverTimestamp = Number(data.timestamp);
+        cachedServerTimeOffset = serverTimestamp - localNow;
+        isServerTimeSynced = true;
+        
+        // Save verified checkpoint to localStorage for offline use
+        localStorage.setItem(LAST_SERVER_TIME_KEY, String(serverTimestamp));
+        localStorage.setItem(LAST_DEVICE_TIME_KEY, String(localNow));
+        
+        return new Date(serverTimestamp);
+      }
+    }
+  } catch {
+    // Offline or network error — fallback to offline verification with anti-tampering drift check
+  }
+
+  // ── Anti-Tampering Drift Check (Offline Mode) ──
+  try {
+    const lastServerTimeStr = localStorage.getItem(LAST_SERVER_TIME_KEY);
+    const lastDeviceTimeStr = localStorage.getItem(LAST_DEVICE_TIME_KEY);
+    
+    if (lastServerTimeStr && lastDeviceTimeStr) {
+      const lastServerTime = Number(lastServerTimeStr);
+      const lastDeviceTime = Number(lastDeviceTimeStr);
+      
+      const elapsedLocalTime = localNow - lastDeviceTime;
+      const estimatedServerTime = lastServerTime + elapsedLocalTime;
+      
+      // Check if device clock was rolled back (tampering detection)
+      if (localNow < lastServerTime || (estimatedServerTime - localNow) > 12 * 60 * 60 * 1000) {
+        console.warn('[Security] Device clock rollback detected! Potential tampering. Enforcing security lock.');
+        localStorage.setItem(GLOBAL_LOCK_KEY, 'true');
+      }
+      
+      return new Date(estimatedServerTime);
+    }
+  } catch {}
+
+  return new Date();
+}
+
+/**
+ * Synchronous version for renders (uses cached offset or fallback)
+ */
+export function getAuthoritativeTimeSync(): Date {
+  const localNow = Date.now();
+  if (isServerTimeSynced) {
+    return new Date(localNow + cachedServerTimeOffset);
+  }
+  
+  try {
+    const lastServerTimeStr = localStorage.getItem(LAST_SERVER_TIME_KEY);
+    const lastDeviceTimeStr = localStorage.getItem(LAST_DEVICE_TIME_KEY);
+    if (lastServerTimeStr && lastDeviceTimeStr) {
+      const elapsed = localNow - Number(lastDeviceTimeStr);
+      return new Date(Number(lastServerTimeStr) + elapsed);
+    }
+  } catch {}
+
+  return new Date();
 }
 
 /**
@@ -68,16 +154,13 @@ function getPaymentHistory(): PaymentRecord[] {
 
 /**
  * Check if there's a PAID/CLEARED payment for the current billing cycle
- * Current billing cycle = current month
  */
 function isCurrentCyclePaid(): boolean {
-  const now = new Date();
+  const now = getAuthoritativeTimeSync();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   
   const history = getPaymentHistory();
   
-  // Check for any payment in current month with PAID/CLEARED status
-  // Also check if amount > 0 (indicating a real payment)
   for (const record of history) {
     const recordDate = record.date; // YYYY-MM-DD
     if (recordDate.startsWith(currentMonthKey)) {
@@ -86,7 +169,6 @@ function isCurrentCyclePaid(): boolean {
       if (amount > 0 && (status === 'PAID' || status === 'CLEARED' || status === 'COMPLETED')) {
         return true;
       }
-      // Also consider payments without explicit status but with valid amount as paid
       if (amount > 0 && !status) {
         return true;
       }
@@ -97,42 +179,33 @@ function isCurrentCyclePaid(): boolean {
 }
 
 /**
- * Calculate the deadline date for the current month
- * Deadline = due day + grace period
+ * Calculate the deadline date for the current month using authoritative time
  */
 function getCurrentMonthDeadline(): Date {
   const settings = getBillingSettings();
-  const now = new Date();
+  const now = getAuthoritativeTimeSync();
   const year = now.getFullYear();
   const month = now.getMonth();
   
-  // Due date is the billingDueDay of current month
   const dueDate = new Date(year, month, settings.billingDueDay);
-  
-  // Add grace period
   const deadline = new Date(dueDate);
   deadline.setDate(deadline.getDate() + settings.billingGracePeriod);
-  deadline.setHours(23, 59, 59, 999); // End of day
+  deadline.setHours(23, 59, 59, 999);
   
   return deadline;
 }
 
 /**
- * Check if auto-lock should be triggered
- * Returns true if:
- * - Current date is past the deadline (due day + grace period)
- * - Current billing cycle is NOT marked as PAID/CLEARED
+ * Check if auto-lock should be triggered using authoritative time
  */
 export function shouldAutoLock(): boolean {
   const deadline = getCurrentMonthDeadline();
-  const now = new Date();
+  const now = getAuthoritativeTimeSync();
   
-  // Check if past deadline
   if (now <= deadline) {
     return false;
   }
   
-  // Check if current cycle is paid
   if (isCurrentCyclePaid()) {
     return false;
   }
@@ -142,7 +215,6 @@ export function shouldAutoLock(): boolean {
 
 /**
  * Apply auto-lock if conditions are met
- * Sets munyaka_global_app_lock to 'true' in localStorage
  */
 export function applyAutoLock(): boolean {
   if (shouldAutoLock()) {
@@ -150,9 +222,8 @@ export function applyAutoLock(): boolean {
       const currentLock = localStorage.getItem(GLOBAL_LOCK_KEY);
       if (currentLock !== 'true') {
         localStorage.setItem(GLOBAL_LOCK_KEY, 'true');
-        // Dispatch storage event so other tabs/components react
         window.dispatchEvent(new Event('storage'));
-        console.log('[Billing Auto-Lock] Teacher apps auto-locked due to overdue payment');
+        console.info('[Billing Auto-Lock] Teacher apps auto-locked due to overdue payment (Authoritative Time Verified)');
         return true;
       }
     } catch (err) {
@@ -163,25 +234,19 @@ export function applyAutoLock(): boolean {
 }
 
 /**
- * Check and apply auto-lock on app startup
- * This should be called once when the app initializes
+ * Check and apply auto-lock on app startup with authoritative time sync
  */
-export function runBillingAutoLockCheck(): void {
+export async function runBillingAutoLockCheck(): Promise<void> {
   try {
-    const wasLocked = applyAutoLock();
-    if (wasLocked) {
-      // Show notification to user (if they're on the owner/admin dashboard)
-      // The lock will be enforced by AppUnlock component
-      console.log('[Billing Auto-Lock] Auto-lock applied on startup');
-    }
+    await getAuthoritativeTime();
+    applyAutoLock();
   } catch (err) {
     console.error('[Billing Auto-Lock] Startup check failed:', err);
   }
 }
 
 /**
- * Manual override: Unlock teacher apps after payment verification
- * Called when owner manually toggles the switch to UNLOCKED
+ * Record payment and unlock
  */
 export function recordPaymentAndUnlock(paymentData: {
   campus: string;
@@ -195,7 +260,7 @@ export function recordPaymentAndUnlock(paymentData: {
     const history = getPaymentHistory();
     const newRecord: PaymentRecord = {
       id: `PAY-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: getAuthoritativeTimeSync().toISOString().split('T')[0],
       campus: paymentData.campus,
       method: paymentData.method,
       ref: paymentData.ref || `REF-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -207,7 +272,6 @@ export function recordPaymentAndUnlock(paymentData: {
     history.unshift(newRecord);
     localStorage.setItem(BILLING_HISTORY_KEY, JSON.stringify(history));
 
-    // Also update central db payment records if present
     try {
       const centralRaw = localStorage.getItem(CENTRAL_DB_KEY);
       if (centralRaw) {
@@ -218,27 +282,11 @@ export function recordPaymentAndUnlock(paymentData: {
       }
     } catch {}
 
-    // Instantly unlock teacher apps upon successful payment recording
     localStorage.setItem(GLOBAL_LOCK_KEY, 'false');
     window.dispatchEvent(new Event('storage'));
     console.info('[Billing Auto-Lock] Payment recorded as PAID and teacher apps unlocked.');
   } catch (err) {
     console.error('[Billing Auto-Lock] Failed to record payment & unlock:', err);
-  }
-}
-
-/**
- * Manual override: Lock teacher apps
- * Called when owner manually toggles the switch to LOCKED
- */
-export function manualLock(): void {
-  try {
-    localStorage.setItem(GLOBAL_LOCK_KEY, 'true');
-    window.dispatchEvent(new Event('storage'));
-    showSuccess('Teacher apps manually locked.');
-  } catch (err) {
-    console.error('[Billing Auto-Lock] Manual lock failed:', err);
-    showError('Failed to lock teacher apps.');
   }
 }
 
@@ -255,7 +303,7 @@ export function getAutoLockStatus(): {
 } {
   const settings = getBillingSettings();
   const deadline = getCurrentMonthDeadline();
-  const now = new Date();
+  const now = getAuthoritativeTimeSync();
   const isPastDeadline = now > deadline;
   const isPaid = isCurrentCyclePaid();
   const isLocked = localStorage.getItem(GLOBAL_LOCK_KEY) === 'true';
