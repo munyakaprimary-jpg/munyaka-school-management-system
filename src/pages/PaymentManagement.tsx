@@ -1,16 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
-import { 
-  CreditCard, 
-  ShieldCheck, 
-  Building2, 
-  CheckCircle2, 
-  Smartphone, 
-  Building, 
-  Key, 
-  RefreshCw, 
+import {
+  CreditCard,
+  ShieldCheck,
+  Building2,
+  CheckCircle2,
+  Smartphone,
+  Building,
+  Key,
+  RefreshCw,
   FileText,
   Users,
   Calendar,
