@@ -41,42 +41,8 @@ export default function ConnectedDevicesMonitor() {
         setLastUpdated(new Date().toLocaleTimeString());
       }
     } catch (err) {
-      // Fallback mock devices for demo / when server is unreachable
-      setDevices([
-        {
-          deviceId: 'dev-001',
-          teacherName: 'John Mwangi',
-          role: 'Mathematics Teacher',
-          ipAddress: '192.168.1.54',
-          appVersion: 'v1.2.4-LAN',
-          batteryLevel: 92,
-          pendingSyncCount: 0,
-          lastSeen: new Date().toISOString(),
-          status: 'Online'
-        },
-        {
-          deviceId: 'dev-002',
-          teacherName: 'Grace Achieng',
-          role: 'Science Teacher',
-          ipAddress: '192.168.1.62',
-          appVersion: 'v1.2.4-LAN',
-          batteryLevel: 78,
-          pendingSyncCount: 3,
-          lastSeen: new Date().toISOString(),
-          status: 'Online'
-        },
-        {
-          deviceId: 'dev-003',
-          teacherName: 'David Kimani',
-          role: 'English Teacher',
-          ipAddress: '192.168.1.41',
-          appVersion: 'v1.2.0-LAN',
-          batteryLevel: 45,
-          pendingSyncCount: 1,
-          lastSeen: new Date(Date.now() - 120000).toISOString(),
-          status: 'Offline'
-        }
-      ]);
+      // If server is unreachable or offline, keep devices empty or preserve previous state
+      setDevices([]);
       setLastUpdated(new Date().toLocaleTimeString());
     } finally {
       setLoading(false);
@@ -135,8 +101,8 @@ export default function ConnectedDevicesMonitor() {
         {devices.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200">
             <Smartphone className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <p className="font-bold text-slate-700 dark:text-slate-300">No active teacher devices connected yet</p>
-            <p className="text-xs text-slate-400 mt-1">Teacher devices will appear here automatically when connected to LAN.</p>
+            <p className="font-bold text-slate-700 dark:text-slate-300">No active teacher devices connected on LAN.</p>
+            <p className="text-xs text-slate-400 mt-1">Teacher devices will appear here automatically when connected and sending heartbeats.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
