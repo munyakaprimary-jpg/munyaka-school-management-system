@@ -237,6 +237,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             '/digital-hub',
             '/digital-skills',
             '/ict-lab',
+            '/lan-config',
             '/study-corner',
             '/games',
             '/settings'
@@ -249,6 +250,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           const allowedLibrarianPaths = [
             '/dashboard',
             '/library',
+            '/lan-config',
             '/study-corner',
             '/notices',
             '/staff/check-in',
