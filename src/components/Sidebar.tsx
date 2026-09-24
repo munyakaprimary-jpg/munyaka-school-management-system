@@ -40,7 +40,9 @@ import {
   ChevronRight,
   LogOut,
   ChevronDown,
-  Database
+  Database,
+  Server,
+  Wifi
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -96,7 +98,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
     { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student', 'ict_technician', 'ict_teacher'] },
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'ict_teacher', 'ict_technician'] },
-    { icon: Server, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'owner', 'ict_technician', 'ict_teacher'] },
+    { icon: Server, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'] },
     { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'ict_technician', 'ict_teacher'] },
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student'] },
@@ -131,7 +133,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
         '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
         '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
-        '/inventory', '/fees', '/reports', '/games', '/science-lab', '/settings', '/settings/profile',
+        '/inventory', '/fees', '/reports', '/games', '/science-lab', '/lan-config', '/settings', '/settings/profile',
         '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list'
       ];
       // Ensure '/teacher-communication' is explicitly present in the teacher menu items
@@ -198,6 +200,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         '/digital-hub',
         '/digital-skills',
         '/ict-lab',
+        '/lan-config',
         '/study-corner',
         '/games',
         '/settings/profile'
@@ -213,6 +216,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       const librarianPaths = [
         '/',
         '/library',
+        '/lan-config',
         '/study-corner',
         '/notices',
         '/staff/check-in',
