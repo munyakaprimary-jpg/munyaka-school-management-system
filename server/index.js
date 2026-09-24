@@ -104,13 +104,19 @@ function writeCentralDb(db) {
     fs.mkdirSync(dir, { recursive: true });
   }
   fs.writeFileSync(CENTRAL_DB_FILE, JSON.stringify(db, null, 2), 'utf8');
-  // Also mirror to root data directory
+  // Also mirror to root data directory and src/data
   try {
     const rootDir = path.join(ROOT, 'data');
     if (!fs.existsSync(rootDir)) {
       fs.mkdirSync(rootDir, { recursive: true });
     }
     fs.writeFileSync(path.join(rootDir, 'central_db.json'), JSON.stringify(db, null, 2), 'utf8');
+
+    const srcDataDir = path.join(ROOT, 'src', 'data');
+    if (!fs.existsSync(srcDataDir)) {
+      fs.mkdirSync(srcDataDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(srcDataDir, 'central_db.json'), JSON.stringify(db, null, 2), 'utf8');
   } catch {}
 }
 
