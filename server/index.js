@@ -4,7 +4,7 @@
 // First install: cd server && npm install
 
 import express from 'express';
-const cors = require('cors');
+import cors from 'cors';
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
