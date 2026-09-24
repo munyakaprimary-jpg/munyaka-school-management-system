@@ -9,15 +9,15 @@ const ROOT = path.resolve(__dirname, '..');
 const CENTRAL_DB_FILES = [
   path.join(ROOT, 'server', 'data', 'central_db.json'),
   path.join(ROOT, 'server', 'central_db.json'),
-  path.join(ROOT, 'data', 'central_db.json'),
-  path.join(ROOT, 'server', 'data', 'users.json'),
+  path.join(ROOT, 'src', 'data', 'central_db.json'),
+  path.join(ROOT, 'data', 'central_db.json')
 ];
 
 const INITIAL_SEED_FILE = path.join(ROOT, 'src', 'data', 'initialSeedData.ts');
 
 function exportSeed() {
   try {
-    let dbData: any = null;
+    let dbData = null;
     let foundPath = '';
 
     for (const filePath of CENTRAL_DB_FILES) {
@@ -31,13 +31,13 @@ function exportSeed() {
             break;
           }
         } catch (e) {
-          // ignore parse error and try next
+          // Ignore and continue searching
         }
       }
     }
 
     if (!dbData) {
-      console.warn('[ExportSeed] No active central_db.json found across paths. Falling back to default baseline.');
+      console.warn('[ExportSeed] No active central_db.json found. Falling back to default empty structure.');
       dbData = {
         students: [],
         staff: [],
@@ -52,7 +52,6 @@ function exportSeed() {
       };
     } else {
       console.log(`[ExportSeed] Found active database at: ${foundPath}`);
-      // Normalize users to staff if needed
       if (!dbData.staff && dbData.users) {
         dbData.staff = dbData.users;
       }
