@@ -11,50 +11,60 @@ const CENTRAL_DB_FILES = [
   path.join(ROOT, 'server', 'central_db.json'),
   path.join(ROOT, 'data', 'central_db.json'),
   path.join(ROOT, 'src', 'data', 'central_db.json'),
-  path.join(ROOT, 'server', 'data', 'users.json')
+  path.join(ROOT, 'server', 'data', 'users.json'),
+  path.join(ROOT, 'server', 'db.json')
 ];
 
 const INITIAL_SEED_FILE = path.join(ROOT, 'src', 'data', 'initialSeedData.ts');
+const BACKUP_SEED_FILE = path.join(ROOT, 'src', 'services', 'initialSeedData.ts');
 
 function exportSeed() {
   try {
     let dbData = null;
     let foundPath = '';
 
+    // 1. Try finding external JSON database files
     for (const filePath of CENTRAL_DB_FILES) {
       if (fs.existsSync(filePath)) {
         try {
           const raw = fs.readFileSync(filePath, 'utf8');
           const parsed = JSON.parse(raw);
-          if (parsed && (parsed.students || parsed.staff || parsed.users || Array.isArray(parsed))) {
+          if (parsed && (parsed.students?.length > 0 || parsed.staff?.length > 0 || parsed.users?.length > 0 || (Array.isArray(parsed) && parsed.length > 0))) {
             dbData = parsed;
             foundPath = filePath;
             break;
           }
         } catch (e) {
-          // Ignore and continue
+          // Ignore parse errors
         }
       }
     }
 
-    // If no external JSON was found, extract/preserve the existing records from initialSeedData.ts if it exists
-    if (!dbData && fs.existsSync(INITIAL_SEED_FILE)) {
-      try {
-        const content = fs.readFileSync(INITIAL_SEED_FILE, 'utf8');
-        // Extract the object literal from initialSeedData = { ... }
-        const match = content.match(/export const initialSeedData =\s*(\{[\s\S]*?\});/);
-        if (match && match[1]) {
-          // Clean up TypeScript cast or comments if any
-          const cleanJson = match[1].replace(/\/\/.*/g, '');
-          // Evaluate safely or parse
-          dbData = eval('(' + cleanJson + ')');
-          foundPath = INITIAL_SEED_FILE;
+    // 2. If no external JSON with records was found, parse existing initialSeedData.ts files
+    if (!dbData || (!dbData.students?.length && !dbData.staff?.length)) {
+      for (const seedPath of [INITIAL_SEED_FILE, BACKUP_SEED_FILE]) {
+        if (fs.existsSync(seedPath)) {
+          try {
+            const content = fs.readFileSync(seedPath, 'utf8');
+            // Match export const initialSeedData = { ... };
+            const match = content.match(/export const initialSeedData\s*=\s*(\{[\s\S]*?\});/);
+            if (match && match[1]) {
+              // Safely evaluate object literal
+              const evaluated = eval('(' + match[1] + ')');
+              if (evaluated && (evaluated.students?.length > 0 || evaluated.staff?.length > 0)) {
+                dbData = evaluated;
+                foundPath = seedPath;
+                break;
+              }
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
         }
-      } catch (e) {
-        console.warn('[ExportSeed] Could not parse existing initialSeedData.ts:', e);
       }
     }
 
+    // 3. Final fallback: ensure we have populated default arrays if absolutely nothing was found
     if (!dbData) {
       dbData = {
         students: [],
@@ -68,19 +78,18 @@ function exportSeed() {
         notices: [],
         settings: {}
       };
-    } else {
-      console.log(`[ExportSeed] Using data source from: ${foundPath}`);
-      if (!dbData.staff && dbData.users) {
-        dbData.staff = dbData.users;
-      }
-      if (Array.isArray(dbData)) {
-        dbData = { students: dbData, staff: [], attendance: {}, fees: [] };
-      }
+    }
+
+    if (!dbData.staff && dbData.users) {
+      dbData.staff = dbData.users;
     }
 
     const studentsCount = Array.isArray(dbData.students) ? dbData.students.length : 0;
-    const staffCount = Array.isArray(dbData.staff) ? dbData.staff.length : (Array.isArray(dbData.users) ? dbData.users.length : 0);
+    const staffCount = Array.isArray(dbData.staff) ? dbData.staff.length : 0;
     const marksCount = dbData.grades && typeof dbData.grades === 'object' ? Object.keys(dbData.grades).length : 0;
+
+    console.log(`[ExportSeed] Source: ${foundPath || 'Default'}`);
+    console.log(`[ExportSeed] Summary -> Students: ${studentsCount}, Staff: ${staffCount}, Marks: ${marksCount}`);
 
     const fileContent = `export const DEFAULT_CBC_CLUSTERS = [
   {
@@ -126,7 +135,7 @@ export default initialSeedData;
 `;
 
     fs.writeFileSync(INITIAL_SEED_FILE, fileContent, 'utf8');
-    console.log(`[ExportSeed] Successfully bundled and exported ${staffCount} staff, ${studentsCount} students, ${marksCount} marks records into ${INITIAL_SEED_FILE}`);
+    console.log(`[ExportSeed] Successfully generated and exported data to ${INITIAL_SEED_FILE}`);
   } catch (err) {
     console.error('[ExportSeed] Error exporting seed data:', err);
     process.exit(1);
