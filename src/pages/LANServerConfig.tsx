@@ -148,7 +148,7 @@ export default function LANServerConfig() {
 
   // Auto-test connection on mount
   useEffect(() => {
-    testConnectionSilent(serverUrl);
+    testConnection(serverUrl);
   }, []);
 
   const pingHealth = async (
@@ -196,26 +196,30 @@ export default function LANServerConfig() {
     }
   };
 
-  const testConnectionSilent = async (url: string) => {
-    if (!url) return;
-    setActiveError(null);
-    setStatus('testing');
-    const result = await pingHealth(url);
-    setLastChecked(new Date().toISOString());
-    if (result.ok) {
-      setLatency(result.latency ?? null);
-      setServerProcess('online');
-      setStatus('connected');
-      if (result.stats) setStats(result.stats);
-    } else {
-      setServerProcess('offline');
-      setStatus('offline');
-      setLatency(null);
-      // The backend binary is not reachable — surface the helpful tip.
-      if (result.notRunning) {
-        setActiveError('backend_not_running');
+  const testConnection = async (inputUrl: string) => {
+    try {
+      // Clean trailing slashes and spaces
+      const formattedUrl = inputUrl.trim().replace(/\/+$/, '');
+      
+      const response = await fetch(`${formattedUrl}/api/ping`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && (data.status === 'online' || data.status === 'ok')) {
+        setStatus('connected');
+        setServerProcess('online');
+        localStorage.setItem(LAN_SERVER_KEY, formattedUrl);
+        return true;
       }
+    } catch (err) {
+      console.error('LAN Server Ping Error:', err);
+      setStatus('offline');
+      setServerProcess('offline');
     }
+    return false;
   };
 
   // ── Server Lifecycle Helpers ──────────────────────────────────────────────
@@ -308,26 +312,17 @@ export default function LANServerConfig() {
 
     setIsTesting(true);
     setStatus('testing');
-    const result = await pingHealth(normalized);
+    const success = await testConnection(normalized);
     setLastChecked(new Date().toISOString());
 
-    if (result.ok) {
-          setLatency(result.latency ?? null);
-          setServerProcess('online');
-          setStatus('connected');
-          if (result.stats) setStats(result.stats);
-          showSuccess(`Online — connected to ${normalized} (${result.latency}ms)`);
-        } else {
-          setServerProcess('offline');
-          setStatus('offline');
-          setLatency(null);
-          if (result.notRunning) {
-            setActiveError('backend_not_running');
-            showError(`Backend binary not detected on port 5000. Run 'npm run server' to start it.`);
-          } else {
-            showError(`Could not reach ${normalized}. Working offline.`);
-          }
-        }
+    if (success) {
+      showSuccess(`Online — connected to ${normalized}`);
+    } else {
+      setServerProcess('offline');
+      setStatus('offline');
+      setLatency(null);
+      showError(`Could not reach ${normalized}. Working offline.`);
+    }
 
     setIsSaving(false);
     setIsTesting(false);
@@ -336,7 +331,7 @@ export default function LANServerConfig() {
   const handleTestOnly = async () => {
     setIsTesting(true);
     setActiveError(null);
-    await testConnectionSilent(serverUrl);
+    await testConnection(serverUrl);
     setIsTesting(false);
   };
 
@@ -350,7 +345,7 @@ export default function LANServerConfig() {
     setStats(null);
     setActiveError(null);
     showSuccess(`Reset to default: ${DEFAULT_LAN_URL}`);
-    testConnectionSilent(DEFAULT_LAN_URL);
+    testConnection(DEFAULT_LAN_URL);
   };
 
   const handleChangePort = () => {
@@ -370,7 +365,7 @@ export default function LANServerConfig() {
     setIsSaving(true);
     setStatus('testing');
     setActiveError(null);
-    testConnectionSilent(newUrl).finally(() => setIsSaving(false));
+    testConnection(newUrl).finally(() => setIsSaving(false));
   };
 
   const currentPort = extractPort(serverUrl);
