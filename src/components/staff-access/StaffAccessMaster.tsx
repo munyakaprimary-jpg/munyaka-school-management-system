@@ -362,6 +362,7 @@ export default function StaffAccessMaster() {
       {/* Modals */}
       {showPreRegModal && (
         <AddPreRegModal
+          isOpen={showPreRegModal}
           onClose={() => setShowPreRegModal(false)}
           onSubmit={(newStaff: any) => setStaffList((prev: any) => [newStaff, ...prev])}
         />
@@ -369,22 +370,28 @@ export default function StaffAccessMaster() {
 
       {inviteModalOpen && inviteTarget && (
         <DispatchInviteModal
-          staff={{
-            id: inviteTarget.id || '1',
-            staffId: inviteTarget.staffId || inviteTarget.id || '1',
-            fullName: inviteTarget.fullName || inviteTarget.name || '',
-            nationalId: inviteTarget.nationalId || '',
-            email: inviteTarget.email || '',
-            phone: inviteTarget.phone || '',
-            systemRole: (inviteTarget.systemRole || 'teacher') as any,
-            department: inviteTarget.department || 'General',
-            accessKey: inviteTarget.accessKey || 'MUN-KEY',
-            status: inviteTarget.status || 'Active',
-            createdAt: inviteTarget.createdAt || new Date().toISOString()
-          }}
+          isOpen={inviteModalOpen}
           onClose={() => {
             setInviteModalOpen(false);
             setInviteTarget(null);
+          }}
+          onConfirm={() => {
+            setInviteModalOpen(false);
+            setInviteTarget(null);
+          }}
+          staff={{
+            id: inviteTarget.id || '1',
+            staffId: (inviteTarget as any).staffId || inviteTarget.id || '1',
+            fullName: (inviteTarget as any).fullName || inviteTarget.name || '',
+            nationalId: (inviteTarget as any).nationalId || '',
+            email: inviteTarget.email || '',
+            phone: inviteTarget.phone || '',
+            systemRole: (inviteTarget as any).systemRole || 'subject_teacher',
+            department: inviteTarget.department || 'General',
+            assignedSubjects: (inviteTarget as any).assignedSubjects || [],
+            tempAccessCode: (inviteTarget as any).tempAccessCode || 'MUN-KEY',
+            status: inviteTarget.status === 'active' ? 'Active' : inviteTarget.status === 'suspended' ? 'Suspended' : 'Pre-Registered',
+            datePreRegistered: (inviteTarget as any).createdAt || new Date().toISOString()
           }}
         />
       )}
