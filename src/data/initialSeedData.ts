@@ -5,58 +5,67 @@
  */
 
 export const initialFeeStructures = [];
+export const feeStructures = initialFeeStructures;
+
 export const initialFeePayments = [];
-export const initialExamTypes = [];
-export const initialExams = [];
-export const initialStudyCorner = [];
-export const initialLibraryBooks = [];
-export const initialLibraryLogs = [];
-export const initialGrades = [];
-export const initialStreams = [];
-export const initialLearningAreas = [];
-export const initialStaff = [];
-export const initialLearners = [];
-export const initialAttendance = [];
-export const initialMarks = [];
-export const initialReportCards = [];
-export const initialIctEquipment = [];
-export const initialScienceInventory = [];
-export const initialStoreInventory = [];
-export const initialSettings = {};
-
+export const feePayments = initialFeePayments;
 export const initialFees = initialFeePayments;
-export const initialStudents = initialLearners;
-export const INITIAL_SEED_DATA = {
-  feeStructures: initialFeeStructures,
-  feePayments: initialFeePayments,
-  fees: initialFeePayments,
-  examTypes: initialExamTypes,
-  exams: initialExams,
-  studyCorner: initialStudyCorner,
-  libraryBooks: initialLibraryBooks,
-  libraryLogs: initialLibraryLogs,
-  grades: initialGrades,
-  streams: initialStreams,
-  learningAreas: initialLearningAreas,
-  staff: initialStaff,
-  learners: initialLearners,
-  students: initialLearners,
-  attendance: initialAttendance,
-  marks: initialMarks,
-  reportCards: initialReportCards,
-  ictEquipment: initialIctEquipment,
-  scienceInventory: initialScienceInventory,
-  storeInventory: initialStoreInventory,
-  settings: initialSettings,
-  schoolSettings: initialSettings
-};
 
-export const mockLearners = initialLearners;
-export const mockStudents = initialLearners;
-export const mockStaff = initialStaff;
-export const mockExams = initialExams;
-export const mockLibrary = initialLibraryBooks;
-export const mockFinances = initialFeePayments;
+export const initialExamTypes = [];
+export const examTypes = initialExamTypes;
+
+export const initialExams = [];
+export const exams = initialExams;
+export const initialExamSchedules = initialExams;
+
+export const initialStudyCorner = [];
+export const studyCorner = initialStudyCorner;
+
+export const initialLibraryBooks = [];
+export const libraryBooks = initialLibraryBooks;
+
+export const initialLibraryLogs = [];
+export const libraryLogs = initialLibraryLogs;
+
+export const initialGrades = [];
+export const grades = initialGrades;
+
+export const initialStreams = [];
+export const streams = initialStreams;
+
+export const initialLearningAreas = [];
+export const learningAreas = initialLearningAreas;
+export const subjects = initialLearningAreas;
+
+export const initialStaff = [];
+export const staff = initialStaff;
+export const teachers = initialStaff;
+
+export const initialLearners = [];
+export const learners = initialLearners;
+export const students = initialLearners;
+
+export const initialAttendance = [];
+export const attendance = initialAttendance;
+
+export const initialMarks = [];
+export const marks = initialMarks;
+export const assessments = initialMarks;
+
+export const initialReportCards = [];
+export const reportCards = initialReportCards;
+
+export const initialIctEquipment = [];
+export const ictEquipment = initialIctEquipment;
+
+export const initialScienceInventory = [];
+export const scienceInventory = initialScienceInventory;
+
+export const initialStoreInventory = [];
+export const storeInventory = initialStoreInventory;
+
+export const initialSettings = {};
+export const settings = initialSettings;
 
 export const DEFAULT_CBC_CLUSTERS = [
   {
@@ -109,6 +118,7 @@ export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 const _initialSeedData = {
   feeStructures: initialFeeStructures,
   feePayments: initialFeePayments,
+  fees: initialFeePayments,
   examTypes: initialExamTypes,
   exams: initialExams,
   studyCorner: initialStudyCorner,
@@ -117,10 +127,14 @@ const _initialSeedData = {
   grades: initialGrades,
   streams: initialStreams,
   learningAreas: initialLearningAreas,
+  subjects: initialLearningAreas,
   staff: initialStaff,
+  teachers: initialStaff,
   learners: initialLearners,
+  students: initialLearners,
   attendance: initialAttendance,
   marks: initialMarks,
+  assessments: initialMarks,
   reportCards: initialReportCards,
   ictEquipment: initialIctEquipment,
   scienceInventory: initialScienceInventory,
@@ -128,5 +142,14 @@ const _initialSeedData = {
   settings: initialSettings
 };
 
+export const INITIAL_SEED_DATA = _initialSeedData;
 export const initialSeedData = _initialSeedData;
+
+export const mockLearners = initialLearners;
+export const mockStudents = initialLearners;
+export const mockStaff = initialStaff;
+export const mockExams = initialExams;
+export const mockLibrary = initialLibraryBooks;
+export const mockFinances = initialFeePayments;
+
 export default _initialSeedData;

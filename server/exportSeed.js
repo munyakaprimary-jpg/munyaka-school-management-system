@@ -116,59 +116,67 @@ const tsContent = `/**
  */
 
 export const initialFeeStructures = ${JSON.stringify(feeStructures, null, 2)};
+export const feeStructures = initialFeeStructures;
+
 export const initialFeePayments = ${JSON.stringify(feePayments, null, 2)};
-export const initialExamTypes = ${JSON.stringify(examTypes, null, 2)};
-export const initialExams = ${JSON.stringify(exams, null, 2)};
-export const initialStudyCorner = ${JSON.stringify(studyCorner, null, 2)};
-export const initialLibraryBooks = ${JSON.stringify(libraryBooks, null, 2)};
-export const initialLibraryLogs = ${JSON.stringify(libraryLogs, null, 2)};
-export const initialGrades = ${JSON.stringify(grades, null, 2)};
-export const initialStreams = ${JSON.stringify(streams, null, 2)};
-export const initialLearningAreas = ${JSON.stringify(learningAreas, null, 2)};
-export const initialStaff = ${JSON.stringify(staff, null, 2)};
-export const initialLearners = ${JSON.stringify(learners, null, 2)};
-export const initialAttendance = ${JSON.stringify(attendance, null, 2)};
-export const initialMarks = ${JSON.stringify(marks, null, 2)};
-export const initialReportCards = ${JSON.stringify(reportCards, null, 2)};
-export const initialIctEquipment = ${JSON.stringify(ictEquipment, null, 2)};
-export const initialScienceInventory = ${JSON.stringify(scienceInventory, null, 2)};
-export const initialStoreInventory = ${JSON.stringify(storeInventory, null, 2)};
-export const initialSettings = ${JSON.stringify(settings, null, 2)};
-
-// Aliases for compatibility across services & stores
+export const feePayments = initialFeePayments;
 export const initialFees = initialFeePayments;
-export const initialStudents = initialLearners;
-export const INITIAL_SEED_DATA = {
-  feeStructures: initialFeeStructures,
-  feePayments: initialFeePayments,
-  fees: initialFeePayments,
-  examTypes: initialExamTypes,
-  exams: initialExams,
-  studyCorner: initialStudyCorner,
-  libraryBooks: initialLibraryBooks,
-  libraryLogs: initialLibraryLogs,
-  grades: initialGrades,
-  streams: initialStreams,
-  learningAreas: initialLearningAreas,
-  staff: initialStaff,
-  learners: initialLearners,
-  students: initialLearners,
-  attendance: initialAttendance,
-  marks: initialMarks,
-  reportCards: initialReportCards,
-  ictEquipment: initialIctEquipment,
-  scienceInventory: initialScienceInventory,
-  storeInventory: initialStoreInventory,
-  settings: initialSettings,
-  schoolSettings: initialSettings
-};
 
-export const mockLearners = initialLearners;
-export const mockStudents = initialLearners;
-export const mockStaff = initialStaff;
-export const mockExams = initialExams;
-export const mockLibrary = initialLibraryBooks;
-export const mockFinances = initialFeePayments;
+export const initialExamTypes = ${JSON.stringify(examTypes, null, 2)};
+export const examTypes = initialExamTypes;
+
+export const initialExams = ${JSON.stringify(exams, null, 2)};
+export const exams = initialExams;
+export const initialExamSchedules = initialExams;
+
+export const initialStudyCorner = ${JSON.stringify(studyCorner, null, 2)};
+export const studyCorner = initialStudyCorner;
+
+export const initialLibraryBooks = ${JSON.stringify(libraryBooks, null, 2)};
+export const libraryBooks = initialLibraryBooks;
+
+export const initialLibraryLogs = ${JSON.stringify(libraryLogs, null, 2)};
+export const libraryLogs = initialLibraryLogs;
+
+export const initialGrades = ${JSON.stringify(grades, null, 2)};
+export const grades = initialGrades;
+
+export const initialStreams = ${JSON.stringify(streams, null, 2)};
+export const streams = initialStreams;
+
+export const initialLearningAreas = ${JSON.stringify(learningAreas, null, 2)};
+export const learningAreas = initialLearningAreas;
+export const subjects = initialLearningAreas;
+
+export const initialStaff = ${JSON.stringify(staff, null, 2)};
+export const staff = initialStaff;
+export const teachers = initialStaff;
+
+export const initialLearners = ${JSON.stringify(learners, null, 2)};
+export const learners = initialLearners;
+export const students = initialLearners;
+
+export const initialAttendance = ${JSON.stringify(attendance, null, 2)};
+export const attendance = initialAttendance;
+
+export const initialMarks = ${JSON.stringify(marks, null, 2)};
+export const marks = initialMarks;
+export const assessments = initialMarks;
+
+export const initialReportCards = ${JSON.stringify(reportCards, null, 2)};
+export const reportCards = initialReportCards;
+
+export const initialIctEquipment = ${JSON.stringify(ictEquipment, null, 2)};
+export const ictEquipment = initialIctEquipment;
+
+export const initialScienceInventory = ${JSON.stringify(scienceInventory, null, 2)};
+export const scienceInventory = initialScienceInventory;
+
+export const initialStoreInventory = ${JSON.stringify(storeInventory, null, 2)};
+export const storeInventory = initialStoreInventory;
+
+export const initialSettings = ${JSON.stringify(settings, null, 2)};
+export const settings = initialSettings;
 
 export const DEFAULT_CBC_CLUSTERS = [
   {
@@ -218,8 +226,44 @@ export const DEFAULT_CBC_CLUSTERS = [
 
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
-const initialSeedData = INITIAL_SEED_DATA;
-export default initialSeedData;
+const _initialSeedData = {
+  feeStructures: initialFeeStructures,
+  feePayments: initialFeePayments,
+  fees: initialFeePayments,
+  examTypes: initialExamTypes,
+  exams: initialExams,
+  studyCorner: initialStudyCorner,
+  libraryBooks: initialLibraryBooks,
+  libraryLogs: initialLibraryLogs,
+  grades: initialGrades,
+  streams: initialStreams,
+  learningAreas: initialLearningAreas,
+  subjects: initialLearningAreas,
+  staff: initialStaff,
+  teachers: initialStaff,
+  learners: initialLearners,
+  students: initialLearners,
+  attendance: initialAttendance,
+  marks: initialMarks,
+  assessments: initialMarks,
+  reportCards: initialReportCards,
+  ictEquipment: initialIctEquipment,
+  scienceInventory: initialScienceInventory,
+  storeInventory: initialStoreInventory,
+  settings: initialSettings
+};
+
+export const INITIAL_SEED_DATA = _initialSeedData;
+export const initialSeedData = _initialSeedData;
+
+export const mockLearners = initialLearners;
+export const mockStudents = initialLearners;
+export const mockStaff = initialStaff;
+export const mockExams = initialExams;
+export const mockLibrary = initialLibraryBooks;
+export const mockFinances = initialFeePayments;
+
+export default _initialSeedData;
 `;
 
 fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
