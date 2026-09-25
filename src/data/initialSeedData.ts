@@ -15,6 +15,7 @@ export const initialFeeStructures = [
     "total": 19000
   }
 ];
+
 export const initialFees = [
   {
     "id": "fee_1",
@@ -26,6 +27,7 @@ export const initialFees = [
     "status": "Completed"
   }
 ];
+
 export const initialExamTypes = [
   {
     "id": "et_1",
@@ -43,6 +45,7 @@ export const initialExamTypes = [
     "weight": 40
   }
 ];
+
 export const initialExams = [
   {
     "id": "asm_1",
@@ -55,6 +58,7 @@ export const initialExams = [
     "questions": []
   }
 ];
+
 export const initialStudyCorner = [
   {
     "id": "sc_1",
@@ -64,6 +68,7 @@ export const initialStudyCorner = [
     "fileUrl": "#"
   }
 ];
+
 export const initialLibrary = [
   {
     "id": "lib_1",
@@ -74,6 +79,7 @@ export const initialLibrary = [
     "availableCopies": 8
   }
 ];
+
 export const initialLibraryLogs = [
   {
     "id": "log_1",
@@ -84,6 +90,7 @@ export const initialLibraryLogs = [
     "status": "issued"
   }
 ];
+
 export const initialGrades = {
   "PP1": [
     "Stream A"
@@ -128,6 +135,7 @@ export const initialGrades = {
     "Beta"
   ]
 };
+
 export const initialStreams = [
   "Green",
   "Blue",
@@ -140,6 +148,7 @@ export const initialStreams = [
   "Alpha",
   "Beta"
 ];
+
 export const initialLearningAreas = [
   {
     "id": "la_1",
@@ -162,6 +171,7 @@ export const initialLearningAreas = [
     "tier": "upper-primary"
   }
 ];
+
 export const initialStaff = [
   {
     "id": "st_1",
@@ -172,6 +182,7 @@ export const initialStaff = [
     "email": "john@munyaka.sc.ke"
   }
 ];
+
 export const initialStudents = [
   {
     "id": "stu_1",
@@ -182,12 +193,15 @@ export const initialStudents = [
     "gender": "Female"
   }
 ];
+
 export const initialLearners = initialStudents;
+
 export const initialAttendance = {
   "2026-02-10": {
     "stu_1": "present"
   }
 };
+
 export const initialMarks = {
   "asm_1": {
     "stu_1": {
@@ -197,10 +211,12 @@ export const initialMarks = {
     }
   }
 };
+
 export const initialReportCards = [];
 export const initialIctLabEquipment = [];
 export const initialScienceLabInventory = [];
 export const initialStoreInventory = [];
+
 export const initialSchoolSettings = {
   "schoolName": "Munyaka School",
   "county": "Uasin Gishu"
@@ -238,5 +254,53 @@ export const mockStaff = initialStaff;
 export const mockExams = initialExams;
 export const mockLibrary = initialLibrary;
 export const mockFinances = initialFees;
+
+export const DEFAULT_CBC_CLUSTERS = [
+  {
+    id: 'lower-primary',
+    name: 'Lower Primary (Grades 1–3)',
+    learningAreas: [
+      { id: 'lp_1', name: 'Literacy Activities', code: 'LIT', description: 'Reading, writing and communication' },
+      { id: 'lp_2', name: 'Mathematical Activities', code: 'MATH', description: 'Numbers, measurement, geometry' },
+      { id: 'lp_3', name: 'Environmental Activities', code: 'ENV', description: 'Social and natural environment' },
+      { id: 'lp_4', name: 'Hygiene and Nutrition', code: 'HN', description: 'Health, sanitation and nutrition' },
+      { id: 'lp_5', name: 'Religious Education', code: 'RE', description: 'CRE / IRE / HRE' },
+      { id: 'lp_6', name: 'Movement and Creative Activities', code: 'MCA', description: 'PE, music, art and craft' }
+    ]
+  },
+  {
+    id: 'upper-primary',
+    name: 'Upper Primary (Grades 4–6)',
+    learningAreas: [
+      { id: 'up_1', name: 'English Language', code: 'ENG', description: 'Grammar, composition, comprehension' },
+      { id: 'up_2', name: 'Kiswahili Language', code: 'KIS', description: 'Kusoma, kuandika na kuzungumza' },
+      { id: 'up_3', name: 'Mathematics', code: 'MTH', description: 'Advanced arithmetic, algebra, geometry' },
+      { id: 'up_4', name: 'Science and Technology', code: 'SCI', description: 'Scientific inquiry, ICT basics' },
+      { id: 'up_5', name: 'Agriculture and Nutrition', code: 'AGR', description: 'Crop production, animal husbandry, home science' },
+      { id: 'up_6', name: 'Social Studies', code: 'SST', description: 'Geography, history, citizenship' },
+      { id: 'up_7', name: 'Creative Arts', code: 'CA', description: 'Visual arts, music, crafts' },
+      { id: 'up_8', name: 'Religious Education (CRE/IRE/HRE)', code: 'RE', description: 'Spiritual and moral education' }
+    ]
+  },
+  {
+    id: 'junior-secondary',
+    name: 'Junior Secondary (Grades 7–9)',
+    learningAreas: [
+      { id: 'js_1', name: 'English', code: 'ENG', description: 'Advanced literature and communication' },
+      { id: 'js_2', name: 'Kiswahili', code: 'KIS', description: 'Fasihi na lugha ya Kiswahili' },
+      { id: 'js_3', name: 'Mathematics', code: 'MTH', description: 'Algebra, trigonometry, statistics' },
+      { id: 'js_4', name: 'Integrated Science', code: 'SCI', description: 'Physics, chemistry, biology combined' },
+      { id: 'js_5', name: 'Health Education', code: 'HE', description: 'Public health and human biology' },
+      { id: 'js_6', name: 'Agriculture and Nutrition', code: 'AGR', description: 'Modern farming and food science' },
+      { id: 'js_7', name: 'Social Studies', code: 'SST', description: 'History, civics, economics' },
+      { id: 'js_8', name: 'Religious Education', code: 'RE', description: 'CRE / IRE / HRE' },
+      { id: 'js_9', name: 'Pre-Technical Studies', code: 'PTS', description: 'Basic mechanics, woodwork, design' },
+      { id: 'js_10', name: 'Computer Science', code: 'CS', description: 'Coding, algorithms, digital literacy' },
+      { id: 'js_11', name: 'Creative Arts and Sports', code: 'CAS', description: 'Fine arts, sports science' }
+    ]
+  }
+];
+
+export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
 export default initialSeedData;
