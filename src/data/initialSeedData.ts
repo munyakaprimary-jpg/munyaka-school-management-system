@@ -213,6 +213,10 @@ export const initialSeedData = {
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
+export const SEED_VERSION = "2026.09.25.PERSONNEL_v1";
+
+export const initialLearners = initialSeedData.students || [];
+export const initialStaff = initialSeedData.staff || [];
 export const mockLearners = initialSeedData.students || [];
 export const mockStudents = initialSeedData.students || [];
 export const mockStaff = initialSeedData.staff || [];

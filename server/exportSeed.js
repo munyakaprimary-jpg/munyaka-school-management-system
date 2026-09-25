@@ -87,14 +87,15 @@ function exportSeed() {
     }
 
     const studentsCount = Array.isArray(dbData.students) ? dbData.students.length : 0;
+    const teachingStaffCount = Array.isArray(dbData.staff) ? dbData.staff.filter((s: any) => s.role === 'teacher' || s.role === 'Teacher' || s.isTeacher || s.teaching).length : (Array.isArray(dbData.staff) ? dbData.staff.length : 0);
+    const nonTeachingStaffCount = Array.isArray(dbData.staff) ? dbData.staff.length - teachingStaffCount : 0;
     const staffCount = Array.isArray(dbData.staff) ? dbData.staff.length : 0;
     const gradesCount = Array.isArray(dbData.grades) ? dbData.grades.length : 0;
     const streamsCount = Array.isArray(dbData.streams) ? dbData.streams.length : 0;
-    const marksCount = dbData.marks && typeof dbData.marks === 'object' ? Object.keys(dbData.marks).length : 0;
 
     console.log(`[ExportSeed] Source: ${foundPath || 'Default'}`);
+    console.log(`[ExportSeed] Exported Learners: ${studentsCount}, Teaching Staff: ${teachingStaffCount}, Non-Teaching Staff: ${nonTeachingStaffCount}`);
     console.log(`[ExportSeed] Exported ${gradesCount} grades, ${streamsCount} streams`);
-    console.log(`[ExportSeed] Summary -> Students: ${studentsCount}, Staff: ${staffCount}, Grades: ${gradesCount}, Streams: ${streamsCount}, Marks: ${marksCount}`);
 
     const fileContent = `export const DEFAULT_CBC_CLUSTERS = [
   {
@@ -129,6 +130,10 @@ export const initialSeedData = ${JSON.stringify(dbData, null, 2)};
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
+export const SEED_VERSION = "2026.09.25.PERSONNEL_v1";
+
+export const initialLearners = initialSeedData.students || [];
+export const initialStaff = initialSeedData.staff || [];
 export const mockLearners = initialSeedData.students || [];
 export const mockStudents = initialSeedData.students || [];
 export const mockStaff = initialSeedData.staff || [];
