@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { initialSeedData } from '@/data/initialSeedData';
+import { initialSeedData, SEED_VERSION } from '@/data/initialSeedData';
 
 /** Key mapping from initialSeedData fields to their respective LocalStorage keys. */
 const KEY_MAPPING: Record<string, string> = {
@@ -29,11 +29,13 @@ const KEY_MAPPING: Record<string, string> = {
 export function hydrateFromInitialSeed(): void {
   try {
     const isInitialized = localStorage.getItem('munyaka_initialized') === 'true';
-    const seedVersion = (initialSeedData as any).version || (initialSeedData as any).seedVersion || 'v1';
-    const currentVersion = localStorage.getItem('munyaka_seed_version');
+    const seedVersion = SEED_VERSION;
+    const currentVersion = localStorage.getItem('stored_seed_version') || localStorage.getItem('munyaka_seed_version');
+    const attendanceRaw = localStorage.getItem('munyaka_attendance');
+    const isAttendanceEmpty = !attendanceRaw || attendanceRaw === '{}' || attendanceRaw === '[]' || attendanceRaw.length < 5;
 
-    if (!isInitialized || currentVersion !== seedVersion) {
-      console.log('[StorageHydration] First-boot storage hydration: Seeding initial data snapshot...');
+    if (!isInitialized || currentVersion !== seedVersion || isAttendanceEmpty) {
+      console.log('[StorageHydration] First-boot storage hydration: Seeding initial data snapshot & attendance...');
 
       const snapshot = {
         students: (initialSeedData as any).students || [],
@@ -69,7 +71,9 @@ export function hydrateFromInitialSeed(): void {
 
       // Set munyaka_initialized to true
       localStorage.setItem('munyaka_initialized', 'true');
+      localStorage.setItem('stored_seed_version', seedVersion);
       localStorage.setItem('munyaka_seed_version', seedVersion);
+      localStorage.setItem('attendance', JSON.stringify((initialSeedData as any).attendance || []));
 
       // Dispatch event to notify listeners
       window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { source: 'seed-hydration' } }));
