@@ -584,7 +584,18 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
             </div>
 
             <div className="space-y-5">
-              {events.map((event) => {
+              {events.length === 0 ? (
+                <div className="text-center py-8 px-4 space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
+                    <CalendarDays size={22} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No upcoming events scheduled</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Click "Schedule Event" above to add new school events.</p>
+                  </div>
+                </div>
+              ) : (
+                events.map((event) => {
                 const dateObj = new Date(event.date);
                 const monthStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'MMM').toUpperCase() : 'AUG';
                 const dayStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'dd') : '28';
@@ -644,7 +655,8 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
                     )}
                   </div>
                 );
-              })}
+              })
+              )}
             </div>
 
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
