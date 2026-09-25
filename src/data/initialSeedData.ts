@@ -231,6 +231,7 @@ export const initialSeedData = {
   schoolSettings: initialSchoolSettings,
 };
 
+export const INITIAL_SEED_DATA = initialSeedData;
 export const DEFAULT_CBC_CLUSTERS = [
   {
     id: 'lower-primary',
