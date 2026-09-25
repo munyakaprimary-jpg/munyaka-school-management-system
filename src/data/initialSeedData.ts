@@ -106,7 +106,7 @@ export const DEFAULT_CBC_CLUSTERS = [
 
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
-const initialSeedData = {
+const _initialSeedData = {
   feeStructures: initialFeeStructures,
   feePayments: initialFeePayments,
   examTypes: initialExamTypes,
@@ -128,4 +128,5 @@ const initialSeedData = {
   settings: initialSettings
 };
 
-export default initialSeedData;
+export const initialSeedData = _initialSeedData;
+export default _initialSeedData;
