@@ -225,12 +225,11 @@ const formatLastSeen = (dateStr: string): string => {
   return date.toLocaleDateString();
 };
 
-type TabId = 'system' | 'lan';
+type TabId = 'overview' | 'permissions' | 'lan' | 'database';
 
 export default function AdminControlCenter() {
   const { user } = useAuth();
-  // Ensure default active tab is 'lan' since 'system' was removed
-  const [activeTab, setActiveTab] = useState<TabId>('lan');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [devices, setDevices] = useState<ConnectedDevice[]>([]);
   const [stats, setStats] = useState<DBStats | null>(null);
@@ -500,7 +499,7 @@ export default function AdminControlCenter() {
       </div>
 
       {/* ── Tab 1: System & Academic Settings ─────────────────────────────── */}
-      {activeTab === 'system' && (
+      {activeTab === 'overview' && (
         <>
           {/* Server Connection Header */}
           <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 text-white shadow-xl -mt-0">

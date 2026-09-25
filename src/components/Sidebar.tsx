@@ -98,7 +98,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
     { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student', 'ict_technician', 'ict_teacher'] },
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'ict_teacher', 'ict_technician'] },
-    { icon: Server, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'] },
     { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'ict_technician', 'ict_teacher'] },
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student'] },
