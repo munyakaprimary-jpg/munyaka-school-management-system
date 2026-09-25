@@ -213,9 +213,12 @@ export const initialSeedData = {
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
-export const SEED_VERSION = "2026.09.25.ATTENDANCE_v1";
+export const SEED_VERSION = "2026.09.25.INVENTORY_v1";
 
 export const initialAttendance = (initialSeedData as any).attendance || {};
+export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
+export const initialScienceInventory = (initialSeedData as any).scienceInventory || (initialSeedData as any).scienceLabInventory || [];
+export const initialStoreInventory = (initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || [];
 export const initialLearners = initialSeedData.students || [];
 export const initialStaff = initialSeedData.staff || [];
 export const initialReportCards = (initialSeedData as any).reportCards || [];

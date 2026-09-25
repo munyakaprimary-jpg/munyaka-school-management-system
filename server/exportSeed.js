@@ -93,11 +93,15 @@ function exportSeed() {
     const gradesCount = Array.isArray(dbData.grades) ? dbData.grades.length : 0;
     const streamsCount = Array.isArray(dbData.streams) ? dbData.streams.length : 0;
     const attendanceRecordsCount = dbData.attendance ? (Array.isArray(dbData.attendance) ? dbData.attendance.length : Object.keys(dbData.attendance).length) : 0;
+    const ictCount = Array.isArray(dbData.ictEquipment || dbData.ictLabEquipment) ? (dbData.ictEquipment || dbData.ictLabEquipment).length : 0;
+    const scienceCount = Array.isArray(dbData.scienceInventory || dbData.scienceLabInventory) ? (dbData.scienceInventory || dbData.scienceLabInventory).length : 0;
+    const storeCount = Array.isArray(dbData.storeInventory || dbData.storeStock) ? (dbData.storeInventory || dbData.storeStock).length : 0;
 
     console.log(`[ExportSeed] Source: ${foundPath || 'Default'}`);
     console.log(`[ExportSeed] Exported Learners: ${studentsCount}, Teaching Staff: ${teachingStaffCount}, Non-Teaching Staff: ${nonTeachingStaffCount}`);
     console.log(`[ExportSeed] Exported ${gradesCount} grades, ${streamsCount} streams`);
     console.log(`[ExportSeed] Exported Attendance Records: ${attendanceRecordsCount}`);
+    console.log(`[ExportSeed] Exported ICT Equipment: ${ictCount}, Science Inventory: ${scienceCount}, Store Stock: ${storeCount}`);
 
     const fileContent = `export const DEFAULT_CBC_CLUSTERS = [
   {
@@ -132,9 +136,12 @@ export const initialSeedData = ${JSON.stringify(dbData, null, 2)};
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
-export const SEED_VERSION = "2026.09.25.ATTENDANCE_v1";
+export const SEED_VERSION = "2026.09.25.INVENTORY_v1";
 
 export const initialAttendance = (initialSeedData as any).attendance || {};
+export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
+export const initialScienceInventory = (initialSeedData as any).scienceInventory || (initialSeedData as any).scienceLabInventory || [];
+export const initialStoreInventory = (initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || [];
 export const initialLearners = initialSeedData.students || [];
 export const initialStaff = initialSeedData.staff || [];
 export const initialReportCards = (initialSeedData as any).reportCards || [];

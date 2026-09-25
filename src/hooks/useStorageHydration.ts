@@ -32,10 +32,17 @@ export function hydrateFromInitialSeed(): void {
     const seedVersion = SEED_VERSION;
     const currentVersion = localStorage.getItem('stored_seed_version') || localStorage.getItem('munyaka_seed_version');
     const attendanceRaw = localStorage.getItem('munyaka_attendance');
+    const ictRaw = localStorage.getItem('munyaka_ict_lab');
+    const scienceRaw = localStorage.getItem('munyaka_science_lab');
+    const storeRaw = localStorage.getItem('munyaka_store_items');
+    
     const isAttendanceEmpty = !attendanceRaw || attendanceRaw === '{}' || attendanceRaw === '[]' || attendanceRaw.length < 5;
+    const isIctEmpty = !ictRaw || ictRaw === '[]' || ictRaw.length < 5;
+    const isScienceEmpty = !scienceRaw || scienceRaw === '[]' || scienceRaw.length < 5;
+    const isStoreEmpty = !storeRaw || storeRaw === '[]' || storeRaw.length < 5;
 
-    if (!isInitialized || currentVersion !== seedVersion || isAttendanceEmpty) {
-      console.log('[StorageHydration] First-boot storage hydration: Seeding initial data snapshot & attendance...');
+    if (!isInitialized || currentVersion !== seedVersion || isAttendanceEmpty || isIctEmpty || isScienceEmpty || isStoreEmpty) {
+      console.log('[StorageHydration] First-boot storage hydration: Seeding initial data snapshot & inventory...');
 
       const snapshot = {
         students: (initialSeedData as any).students || [],
@@ -73,7 +80,10 @@ export function hydrateFromInitialSeed(): void {
       localStorage.setItem('munyaka_initialized', 'true');
       localStorage.setItem('stored_seed_version', seedVersion);
       localStorage.setItem('munyaka_seed_version', seedVersion);
-      localStorage.setItem('attendance', JSON.stringify((initialSeedData as any).attendance || []));
+      localStorage.setItem('munyaka_attendance', JSON.stringify((initialSeedData as any).attendance || []));
+      localStorage.setItem('munyaka_ict_lab', JSON.stringify((initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || []));
+      localStorage.setItem('munyaka_science_lab', JSON.stringify((initialSeedData as any).scienceInventory || (initialSeedData as any).scienceLabInventory || []));
+      localStorage.setItem('munyaka_store_items', JSON.stringify((initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || []));
 
       // Dispatch event to notify listeners
       window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { source: 'seed-hydration' } }));
