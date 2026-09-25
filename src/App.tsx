@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "@/components/ui/notification-provider";
+import { initialSeedData } from "@/data/initialSeedData";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -341,11 +342,11 @@ const App = () => {
             ['munyaka_students', initialSeedData.students || []],
             ['munyaka_fees_records', (initialSeedData as any).fees || []],
             ['munyaka_student_fees', (initialSeedData as any).fees || []],
-            ['munyaka_transactions', initialSeedData.transactions || []],
+            ['munyaka_transactions', (initialSeedData as any).transactions || []],
             ['munyaka_attendance', (initialSeedData as any).attendance || []],
             ['munyaka_grades', (initialSeedData as any).grades || []],
             ['munyaka_exam_types', (initialSeedData as any).examTypes || []],
-            ['munyaka_library_books', initialSeedData.libraryBooks || []],
+            ['munyaka_library_books', (initialSeedData as any).libraryBooks || []],
             ['munyaka_fee_structures', (initialSeedData as any).feeStructures || []],
             ['munyaka_notices', (initialSeedData as any).notices || []],
             ['munyaka_system_settings_v3', (initialSeedData as any).settings || {}],
@@ -354,7 +355,7 @@ const App = () => {
           let anySeeded = false;
           for (const [key, value] of seedKeys) {
             const existing = localStorage.getItem(key);
-            if (!existing) {
+            if (!existing || JSON.parse(existing).length === 0) {
               localStorage.setItem(key, JSON.stringify(value));
               anySeeded = true;
             } else {
@@ -371,6 +372,30 @@ const App = () => {
             }
           }
   
+          // Also ensure staff lists (`munyaka_staff`, `munyaka_staff_directory`) are populated
+          const staffKeys = ['munyaka_staff', 'munyaka_staff_directory', 'munyaka_staff_prereg'];
+          for (const sKey of staffKeys) {
+            const existingStaff = localStorage.getItem(sKey);
+            let needsStaffSeed = false;
+            if (!existingStaff) {
+              needsStaffSeed = true;
+            } else {
+              try {
+                const parsedStaff = JSON.parse(existingStaff);
+                if (Array.isArray(parsedStaff) && parsedStaff.length === 0) {
+                  needsStaffSeed = true;
+                }
+              } catch {
+                needsStaffSeed = true;
+              }
+            }
+
+            if (needsStaffSeed && initialSeedData.staff && initialSeedData.staff.length > 0) {
+              localStorage.setItem(sKey, JSON.stringify(initialSeedData.staff));
+              anySeeded = true;
+            }
+          }
+
           // Also ensure munyaka_central_db is populated (used by CentralDataService)
           const existingDb = localStorage.getItem('munyaka_central_db');
           if (!existingDb) {
