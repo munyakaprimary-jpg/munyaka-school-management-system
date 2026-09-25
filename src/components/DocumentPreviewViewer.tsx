@@ -64,13 +64,33 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
 
         // Check if docx
         if (fileName.endsWith('.docx') || fileName.includes('word') || attachment.type?.includes('wordprocessingml')) {
-          // Fetch arrayBuffer for mammoth
-          const response = await fetch(sourceUrl);
-          const arrayBuffer = await response.arrayBuffer();
-          const result = await mammoth.convertToHtml({ arrayBuffer });
-          if (isMounted) {
-            setDocxHtml(result.value || '<p>No content extracted from Word document.</p>');
-            setIsLoading(false);
+          let arrayBuffer: ArrayBuffer;
+          if (sourceUrl.startsWith('data:')) {
+            const base64Part = sourceUrl.split(',')[1] || '';
+            const binaryString = atob(base64Part);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            arrayBuffer = bytes.buffer;
+          } else {
+            const response = await fetch(sourceUrl);
+            arrayBuffer = await response.arrayBuffer();
+          }
+
+          try {
+            const result = await mammoth.convertToHtml({ arrayBuffer });
+            if (isMounted) {
+              setDocxHtml(result.value || '<p>No content extracted from Word document.</p>');
+              setIsLoading(false);
+            }
+          } catch (mammothErr: any) {
+            console.warn('[DocumentPreviewViewer] Mammoth failed, fallback to raw text:', mammothErr);
+            if (isMounted) {
+              setDocxHtml(`<div class="p-4 bg-amber-50 text-amber-800 rounded mb-4">Note: Could not parse complex Word structures directly. Showing extracted text/error.</div><pre class="whitespace-pre-wrap font-mono text-xs">${String(mammothErr?.message || mammothErr)}</pre>`);
+              setIsLoading(false);
+            }
           }
           return;
         }
