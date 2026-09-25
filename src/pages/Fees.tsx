@@ -406,11 +406,31 @@ const Fees = () => {
     return exact ? exact.amount : 0;
   }, [selectedYear, selectedTerm, feeStructures]);
 
-  /** Calculate total paid for a student from transactions */
+  /** Calculate total paid for a student from transactions and direct localStorage overrides */
   const getTotalPaidForStudent = useCallback((studentId: string): number => {
-    return transactionsList
-      .filter(tx => tx.studentId === studentId)
-      .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    // Check if there's a direct override in localStorage (munyaka_fee_{id})
+    try {
+      const overrideKey = `${FEE_OVERRIDES_KEY_PREFIX}${studentId}`;
+      const savedOverride = localStorage.getItem(overrideKey);
+      if (savedOverride) {
+        const parsed = JSON.parse(savedOverride);
+        if (parsed.feePaid !== undefined) {
+          return Number(parsed.feePaid);
+        }
+        if (parsed.paid !== undefined) {
+          return Number(parsed.paid);
+        }
+      }
+    } catch {}
+
+    // Fall back to summing transactions plus any direct absolute override in transactions
+    const studentTxs = transactionsList.filter(tx => tx.studentId === studentId);
+    const directEditTx = studentTxs.find(tx => tx.category === 'Direct Edit' || tx.method === 'Admin Direct Override');
+    if (directEditTx) {
+      return Number(directEditTx.amount || 0);
+    }
+
+    return studentTxs.reduce((sum, tx) => sum + (tx.amount || 0), 0);
   }, [transactionsList]);
 
   /** Find grade ID matching a learner's grade name */
@@ -809,36 +829,65 @@ const Fees = () => {
       oldPaid = oldFee?.paid || 0;
     }
 
-    // Calculate new status
+    // Calculate new status & balance instantly
     const balance = Math.max(0, termFee - feePaid);
     const status = deriveStatus(termFee, feePaid);
 
-    // Save override
-    localStorage.setItem(storageKey, JSON.stringify({
+    // Save override to LocalStorage permanently
+    const overrideData = {
       id: studentId,
       termFee,
       feePaid,
       balance,
       status,
-      reason
-    }));
+      reason,
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem(storageKey, JSON.stringify(overrideData));
     notifyDataChanged(storageKey);
 
-    // Add transaction for adjustment if paid changed
-    const diff = feePaid - oldPaid;
-    if (diff !== 0) {
-      const newTransactions = [{
-        id: `TX-${Math.floor(100 + Math.random() * 900)}`,
-        date: new Date().toLocaleDateString(),
-        amount: diff,
-        method: "Admin Adjustment",
-        ref: "ADJ-" + Date.now().toString().slice(-6),
-        category: "Adjustment",
-        studentId,
-        grade: studentGrade,
-      }, ...localTransactions];
-      setLocalTransactions(newTransactions as any);
+    // Also update munyaka_fees_records and munyaka_fee_structures if needed
+    try {
+      const savedRecords = localStorage.getItem('munyaka_fees_records');
+      if (savedRecords) {
+        const records = JSON.parse(savedRecords);
+        const updatedRecords = records.map((r: any) => {
+          if (r.id === studentId || r.studentId === studentId) {
+            return { ...r, total: termFee, paid: feePaid, feePaid, status, balance };
+          }
+          return r;
+        });
+        localStorage.setItem('munyaka_fees_records', JSON.stringify(updatedRecords));
+        notifyDataChanged('munyaka_fees_records');
+      }
+    } catch (e) {
+      console.error("Failed to update munyaka_fees_records:", e);
     }
+
+    // Set/Replace absolute direct edit transaction in ledger so future recalculations respect feePaid directly without old ledger logs overwriting it
+    const txKey = 'munyaka_transactions';
+    const savedTxs = localStorage.getItem(txKey);
+    let txs = [];
+    try {
+      if (savedTxs) txs = JSON.parse(savedTxs);
+    } catch {}
+
+    const directEditTx = {
+      id: `TX-ADJ-${Date.now()}`,
+      date: new Date().toISOString().slice(0, 10),
+      amount: feePaid,
+      method: "Admin Direct Override",
+      ref: `OVERRIDE-${Date.now().toString().slice(-6)}`,
+      category: "Direct Edit",
+      studentId,
+      grade: studentGrade,
+    };
+
+    const filteredTxs = txs.filter((t: any) => t.studentId !== studentId || t.category !== 'Direct Edit');
+    const newTxs = [directEditTx, ...filteredTxs];
+    localStorage.setItem(txKey, JSON.stringify(newTxs));
+    setLocalTransactions(newTxs as any);
+    notifyDataChanged(txKey);
 
     // Create audit log entry
     const auditEntry: AuditLogEntry = {
@@ -851,12 +900,16 @@ const Fees = () => {
       changes: [
         { field: "Term Fee", oldValue: oldTotal.toString(), newValue: termFee.toString() },
         { field: "Fee Paid", oldValue: oldPaid.toString(), newValue: feePaid.toString() },
+        { field: "Status", oldValue: deriveStatus(oldTotal, oldPaid), newValue: status },
       ],
       reason: reason || "No reason provided"
     };
 
     const newAuditLogs = [auditEntry, ...auditLogs];
     setAuditLogs(newAuditLogs);
+
+    window.dispatchEvent(new Event('munyaka_fees_updated'));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: storageKey } }));
 
     showSuccess(`Fee record updated for ${studentName}. Status updated to ${status}.`);
   };

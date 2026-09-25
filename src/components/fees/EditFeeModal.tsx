@@ -117,8 +117,8 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
             balance,
             status,
             reason: String(reason || '').trim(),
-                        updatedAt: new Date().toISOString()
-                      };
+            updatedAt: new Date().toISOString()
+          };
     
           try {
             localStorage.setItem(storageKey, JSON.stringify(feeData));
@@ -130,8 +130,8 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
               try {
                 const records = JSON.parse(savedRecords);
                 const updatedRecords = records.map((r: any) => {
-                  if (r.id === student.id) {
-                    return { ...r, total: termFeeNum, paid: feePaidNum, status, balance };
+                  if (r.id === student.id || r.studentId === student.id) {
+                    return { ...r, total: termFeeNum, paid: feePaidNum, feePaid: feePaidNum, status, balance };
                   }
                   return r;
                 });
@@ -141,9 +141,37 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
                 console.error("Failed to update munyaka_fees_records array:", err);
               }
             }
+
+            // Also update munyaka_transactions to replace/add adjustment ledger entry so paid totals are synchronized
+            const txKey = 'munyaka_transactions';
+            const savedTxs = localStorage.getItem(txKey);
+            let txs = [];
+            try {
+              if (savedTxs) txs = JSON.parse(savedTxs);
+            } catch {}
+
+            // Add an explicit adjustment transaction or update ledger so feePaid is not overwritten by old individual transaction logs
+            const adjustmentTx = {
+              id: `TX-ADJ-${Date.now()}`,
+              date: new Date().toISOString().slice(0, 10),
+              amount: feePaidNum,
+              method: "Admin Direct Override",
+              ref: `OVERRIDE-${Date.now().toString().slice(-6)}`,
+              category: "Direct Edit",
+              studentId: student.id,
+              grade: student.grade || '',
+              stream: student.stream || '',
+            };
+            
+            // Filter out old Direct Edit transactions for this student and insert the new direct absolute feePaid ledger entry
+            const filteredTxs = txs.filter((t: any) => t.studentId !== student.id || t.category !== 'Direct Edit');
+            const newTxs = [adjustmentTx, ...filteredTxs];
+            localStorage.setItem(txKey, JSON.stringify(newTxs));
+            notifyDataChanged(txKey);
     
             // Dispatch custom event for instant cross-component sync
             window.dispatchEvent(new Event('munyaka_fees_updated'));
+            window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: storageKey } }));
     
             showSuccess("Fee record saved to LocalStorage");
           } catch (e) {
