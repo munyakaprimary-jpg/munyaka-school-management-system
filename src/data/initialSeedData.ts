@@ -1,336 +1,223 @@
-/**
- * AUTO-GENERATED SEED DATA FOR MUNYAKA SCHOOL MANAGEMENT SYSTEM
- * Generated at: 2026-09-25T05:57:14.296Z
- * DO NOT EDIT DIRECTLY — Run "npm run export-seed" on the backend server to regenerate.
- */
-
-export const initialFeeStructures = [
-  {
-    "id": "fs_1",
-    "grade": "Grade 4",
-    "term": "Term 1",
-    "tuitionFee": 12000,
-    "activityFee": 2500,
-    "lunchFee": 4500,
-    "total": 19000
-  }
-];
-export const feeStructures = initialFeeStructures;
-
-export const initialFeePayments = [
-  {
-    "id": "fee_1",
-    "studentId": "stu_1",
-    "studentName": "Amina Kiprop",
-    "amount": 15000,
-    "term": "Term 1",
-    "date": "2026-01-10",
-    "status": "Completed"
-  }
-];
-export const feePayments = initialFeePayments;
-export const initialFees = initialFeePayments;
-
-export const initialExamTypes = [
-  {
-    "id": "et_1",
-    "name": "Formative Assessment",
-    "weight": 30
-  },
-  {
-    "id": "et_2",
-    "name": "Mid-Term Exam",
-    "weight": 30
-  },
-  {
-    "id": "et_3",
-    "name": "End-Term Exam",
-    "weight": 40
-  }
-];
-export const examTypes = initialExamTypes;
-
-export const initialExams = [
-  {
-    "id": "asm_1",
-    "title": "Grade 4 Mathematics Opener",
-    "subject": "Mathematics",
-    "classLevel": "Grade 4",
-    "totalMarks": 50,
-    "duration": 60,
-    "status": "published",
-    "questions": []
-  }
-];
-export const exams = initialExams;
-export const initialExamSchedules = initialExams;
-
-export const initialStudyCorner = [
-  {
-    "id": "sc_1",
-    "title": "Grade 4 Science Revision Notes",
-    "subject": "Science & Technology",
-    "category": "class_notes",
-    "fileUrl": "#"
-  }
-];
-export const studyCorner = initialStudyCorner;
-
-export const initialLibraryBooks = [
-  {
-    "id": "lib_1",
-    "title": "Secondary Mathematics Bk 1",
-    "author": "KLB",
-    "isbn": "978-9966-10-001-1",
-    "totalCopies": 10,
-    "availableCopies": 8
-  }
-];
-export const libraryBooks = initialLibraryBooks;
-
-export const initialLibraryLogs = [
-  {
-    "id": "log_1",
-    "bookId": "lib_1",
-    "studentId": "stu_1",
-    "issuedDate": "2026-02-01",
-    "dueDate": "2026-02-15",
-    "status": "issued"
-  }
-];
-export const libraryLogs = initialLibraryLogs;
-
-export const initialGrades = {
-  "PP1": [
-    "Stream A"
-  ],
-  "PP2": [
-    "Stream A"
-  ],
-  "Grade 1": [
-    "East",
-    "West"
-  ],
-  "Grade 2": [
-    "East",
-    "West"
-  ],
-  "Grade 3": [
-    "North",
-    "South"
-  ],
-  "Grade 4": [
-    "Green",
-    "Blue"
-  ],
-  "Grade 5": [
-    "Green",
-    "Blue"
-  ],
-  "Grade 6": [
-    "Gold",
-    "Silver"
-  ],
-  "Grade 7": [
-    "Alpha",
-    "Beta"
-  ],
-  "Grade 8": [
-    "Alpha",
-    "Beta"
-  ],
-  "Grade 9": [
-    "Alpha",
-    "Beta"
-  ]
-};
-export const grades = initialGrades;
-
-export const initialStreams = [
-  "Green",
-  "Blue",
-  "East",
-  "West",
-  "North",
-  "South",
-  "Gold",
-  "Silver",
-  "Alpha",
-  "Beta"
-];
-export const streams = initialStreams;
-
-export const initialLearningAreas = [
-  {
-    "id": "la_1",
-    "name": "Mathematics",
-    "tier": "upper-primary"
-  },
-  {
-    "id": "la_2",
-    "name": "English Language",
-    "tier": "upper-primary"
-  },
-  {
-    "id": "la_3",
-    "name": "Kiswahili",
-    "tier": "upper-primary"
-  },
-  {
-    "id": "la_4",
-    "name": "Science & Technology",
-    "tier": "upper-primary"
-  }
-];
-export const learningAreas = initialLearningAreas;
-export const subjects = initialLearningAreas;
-
-export const initialStaff = [
-  {
-    "id": "st_1",
-    "name": "Teacher John Mwangi",
-    "role": "teacher",
-    "department": "ACADEMIC",
-    "staffCategory": "TEACHING",
-    "email": "john@munyaka.sc.ke"
-  }
-];
-export const staff = initialStaff;
-export const teachers = initialStaff;
-
-export const initialLearners = [
-  {
-    "id": "stu_1",
-    "admissionNumber": "MUN/2026/001",
-    "name": "Amina Kiprop",
-    "grade": "Grade 4",
-    "stream": "Green",
-    "gender": "Female"
-  }
-];
-export const learners = initialLearners;
-export const students = initialLearners;
-
-export const initialAttendance = {
-  "2026-02-10": {
-    "stu_1": "present"
-  }
-};
-export const attendance = initialAttendance;
-
-export const initialMarks = {
-  "asm_1": {
-    "stu_1": {
-      "score": 45,
-      "maxScore": 50,
-      "grade": "EE"
-    }
-  }
-};
-export const marks = initialMarks;
-export const assessments = initialMarks;
-
-export const initialReportCards = [];
-export const reportCards = initialReportCards;
-
-export const initialIctEquipment = [];
-export const ictEquipment = initialIctEquipment;
-
-export const initialScienceInventory = [];
-export const scienceInventory = initialScienceInventory;
-
-export const initialStoreInventory = [];
-export const storeInventory = initialStoreInventory;
-
-export const initialSettings = {
-  "schoolName": "Munyaka School",
-  "county": "Uasin Gishu"
-};
-export const settings = initialSettings;
-
 export const DEFAULT_CBC_CLUSTERS = [
   {
-    id: 'lower-primary',
-    name: 'Lower Primary (Grades 1–3)',
+    id: "cluster_1",
+    name: "Languages & Literacy",
+    description: "English, Kiswahili, Indigenous Languages, Foreign Languages",
+    color: "bg-indigo-500",
+    icon: "BookOpen",
     learningAreas: [
-      { id: 'lp_1', name: 'Literacy Activities', code: 'LIT', description: 'Reading, writing and communication' },
-      { id: 'lp_2', name: 'Mathematical Activities', code: 'MATH', description: 'Numbers, measurement, geometry' },
-      { id: 'lp_3', name: 'Environmental Activities', code: 'ENV', description: 'Social and natural environment' },
-      { id: 'lp_4', name: 'Hygiene and Nutrition', code: 'HN', description: 'Health, sanitation and nutrition' },
-      { id: 'lp_5', name: 'Religious Education', code: 'RE', description: 'CRE / IRE / HRE' },
-      { id: 'lp_6', name: 'Movement and Creative Activities', code: 'MCA', description: 'PE, music, art and craft' }
+      { id: "la_eng", name: "English Language Activities", code: "ENG-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
+      { id: "la_kisw", name: "Kiswahili Language Activities", code: "KISW-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] }
     ]
   },
   {
-    id: 'upper-primary',
-    name: 'Upper Primary (Grades 4–6)',
+    id: "cluster_2",
+    name: "Mathematics & Science",
+    description: "Mathematics, Integrated Science, Health Education",
+    color: "bg-emerald-500",
+    icon: "Calculator",
     learningAreas: [
-      { id: 'up_1', name: 'English Language', code: 'ENG', description: 'Grammar, composition, comprehension' },
-      { id: 'up_2', name: 'Kiswahili Language', code: 'KIS', description: 'Kusoma, kuandika na kuzungumza' },
-      { id: 'up_3', name: 'Mathematics', code: 'MTH', description: 'Advanced arithmetic, algebra, geometry' },
-      { id: 'up_4', name: 'Science and Technology', code: 'SCI', description: 'Scientific inquiry, ICT basics' },
-      { id: 'up_5', name: 'Agriculture and Nutrition', code: 'AGR', description: 'Crop production, animal husbandry, home science' },
-      { id: 'up_6', name: 'Social Studies', code: 'SST', description: 'Geography, history, citizenship' },
-      { id: 'up_7', name: 'Creative Arts', code: 'CA', description: 'Visual arts, music, crafts' },
-      { id: 'up_8', name: 'Religious Education (CRE/IRE/HRE)', code: 'RE', description: 'Spiritual and moral education' }
-    ]
-  },
-  {
-    id: 'junior-secondary',
-    name: 'Junior Secondary (Grades 7–9)',
-    learningAreas: [
-      { id: 'js_1', name: 'English', code: 'ENG', description: 'Advanced literature and communication' },
-      { id: 'js_2', name: 'Kiswahili', code: 'KIS', description: 'Fasihi na lugha ya Kiswahili' },
-      { id: 'js_3', name: 'Mathematics', code: 'MTH', description: 'Algebra, trigonometry, statistics' },
-      { id: 'js_4', name: 'Integrated Science', code: 'SCI', description: 'Physics, chemistry, biology combined' },
-      { id: 'js_5', name: 'Health Education', code: 'HE', description: 'Public health and human biology' },
-      { id: 'js_6', name: 'Agriculture and Nutrition', code: 'AGR', description: 'Modern farming and food science' },
-      { id: 'js_7', name: 'Social Studies', code: 'SST', description: 'History, civics, economics' },
-      { id: 'js_8', name: 'Religious Education', code: 'RE', description: 'CRE / IRE / HRE' },
-      { id: 'js_9', name: 'Pre-Technical Studies', code: 'PTS', description: 'Basic mechanics, woodwork, design' },
-      { id: 'js_10', name: 'Computer Science', code: 'CS', description: 'Coding, algorithms, digital literacy' },
-      { id: 'js_11', name: 'Creative Arts and Sports', code: 'CAS', description: 'Fine arts, sports science' }
+      { id: "la_math", name: "Mathematics Activities", code: "MATH-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
+      { id: "la_sci", name: "Integrated Science", code: "SCI-01", category: "Core", gradeLevels: ["Grade 4", "Grade 5", "Grade 6"] }
     ]
   }
 ];
 
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
-const _initialSeedData = {
-  feeStructures: initialFeeStructures,
-  feePayments: initialFeePayments,
-  fees: initialFeePayments,
-  examTypes: initialExamTypes,
-  exams: initialExams,
-  studyCorner: initialStudyCorner,
-  libraryBooks: initialLibraryBooks,
-  libraryLogs: initialLibraryLogs,
-  grades: initialGrades,
-  streams: initialStreams,
-  learningAreas: initialLearningAreas,
-  subjects: initialLearningAreas,
-  staff: initialStaff,
-  teachers: initialStaff,
-  learners: initialLearners,
-  students: initialLearners,
-  attendance: initialAttendance,
-  marks: initialMarks,
-  assessments: initialMarks,
-  reportCards: initialReportCards,
-  ictEquipment: initialIctEquipment,
-  scienceInventory: initialScienceInventory,
-  storeInventory: initialStoreInventory,
-  settings: initialSettings
+export const initialSeedData = {
+  "students": [
+    {
+      "id": "1789881428012",
+      "name": "FRED KAPONDI",
+      "fullName": "FRED KAPONDI",
+      "admissionNumber": "MUN-G1-002-2026",
+      "admNo": "MUN-G1-002-2026",
+      "assessmentNumber": "",
+      "assessmentNo": "",
+      "assessment": "",
+      "gender": "Male",
+      "grade": "GRADE 1",
+      "stream": "GREEN",
+      "parentName": "ANTONY MURIMA",
+      "guardian": "ANTONY MURIMA",
+      "phoneNumber": "0734525612",
+      "phone": "0734525612",
+      "createdAt": "2026-09-20T05:17:08.012Z"
+    },
+    {
+      "id": "1789880616052",
+      "name": "GRACE MUTHONI",
+      "fullName": "GRACE MUTHONI",
+      "admissionNumber": "MUN-G6-002-2026",
+      "admNo": "MUN-G6-002-2026",
+      "assessmentNumber": "A00345678",
+      "assessmentNo": "A00345678",
+      "assessment": "A00345678",
+      "gender": "Female",
+      "grade": "GRADE 6",
+      "stream": "GREEN",
+      "parentName": "MARY IKANYI",
+      "guardian": "MARY IKANYI",
+      "phoneNumber": "0734567345",
+      "phone": "0734567345",
+      "createdAt": "2026-09-20T05:03:36.052Z"
+    },
+    {
+      "id": "1789880087460",
+      "name": "BRIGHTON KIPKOECH",
+      "fullName": "BRIGHTON KIPKOECH",
+      "admissionNumber": "MUN-G6-001-2026",
+      "admNo": "MUN-G6-001-2026",
+      "assessmentNumber": "B003754306",
+      "assessmentNo": "B003754306",
+      "assessment": "B003754306",
+      "gender": "Male",
+      "grade": "GRADE 6",
+      "stream": "BLUE",
+      "parentName": "VIOLA JEPKORIR MAIYO",
+      "guardian": "VIOLA JEPKORIR MAIYO",
+      "phoneNumber": "0713345267",
+      "phone": "0713345267",
+      "createdAt": "2026-09-20T05:09:03.812Z"
+    },
+    {
+      "id": "1789826147758",
+      "name": "PETER MWANGI",
+      "fullName": "PETER MWANGI",
+      "admissionNumber": "MUN-G1-001-2026",
+      "admNo": "MUN-G1-001-2026",
+      "assessmentNumber": "",
+      "assessmentNo": "",
+      "assessment": "",
+      "gender": "Female",
+      "grade": "Grade 1",
+      "stream": "North",
+      "parentName": "ALICE WANJIRU",
+      "guardian": "ALICE WANJIRU",
+      "phoneNumber": "0789456778",
+      "phone": "0789456778",
+      "createdAt": "2026-09-19T13:55:47.758Z"
+    }
+  ],
+  "staff": [
+    {
+      "name": "JAMES NDIKI",
+      "nationalId": "ID-1789969050865",
+      "email": "jndiki@munyaka.sc.ke",
+      "phone": "0740583662",
+      "tscNumber": "327775",
+      "role": "ICT TECHNICIAN",
+      "systemRole": "ict_technician",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1789969050866_xbcva",
+      "full_name": "JAMES NDIKI",
+      "staffId": "MUN-2430",
+      "tempAccessCode": "134082",
+      "joined": "2026-09-21",
+      "assignedSubjects": []
+    },
+    {
+      "name": "ALICE MAINA",
+      "nationalId": "ID-1790072852855",
+      "email": "maina@munyaka.sc.ke",
+      "phone": "0722345567",
+      "tscNumber": "1123345",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790072852855_fys7j",
+      "full_name": "ALICE MAINA",
+      "staffId": "MUN-4881",
+      "tempAccessCode": "313167",
+      "joined": "2026-09-22"
+    },
+    {
+      "name": "ANN NDUTA MBUGUA",
+      "nationalId": "ID-1790157907617",
+      "email": "annmbugua@munyaka.sc.ke",
+      "phone": "0724467137",
+      "tscNumber": "452588",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790157907618_qk42q",
+      "full_name": "ANN NDUTA MBUGUA",
+      "staffId": "MUN-2020",
+      "tempAccessCode": "443492",
+      "joined": "2026-09-23"
+    },
+    {
+      "name": "JANET GATHONI KUNGU",
+      "nationalId": "ID-1790170127489",
+      "email": "janetkungu@munyaka.sc.ke",
+      "phone": "0720869310",
+      "tscNumber": "487406",
+      "role": "LIBRARIAN",
+      "systemRole": "librarian",
+      "department": "Library",
+      "status": "Active",
+      "id": "staff_1790170127489_uw96a",
+      "full_name": "JANET GATHONI KUNGU",
+      "staffId": "MUN-3433",
+      "tempAccessCode": "774938",
+      "joined": "2026-09-23"
+    },
+    {
+      "name": "LAWRENCE NDEGWA GIOSHE",
+      "nationalId": "ID-1790174007943",
+      "email": "lndegwa@munyaka.sc.ke",
+      "phone": "0720583097",
+      "tscNumber": "516570",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790174007943_xtycd",
+      "full_name": "LAWRENCE NDEGWA GIOSHE",
+      "staffId": "MUN-1788",
+      "tempAccessCode": "493306",
+      "joined": "2026-09-23"
+    }
+  ],
+  "attendance": {
+    "Grade 4_Blue_2026-08-26_morning": {
+      "session": "morning",
+      "class": "Grade 4",
+      "stream": "Blue",
+      "date": "2026-08-26",
+      "savedAt": "2026-08-26T07:05:17.006Z"
+    },
+    "Grade 4_all_2026-08-26_morning": {
+      "session": "morning",
+      "class": "Grade 4",
+      "stream": "all",
+      "date": "2026-08-26",
+      "savedAt": "2026-08-26T07:13:13.158Z"
+    },
+    "Grade 6_all_2026-08-26_morning": {
+      "session": "morning",
+      "class": "Grade 6",
+      "stream": "all",
+      "date": "2026-08-26",
+      "savedAt": "2026-08-26T08:56:37.698Z"
+    }
+  },
+  "fees": []
 };
 
-export const INITIAL_SEED_DATA = _initialSeedData;
-export const initialSeedData = _initialSeedData;
+(initialSeedData as any).learners = initialSeedData.students;
 
-export const mockLearners = initialLearners;
-export const mockStudents = initialLearners;
-export const mockStaff = initialStaff;
-export const mockExams = initialExams;
-export const mockLibrary = initialLibraryBooks;
-export const mockFinances = initialFeePayments;
+export const INITIAL_SEED_DATA = initialSeedData;
 
-export default _initialSeedData;
+export const mockLearners = initialSeedData.students || [];
+export const mockStudents = initialSeedData.students || [];
+export const mockStaff = initialSeedData.staff || [];
+export const mockExams = (initialSeedData as any).exams || [];
+export const mockLibrary = (initialSeedData as any).libraryBooks || [];
+export const mockFinances = (initialSeedData as any).fees || [];
+
+export default initialSeedData;

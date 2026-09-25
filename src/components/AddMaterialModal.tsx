@@ -645,7 +645,6 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
                     onClick={() => {
                       const event = new CustomEvent("open_document_preview", { detail: form.attachment });
                       window.dispatchEvent(event);
-                      onClose();
                     }}
                     className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-indigo-300 bg-white text-indigo-700 hover:bg-indigo-50 transition-colors font-semibold shadow-xs"
                   >

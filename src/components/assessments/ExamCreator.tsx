@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api } from "@/lib/api";
 import {
   Save,
   Plus,
@@ -41,8 +40,6 @@ import type { Assessment, Question, QuestionType } from "@/types/questions";
 const QUESTION_BANK_KEY = "question_bank";
 const ASSESSMENTS_KEY = "assessments";
 const ALL_SET_EXAMS_KEY = "all_set_exams";
-const DRAFT_EXAM_QUESTIONS_KEY = "draft_exam_questions";
-const PENDING_EXAM_SYNC_KEY = "pending_exam_sync";
 const ASSESSMENT_CATEGORIES = [
   { value: "formative", label: "Formative Quiz" },
   { value: "summative", label: "Summative Quiz" },
@@ -307,35 +304,9 @@ const ExamCreator: React.FC = () => {
   const [passingPercentage, setPassingPercentage] = useState(50);
 
   // Questions
-    const [questions, setQuestions] = useState<Question[]>(() => {
-      // Load draft questions from localStorage on mount
-      try {
-        const raw = localStorage.getItem(DRAFT_EXAM_QUESTIONS_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          // Validate each question has required fields
-          return parsed.filter((q: any) =>
-            q && typeof q === 'object' && q.id && q.prompt && typeof q.points === 'number'
-          );
-        }
-      } catch {
-        // Ignore parse errors, start fresh
-      }
-      return [];
-    });
-    const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
-  
-    // Persist draft questions to localStorage whenever they change
-    useEffect(() => {
-      try {
-        localStorage.setItem(DRAFT_EXAM_QUESTIONS_KEY, JSON.stringify(questions));
-      } catch {
-        // Ignore quota exceeded or private mode errors
-      }
-    }, [questions]);
-  
-    const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [publishedAssessmentId, setPublishedAssessmentId] = useState<string>("");
@@ -592,40 +563,41 @@ const ExamCreator: React.FC = () => {
   // ── Publish assessment ────────────────────────────────────────────────────
   const handlePublish = useCallback(async () => {
     if (!String(title || '').trim()) {
-      showError("Please enter an assessment title before publishing.");
-      return;
-    }
-    if (!selectedGrade || !String(subject || '').trim()) {
-      showError("Please pick a target grade and enter a subject.");
-      return;
-    }
+          showError("Please enter an assessment title before publishing.");
+          return;
+        }
+        if (!selectedGrade || !String(subject || '').trim()) {
+          showError("Please pick a target grade and enter a subject.");
+          return;
+        }
     if (questions.length === 0) {
       showError("Add at least one question before publishing.");
       return;
     }
 
     setIsSaving(true);
+    await new Promise((r) => setTimeout(r, 400));
 
     try {
       const now = new Date().toISOString();
       const assessmentId = publishedAssessmentId || generateId("asm");
       const calcTotalMarks = totalMarks || questions.reduce((s, q) => s + q.points, 0);
-      const resolvedClassLevel = (String(classLevel || '').trim() || selectedGrade).trim();
-      // Persist `"all"` (not an empty string) so the Teacher Grading
-      // Dashboard's stream filter has a canonical sentinel.
-      const resolvedStream =
-        selectedStream && selectedStream !== ALL_STREAMS_VALUE
-          ? String(selectedStream || '').trim()
-          : "all";
-
-      // 1. Update question bank so StudentAssessmentView can find this exam.
-      const bankPayload = {
-        metadata: {
-          title: String(title || '').trim(),
-          category,
-          classLevel: resolvedClassLevel,
-          subject: String(subject || '').trim(),
-          duration,
+            const resolvedClassLevel = (String(classLevel || '').trim() || selectedGrade).trim();
+            // Persist `"all"` (not an empty string) so the Teacher Grading
+            // Dashboard's stream filter has a canonical sentinel.
+            const resolvedStream =
+              selectedStream && selectedStream !== ALL_STREAMS_VALUE
+                ? String(selectedStream || '').trim()
+                : "all";
+      
+            // 1. Update question bank so StudentAssessmentView can find this exam.
+            const bankPayload = {
+              metadata: {
+                title: String(title || '').trim(),
+                category,
+                classLevel: resolvedClassLevel,
+                subject: String(subject || '').trim(),
+                duration,
           totalMarks: calcTotalMarks,
           randomize: false,
           showFeedback: false,
@@ -645,13 +617,13 @@ const ExamCreator: React.FC = () => {
       //    Teacher Grading Dashboard's cascading filter can match them
       //    directly.
       const newAssessment: Assessment & { grade: string; stream: string } = {
-        id: assessmentId,
-        title: String(title || '').trim(),
-        category,
-        classLevel: resolvedClassLevel,
-        grade: selectedGrade,
-        stream: resolvedStream,
-        subject: String(subject || '').trim(),
+              id: assessmentId,
+              title: String(title || '').trim(),
+              category,
+              classLevel: resolvedClassLevel,
+              grade: selectedGrade,
+              stream: resolvedStream,
+              subject: String(subject || '').trim(),
         duration,
         totalMarks: calcTotalMarks,
         randomizeQuestions: false,
@@ -689,38 +661,6 @@ const ExamCreator: React.FC = () => {
       // Dispatch event so SetExamsList + Teacher Grading Dashboard + Marked
       // Scripts list refresh their dropdown options automatically.
       window.dispatchEvent(new Event("assessments_updated"));
-
-      // 3. Attempt to send the payload to the backend API.
-      //    If the server is unreachable, save locally with sync_status: "pending_offline".
-      const completePayload = {
-        assessment: newAssessment,
-        questionBank: bankPayload,
-      };
-
-      try {
-        await api.post("/api/assessments/publish", completePayload);
-        // Server accepted the payload — clear any pending offline sync for this assessment
-        try {
-          const pending = JSON.parse(localStorage.getItem(PENDING_EXAM_SYNC_KEY) || "[]");
-          const filtered = pending.filter((item: any) => item.assessmentId !== assessmentId);
-          localStorage.setItem(PENDING_EXAM_SYNC_KEY, JSON.stringify(filtered));
-        } catch { /* ignore */ }
-      } catch {
-        // Server unreachable — save complete exam payload locally and queue for sync
-        try {
-          const pendingItem = {
-            assessmentId,
-            sync_status: "pending_offline",
-            payload: completePayload,
-            queuedAt: now,
-          };
-          const pending = JSON.parse(localStorage.getItem(PENDING_EXAM_SYNC_KEY) || "[]");
-          const filtered = pending.filter((item: any) => item.assessmentId !== assessmentId);
-          filtered.push(pendingItem);
-          localStorage.setItem(PENDING_EXAM_SYNC_KEY, JSON.stringify(filtered));
-        } catch { /* ignore */ }
-        showError("Server unreachable. Exam saved locally and queued for sync.");
-      }
 
       setIsPublished(true);
       setPublishedAssessmentId(newAssessment.id);

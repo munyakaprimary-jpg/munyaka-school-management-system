@@ -107,22 +107,7 @@ const showOfflineBanner = () => {
 };
 
 /**
- * Creates an AbortSignal with a timeout.
- * Uses AbortSignal.timeout when available (modern browsers), otherwise falls back to AbortController.
- */
-function createTimeoutSignal(timeoutMs: number): AbortSignal {
-  if (typeof AbortSignal.timeout === 'function') {
-    return AbortSignal.timeout(timeoutMs);
-  }
-  // Fallback for older environments
-  const controller = new AbortController();
-  setTimeout(() => controller.abort(), timeoutMs);
-  return controller.signal;
-}
-
-/**
- * Core Request wrapper with offline fallback, response interceptors, and robust timeout handling.
- * All network requests are wrapped in try/catch to prevent state corruption on network failures.
+ * Core Request wrapper with offline fallback and response interceptors
  */
 async function request<T = unknown>(
   path: string,
@@ -146,25 +131,9 @@ async function request<T = unknown>(
     }
   } catch { /* ignore */ }
 
-  // Create a timeout signal (default 10s for POST/PUT, 6s for GET)
-  const defaultTimeout = method === 'GET' ? 6000 : 10000;
-  const timeoutSignal = createTimeoutSignal(defaultTimeout);
-
-  // Combine with any user-provided signal
-  let combinedSignal: AbortSignal;
-  if (options.signal) {
-    const controller = new AbortController();
-    const abort = () => controller.abort();
-    options.signal.addEventListener('abort', abort);
-    timeoutSignal.addEventListener('abort', abort);
-    combinedSignal = controller.signal;
-  } else {
-    combinedSignal = timeoutSignal;
-  }
-
   let response: Response;
   try {
-    response = await fetch(url, { ...options, headers, signal: combinedSignal });
+    response = await fetch(url, { ...options, headers, signal: options.signal || AbortSignal.timeout(6000) });
   } catch (err: any) {
     // Network error / unreachable / offline fallback
     showOfflineBanner();
@@ -204,14 +173,10 @@ async function request<T = unknown>(
 
   let body: any = null;
   const contentType = response.headers.get('content-type') || '';
-  try {
-    if (contentType.includes('application/json')) {
-      body = await response.json();
-    } else {
-      body = await response.text();
-    }
-  } catch {
-    body = null;
+  if (contentType.includes('application/json')) {
+    body = await response.json().catch(() => null);
+  } else {
+    body = await response.text().catch(() => null);
   }
 
   // Cache successful GET responses for offline fallback
@@ -230,26 +195,6 @@ async function request<T = unknown>(
   }
 
   return body as T;
-}
-
-/**
- * Health check endpoint with timeout - useful for checking server connectivity
- * before attempting critical operations.
- */
-export async function checkServerHealth(timeoutMs = 5000): Promise<boolean> {
-  try {
-    const baseUrl = getApiBaseUrl();
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    const response = await fetch(`${baseUrl}/api/health`, {
-      method: 'GET',
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    return response.ok;
-  } catch {
-    return false;
-  }
 }
 
 export const api = {
