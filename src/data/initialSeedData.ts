@@ -1,223 +1,242 @@
-export const DEFAULT_CBC_CLUSTERS = [
+/**
+ * AUTO-GENERATED SEED DATA FOR MUNYAKA SCHOOL MANAGEMENT SYSTEM
+ * Generated at: 2026-09-25T04:41:12.970Z
+ * DO NOT EDIT DIRECTLY — Run "npm run export-seed" on the backend server to regenerate.
+ */
+
+export const initialFeeStructures = [
   {
-    id: "cluster_1",
-    name: "Languages & Literacy",
-    description: "English, Kiswahili, Indigenous Languages, Foreign Languages",
-    color: "bg-indigo-500",
-    icon: "BookOpen",
-    learningAreas: [
-      { id: "la_eng", name: "English Language Activities", code: "ENG-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
-      { id: "la_kisw", name: "Kiswahili Language Activities", code: "KISW-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] }
-    ]
-  },
-  {
-    id: "cluster_2",
-    name: "Mathematics & Science",
-    description: "Mathematics, Integrated Science, Health Education",
-    color: "bg-emerald-500",
-    icon: "Calculator",
-    learningAreas: [
-      { id: "la_math", name: "Mathematics Activities", code: "MATH-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
-      { id: "la_sci", name: "Integrated Science", code: "SCI-01", category: "Core", gradeLevels: ["Grade 4", "Grade 5", "Grade 6"] }
-    ]
+    "id": "fs_1",
+    "grade": "Grade 4",
+    "term": "Term 1",
+    "tuitionFee": 12000,
+    "activityFee": 2500,
+    "lunchFee": 4500,
+    "total": 19000
   }
 ];
-
-export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
-
-export const initialSeedData = {
-  "students": [
-    {
-      "id": "1789881428012",
-      "name": "FRED KAPONDI",
-      "fullName": "FRED KAPONDI",
-      "admissionNumber": "MUN-G1-002-2026",
-      "admNo": "MUN-G1-002-2026",
-      "assessmentNumber": "",
-      "assessmentNo": "",
-      "assessment": "",
-      "gender": "Male",
-      "grade": "GRADE 1",
-      "stream": "GREEN",
-      "parentName": "ANTONY MURIMA",
-      "guardian": "ANTONY MURIMA",
-      "phoneNumber": "0734525612",
-      "phone": "0734525612",
-      "createdAt": "2026-09-20T05:17:08.012Z"
-    },
-    {
-      "id": "1789880616052",
-      "name": "GRACE MUTHONI",
-      "fullName": "GRACE MUTHONI",
-      "admissionNumber": "MUN-G6-002-2026",
-      "admNo": "MUN-G6-002-2026",
-      "assessmentNumber": "A00345678",
-      "assessmentNo": "A00345678",
-      "assessment": "A00345678",
-      "gender": "Female",
-      "grade": "GRADE 6",
-      "stream": "GREEN",
-      "parentName": "MARY IKANYI",
-      "guardian": "MARY IKANYI",
-      "phoneNumber": "0734567345",
-      "phone": "0734567345",
-      "createdAt": "2026-09-20T05:03:36.052Z"
-    },
-    {
-      "id": "1789880087460",
-      "name": "BRIGHTON KIPKOECH",
-      "fullName": "BRIGHTON KIPKOECH",
-      "admissionNumber": "MUN-G6-001-2026",
-      "admNo": "MUN-G6-001-2026",
-      "assessmentNumber": "B003754306",
-      "assessmentNo": "B003754306",
-      "assessment": "B003754306",
-      "gender": "Male",
-      "grade": "GRADE 6",
-      "stream": "BLUE",
-      "parentName": "VIOLA JEPKORIR MAIYO",
-      "guardian": "VIOLA JEPKORIR MAIYO",
-      "phoneNumber": "0713345267",
-      "phone": "0713345267",
-      "createdAt": "2026-09-20T05:09:03.812Z"
-    },
-    {
-      "id": "1789826147758",
-      "name": "PETER MWANGI",
-      "fullName": "PETER MWANGI",
-      "admissionNumber": "MUN-G1-001-2026",
-      "admNo": "MUN-G1-001-2026",
-      "assessmentNumber": "",
-      "assessmentNo": "",
-      "assessment": "",
-      "gender": "Female",
-      "grade": "Grade 1",
-      "stream": "North",
-      "parentName": "ALICE WANJIRU",
-      "guardian": "ALICE WANJIRU",
-      "phoneNumber": "0789456778",
-      "phone": "0789456778",
-      "createdAt": "2026-09-19T13:55:47.758Z"
-    }
-  ],
-  "staff": [
-    {
-      "name": "JAMES NDIKI",
-      "nationalId": "ID-1789969050865",
-      "email": "jndiki@munyaka.sc.ke",
-      "phone": "0740583662",
-      "tscNumber": "327775",
-      "role": "ICT TECHNICIAN",
-      "systemRole": "ict_technician",
-      "department": "School Administration",
-      "status": "Active",
-      "id": "staff_1789969050866_xbcva",
-      "full_name": "JAMES NDIKI",
-      "staffId": "MUN-2430",
-      "tempAccessCode": "134082",
-      "joined": "2026-09-21",
-      "assignedSubjects": []
-    },
-    {
-      "name": "ALICE MAINA",
-      "nationalId": "ID-1790072852855",
-      "email": "maina@munyaka.sc.ke",
-      "phone": "0722345567",
-      "tscNumber": "1123345",
-      "role": "CLASS TEACHER",
-      "systemRole": "class_teacher",
-      "department": "School Administration",
-      "status": "Active",
-      "id": "staff_1790072852855_fys7j",
-      "full_name": "ALICE MAINA",
-      "staffId": "MUN-4881",
-      "tempAccessCode": "313167",
-      "joined": "2026-09-22"
-    },
-    {
-      "name": "ANN NDUTA MBUGUA",
-      "nationalId": "ID-1790157907617",
-      "email": "annmbugua@munyaka.sc.ke",
-      "phone": "0724467137",
-      "tscNumber": "452588",
-      "role": "CLASS TEACHER",
-      "systemRole": "class_teacher",
-      "department": "School Administration",
-      "status": "Active",
-      "id": "staff_1790157907618_qk42q",
-      "full_name": "ANN NDUTA MBUGUA",
-      "staffId": "MUN-2020",
-      "tempAccessCode": "443492",
-      "joined": "2026-09-23"
-    },
-    {
-      "name": "JANET GATHONI KUNGU",
-      "nationalId": "ID-1790170127489",
-      "email": "janetkungu@munyaka.sc.ke",
-      "phone": "0720869310",
-      "tscNumber": "487406",
-      "role": "LIBRARIAN",
-      "systemRole": "librarian",
-      "department": "Library",
-      "status": "Active",
-      "id": "staff_1790170127489_uw96a",
-      "full_name": "JANET GATHONI KUNGU",
-      "staffId": "MUN-3433",
-      "tempAccessCode": "774938",
-      "joined": "2026-09-23"
-    },
-    {
-      "name": "LAWRENCE NDEGWA GIOSHE",
-      "nationalId": "ID-1790174007943",
-      "email": "lndegwa@munyaka.sc.ke",
-      "phone": "0720583097",
-      "tscNumber": "516570",
-      "role": "CLASS TEACHER",
-      "systemRole": "class_teacher",
-      "department": "School Administration",
-      "status": "Active",
-      "id": "staff_1790174007943_xtycd",
-      "full_name": "LAWRENCE NDEGWA GIOSHE",
-      "staffId": "MUN-1788",
-      "tempAccessCode": "493306",
-      "joined": "2026-09-23"
-    }
-  ],
-  "attendance": {
-    "Grade 4_Blue_2026-08-26_morning": {
-      "session": "morning",
-      "class": "Grade 4",
-      "stream": "Blue",
-      "date": "2026-08-26",
-      "savedAt": "2026-08-26T07:05:17.006Z"
-    },
-    "Grade 4_all_2026-08-26_morning": {
-      "session": "morning",
-      "class": "Grade 4",
-      "stream": "all",
-      "date": "2026-08-26",
-      "savedAt": "2026-08-26T07:13:13.158Z"
-    },
-    "Grade 6_all_2026-08-26_morning": {
-      "session": "morning",
-      "class": "Grade 6",
-      "stream": "all",
-      "date": "2026-08-26",
-      "savedAt": "2026-08-26T08:56:37.698Z"
-    }
+export const initialFees = [
+  {
+    "id": "fee_1",
+    "studentId": "stu_1",
+    "studentName": "Amina Kiprop",
+    "amount": 15000,
+    "term": "Term 1",
+    "date": "2026-01-10",
+    "status": "Completed"
+  }
+];
+export const initialExamTypes = [
+  {
+    "id": "et_1",
+    "name": "Formative Assessment",
+    "weight": 30
   },
-  "fees": []
+  {
+    "id": "et_2",
+    "name": "Mid-Term Exam",
+    "weight": 30
+  },
+  {
+    "id": "et_3",
+    "name": "End-Term Exam",
+    "weight": 40
+  }
+];
+export const initialExams = [
+  {
+    "id": "asm_1",
+    "title": "Grade 4 Mathematics Opener",
+    "subject": "Mathematics",
+    "classLevel": "Grade 4",
+    "totalMarks": 50,
+    "duration": 60,
+    "status": "published",
+    "questions": []
+  }
+];
+export const initialStudyCorner = [
+  {
+    "id": "sc_1",
+    "title": "Grade 4 Science Revision Notes",
+    "subject": "Science & Technology",
+    "category": "class_notes",
+    "fileUrl": "#"
+  }
+];
+export const initialLibrary = [
+  {
+    "id": "lib_1",
+    "title": "Secondary Mathematics Bk 1",
+    "author": "KLB",
+    "isbn": "978-9966-10-001-1",
+    "totalCopies": 10,
+    "availableCopies": 8
+  }
+];
+export const initialLibraryLogs = [
+  {
+    "id": "log_1",
+    "bookId": "lib_1",
+    "studentId": "stu_1",
+    "issuedDate": "2026-02-01",
+    "dueDate": "2026-02-15",
+    "status": "issued"
+  }
+];
+export const initialGrades = {
+  "PP1": [
+    "Stream A"
+  ],
+  "PP2": [
+    "Stream A"
+  ],
+  "Grade 1": [
+    "East",
+    "West"
+  ],
+  "Grade 2": [
+    "East",
+    "West"
+  ],
+  "Grade 3": [
+    "North",
+    "South"
+  ],
+  "Grade 4": [
+    "Green",
+    "Blue"
+  ],
+  "Grade 5": [
+    "Green",
+    "Blue"
+  ],
+  "Grade 6": [
+    "Gold",
+    "Silver"
+  ],
+  "Grade 7": [
+    "Alpha",
+    "Beta"
+  ],
+  "Grade 8": [
+    "Alpha",
+    "Beta"
+  ],
+  "Grade 9": [
+    "Alpha",
+    "Beta"
+  ]
+};
+export const initialStreams = [
+  "Green",
+  "Blue",
+  "East",
+  "West",
+  "North",
+  "South",
+  "Gold",
+  "Silver",
+  "Alpha",
+  "Beta"
+];
+export const initialLearningAreas = [
+  {
+    "id": "la_1",
+    "name": "Mathematics",
+    "tier": "upper-primary"
+  },
+  {
+    "id": "la_2",
+    "name": "English Language",
+    "tier": "upper-primary"
+  },
+  {
+    "id": "la_3",
+    "name": "Kiswahili",
+    "tier": "upper-primary"
+  },
+  {
+    "id": "la_4",
+    "name": "Science & Technology",
+    "tier": "upper-primary"
+  }
+];
+export const initialStaff = [
+  {
+    "id": "st_1",
+    "name": "Teacher John Mwangi",
+    "role": "teacher",
+    "department": "ACADEMIC",
+    "staffCategory": "TEACHING",
+    "email": "john@munyaka.sc.ke"
+  }
+];
+export const initialStudents = [
+  {
+    "id": "stu_1",
+    "admissionNumber": "MUN/2026/001",
+    "name": "Amina Kiprop",
+    "grade": "Grade 4",
+    "stream": "Green",
+    "gender": "Female"
+  }
+];
+export const initialLearners = initialStudents;
+export const initialAttendance = {
+  "2026-02-10": {
+    "stu_1": "present"
+  }
+};
+export const initialMarks = {
+  "asm_1": {
+    "stu_1": {
+      "score": 45,
+      "maxScore": 50,
+      "grade": "EE"
+    }
+  }
+};
+export const initialReportCards = [];
+export const initialIctLabEquipment = [];
+export const initialScienceLabInventory = [];
+export const initialStoreInventory = [];
+export const initialSchoolSettings = {
+  "schoolName": "Munyaka School",
+  "county": "Uasin Gishu"
 };
 
-(initialSeedData as any).learners = initialSeedData.students;
+export const initialSeedData = {
+  version: "v2.6.0",
+  generatedAt: "2026-09-25T04:41:12.970Z",
+  feeStructures: initialFeeStructures,
+  fees: initialFees,
+  examTypes: initialExamTypes,
+  exams: initialExams,
+  studyCorner: initialStudyCorner,
+  libraryBooks: initialLibrary,
+  libraryLogs: initialLibraryLogs,
+  grades: initialGrades,
+  streams: initialStreams,
+  learningAreas: initialLearningAreas,
+  staff: initialStaff,
+  students: initialStudents,
+  learners: initialStudents,
+  attendance: initialAttendance,
+  marks: initialMarks,
+  reportCards: initialReportCards,
+  ictLabEquipment: initialIctLabEquipment,
+  scienceLabInventory: initialScienceLabInventory,
+  storeInventory: initialStoreInventory,
+  schoolSettings: initialSchoolSettings,
+};
 
 export const INITIAL_SEED_DATA = initialSeedData;
-
-export const mockLearners = initialSeedData.students || [];
-export const mockStudents = initialSeedData.students || [];
-export const mockStaff = initialSeedData.staff || [];
-export const mockExams = (initialSeedData as any).exams || [];
-export const mockLibrary = (initialSeedData as any).libraryBooks || [];
-export const mockFinances = (initialSeedData as any).fees || [];
+export const mockLearners = initialStudents;
+export const mockStudents = initialStudents;
+export const mockStaff = initialStaff;
+export const mockExams = initialExams;
+export const mockLibrary = initialLibrary;
+export const mockFinances = initialFees;
 
 export default initialSeedData;
