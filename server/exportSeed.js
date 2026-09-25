@@ -34,12 +34,11 @@ function readCentralDb() {
 
 const db = readCentralDb();
 
-// Extract categories across ALL school management modules & menus
-const feeStructures = db.feeStructures || db.fees_structures || [
+const feeStructures = db.feeStructures || [
   { id: 'fs_1', grade: 'Grade 4', term: 'Term 1', tuitionFee: 12000, activityFee: 2500, lunchFee: 4500, total: 19000 }
 ];
 
-const fees = db.fees || db.feePayments || db.transactions || [
+const feePayments = db.fees || db.feePayments || db.transactions || [
   { id: 'fee_1', studentId: 'stu_1', studentName: 'Amina Kiprop', amount: 15000, term: 'Term 1', date: '2026-01-10', status: 'Completed' }
 ];
 
@@ -92,7 +91,7 @@ const staff = db.staff || db.users || [
   { id: 'st_1', name: 'Teacher John Mwangi', role: 'teacher', department: 'ACADEMIC', staffCategory: 'TEACHING', email: 'john@munyaka.sc.ke' }
 ];
 
-const students = db.students || db.learners || [
+const learners = db.students || db.learners || [
   { id: 'stu_1', admissionNumber: 'MUN/2026/001', name: 'Amina Kiprop', grade: 'Grade 4', stream: 'Green', gender: 'Female' }
 ];
 
@@ -105,95 +104,121 @@ const marks = db.marks || db.assessmentResults || {
 };
 
 const reportCards = db.reportCards || [];
-const ictLabEquipment = db.ictLabEquipment || [];
-const scienceLabInventory = db.scienceLabInventory || [];
+const ictEquipment = db.ictLabEquipment || [];
+const scienceInventory = db.scienceLabInventory || [];
 const storeInventory = db.storeInventory || [];
-const schoolSettings = db.schoolSettings || { schoolName: 'Munyaka School', county: 'Uasin Gishu' };
-
-const fullSeedObject = {
-  version: 'v2.6.0',
-  generatedAt: new Date().toISOString(),
-  feeStructures,
-  fees,
-  examTypes,
-  exams,
-  studyCorner,
-  libraryBooks,
-  libraryLogs,
-  grades,
-  streams,
-  learningAreas,
-  staff,
-  students,
-  attendance,
-  marks,
-  reportCards,
-  ictLabEquipment,
-  scienceLabInventory,
-  storeInventory,
-  schoolSettings,
-};
+const settings = db.schoolSettings || { schoolName: 'Munyaka School', county: 'Uasin Gishu' };
 
 const tsContent = `/**
  * AUTO-GENERATED SEED DATA FOR MUNYAKA SCHOOL MANAGEMENT SYSTEM
- * Generated at: ${fullSeedObject.generatedAt}
+ * Generated at: ${new Date().toISOString()}
  * DO NOT EDIT DIRECTLY — Run "npm run export-seed" on the backend server to regenerate.
  */
 
 export const initialFeeStructures = ${JSON.stringify(feeStructures, null, 2)};
-export const initialFees = ${JSON.stringify(fees, null, 2)};
+export const initialFeePayments = ${JSON.stringify(feePayments, null, 2)};
 export const initialExamTypes = ${JSON.stringify(examTypes, null, 2)};
 export const initialExams = ${JSON.stringify(exams, null, 2)};
 export const initialStudyCorner = ${JSON.stringify(studyCorner, null, 2)};
-export const initialLibrary = ${JSON.stringify(libraryBooks, null, 2)};
+export const initialLibraryBooks = ${JSON.stringify(libraryBooks, null, 2)};
 export const initialLibraryLogs = ${JSON.stringify(libraryLogs, null, 2)};
 export const initialGrades = ${JSON.stringify(grades, null, 2)};
 export const initialStreams = ${JSON.stringify(streams, null, 2)};
 export const initialLearningAreas = ${JSON.stringify(learningAreas, null, 2)};
 export const initialStaff = ${JSON.stringify(staff, null, 2)};
-export const initialStudents = ${JSON.stringify(students, null, 2)};
-export const initialLearners = initialStudents;
+export const initialLearners = ${JSON.stringify(learners, null, 2)};
 export const initialAttendance = ${JSON.stringify(attendance, null, 2)};
 export const initialMarks = ${JSON.stringify(marks, null, 2)};
 export const initialReportCards = ${JSON.stringify(reportCards, null, 2)};
-export const initialIctLabEquipment = ${JSON.stringify(ictLabEquipment, null, 2)};
-export const initialScienceLabInventory = ${JSON.stringify(scienceLabInventory, null, 2)};
+export const initialIctEquipment = ${JSON.stringify(ictEquipment, null, 2)};
+export const initialScienceInventory = ${JSON.stringify(scienceInventory, null, 2)};
 export const initialStoreInventory = ${JSON.stringify(storeInventory, null, 2)};
-export const initialSchoolSettings = ${JSON.stringify(schoolSettings, null, 2)};
+export const initialSettings = ${JSON.stringify(settings, null, 2)};
 
-export const initialSeedData = {
-  version: "${fullSeedObject.version}",
-  generatedAt: "${fullSeedObject.generatedAt}",
+// Aliases for compatibility across services & stores
+export const initialFees = initialFeePayments;
+export const initialStudents = initialLearners;
+export const INITIAL_SEED_DATA = {
   feeStructures: initialFeeStructures,
-  fees: initialFees,
+  feePayments: initialFeePayments,
+  fees: initialFeePayments,
   examTypes: initialExamTypes,
   exams: initialExams,
   studyCorner: initialStudyCorner,
-  libraryBooks: initialLibrary,
+  libraryBooks: initialLibraryBooks,
   libraryLogs: initialLibraryLogs,
   grades: initialGrades,
   streams: initialStreams,
   learningAreas: initialLearningAreas,
   staff: initialStaff,
-  students: initialStudents,
-  learners: initialStudents,
+  learners: initialLearners,
+  students: initialLearners,
   attendance: initialAttendance,
   marks: initialMarks,
   reportCards: initialReportCards,
-  ictLabEquipment: initialIctLabEquipment,
-  scienceLabInventory: initialScienceLabInventory,
+  ictEquipment: initialIctEquipment,
+  scienceInventory: initialScienceInventory,
   storeInventory: initialStoreInventory,
-  schoolSettings: initialSchoolSettings,
+  settings: initialSettings,
+  schoolSettings: initialSettings
 };
 
-export const INITIAL_SEED_DATA = initialSeedData;
-export const mockLearners = initialStudents;
-export const mockStudents = initialStudents;
+export const mockLearners = initialLearners;
+export const mockStudents = initialLearners;
 export const mockStaff = initialStaff;
 export const mockExams = initialExams;
-export const mockLibrary = initialLibrary;
-export const mockFinances = initialFees;
+export const mockLibrary = initialLibraryBooks;
+export const mockFinances = initialFeePayments;
 
+export const DEFAULT_CBC_CLUSTERS = [
+  {
+    id: 'lower-primary',
+    name: 'Lower Primary (Grades 1–3)',
+    learningAreas: [
+      { id: 'lp_1', name: 'Literacy Activities', code: 'LIT', description: 'Reading, writing and communication' },
+      { id: 'lp_2', name: 'Mathematical Activities', code: 'MATH', description: 'Numbers, measurement, geometry' },
+      { id: 'lp_3', name: 'Environmental Activities', code: 'ENV', description: 'Social and natural environment' },
+      { id: 'lp_4', name: 'Hygiene and Nutrition', code: 'HN', description: 'Health, sanitation and nutrition' },
+      { id: 'lp_5', name: 'Religious Education', code: 'RE', description: 'CRE / IRE / HRE' },
+      { id: 'lp_6', name: 'Movement and Creative Activities', code: 'MCA', description: 'PE, music, art and craft' }
+    ]
+  },
+  {
+    id: 'upper-primary',
+    name: 'Upper Primary (Grades 4–6)',
+    learningAreas: [
+      { id: 'up_1', name: 'English Language', code: 'ENG', description: 'Grammar, composition, comprehension' },
+      { id: 'up_2', name: 'Kiswahili Language', code: 'KIS', description: 'Kusoma, kuandika na kuzungumza' },
+      { id: 'up_3', name: 'Mathematics', code: 'MTH', description: 'Advanced arithmetic, algebra, geometry' },
+      { id: 'up_4', name: 'Science and Technology', code: 'SCI', description: 'Scientific inquiry, ICT basics' },
+      { id: 'up_5', name: 'Agriculture and Nutrition', code: 'AGR', description: 'Crop production, animal husbandry, home science' },
+      { id: 'up_6', name: 'Social Studies', code: 'SST', description: 'Geography, history, citizenship' },
+      { id: 'up_7', name: 'Creative Arts', code: 'CA', description: 'Visual arts, music, crafts' },
+      { id: 'up_8', name: 'Religious Education (CRE/IRE/HRE)', code: 'RE', description: 'Spiritual and moral education' }
+    ]
+  },
+  {
+    id: 'junior-secondary',
+    name: 'Junior Secondary (Grades 7–9)',
+    learningAreas: [
+      { id: 'js_1', name: 'English', code: 'ENG', description: 'Advanced literature and communication' },
+      { id: 'js_2', name: 'Kiswahili', code: 'KIS', description: 'Fasihi na lugha ya Kiswahili' },
+      { id: 'js_3', name: 'Mathematics', code: 'MTH', description: 'Algebra, trigonometry, statistics' },
+      { id: 'js_4', name: 'Integrated Science', code: 'SCI', description: 'Physics, chemistry, biology combined' },
+      { id: 'js_5', name: 'Health Education', code: 'HE', description: 'Public health and human biology' },
+      { id: 'js_6', name: 'Agriculture and Nutrition', code: 'AGR', description: 'Modern farming and food science' },
+      { id: 'js_7', name: 'Social Studies', code: 'SST', description: 'History, civics, economics' },
+      { id: 'js_8', name: 'Religious Education', code: 'RE', description: 'CRE / IRE / HRE' },
+      { id: 'js_9', name: 'Pre-Technical Studies', code: 'PTS', description: 'Basic mechanics, woodwork, design' },
+      { id: 'js_10', name: 'Computer Science', code: 'CS', description: 'Coding, algorithms, digital literacy' },
+      { id: 'js_11', name: 'Creative Arts and Sports', code: 'CAS', description: 'Fine arts, sports science' }
+    ]
+  }
+];
+
+export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
+
+const initialSeedData = INITIAL_SEED_DATA;
 export default initialSeedData;
 `;
 
@@ -204,7 +229,7 @@ console.log('======================================================');
 console.log(' 🚀 MUNYAKA SEED EXPORT SUMMARY (npm run export-seed) ');
 console.log('======================================================');
 console.log(` • Fee Structures        : ${feeStructures.length} records`);
-console.log(` • Fee Payments / Fees   : ${fees.length} records`);
+console.log(` • Fee Payments          : ${feePayments.length} records`);
 console.log(` • Exam Types            : ${examTypes.length} records`);
 console.log(` • Exam Schedules / Exams: ${exams.length} records`);
 console.log(` • Study Corner Materials: ${studyCorner.length} records`);
@@ -214,12 +239,12 @@ console.log(` • Academic Grades       : ${Object.keys(grades).length} grade le
 console.log(` • Streams               : ${streams.length} streams`);
 console.log(` • Learning Areas        : ${learningAreas.length} subjects`);
 console.log(` • Personnel & Staff     : ${staff.length} staff records`);
-console.log(` • Learners / Students   : ${students.length} student records`);
+console.log(` • Learners / Students   : ${learners.length} student records`);
 console.log(` • Attendance Records    : ${Object.keys(attendance).length} dates`);
 console.log(` • Assessment Marks      : ${Object.keys(marks).length} assessments`);
 console.log(` • Report Cards          : ${reportCards.length} records`);
-console.log(` • ICT Lab Equipment     : ${ictLabEquipment.length} items`);
-console.log(` • Science Lab Inventory : ${scienceLabInventory.length} items`);
+console.log(` • ICT Equipment         : ${ictEquipment.length} items`);
+console.log(` • Science Inventory     : ${scienceInventory.length} items`);
 console.log(` • Store Inventory       : ${storeInventory.length} items`);
 console.log(` • School Settings       : Loaded`);
 console.log('======================================================');
