@@ -697,112 +697,57 @@ const Fees = () => {
   };
 
   const handleRecordPayment = (result: { transaction: Transaction; activationKey?: string; issuedTo?: string; deviceId?: string; expiresAt?: string } | Transaction) => {
+    const tx = 'transaction' in result ? result.transaction : result;
+    const matchedLearner = studentsFromStore.find(l => l.id === tx.studentId);
+    const studentName = matchedLearner ? matchedLearner.name : "Learner";
+    const studentGrade = matchedLearner ? matchedLearner.grade : tx.grade ?? "";
+
+    const enrichedTx: ExtendedTransaction = {
+      ...tx,
+      grade: studentGrade,
+    };
+
+    // Persist to local transactions
+    const nextList = [enrichedTx, ...localTransactions];
+    setLocalTransactions(nextList);
+
+    // Update per-student override for immediate balance update
     try {
-      const tx = 'transaction' in result ? result.transaction : result;
-      const matchedLearner = studentsFromStore.find(l => l.id === tx.studentId);
-      const studentName = matchedLearner ? matchedLearner.name : "Learner";
-      const studentGrade = matchedLearner ? matchedLearner.grade : tx.grade ?? "";
-
-      const enrichedTx: ExtendedTransaction = {
-        ...tx,
-        grade: studentGrade,
-      };
-
-      // Persist to local transactions and localStorage immediately
-      const nextList = [enrichedTx, ...localTransactions];
-      setLocalTransactions(nextList);
-      try {
-        localStorage.setItem(TX_KEY, JSON.stringify(nextList));
-        localStorage.setItem('munyaka_fee_payments', JSON.stringify(nextList));
-        localStorage.setItem('munyaka_fees', JSON.stringify(nextList));
-        notifyDataChanged(TX_KEY);
-        notifyDataChanged('munyaka_fee_payments');
-        notifyDataChanged('munyaka_fees');
-      } catch (e) {
-        console.error('Failed to write fee payments to localStorage:', e);
+      const overrideKey = `${FEE_OVERRIDES_KEY_PREFIX}${tx.studentId}`;
+      const prevOverride = localStorage.getItem(overrideKey);
+      let prevPaid = 0;
+      if (prevOverride) {
+        const parsed = JSON.parse(prevOverride);
+        prevPaid = parsed.feePaid ?? parsed.paid ?? 0;
       }
-
-      // Update per-student override for immediate balance update & overpayment/cleared handling
-      try {
-        const overrideKey = `${FEE_OVERRIDES_KEY_PREFIX}${tx.studentId}`;
-        const prevOverride = localStorage.getItem(overrideKey);
-        let prevPaid = 0;
-        let total = 0;
-        const fee = calculatedFees.find(f => f.id === tx.studentId);
-        
-        if (prevOverride) {
-          try {
-            const parsed = JSON.parse(prevOverride);
-            prevPaid = parsed.feePaid ?? parsed.paid ?? 0;
-            total = parsed.termFee ?? parsed.total ?? fee?.total ?? 0;
-          } catch {
-            total = fee?.total ?? 0;
-          }
-        } else {
-          total = fee?.total ?? 0;
-        }
-
-        const newPaid = prevPaid + tx.amount;
-        const balance = total - newPaid; // Can be negative for overpayments
-        const status = newPaid >= total ? (newPaid > total ? 'Overpaid' : 'Cleared') : (newPaid > 0 ? 'Partial' : 'Pending');
-        
-        const overrideData = {
-          id: tx.studentId,
-          termFee: total,
-          feePaid: newPaid,
-          balance,
-          status,
-          paid: newPaid,
-          total,
-          reason: `Auto-update from ${tx.method} payment ${tx.id}`,
-        };
-        localStorage.setItem(overrideKey, JSON.stringify(overrideData));
-        notifyDataChanged(overrideKey);
-
-        // Also update calculatedFees in memory/storage if present
-        const allFeesRaw = localStorage.getItem('munyaka_calculated_fees');
-        if (allFeesRaw) {
-          try {
-            const allFees = JSON.parse(allFeesRaw);
-            if (Array.isArray(allFees)) {
-              const updatedFees = allFees.map((f: any) => {
-                if (f.id === tx.studentId) {
-                  const p = (f.paid || 0) + tx.amount;
-                  const t = f.total || total;
-                  return { ...f, paid: p, balance: t - p, status: p >= t ? (p > t ? 'Overpaid' : 'Cleared') : 'Partial' };
-                }
-                return f;
-              });
-              localStorage.setItem('munyaka_calculated_fees', JSON.stringify(updatedFees));
-              notifyDataChanged('munyaka_calculated_fees');
-            }
-          } catch {}
-        }
-      } catch (e) {
-        console.error('Failed to update student fee override:', e);
+      let total = 0;
+      const fee = calculatedFees.find(f => f.id === tx.studentId);
+      if (prevOverride) {
+        const parsed = JSON.parse(prevOverride);
+        total = parsed.termFee ?? parsed.total ?? fee?.total ?? 0;
+      } else {
+        total = fee?.total ?? 0;
       }
-
-      // Add audit log entry
-      const auditEntry: AuditLogEntry = {
-        id: `AUD-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        user: 'Admin/Staff',
-        action: 'RECORD_PAYMENT',
-        details: `Recorded payment of KES ${tx.amount.toLocaleString()} for ${studentName} (${tx.ref})`
-      };
-      const nextAudit = [auditEntry, ...auditLogs];
-      setAuditLogs(nextAudit);
-      localStorage.setItem(AUDIT_LOGS_KEY, JSON.stringify(nextAudit));
-      notifyDataChanged(AUDIT_LOGS_KEY);
-
-      setLastTransaction(enrichedTx);
-      setIsReceiptOpen(true);
-      showSuccess(`Payment of KES ${tx.amount.toLocaleString()} recorded successfully!`);
-    } catch (err: any) {
-      console.error("handleRecordPayment error:", err);
-      showError("Failed to record payment locally: " + (err?.message || err));
+      const newPaid = prevPaid + tx.amount;
+      const balance = Math.max(0, total - newPaid);
+      const status = deriveStatus(total, newPaid);
+      localStorage.setItem(overrideKey, JSON.stringify({
+        id: tx.studentId,
+        termFee: total,
+        feePaid: newPaid,
+        balance,
+        status,
+        reason: `Auto-update from ${tx.method} payment ${tx.id}`,
+      }));
+      notifyDataChanged(overrideKey);
+    } catch (e) {
+      console.error('Failed to update student fee override:', e);
     }
-  };
+
+    // Add audit log entry
+    const auditEntry: AuditLogEntry = {
+      id: `AUD-${Date.now()}`,
+      timestamp: new Date().toISOString(),
       admin: tx.paymentMethod === 'cash' ? (tx.paymentDetails as any)?.receivedBy ?? 'Cashier' : 'System Admin',
       action: `Payment Recorded (${tx.method})`,
       studentName,
