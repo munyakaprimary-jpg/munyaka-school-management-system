@@ -46,6 +46,7 @@ interface Material {
   description: string;
   createdAt: string;
   bookmarked?: boolean;
+  framework?: { name?: string };
 }
 
 const STORAGE_KEY = "munyaka_study_corner_materials";
@@ -62,7 +63,8 @@ const DEFAULT_MATERIALS: Material[] = [
     downloads: 342,
     fileSize: "4.2 MB",
     description: "Comprehensive revision guide covering number operations, fractions, measurement, and geometry with worked examples.",
-    createdAt: "2026-01-15"
+    createdAt: "2026-01-15",
+    framework: { name: "CBC" }
   },
   {
     id: "mat_2",
@@ -75,7 +77,8 @@ const DEFAULT_MATERIALS: Material[] = [
     downloads: 289,
     fileSize: "8.5 MB",
     description: "Junior Secondary CBC aligned notes covering living things, laboratory safety, mixtures, and the human digestive system.",
-    createdAt: "2026-01-20"
+    createdAt: "2026-01-20",
+    framework: { name: "CBC" }
   },
   {
     id: "mat_3",
@@ -88,7 +91,8 @@ const DEFAULT_MATERIALS: Material[] = [
     downloads: 412,
     fileSize: "3.1 MB",
     description: "Step-by-step guide to writing compelling narrative, descriptive, and functional essays for upper primary learners.",
-    createdAt: "2026-02-01"
+    createdAt: "2026-02-01",
+    framework: { name: "CBC" }
   },
   {
     id: "mat_4",
@@ -101,7 +105,8 @@ const DEFAULT_MATERIALS: Material[] = [
     downloads: 530,
     fileSize: "2.4 MB",
     description: "Standardized assessment test with complete marking scheme for Junior Secondary CBC agriculture and nutrition.",
-    createdAt: "2026-02-10"
+    createdAt: "2026-02-10",
+    framework: { name: "CBC" }
   },
   {
     id: "mat_5",
@@ -114,7 +119,8 @@ const DEFAULT_MATERIALS: Material[] = [
     downloads: 195,
     fileSize: "6.0 MB",
     description: "Fun and engaging coloring, tracing, and outdoor exploration tasks for pre-primary learners.",
-    createdAt: "2026-02-14"
+    createdAt: "2026-02-14",
+    framework: { name: "CBC" }
   }
 ];
 
@@ -160,34 +166,34 @@ const StudyCorner: React.FC = () => {
 
   // Save materials
   const persistMaterials = (updated: Material[]) => {
-    setMaterials(updated);
+    setMaterials(updated || []);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated || []));
     } catch {}
   };
 
   const toggleBookmark = (id: string) => {
-    const next = bookmarks.includes(id)
-      ? bookmarks.filter(b => b !== id)
-      : [...bookmarks, id];
+    const list = bookmarks || [];
+    const next = list.includes(id)
+      ? list.filter(b => b !== id)
+      : [...list, id];
     setBookmarks(next);
     try {
       localStorage.setItem("munyaka_study_bookmarks", JSON.stringify(next));
     } catch {}
-    showSuccess(bookmarks.includes(id) ? "Removed from bookmarks" : "Saved to bookmarks");
+    showSuccess(list.includes(id) ? "Removed from bookmarks" : "Saved to bookmarks");
   };
 
   const handleDownload = (mat: Material) => {
-    const updated = materials.map(m => m.id === mat.id ? { ...m, downloads: m.downloads + 1 } : m);
+    const list = materials || [];
+    const updated = list.map(m => m?.id === mat?.id ? { ...m, downloads: (m.downloads || 0) + 1 } : m);
     persistMaterials(updated);
-    showSuccess(`Downloading "${mat.title}" (${mat.fileSize})…`);
+    showSuccess(`Downloading "${mat?.title || 'Material'}" (${mat?.fileSize || ''})…`);
     
-    // Simulate blob download or open link
     const link = document.createElement('a');
-    link.href = mat.fileUrl || '#';
-    link.download = `${mat.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+    link.href = mat?.fileUrl || '#';
+    link.download = `${(mat?.title || 'material').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
     document.body.appendChild(link);
-    // If external or blob
     setTimeout(() => {
       document.body.removeChild(link);
     }, 100);
@@ -195,7 +201,8 @@ const StudyCorner: React.FC = () => {
 
   const handleDelete = (id: string) => {
     if (!confirm("Are you sure you want to delete this learning material?")) return;
-    const filtered = materials.filter(m => m.id !== id);
+    const list = materials || [];
+    const filtered = list.filter(m => m?.id !== id);
     persistMaterials(filtered);
     showSuccess("Material deleted successfully.");
   };
@@ -204,21 +211,31 @@ const StudyCorner: React.FC = () => {
   const subjectsList = ["Mathematics", "English", "Kiswahili", "Science & Technology", "Integrated Science", "Agriculture & Nutrition", "Social Studies", "Environmental Activities"];
 
   const filteredMaterials = useMemo(() => {
-    return materials.filter(m => {
+    const list = materials || [];
+    return list.filter(m => {
+      if (!m) return false;
+      const title = m.title || "";
+      const subject = m.subject || "";
+      const description = m.description || "";
+      const author = m.author || "";
+      
       const matchesSearch = 
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.author.toLowerCase().includes(searchQuery.toLowerCase());
+        title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        author.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesGrade = selectedGrade === "all" || m.grade === selectedGrade;
-      const matchesSubject = selectedSubject === "all" || m.subject === selectedSubject;
+      const matchesSubject = selectedSubject === "all" || subject === selectedSubject;
       const matchesCategory = selectedCategory === "all" || m.category === selectedCategory;
-      const matchesTab = activeTab === "all" || bookmarks.includes(m.id);
+      const matchesTab = activeTab === "all" || (bookmarks || []).includes(m.id);
 
       return matchesSearch && matchesGrade && matchesSubject && matchesCategory && matchesTab;
     });
   }, [materials, searchQuery, selectedGrade, selectedSubject, selectedCategory, activeTab, bookmarks]);
+
+  const totalCount = (materials || []).length;
+  const bookmarkCount = (bookmarks || []).length;
 
   return (
     <div className="space-y-6 pb-20 max-w-full">
@@ -258,7 +275,7 @@ const StudyCorner: React.FC = () => {
                 activeTab === "all" ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500 hover:text-gray-900"
               )}
             >
-              All Materials ({materials.length})
+              All Materials ({totalCount})
             </button>
             <button
               onClick={() => setActiveTab("bookmarks")}
@@ -267,7 +284,7 @@ const StudyCorner: React.FC = () => {
                 activeTab === "bookmarks" ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500 hover:text-gray-900"
               )}
             >
-              <Bookmark size={15} /> Bookmarks ({bookmarks.length})
+              <Bookmark size={15} /> Bookmarks ({bookmarkCount})
             </button>
           </div>
 
@@ -285,7 +302,6 @@ const StudyCorner: React.FC = () => {
 
         {/* Dropdown Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-100">
-          {/* Grade filter */}
           <div>
             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">
               Grade Level
@@ -296,13 +312,12 @@ const StudyCorner: React.FC = () => {
               className="w-full h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             >
               <option value="all">All Grades (PP1 - Grade 9)</option>
-              {gradesList.map(g => (
+              {(gradesList || []).map(g => (
                 <option key={g} value={g}>{g}</option>
               ))}
             </select>
           </div>
 
-          {/* Subject filter */}
           <div>
             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">
               Learning Area / Subject
@@ -313,13 +328,12 @@ const StudyCorner: React.FC = () => {
               className="w-full h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             >
               <option value="all">All Subjects</option>
-              {subjectsList.map(s => (
+              {(subjectsList || []).map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
           </div>
 
-          {/* Category filter */}
           <div>
             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">
               Resource Category
@@ -341,7 +355,7 @@ const StudyCorner: React.FC = () => {
       </div>
 
       {/* Materials Grid */}
-      {filteredMaterials.length === 0 ? (
+      {(!filteredMaterials || filteredMaterials.length === 0) ? (
         <div className="bg-white rounded-3xl p-16 text-center border border-gray-100 shadow-sm">
           <div className="w-16 h-16 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto mb-4">
             <BookOpen size={28} />
@@ -359,20 +373,26 @@ const StudyCorner: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredMaterials.map((mat) => {
-            const isBookmarked = bookmarks.includes(mat.id);
+          {(filteredMaterials || []).map((mat) => {
+            if (!mat) return null;
+            const isBookmarked = (bookmarks || []).includes(mat.id);
+            const frameworkName = mat?.framework?.name || 'CBC';
             return (
               <Card key={mat.id} className="border border-gray-100 shadow-sm rounded-3xl overflow-hidden hover:shadow-md transition-all flex flex-col justify-between group">
                 <CardContent className="p-6 space-y-4">
-                  {/* Top tags */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Badge className="bg-indigo-50 text-indigo-700 border-indigo-100 font-bold text-xs rounded-lg px-2.5 py-0.5">
-                        {mat.grade}
+                        {mat.grade || 'General'}
                       </Badge>
                       <Badge variant="outline" className="text-gray-600 font-medium text-xs rounded-lg px-2.5 py-0.5">
-                        {mat.subject}
+                        {mat.subject || 'General'}
                       </Badge>
+                      {mat.framework && (
+                        <Badge variant="secondary" className="text-[10px] bg-purple-50 text-purple-700 font-semibold">
+                          {frameworkName}
+                        </Badge>
+                      )}
                     </div>
                     <button
                       onClick={() => toggleBookmark(mat.id)}
@@ -386,24 +406,21 @@ const StudyCorner: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Title & Description */}
                   <div className="space-y-2">
                     <h3 className="font-black text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2 text-base">
-                      {mat.title}
+                      {mat.title || 'Untitled Material'}
                     </h3>
                     <p className="text-xs text-gray-500 line-clamp-3 leading-relaxed font-medium">
-                      {mat.description}
+                      {mat.description || 'No description provided.'}
                     </p>
                   </div>
 
-                  {/* Meta details */}
                   <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400 font-semibold">
-                    <span>By {mat.author}</span>
-                    <span>{mat.fileSize} · {mat.downloads} downloads</span>
+                    <span>By {mat.author || 'Munyaka Staff'}</span>
+                    <span>{mat.fileSize || '1.0 MB'} · {mat.downloads || 0} downloads</span>
                   </div>
                 </CardContent>
 
-                {/* Card footer actions */}
                 <div className="px-6 py-4 bg-gray-50/70 border-t border-gray-100 flex items-center justify-between gap-2">
                   <Button
                     variant="outline"
@@ -433,7 +450,7 @@ const StudyCorner: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-              </CardCard>
+              </Card>
             );
           })}
         </div>
@@ -444,7 +461,8 @@ const StudyCorner: React.FC = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAdded={(newMat) => {
-          const updated = [newMat, ...materials];
+          const list = materials || [];
+          const updated = [newMat, ...list];
           persistMaterials(updated);
           showSuccess("Learning material successfully added to Study Corner!");
         }}
@@ -457,10 +475,10 @@ const StudyCorner: React.FC = () => {
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <Badge className="bg-indigo-50 text-indigo-700 font-bold">{previewMaterial.grade}</Badge>
-                  <Badge variant="outline">{previewMaterial.subject}</Badge>
+                  <Badge className="bg-indigo-50 text-indigo-700 font-bold">{previewMaterial.grade || 'General'}</Badge>
+                  <Badge variant="outline">{previewMaterial.subject || 'General'}</Badge>
                 </div>
-                <h2 className="text-xl font-black text-gray-900">{previewMaterial.title}</h2>
+                <h2 className="text-xl font-black text-gray-900">{previewMaterial.title || 'Untitled'}</h2>
               </div>
               <button
                 onClick={() => setPreviewMaterial(null)}
@@ -473,18 +491,18 @@ const StudyCorner: React.FC = () => {
             <div className="space-y-4 text-sm text-gray-600">
               <div className="p-4 bg-gray-50 rounded-2xl space-y-2">
                 <div className="flex justify-between text-xs font-bold text-gray-500">
-                  <span>Author: {previewMaterial.author}</span>
-                  <span>Size: {previewMaterial.fileSize}</span>
+                  <span>Author: {previewMaterial.author || 'Staff'}</span>
+                  <span>Size: {previewMaterial.fileSize || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between text-xs font-bold text-gray-500">
-                  <span>Category: {previewMaterial.category.toUpperCase()}</span>
-                  <span>Downloads: {previewMaterial.downloads}</span>
+                  <span>Category: {(previewMaterial.category || 'notes').toUpperCase()}</span>
+                  <span>Downloads: {previewMaterial.downloads || 0}</span>
                 </div>
               </div>
 
               <div>
                 <h4 className="font-bold text-gray-900 mb-1">Description</h4>
-                <p className="leading-relaxed">{previewMaterial.description}</p>
+                <p className="leading-relaxed">{previewMaterial.description || 'No description available.'}</p>
               </div>
 
               <div className="p-6 border-2 border-dashed border-gray-200 rounded-2xl text-center space-y-3 bg-indigo-50/30">
