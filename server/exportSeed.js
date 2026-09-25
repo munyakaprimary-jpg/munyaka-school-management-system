@@ -149,7 +149,7 @@ export const initialSeedData = ${JSON.stringify(dbData, null, 2)};
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
-export const SEED_VERSION = "2026.09.25.EXAMS_v1";
+export const SEED_VERSION = "2026.09.25.FULL_PORTAL_v1";
 
 export const initialAttendance = (initialSeedData as any).attendance || {};
 export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
@@ -163,6 +163,14 @@ export const initialExamSchedules = (initialSeedData as any).examSchedules || (i
 export const initialExamTypes = (initialSeedData as any).examTypes || (initialSeedData as any).exam_types || [];
 export const initialMarks = (initialSeedData as any).marks || (initialSeedData as any).assessments || (initialSeedData as any).marked_student_submissions || [];
 export const initialQuestions = (initialSeedData as any).questions || (initialSeedData as any).question_bank || [];
+export const initialLearners = initialSeedData.students || [];
+export const initialStaff = initialSeedData.staff || [];
+export const initialReportCards = (initialSeedData as any).reportCards || [];
+export const initialFeeStructures = (initialSeedData as any).feeStructures || (initialSeedData as any).fees_structures || [];
+export const initialFeePayments = (initialSeedData as any).fees || (initialSeedData as any).payments || [];
+export const initialStudyCorner = (initialSeedData as any).studyCorner || (initialSeedData as any).study_materials || [];
+export const initialLibraryBooks = (initialSeedData as any).libraryBooks || (initialSeedData as any).library_books || [];
+export const initialLibraryLogs = (initialSeedData as any).libraryLogs || (initialSeedData as any).library_logs || [];
 export const initialLearners = initialSeedData.students || [];
 export const initialStaff = initialSeedData.staff || [];
 export const initialReportCards = (initialSeedData as any).reportCards || [];
