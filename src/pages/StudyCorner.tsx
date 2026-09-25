@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { DocumentPreviewViewer } from "@/components/DocumentPreviewViewer";
 import {
   strandCategories,
   gradeLevels,
@@ -1127,25 +1128,11 @@ export default function StudyCorner() {
 
   const handleOpenAttachment = useCallback(async (att: Attachment | null | undefined) => {
     if (!att) return;
-    setIsLoadingPreview(true);
     setPreviewAttachment(att);
-    setZoomLevel(100);
-
-    let url = att.dataUrl || att.url || '';
-    if (!url && att.id) {
-      try {
-        const allIdb = await getAllStudyMaterialsIdb();
-        const foundMat = allIdb.find(m => m.id === att.id || m.attachment?.id === att.id);
-        if (foundMat?.attachment?.dataUrl) {
-          url = foundMat.attachment.dataUrl;
-        }
-      } catch {
-        // fallback
-      }
-    }
-    setResolvedDataUrl(url);
-    setIsLoadingPreview(false);
+    setIsPreviewOpen(true);
   }, []);
+
+  const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
 
   const handleDownloadAllForGrade = useCallback(async () => {
     if (selectedGrade === null) return;
