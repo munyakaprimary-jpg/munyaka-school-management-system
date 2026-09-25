@@ -583,21 +583,13 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">Upcoming Events</h3>
               </div>
               <span className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-full">
-                {events.length} {events.length === 1 ? 'Date' : 'Dates'}
+                Upcoming Events ({events.length})
               </span>
             </div>
 
             <div className="space-y-5">
               {events.length === 0 ? (
-                <div className="text-center py-8 px-4 space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
-                    <CalendarDays size={22} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No upcoming events scheduled</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Click "Schedule Event" above to add new school events.</p>
-                  </div>
-                </div>
+                <div className="p-8 text-center text-gray-500">No upcoming events scheduled.</div>
               ) : (
                 events.map((event) => {
                 const dateObj = new Date(event.date);
