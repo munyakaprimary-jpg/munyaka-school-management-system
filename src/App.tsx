@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { initialSeedData } from "@/data/initialSeedData";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -341,11 +342,11 @@ const App = () => {
             ['munyaka_students', initialSeedData.students || []],
             ['munyaka_fees_records', (initialSeedData as any).fees || []],
             ['munyaka_student_fees', (initialSeedData as any).fees || []],
-            ['munyaka_transactions', initialSeedData.transactions || []],
+            ['munyaka_transactions', (initialSeedData as any).transactions || []],
             ['munyaka_attendance', (initialSeedData as any).attendance || []],
             ['munyaka_grades', (initialSeedData as any).grades || []],
             ['munyaka_exam_types', (initialSeedData as any).examTypes || []],
-            ['munyaka_library_books', initialSeedData.libraryBooks || []],
+            ['munyaka_library_books', (initialSeedData as any).libraryBooks || []],
             ['munyaka_fee_structures', (initialSeedData as any).feeStructures || []],
             ['munyaka_notices', (initialSeedData as any).notices || []],
             ['munyaka_system_settings_v3', (initialSeedData as any).settings || {}],

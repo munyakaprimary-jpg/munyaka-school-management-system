@@ -5,7 +5,6 @@
 
 import { STORAGE_KEYS, readStorage, writeStorage, removeStorage, clearAllStorage } from '@/services/persistentStore';
 import CentralDataSyncManager from './CentralDataSyncManager';
-import CentralDataSyncManager from './CentralDataSyncManager';
 
 export const UnifiedDataStorage = {
   get: <T>(key: string, fallback: T): T => {

@@ -43,7 +43,7 @@ const hydrateClusters = (savedClusters: ClusterData[]): ClusterData[] => {
         id: `default-${defaultCluster.id}-${index}-${Date.now().toString(36)}`,
         name: area.name,
         periodsPerWeek: 4,
-        type: area.type,
+        type: (area as any).type || 'core',
         isDefault: true,
       })),
     };
@@ -57,12 +57,12 @@ const LearningAreas = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        return hydrateClusters(JSON.parse(saved)) as ClusterData[];
+        return hydrateClusters(JSON.parse(saved) as ClusterData[]) as unknown as ClusterData[];
       } catch {
-        return buildDefaultClusters() as ClusterData[];
+        return buildDefaultClusters() as unknown as ClusterData[];
       }
     }
-    return buildDefaultClusters();
+    return buildDefaultClusters() as unknown as ClusterData[];
   });
 
   const [activeTab, setActiveTab] = useState<string>('pre-primary');

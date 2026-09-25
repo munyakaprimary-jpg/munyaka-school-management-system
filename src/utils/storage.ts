@@ -398,8 +398,8 @@ export function hydrateAllStores(): HydrationReport {
     report.keys.push(STORAGE_KEYS.ASSESSMENT_SCORES);
 
     // 1g. Library books
-    if (Array.isArray(INITIAL_SEED_DATA?.libraryBooks)) {
-      seedIfAbsent(STORAGE_KEYS.LIBRARY_BOOKS, INITIAL_SEED_DATA.libraryBooks);
+    if (Array.isArray((INITIAL_SEED_DATA as any)?.libraryBooks)) {
+      seedIfAbsent(STORAGE_KEYS.LIBRARY_BOOKS, (INITIAL_SEED_DATA as any).libraryBooks);
     }
     report.keys.push(STORAGE_KEYS.LIBRARY_BOOKS);
 
@@ -440,7 +440,7 @@ export function hydrateAllStores(): HydrationReport {
     if (ls.getItem(STORAGE_KEYS.TRANSACTIONS) === null) {
       seedIfAbsent(
         STORAGE_KEYS.TRANSACTIONS,
-        Array.isArray(INITIAL_SEED_DATA?.transactions) ? INITIAL_SEED_DATA.transactions : []
+        Array.isArray((INITIAL_SEED_DATA as any)?.transactions) ? (INITIAL_SEED_DATA as any).transactions : []
       );
     }
     report.keys.push(STORAGE_KEYS.TRANSACTIONS);

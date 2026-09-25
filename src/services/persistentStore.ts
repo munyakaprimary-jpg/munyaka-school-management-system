@@ -375,8 +375,8 @@ export function hydrateFromSeed(): void {
   }
 
   // Transactions
-  if (Array.isArray(INITIAL_SEED_DATA.transactions)) {
-    seedIfAbsent('munyaka_transactions', INITIAL_SEED_DATA.transactions);
+  if (Array.isArray((INITIAL_SEED_DATA as any).transactions)) {
+    seedIfAbsent('munyaka_transactions', (INITIAL_SEED_DATA as any).transactions);
   }
 
   // Attendance
@@ -385,8 +385,8 @@ export function hydrateFromSeed(): void {
   }
 
   // Library books
-  if (Array.isArray(INITIAL_SEED_DATA.libraryBooks)) {
-    seedIfAbsent('munyaka_library_books', INITIAL_SEED_DATA.libraryBooks);
+  if (Array.isArray((INITIAL_SEED_DATA as any).libraryBooks)) {
+    seedIfAbsent('munyaka_library_books', (INITIAL_SEED_DATA as any).libraryBooks);
   }
 
   // ICT assets
