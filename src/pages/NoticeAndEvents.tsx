@@ -131,7 +131,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_EVENTS;
+    return [];
   });
 
   // Mobile/responsive segmented toggle: 'announcements' | 'events'
