@@ -36,15 +36,19 @@ export function hydrateFromInitialSeed(): void {
     const scienceRaw = localStorage.getItem('munyaka_science_lab');
     const storeRaw = localStorage.getItem('munyaka_store_items');
     const settingsRaw = localStorage.getItem('munyaka_system_settings_v3') || localStorage.getItem('munyaka_settings');
+    const noticesRaw = localStorage.getItem('munyaka_notices');
+    const eventsRaw = localStorage.getItem('munyaka_events');
     
     const isAttendanceEmpty = !attendanceRaw || attendanceRaw === '{}' || attendanceRaw === '[]' || attendanceRaw.length < 5;
     const isIctEmpty = !ictRaw || ictRaw === '[]' || ictRaw.length < 5;
     const isScienceEmpty = !scienceRaw || scienceRaw === '[]' || scienceRaw.length < 5;
     const isStoreEmpty = !storeRaw || storeRaw === '[]' || storeRaw.length < 5;
     const isSettingsEmpty = !settingsRaw || settingsRaw === '{}' || settingsRaw.length < 5;
+    const isNoticesEmpty = !noticesRaw || noticesRaw === '[]' || noticesRaw.length < 5;
+    const isEventsEmpty = !eventsRaw || eventsRaw === '[]' || eventsRaw.length < 5;
 
-    if (!isInitialized || currentVersion !== seedVersion || isAttendanceEmpty || isIctEmpty || isScienceEmpty || isStoreEmpty || isSettingsEmpty) {
-      console.log('[StorageHydration] First-boot storage hydration: Seeding initial data snapshot, inventory & settings...');
+    if (!isInitialized || currentVersion !== seedVersion || isAttendanceEmpty || isIctEmpty || isScienceEmpty || isStoreEmpty || isSettingsEmpty || isNoticesEmpty || isEventsEmpty) {
+      console.log('[StorageHydration] First-boot storage hydration: Seeding initial data snapshot, inventory, settings, notices & events...');
 
       const snapshot = {
         students: (initialSeedData as any).students || [],
@@ -88,6 +92,8 @@ export function hydrateFromInitialSeed(): void {
       localStorage.setItem('munyaka_store_items', JSON.stringify((initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || []));
       localStorage.setItem('munyaka_system_settings_v3', JSON.stringify((initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {}));
       localStorage.setItem('settings', JSON.stringify((initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {}));
+      localStorage.setItem('munyaka_notices', JSON.stringify((initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || []));
+      localStorage.setItem('munyaka_events', JSON.stringify((initialSeedData as any).events || (initialSeedData as any).munyaka_events || []));
 
       // Dispatch event to notify listeners
       window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { source: 'seed-hydration' } }));

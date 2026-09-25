@@ -71,45 +71,7 @@ const MOCK_ATTACHMENTS = {
   ),
 };
 
-const INITIAL_NOTICES: Notice[] = [
-  {
-    id: 'n1',
-    title: 'Urgent: Term 3 Fee Balance Deadline & Statement Verification',
-    content: 'All parents and guardians are kindly reminded that the deadline for clearing 100% of Term 3 school fee balances is Friday of next week. Please ensure bank payment slips are presented to the bursar.',
-    description: 'All parents and guardians are kindly reminded that the deadline for clearing 100% of Term 3 school fee balances is Friday...',
-    date: 'Today, 08:30 AM',
-    category: 'Urgent',
-    pinned: true,
-    attachmentName: MOCK_ATTACHMENTS.feeGuidelines.name,
-    attachmentUrl: MOCK_ATTACHMENTS.feeGuidelines.url,
-    color: 'bg-rose-50 text-rose-600 border-rose-200',
-    createdBy: 'admin-001'
-  },
-  {
-    id: 'n2',
-    title: 'Mid-Term Examination Timetable and Revision Guidelines',
-    content: 'Mid-Term examinations for Grades 1 to 9 will commence on Monday. Teachers have uploaded all revision materials into the Digital Hub and E-Resources library.',
-    description: 'Mid-Term examinations for Grades 1 to 9 will commence on Monday. Teachers have uploaded all revision materials...',
-    date: 'Yesterday, 02:15 PM',
-    category: 'General',
-    pinned: false,
-    attachmentName: MOCK_ATTACHMENTS.examSchedule.name,
-    attachmentUrl: MOCK_ATTACHMENTS.examSchedule.url,
-    color: 'bg-indigo-50 text-indigo-600 border-indigo-200',
-    createdBy: 'admin-001'
-  },
-  {
-    id: 'n3',
-    title: 'School Canteen Supplier Update & Subsidy Announcement',
-    content: 'We have updated our nutritional supplier guidelines to incorporate fresh organic milk and locally sourced fruits for all Junior Secondary students.',
-    description: 'We have updated our nutritional supplier guidelines to incorporate fresh organic milk and locally sourced fruits...',
-    date: 'Oct 24, 2025',
-    category: 'Finance',
-    pinned: false,
-    color: 'bg-amber-50 text-amber-600 border-amber-200',
-    createdBy: 'admin-001'
-  }
-];
+const INITIAL_NOTICES: Notice[] = [];
 
 // Regenerates a valid blob: URL for a seed attachment so it survives page reloads.
 // This creates a tiny placeholder file whose name reflects the original.
@@ -119,44 +81,7 @@ function regenerateAttachmentUrl(filename: string): string {
   return URL.createObjectURL(blob);
 }
 
-const INITIAL_EVENTS: SchoolEvent[] = [
-  {
-    id: 'e1',
-    title: 'Annual Inter-House Athletics Championship',
-    date: '2025-08-28',
-    time: '08:30 AM - 03:00 PM',
-    location: 'Main School Sports Ground',
-    type: 'Sports',
-    priority: 'high'
-  },
-  {
-    id: 'e2',
-    title: 'Grade 6 & 9 Parent-Teacher Consultation Day',
-    date: '2025-08-30',
-    time: '09:00 AM - 01:00 PM',
-    location: 'Main Assembly Hall',
-    type: 'Academic',
-    priority: 'normal'
-  },
-  {
-    id: 'e3',
-    title: 'National Science & ICT Fair Exhibition',
-    date: '2025-09-04',
-    time: '10:00 AM - 04:00 PM',
-    location: 'Computer Lab & Science Center',
-    type: 'Exhibition',
-    priority: 'high'
-  },
-  {
-    id: 'e4',
-    title: 'End of Term 3 Closing Ceremony',
-    date: '2025-09-18',
-    time: '09:00 AM - 12:00 PM',
-    location: 'School Main Hall',
-    type: 'Ceremony',
-    priority: 'normal'
-  }
-];
+const INITIAL_EVENTS: SchoolEvent[] = [];
 
 export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defaultTab?: 'announcements' | 'events' }) {
   const { user } = useAuth();
@@ -178,11 +103,9 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   // LocalStorage Persistence for Notices and Events
   const [notices, setNotices] = useState<Notice[]>(() => {
     try {
-      const saved = localStorage.getItem('munyaka_notices_v2');
+      const saved = localStorage.getItem('munyaka_notices') || localStorage.getItem('munyaka_notices_v2');
       if (saved) {
         const parsed: Notice[] = JSON.parse(saved) as Notice[];
-        // Refresh any dead blob: URLs from seed attachments so downloads keep working
-        // across page reloads (blob URLs are session-scoped and don't survive).
         return parsed.map(n => {
           if (!n.attachmentName) return n;
           const urlIsDead = !n.attachmentUrl || n.attachmentUrl === '#' || n.attachmentUrl.startsWith('blob:');
@@ -199,7 +122,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   const [events, setEvents] = useState<SchoolEvent[]>(() => {
     try {
-      const saved = localStorage.getItem('munyaka_events_v2');
+      const saved = localStorage.getItem('munyaka_events') || localStorage.getItem('munyaka_events_v2');
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error(e);

@@ -99,6 +99,8 @@ function exportSeed() {
     const settingsObj = dbData.settings || dbData.schoolSettings || {};
     const settingsCount = Object.keys(settingsObj).length;
     const institutionName = settingsObj.schoolName || settingsObj.name || settingsObj.institutionName || 'Munyaka School';
+    const noticesCount = Array.isArray(dbData.notices || dbData.munyaka_notices) ? (dbData.notices || dbData.munyaka_notices).length : 0;
+    const eventsCount = Array.isArray(dbData.events || dbData.munyaka_events) ? (dbData.events || dbData.munyaka_events).length : 0;
 
     console.log(`[ExportSeed] Source: ${foundPath || 'Default'}`);
     console.log(`[ExportSeed] Exported Learners: ${studentsCount}, Teaching Staff: ${teachingStaffCount}, Non-Teaching Staff: ${nonTeachingStaffCount}`);
@@ -106,6 +108,7 @@ function exportSeed() {
     console.log(`[ExportSeed] Exported Attendance Records: ${attendanceRecordsCount}`);
     console.log(`[ExportSeed] Exported ICT Equipment: ${ictCount}, Science Inventory: ${scienceCount}, Store Stock: ${storeCount}`);
     console.log(`[ExportSeed] Exported Institution Name: "${institutionName}", Settings Fields Count: ${settingsCount}`);
+    console.log(`[ExportSeed] Exported Notices: ${noticesCount}, Events: ${eventsCount}`);
 
     const fileContent = `export const DEFAULT_CBC_CLUSTERS = [
   {
@@ -140,13 +143,15 @@ export const initialSeedData = ${JSON.stringify(dbData, null, 2)};
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
-export const SEED_VERSION = "2026.09.25.FINAL_MASTER_v1";
+export const SEED_VERSION = "2026.09.25.NOTICES_CLEAN_v1";
 
 export const initialAttendance = (initialSeedData as any).attendance || {};
 export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
 export const initialScienceInventory = (initialSeedData as any).scienceInventory || (initialSeedData as any).scienceLabInventory || [];
 export const initialStoreInventory = (initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || [];
 export const initialSettings = (initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {};
+export const initialNotices = (initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || [];
+export const initialEvents = (initialSeedData as any).events || (initialSeedData as any).munyaka_events || [];
 export const initialLearners = initialSeedData.students || [];
 export const initialStaff = initialSeedData.staff || [];
 export const initialReportCards = (initialSeedData as any).reportCards || [];

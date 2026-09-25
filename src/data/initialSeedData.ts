@@ -213,13 +213,15 @@ export const initialSeedData = {
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
-export const SEED_VERSION = "2026.09.25.FINAL_MASTER_v1";
+export const SEED_VERSION = "2026.09.25.NOTICES_CLEAN_v1";
 
 export const initialAttendance = (initialSeedData as any).attendance || {};
 export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
 export const initialScienceInventory = (initialSeedData as any).scienceInventory || (initialSeedData as any).scienceLabInventory || [];
 export const initialStoreInventory = (initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || [];
 export const initialSettings = (initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {};
+export const initialNotices = (initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || [];
+export const initialEvents = (initialSeedData as any).events || (initialSeedData as any).munyaka_events || [];
 export const initialLearners = initialSeedData.students || [];
 export const initialStaff = initialSeedData.staff || [];
 export const initialReportCards = (initialSeedData as any).reportCards || [];
