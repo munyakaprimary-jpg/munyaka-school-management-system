@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "@/lib/api";
-import { api } from "@/lib/api";
 import {
   Save,
   Plus,
@@ -335,7 +334,8 @@ const ExamCreator: React.FC = () => {
         // Ignore quota exceeded or private mode errors
       }
     }, [questions]);
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  
+    const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [publishedAssessmentId, setPublishedAssessmentId] = useState<string>("");
