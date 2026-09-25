@@ -530,11 +530,17 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
       return;
     }
 
-    // No activation-key path (learner fee payment only).
-    onSubmitPayment({ transaction: tx });
-    showSuccess(`Payment of ${currency} ${tx.amount.toLocaleString()} recorded.`);
-    setIsSaving(false);
-    onClose();
+    // No activation-key path (learner fee payment only). Ensure robust try-catch and local persistence.
+    try {
+      onSubmitPayment({ transaction: tx });
+      showSuccess(`Payment of ${currency} ${tx.amount.toLocaleString()} recorded.`);
+    } catch (err: any) {
+      console.error('UnifiedRecordPaymentModal onSubmitPayment callback error:', err);
+      showError('Payment recorded locally but callback reported error: ' + (err?.message || err));
+    } finally {
+      setIsSaving(false);
+      onClose();
+    }
   };
 
   const copyKey = async () => {
