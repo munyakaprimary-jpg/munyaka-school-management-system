@@ -119,7 +119,20 @@ export function hydrateFromInitialSeed(): void {
       localStorage.setItem('munyaka_report_cards', JSON.stringify(initialReportCards));
       localStorage.setItem('munyaka_fee_structures', JSON.stringify(initialFeeStructures));
       localStorage.setItem('munyaka_payments', JSON.stringify(initialFeePayments));
-      localStorage.setItem('munyaka_fees', JSON.stringify(initialFeePayments));
+      // Hydrate fees & payments from initialSeedData if empty
+      const existingFees = localStorage.getItem('munyaka_fees');
+      const existingPayments = localStorage.getItem('munyaka_payments');
+      const existingFeesRecords = localStorage.getItem('munyaka_fees_records');
+
+      if (!existingFees || JSON.parse(existingFees || '[]').length === 0) {
+        localStorage.setItem('munyaka_fees', JSON.stringify((initialSeedData as any).fees || initialFeePayments));
+      }
+      if (!existingPayments || JSON.parse(existingPayments || '[]').length === 0) {
+        localStorage.setItem('munyaka_payments', JSON.stringify((initialSeedData as any).payments || (initialSeedData as any).fees || initialFeePayments));
+      }
+      if (!existingFeesRecords || JSON.parse(existingFeesRecords || '[]').length === 0) {
+        localStorage.setItem('munyaka_fees_records', JSON.stringify((initialSeedData as any).fees || initialFeePayments));
+      }
       localStorage.setItem('munyaka_study_materials', JSON.stringify(initialStudyCorner));
       localStorage.setItem('munyaka_library_books', JSON.stringify(initialLibraryBooks));
       localStorage.setItem('munyaka_library_borrowings', JSON.stringify(initialLibraryLogs));

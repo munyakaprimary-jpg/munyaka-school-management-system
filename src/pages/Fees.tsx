@@ -846,23 +846,31 @@ const Fees = () => {
     localStorage.setItem(storageKey, JSON.stringify(overrideData));
     notifyDataChanged(storageKey);
 
-    // Also update munyaka_fees_records and munyaka_fee_structures if needed
-    try {
-      const savedRecords = localStorage.getItem('munyaka_fees_records');
-      if (savedRecords) {
-        const records = JSON.parse(savedRecords);
-        const updatedRecords = records.map((r: any) => {
-          if (r.id === studentId || r.studentId === studentId) {
-            return { ...r, total: termFee, paid: feePaid, feePaid, status, balance };
+    // Also update munyaka_fees and munyaka_payments in localStorage
+    const paymentStorageKeys = ['munyaka_fees_records', 'munyaka_fees', 'munyaka_payments'];
+    paymentStorageKeys.forEach(key => {
+      try {
+        const savedRecords = localStorage.getItem(key);
+        if (savedRecords) {
+          const records = JSON.parse(savedRecords);
+          if (Array.isArray(records)) {
+            const updatedRecords = records.map((r: any) => {
+              if (r.id === studentId || r.studentId === studentId) {
+                return { ...r, total: termFee, paid: feePaid, feePaid, status, balance };
+              }
+              return r;
+            });
+            localStorage.setItem(key, JSON.stringify(updatedRecords));
+            notifyDataChanged(key);
           }
-          return r;
-        });
-        localStorage.setItem('munyaka_fees_records', JSON.stringify(updatedRecords));
-        notifyDataChanged('munyaka_fees_records');
+        } else {
+          // Initialize if absent
+          localStorage.setItem(key, JSON.stringify([{ id: studentId, student: studentName, total: termFee, paid: feePaid, feePaid, balance, status }]));
+        }
+      } catch (e) {
+        console.error(`Failed to update ${key}:`, e);
       }
-    } catch (e) {
-      console.error("Failed to update munyaka_fees_records:", e);
-    }
+    });
 
     // Set/Replace absolute direct edit transaction in ledger so future recalculations respect feePaid directly without old ledger logs overwriting it
     const txKey = 'munyaka_transactions';

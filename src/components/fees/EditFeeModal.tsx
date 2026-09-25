@@ -124,23 +124,28 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
             localStorage.setItem(storageKey, JSON.stringify(feeData));
             notifyDataChanged(storageKey);
 
-            // Also update munyaka_fees_records array in localStorage if present
-            const savedRecords = localStorage.getItem('munyaka_fees_records');
-            if (savedRecords) {
-              try {
-                const records = JSON.parse(savedRecords);
-                const updatedRecords = records.map((r: any) => {
-                  if (r.id === student.id || r.studentId === student.id) {
-                    return { ...r, total: termFeeNum, paid: feePaidNum, feePaid: feePaidNum, status, balance };
+            // Also update munyaka_fees, munyaka_payments and munyaka_fees_records array in localStorage if present
+            const storageKeysToUpdate = ['munyaka_fees_records', 'munyaka_fees', 'munyaka_payments'];
+            storageKeysToUpdate.forEach(key => {
+              const savedRecords = localStorage.getItem(key);
+              if (savedRecords) {
+                try {
+                  const records = JSON.parse(savedRecords);
+                  if (Array.isArray(records)) {
+                    const updatedRecords = records.map((r: any) => {
+                      if (r.id === student.id || r.studentId === student.id) {
+                        return { ...r, total: termFeeNum, paid: feePaidNum, feePaid: feePaidNum, status, balance };
+                      }
+                      return r;
+                    });
+                    localStorage.setItem(key, JSON.stringify(updatedRecords));
+                    notifyDataChanged(key);
                   }
-                  return r;
-                });
-                localStorage.setItem('munyaka_fees_records', JSON.stringify(updatedRecords));
-                notifyDataChanged('munyaka_fees_records');
-              } catch (err) {
-                console.error("Failed to update munyaka_fees_records array:", err);
+                } catch (err) {
+                  console.error(`Failed to update ${key} array:`, err);
+                }
               }
-            }
+            });
 
             // Also update munyaka_transactions to replace/add adjustment ledger entry so paid totals are synchronized
             const txKey = 'munyaka_transactions';

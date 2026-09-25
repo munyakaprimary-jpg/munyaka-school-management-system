@@ -26,6 +26,160 @@ export const DEFAULT_CBC_CLUSTERS = [
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
 export const initialSeedData = {
+  "fees": [
+    {
+      "id": "FEE-001",
+      "studentId": "1789826147758",
+      "student": "PETER MWANGI",
+      "admNo": "MUN-G1-001-2026",
+      "grade": "Grade 1",
+      "stream": "North",
+      "total": 12000,
+      "paid": 12000,
+      "balance": 0,
+      "status": "Cleared",
+      "year": "2026",
+      "term": "term1",
+      "reason": "Full payment received"
+    },
+    {
+      "id": "FEE-002",
+      "studentId": "1789881428012",
+      "student": "FRED KAPONDI",
+      "admNo": "MUN-G1-002-2026",
+      "grade": "GRADE 1",
+      "stream": "GREEN",
+      "total": 12000,
+      "paid": 8000,
+      "balance": 4000,
+      "status": "Partial",
+      "year": "2026",
+      "term": "term1",
+      "reason": "Partial deposit"
+    },
+    {
+      "id": "FEE-003",
+      "studentId": "1789880616052",
+      "student": "GRACE MUTHONI",
+      "admNo": "MUN-G6-002-2026",
+      "grade": "GRADE 6",
+      "stream": "GREEN",
+      "total": 15000,
+      "paid": 15000,
+      "balance": 0,
+      "status": "Cleared",
+      "year": "2026",
+      "term": "term1",
+      "reason": "Cleared in full"
+    },
+    {
+      "id": "FEE-004",
+      "studentId": "1789880087460",
+      "student": "BRIGHTON KIPKOECH",
+      "admNo": "MUN-G6-001-2026",
+      "grade": "GRADE 6",
+      "stream": "BLUE",
+      "total": 15000,
+      "paid": 5000,
+      "balance": 10000,
+      "status": "Pending",
+      "year": "2026",
+      "term": "term1",
+      "reason": "Pending balance"
+    }
+  ],
+  "payments": [
+    {
+      "id": "TX-101",
+      "date": "2026-01-15",
+      "amount": 12000,
+      "method": "Bank Deposit",
+      "ref": "REF-981273",
+      "category": "Payment",
+      "studentId": "1789826147758",
+      "grade": "Grade 1",
+      "stream": "North"
+    },
+    {
+      "id": "TX-102",
+      "date": "2026-01-18",
+      "amount": 8000,
+      "method": "M-Pesa",
+      "ref": "QHJ8921KLO",
+      "category": "Payment",
+      "studentId": "1789881428012",
+      "grade": "GRADE 1",
+      "stream": "GREEN"
+    },
+    {
+      "id": "TX-103",
+      "date": "2026-01-10",
+      "amount": 15000,
+      "method": "Bank Deposit",
+      "ref": "REF-441209",
+      "category": "Payment",
+      "studentId": "1789880616052",
+      "grade": "GRADE 6",
+      "stream": "GREEN"
+    },
+    {
+      "id": "TX-104",
+      "date": "2026-01-22",
+      "amount": 5000,
+      "method": "Cash",
+      "ref": "CSH-00192",
+      "category": "Payment",
+      "studentId": "1789880087460",
+      "grade": "GRADE 6",
+      "stream": "BLUE"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "TX-101",
+      "date": "2026-01-15",
+      "amount": 12000,
+      "method": "Bank Deposit",
+      "ref": "REF-981273",
+      "category": "Payment",
+      "studentId": "1789826147758",
+      "grade": "Grade 1",
+      "stream": "North"
+    },
+    {
+      "id": "TX-102",
+      "date": "2026-01-18",
+      "amount": 8000,
+      "method": "M-Pesa",
+      "ref": "QHJ8921KLO",
+      "category": "Payment",
+      "studentId": "1789881428012",
+      "grade": "GRADE 1",
+      "stream": "GREEN"
+    },
+    {
+      "id": "TX-103",
+      "date": "2026-01-10",
+      "amount": 15000,
+      "method": "Bank Deposit",
+      "ref": "REF-441209",
+      "category": "Payment",
+      "studentId": "1789880616052",
+      "grade": "GRADE 6",
+      "stream": "GREEN"
+    },
+    {
+      "id": "TX-104",
+      "date": "2026-01-22",
+      "amount": 5000,
+      "method": "Cash",
+      "ref": "CSH-00192",
+      "category": "Payment",
+      "studentId": "1789880087460",
+      "grade": "GRADE 6",
+      "stream": "BLUE"
+    }
+  ],
   "students": [
     {
       "id": "1789881428012",
