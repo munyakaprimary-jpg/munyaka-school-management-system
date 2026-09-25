@@ -161,7 +161,7 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
 
           {/* Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {!isDocx && !isText && (
+            {!isText && (
               <div className="hidden sm:flex items-center gap-1 bg-slate-200/60 dark:bg-slate-800 p-1 rounded-xl">
                 <button
                   type="button"
@@ -273,9 +273,10 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
           )}
 
           {!errorMsg && isDocx && (
-            <div className="w-full h-full overflow-auto bg-white dark:bg-slate-900 rounded-xl shadow-inner border border-slate-200 dark:border-slate-800 p-6 sm:p-12 max-w-4xl mx-auto">
-              <div 
-                className="prose dark:prose-invert max-w-none text-slate-800 dark:text-slate-200"
+            <div className="w-full h-full overflow-auto bg-white dark:bg-slate-900 rounded-xl shadow-inner border border-slate-200 dark:border-slate-800 p-6 sm:p-12 flex items-center justify-center">
+              <div
+                className="prose dark:prose-invert max-w-4xl w-full text-slate-800 dark:text-slate-200 origin-top transition-transform duration-200"
+                style={{ transform: `scale(${zoomLevel / 100})` }}
                 dangerouslySetInnerHTML={{ __html: docxHtml || '<p>Loading Word document content...</p>' }}
               />
             </div>
