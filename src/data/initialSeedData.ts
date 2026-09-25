@@ -1,10 +1,8 @@
 /**
  * AUTO-GENERATED SEED DATA FOR MUNYAKA SCHOOL MANAGEMENT SYSTEM
- * Generated at: 2026-09-25T05:07:30.854Z
+ * Generated at: 2026-09-25T05:57:14.296Z
  * DO NOT EDIT DIRECTLY — Run "npm run export-seed" on the backend server to regenerate.
  */
-
-export const SEED_VERSION = "2026.09.25.1";
 
 export const initialFeeStructures = [
   {
@@ -299,8 +297,6 @@ export const DEFAULT_CBC_CLUSTERS = [
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
 const _initialSeedData = {
-  version: SEED_VERSION,
-  seedVersion: SEED_VERSION,
   feeStructures: initialFeeStructures,
   feePayments: initialFeePayments,
   fees: initialFeePayments,
