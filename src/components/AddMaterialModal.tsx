@@ -475,6 +475,7 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
           >
@@ -941,6 +942,7 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
         {!saved && (
           <div className="sticky bottom-0 z-10 flex items-center gap-3 px-6 py-4 border-t bg-white rounded-b-2xl shrink-0">
             <button
+              type="button"
               onClick={onClose}
               className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
