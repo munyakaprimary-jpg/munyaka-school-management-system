@@ -69,9 +69,11 @@ function exportSeed() {
       dbData = {
         students: [],
         staff: [],
+        grades: [],
+        streams: [],
+        classAssignments: [],
         attendance: {},
         fees: [],
-        grades: {},
         examTypes: [],
         libraryBooks: [],
         feeStructures: [],
@@ -86,10 +88,13 @@ function exportSeed() {
 
     const studentsCount = Array.isArray(dbData.students) ? dbData.students.length : 0;
     const staffCount = Array.isArray(dbData.staff) ? dbData.staff.length : 0;
-    const marksCount = dbData.grades && typeof dbData.grades === 'object' ? Object.keys(dbData.grades).length : 0;
+    const gradesCount = Array.isArray(dbData.grades) ? dbData.grades.length : 0;
+    const streamsCount = Array.isArray(dbData.streams) ? dbData.streams.length : 0;
+    const marksCount = dbData.marks && typeof dbData.marks === 'object' ? Object.keys(dbData.marks).length : 0;
 
     console.log(`[ExportSeed] Source: ${foundPath || 'Default'}`);
-    console.log(`[ExportSeed] Summary -> Students: ${studentsCount}, Staff: ${staffCount}, Marks: ${marksCount}`);
+    console.log(`[ExportSeed] Exported ${gradesCount} grades, ${streamsCount} streams`);
+    console.log(`[ExportSeed] Summary -> Students: ${studentsCount}, Staff: ${staffCount}, Grades: ${gradesCount}, Streams: ${streamsCount}, Marks: ${marksCount}`);
 
     const fileContent = `export const DEFAULT_CBC_CLUSTERS = [
   {
@@ -127,6 +132,9 @@ export const INITIAL_SEED_DATA = initialSeedData;
 export const mockLearners = initialSeedData.students || [];
 export const mockStudents = initialSeedData.students || [];
 export const mockStaff = initialSeedData.staff || [];
+export const initialGrades = (initialSeedData as any).grades || [];
+export const initialStreams = (initialSeedData as any).streams || [];
+export const initialClassAssignments = (initialSeedData as any).classAssignments || [];
 export const mockExams = (initialSeedData as any).exams || [];
 export const mockLibrary = (initialSeedData as any).libraryBooks || [];
 export const mockFinances = (initialSeedData as any).fees || [];
