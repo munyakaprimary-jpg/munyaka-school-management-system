@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { initialSeedData, SEED_VERSION } from '@/data/initialSeedData';
+import { initialSeedData, SEED_VERSION, initialExams, initialQuestions } from '@/data/initialSeedData';
 
 /** Key mapping from initialSeedData fields to their respective LocalStorage keys. */
 const KEY_MAPPING: Record<string, string> = {
@@ -7,7 +7,8 @@ const KEY_MAPPING: Record<string, string> = {
   classes: 'munyaka_grades',
   streams: 'munyaka_grades',
   learningAreas: 'munyaka_learning_areas',
-  exams: 'munyaka_exam_types',
+  exams: 'all_set_exams',
+  questions: 'question_bank',
   assessments: 'munyaka_assessment_scores',
   gradingScales: 'munyaka_grading_scales',
   reportCards: 'munyaka_report_cards',
@@ -38,6 +39,8 @@ export function hydrateFromInitialSeed(): void {
     const settingsRaw = localStorage.getItem('munyaka_system_settings_v3') || localStorage.getItem('munyaka_settings');
     const noticesRaw = localStorage.getItem('munyaka_notices');
     const eventsRaw = localStorage.getItem('munyaka_events');
+    const examsRaw = localStorage.getItem('all_set_exams') || localStorage.getItem('exams');
+    const questionsRaw = localStorage.getItem('question_bank') || localStorage.getItem('questions');
     
     const isAttendanceEmpty = !attendanceRaw || attendanceRaw === '{}' || attendanceRaw === '[]' || attendanceRaw.length < 5;
     const isIctEmpty = !ictRaw || ictRaw === '[]' || ictRaw.length < 5;
@@ -46,16 +49,19 @@ export function hydrateFromInitialSeed(): void {
     const isSettingsEmpty = !settingsRaw || settingsRaw === '{}' || settingsRaw.length < 5;
     const isNoticesEmpty = !noticesRaw || noticesRaw === '[]' || noticesRaw.length < 5;
     const isEventsEmpty = !eventsRaw || eventsRaw === '[]' || eventsRaw.length < 5;
+    const isExamsEmpty = !examsRaw || examsRaw === '[]' || examsRaw.length < 5;
+    const isQuestionsEmpty = !questionsRaw || questionsRaw === '[]' || questionsRaw.length < 5;
 
-    if (!isInitialized || currentVersion !== seedVersion || isAttendanceEmpty || isIctEmpty || isScienceEmpty || isStoreEmpty || isSettingsEmpty || isNoticesEmpty || isEventsEmpty) {
-      console.log('[StorageHydration] First-boot storage hydration: Seeding initial data snapshot, inventory, settings, notices & events...');
+    if (!isInitialized || currentVersion !== seedVersion || isAttendanceEmpty || isIctEmpty || isScienceEmpty || isStoreEmpty || isSettingsEmpty || isNoticesEmpty || isEventsEmpty || isExamsEmpty || isQuestionsEmpty) {
+      console.log('[StorageHydration] First-boot storage hydration: Seeding initial data snapshot, exams, questions, inventory, settings, notices & events...');
 
       const snapshot = {
         students: (initialSeedData as any).students || [],
         classes: (initialSeedData as any).classes || [],
         streams: (initialSeedData as any).streams || [],
         learningAreas: (initialSeedData as any).learningAreas || [],
-        exams: (initialSeedData as any).exams || [],
+        exams: initialExams,
+        questions: initialQuestions,
         assessments: (initialSeedData as any).assessments || [],
         gradingScales: (initialSeedData as any).gradingScales || [],
         reportCards: (initialSeedData as any).reportCards || [],
@@ -86,6 +92,10 @@ export function hydrateFromInitialSeed(): void {
       localStorage.setItem('munyaka_initialized', 'true');
       localStorage.setItem('stored_seed_version', seedVersion);
       localStorage.setItem('munyaka_seed_version', seedVersion);
+      localStorage.setItem('all_set_exams', JSON.stringify(initialExams));
+      localStorage.setItem('exams', JSON.stringify(initialExams));
+      localStorage.setItem('question_bank', JSON.stringify(initialQuestions));
+      localStorage.setItem('questions', JSON.stringify(initialQuestions));
       localStorage.setItem('munyaka_attendance', JSON.stringify((initialSeedData as any).attendance || []));
       localStorage.setItem('munyaka_ict_lab', JSON.stringify((initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || []));
       localStorage.setItem('munyaka_science_lab', JSON.stringify((initialSeedData as any).scienceInventory || (initialSeedData as any).scienceLabInventory || []));

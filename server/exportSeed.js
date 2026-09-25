@@ -87,7 +87,7 @@ function exportSeed() {
     }
 
     const studentsCount = Array.isArray(dbData.students) ? dbData.students.length : 0;
-    const teachingStaffCount = Array.isArray(dbData.staff) ? dbData.staff.filter((s: any) => s.role === 'teacher' || s.role === 'Teacher' || s.isTeacher || s.teaching).length : (Array.isArray(dbData.staff) ? dbData.staff.length : 0);
+    const teachingStaffCount = Array.isArray(dbData.staff) ? dbData.staff.filter((s) => s.role === 'teacher' || s.role === 'Teacher' || s.isTeacher || s.teaching).length : (Array.isArray(dbData.staff) ? dbData.staff.length : 0);
     const nonTeachingStaffCount = Array.isArray(dbData.staff) ? dbData.staff.length - teachingStaffCount : 0;
     const staffCount = Array.isArray(dbData.staff) ? dbData.staff.length : 0;
     const gradesCount = Array.isArray(dbData.grades) ? dbData.grades.length : 0;
@@ -101,6 +101,8 @@ function exportSeed() {
     const institutionName = settingsObj.schoolName || settingsObj.name || settingsObj.institutionName || 'Munyaka School';
     const noticesCount = Array.isArray(dbData.notices || dbData.munyaka_notices) ? (dbData.notices || dbData.munyaka_notices).length : 0;
     const eventsCount = Array.isArray(dbData.events || dbData.munyaka_events) ? (dbData.events || dbData.munyaka_events).length : 0;
+    const examsCount = Array.isArray(dbData.exams || dbData.all_set_exams || dbData.question_bank) ? (dbData.exams || dbData.all_set_exams || dbData.question_bank).length : 0;
+    const questionsCount = Array.isArray(dbData.questions || dbData.question_bank) ? (dbData.questions || dbData.question_bank).length : 0;
 
     console.log(`[ExportSeed] Source: ${foundPath || 'Default'}`);
     console.log(`[ExportSeed] Exported Learners: ${studentsCount}, Teaching Staff: ${teachingStaffCount}, Non-Teaching Staff: ${nonTeachingStaffCount}`);
@@ -109,6 +111,7 @@ function exportSeed() {
     console.log(`[ExportSeed] Exported ICT Equipment: ${ictCount}, Science Inventory: ${scienceCount}, Store Stock: ${storeCount}`);
     console.log(`[ExportSeed] Exported Institution Name: "${institutionName}", Settings Fields Count: ${settingsCount}`);
     console.log(`[ExportSeed] Exported Notices: ${noticesCount}, Events: ${eventsCount}`);
+    console.log(`[ExportSeed] Exported Exams: ${examsCount}, Questions: ${questionsCount}`);
 
     const fileContent = `export const DEFAULT_CBC_CLUSTERS = [
   {
@@ -143,7 +146,7 @@ export const initialSeedData = ${JSON.stringify(dbData, null, 2)};
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
-export const SEED_VERSION = "2026.09.25.NOTICES_CLEAN_v1";
+export const SEED_VERSION = "2026.09.25.EXAMS_FIXED_v1";
 
 export const initialAttendance = (initialSeedData as any).attendance || {};
 export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
@@ -152,6 +155,8 @@ export const initialStoreInventory = (initialSeedData as any).storeInventory || 
 export const initialSettings = (initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {};
 export const initialNotices = (initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || [];
 export const initialEvents = [];
+export const initialExams = (initialSeedData as any).exams || (initialSeedData as any).all_set_exams || (initialSeedData as any).question_bank || [];
+export const initialQuestions = (initialSeedData as any).questions || (initialSeedData as any).question_bank || [];
 export const initialLearners = initialSeedData.students || [];
 export const initialStaff = initialSeedData.staff || [];
 export const initialReportCards = (initialSeedData as any).reportCards || [];
