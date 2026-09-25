@@ -342,7 +342,52 @@ export const initialSeedData = {
     }
   ],
   "marks": [],
-  "fees": [],
+  "fees": [
+    {
+      "id": "TX-101",
+      "date": "2026-01-15",
+      "amount": 12000,
+      "method": "Bank Deposit",
+      "ref": "REF-981273",
+      "category": "Payment",
+      "studentId": "1789826147758",
+      "grade": "Grade 1",
+      "stream": "North"
+    },
+    {
+      "id": "TX-102",
+      "date": "2026-01-18",
+      "amount": 8000,
+      "method": "M-Pesa",
+      "ref": "QHJ8921KLO",
+      "category": "Payment",
+      "studentId": "1789881428012",
+      "grade": "GRADE 1",
+      "stream": "GREEN"
+    },
+    {
+      "id": "TX-103",
+      "date": "2026-01-10",
+      "amount": 15000,
+      "method": "Bank Deposit",
+      "ref": "REF-441209",
+      "category": "Payment",
+      "studentId": "1789880616052",
+      "grade": "GRADE 6",
+      "stream": "GREEN"
+    },
+    {
+      "id": "TX-104",
+      "date": "2026-01-22",
+      "amount": 5000,
+      "method": "Cash",
+      "ref": "CSH-00192",
+      "category": "Payment",
+      "studentId": "1789880087460",
+      "grade": "GRADE 6",
+      "stream": "BLUE"
+    }
+  ],
   "feeStructures": [
     {
       "year": "2026",
@@ -962,7 +1007,7 @@ export const initialSeedData = {
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
-export const SEED_VERSION = "BUILD_1790351697110";
+export const SEED_VERSION = "BUILD_1790354443672";
 
 export const initialAttendance = (initialSeedData as any).attendance || {};
 export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
