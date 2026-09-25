@@ -122,8 +122,12 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   const [events, setEvents] = useState<SchoolEvent[]>(() => {
     try {
+      localStorage.removeItem('events');
       const saved = localStorage.getItem('munyaka_events') || localStorage.getItem('munyaka_events_v2');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch (e) {
       console.error(e);
     }

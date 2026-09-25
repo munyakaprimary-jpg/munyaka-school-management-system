@@ -93,7 +93,9 @@ export function hydrateFromInitialSeed(): void {
       localStorage.setItem('munyaka_system_settings_v3', JSON.stringify((initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {}));
       localStorage.setItem('settings', JSON.stringify((initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {}));
       localStorage.setItem('munyaka_notices', JSON.stringify((initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || []));
-      localStorage.setItem('munyaka_events', JSON.stringify((initialSeedData as any).events || (initialSeedData as any).munyaka_events || []));
+      localStorage.removeItem('munyaka_events');
+      localStorage.removeItem('events');
+      localStorage.setItem('munyaka_events', JSON.stringify([]));
 
       // Dispatch event to notify listeners
       window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { source: 'seed-hydration' } }));
