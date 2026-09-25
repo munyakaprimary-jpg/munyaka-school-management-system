@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { initialSeedData, SEED_VERSION, initialExams, initialQuestions } from '@/data/initialSeedData';
+import { initialSeedData, SEED_VERSION, initialExams, initialExamSchedules, initialExamTypes, initialMarks, initialQuestions } from '@/data/initialSeedData';
 
 /** Key mapping from initialSeedData fields to their respective LocalStorage keys. */
 const KEY_MAPPING: Record<string, string> = {
@@ -8,6 +8,9 @@ const KEY_MAPPING: Record<string, string> = {
   streams: 'munyaka_grades',
   learningAreas: 'munyaka_learning_areas',
   exams: 'all_set_exams',
+  examSchedules: 'examSchedules',
+  examTypes: 'munyaka_exam_types',
+  marks: 'marked_student_submissions',
   questions: 'question_bank',
   assessments: 'munyaka_assessment_scores',
   gradingScales: 'munyaka_grading_scales',
@@ -40,6 +43,9 @@ export function hydrateFromInitialSeed(): void {
     const noticesRaw = localStorage.getItem('munyaka_notices');
     const eventsRaw = localStorage.getItem('munyaka_events');
     const examsRaw = localStorage.getItem('all_set_exams') || localStorage.getItem('exams');
+    const schedulesRaw = localStorage.getItem('examSchedules');
+    const examTypesRaw = localStorage.getItem('munyaka_exam_types');
+    const marksRaw = localStorage.getItem('marked_student_submissions') || localStorage.getItem('marks');
     const questionsRaw = localStorage.getItem('question_bank') || localStorage.getItem('questions');
     
     const isAttendanceEmpty = !attendanceRaw || attendanceRaw === '{}' || attendanceRaw === '[]' || attendanceRaw.length < 5;
@@ -50,10 +56,13 @@ export function hydrateFromInitialSeed(): void {
     const isNoticesEmpty = !noticesRaw || noticesRaw === '[]' || noticesRaw.length < 5;
     const isEventsEmpty = !eventsRaw || eventsRaw === '[]' || eventsRaw.length < 5;
     const isExamsEmpty = !examsRaw || examsRaw === '[]' || examsRaw.length < 5;
+    const isSchedulesEmpty = !schedulesRaw || schedulesRaw === '[]' || schedulesRaw.length < 5;
+    const isExamTypesEmpty = !examTypesRaw || examTypesRaw === '[]' || examTypesRaw.length < 5;
+    const isMarksEmpty = !marksRaw || marksRaw === '[]' || marksRaw.length < 5;
     const isQuestionsEmpty = !questionsRaw || questionsRaw === '[]' || questionsRaw.length < 5;
 
-    if (!isInitialized || currentVersion !== seedVersion || isAttendanceEmpty || isIctEmpty || isScienceEmpty || isStoreEmpty || isSettingsEmpty || isNoticesEmpty || isEventsEmpty || isExamsEmpty || isQuestionsEmpty) {
-      console.log('[StorageHydration] First-boot storage hydration: Seeding initial data snapshot, exams, questions, inventory, settings, notices & events...');
+    if (!isInitialized || currentVersion !== seedVersion || isAttendanceEmpty || isIctEmpty || isScienceEmpty || isStoreEmpty || isSettingsEmpty || isNoticesEmpty || isEventsEmpty || isExamsEmpty || isSchedulesEmpty || isExamTypesEmpty || isMarksEmpty || isQuestionsEmpty) {
+      console.log('[StorageHydration] First-boot storage hydration: Seeding initial exams, schedules, marks, exam types, questions, inventory, settings, notices & events...');
 
       const snapshot = {
         students: (initialSeedData as any).students || [],
@@ -61,6 +70,9 @@ export function hydrateFromInitialSeed(): void {
         streams: (initialSeedData as any).streams || [],
         learningAreas: (initialSeedData as any).learningAreas || [],
         exams: initialExams,
+        examSchedules: initialExamSchedules,
+        examTypes: initialExamTypes,
+        marks: initialMarks,
         questions: initialQuestions,
         assessments: (initialSeedData as any).assessments || [],
         gradingScales: (initialSeedData as any).gradingScales || [],
@@ -94,6 +106,10 @@ export function hydrateFromInitialSeed(): void {
       localStorage.setItem('munyaka_seed_version', seedVersion);
       localStorage.setItem('all_set_exams', JSON.stringify(initialExams));
       localStorage.setItem('exams', JSON.stringify(initialExams));
+      localStorage.setItem('examSchedules', JSON.stringify(initialExamSchedules));
+      localStorage.setItem('munyaka_exam_types', JSON.stringify(initialExamTypes));
+      localStorage.setItem('marked_student_submissions', JSON.stringify(initialMarks));
+      localStorage.setItem('marks', JSON.stringify(initialMarks));
       localStorage.setItem('question_bank', JSON.stringify(initialQuestions));
       localStorage.setItem('questions', JSON.stringify(initialQuestions));
       localStorage.setItem('munyaka_attendance', JSON.stringify((initialSeedData as any).attendance || []));
@@ -110,8 +126,9 @@ export function hydrateFromInitialSeed(): void {
       // Dispatch event to notify listeners
       window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { source: 'seed-hydration' } }));
       window.dispatchEvent(new CustomEvent('munyaka_learners_updated'));
+      window.dispatchEvent(new CustomEvent('storage', { key: 'all_set_exams' } as any));
 
-      console.log('[StorageHydration] 100% data parity achieved. LocalStorage successfully hydrated from initialSeedData.');
+      console.log('[StorageHydration] 100% data parity achieved. LocalStorage successfully hydrated with exams, schedules, marks, exam types & questions.');
     }
   } catch (error) {
     console.error('[StorageHydration] Error during automatic first-boot storage hydration:', error);

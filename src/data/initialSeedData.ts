@@ -213,7 +213,7 @@ export const initialSeedData = {
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
-export const SEED_VERSION = "2026.09.25.EXAMS_FIXED_v1";
+export const SEED_VERSION = "2026.09.25.EXAMS_v1";
 
 export const initialAttendance = (initialSeedData as any).attendance || {};
 export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
@@ -223,6 +223,9 @@ export const initialSettings = (initialSeedData as any).settings || (initialSeed
 export const initialNotices = (initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || [];
 export const initialEvents = [];
 export const initialExams = (initialSeedData as any).exams || (initialSeedData as any).all_set_exams || (initialSeedData as any).question_bank || [];
+export const initialExamSchedules = (initialSeedData as any).examSchedules || (initialSeedData as any).assessment_schedules || [];
+export const initialExamTypes = (initialSeedData as any).examTypes || (initialSeedData as any).exam_types || [];
+export const initialMarks = (initialSeedData as any).marks || (initialSeedData as any).assessments || (initialSeedData as any).marked_student_submissions || [];
 export const initialQuestions = (initialSeedData as any).questions || (initialSeedData as any).question_bank || [];
 export const initialLearners = initialSeedData.students || [];
 export const initialStaff = initialSeedData.staff || [];
