@@ -1,6 +1,6 @@
 /**
  * AUTO-GENERATED SEED DATA FOR MUNYAKA SCHOOL MANAGEMENT SYSTEM
- * Generated at: 2026-09-25T04:55:07.222Z
+ * Generated at: 2026-09-25T05:07:30.854Z
  * DO NOT EDIT DIRECTLY — Run "npm run export-seed" on the backend server to regenerate.
  */
 
