@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { initialSeedData } from "@/data/initialSeedData";
 import { useSchoolStore } from "@/store/useSchoolStore";
+import { useSchoolStore } from "@/store/useSchoolStore";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -400,6 +401,8 @@ const App = () => {
       runOneTimeLearnerPurge();
     }, []);
 
+  const isActivated = useSchoolStore((state: any) => state.isActivated);
+
   return (
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -412,16 +415,21 @@ const App = () => {
                     <Toaster />
                     <Sonner />
                     <LearnerProvider>
-                      <Routes>
-                        {/* Public Routes */}
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/portal" element={<ParentPortal />} />
+                      {isActivated ? (
+                        <Routes>
+                          <Route path="/*" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+                        </Routes>
+                      ) : (
+                        <Routes>
+                          {/* Public Routes */}
+                          <Route path="/login" element={<Login />} />
+                          <Route path="/portal" element={<ParentPortal />} />
 
-                      {/* Protected Routes */}
-                      <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
+                          {/* Protected Routes */}
+                          <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                          <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                          <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                          <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/learners/archive" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/students/:id" element={<ProtectedRoute><AppUnlock><Layout><StudentProfile /></Layout></AppUnlock></ProtectedRoute>} />
@@ -483,6 +491,7 @@ const App = () => {
                       <Route path="/server" element={<ProtectedRoute allowedRoles={['owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'admin', 'bursar', 'support_staff', 'librarian']}><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
+                      )}
                     </LearnerProvider>
                   </TooltipProvider>
                 </ThemeProvider>
