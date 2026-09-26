@@ -7,6 +7,7 @@ import { Download, Upload, Database, RefreshCw, Layers, ShieldCheck, Users, Grad
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { initialSeedData } from '@/data/initialSeedData';
+import { CentralDataService } from '@/services/centralDataService';
 
 export default function CentralDataServicePage() {
   const { learners, staff, fees, attendance, exams, marks, timetable, settings, refreshStore } = useSchoolStore();
@@ -197,6 +198,7 @@ export default initialSeedData;
 
       showSuccess(`Exported initialSeedData.ts (${generatedSeedVersion}) with full un-sliced state across all modules!`);
     } catch (err: any) {
+      console.error('[CentralDataServicePage] Export seed error:', err);
       showError('Failed to generate initialSeedData.ts: ' + (err?.message || err));
     }
   };
