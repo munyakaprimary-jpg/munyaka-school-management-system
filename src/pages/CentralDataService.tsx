@@ -105,62 +105,17 @@ export default function CentralDataServicePage() {
     try {
       const generatedSeedVersion = "BUILD_OFFLINE_" + Date.now();
 
-      // Ensure masterStaff captures all 14 records across any active storage key
-      const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
-      const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
-      const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
-      const s4 = JSON.parse(localStorage.getItem('staff') || '[]');
-      const staffCandidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
-      const masterStaff = staffCandidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
+      // Automatically trigger a full state dump and store sync immediately before generating export
+      const fullDbObject = CentralDataService.getFullStateDump();
+      CentralDataService.importCentralData(fullDbObject);
 
-      // Learners master array
-      const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-      const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
-      const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
-
-      // Fees master array
-      const f1 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
-      const f2 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
-      const masterFees = [fees, f1, f2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), fees);
-
-      // Marks master record
-      const m1 = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
-      const m2 = JSON.parse(localStorage.getItem('munyaka_marks_records') || '[]');
-      const masterMarks = m1.length > 0 ? m1 : (Array.isArray(m2) && m2.length > 0 ? m2 : marks);
-
-      const state = { learners: masterLearners, staff: masterStaff, fees: masterFees, attendance, exams, marks: masterMarks, timetable, settings };
-
-      // Read live store across all 12+ menus with full state fallback
-      const fullDbObject = {
-        students: masterLearners,
-        staff: masterStaff,
-        fees: masterFees,
-        payments: JSON.parse(localStorage.getItem('munyaka_payments') || JSON.stringify(masterFees)),
-        transactions: JSON.parse(localStorage.getItem('munyaka_transactions') || '[]'),
-        attendance: state.attendance || attendance,
-        grades: JSON.parse(localStorage.getItem('munyaka_grades') || JSON.stringify((initialSeedData as any).grades || {})),
-        streams: JSON.parse(localStorage.getItem('munyaka_streams') || JSON.stringify((initialSeedData as any).streams || [])),
-        classAssignments: JSON.parse(localStorage.getItem('munyaka_class_assignments') || JSON.stringify((initialSeedData as any).classAssignments || [])),
-        learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || JSON.stringify((initialSeedData as any).learningAreas || [])),
-        exams: state.exams || exams,
-        examSchedules: JSON.parse(localStorage.getItem('examSchedules') || JSON.stringify((initialSeedData as any).examSchedules || [])),
-        marks: masterMarks,
-        assessments: JSON.parse(localStorage.getItem('munyaka_assessment_scores') || '[]'),
-        questions: JSON.parse(localStorage.getItem('question_bank') || JSON.stringify((initialSeedData as any).questions || [])),
-        reportCards: JSON.parse(localStorage.getItem('munyaka_report_cards') || '[]'),
-        feeStructures: JSON.parse(localStorage.getItem('munyaka_fee_structures') || JSON.stringify((initialSeedData as any).feeStructures || [])),
-        studyCorner: JSON.parse(localStorage.getItem('munyaka_study_materials') || JSON.stringify((initialSeedData as any).studyCorner || [])),
-        libraryBooks: JSON.parse(localStorage.getItem('munyaka_library_books') || JSON.stringify((initialSeedData as any).libraryBooks || [])),
-        libraryLogs: JSON.parse(localStorage.getItem('munyaka_library_borrowings') || '[]'),
-        ictEquipment: JSON.parse(localStorage.getItem('munyaka_ict_assets') || JSON.stringify((initialSeedData as any).ictEquipment || [])),
-        scienceInventory: JSON.parse(localStorage.getItem('munyaka_science_lab') || JSON.stringify((initialSeedData as any).scienceInventory || [])),
-        storeInventory: JSON.parse(localStorage.getItem('munyaka_store_items') || JSON.stringify((initialSeedData as any).storeInventory || [])),
-        notices: JSON.parse(localStorage.getItem('munyaka_notices') || JSON.stringify((initialSeedData as any).notices || [])),
-        events: JSON.parse(localStorage.getItem('munyaka_events') || '[]'),
-        timetable: state.timetable || timetable,
-        settings: state.settings || settings,
-        schoolSettings: state.settings || settings
-      };
+      // Ensure staff and students are never sliced or omitted
+      if (!fullDbObject.staff || fullDbObject.staff.length === 0) {
+        fullDbObject.staff = initialSeedData.staff || [];
+      }
+      if (!fullDbObject.students || fullDbObject.students.length === 0) {
+        fullDbObject.students = initialSeedData.students || [];
+      }
 
       const fileContent = `export const SEED_VERSION = "${generatedSeedVersion}";
 
@@ -240,7 +195,7 @@ export default initialSeedData;
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      showSuccess(`Exported initialSeedData.ts (${generatedSeedVersion}) with live useSchoolStore state across all menus!`);
+      showSuccess(`Exported initialSeedData.ts (${generatedSeedVersion}) with full un-sliced state across all modules!`);
     } catch (err: any) {
       showError('Failed to generate initialSeedData.ts: ' + (err?.message || err));
     }
