@@ -1,4 +1,4 @@
-export const SEED_VERSION = "BUILD_OFFLINE_1790450717809";
+export const SEED_VERSION = "BUILD_OFFLINE_1790451551355";
 
 export const DEFAULT_CBC_CLUSTERS = [
   {
@@ -154,6 +154,24 @@ export const initialSeedData = {
       "phoneNumber": "0715223831",
       "phone": "0715223831",
       "createdAt": "2026-09-26T10:27:57.989Z"
+    },
+    {
+      "id": "1790451537138",
+      "name": "TABITHA WANJIRU MACHARIA",
+      "fullName": "TABITHA WANJIRU MACHARIA",
+      "admissionNumber": "MUN-G6-006-2026",
+      "admNo": "MUN-G6-006-2026",
+      "assessmentNumber": "B003882638",
+      "assessmentNo": "B003882638",
+      "assessment": "B003882638",
+      "gender": "Female",
+      "grade": "Grade 6",
+      "stream": "GREEN",
+      "parentName": "DANIEL MACHARIA",
+      "guardian": "DANIEL MACHARIA",
+      "phoneNumber": "0701788155",
+      "phone": "0701788155",
+      "createdAt": "2026-09-26T19:38:57.138Z"
     }
   ],
   "staff": [
