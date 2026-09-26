@@ -39,10 +39,14 @@ export default function CentralDataServicePage() {
       const notices = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
       const ictAssets = JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]');
 
+      // Check teaching vs non-teaching staff
       const teachingStaff = staff.filter((s: any) => {
+        const type = (s.type || s.staffType || '').toLowerCase();
         const role = (s.role || s.systemRole || '').toLowerCase();
         const category = (s.category || s.staffCategory || '').toLowerCase();
+        
         return (
+          type === 'teaching' ||
           category === 'teaching' ||
           role.includes('teacher') ||
           role.includes('head') ||
@@ -51,7 +55,8 @@ export default function CentralDataServicePage() {
           role.includes('instructor') ||
           role.includes('principal') ||
           role.includes('deputy') ||
-          s.teaching === true
+          s.teaching === true ||
+          (!type && !category && (role.includes('teacher') || !role.includes('non')))
         );
       }).length;
 

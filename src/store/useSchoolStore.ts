@@ -24,7 +24,11 @@ export interface SchoolState {
 const getInitialStorage = (key: string, fallback: any) => {
   try {
     const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) return parsed;
+    }
   } catch (e) {
     console.error(`Error reading ${key} from localStorage:`, e);
   }
@@ -37,9 +41,14 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [learners, setLearnersState] = useState<any[]>(() =>
     getInitialStorage('munyaka_students', getInitialStorage('school_learners_data', initialSeedData.students || []))
   );
-  const [staff, setStaffState] = useState<any[]>(() =>
-    getInitialStorage('munyaka_staff', initialSeedData.staff || [])
-  );
+  const [staff, setStaffState] = useState<any[]>(() => {
+    const s1 = getInitialStorage('munyaka_staff', null);
+    const s2 = getInitialStorage('munyaka_staff_directory', null);
+    const s3 = getInitialStorage('munyaka_master_staff_list', null);
+    const s4 = getInitialStorage('staff', null);
+    const list = s1 || s2 || s3 || s4 || initialSeedData.staff || [];
+    return Array.isArray(list) ? list : [];
+  });
   const [fees, setFeesState] = useState<any[]>(() =>
     getInitialStorage('munyaka_fees', (initialSeedData as any).fees || [])
   );
@@ -63,7 +72,13 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setLearnersState(
       getInitialStorage('munyaka_students', getInitialStorage('school_learners_data', initialSeedData.students || []))
     );
-    setStaffState(getInitialStorage('munyaka_staff', initialSeedData.staff || []));
+    const s1 = getInitialStorage('munyaka_staff', null);
+    const s2 = getInitialStorage('munyaka_staff_directory', null);
+    const s3 = getInitialStorage('munyaka_master_staff_list', null);
+    const s4 = getInitialStorage('staff', null);
+    const staffList = s1 || s2 || s3 || s4 || initialSeedData.staff || [];
+    setStaffState(Array.isArray(staffList) ? staffList : []);
+
     setFeesState(getInitialStorage('munyaka_fees', (initialSeedData as any).fees || []));
     setAttendanceState(getInitialStorage('munyaka_attendance', (initialSeedData as any).attendance || []));
     setExamsState(getInitialStorage('all_set_exams', (initialSeedData as any).exams || []));
@@ -96,6 +111,8 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const setStaff = (newStaff: any[]) => {
     localStorage.setItem('munyaka_staff', JSON.stringify(newStaff));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(newStaff));
+    localStorage.setItem('staff', JSON.stringify(newStaff));
     setStaffState(newStaff);
     window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
     window.dispatchEvent(new CustomEvent('staff-changed'));
@@ -165,7 +182,11 @@ export const useSchoolStore = () => {
   if (!context) {
     // Return standalone accessor if outside provider
     const learners = getInitialStorage('munyaka_students', getInitialStorage('school_learners_data', initialSeedData.students || []));
-    const staff = getInitialStorage('munyaka_staff', initialSeedData.staff || []);
+    const s1 = getInitialStorage('munyaka_staff', null);
+    const s2 = getInitialStorage('munyaka_staff_directory', null);
+    const s3 = getInitialStorage('munyaka_master_staff_list', null);
+    const s4 = getInitialStorage('staff', null);
+    const staff = s1 || s2 || s3 || s4 || initialSeedData.staff || [];
     const fees = getInitialStorage('munyaka_fees', (initialSeedData as any).fees || []);
     const attendance = getInitialStorage('munyaka_attendance', (initialSeedData as any).attendance || []);
     const exams = getInitialStorage('all_set_exams', (initialSeedData as any).exams || []);
