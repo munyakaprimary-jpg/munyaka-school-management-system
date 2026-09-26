@@ -19,7 +19,7 @@ try {
   console.error('[useSchoolStore] Migration check failed:', e);
 }
 
-const SchoolStoreContext = createContext<any>(null);
+const SchoolStoreContext = createContext(null as any);
 
 const getInitialStorage = (key: string, fallback: any) => {
   try {
@@ -223,7 +223,7 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setState
   };
 
-  return <SchoolStoreContext.Provider value={value}>{children}</SchoolStoreContext.Provider>;
+  return React.createElement(SchoolStoreContext.Provider, { value }, children);
 };
 
 export const useSchoolStore = (selector?: (state: any) => any) => {
