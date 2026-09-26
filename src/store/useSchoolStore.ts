@@ -42,7 +42,8 @@ const getInitialStorage = (key: string, fallback: any) => {
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object' && Array.isArray((parsed as any).learners)) return (parsed as any).learners;
       if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) return parsed;
     }
   } catch (e) {
@@ -54,9 +55,10 @@ const getInitialStorage = (key: string, fallback: any) => {
 const SchoolStoreContext = createContext<SchoolState | null>(null);
 
 export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [learners, setLearnersState] = useState<any[]>(() =>
-    getInitialStorage('munyaka_students', getInitialStorage('school_learners_data', initialSeedData.students || []))
-  );
+  const [learners, setLearnersState] = useState<any[]>(() => {
+    const res = getInitialStorage('munyaka_students', getInitialStorage('school_learners_data', initialSeedData.students || []));
+    return Array.isArray(res) ? res : [];
+  });
   const [staff, setStaffState] = useState<any[]>(() => {
     const s1 = getInitialStorage('munyaka_staff', null);
     const s2 = getInitialStorage('munyaka_staff_directory', null);
