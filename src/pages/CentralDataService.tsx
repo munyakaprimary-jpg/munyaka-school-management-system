@@ -268,7 +268,7 @@ export default initialSeedData;
     }
   };
 
-  const handleSyncStoreToCentralData = () => {
+  const handleSyncStoreToCentralData = async () => {
     try {
       setLoading(true);
       // Read current store state and master lists
@@ -287,17 +287,7 @@ export default initialSeedData;
       const f2 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
       const masterFees = [fees, f1, f2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), fees);
 
-      const dump = {
-        students: masterLearners,
-        staff: masterStaff.length > 0 ? masterStaff : (initialSeedData.staff || []),
-        fees: masterFees,
-        attendance,
-        exams,
-        marks,
-        timetable,
-        settings,
-        timestamp: new Date().toISOString()
-      };
+      const dump = CentralDataService.getFullStateDump();
 
       // Write full updated dataset to localStorage keys
       localStorage.setItem('munyaka_students', JSON.stringify(masterLearners));
@@ -308,13 +298,29 @@ export default initialSeedData;
       localStorage.setItem('munyaka_attendance', JSON.stringify(attendance));
       localStorage.setItem('munyaka_central_db', JSON.stringify(dump));
 
+      // Post directly to local dev server endpoint /api/save-seed to write to src/data/initialSeedData.ts on disk
+      let diskWriteMsg = '';
+      try {
+        const res = await fetch('/api/save-seed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dump)
+        });
+        if (res.ok) {
+          const jsonRes = await res.json();
+          if (jsonRes.success) {
+            diskWriteMsg = ' (and saved directly to initialSeedData.ts on disk!)';
+          }
+        }
+      } catch {}
+
       refreshStore();
       refreshStats();
       window.dispatchEvent(new Event('munyaka:data-changed'));
       window.dispatchEvent(new Event('staff-changed'));
       window.dispatchEvent(new Event('students-updated'));
 
-      showSuccess('Successfully synced useSchoolStore and localStorage with latest central dataset!');
+      showSuccess(`Successfully synced useSchoolStore, localStorage, and central dataset${diskWriteMsg}!`);
     } catch (err: any) {
       showError('Failed to sync central data: ' + (err?.message || err));
     } finally {

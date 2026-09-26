@@ -1,37 +1,128 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import dyadComponentTagger from '@dyad-sh/react-vite-component-tagger';
+import fs from "fs";
 
-export default defineConfig(() => ({
-  // Force relative base path at the root of the config so all bundled
-  // assets work from any sub-path or local file URL (critical for
-  // Capacitor / Android WebView file:// access).
-  base: "./",
-  server: {
-    host: "::",
-    port: 8080,
+function saveSeedPlugin() {
+  return {
+    name: 'vite-plugin-save-seed',
+    configureServer(server: any) {
+      server.middlewares.use('/api/save-seed', (req: any, res: any) => {
+        if (req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk: any) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const fullDbObject = JSON.parse(body);
+              const generatedSeedVersion = "BUILD_OFFLINE_" + Date.now();
+
+              const fileContent = `export const SEED_VERSION = "${generatedSeedVersion}";
+
+export const DEFAULT_CBC_CLUSTERS = [
+  {
+    id: "cluster_1",
+    name: "Languages & Literacy",
+    description: "English, Kiswahili, Indigenous Languages, Foreign Languages",
+    color: "bg-indigo-500",
+    icon: "BookOpen",
+    learningAreas: [
+      { id: "la_eng", name: "English Language Activities", code: "ENG-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
+      { id: "la_kisw", name: "Kiswahili Language Activities", code: "KISW-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] }
+    ]
   },
-  // @vitejs/plugin-react must be first so its Babel transform runs before
-  // any other plugin sees the JSX (required for automatic JSX runtime).
-  plugins: [react(), dyadComponentTagger()],
+  {
+    id: "cluster_2",
+    name: "Mathematics & Science",
+    description: "Mathematics, Integrated Science, Health Education",
+    color: "bg-emerald-500",
+    icon: "Calculator",
+    learningAreas: [
+      { id: "la_math", name: "Mathematics Activities", code: "MATH-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
+      { id: "la_sci", name: "Integrated Science", code: "SCI-01", category: "Core", gradeLevels: ["Grade 4", "Grade 5", "Grade 6"] }
+    ]
+  }
+];
+
+export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
+
+export const initialSeedData = ${JSON.stringify(fullDbObject, null, 2)};
+
+(initialSeedData as any).learners = initialSeedData.students;
+
+export const INITIAL_SEED_DATA = initialSeedData;
+
+export const initialAttendance = (initialSeedData as any).attendance || {};
+export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
+export const initialScienceInventory = (initialSeedData as any).scienceInventory || (initialSeedData as any).scienceLabInventory || [];
+export const initialStoreInventory = (initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || [];
+export const initialSettings = (initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {};
+export const initialNotices = (initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || [];
+export const initialEvents = (initialSeedData as any).events || [];
+export const initialExams = (initialSeedData as any).exams || (initialSeedData as any).all_set_exams || (initialSeedData as any).question_bank || [];
+export const initialExamSchedules = (initialSeedData as any).examSchedules || (initialSeedData as any).assessment_schedules || [];
+export const initialExamTypes = (initialSeedData as any).examTypes || (initialSeedData as any).exam_types || [];
+export const initialMarks = (initialSeedData as any).marks || (initialSeedData as any).assessments || (initialSeedData as any).marked_student_submissions || [];
+export const initialQuestions = (initialSeedData as any).questions || (initialSeedData as any).question_bank || [];
+export const initialLearners = initialSeedData.students || [];
+export const initialStaff = initialSeedData.staff || [];
+export const initialReportCards = (initialSeedData as any).reportCards || [];
+export const initialFeeStructures = (initialSeedData as any).feeStructures || (initialSeedData as any).fees_structures || [];
+export const initialFeePayments = (initialSeedData as any).fees || (initialSeedData as any).payments || [];
+export const initialStudyCorner = (initialSeedData as any).studyCorner || (initialSeedData as any).study_materials || [];
+export const initialLibraryBooks = (initialSeedData as any).libraryBooks || (initialSeedData as any).library_books || [];
+export const initialLibraryLogs = (initialSeedData as any).libraryLogs || (initialSeedData as any).library_logs || [];
+export const mockLearners = initialSeedData.students || [];
+export const mockStudents = initialSeedData.students || [];
+export const mockStaff = initialSeedData.staff || [];
+export const initialGrades = (initialSeedData as any).grades || [];
+export const initialStreams = (initialSeedData as any).streams || [];
+export const initialClassAssignments = (initialSeedData as any).classAssignments || [];
+export const mockExams = (initialSeedData as any).exams || [];
+export const mockLibrary = (initialSeedData as any).libraryBooks || [];
+export const mockFinances = (initialSeedData as any).fees || [];
+
+export default initialSeedData;
+`;
+
+              const targetPath = path.resolve(__dirname, 'src/data/initialSeedData.ts');
+              fs.writeFileSync(targetPath, fileContent, 'utf-8');
+
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true, message: 'Saved directly to initialSeedData.ts on disk!' }));
+            } catch (err: any) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: false, error: err?.message || String(err) }));
+            }
+          });
+        } else {
+          res.statusCode = 405;
+          res.end('Method Not Allowed');
+        }
+      });
+    }
+  };
+}
+
+// https://vitejs.dev/config/
+export default defineConfig(() => ({
+  server: {
+    host: "0.0.0.0",
+    port: 5173,
+    hmr: {
+      overlay: false
+    }
+  },
+  plugins: [
+    react(),
+    saveSeedPlugin()
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-  },
-  build: {
-    // Set target to es2015 for Android WebView compatibility
-    target: 'es2015',
-    // Disable module preloading to prevent cross-origin script loading blocks
-    // in native local file:// contexts (Capacitor / Android WebView).
-    modulePreload: false,
-    // Raise the warning threshold to accommodate the heavy vendor stack used
-    // for local / Capacitor builds (recharts, pdfjs, sql.js, lucide).
-    chunkSizeWarningLimit: 6000,
-    // No custom manualChunks — let Rollup bundle react / react-dom / react-router
-    // synchronously into the main chunk so they load without async script tags
-    // that break older Android WebViews.
-    rollupOptions: {},
   },
 }));
