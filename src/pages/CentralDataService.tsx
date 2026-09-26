@@ -25,56 +25,60 @@ export default function CentralDataServicePage() {
     }
   };
 
-  const handleApplyPastedState = () => {
-    if (!pasteJsonInput.trim()) {
-      showError('Please paste valid JSON state first.');
-      return;
-    }
-    try {
-      setLoading(true);
-      const parsed = JSON.parse(pasteJsonInput);
-      if (!parsed || typeof parsed !== 'object') {
-        showError('Invalid JSON format.');
-        return;
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        setLoading(true);
+        const content = event.target?.result as string;
+        const parsed = JSON.parse(content);
+        if (!parsed || typeof parsed !== 'object') {
+          showError('Invalid JSON backup file.');
+          return;
+        }
+
+        // Overwrite local storage keys
+        if (parsed.students) localStorage.setItem('munyaka_students', JSON.stringify(parsed.students));
+        if (parsed.staff) localStorage.setItem('munyaka_staff', JSON.stringify(parsed.staff));
+        if (parsed.fees) localStorage.setItem('munyaka_fees', JSON.stringify(parsed.fees));
+        if (parsed.attendance) localStorage.setItem('munyaka_attendance', JSON.stringify(parsed.attendance));
+        if (parsed.exams) localStorage.setItem('all_set_exams', JSON.stringify(parsed.exams));
+        if (parsed.marks) localStorage.setItem('marked_student_submissions', JSON.stringify(parsed.marks));
+        if (parsed.timetable) localStorage.setItem('school-timetable-data', JSON.stringify(parsed.timetable));
+        if (parsed.settings) localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(parsed.settings));
+
+        localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
+
+        // Force update Zustand store state
+        useSchoolStore.setState({
+          learners: parsed.students || learners,
+          staff: parsed.staff || staff,
+          fees: parsed.fees || fees,
+          attendance: parsed.attendance || attendance,
+          exams: parsed.exams || exams,
+          marks: parsed.marks || marks,
+          timetable: parsed.timetable || timetable,
+          settings: parsed.settings || settings,
+        });
+
+        refreshStore();
+        refreshStats();
+        window.dispatchEvent(new Event('munyaka:data-changed'));
+        window.dispatchEvent(new Event('staff-changed'));
+        window.dispatchEvent(new Event('students-updated'));
+
+        showSuccess('Successfully uploaded and hydrated store from backup file!');
+      } catch (err: any) {
+        showError('Failed to parse uploaded JSON: ' + (err?.message || err));
+      } finally {
+        setLoading(false);
+        if (e.target) e.target.value = '';
       }
-
-      // Overwrite local storage keys
-      if (parsed.students) localStorage.setItem('munyaka_students', JSON.stringify(parsed.students));
-      if (parsed.staff) localStorage.setItem('munyaka_staff', JSON.stringify(parsed.staff));
-      if (parsed.fees) localStorage.setItem('munyaka_fees', JSON.stringify(parsed.fees));
-      if (parsed.attendance) localStorage.setItem('munyaka_attendance', JSON.stringify(parsed.attendance));
-      if (parsed.exams) localStorage.setItem('all_set_exams', JSON.stringify(parsed.exams));
-      if (parsed.marks) localStorage.setItem('marked_student_submissions', JSON.stringify(parsed.marks));
-      if (parsed.timetable) localStorage.setItem('school-timetable-data', JSON.stringify(parsed.timetable));
-      if (parsed.settings) localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(parsed.settings));
-
-      localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
-
-      // Force update Zustand store state
-      useSchoolStore.setState({
-        learners: parsed.students || learners,
-        staff: parsed.staff || staff,
-        fees: parsed.fees || fees,
-        attendance: parsed.attendance || attendance,
-        exams: parsed.exams || exams,
-        marks: parsed.marks || marks,
-        timetable: parsed.timetable || timetable,
-        settings: parsed.settings || settings,
-      });
-
-      refreshStore();
-      refreshStats();
-      window.dispatchEvent(new Event('munyaka:data-changed'));
-      window.dispatchEvent(new Event('staff-changed'));
-      window.dispatchEvent(new Event('students-updated'));
-
-      showSuccess('Successfully applied pasted state and updated live useSchoolStore!');
-      setPasteJsonInput('');
-    } catch (err: any) {
-      showError('Failed to parse or apply pasted JSON: ' + (err?.message || err));
-    } finally {
-      setLoading(false);
-    }
+    };
+    reader.readAsText(file);
   };
 
   const [stats, setStats] = useState({
@@ -548,24 +552,35 @@ export default initialSeedData;
           <CardHeader>
             <div className="flex items-center gap-2">
               <Upload className="w-5 h-5 text-emerald-600" />
-              <CardTitle>Paste & Force Hydrate Store</CardTitle>
+              <CardTitle>Upload Backup File (.json)</CardTitle>
             </div>
             <CardDescription>
-              Paste JSON state below and click apply to instantly update <code className="text-xs font-mono">useSchoolStore</code> and localStorage.
+              Upload a previously exported JSON backup file to instantly hydrate <code className="text-xs font-mono">useSchoolStore</code> and localStorage.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea
-              placeholder="Paste raw JSON state here..."
-              value={pasteJsonInput}
-              onChange={(e) => setPasteJsonInput(e.target.value)}
-              className="font-mono text-xs h-40 rounded-xl bg-slate-50 dark:bg-slate-900"
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Updates screen counts and menus immediately.</span>
-              <Button onClick={handleApplyPastedState} disabled={loading} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
-                Apply Pasted State
-              </Button>
+            <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-6 bg-slate-50/50 dark:bg-slate-900/50 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
+                <Upload className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-900 dark:text-white">Upload backup file (.json)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Select a valid .json snapshot file from your device.</p>
+              </div>
+              <label className="cursor-pointer inline-flex items-center justify-center px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-md shadow-emerald-900/20 transition-all">
+                <span>Upload & Hydrate Store (.json)</span>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={loading}
+                />
+              </label>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs text-muted-foreground flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+              <p>Hydrating from a backup file will immediately update the store and refresh all dashboard counters in real time.</p>
             </div>
           </CardContent>
         </Card>
