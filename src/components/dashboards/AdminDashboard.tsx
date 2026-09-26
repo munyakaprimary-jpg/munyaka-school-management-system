@@ -3,18 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import CentralDataService from '../../services/centralDataService';
+import { useSchoolStore } from '../../store/useSchoolStore';
 import { Users, GraduationCap, Briefcase, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const AdminDashboardComponent: React.FC = () => {
+  const storeLearners = useSchoolStore(state => state.learners);
+  const storeStaff = useSchoolStore(state => state.staff);
+
   const [totalStudents, setTotalStudents] = useState(0);
   const [teachingStaffCount, setTeachingStaffCount] = useState(0);
   const [nonTeachingStaffCount, setNonTeachingStaffCount] = useState(0);
   const [primaryCount, setPrimaryCount] = useState(0);
   const [juniorCount, setJuniorCount] = useState(0);
 
-  useEffect(() => {
-    const learners = CentralDataService.getLearners();
-    const staff = CentralDataService.getStaff();
+  const computeMetrics = () => {
+    const learners = storeLearners && storeLearners.length > 0 ? storeLearners : CentralDataService.getLearners();
+    const staff = storeStaff && storeStaff.length > 0 ? storeStaff : CentralDataService.getStaff();
 
     const teaching = staff.filter((s: any) => {
       const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
@@ -43,7 +47,22 @@ export const AdminDashboardComponent: React.FC = () => {
     setNonTeachingStaffCount(nonTeaching.length);
     setPrimaryCount(primary.length);
     setJuniorCount(junior);
-  }, []);
+  };
+
+  useEffect(() => {
+    computeMetrics();
+    const handleDataChange = () => computeMetrics();
+    window.addEventListener('munyaka:data-changed', handleDataChange);
+    window.addEventListener('staff-changed', handleDataChange);
+    window.addEventListener('students-updated', handleDataChange);
+    window.addEventListener('storage', handleDataChange);
+    return () => {
+      window.removeEventListener('munyaka:data-changed', handleDataChange);
+      window.removeEventListener('staff-changed', handleDataChange);
+      window.removeEventListener('students-updated', handleDataChange);
+      window.removeEventListener('storage', handleDataChange);
+    };
+  }, [storeLearners, storeStaff]);
 
   return (
     <div className="p-6 space-y-6">
