@@ -74,7 +74,6 @@ import TeacherCommunication from "./pages/TeacherCommunication";
 import Library from "./pages/Library";
 import Inventory from "./pages/Inventory";
 import { LearnerProvider } from './context/LearnerContext';
-import { CentralDataSyncManager } from './services/CentralDataSyncManager';
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
 import { startHeartbeatService, stopHeartbeatService } from "./services/deviceHeartbeat";
@@ -109,11 +108,6 @@ if (typeof window !== 'undefined') {
 
 // ── Critical Central Database Initialization ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Initialize and hydrate state from remote central DB on boot
-if (typeof window !== 'undefined') {
-  CentralDataSyncManager.initializeAndHydrate().catch(err => {
-    console.error('[App] CentralDataSyncManager initialization error:', err);
-  });
-}
 
 // ── Legacy Key Auto-Migration ─────────────────────────────────────────────
 const migrateStorageKey = (oldKey: string, newKey: string) => {
