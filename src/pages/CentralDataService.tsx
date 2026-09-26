@@ -342,14 +342,6 @@ export default initialSeedData;
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button
-              onClick={refreshStats}
-              variant="outline"
-              className="rounded-xl border-indigo-400/30 bg-indigo-950/40 text-indigo-200 hover:bg-indigo-900/60 hover:text-white"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
-            <Button
               onClick={handleSyncStoreToCentralData}
               disabled={loading}
               className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-900/30 font-semibold"
