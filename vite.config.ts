@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
+import { exec } from "child_process";
 
 function saveSeedPlugin() {
   return {
@@ -89,6 +90,8 @@ export default initialSeedData;
               const targetPath = path.resolve(__dirname, 'src/data/initialSeedData.ts');
               fs.writeFileSync(targetPath, fileContent, 'utf-8');
 
+              exec('git add src/data/initialSeedData.ts && git commit -m "Auto-commit updated initialSeedData.ts"', () => {});
+
               res.statusCode = 200;
               res.setHeader('Content-Type', 'application/json');
               res.end(JSON.stringify({ success: true, message: 'Saved directly to initialSeedData.ts on disk!' }));
@@ -118,6 +121,7 @@ export default defineConfig(() => ({
   },
   plugins: [
     react(),
+    saveSeedPlugin(),
     saveSeedPlugin()
   ],
   resolve: {
