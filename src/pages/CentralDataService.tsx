@@ -41,17 +41,21 @@ export default function CentralDataServicePage() {
 
       const teachingStaff = staff.filter((s: any) => {
         const role = (s.role || s.systemRole || '').toLowerCase();
+        const category = (s.category || s.staffCategory || '').toLowerCase();
         return (
+          category === 'teaching' ||
           role.includes('teacher') ||
           role.includes('head') ||
           role.includes('educator') ||
           role.includes('tutor') ||
           role.includes('instructor') ||
+          role.includes('principal') ||
+          role.includes('deputy') ||
           s.teaching === true
         );
       }).length;
 
-      const nonTeachingStaff = staff.length - teachingStaff;
+      const nonTeachingStaff = Math.max(0, staff.length - teachingStaff);
 
       const attendanceCount = Array.isArray(attendance)
         ? attendance.length
