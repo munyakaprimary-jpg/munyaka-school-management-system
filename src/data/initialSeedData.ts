@@ -25,6 +25,8 @@ export const DEFAULT_CBC_CLUSTERS = [
 
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
+export const SEED_VERSION = 1741300000000;
+
 export const initialSeedData = {
   "fees": [
     {
