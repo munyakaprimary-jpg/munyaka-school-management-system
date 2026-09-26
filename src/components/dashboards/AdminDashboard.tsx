@@ -61,7 +61,7 @@ export const AdminDashboardComponent: React.FC = () => {
     let sumGirls = 0;
 
     const rows = gradeLevels.map(gradeName => {
-      // Filter learners matching grade and optional year check if present
+      // Filter learners matching grade and strict academic year check
       const gradeLearners = learners.filter((l: any) => {
         const lGrade = String(l.grade || l.class || '').trim();
         const matchesGrade = lGrade.toLowerCase() === gradeName.toLowerCase() ||
@@ -71,11 +71,8 @@ export const AdminDashboardComponent: React.FC = () => {
         
         if (!matchesGrade) return false;
 
-        if (l.enrollmentYear || l.year || l.academicYear) {
-          const lYear = String(l.enrollmentYear || l.year || l.academicYear);
-          if (lYear && lYear !== selectedYear) return false;
-        }
-        return true;
+        const lYear = String(l.academicYear || l.year || l.enrollmentYear || '2026');
+        return lYear === String(selectedYear);
       });
 
       const boys = gradeLearners.filter((l: any) => {
@@ -88,7 +85,6 @@ export const AdminDashboardComponent: React.FC = () => {
         return g.startsWith('f') || g === 'girl';
       }).length;
 
-      // If gender wasn't explicit, split evenly or count remaining
       const unassigned = gradeLearners.length - (boys + girls);
       const adjustedBoys = boys + Math.ceil(unassigned / 2);
       const adjustedGirls = girls + Math.floor(unassigned / 2);
