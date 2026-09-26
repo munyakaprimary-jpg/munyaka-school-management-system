@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getApiBaseUrl } from '@/lib/apiBase';
 import { CentralDataService } from '@/services/centralDataService';
-import { syncAdminDataToSeed } from '@/utils/adminSeedSync';
 import {
   Server,
   Monitor,
@@ -739,29 +738,6 @@ export default function AdminControlCenter() {
                   </label>
                 </div>
 
-                <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-200 dark:bg-emerald-900/50 flex items-center justify-center">
-                    <RefreshCw className="w-6 h-6 text-emerald-700 dark:text-emerald-300" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-emerald-900 dark:text-emerald-100">Sync Admin Data to Seed</p>
-                    <p className="text-sm text-emerald-700 dark:text-emerald-300">Package local DB into initialSeedData for offline APK builds</p>
-                  </div>
-                  <Button
-                    onClick={async () => {
-                      try {
-                        const stats = await syncAdminDataToSeed();
-                        showSuccess(`Successfully synchronized admin seed data! Students: ${stats.students}, Staff: ${stats.staff}, Exams: ${stats.exams}. initialSeedData.ts downloaded.`);
-                      } catch (err: any) {
-                        showError('Failed to sync admin seed data: ' + (err?.message || err));
-                      }
-                    }}
-                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin-hover" />
-                    Sync Seed
-                  </Button>
-                </div>
               </CardContent>
             </Card>
 

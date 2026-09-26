@@ -1,4 +1,4 @@
-import { initialSeedData } from '../data/initialSeedData';
+import { initialSeedData } from '@/data/initialSeedData';
 
 // Canonical storage keys — unified namespace used across all modules.
 const CANONICAL_KEYS = {
@@ -56,6 +56,16 @@ export const initializeApplicationStorage = (): void => {
       localStorage.setItem(key, JSON.stringify(data));
     }
   });
+};
+
+/** Merged StorageInitService from duplicate StorageInitService.ts */
+export const StorageInitService = {
+  init: () => {
+    initializeApplicationStorage();
+  },
+  ensureSeeded: () => {
+    initializeApplicationStorage();
+  }
 };
 
 export default initializeApplicationStorage;

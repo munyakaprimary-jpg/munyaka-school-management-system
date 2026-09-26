@@ -4,7 +4,7 @@
  */
 
 import { STORAGE_KEYS, readStorage, writeStorage, removeStorage, clearAllStorage } from '@/services/persistentStore';
-import CentralDataSyncManager from './CentralDataSyncManager';
+import { CentralDataService } from './centralDataService';
 
 export const UnifiedDataStorage = {
   get: <T>(key: string, fallback: T): T => {
@@ -70,7 +70,7 @@ export const UnifiedDataStorage = {
       localStorage.setItem('munyaka_central_db', JSON.stringify(db));
     } catch {}
 
-    CentralDataSyncManager.persistAndSyncMutation('staff', staffList);
+    CentralDataService.persistAndSyncMutation('staff', staffList);
 
     window.dispatchEvent(new Event('staff-changed'));
     window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
@@ -161,7 +161,7 @@ export const UnifiedDataStorage = {
     writeStorage('munyaka_students', learners);
     writeStorage('munyaka_master_learner_list', learners);
 
-    CentralDataSyncManager.persistAndSyncMutation('students', learners);
+    CentralDataService.persistAndSyncMutation('students', learners);
 
     window.dispatchEvent(new Event('students-updated'));
     window.dispatchEvent(new Event('learners-updated'));
@@ -172,14 +172,14 @@ export const UnifiedDataStorage = {
   getFees: (): any[] => readStorage<any[]>('munyaka_fees_records', []),
   saveFees: (records: any[]): boolean => {
     writeStorage('munyaka_fees_records', records);
-    CentralDataSyncManager.persistAndSyncMutation('fees', records);
+    CentralDataService.persistAndSyncMutation('fees', records);
     return true;
   },
 
   getAttendance: (): any[] => readStorage<any[]>('munyaka_attendance_records', []),
   saveAttendance: (records: any[]): boolean => {
     writeStorage('munyaka_attendance_records', records);
-    CentralDataSyncManager.persistAndSyncMutation('attendance', records);
+    CentralDataService.persistAndSyncMutation('attendance', records);
     return true;
   },
 };
