@@ -1,18 +1,5 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { initialSeedData, SEED_VERSION } from '@/data/initialSeedData';
-
-// Check seed version sync on module load for mobile APK stale cache prevention
-try {
-  const storedVersion = localStorage.getItem('munyaka_seed_version');
-  const targetVersion = String(SEED_VERSION);
-  if (storedVersion !== targetVersion) {
-    localStorage.clear();
-    localStorage.setItem('munyaka_seed_version', targetVersion);
-    console.log('[SeedSync] Stale cache detected or first launch. Cleared storage and re-hydrated with SEED_VERSION:', targetVersion);
-  }
-} catch (e) {
-  console.error('[SeedSync] Error checking seed version:', e);
-}
+import { initialSeedData } from '@/data/initialSeedData';
 
 export interface SchoolState {
   learners: any[];
