@@ -1,238 +1,159 @@
-"use client";
-
-import React, { useState, useEffect, useMemo } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { showSuccess } from '@/utils/toast';
-import PromoteStudentsModal from '@/components/ui/PromoteStudentsModal';
-import { getStudents, setStudents as saveStudentsToStore } from '@/services/persistentStore';
-import { CentralDataService } from '@/services/centralDataService';
-
-// Modular Components
-import PromotionHeader from '@/components/promote/PromotionHeader';
-import WarningBanner from '@/components/promote/WarningBanner';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useSchoolStore } from '@/store/useSchoolStore';
+import { showSuccess, showError } from '@/utils/toast';
+import { ArrowRight, CheckCircle2, Users, GraduationCap, RefreshCw } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import PromotionStats from '@/components/promote/PromotionStats';
-import PromotionFilters from '@/components/promote/PromotionFilters';
-import PromotionPreviewTable, { StudentPreview } from '@/components/promote/PromotionPreviewTable';
-import PromotionHistoryTable, { PromotionRecord } from '@/components/promote/PromotionHistoryTable';
-import SuccessMessage from '@/components/promote/SuccessMessage';
 
-interface Student {
-  id: string;
-  name: string;
-  grade: string;
-  stream: string;
-  status: 'Active' | 'Graduated' | 'Archived';
-  [key: string]: any;
-}
+const GRADE_SEQUENCE = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 
-const HISTORY_STORAGE_KEY = 'munyaka_promotion_history';
+const calculateNextGrade = (currentGrade: string): string => {
+  if (!currentGrade) return 'Grade 1';
+  const clean = currentGrade.trim().toLowerCase();
 
-const Promote = () => {
-  const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
-  const [students, setStudents] = useState<Student[]>(() => {
-    try {
-      const raw = getStudents();
-      if (Array.isArray(raw) && raw.length > 0) {
-        return raw.map((s: any) => ({
-          id: s.id || String(Math.random()),
-          name: s.name || 'Unnamed Learner',
-          grade: s.grade || 'Grade 1',
-          stream: s.stream || 'Blue',
-          status: s.status || 'Active'
-        }));
-      }
-    } catch {}
-    return [];
-  });
+  const index = GRADE_SEQUENCE.findIndex(g => g.toLowerCase() === clean);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterGrade, setFilterGrade] = useState('');
-  const [filterStream, setFilterStream] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [activeTab, setActiveTab] = useState('preview');
-  
-  const [promotionHistory, setPromotionHistory] = useState<PromotionRecord[]>(() => {
-    try {
-      const central = CentralDataService.getData<PromotionRecord[]>(HISTORY_STORAGE_KEY, []);
-      if (central && Array.isArray(central)) return central;
-      const saved = localStorage.getItem(HISTORY_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [];
-  });
+  if (index !== -1 && index + 1 < GRADE_SEQUENCE.length) {
+    return GRADE_SEQUENCE[index + 1];
+  } else if (index === GRADE_SEQUENCE.length - 1 || clean.includes('grade 9') || clean.includes('g9')) {
+    return 'Graduated';
+  }
 
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  if (clean === 'g1' || clean === 'class 1') return 'Grade 2';
+  if (clean === 'g2' || clean === 'class 2') return 'Grade 3';
+  if (clean === 'g3' || clean === 'class 3') return 'Grade 4';
+  if (clean === 'g4' || clean === 'class 4') return 'Grade 5';
+  if (clean === 'g5' || clean === 'class 5') return 'Grade 6';
+  if (clean === 'g6' || clean === 'class 6') return 'Grade 7';
+  if (clean === 'g7' || clean === 'class 7') return 'Grade 8';
+  if (clean === 'g8' || clean === 'class 8') return 'Grade 9';
+  if (clean === 'g9' || clean === 'class 9') return 'Graduated';
 
-  useEffect(() => {
-    try {
-      CentralDataService.setData(HISTORY_STORAGE_KEY, promotionHistory);
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(promotionHistory));
-    } catch {}
-  }, [promotionHistory]);
-
-  // Filter students based on search and filters
-  const filteredStudents = useMemo(() => {
-    return students.filter(student => {
-      const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesGrade = !filterGrade || student.grade === filterGrade;
-      const matchesStream = !filterStream || student.stream === filterStream;
-      const matchesStatus = !filterStatus || student.status === filterStatus;
-      return matchesSearch && matchesGrade && matchesStream && matchesStatus;
-    });
-  }, [students, searchTerm, filterGrade, filterStream, filterStatus]);
-
-  // Helper functions
-  const getNextGrade = (currentGrade: string): string => {
-    const gradeMatch = currentGrade.match(/Grade (\d+)/);
-    if (gradeMatch) {
-      const currentNum = parseInt(gradeMatch[1]);
-      return `Grade ${currentNum + 1}`;
-    }
-    if (currentGrade === "Grade PP2") return "Grade 1";
-    if (currentGrade === "Grade PP1") return "Grade PP2";
-    return currentGrade;
-  };
-
-  const isHighestGrade = (grade: string, highestGrade: string): boolean => {
-    const gradeMatch = grade.match(/Grade (\d+)/);
-    const highestMatch = highestGrade.match(/Grade (\d+)/);
-    
-    if (gradeMatch && highestMatch) {
-      const currentNum = parseInt(gradeMatch[1]);
-      const highestNum = parseInt(highestMatch[1]);
-      return currentNum >= highestNum;
-    }
-    return false;
-  };
-
-  const getHighestGrade = (): string => {
-    if (students.length === 0) return 'Grade 6';
-    const maxGrade = Math.max(...students.map(s => {
-      const match = s.grade.match(/Grade (\d+)/);
-      return match ? parseInt(match[1]) : 0;
-    }));
-    return `Grade ${maxGrade > 0 ? maxGrade : 6}`;
-  };
-
-  // Generate promotion preview
-  const getPromotionPreview = (): StudentPreview[] => {
-    const highestGrade = getHighestGrade();
-    return students.map(student => {
-      const nextGrade = getNextGrade(student.grade);
-      const isHighest = isHighestGrade(student.grade, highestGrade);
-      return {
-        ...student,
-        nextGrade,
-        isHighest,
-        status: isHighest ? 'Graduated' : student.status
-      };
-    });
-  };
-
-  // Handle promotion execution
-  const handlePromoteStudents = (promotedStudents: Student[]) => {
-    setStudents(promotedStudents);
-    try {
-      saveStudentsToStore(promotedStudents);
-    } catch {}
-    
-    // Add to promotion history
-    const promotionRecord: PromotionRecord = {
-      id: `PROM-${Date.now()}`,
-      date: new Date().toLocaleDateString(),
-      promotedBy: "System Admin",
-      totalPromoted: promotedStudents.length,
-      newGrades: promotedStudents.map(s => ({
-        student: s.name,
-        from: s.grade,
-        to: getNextGrade(s.grade)
-      }))
-    };
-    
-    const updatedHistory = [promotionRecord, ...promotionHistory];
-    setPromotionHistory(updatedHistory);
-    setShowSuccessMessage(true);
-    showSuccess("Students promoted successfully in permanent storage!");
-    
-    setTimeout(() => setShowSuccessMessage(false), 5000);
-  };
-
-  const promotionPreview = getPromotionPreview();
-
-  const statsData = useMemo(() => {
-    const active = students.filter(s => s.status === 'Active').length;
-    const graduated = students.filter(s => s.status === 'Graduated').length;
-    return {
-      totalStudents: students.length,
-      activeStudents: active,
-      graduatedStudents: graduated,
-      highestGrade: getHighestGrade()
-    };
-  }, [students]);
-
-  const gradeCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    students.forEach(s => {
-      map[s.grade] = (map[s.grade] || 0) + 1;
-    });
-    return Object.keys(map).map(grade => ({ grade, count: map[grade] }));
-  }, [students]);
-
-  const streamCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    students.forEach(s => {
-      if (s.stream) map[s.stream] = (map[s.stream] || 0) + 1;
-    });
-    return Object.keys(map).map(stream => ({ stream, count: map[stream] }));
-  }, [students]);
-
-  return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <SuccessMessage visible={showSuccessMessage} />
-
-      <PromotionHeader onPromoteClick={() => setIsPromoteModalOpen(true)} />
-
-      <WarningBanner />
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-full overflow-x-hidden">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8 flex-wrap">
-          <TabsTrigger value="preview" className="rounded-xl px-8 h-full font-bold text-xs">Promotion Preview</TabsTrigger>
-          <TabsTrigger value="history" className="rounded-xl px-8 h-full font-bold text-xs">Promotion History</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="preview" className="space-y-8">
-          <PromotionStats stats={statsData} />
-
-          <PromotionFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            filterGrade={filterGrade}
-            onGradeChange={setFilterGrade}
-            filterStream={filterStream}
-            onStreamChange={setFilterStream}
-            filterStatus={filterStatus}
-            onStatusChange={setFilterStatus}
-            grades={gradeCounts}
-            streams={streamCounts}
-          />
-
-          <PromotionPreviewTable students={promotionPreview} />
-        </TabsContent>
-
-        <TabsContent value="history" className="space-y-6">
-          <PromotionHistoryTable history={promotionHistory} />
-        </TabsContent>
-      </Tabs>
-
-      <PromoteStudentsModal
-        isOpen={isPromoteModalOpen}
-        onClose={() => setIsPromoteModalOpen(false)}
-        students={filteredStudents}
-        onPromote={handlePromoteStudents}
-        highestGrade={getHighestGrade()}
-      />
-    </div>
-  );
+  return currentGrade;
 };
 
-export default Promote;
+export default function PromotePage() {
+  const { learners, saveLearners } = useSchoolStore();
+  const [targetYear, setTargetYear] = useState('2027');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const statsData = {
+    totalStudents: learners.length,
+    eligibleForPromotion: learners.filter(l => calculateNextGrade(l.grade || l.class) !== 'Graduated').length,
+    graduating: learners.filter(l => calculateNextGrade(l.grade || l.class) === 'Graduated').length,
+    retained: 0
+  };
+
+  const handleExecutePromotions = () => {
+    try {
+      setIsProcessing(true);
+      const updated = learners.map(l => {
+        const current = l.grade || l.class || 'Grade 1';
+        const next = calculateNextGrade(current);
+        return {
+          ...l,
+          grade: next === 'Graduated' ? current : next,
+          status: next === 'Graduated' ? 'Graduated' : 'Active',
+          academicYear: targetYear,
+          year: targetYear,
+          enrollmentYear: targetYear
+        };
+      });
+
+      saveLearners(updated);
+      showSuccess(`Successfully promoted all students to academic year ${targetYear}!`);
+    } catch (err: any) {
+      showError('Promotion execution failed: ' + (err?.message || err));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Student Promotion & Advancement</h1>
+          <p className="text-sm text-muted-foreground mt-1">Advance active students to the next grade sequence for academic year {targetYear}.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleExecutePromotions}
+            disabled={isProcessing}
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg shadow-indigo-900/20"
+          >
+            <ArrowRight className="w-4 h-4 mr-2" />
+            Execute Promotions for {targetYear}
+          </Button>
+        </div>
+      </div>
+
+      <PromotionStats stats={statsData} />
+
+      <Card className="rounded-3xl border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold">Promotion Preview Table</CardTitle>
+              <CardDescription>Review projected grade advancement for all registered students.</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Target Year:</span>
+              <select
+                value={targetYear}
+                onChange={(e) => setTargetYear(e.target.value)}
+                className="bg-white dark:bg-slate-800 border rounded-xl px-3 py-1.5 text-sm font-bold"
+              >
+                <option value="2027">2027</option>
+                <option value="2028">2028</option>
+                <option value="2029">2029</option>
+              </select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-slate-100/70 dark:bg-slate-800/50">
+              <TableRow>
+                <TableHead className="font-bold py-4 px-6">STUDENT NAME</TableHead>
+                <TableHead className="font-bold py-4 px-6">ADMISSION NO</TableHead>
+                <TableHead className="font-bold py-4 px-6">CURRENT GRADE</TableHead>
+                <TableHead className="font-bold py-4 px-6">NEXT GRADE (PREVIEW)</TableHead>
+                <TableHead className="font-bold py-4 px-6">STATUS</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {learners.map((learner: any, idx: number) => {
+                const currentGrade = learner.grade || learner.class || 'Grade 1';
+                const nextGrade = calculateNextGrade(currentGrade);
+                const isGraduated = nextGrade === 'Graduated';
+
+                return (
+                  <TableRow key={learner.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                    <TableCell className="font-bold text-slate-900 dark:text-white py-3.5 px-6">{learner.name || learner.fullName || 'Student'}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground py-3.5 px-6">{learner.admissionNumber || learner.admNo || 'MUN-000'}</TableCell>
+                    <TableCell className="py-3.5 px-6 font-medium">{currentGrade}</TableCell>
+                    <TableCell className="py-3.5 px-6 font-bold text-indigo-600 dark:text-indigo-400">
+                      <div className="flex items-center gap-2">
+                        <span>{nextGrade}</span>
+                        {!isGraduated && <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3.5 px-6">
+                      <Badge variant={isGraduated ? 'secondary' : 'default'} className={isGraduated ? 'bg-amber-100 text-amber-800 font-bold' : 'bg-emerald-100 text-emerald-800 font-bold'}>
+                        {isGraduated ? 'Graduated' : 'Active'}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
