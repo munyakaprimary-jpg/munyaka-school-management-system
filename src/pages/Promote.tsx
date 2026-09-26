@@ -115,43 +115,45 @@ export default function PromotePage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-100/70 dark:bg-slate-800/50">
-              <TableRow>
-                <TableHead className="font-bold py-4 px-6">STUDENT NAME</TableHead>
-                <TableHead className="font-bold py-4 px-6">ADMISSION NO</TableHead>
-                <TableHead className="font-bold py-4 px-6">CURRENT GRADE</TableHead>
-                <TableHead className="font-bold py-4 px-6">NEXT GRADE (PREVIEW)</TableHead>
-                <TableHead className="font-bold py-4 px-6">STATUS</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {learners.map((learner: any, idx: number) => {
-                const currentGrade = learner.grade || learner.class || 'Grade 1';
-                const nextGrade = calculateNextGrade(currentGrade);
-                const isGraduated = nextGrade === 'Graduated';
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[650px]">
+              <TableHeader className="bg-slate-100/70 dark:bg-slate-800/50">
+                <TableRow>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3 min-w-[150px]">STUDENT NAME</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3 min-w-[110px]">ADMISSION NO</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3 min-w-[110px]">CURRENT GRADE</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3 min-w-[160px]">NEXT GRADE (PREVIEW)</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3 min-w-[100px]">STATUS</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {learners.map((learner: any, idx: number) => {
+                  const currentGrade = learner.grade || learner.class || 'Grade 1';
+                  const nextGrade = calculateNextGrade(currentGrade);
+                  const isGraduated = nextGrade === 'Graduated';
 
-                return (
-                  <TableRow key={learner.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                    <TableCell className="font-bold text-slate-900 dark:text-white py-3.5 px-6">{learner.name || learner.fullName || 'Student'}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground py-3.5 px-6">{learner.admissionNumber || learner.admNo || 'MUN-000'}</TableCell>
-                    <TableCell className="py-3.5 px-6 font-medium">{currentGrade}</TableCell>
-                    <TableCell className="py-3.5 px-6 font-bold text-indigo-600 dark:text-indigo-400">
-                      <div className="flex items-center gap-2">
-                        <span>{nextGrade}</span>
-                        {!isGraduated && <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-3.5 px-6">
-                      <Badge variant={isGraduated ? 'secondary' : 'default'} className={isGraduated ? 'bg-amber-100 text-amber-800 font-bold' : 'bg-emerald-100 text-emerald-800 font-bold'}>
-                        {isGraduated ? 'Graduated' : 'Active'}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  return (
+                    <TableRow key={learner.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                      <TableCell className="text-xs md:text-sm font-bold text-slate-900 dark:text-white py-2.5 px-3 whitespace-nowrap">{learner.name || learner.fullName || 'Student'}</TableCell>
+                      <TableCell className="text-xs font-mono text-muted-foreground py-2.5 px-3 whitespace-nowrap">{learner.admissionNumber || learner.admNo || 'MUN-000'}</TableCell>
+                      <TableCell className="text-xs md:text-sm py-2.5 px-3 font-medium whitespace-nowrap">{currentGrade}</TableCell>
+                      <TableCell className="text-xs md:text-sm py-2.5 px-3 font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span>{nextGrade}</span>
+                          {!isGraduated && <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs py-2.5 px-3 whitespace-nowrap">
+                        <Badge variant={isGraduated ? 'secondary' : 'default'} className={isGraduated ? 'bg-amber-100 text-amber-800 font-bold text-[10px]' : 'bg-emerald-100 text-emerald-800 font-bold text-[10px]'}>
+                          {isGraduated ? 'Graduated' : 'Active'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
