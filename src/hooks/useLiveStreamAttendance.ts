@@ -321,9 +321,21 @@ export const useLiveStreamAttendance = (
 
   // ── Apply filter state ─────────────────────────────────────────────────────
   const filteredStreams = useMemo(() => {
-      const q = String(searchTerm || '').trim().toLowerCase();
-      return rawStreams.filter((s) => {
-      const gradeMatch = filterGrade === 'all' || s.grade === filterGrade;
+    const q = String(searchTerm || '').trim().toLowerCase();
+    const getDigits = (val: any) => String(val ?? '').replace(/[^0-9]/g, '');
+
+    return rawStreams.filter((s) => {
+      let gradeMatch = filterGrade === 'all';
+      if (!gradeMatch) {
+        const targetDigits = getDigits(filterGrade);
+        const itemDigits = getDigits(s.grade);
+        if (targetDigits !== '' && itemDigits !== '') {
+          gradeMatch = targetDigits === itemDigits;
+        } else {
+          gradeMatch = String(s.grade || '').toLowerCase().trim() === String(filterGrade || '').toLowerCase().trim();
+        }
+      }
+
       const streamMatch = filterStream === 'all' ||
         normalizeStream(s.stream) === normalizeStream(filterStream);
       const searchMatch = !q
