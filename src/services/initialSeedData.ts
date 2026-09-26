@@ -1,3 +1,5 @@
+export const SEED_VERSION = "BUILD_OFFLINE_1790412920872";
+
 export const DEFAULT_CBC_CLUSTERS = [
   {
     id: "cluster_1",
@@ -83,21 +85,21 @@ export const initialSeedData = {
     },
     {
       "id": "1789826147758",
-      "name": "PETER MWANGI",
-      "fullName": "PETER MWANGI",
+      "name": "ALICE WAMBUI MUTHONI",
+      "fullName": "ALICE WAMBUI MUTHONI",
       "admissionNumber": "MUN-G1-001-2026",
       "admNo": "MUN-G1-001-2026",
-      "assessmentNumber": "",
-      "assessmentNo": "",
-      "assessment": "",
+      "assessmentNumber": "B004822723",
+      "assessmentNo": "B004822723",
+      "assessment": "B004822723",
       "gender": "Female",
-      "grade": "Grade 1",
-      "stream": "North",
-      "parentName": "ALICE WANJIRU",
-      "guardian": "ALICE WANJIRU",
-      "phoneNumber": "0789456778",
-      "phone": "0789456778",
-      "createdAt": "2026-09-19T13:55:47.758Z"
+      "grade": "GRADE 6",
+      "stream": "BLUE",
+      "parentName": "EUNICE NJERI NJOROGE",
+      "guardian": "EUNICE NJERI NJOROGE",
+      "phoneNumber": "0714698265",
+      "phone": "0714698265",
+      "createdAt": "2026-09-26T07:55:09.823Z"
     },
     {
       "id": "1790310963743",
@@ -116,52 +118,612 @@ export const initialSeedData = {
       "phoneNumber": "0790783570",
       "phone": "0790783570",
       "createdAt": "2026-09-25T04:36:03.743Z"
+    },
+    {
+      "id": "1790405114703",
+      "name": "MARY WAIRIMU MWANGI",
+      "fullName": "MARY WAIRIMU MWANGI",
+      "admissionNumber": "MUN-G6-003-2026",
+      "admNo": "MUN-G6-003-2026",
+      "assessmentNumber": "B004842047",
+      "assessmentNo": "B004842047",
+      "assessment": "B004842047",
+      "gender": "Female",
+      "grade": "GRADE 6",
+      "stream": "BLUE",
+      "parentName": "SUSAN NYAMBURA KURIA",
+      "guardian": "SUSAN NYAMBURA KURIA",
+      "phoneNumber": "0717033548",
+      "phone": "0717033548",
+      "createdAt": "2026-09-26T07:56:44.676Z"
+    },
+    {
+      "id": "1790406760110",
+      "name": "MOSES NJOROGE",
+      "fullName": "MOSES NJOROGE",
+      "admissionNumber": "MUN-G6-004-2026",
+      "admNo": "MUN-G6-004-2026",
+      "assessmentNumber": "B004275934",
+      "assessmentNo": "B004275934",
+      "assessment": "B004275934",
+      "gender": "Male",
+      "grade": "GRADE 6",
+      "stream": "BLUE",
+      "parentName": "PENINAH JEPKEMOI TIROP",
+      "guardian": "PENINAH JEPKEMOI TIROP",
+      "phoneNumber": "0718409137",
+      "phone": "0718409137",
+      "createdAt": "2026-09-26T07:12:40.110Z"
+    },
+    {
+      "id": "1790407006902",
+      "name": "MARYANNE ATIENO",
+      "fullName": "MARYANNE ATIENO",
+      "admissionNumber": "MUN-G6-005-2026",
+      "admNo": "MUN-G6-005-2026",
+      "assessmentNumber": "B004858317",
+      "assessmentNo": "B004858317",
+      "assessment": "B004858317",
+      "gender": "Female",
+      "grade": "GRADE 6",
+      "stream": "YELLOW",
+      "parentName": "ANTONINA NABALAYO",
+      "guardian": "ANTONINA NABALAYO",
+      "phoneNumber": "0711505328",
+      "phone": "0711505328",
+      "createdAt": "2026-09-26T07:16:46.902Z"
     }
   ],
   "staff": [
     {
-      "id": "staff_1",
-      "staffId": "T001",
-      "name": "John Kamau",
-      "fullName": "John Kamau",
-      "full_name": "John Kamau",
-      "role": "Class Teacher",
-      "staffCategory": "TEACHING",
-      "staff_category": "TEACHING",
-      "department": "Academics",
-      "email": "john.kamau@munyaka.ac.ke",
-      "phoneNumber": "+254700112233",
-      "status": "Active"
+      "name": "JAMES NDIKI",
+      "nationalId": "ID-1789969050865",
+      "email": "jndiki@munyaka.sc.ke",
+      "phone": "0740583662",
+      "tscNumber": "327775",
+      "role": "ICT TECHNICIAN",
+      "systemRole": "ict_technician",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1789969050866_xbcva",
+      "full_name": "JAMES NDIKI",
+      "staffId": "MUN-2430",
+      "tempAccessCode": "134082",
+      "joined": "2026-09-21",
+      "assignedSubjects": []
     },
     {
-      "id": "staff_2",
-      "staffId": "NT001",
-      "name": "Peter Otieno",
-      "fullName": "Peter Otieno",
-      "full_name": "Peter Otieno",
-      "role": "Accountant",
-      "staffCategory": "NON_TEACHING",
-      "staff_category": "NON_TEACHING",
-      "department": "Finance",
-      "email": "peter.otieno@munyaka.ac.ke",
-      "phoneNumber": "+254722334455",
-      "status": "Active"
+      "name": "ALICE MAINA",
+      "nationalId": "ID-1790072852855",
+      "email": "maina@munyaka.sc.ke",
+      "phone": "0722345567",
+      "tscNumber": "1123345",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790072852855_fys7j",
+      "full_name": "ALICE MAINA",
+      "staffId": "MUN-4881",
+      "tempAccessCode": "313167",
+      "joined": "2026-09-22"
     },
     {
-      "id": "staff_3",
-      "staffId": "NT002",
-      "name": "Mary Mutua",
-      "fullName": "Mary Mutua",
-      "full_name": "Mary Mutua",
-      "role": "Secretary",
-      "staffCategory": "NON_TEACHING",
-      "staff_category": "NON_TEACHING",
-      "department": "Administration",
-      "email": "mary.mutua@munyaka.ac.ke",
-      "phoneNumber": "+254733445566",
-      "status": "Active"
+      "name": "ANN NDUTA MBUGUA",
+      "nationalId": "ID-1790157907617",
+      "email": "annmbugua@munyaka.sc.ke",
+      "phone": "0724467137",
+      "tscNumber": "452588",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790157907618_qk42q",
+      "full_name": "ANN NDUTA MBUGUA",
+      "staffId": "MUN-2020",
+      "tempAccessCode": "443492",
+      "joined": "2026-09-23"
+    },
+    {
+      "name": "JANET GATHONI KUNGU",
+      "nationalId": "ID-1790170127489",
+      "email": "janetkungu@munyaka.sc.ke",
+      "phone": "0720869310",
+      "tscNumber": "487406",
+      "role": "LIBRARIAN",
+      "systemRole": "librarian",
+      "department": "Library",
+      "status": "Active",
+      "id": "staff_1790170127489_uw96a",
+      "full_name": "JANET GATHONI KUNGU",
+      "staffId": "MUN-3433",
+      "tempAccessCode": "774938",
+      "joined": "2026-09-23"
+    },
+    {
+      "name": "LAWRENCE NDEGWA GIOSHE",
+      "nationalId": "ID-1790174007943",
+      "email": "lndegwa@munyaka.sc.ke",
+      "phone": "0720583097",
+      "tscNumber": "516570",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790174007943_xtycd",
+      "full_name": "LAWRENCE NDEGWA GIOSHE",
+      "staffId": "MUN-1788",
+      "tempAccessCode": "493306",
+      "joined": "2026-09-23"
+    },
+    {
+      "name": "GEOFFREY NGANGA NGUGI",
+      "nationalId": "ID-1790259359368",
+      "email": "gnganga@munyaka.sc.ke",
+      "phone": "0724743335",
+      "tscNumber": "330604",
+      "role": "DEPUTY HEAD TEACHER",
+      "systemRole": "head_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790259359368_r9hfz",
+      "full_name": "GEOFFREY NGANGA NGUGI",
+      "staffId": "MUN-4019",
+      "tempAccessCode": "300228",
+      "joined": "2026-09-24"
+    },
+    {
+      "name": "ANN NJOKI GITHINJI",
+      "nationalId": "ID-1790259489407",
+      "email": "annnjoki@munyaka.sc.ke",
+      "phone": "0728482097",
+      "tscNumber": "445049",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790259489407_hs4b9",
+      "full_name": "ANN NJOKI GITHINJI",
+      "staffId": "MUN-3517",
+      "tempAccessCode": "299779",
+      "joined": "2026-09-24"
+    },
+    {
+      "name": "MARIA WAMBOI MARITE",
+      "nationalId": "ID-1790262337141",
+      "email": "mariamarite@munyaka.sc.ke",
+      "phone": "0726312792",
+      "tscNumber": "384880",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790262337141_gztie",
+      "full_name": "MARIA WAMBOI MARITE",
+      "staffId": "MUN-8404",
+      "tempAccessCode": "284679",
+      "joined": "2026-09-24"
+    },
+    {
+      "name": "MARY MWIHAKI WANJAU",
+      "nationalId": "ID-1790262469474",
+      "email": "mwihaki@munyaka.sc.ke",
+      "phone": "0720806370",
+      "tscNumber": "425958",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790262469474_7adyd",
+      "full_name": "MARY MWIHAKI WANJAU",
+      "staffId": "MUN-2291",
+      "tempAccessCode": "873951",
+      "joined": "2026-09-24"
+    },
+    {
+      "name": "JENIFFER J KIPYEGO",
+      "nationalId": "ID-1790268898125",
+      "email": "jkipyego@munyaka.sc.ke",
+      "phone": "0729174412",
+      "tscNumber": "366972",
+      "role": "DEPUTY HEAD TEACHER",
+      "systemRole": "head_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790268898125_j5hml",
+      "full_name": "JENIFFER J KIPYEGO",
+      "staffId": "MUN-1162",
+      "tempAccessCode": "821136",
+      "joined": "2026-09-24"
+    },
+    {
+      "name": "joash keanche ogoi",
+      "nationalId": "ID-1790270235103",
+      "email": "jogoi@munyaka.sc.ke",
+      "phone": "0727295648",
+      "tscNumber": "436663",
+      "role": "SENIOR TEACHER",
+      "systemRole": "senior_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790270235103_y7nwp",
+      "full_name": "joash keanche ogoi",
+      "staffId": "MUN-3242",
+      "tempAccessCode": "304888",
+      "joined": "2026-09-24"
+    },
+    {
+      "name": "hoglar sanduki",
+      "nationalId": "ID-1790270316274",
+      "email": "hsanduki@munyaka.sc.ke",
+      "phone": "0722266401",
+      "tscNumber": "384498",
+      "role": "DEPUTY HEAD TEACHER",
+      "systemRole": "head_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790270316274_i5y7o",
+      "full_name": "hoglar sanduki",
+      "staffId": "MUN-5711",
+      "tempAccessCode": "110992",
+      "joined": "2026-09-24"
+    },
+    {
+      "name": "RACHAEL WAIRIMU NJOGO",
+      "nationalId": "ID-1790354087206",
+      "email": "njogo@munyaka.sc.ke",
+      "phone": "0725098528",
+      "tscNumber": "627672",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790354087207_r6hg6",
+      "full_name": "RACHAEL WAIRIMU NJOGO",
+      "staffId": "MUN-2534",
+      "tempAccessCode": "794905",
+      "joined": "2026-09-25"
+    },
+    {
+      "name": "carolyne muchai wamboi",
+      "nationalId": "ID-1790354406064",
+      "email": "caromuchai@munyaka.sc.ke",
+      "phone": "0710479121",
+      "tscNumber": "566756",
+      "role": "CLASS TEACHER",
+      "systemRole": "class_teacher",
+      "department": "School Administration",
+      "status": "Active",
+      "id": "staff_1790354406065_it75s",
+      "full_name": "carolyne muchai wamboi",
+      "staffId": "MUN-7395",
+      "tempAccessCode": "782429",
+      "joined": "2026-09-25"
     }
   ],
+  "fees": [
+    {
+      "id": "FEE-001",
+      "studentId": "1789826147758",
+      "student": "PETER MWANGI",
+      "admNo": "MUN-G1-001-2026",
+      "grade": "Grade 1",
+      "stream": "North",
+      "total": 12000,
+      "paid": 12000,
+      "balance": 0,
+      "status": "Cleared",
+      "year": "2026",
+      "term": "term1",
+      "reason": "Full payment received"
+    },
+    {
+      "id": "FEE-002",
+      "studentId": "1789881428012",
+      "student": "FRED KAPONDI",
+      "admNo": "MUN-G1-002-2026",
+      "grade": "GRADE 1",
+      "stream": "GREEN",
+      "total": 12000,
+      "paid": 8000,
+      "balance": 4000,
+      "status": "Partial",
+      "year": "2026",
+      "term": "term1",
+      "reason": "Partial deposit"
+    },
+    {
+      "id": "FEE-003",
+      "studentId": "1789880616052",
+      "student": "GRACE MUTHONI",
+      "admNo": "MUN-G6-002-2026",
+      "grade": "GRADE 6",
+      "stream": "GREEN",
+      "total": 15000,
+      "paid": 15000,
+      "balance": 0,
+      "status": "Cleared",
+      "year": "2026",
+      "term": "term1",
+      "reason": "Cleared in full"
+    },
+    {
+      "id": "FEE-004",
+      "studentId": "1789880087460",
+      "student": "BRIGHTON KIPKOECH",
+      "admNo": "MUN-G6-001-2026",
+      "grade": "GRADE 6",
+      "stream": "BLUE",
+      "total": 15000,
+      "paid": 5000,
+      "balance": 10000,
+      "status": "Pending",
+      "year": "2026",
+      "term": "term1",
+      "reason": "Pending balance"
+    }
+  ],
+  "payments": [
+    {
+      "id": "TX-101",
+      "date": "2026-01-15",
+      "amount": 12000,
+      "method": "Bank Deposit",
+      "ref": "REF-981273",
+      "category": "Payment",
+      "studentId": "1789826147758",
+      "grade": "Grade 1",
+      "stream": "North"
+    },
+    {
+      "id": "TX-102",
+      "date": "2026-01-18",
+      "amount": 8000,
+      "method": "M-Pesa",
+      "ref": "QHJ8921KLO",
+      "category": "Payment",
+      "studentId": "1789881428012",
+      "grade": "GRADE 1",
+      "stream": "GREEN"
+    },
+    {
+      "id": "TX-103",
+      "date": "2026-01-10",
+      "amount": 15000,
+      "method": "Bank Deposit",
+      "ref": "REF-441209",
+      "category": "Payment",
+      "studentId": "1789880616052",
+      "grade": "GRADE 6",
+      "stream": "GREEN"
+    },
+    {
+      "id": "TX-104",
+      "date": "2026-01-22",
+      "amount": 5000,
+      "method": "Cash",
+      "ref": "CSH-00192",
+      "category": "Payment",
+      "studentId": "1789880087460",
+      "grade": "GRADE 6",
+      "stream": "BLUE"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "TX-ADJ-1790353183325",
+      "date": "2026-09-25",
+      "amount": 600,
+      "method": "Admin Direct Override",
+      "ref": "OVERRIDE-183325",
+      "category": "Direct Edit",
+      "studentId": "1789880616052",
+      "grade": "Grade 6"
+    },
+    {
+      "id": "TX-ADJ-1790353169050",
+      "date": "2026-09-25",
+      "amount": 1000,
+      "method": "Admin Direct Override",
+      "ref": "OVERRIDE-169050",
+      "category": "Direct Edit",
+      "studentId": "1789880087460",
+      "grade": "Grade 6"
+    },
+    {
+      "id": "TX-ADJ-1790353151419",
+      "date": "2026-09-25",
+      "amount": 700,
+      "method": "Admin Direct Override",
+      "ref": "OVERRIDE-151419",
+      "category": "Direct Edit",
+      "studentId": "1790310963743",
+      "grade": "Grade 5"
+    },
+    {
+      "id": "tx_1",
+      "studentId": "1789826147758",
+      "studentName": "PETER MWANGI",
+      "admissionNumber": "MUN-G1-001-2026",
+      "amount": 5000,
+      "category": "Tuition Fee",
+      "method": "M-PESA",
+      "ref": "QHJ8923XYZ",
+      "date": "2026-01-15",
+      "status": "Completed"
+    }
+  ],
+  "attendance": {
+    "2026-02-10": {
+      "stu_1": "present"
+    }
+  },
+  "grades": [
+    {
+      "id": "g-1789816552094",
+      "name": "GRADE 1",
+      "category": "Primary",
+      "streams": [
+        {
+          "id": "s-1789816570237",
+          "name": "BLUE",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1789816578097",
+          "name": "GREEN",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1789816586319",
+          "name": "YELLOW",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        }
+      ]
+    },
+    {
+      "id": "g-1789817749440",
+      "name": "PP1",
+      "category": "Pre-Primary",
+      "streams": []
+    },
+    {
+      "id": "g-1789817756408",
+      "name": "PP2",
+      "category": "Pre-Primary",
+      "streams": []
+    },
+    {
+      "id": "g-1789838839903",
+      "name": "GRADE 6",
+      "category": "Primary",
+      "streams": [
+        {
+          "id": "s-1789838852627",
+          "name": "BLUE",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1789838870763",
+          "name": "YELLOW",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1789838878242",
+          "name": "GREEN",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1789838884417",
+          "name": "RED",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        }
+      ]
+    },
+    {
+      "id": "g-1790234904665",
+      "name": "GRADE 8",
+      "category": "Junior School",
+      "streams": [
+        {
+          "id": "s-1790234923680",
+          "name": "VENUS",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1790234934496",
+          "name": "NEPTUNE",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1790234946304",
+          "name": "MERCURY",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1790234958410",
+          "name": "JUPITER",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        }
+      ]
+    },
+    {
+      "id": "g-1790310622666",
+      "name": "GRADE 5",
+      "category": "Primary",
+      "streams": [
+        {
+          "id": "s-1790310635738",
+          "name": "BLUE",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1790310648394",
+          "name": "GREEN",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1790310656319",
+          "name": "YELLOW",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1790310661810",
+          "name": "RED",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        }
+      ]
+    },
+    {
+      "id": "g-1790348631435",
+      "name": "GRADE 9",
+      "category": "Junior School",
+      "streams": [
+        {
+          "id": "s-1790348654180",
+          "name": "YELLOW",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1790348662091",
+          "name": "BLUE",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1790348669040",
+          "name": "GREEN",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        },
+        {
+          "id": "s-1790348676372",
+          "name": "RED",
+          "teacher": "Unassigned",
+          "studentsCount": 0
+        }
+      ]
+    }
+  ],
+  "streams": [],
+  "classAssignments": [],
+  "learningAreas": [],
   "exams": [
     {
       "id": "asm-1790261295282-y6u6ma",
@@ -305,89 +867,34 @@ export const initialSeedData = {
       "updatedAt": "2026-09-24T14:48:15.282Z"
     }
   ],
-  "questions": [],
   "examSchedules": [],
-  "examTypes": [
-    {
-      "id": "et-1",
-      "name": "Formative Assessment",
-      "code": "FORMATIVE",
-      "weight": 40,
-      "category": "Formative",
-      "description": "Continuous assessment tests and classroom activities"
-    },
-    {
-      "id": "et-2",
-      "name": "Summative Assessment",
-      "code": "SUMMATIVE",
-      "weight": 60,
-      "category": "Summative",
-      "description": "End of term comprehensive evaluation"
-    },
-    {
-      "id": "et-3",
-      "name": "Opener Exam",
-      "code": "OPENER",
-      "weight": 0,
-      "category": "Other",
-      "description": "Beginning of term diagnostic test"
-    },
-    {
-      "id": "et-4",
-      "name": "Mid-Term Exam",
-      "code": "MIDTERM",
-      "weight": 0,
-      "category": "Other",
-      "description": "Mid-term progress evaluation"
-    }
-  ],
   "marks": [],
-  "fees": [
-    {
-      "id": "TX-101",
-      "date": "2026-01-15",
-      "amount": 12000,
-      "method": "Bank Deposit",
-      "ref": "REF-981273",
-      "category": "Payment",
-      "studentId": "1789826147758",
-      "grade": "Grade 1",
-      "stream": "North"
-    },
-    {
-      "id": "TX-102",
-      "date": "2026-01-18",
-      "amount": 8000,
-      "method": "M-Pesa",
-      "ref": "QHJ8921KLO",
-      "category": "Payment",
-      "studentId": "1789881428012",
-      "grade": "GRADE 1",
-      "stream": "GREEN"
-    },
-    {
-      "id": "TX-103",
-      "date": "2026-01-10",
-      "amount": 15000,
-      "method": "Bank Deposit",
-      "ref": "REF-441209",
-      "category": "Payment",
-      "studentId": "1789880616052",
-      "grade": "GRADE 6",
-      "stream": "GREEN"
-    },
-    {
-      "id": "TX-104",
-      "date": "2026-01-22",
-      "amount": 5000,
-      "method": "Cash",
-      "ref": "CSH-00192",
-      "category": "Payment",
-      "studentId": "1789880087460",
-      "grade": "GRADE 6",
-      "stream": "BLUE"
+  "assessments": {
+    "2026_Term 1_Grade 4_All Subjects_Formative Assessment": {
+      "1": {
+        "English": "45",
+        "Kiswahili": "56",
+        "Mathematics": "87",
+        "Science & Technology": "65",
+        "Agriculture & Nutrition": "64",
+        "Social Studies": "66",
+        "Religious Education (CRE/IRE/HRE)": "45",
+        "Creative Arts": "76"
+      },
+      "5": {
+        "English": "54",
+        "Kiswahili": "65",
+        "Mathematics": "45",
+        "Science & Technology": "66",
+        "Agriculture & Nutrition": "76",
+        "Social Studies": "80",
+        "Religious Education (CRE/IRE/HRE)": "54",
+        "Creative Arts": "66"
+      }
     }
-  ],
+  },
+  "questions": [],
+  "reportCards": [],
   "feeStructures": [
     {
       "year": "2026",
@@ -462,6 +969,7 @@ export const initialSeedData = {
       "amount": 1400
     }
   ],
+  "studyCorner": [],
   "libraryBooks": [
     {
       "title": "PRIMARY MATHEMATICS",
@@ -474,12 +982,1237 @@ export const initialSeedData = {
     }
   ],
   "libraryLogs": [],
+  "ictEquipment": [
+    {
+      "id": "1",
+      "assetTag": "ICT-LP-01",
+      "name": "HP ProBook 450",
+      "category": "Laptops",
+      "serialNumber": "CND12345XYZ",
+      "status": "Active",
+      "location": "Computer Lab 1",
+      "assignedTo": "Jane Mwangi"
+    },
+    {
+      "id": "2",
+      "assetTag": "ICT-TB-05",
+      "name": "Samsung Galaxy Tab A8",
+      "category": "Tablets",
+      "serialNumber": "RF8S123456",
+      "status": "Active",
+      "location": "Mobile Cart A",
+      "assignedTo": "Grade 4 Blue"
+    },
+    {
+      "id": "3",
+      "assetTag": "ICT-PJ-01",
+      "name": "Epson EB-X41",
+      "category": "Projectors",
+      "serialNumber": "V11H843040",
+      "status": "In Maintenance",
+      "location": "Staff Room",
+      "assignedTo": "John Kamau"
+    },
+    {
+      "id": "4",
+      "assetTag": "ICT-NW-02",
+      "name": "TP-Link AX1800 Router",
+      "category": "Networking",
+      "serialNumber": "220C123456",
+      "status": "Active",
+      "location": "Server Room"
+    },
+    {
+      "id": "5",
+      "assetTag": "ICT-LP-02",
+      "name": "Dell Latitude 5420",
+      "category": "Laptops",
+      "serialNumber": "DL5420-001",
+      "status": "Active",
+      "location": "Computer Lab 1"
+    },
+    {
+      "id": "6",
+      "assetTag": "ICT-TB-10",
+      "name": "iPad 9th Gen",
+      "category": "Tablets",
+      "serialNumber": "IPAD9-010",
+      "status": "Active",
+      "location": "Mobile Cart B"
+    }
+  ],
   "scienceInventory": [],
-  "ictEquipment": [],
   "storeInventory": [],
-  "attendance": {
-    "2026-02-10": {
-      "stu_1": "present"
+  "notices": [],
+  "events": [],
+  "timetable": {
+    "grade-4-blue": {
+      "timeSlots": [
+        {
+          "id": "585f7ec0-77c7-4102-98f1-eb0f2afe3367",
+          "startTime": "08:00",
+          "endTime": "08:30",
+          "category": null
+        },
+        {
+          "id": "6b895dc7-05be-4fa4-b396-f1751201c4dd",
+          "startTime": "08:30",
+          "endTime": "09:10",
+          "category": null
+        },
+        {
+          "id": "f5e314eb-a76a-4284-be6f-57a38d5b4685",
+          "startTime": "09:10",
+          "endTime": "09:50",
+          "category": null
+        },
+        {
+          "id": "e41deffc-0674-4e06-a1f0-49dff946908b",
+          "startTime": "09:50",
+          "endTime": "10:30",
+          "category": null
+        },
+        {
+          "id": "907ce644-d1bc-4d9c-a80c-df8e989d7222",
+          "startTime": "10:30",
+          "endTime": "11:00",
+          "category": "Break"
+        },
+        {
+          "id": "1f1d238e-fdce-4564-9c5b-f80a8da9f91b",
+          "startTime": "11:00",
+          "endTime": "11:40",
+          "category": null
+        },
+        {
+          "id": "1409cba9-e433-46d3-87e5-cc82daae283b",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "category": "Lunch Break"
+        }
+      ],
+      "entries": [
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "a0a02bda-d152-47be-b52e-0b0f892e255b",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "tue": {
+            "id": "ce684350-c647-45cc-91e0-5bd57a8c14ec",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "wed": {
+            "id": "84e1dbb3-9cc2-4d99-af30-dd8fd07578b4",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "thu": {
+            "id": "b3c27d73-c343-4717-9fc6-a51b85111138",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "fri": {
+            "id": "8747beab-b7e1-43f5-be74-f489ab83ad95",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          }
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "e5583f3d-ff87-4b5e-8103-a3abd2bbba8d",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "tue": {
+            "id": "d576f960-e463-45ab-89bb-32b483f293b1",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "wed": {
+            "id": "01cc23de-d655-4ff2-8da3-db19f444aeed",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "thu": {
+            "id": "16745b96-b13f-4554-b4b3-5cd84bc9e954",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "fri": {
+            "id": "9ed9cb73-383d-4e6c-8e08-0b2ac848758a",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          }
+        }
+      ]
+    },
+    "pp1": {
+      "timeSlots": [
+        {
+          "id": "0cb92e89-2f0b-47c7-9b03-dcb51da7d5de",
+          "startTime": "08:00",
+          "endTime": "08:30",
+          "category": null
+        },
+        {
+          "id": "8025e255-42ce-4728-ab41-3184fd1fda94",
+          "startTime": "08:30",
+          "endTime": "09:10",
+          "category": null
+        },
+        {
+          "id": "ce601b98-6b64-45ff-b55f-957dbeaaaa60",
+          "startTime": "09:10",
+          "endTime": "09:50",
+          "category": null
+        },
+        {
+          "id": "6db663e6-2278-4ad4-b522-579bb130f7d9",
+          "startTime": "09:50",
+          "endTime": "10:30",
+          "category": null
+        },
+        {
+          "id": "2ec439f7-2bf9-4b75-9afb-f1bd31a8c0f1",
+          "startTime": "10:30",
+          "endTime": "11:00",
+          "category": "Break"
+        },
+        {
+          "id": "16ea3d65-d996-4f2a-9bc8-b7c68e4fba69",
+          "startTime": "11:00",
+          "endTime": "11:40",
+          "category": null
+        },
+        {
+          "id": "64f74a0a-ea04-4668-b66b-9112aa747b83",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "category": "Lunch Break"
+        }
+      ],
+      "entries": [
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "c5a8bf37-0a05-4819-8eda-a43be3f1b71a",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "tue": {
+            "id": "d722fb59-7137-4a03-a344-1116a04907f5",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "wed": {
+            "id": "578a7038-37bc-4062-870f-fc0b1a987434",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "thu": {
+            "id": "36a7240c-9a51-425e-8862-6e385b3cde52",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "fri": {
+            "id": "131f0ba7-546b-483a-97ff-f7e529b58a88",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          }
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "210b2f7f-816b-4160-b261-4da2aee4640f",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "tue": {
+            "id": "a046e349-e7cd-41fd-bba4-fc4c6b7aae83",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "wed": {
+            "id": "8fb7a51b-b09e-4e4e-9356-67d9d5f43ec0",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "thu": {
+            "id": "c60db5d5-126a-4d11-befe-e7553030ba73",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "fri": {
+            "id": "103f64b4-8c60-4373-aa36-09110ec4413c",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          }
+        }
+      ]
+    },
+    "Grade 6 - Yellow": {
+      "timeSlots": [
+        {
+          "id": "b259dd50-51f8-4502-85ac-beeba450c559",
+          "startTime": "08:00",
+          "endTime": "08:30",
+          "category": null
+        },
+        {
+          "id": "38a91a43-c59f-4f9a-955c-d4da14b8f3cf",
+          "startTime": "08:30",
+          "endTime": "09:10",
+          "category": null
+        },
+        {
+          "id": "ad2a84f7-c867-4543-9dd5-23a9aec293fc",
+          "startTime": "09:10",
+          "endTime": "09:50",
+          "category": null
+        },
+        {
+          "id": "1722f524-7fda-4c44-b0cc-ad26aa70f95d",
+          "startTime": "09:50",
+          "endTime": "10:30",
+          "category": null
+        },
+        {
+          "id": "69d25437-f708-4b74-bb91-8fb6c389b52d",
+          "startTime": "10:30",
+          "endTime": "11:00",
+          "category": "Break"
+        },
+        {
+          "id": "dc105747-be5a-4b0d-9cce-612041a3c556",
+          "startTime": "11:00",
+          "endTime": "11:40",
+          "category": null
+        },
+        {
+          "id": "7d51d091-0c98-44e3-8ca1-d4ffbea6af2f",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "category": "Lunch Break"
+        }
+      ],
+      "entries": [
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "af9bbb3b-b9d3-4b65-bba5-af000070ef9b",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "tue": {
+            "id": "6bb6e56e-ca02-4f9f-bef5-b492018e2aef",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "wed": {
+            "id": "edf414bc-8fcc-4438-a48b-a15f0cdf7d37",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "thu": {
+            "id": "0c5cb750-3530-4e51-b9e3-9c4b4cdfd6c9",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "fri": {
+            "id": "206ddb8a-5cd8-4378-af8f-b8b4ece1ed0f",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          }
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "f7aaeb28-f55a-4b0d-b3e1-43842eae08c5",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "tue": {
+            "id": "8213ac45-c5bb-4ad6-8119-0b3c8a597fbf",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "wed": {
+            "id": "724b4c6e-470c-4b13-abcf-1f4b72300d3c",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "thu": {
+            "id": "2920bca9-e351-43d1-8670-bca131d36835",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "fri": {
+            "id": "8d0c9c45-6a46-48cd-ad54-230bd6d0814f",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          }
+        }
+      ]
+    },
+    "Grade 1 - Blue": {
+      "timeSlots": [
+        {
+          "id": "2257b63d-c6b1-44c8-bd07-78111d4fe9f4",
+          "startTime": "08:00",
+          "endTime": "08:30",
+          "category": null
+        },
+        {
+          "id": "af0858e2-0fc7-48b4-9b28-4962a931dd97",
+          "startTime": "08:30",
+          "endTime": "09:10",
+          "category": null
+        },
+        {
+          "id": "f72f9e67-09c4-4035-a2e7-b1b0d7cc6346",
+          "startTime": "09:10",
+          "endTime": "09:50",
+          "category": null
+        },
+        {
+          "id": "55105efe-99fb-4aa2-8ca7-61d99609719f",
+          "startTime": "09:50",
+          "endTime": "10:30",
+          "category": null
+        },
+        {
+          "id": "8cfa5b43-a341-4dac-9d15-5a9a69181bab",
+          "startTime": "10:30",
+          "endTime": "11:00",
+          "category": "Break"
+        },
+        {
+          "id": "a1b8ea9c-27fb-46f9-a9e5-c1f64107be0b",
+          "startTime": "11:00",
+          "endTime": "11:40",
+          "category": null
+        },
+        {
+          "id": "3fdb396e-106c-4c2d-8afe-41e178b69fd4",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "category": "Lunch Break"
+        }
+      ],
+      "entries": [
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "36ff3d7a-f7f5-4050-b9a6-9a9d78618d99",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "tue": {
+            "id": "4bc0b430-8b57-4e80-b2df-6521303fa7dc",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "wed": {
+            "id": "5718f5c6-a252-4503-b97a-1ae9920ab591",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "thu": {
+            "id": "e78d8531-a789-48f5-900d-7a7242762ad7",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "fri": {
+            "id": "99846c06-df75-4b38-a80c-431d328f6701",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          }
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "2d80dc96-ac65-4a93-9f3c-53286d6410d0",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "tue": {
+            "id": "777d87fe-6472-40f5-bd83-2a4b47dbc515",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "wed": {
+            "id": "b0a8daf0-a9f4-45f0-8561-17e2c40ef1bc",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "thu": {
+            "id": "55924755-dcd8-45d6-96a5-47cdf141b6dd",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "fri": {
+            "id": "2859af47-072f-41b4-9cb5-a52d232794ef",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          }
+        }
+      ]
+    },
+    "Grade 6 - Red": {
+      "timeSlots": [
+        {
+          "id": "02755fe8-0e73-43b6-b7e6-80a02eddec72",
+          "startTime": "08:00",
+          "endTime": "08:30",
+          "category": null
+        },
+        {
+          "id": "667d4e28-2a32-4c40-8032-59c81fdbd11a",
+          "startTime": "08:30",
+          "endTime": "09:10",
+          "category": null
+        },
+        {
+          "id": "286ba88e-7ed0-469a-b5b7-dd91b180d10a",
+          "startTime": "09:10",
+          "endTime": "09:50",
+          "category": null
+        },
+        {
+          "id": "52cbb0c0-9548-4d35-a5e1-48f719fbdded",
+          "startTime": "09:50",
+          "endTime": "10:30",
+          "category": null
+        },
+        {
+          "id": "a66ab373-5d67-4a41-bf8a-568d7a7454e1",
+          "startTime": "10:30",
+          "endTime": "11:00",
+          "category": "Break"
+        },
+        {
+          "id": "83a9c062-82c0-4e0b-8db7-e4e7a1d88b81",
+          "startTime": "11:00",
+          "endTime": "11:40",
+          "category": null
+        },
+        {
+          "id": "579d8666-97b9-4d1e-8f18-5d45c967f3a8",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "category": "Lunch Break"
+        }
+      ],
+      "entries": [
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "e0caf273-424d-4ca7-8acf-8bd69389dd99",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "tue": {
+            "id": "24517cb7-0d77-495e-a4b3-ee7d4daf245a",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "wed": {
+            "id": "aa1e5623-929f-4937-adaa-7d0842a04fe3",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "thu": {
+            "id": "0f6ae2fb-925d-436e-b30a-9ceffd958386",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "fri": {
+            "id": "1005e847-0b4c-4347-a4ee-1eb4794760c7",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          }
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "4ae6a85e-e2a7-4d3c-bcab-1803964e5ed2",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "tue": {
+            "id": "29bce80d-739b-42ee-a9ed-0e0514a2c03c",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "wed": {
+            "id": "5458e88b-dfbe-4295-b931-77ea944137d6",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "thu": {
+            "id": "6d959a5d-14d8-4fec-9eb6-9bb7df080e50",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "fri": {
+            "id": "076e49bb-fd31-4840-aaf0-be544e71072c",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          }
+        }
+      ]
+    },
+    "Grade 6 - Green": {
+      "timeSlots": [
+        {
+          "id": "733daa1d-efbd-4aee-840d-99e2636d1e26",
+          "startTime": "08:00",
+          "endTime": "08:30",
+          "category": null
+        },
+        {
+          "id": "9792f66e-dbc6-4f06-8cd7-4e6c1b639129",
+          "startTime": "08:30",
+          "endTime": "09:10",
+          "category": null
+        },
+        {
+          "id": "b1ff8bb0-c42e-4f63-bdf5-d4eee12eb80d",
+          "startTime": "09:10",
+          "endTime": "09:50",
+          "category": null
+        },
+        {
+          "id": "19022226-5123-4b24-8d9a-bc035e8f9132",
+          "startTime": "09:50",
+          "endTime": "10:30",
+          "category": null
+        },
+        {
+          "id": "fa4e57a9-3b11-4570-8765-e311d003ae9b",
+          "startTime": "10:30",
+          "endTime": "11:00",
+          "category": "Break"
+        },
+        {
+          "id": "cd702a5a-fcc2-4fc7-9bb6-2debc07c4ff5",
+          "startTime": "11:00",
+          "endTime": "11:40",
+          "category": null
+        },
+        {
+          "id": "50b45f18-fc42-4dab-bffc-1f4cbdff5443",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "category": "Lunch Break"
+        }
+      ],
+      "entries": [
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "538980a3-6c6f-4c8c-a93c-bb5b94df9b18",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "tue": {
+            "id": "9e845b99-263b-4851-a149-505fe318277a",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "wed": {
+            "id": "4d78b569-dc93-4b4d-9314-440a66442e7d",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "thu": {
+            "id": "ea367e6e-4d96-409f-ab81-274979680c54",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "fri": {
+            "id": "521df549-ce55-485e-9def-f05d9377ed51",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          }
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "c7a3a2ce-f360-4f7f-a5f7-3b0b80c7b804",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "tue": {
+            "id": "a758c480-ffc9-4d58-8689-0584d4af2acc",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "wed": {
+            "id": "ccc7a7bb-7038-445d-b5d9-afa1c3631da3",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "thu": {
+            "id": "c1e1cee0-72a2-44b6-9b60-3fd2a74dcd28",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "fri": {
+            "id": "b52fb200-e566-4a00-9f2e-a18cd0db5836",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          }
+        }
+      ]
+    },
+    "grade-6---red": {
+      "timeSlots": [
+        {
+          "id": "339f55f3-1c8a-4123-87db-6c2e668622af",
+          "startTime": "08:00",
+          "endTime": "08:30",
+          "category": null
+        },
+        {
+          "id": "49b00ecf-2f29-45db-88ea-cfa7cc7f57d8",
+          "startTime": "08:30",
+          "endTime": "09:10",
+          "category": null
+        },
+        {
+          "id": "a686db58-d898-4d17-9236-c5302636bc4d",
+          "startTime": "09:10",
+          "endTime": "09:50",
+          "category": null
+        },
+        {
+          "id": "533bb402-2d34-4299-8cf5-f738e0485044",
+          "startTime": "09:50",
+          "endTime": "10:30",
+          "category": null
+        },
+        {
+          "id": "8d0f8c18-c211-47f9-a87f-b1375c06854f",
+          "startTime": "10:30",
+          "endTime": "11:00",
+          "category": "Break"
+        },
+        {
+          "id": "90763b37-97e8-457c-a84a-017f5c8b3eaf",
+          "startTime": "11:00",
+          "endTime": "11:40",
+          "category": null
+        },
+        {
+          "id": "9f972f89-3cd9-432b-af9b-73f1101c55d8",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "category": "Lunch Break"
+        }
+      ],
+      "entries": [
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "f139dee0-792d-4f8a-be88-e69edbe29c50",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "tue": {
+            "id": "ca7fc8e7-e927-4b37-9766-c536bfe3594a",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "wed": {
+            "id": "2974516f-546f-413b-b95a-6a8e33cfdba4",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "thu": {
+            "id": "d3300f4a-4c17-4217-b98c-154f7e747080",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "fri": {
+            "id": "a5c48cfc-cd7f-43cf-a07f-3d152e5b4716",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          }
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "7eb255c8-5ec5-4c2b-b333-1a2a8833a29e",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "tue": {
+            "id": "a35ac0f1-a8b6-4660-a200-7a5362f030a9",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "wed": {
+            "id": "cc23e442-53ef-4c2b-995c-66e67d5fc594",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "thu": {
+            "id": "2c1cfb34-f049-4981-ac09-4d181ac05f17",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "fri": {
+            "id": "b5c9c073-3716-4c4e-8c24-78330fcc32ab",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          }
+        }
+      ]
+    },
+    "Pp1": {
+      "timeSlots": [
+        {
+          "id": "72b19355-a295-4ed6-94bf-078b3ec6c0e5",
+          "startTime": "08:20",
+          "endTime": "09:00",
+          "category": "normal"
+        },
+        {
+          "id": "26f6aa5f-bc10-443b-a2d6-a687dc3891cd",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "category": "Lunch Break"
+        }
+      ],
+      "entries": [
+        {
+          "mon": {
+            "id": "0cc3edfa-39e9-4445-9eec-c6f9242f7fbc",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "tue": {
+            "id": "acbbe3ac-fa72-4377-a06f-aa0305d21805",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "wed": {
+            "id": "f6c03d84-8a23-49dc-a026-b40777fcf687",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "thu": {
+            "id": "d069766e-9498-4c8c-b810-2894b0985391",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "fri": {
+            "id": "a6549a0c-e4e5-4e91-98ce-5a786e1eca19",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          }
+        },
+        {
+          "mon": {
+            "id": "00840e35-bf55-4d11-a85b-fc25c70a9c33",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "tue": {
+            "id": "dacc42b3-425e-4f46-bb43-3552d0048687",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "wed": {
+            "id": "476af871-e260-4771-abc6-9ad7ffcc8229",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "thu": {
+            "id": "75adbb0a-a759-489c-92bd-52851ccd4730",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "fri": {
+            "id": "9c810f36-68c9-4fad-b738-f67d421d9239",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          }
+        }
+      ]
+    },
+    "Grade 6 Green": {
+      "timeSlots": [
+        {
+          "id": "e2a6d417-8780-4c4a-ad9a-959845cba4e1",
+          "startTime": "08:00",
+          "endTime": "08:30",
+          "category": null
+        },
+        {
+          "id": "1d34bd92-628f-47ec-a5b1-98af9000c7d3",
+          "startTime": "08:30",
+          "endTime": "09:10",
+          "category": null
+        },
+        {
+          "id": "0df32b97-8dba-4aa1-84ed-9f647ee1a108",
+          "startTime": "09:10",
+          "endTime": "09:50",
+          "category": null
+        },
+        {
+          "id": "bf7dd642-481e-4e11-a713-5636eeabe06f",
+          "startTime": "09:50",
+          "endTime": "10:30",
+          "category": null
+        },
+        {
+          "id": "a2a10fc0-086c-4248-8542-3f8a36e13b34",
+          "startTime": "10:30",
+          "endTime": "11:00",
+          "category": "Break"
+        },
+        {
+          "id": "2fcc07fc-69e9-4888-863f-c07a64c4ac79",
+          "startTime": "11:00",
+          "endTime": "11:40",
+          "category": null
+        },
+        {
+          "id": "e96e48a4-0f73-43b1-ab95-c3388266ef45",
+          "startTime": "12:00",
+          "endTime": "13:00",
+          "category": "Lunch Break"
+        }
+      ],
+      "entries": [
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "fcb273b3-21d7-4fbb-82d1-bda32093798c",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "tue": {
+            "id": "f2afb2fb-9c63-4519-97b3-7aa75a520258",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "wed": {
+            "id": "80ee1500-323b-483d-b4d2-c8ee3cd9eea4",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "thu": {
+            "id": "9cf6ee4c-d825-44f5-b328-efebad2f5076",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          },
+          "fri": {
+            "id": "f56d72a1-1068-4cab-b38b-073cdd097702",
+            "subject": "Break",
+            "color": "bg-amber-50 text-amber-700 border border-amber-200"
+          }
+        },
+        {
+          "mon": null,
+          "tue": null,
+          "wed": null,
+          "thu": null,
+          "fri": null
+        },
+        {
+          "mon": {
+            "id": "95a7a207-930c-4283-9f46-c4d9a46fea21",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "tue": {
+            "id": "4d0962cc-568b-437a-bbe3-c5423c781901",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "wed": {
+            "id": "98f4a883-35ad-4bdc-be1c-7e26e473a600",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "thu": {
+            "id": "a14c8431-369f-41cf-bde9-03aaa27c6c02",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          },
+          "fri": {
+            "id": "0a02cdb6-c7a1-4b35-b67f-02a292ec883d",
+            "subject": "Lunch Break",
+            "color": "bg-orange-50 text-orange-700 border border-orange-200"
+          }
+        }
+      ]
     }
   },
   "settings": {
@@ -834,180 +2567,363 @@ export const initialSeedData = {
       }
     ]
   },
-  "notices": [],
-  "reportCards": [],
-  "studyCorner": [],
-  "grades": [
-    {
-      "id": "g-1789816552094",
-      "name": "GRADE 1",
-      "category": "Primary",
-      "streams": [
+  "schoolSettings": {
+    "general": {
+      "schoolName": "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+      "motto": "KNOWLEDGE IS POWER",
+      "postalAddress": "P.O. BOX 5239-30100 ELDORET",
+      "phone": "+254 712 345 678",
+      "email": "info@munyaka.sc.ke",
+      "location": "Munyaka, Eldoret East, Uasin Gishu County",
+      "maintenanceMode": false
+    },
+    "academic": {
+      "activeYear": "2026",
+      "activeTerm": "term1",
+      "termStartDate": "2026-01-05",
+      "termEndDate": "2026-04-10",
+      "gradingScale": [
         {
-          "id": "s-1789816570237",
-          "name": "BLUE",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+          "level": "EE",
+          "descriptor": "Exceeding Expectations",
+          "min": 80,
+          "max": 100,
+          "points": 4
         },
         {
-          "id": "s-1789816578097",
-          "name": "GREEN",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+          "level": "ME",
+          "descriptor": "Meeting Expectations",
+          "min": 50,
+          "max": 79,
+          "points": 3
         },
         {
-          "id": "s-1789816586319",
-          "name": "YELLOW",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+          "level": "AE",
+          "descriptor": "Approaching Expectations",
+          "min": 30,
+          "max": 49,
+          "points": 2
+        },
+        {
+          "level": "BE",
+          "descriptor": "Below Expectations",
+          "min": 0,
+          "max": 29,
+          "points": 1
         }
       ]
     },
-    {
-      "id": "g-1789817749440",
-      "name": "PP1",
-      "category": "Pre-Primary",
-      "streams": []
-    },
-    {
-      "id": "g-1789817756408",
-      "name": "PP2",
-      "category": "Pre-Primary",
-      "streams": []
-    },
-    {
-      "id": "g-1789838839903",
-      "name": "GRADE 6",
-      "category": "Primary",
-      "streams": [
-        {
-          "id": "s-1789838852627",
-          "name": "BLUE",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+    "permissions": {
+      "owner": {
+        "sys_config": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
         },
-        {
-          "id": "s-1789838870763",
-          "name": "YELLOW",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "academic_grading": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
         },
-        {
-          "id": "s-1789838878242",
-          "name": "GREEN",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "student_records": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
         },
-        {
-          "id": "s-1789838884417",
-          "name": "RED",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "finance_fees": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
+        },
+        "payment_subscriptions": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
+        },
+        "staff_mgmt": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
         }
-      ]
-    },
-    {
-      "id": "g-1790234904665",
-      "name": "GRADE 8",
-      "category": "Junior School",
-      "streams": [
-        {
-          "id": "s-1790234923680",
-          "name": "VENUS",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+      },
+      "super_admin": {
+        "sys_config": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
         },
-        {
-          "id": "s-1790234934496",
-          "name": "NEPTUNE",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "academic_grading": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
         },
-        {
-          "id": "s-1790234946304",
-          "name": "MERCURY",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "student_records": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
         },
-        {
-          "id": "s-1790234958410",
-          "name": "JUPITER",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "finance_fees": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
+        },
+        "payment_subscriptions": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "staff_mgmt": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": true
         }
-      ]
-    },
-    {
-      "id": "g-1790310622666",
-      "name": "GRADE 5",
-      "category": "Primary",
-      "streams": [
-        {
-          "id": "s-1790310635738",
-          "name": "BLUE",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+      },
+      "head_teacher": {
+        "sys_config": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": false
         },
-        {
-          "id": "s-1790310648394",
-          "name": "GREEN",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "academic_grading": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": false
         },
-        {
-          "id": "s-1790310656319",
-          "name": "YELLOW",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "student_records": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": false
         },
-        {
-          "id": "s-1790310661810",
-          "name": "RED",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "finance_fees": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": false
+        },
+        "payment_subscriptions": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "staff_mgmt": {
+          "read": true,
+          "create": true,
+          "edit": true,
+          "delete": false
         }
-      ]
-    },
-    {
-      "id": "g-1790348631435",
-      "name": "GRADE 9",
-      "category": "Junior School",
-      "streams": [
-        {
-          "id": "s-1790348654180",
-          "name": "YELLOW",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+      },
+      "bursar": {
+        "sys_config": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
         },
-        {
-          "id": "s-1790348662091",
-          "name": "BLUE",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "academic_grading": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
         },
-        {
-          "id": "s-1790348669040",
-          "name": "GREEN",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "student_records": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
         },
-        {
-          "id": "s-1790348676372",
-          "name": "RED",
-          "teacher": "Unassigned",
-          "studentsCount": 0
+        "finance_fees": {
+          "read": true,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "payment_subscriptions": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "staff_mgmt": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
         }
-      ]
-    }
-  ],
-  "streams": []
+      },
+      "teacher": {
+        "sys_config": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "academic_grading": {
+          "read": true,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "student_records": {
+          "read": true,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "finance_fees": {
+          "read": true,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "payment_subscriptions": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "staff_mgmt": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        }
+      },
+      "parent": {
+        "sys_config": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "academic_grading": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "student_records": {
+          "read": true,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "finance_fees": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "payment_subscriptions": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "staff_mgmt": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        }
+      },
+      "student": {
+        "sys_config": {
+          "read": true,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "academic_grading": {
+          "read": true,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "student_records": {
+          "read": true,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "finance_fees": {
+          "read": true,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "payment_subscriptions": {
+          "read": false,
+          "create": false,
+          "edit": false,
+          "delete": false
+        },
+        "staff_mgmt": {
+          "read": true,
+          "create": false,
+          "edit": false,
+          "delete": false
+        }
+      }
+    },
+    "geofence": {
+      "lat": 0.5142,
+      "lng": 35.2698,
+      "radius": 500
+    },
+    "geofenceEnabled": true,
+    "devBypass": false,
+    "sessionSecurity": {
+      "idleTimeout": "30m",
+      "requirePasswordOnFirstLogin": true
+    },
+    "auditLogs": [
+      {
+        "timestamp": "2026-03-31 09:14:02",
+        "admin": "System Admin",
+        "action": "Geofence Radius Updated (150m)",
+        "ip": "192.168.1.102 (Chrome/Win)"
+      },
+      {
+        "timestamp": "2026-03-30 16:45:11",
+        "admin": "System Admin",
+        "action": "Credentials Reset for J. Mwangi",
+        "ip": "192.168.1.102 (Chrome/Win)"
+      },
+      {
+        "timestamp": "2026-03-28 11:20:30",
+        "admin": "Head Teacher",
+        "action": "Grade Bounds Modified (Grade 4)",
+        "ip": "192.168.1.108 (Safari/Mac)"
+      },
+      {
+        "timestamp": "2026-03-25 08:30:15",
+        "admin": "System Admin",
+        "action": "Idle Session Timeout set to 30m",
+        "ip": "192.168.1.102 (Chrome/Win)"
+      }
+    ]
+  }
 };
 
 (initialSeedData as any).learners = initialSeedData.students;
 
 export const INITIAL_SEED_DATA = initialSeedData;
-
-export const SEED_VERSION = "BUILD_1790354443672";
 
 export const initialAttendance = (initialSeedData as any).attendance || {};
 export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
@@ -1015,7 +2931,7 @@ export const initialScienceInventory = (initialSeedData as any).scienceInventory
 export const initialStoreInventory = (initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || [];
 export const initialSettings = (initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {};
 export const initialNotices = (initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || [];
-export const initialEvents = [];
+export const initialEvents = (initialSeedData as any).events || [];
 export const initialExams = (initialSeedData as any).exams || (initialSeedData as any).all_set_exams || (initialSeedData as any).question_bank || [];
 export const initialExamSchedules = (initialSeedData as any).examSchedules || (initialSeedData as any).assessment_schedules || [];
 export const initialExamTypes = (initialSeedData as any).examTypes || (initialSeedData as any).exam_types || [];
