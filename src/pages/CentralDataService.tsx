@@ -1,42 +1,239 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { CentralDataService } from '../services/centralDataService';
-import { exportAllData, parseAndImportBackup, downloadDatabaseBackup } from '@/utils/storage';
-import { Download, Upload, Users, GraduationCap, Briefcase, CheckCircle2, RefreshCw, AlertCircle, Database, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { CentralDataService } from '@/services/centralDataService';
+import { UnifiedDataStorage } from '@/services/unifiedDataStorage';
 import { showSuccess, showError } from '@/utils/toast';
+import { Download, Upload, Database, RefreshCw, Layers, CheckCircle2, ShieldCheck, Users, GraduationCap, DollarSign, CalendarCheck, BookOpen, Clock, Settings as SettingsIcon } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { initialSeedData } from '@/data/initialSeedData';
 
-export default function CentralDataPage() {
-  const [stats, setStats] = useState({ learners: 0, teaching: 0, nonTeaching: 0 });
-  const [isRestoring, setIsRestoring] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export default function CentralDataServicePage() {
+  const [stats, setStats] = useState({
+    registeredStudents: 0,
+    teachingStaff: 0,
+    nonTeachingStaff: 0,
+    attendanceRecords: 0,
+    feeRecords: 0,
+    examsCount: 0,
+    marksCount: 0,
+    timetableCount: 0,
+    libraryCount: 0,
+    noticesCount: 0,
+    ictAssetsCount: 0,
+    settingsConfigured: 0,
+  });
+
+  const [snapshotJson, setSnapshotJson] = useState('');
+  const [restoreJson, setRestoreJson] = useState('');
+  const [isRestoreOpen, setIsRestoreOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const refreshStats = () => {
+    try {
+      const learners = UnifiedDataStorage.getLearners();
+      const staff = UnifiedDataStorage.getStaff();
+      const attendance = UnifiedDataStorage.getAttendance();
+      const fees = UnifiedDataStorage.getFees();
+
+      // Read from live unified storage / localStorage
+      const exams = UnifiedDataStorage.get<any[]>('munyaka_exam_types', UnifiedDataStorage.get<any[]>('all_set_exams', []));
+      const marks = UnifiedDataStorage.get<any>('munyaka_marks_records', UnifiedDataStorage.get<any>('marks', []));
+      const marksCount = Array.isArray(marks) ? marks.length : Object.keys(marks || {}).length;
+      const timetable = UnifiedDataStorage.get<any[]>('school-timetable-data', []);
+      const library = UnifiedDataStorage.get<any[]>('munyaka_library_books', []);
+      const notices = UnifiedDataStorage.get<any[]>('munyaka_notices', []);
+      const ictAssets = UnifiedDataStorage.get<any[]>('munyaka_ict_assets', []);
+      const settings = UnifiedDataStorage.get<any>('munyaka_system_settings_v3', {});
+
+      const teachingStaff = staff.filter((s: any) => {
+        const role = (s.role || s.systemRole || '').toLowerCase();
+        return (
+          role.includes('teacher') ||
+          role.includes('head') ||
+          role.includes('educator') ||
+          role.includes('tutor') ||
+          role.includes('instructor') ||
+          s.teaching === true
+        );
+      }).length;
+
+      const nonTeachingStaff = staff.length - teachingStaff;
+
+      const attendanceCount = Array.isArray(attendance)
+        ? attendance.length
+        : Object.keys(attendance || {}).length;
+
+      const feeCount = Array.isArray(fees) ? fees.length : Object.keys(fees || {}).length;
+
+      setStats({
+        registeredStudents: learners.length,
+        teachingStaff,
+        nonTeachingStaff: Math.max(0, nonTeachingStaff),
+        attendanceRecords: attendanceCount,
+        feeRecords: feeCount,
+        examsCount: Array.isArray(exams) ? exams.length : 0,
+        marksCount,
+        timetableCount: Array.isArray(timetable) ? timetable.length : Object.keys(timetable || {}).length,
+        libraryCount: Array.isArray(library) ? library.length : 0,
+        noticesCount: Array.isArray(notices) ? notices.length : 0,
+        ictAssetsCount: Array.isArray(ictAssets) ? ictAssets.length : 0,
+        settingsConfigured: Object.keys(settings || {}).length,
+      });
+    } catch (e) {
+      console.error('Error refreshing central data stats:', e);
+    }
+  };
 
   useEffect(() => {
-    const learners = CentralDataService.getLearners();
-    const staff = CentralDataService.getStaff();
-
-    const teaching = staff.filter((s: any) => {
-      const roleStr = `${s?.role || ''} ${s?.type || ''}`.toLowerCase();
-      return roleStr.includes('teach');
-    });
-
-    const nonTeaching = staff.filter((s: any) => {
-      const roleStr = `${s?.role || ''} ${s?.type || ''}`.toLowerCase();
-      return !roleStr.includes('teach');
-    });
-
-    setStats({
-      learners: learners.length,
-      teaching: teaching.length,
-      nonTeaching: nonTeaching.length
-    });
+    refreshStats();
+    const handleDataChange = () => refreshStats();
+    window.addEventListener('munyaka:data-changed', handleDataChange);
+    window.addEventListener('storage', handleDataChange);
+    return () => {
+      window.removeEventListener('munyaka:data-changed', handleDataChange);
+      window.removeEventListener('storage', handleDataChange);
+    };
   }, []);
 
-  const handleExport = async () => {
+  const handleExportSeedData = () => {
     try {
-      const content = await CentralDataService.generateFullSnapshot();
-      const blob = new Blob([content], { type: 'text/typescript;charset=utf-8' });
+      const generatedSeedVersion = "BUILD_OFFLINE_" + Date.now();
+
+      // Read live store across all 12+ menus
+      const learners = UnifiedDataStorage.getLearners();
+      const staff = UnifiedDataStorage.getStaff();
+      const fees = UnifiedDataStorage.getFees();
+      const attendance = UnifiedDataStorage.getAttendance();
+
+      const transactions = UnifiedDataStorage.get<any[]>('munyaka_transactions', []);
+      const payments = UnifiedDataStorage.get<any[]>('munyaka_payments', fees);
+      const grades = UnifiedDataStorage.get<any>('munyaka_grades', (initialSeedData as any).grades || {});
+      const streams = UnifiedDataStorage.get<any>('munyaka_streams', (initialSeedData as any).streams || []);
+      const classAssignments = UnifiedDataStorage.get<any>('munyaka_class_assignments', (initialSeedData as any).classAssignments || []);
+      const learningAreas = UnifiedDataStorage.get<any>('munyaka_learning_areas', (initialSeedData as any).learningAreas || []);
+      const exams = UnifiedDataStorage.get<any>('munyaka_exam_types', UnifiedDataStorage.get<any>('all_set_exams', []));
+      const examSchedules = UnifiedDataStorage.get<any>('munyaka_exam_schedules', (initialSeedData as any).examSchedules || []);
+      const marks = UnifiedDataStorage.get<any>('munyaka_marks_records', UnifiedDataStorage.get<any>('marks', {}));
+      const assessments = UnifiedDataStorage.get<any>('munyaka_assessment_scores', []);
+      const questions = UnifiedDataStorage.get<any>('munyaka_question_bank', (initialSeedData as any).questions || []);
+      const reportCards = UnifiedDataStorage.get<any>('munyaka_report_cards', []);
+      const feeStructures = UnifiedDataStorage.get<any>('munyaka_fee_structures', (initialSeedData as any).feeStructures || []);
+      const studyCorner = UnifiedDataStorage.get<any>('munyaka_study_materials', (initialSeedData as any).studyCorner || []);
+      const libraryBooks = UnifiedDataStorage.get<any>('munyaka_library_books', (initialSeedData as any).libraryBooks || []);
+      const libraryLogs = UnifiedDataStorage.get<any>('munyaka_library_logs', []);
+      const ictEquipment = UnifiedDataStorage.get<any>('munyaka_ict_assets', (initialSeedData as any).ictEquipment || []);
+      const scienceInventory = UnifiedDataStorage.get<any>('munyaka_science_inventory', (initialSeedData as any).scienceInventory || []);
+      const storeInventory = UnifiedDataStorage.get<any>('munyaka_store_inventory', (initialSeedData as any).storeInventory || []);
+      const notices = UnifiedDataStorage.get<any>('munyaka_notices', (initialSeedData as any).notices || []);
+      const events = UnifiedDataStorage.get<any>('munyaka_events', []);
+      const timetable = UnifiedDataStorage.get<any>('school-timetable-data', {});
+      const timetableGrades = UnifiedDataStorage.get<any>('school-timetable-grades', []);
+      const settings = UnifiedDataStorage.get<any>('munyaka_system_settings_v3', UnifiedDataStorage.get<any>('schoolSettings', {}));
+
+      const fullDbObject = {
+        students: learners,
+        staff,
+        fees,
+        payments,
+        transactions,
+        attendance,
+        grades,
+        streams,
+        classAssignments,
+        learningAreas,
+        exams,
+        examSchedules,
+        marks,
+        assessments,
+        questions,
+        reportCards,
+        feeStructures,
+        studyCorner,
+        libraryBooks,
+        libraryLogs,
+        ictEquipment,
+        scienceInventory,
+        storeInventory,
+        notices,
+        events,
+        timetable,
+        timetableGrades,
+        settings,
+        schoolSettings: settings
+      };
+
+      const fileContent = `export const SEED_VERSION = "${generatedSeedVersion}";
+
+export const DEFAULT_CBC_CLUSTERS = [
+  {
+    id: "cluster_1",
+    name: "Languages & Literacy",
+    description: "English, Kiswahili, Indigenous Languages, Foreign Languages",
+    color: "bg-indigo-500",
+    icon: "BookOpen",
+    learningAreas: [
+      { id: "la_eng", name: "English Language Activities", code: "ENG-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
+      { id: "la_kisw", name: "Kiswahili Language Activities", code: "KISW-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] }
+    ]
+  },
+  {
+    id: "cluster_2",
+    name: "Mathematics & Science",
+    description: "Mathematics, Integrated Science, Health Education",
+    color: "bg-emerald-500",
+    icon: "Calculator",
+    learningAreas: [
+      { id: "la_math", name: "Mathematics Activities", code: "MATH-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
+      { id: "la_sci", name: "Integrated Science", code: "SCI-01", category: "Core", gradeLevels: ["Grade 4", "Grade 5", "Grade 6"] }
+    ]
+  }
+];
+
+export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
+
+export const initialSeedData = ${JSON.stringify(fullDbObject, null, 2)};
+
+(initialSeedData as any).learners = initialSeedData.students;
+
+export const INITIAL_SEED_DATA = initialSeedData;
+
+export const initialAttendance = (initialSeedData as any).attendance || {};
+export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
+export const initialScienceInventory = (initialSeedData as any).scienceInventory || (initialSeedData as any).scienceLabInventory || [];
+export const initialStoreInventory = (initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || [];
+export const initialSettings = (initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {};
+export const initialNotices = (initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || [];
+export const initialEvents = (initialSeedData as any).events || [];
+export const initialExams = (initialSeedData as any).exams || (initialSeedData as any).all_set_exams || (initialSeedData as any).question_bank || [];
+export const initialExamSchedules = (initialSeedData as any).examSchedules || (initialSeedData as any).assessment_schedules || [];
+export const initialExamTypes = (initialSeedData as any).examTypes || (initialSeedData as any).exam_types || [];
+export const initialMarks = (initialSeedData as any).marks || (initialSeedData as any).assessments || (initialSeedData as any).marked_student_submissions || [];
+export const initialQuestions = (initialSeedData as any).questions || (initialSeedData as any).question_bank || [];
+export const initialLearners = initialSeedData.students || [];
+export const initialStaff = initialSeedData.staff || [];
+export const initialReportCards = (initialSeedData as any).reportCards || [];
+export const initialFeeStructures = (initialSeedData as any).feeStructures || (initialSeedData as any).fees_structures || [];
+export const initialFeePayments = (initialSeedData as any).fees || (initialSeedData as any).payments || [];
+export const initialStudyCorner = (initialSeedData as any).studyCorner || (initialSeedData as any).study_materials || [];
+export const initialLibraryBooks = (initialSeedData as any).libraryBooks || (initialSeedData as any).library_books || [];
+export const initialLibraryLogs = (initialSeedData as any).libraryLogs || (initialSeedData as any).library_logs || [];
+export const mockLearners = initialSeedData.students || [];
+export const mockStudents = initialSeedData.students || [];
+export const mockStaff = initialSeedData.staff || [];
+export const initialGrades = (initialSeedData as any).grades || [];
+export const initialStreams = (initialSeedData as any).streams || [];
+export const initialClassAssignments = (initialSeedData as any).classAssignments || [];
+export const mockExams = (initialSeedData as any).exams || [];
+export const mockLibrary = (initialSeedData as any).libraryBooks || [];
+export const mockFinances = (initialSeedData as any).fees || [];
+
+export default initialSeedData;
+`;
+
+      const blob = new Blob([fileContent], { type: 'text/typescript;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -45,181 +242,256 @@ export default function CentralDataPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      showSuccess("Initial seed data exported successfully!");
-    } catch (e) {
-      showError("Failed to export seed data.");
+
+      showSuccess(`Exported initialSeedData.ts (${generatedSeedVersion}) with live store state across all menus!`);
+    } catch (err: any) {
+      showError('Failed to generate initialSeedData.ts: ' + (err?.message || err));
     }
   };
 
-  const handleExportJsonBackup = () => {
+  const handleGenerateSnapshot = async () => {
     try {
-      const backup = exportAllData();
-      const jsonStr = JSON.stringify(backup, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `munyaka_system_backup_${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      showSuccess("System backup JSON exported successfully!");
-    } catch (e) {
-      showError("Failed to export JSON backup.");
+      setLoading(true);
+      const snapshot = await CentralDataService.generateFullSnapshot();
+      setSnapshotJson(snapshot);
+      showSuccess('Live database snapshot generated successfully.');
+    } catch {
+      showError('Failed to generate snapshot.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleClearStaff = () => {
-    if (!window.confirm("Are you sure you want to clear all staff records? This will wipe all teacher and staff personnel data and reset the list to empty.")) {
+  const handleDownloadSnapshot = () => {
+    if (!snapshotJson) return;
+    const blob = new Blob([snapshotJson], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `munyaka_snapshot_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleRestoreSnapshot = async () => {
+    if (!restoreJson.trim()) {
+      showError('Please paste a valid JSON snapshot');
       return;
     }
     try {
-      CentralDataService.clearStaff();
-      setStats({
-        learners: stats.learners,
-        teaching: 0,
-        nonTeaching: 0
-      });
-      showSuccess("All staff records have been successfully cleared.");
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-    } catch (e) {
-      showError("Failed to clear staff records.");
+      setLoading(true);
+      const success = await CentralDataService.restoreSnapshot(restoreJson);
+      if (success) {
+        showSuccess('System restored successfully from snapshot.');
+        setIsRestoreOpen(false);
+        setRestoreJson('');
+        refreshStats();
+        window.dispatchEvent(new Event('munyaka:data-changed'));
+      } else {
+        showError('Invalid JSON format or corrupted snapshot.');
+      }
+    } catch {
+      showError('Failed to restore snapshot.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleFileRestoreClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileRestoreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target?.result as string;
-        const result = parseAndImportBackup(content);
-
-        if (!result.success) {
-          throw new Error(result.errors.join('; ') || 'Failed to restore backup.');
-        }
-
-        setIsRestoring(true);
-        showSuccess(`Backup successfully restored! ${result.keysRestored.length} data areas restored. Reloading application...`);
-        setTimeout(() => {
-          window.location.reload();
-        }, 800);
-      } catch (err) {
-        setIsRestoring(false);
-        showError(err instanceof Error ? err.message : "Failed to restore backup: Invalid JSON file.");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto pb-20">
-      <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <Badge variant="outline" className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 mb-2">
-            CENTRALIZED DATA & APK BACKUPS
-          </Badge>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Central Data Service & APK Generator</h1>
-          <p className="text-sm text-indigo-200 mt-1 max-w-2xl">
-            All student and staff records are synchronized in a single unified persistent engine. Export your database into <code className="bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">initialSeedData.ts</code> or perform full JSON backups and restores.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <Button onClick={handleExport} variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
-            <Download className="w-4 h-4 mr-2" />
-            Export initialSeedData.ts
-          </Button>
-          <Button onClick={handleExportJsonBackup} className="bg-indigo-600 hover:bg-indigo-500 text-white shadow">
-            <Database className="w-4 h-4 mr-2" />
-            Export JSON Backup
-          </Button>
-          <Button onClick={handleFileRestoreClick} disabled={isRestoring} className="bg-emerald-600 hover:bg-emerald-500 text-white shadow">
-            {isRestoring ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-            Restore JSON Backup
-          </Button>
-          <Button onClick={handleClearStaff} variant="destructive" className="bg-red-600 hover:bg-red-500 text-white shadow">
-            <Trash2 className="w-4 h-4 mr-2" />
-            Reset Staff Database
-          </Button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileRestoreChange}
-            accept=".json"
-            className="hidden"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="border shadow-sm rounded-2xl bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Registered Students</CardTitle>
-            <Users className="w-5 h-5 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.learners}</div>
-            <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Fully synchronized centrally
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Header Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white p-8 shadow-xl border border-indigo-500/20">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold backdrop-blur-md border border-indigo-500/30">
+              <Database className="w-3.5 h-3.5" />
+              Central Storage & APK Seed Generator
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight">Central Data & APK Master Export</h1>
+            <p className="text-indigo-200 text-sm max-w-2xl leading-relaxed">
+              All student, staff, exam, fee, and timetable records are synchronized in a single unified live storage engine. Export your active live store directly into <code className="bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">initialSeedData.ts</code> for offline APK builds or perform full JSON backups and restores.
             </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={refreshStats}
+              variant="outline"
+              className="rounded-xl border-indigo-400/30 bg-indigo-950/40 text-indigo-200 hover:bg-indigo-900/60 hover:text-white"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            <Button
+              onClick={handleExportSeedData}
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/30 font-semibold"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export initialSeedData.ts
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Live Store Metrics Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Learners</p>
+              <p className="text-xl font-bold">{stats.registeredStudents}</p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm rounded-2xl bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Teaching Staff</CardTitle>
-            <GraduationCap className="w-5 h-5 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.teaching}</div>
-            <p className="text-xs text-gray-500 mt-1">Active: {stats.teaching} | Pending: 0</p>
+        <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Teaching Staff</p>
+              <p className="text-xl font-bold">{stats.teachingStaff}</p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border shadow-sm rounded-2xl bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Non-Teaching Staff</CardTitle>
-            <Briefcase className="w-5 h-5 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.nonTeaching}</div>
-            <p className="text-xs text-gray-500 mt-1">Active: {stats.nonTeaching} | Pending: 0</p>
+        <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 flex items-center justify-center">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Non-Teaching</p>
+              <p className="text-xl font-bold">{stats.nonTeachingStaff}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center">
+              <CalendarCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Attendance</p>
+              <p className="text-xl font-bold">{stats.attendanceRecords}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
+              <DollarSign className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Fee Records</p>
+              <p className="text-xl font-bold">{stats.feeRecords}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-slate-200 dark:border-slate-800 shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Exams / Marks</p>
+              <p className="text-xl font-bold">{stats.examsCount} / {stats.marksCount}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border shadow-sm rounded-3xl bg-white p-6">
-        <CardHeader className="px-0 pt-0 pb-4 border-b">
-          <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-indigo-600" />
-            Backup & Restoration Instructions
-          </CardTitle>
-          <CardDescription>
-            How to use the JSON backup utility for offline deployments and APK portability.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-0 pt-4 space-y-3 text-sm text-slate-600 leading-relaxed">
-          <p>
-            1. <strong>Export JSON Backup:</strong> Downloads all local storage keys (attendance records, student grades, fee ledgers, teacher schedules, notices, and system settings) into a single JSON file.
-          </p>
-          <p>
-            2. <strong>Restore JSON Backup:</strong> Selects a previously exported JSON backup file. The system automatically populates device storage with all records and instantly triggers an automatic page reload to ensure the app is fully hydrated with restored state.
-          </p>
-          <p>
-            3. <strong>APK Build Seed:</strong> Use <code className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded font-mono text-xs">initialSeedData.ts</code> export to hardcode current school records directly into the mobile APK bundle before compiling with Capacitor.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Snapshot & Backup Management */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="rounded-3xl border-slate-200 dark:border-slate-800 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Database className="w-5 h-5 text-indigo-600" />
+              <CardTitle>Generate JSON Backup</CardTitle>
+            </div>
+            <CardDescription>
+              Create a structured JSON dump of all core learners, staff, attendance, and financial data.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Button onClick={handleGenerateSnapshot} disabled={loading} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
+                Generate Snapshot
+              </Button>
+              {snapshotJson && (
+                <Button onClick={handleDownloadSnapshot} variant="outline" className="rounded-xl">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download JSON
+                </Button>
+              )}
+            </div>
+
+            {snapshotJson && (
+              <Textarea
+                readOnly
+                value={snapshotJson}
+                className="font-mono text-xs h-48 bg-slate-50 dark:bg-slate-900 rounded-xl"
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl border-slate-200 dark:border-slate-800 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Upload className="w-5 h-5 text-emerald-600" />
+              <CardTitle>Restore JSON Snapshot</CardTitle>
+            </div>
+            <CardDescription>
+              Paste a previously exported snapshot to safely hydrate and overwrite live local state.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="rounded-xl border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
+                  Open Restore Dialog
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="rounded-3xl max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Restore System Snapshot</DialogTitle>
+                  <DialogDescription>
+                    Paste raw JSON snapshot contents below. This will overwrite local student, staff, fee, and attendance state.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-2">
+                  <Textarea
+                    placeholder="Paste valid JSON snapshot here..."
+                    value={restoreJson}
+                    onChange={(e) => setRestoreJson(e.target.value)}
+                    className="font-mono text-xs h-56 rounded-xl bg-slate-50 dark:bg-slate-900"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsRestoreOpen(false)} className="rounded-xl">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleRestoreSnapshot} disabled={loading} className="rounded-xl bg-emerald-600 hover:bg-emerald-700">
+                    Confirm Restore
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs text-muted-foreground flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
+              <p>Restoring a snapshot will immediately trigger global event dispatches to update all open tabs and active dashboards in real time.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

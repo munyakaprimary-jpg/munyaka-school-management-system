@@ -4,6 +4,7 @@ import { initialSeedData, SEED_VERSION, initialExams, initialExamSchedules, init
 /** Key mapping from initialSeedData fields to their respective LocalStorage keys. */
 const KEY_MAPPING: Record<string, string> = {
   students: 'munyaka_students',
+  staff: 'munyaka_staff',
   classes: 'munyaka_grades',
   streams: 'munyaka_grades',
   learningAreas: 'munyaka_learning_areas',
@@ -28,9 +29,20 @@ const KEY_MAPPING: Record<string, string> = {
 /** Hydrates localStorage from initialSeedData on first app boot or when uninitialized on Android / Web. */
 export function hydrateFromInitialSeed(): void {
   try {
-    const isInitialized = localStorage.getItem('munyaka_initialized') === 'true';
     const seedVersion = SEED_VERSION;
-    const currentVersion = localStorage.getItem('stored_seed_version') || localStorage.getItem('munyaka_seed_version');
+    const storedSeedVersion = localStorage.getItem('munyaka_seed_version') || localStorage.getItem('stored_seed_version');
+
+    // ── Enforce APK boot version check ───────────────────────────────────────
+    // If seed versions do not match, clear existing stale storage to force fresh master APK hydration
+    if (storedSeedVersion !== seedVersion) {
+      console.log(`[StorageHydration] New master seed version detected (${seedVersion} vs ${storedSeedVersion}). Purging stale storage and hydrating fresh master seed.`);
+      localStorage.clear();
+      sessionStorage.clear();
+    }
+
+    const isInitialized = localStorage.getItem('munyaka_initialized') === 'true';
+    const learnersRaw = localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students');
+    const staffRaw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory');
     const attendanceRaw = localStorage.getItem('munyaka_attendance');
     const ictRaw = localStorage.getItem('munyaka_ict_lab');
     const scienceRaw = localStorage.getItem('munyaka_science_lab');
@@ -50,6 +62,8 @@ export function hydrateFromInitialSeed(): void {
     const libraryBooksRaw = localStorage.getItem('munyaka_library_books');
     const libraryLogsRaw = localStorage.getItem('munyaka_library_borrowings');
     
+    const isLearnersEmpty = !learnersRaw || learnersRaw === '[]' || learnersRaw.length < 5;
+    const isStaffEmpty = !staffRaw || staffRaw === '[]' || staffRaw.length < 5;
     const isAttendanceEmpty = !attendanceRaw || attendanceRaw === '{}' || attendanceRaw === '[]' || attendanceRaw.length < 5;
     const isIctEmpty = !ictRaw || ictRaw === '[]' || ictRaw.length < 5;
     const isScienceEmpty = !scienceRaw || scienceRaw === '[]' || scienceRaw.length < 5;
@@ -69,11 +83,12 @@ export function hydrateFromInitialSeed(): void {
     const isLibraryBooksEmpty = !libraryBooksRaw || libraryBooksRaw === '[]' || libraryBooksRaw.length < 5;
     const isLibraryLogsEmpty = !libraryLogsRaw || libraryLogsRaw === '[]' || libraryLogsRaw.length < 5;
 
-    if (!isInitialized || currentVersion !== seedVersion || isAttendanceEmpty || isIctEmpty || isScienceEmpty || isStoreEmpty || isSettingsEmpty || isNoticesEmpty || isEventsEmpty || isExamsEmpty || isSchedulesEmpty || isExamTypesEmpty || isMarksEmpty || isQuestionsEmpty || isReportCardsEmpty || isFeeStructuresEmpty || isPaymentsEmpty || isStudyCornerEmpty || isLibraryBooksEmpty || isLibraryLogsEmpty) {
+    if (!isInitialized || storedSeedVersion !== seedVersion || isLearnersEmpty || isStaffEmpty || isAttendanceEmpty || isIctEmpty || isScienceEmpty || isStoreEmpty || isSettingsEmpty || isNoticesEmpty || isEventsEmpty || isExamsEmpty || isSchedulesEmpty || isExamTypesEmpty || isMarksEmpty || isQuestionsEmpty || isReportCardsEmpty || isFeeStructuresEmpty || isPaymentsEmpty || isStudyCornerEmpty || isLibraryBooksEmpty || isLibraryLogsEmpty) {
       console.log('[StorageHydration] First-boot storage hydration: Forcing full portal hydration across all menus (exams, fees, report cards, library, inventory, settings)...');
 
       const snapshot = {
         students: (initialSeedData as any).students || [],
+        staff: (initialSeedData as any).staff || [],
         classes: (initialSeedData as any).classes || [],
         streams: (initialSeedData as any).streams || [],
         learningAreas: (initialSeedData as any).learningAreas || [],
@@ -104,6 +119,18 @@ export function hydrateFromInitialSeed(): void {
         }
       });
 
+      // Canonical learner & staff keys
+      const studentsList = (initialSeedData as any).students || [];
+      const staffList = (initialSeedData as any).staff || [];
+      localStorage.setItem('school_learners_data', JSON.stringify(studentsList));
+      localStorage.setItem('munyaka_students', JSON.stringify(studentsList));
+      localStorage.setItem('munyaka_master_learner_list', JSON.stringify(studentsList));
+
+      localStorage.setItem('munyaka_staff', JSON.stringify(staffList));
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(staffList));
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(staffList));
+      localStorage.removeItem('munyaka_staff_cleared_explicitly');
+
       // Set munyaka_initialized to true
       localStorage.setItem('munyaka_initialized', 'true');
       localStorage.setItem('stored_seed_version', seedVersion);
@@ -114,45 +141,43 @@ export function hydrateFromInitialSeed(): void {
       localStorage.setItem('munyaka_exam_types', JSON.stringify(initialExamTypes));
       localStorage.setItem('marked_student_submissions', JSON.stringify(initialMarks));
       localStorage.setItem('marks', JSON.stringify(initialMarks));
+      localStorage.setItem('munyaka_marks_records', JSON.stringify(initialMarks));
       localStorage.setItem('question_bank', JSON.stringify(initialQuestions));
       localStorage.setItem('questions', JSON.stringify(initialQuestions));
       localStorage.setItem('munyaka_report_cards', JSON.stringify(initialReportCards));
       localStorage.setItem('munyaka_fee_structures', JSON.stringify(initialFeeStructures));
       localStorage.setItem('munyaka_payments', JSON.stringify(initialFeePayments));
-      // Hydrate fees & payments from initialSeedData if empty
-      const existingFees = localStorage.getItem('munyaka_fees');
-      const existingPayments = localStorage.getItem('munyaka_payments');
-      const existingFeesRecords = localStorage.getItem('munyaka_fees_records');
+      localStorage.setItem('munyaka_fees', JSON.stringify((initialSeedData as any).fees || initialFeePayments));
+      localStorage.setItem('munyaka_fees_records', JSON.stringify((initialSeedData as any).fees || initialFeePayments));
+      localStorage.setItem('munyaka_student_fees', JSON.stringify((initialSeedData as any).fees || initialFeePayments));
+      localStorage.setItem('munyaka_transactions', JSON.stringify((initialSeedData as any).transactions || []));
 
-      if (!existingFees || JSON.parse(existingFees || '[]').length === 0) {
-        localStorage.setItem('munyaka_fees', JSON.stringify((initialSeedData as any).fees || initialFeePayments));
-      }
-      if (!existingPayments || JSON.parse(existingPayments || '[]').length === 0) {
-        localStorage.setItem('munyaka_payments', JSON.stringify((initialSeedData as any).payments || (initialSeedData as any).fees || initialFeePayments));
-      }
-      if (!existingFeesRecords || JSON.parse(existingFeesRecords || '[]').length === 0) {
-        localStorage.setItem('munyaka_fees_records', JSON.stringify((initialSeedData as any).fees || initialFeePayments));
-      }
       localStorage.setItem('munyaka_study_materials', JSON.stringify(initialStudyCorner));
       localStorage.setItem('munyaka_library_books', JSON.stringify(initialLibraryBooks));
       localStorage.setItem('munyaka_library_borrowings', JSON.stringify(initialLibraryLogs));
       localStorage.setItem('munyaka_attendance', JSON.stringify((initialSeedData as any).attendance || []));
+      localStorage.setItem('munyaka_attendance_records', JSON.stringify((initialSeedData as any).attendance || []));
       localStorage.setItem('munyaka_ict_lab', JSON.stringify((initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || []));
+      localStorage.setItem('munyaka_ict_assets', JSON.stringify((initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || []));
       localStorage.setItem('munyaka_science_lab', JSON.stringify((initialSeedData as any).scienceInventory || (initialSeedData as any).scienceLabInventory || []));
       localStorage.setItem('munyaka_store_items', JSON.stringify((initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || []));
       localStorage.setItem('munyaka_system_settings_v3', JSON.stringify((initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {}));
       localStorage.setItem('settings', JSON.stringify((initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {}));
       localStorage.setItem('munyaka_notices', JSON.stringify((initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || []));
-      localStorage.removeItem('munyaka_events');
-      localStorage.removeItem('events');
-      localStorage.setItem('munyaka_events', JSON.stringify([]));
+      localStorage.setItem('munyaka_events', JSON.stringify((initialSeedData as any).events || []));
+
+      if ((initialSeedData as any).timetable) {
+        localStorage.setItem('school-timetable-data', JSON.stringify((initialSeedData as any).timetable));
+      }
 
       // Dispatch event to notify listeners
       window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { source: 'full-portal-seed-hydration' } }));
       window.dispatchEvent(new CustomEvent('munyaka_learners_updated'));
-      window.dispatchEvent(new CustomEvent('storage', { key: 'stored_seed_version' } as any));
+      window.dispatchEvent(new CustomEvent('staff-changed'));
+      window.dispatchEvent(new CustomEvent('munyaka:staff-directory-changed'));
+      window.dispatchEvent(new CustomEvent('storage', { key: 'munyaka_seed_version' } as any));
 
-      console.log('[StorageHydration] 100% full portal data parity achieved. All menu modules successfully hydrated from initialSeedData.');
+      console.log(`[StorageHydration] 100% full portal data parity achieved with SEED_VERSION: ${seedVersion}`);
     }
   } catch (error) {
     console.error('[StorageHydration] Error during automatic full-portal storage hydration:', error);
