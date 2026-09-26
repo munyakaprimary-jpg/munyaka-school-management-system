@@ -72,6 +72,14 @@ export const UnifiedDataStorage = {
     const f2 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
     const masterFees = [f1, f2, (initialSeedData as any).fees || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
 
+    const n1 = JSON.parse(localStorage.getItem('munyaka_notices_v2') || '[]');
+    const n2 = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
+    const masterNotices = [n1, n2, (initialSeedData as any).notices || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
+
+    const ev1 = JSON.parse(localStorage.getItem('munyaka_events_v2') || '[]');
+    const ev2 = JSON.parse(localStorage.getItem('munyaka_events') || '[]');
+    const masterEvents = [ev1, ev2, (initialSeedData as any).events || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
+
     const a1 = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
     const a2 = JSON.parse(localStorage.getItem('munyaka_attendance') || '{}');
     const masterAttendance = Array.isArray(a1) && a1.length > 0 ? a1 : (Object.keys(a2).length > 0 ? a2 : ((initialSeedData as any).attendance || {}));
@@ -101,7 +109,8 @@ export const UnifiedDataStorage = {
       examTypes: JSON.parse(localStorage.getItem('munyaka_exam_types') || JSON.stringify((initialSeedData as any).examTypes || [])),
       libraryBooks: JSON.parse(localStorage.getItem('munyaka_library_books') || JSON.stringify((initialSeedData as any).libraryBooks || [])),
       feeStructures: JSON.parse(localStorage.getItem('munyaka_fee_structures') || JSON.stringify((initialSeedData as any).feeStructures || [])),
-      notices: JSON.parse(localStorage.getItem('munyaka_notices') || JSON.stringify((initialSeedData as any).notices || [])),
+      notices: masterNotices,
+      events: masterEvents,
       ictEquipment: JSON.parse(localStorage.getItem('munyaka_ict_assets') || JSON.stringify((initialSeedData as any).ictEquipment || [])),
       scienceInventory: JSON.parse(localStorage.getItem('munyaka_science_lab') || JSON.stringify((initialSeedData as any).scienceInventory || [])),
       storeInventory: JSON.parse(localStorage.getItem('munyaka_store_items') || JSON.stringify((initialSeedData as any).storeInventory || [])),

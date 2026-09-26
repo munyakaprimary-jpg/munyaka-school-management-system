@@ -103,16 +103,18 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   // LocalStorage Persistence for Notices and Events
   const [notices, setNotices] = useState<Notice[]>(() => {
     try {
-      const saved = localStorage.getItem('munyaka_notices') || localStorage.getItem('munyaka_notices_v2');
+      const saved = localStorage.getItem('munyaka_notices_v2') || localStorage.getItem('munyaka_notices');
       if (saved) {
         const parsed: Notice[] = JSON.parse(saved) as Notice[];
-        return parsed.map(n => {
-          if (!n.attachmentName) return n;
-          const urlIsDead = !n.attachmentUrl || n.attachmentUrl === '#' || n.attachmentUrl.startsWith('blob:');
-          if (!urlIsDead) return n;
-          const regenerated = regenerateAttachmentUrl(n.attachmentName);
-          return { ...n, attachmentUrl: regenerated };
-        });
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(n => {
+            if (!n.attachmentName) return n;
+            const urlIsDead = !n.attachmentUrl || n.attachmentUrl === '#' || n.attachmentUrl.startsWith('blob:');
+            if (!urlIsDead) return n;
+            const regenerated = regenerateAttachmentUrl(n.attachmentName);
+            return { ...n, attachmentUrl: regenerated };
+          });
+        }
       }
     } catch (e) {
       console.error(e);
@@ -122,8 +124,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   const [events, setEvents] = useState<SchoolEvent[]>(() => {
     try {
-      localStorage.removeItem('events');
-      const saved = localStorage.getItem('munyaka_events') || localStorage.getItem('munyaka_events_v2');
+      const saved = localStorage.getItem('munyaka_events_v2') || localStorage.getItem('munyaka_events');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -195,10 +196,39 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   const [eventDetails, setEventDetails] = useState('');
   const [eventType, setEventType] = useState('Academic');
 
+  // Save notices to localStorage & CentralDataService on change
   useEffect(() => {
-    localStorage.setItem('munyaka_notices_v2', JSON.stringify(notices));
-    notifyDataChanged('munyaka_notices_v2');
+    try {
+      localStorage.setItem('munyaka_notices_v2', JSON.stringify(notices));
+      localStorage.setItem('munyaka_notices', JSON.stringify(notices));
+      try {
+        const centralRaw = localStorage.getItem('munyaka_central_db') || '{}';
+        const db = JSON.parse(centralRaw);
+        db.notices = notices;
+        localStorage.setItem('munyaka_central_db', JSON.stringify(db));
+      } catch {}
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+    } catch (e) {
+      console.error(e);
+    }
   }, [notices]);
+
+  // Save events to localStorage & CentralDataService on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('munyaka_events_v2', JSON.stringify(events));
+      localStorage.setItem('munyaka_events', JSON.stringify(events));
+      try {
+        const centralRaw = localStorage.getItem('munyaka_central_db') || '{}';
+        const db = JSON.parse(centralRaw);
+        db.events = events;
+        localStorage.setItem('munyaka_central_db', JSON.stringify(db));
+      } catch {}
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [events]);
 
   const formatTime12h = (time24: string): string => {
     if (!time24) return '';
