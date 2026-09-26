@@ -39,25 +39,14 @@ export default function CentralDataServicePage() {
       const notices = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
       const ictAssets = JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]');
 
-      // Check teaching vs non-teaching staff
+      // Align exactly with Staff page: check category/role or default to teaching if ambiguous
       const teachingStaff = staff.filter((s: any) => {
-        const type = (s.type || s.staffType || '').toLowerCase();
-        const role = (s.role || s.systemRole || '').toLowerCase();
-        const category = (s.category || s.staffCategory || '').toLowerCase();
-        
-        return (
-          type === 'teaching' ||
-          category === 'teaching' ||
-          role.includes('teacher') ||
-          role.includes('head') ||
-          role.includes('educator') ||
-          role.includes('tutor') ||
-          role.includes('instructor') ||
-          role.includes('principal') ||
-          role.includes('deputy') ||
-          s.teaching === true ||
-          (!type && !category && (role.includes('teacher') || !role.includes('non')))
-        );
+        const cat = String(s.category || s.staffCategory || s.type || '').toLowerCase();
+        const role = String(s.role || s.systemRole || '').toLowerCase();
+        if (cat.includes('non') || role.includes('support') || role.includes('bursar') || role.includes('accountant') || role.includes('librarian') || role.includes('ict') || role.includes('store') || role.includes('driver')) {
+          return false;
+        }
+        return true;
       }).length;
 
       const nonTeachingStaff = Math.max(0, staff.length - teachingStaff);
