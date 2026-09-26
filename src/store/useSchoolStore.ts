@@ -10,6 +10,14 @@ export interface SchoolState {
   marks: any[];
   timetable: any;
   settings: any;
+  notices: any[];
+  events: any[];
+  studyMaterials: any[];
+  libraryBooks: any[];
+  libraryLogs: any[];
+  ictEquipment: any[];
+  scienceInventory: any[];
+  storeInventory: any[];
   setLearners: (learners: any[]) => void;
   setStaff: (staff: any[]) => void;
   setFees: (fees: any[]) => void;
@@ -18,6 +26,14 @@ export interface SchoolState {
   setMarks: (marks: any[]) => void;
   setTimetable: (timetable: any) => void;
   setSettings: (settings: any) => void;
+  setNotices: (notices: any[]) => void;
+  setEvents: (events: any[]) => void;
+  setStudyMaterials: (studyMaterials: any[]) => void;
+  setLibraryBooks: (libraryBooks: any[]) => void;
+  setLibraryLogs: (libraryLogs: any[]) => void;
+  setIctEquipment: (ictEquipment: any[]) => void;
+  setScienceInventory: (scienceInventory: any[]) => void;
+  setStoreInventory: (storeInventory: any[]) => void;
   refreshStore: () => void;
 }
 
@@ -67,6 +83,30 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [settings, setSettingsState] = useState<any>(() =>
     getInitialStorage('munyaka_system_settings_v3', (initialSeedData as any).settings || {})
   );
+  const [notices, setNoticesState] = useState<any[]>(() =>
+    getInitialStorage('munyaka_notices', (initialSeedData as any).notices || [])
+  );
+  const [events, setEventsState] = useState<any[]>(() =>
+    getInitialStorage('munyaka_events', (initialSeedData as any).events || [])
+  );
+  const [studyMaterials, setStudyMaterialsState] = useState<any[]>(() =>
+    getInitialStorage('munyaka_study_materials', (initialSeedData as any).studyCorner || [])
+  );
+  const [libraryBooks, setLibraryBooksState] = useState<any[]>(() =>
+    getInitialStorage('munyaka_library_books', (initialSeedData as any).libraryBooks || [])
+  );
+  const [libraryLogs, setLibraryLogsState] = useState<any[]>(() =>
+    getInitialStorage('munyaka_library_borrowings', (initialSeedData as any).libraryLogs || [])
+  );
+  const [ictEquipment, setIctEquipmentState] = useState<any[]>(() =>
+    getInitialStorage('munyaka_ict_assets', (initialSeedData as any).ictEquipment || [])
+  );
+  const [scienceInventory, setScienceInventoryState] = useState<any[]>(() =>
+    getInitialStorage('munyaka_science_lab', (initialSeedData as any).scienceInventory || [])
+  );
+  const [storeInventory, setStoreInventoryState] = useState<any[]>(() =>
+    getInitialStorage('munyaka_store_items', (initialSeedData as any).storeInventory || [])
+  );
 
   const refreshStore = () => {
     setLearnersState(
@@ -85,6 +125,14 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setMarksState(getInitialStorage('marked_student_submissions', (initialSeedData as any).marks || []));
     setTimetableState(getInitialStorage('school-timetable-data', (initialSeedData as any).timetable || {}));
     setSettingsState(getInitialStorage('munyaka_system_settings_v3', (initialSeedData as any).settings || {}));
+    setNoticesState(getInitialStorage('munyaka_notices', (initialSeedData as any).notices || []));
+    setEventsState(getInitialStorage('munyaka_events', (initialSeedData as any).events || []));
+    setStudyMaterialsState(getInitialStorage('munyaka_study_materials', (initialSeedData as any).studyCorner || []));
+    setLibraryBooksState(getInitialStorage('munyaka_library_books', (initialSeedData as any).libraryBooks || []));
+    setLibraryLogsState(getInitialStorage('munyaka_library_borrowings', (initialSeedData as any).libraryLogs || []));
+    setIctEquipmentState(getInitialStorage('munyaka_ict_assets', (initialSeedData as any).ictEquipment || []));
+    setScienceInventoryState(getInitialStorage('munyaka_science_lab', (initialSeedData as any).scienceInventory || []));
+    setStoreInventoryState(getInitialStorage('munyaka_store_items', (initialSeedData as any).storeInventory || []));
   };
 
   useEffect(() => {
@@ -154,6 +202,54 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
   };
 
+  const setNotices = (newNotices: any[]) => {
+    localStorage.setItem('munyaka_notices', JSON.stringify(newNotices));
+    setNoticesState(newNotices);
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+  };
+
+  const setEvents = (newEvents: any[]) => {
+    localStorage.setItem('munyaka_events', JSON.stringify(newEvents));
+    setEventsState(newEvents);
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+  };
+
+  const setStudyMaterials = (newStudy: any[]) => {
+    localStorage.setItem('munyaka_study_materials', JSON.stringify(newStudy));
+    setStudyMaterialsState(newStudy);
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+  };
+
+  const setLibraryBooks = (newBooks: any[]) => {
+    localStorage.setItem('munyaka_library_books', JSON.stringify(newBooks));
+    setLibraryBooksState(newBooks);
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+  };
+
+  const setLibraryLogs = (newLogs: any[]) => {
+    localStorage.setItem('munyaka_library_borrowings', JSON.stringify(newLogs));
+    setLibraryLogsState(newLogs);
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+  };
+
+  const setIctEquipment = (newIct: any[]) => {
+    localStorage.setItem('munyaka_ict_assets', JSON.stringify(newIct));
+    setIctEquipmentState(newIct);
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+  };
+
+  const setScienceInventory = (newSci: any[]) => {
+    localStorage.setItem('munyaka_science_lab', JSON.stringify(newSci));
+    setScienceInventoryState(newSci);
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+  };
+
+  const setStoreInventory = (newStore: any[]) => {
+    localStorage.setItem('munyaka_store_items', JSON.stringify(newStore));
+    setStoreInventoryState(newStore);
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+  };
+
   const contextValue: SchoolState = {
     learners,
     staff,
@@ -163,6 +259,14 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     marks,
     timetable,
     settings,
+    notices,
+    events,
+    studyMaterials,
+    libraryBooks,
+    libraryLogs,
+    ictEquipment,
+    scienceInventory,
+    storeInventory,
     setLearners,
     setStaff,
     setFees,
@@ -171,6 +275,14 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setMarks,
     setTimetable,
     setSettings,
+    setNotices,
+    setEvents,
+    setStudyMaterials,
+    setLibraryBooks,
+    setLibraryLogs,
+    setIctEquipment,
+    setScienceInventory,
+    setStoreInventory,
     refreshStore,
   };
 
