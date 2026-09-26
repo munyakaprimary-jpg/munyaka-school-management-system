@@ -12,6 +12,71 @@ import { CentralDataService } from '@/services/centralDataService';
 export default function CentralDataServicePage() {
   const { learners, staff, fees, attendance, exams, marks, timetable, settings, refreshStore } = useSchoolStore();
 
+  const [pasteJsonInput, setPasteJsonInput] = useState('');
+
+  const handleCopyLiveStoreJson = async () => {
+    try {
+      const fullDump = CentralDataService.getFullStateDump();
+      const jsonStr = JSON.stringify(fullDump, null, 2);
+      await navigator.clipboard.writeText(jsonStr);
+      showSuccess('Successfully copied all live store JSON to clipboard!');
+    } catch (err: any) {
+      showError('Failed to copy to clipboard: ' + (err?.message || err));
+    }
+  };
+
+  const handleApplyPastedState = () => {
+    if (!pasteJsonInput.trim()) {
+      showError('Please paste valid JSON state first.');
+      return;
+    }
+    try {
+      setLoading(true);
+      const parsed = JSON.parse(pasteJsonInput);
+      if (!parsed || typeof parsed !== 'object') {
+        showError('Invalid JSON format.');
+        return;
+      }
+
+      // Overwrite local storage keys
+      if (parsed.students) localStorage.setItem('munyaka_students', JSON.stringify(parsed.students));
+      if (parsed.staff) localStorage.setItem('munyaka_staff', JSON.stringify(parsed.staff));
+      if (parsed.fees) localStorage.setItem('munyaka_fees', JSON.stringify(parsed.fees));
+      if (parsed.attendance) localStorage.setItem('munyaka_attendance', JSON.stringify(parsed.attendance));
+      if (parsed.exams) localStorage.setItem('all_set_exams', JSON.stringify(parsed.exams));
+      if (parsed.marks) localStorage.setItem('marked_student_submissions', JSON.stringify(parsed.marks));
+      if (parsed.timetable) localStorage.setItem('school-timetable-data', JSON.stringify(parsed.timetable));
+      if (parsed.settings) localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(parsed.settings));
+
+      localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
+
+      // Force update Zustand store state
+      useSchoolStore.setState({
+        learners: parsed.students || learners,
+        staff: parsed.staff || staff,
+        fees: parsed.fees || fees,
+        attendance: parsed.attendance || attendance,
+        exams: parsed.exams || exams,
+        marks: parsed.marks || marks,
+        timetable: parsed.timetable || timetable,
+        settings: parsed.settings || settings,
+      });
+
+      refreshStore();
+      refreshStats();
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+      window.dispatchEvent(new Event('staff-changed'));
+      window.dispatchEvent(new Event('students-updated'));
+
+      showSuccess('Successfully applied pasted state and updated live useSchoolStore!');
+      setPasteJsonInput('');
+    } catch (err: any) {
+      showError('Failed to parse or apply pasted JSON: ' + (err?.message || err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const [stats, setStats] = useState({
     registeredStudents: 0,
     teachingStaff: 0,
@@ -448,9 +513,12 @@ export default initialSeedData;
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button onClick={handleGenerateSnapshot} disabled={loading} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
                 Generate Snapshot
+              </Button>
+              <Button onClick={handleCopyLiveStoreJson} variant="outline" className="rounded-xl border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30">
+                Copy Live Store JSON
               </Button>
               {snapshotJson && (
                 <Button onClick={handleDownloadSnapshot} variant="outline" className="rounded-xl">
@@ -474,48 +542,24 @@ export default initialSeedData;
           <CardHeader>
             <div className="flex items-center gap-2">
               <Upload className="w-5 h-5 text-emerald-600" />
-              <CardTitle>Restore JSON Snapshot</CardTitle>
+              <CardTitle>Paste & Force Hydrate Store</CardTitle>
             </div>
             <CardDescription>
-              Paste a previously exported snapshot to safely hydrate and overwrite live <code className="text-xs font-mono">useSchoolStore</code> state.
+              Paste JSON state below and click apply to instantly update <code className="text-xs font-mono">useSchoolStore</code> and localStorage.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Dialog open={isRestoreOpen} onOpenChange={setIsRestoreOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="rounded-xl border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30">
-                  Open Restore Dialog
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="rounded-3xl max-w-xl">
-                <DialogHeader>
-                  <DialogTitle>Restore System Snapshot</DialogTitle>
-                  <DialogDescription>
-                    Paste raw JSON snapshot contents below. This will overwrite local student, staff, fee, and attendance state.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-2">
-                  <Textarea
-                    placeholder="Paste valid JSON snapshot here..."
-                    value={restoreJson}
-                    onChange={(e) => setRestoreJson(e.target.value)}
-                    className="font-mono text-xs h-56 rounded-xl bg-slate-50 dark:bg-slate-900"
-                  />
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsRestoreOpen(false)} className="rounded-xl">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleRestoreSnapshot} disabled={loading} className="rounded-xl bg-emerald-600 hover:bg-emerald-700">
-                    Confirm Restore
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs text-muted-foreground flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
-              <p>Restoring a snapshot will immediately update the Zustand store and dispatch global events to refresh all open dashboards in real time.</p>
+            <Textarea
+              placeholder="Paste raw JSON state here..."
+              value={pasteJsonInput}
+              onChange={(e) => setPasteJsonInput(e.target.value)}
+              className="font-mono text-xs h-40 rounded-xl bg-slate-50 dark:bg-slate-900"
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Updates screen counts and menus immediately.</span>
+              <Button onClick={handleApplyPastedState} disabled={loading} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                Apply Pasted State
+              </Button>
             </div>
           </CardContent>
         </Card>
