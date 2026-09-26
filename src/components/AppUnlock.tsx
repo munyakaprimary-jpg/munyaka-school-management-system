@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import { useSchoolStore } from '../store/useSchoolStore';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -251,9 +250,15 @@ interface AppUnlockProps {
 }
 
 const AppUnlock = ({ children, forceShow = false, currentRole }: AppUnlockProps) => {
+  const isActivated = useSchoolStore((state: any) => state.isActivated);
   const [activeLicense, setActiveLicense] = useState<License | null>(() => getActiveLicense());
   const [stats, setStats] = useState(() => getAllLicenses().length);
   const [now, setNow] = useState<Date>(() => new Date());
+
+  // If isActivated is true in store, do not render AppUnlock gate / render children immediately
+  if (isActivated && !forceShow) {
+    return <>{children}</>;
+  }
 
   // Resolved current role — prefer the prop if supplied, otherwise read
   // the AuthContext value from localStorage. If neither is available we

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { initialSeedData } from "@/data/initialSeedData";
+import { useSchoolStore } from "@/store/useSchoolStore";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
