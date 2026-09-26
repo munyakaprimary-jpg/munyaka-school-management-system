@@ -229,14 +229,12 @@ const Attendance = () => {
   const isTeacherRole = userRole.toLowerCase() === 'teacher' || userRole.toLowerCase() === 'class_teacher' || userRole.toLowerCase() === 'subject_teacher' || userRole.toLowerCase() === 'senior_teacher';
 
   // ── Global School Store (eliminating separate storage layer) ──
-  const rawLearners = useSchoolStore((state) => state.learners);
+  const { learners: rawLearners, attendance: globalAttendanceStore, setAttendance: setGlobalAttendanceStore } = useSchoolStore();
   const learners = useMemo(() => {
     if (Array.isArray(rawLearners)) return rawLearners;
     if (rawLearners && typeof rawLearners === 'object' && Array.isArray((rawLearners as any).learners)) return (rawLearners as any).learners;
     return [];
   }, [rawLearners]);
-  const globalAttendanceStore = useSchoolStore((state) => state.attendance);
-  const setGlobalAttendanceStore = useSchoolStore((state) => state.setAttendance);
 
   // If user is a teacher with an assigned class/stream, automatically set default filter
   const assignedClassStr = (user as any)?.assignedClass || '';
