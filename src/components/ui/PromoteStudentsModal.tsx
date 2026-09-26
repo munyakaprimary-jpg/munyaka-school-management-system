@@ -49,9 +49,21 @@ const PromoteStudentsModal = ({
   }, [isOpen]);
 
   const getNextGrade = (currentGrade: string): string => {
-    const gradeMatch = currentGrade.match(/Grade (\d+)/);
+    const gradeSequence = ['PP1', 'PP2', 'GRADE 1', 'GRADE 2', 'GRADE 3', 'GRADE 4', 'GRADE 5', 'GRADE 6', 'GRADE 7', 'GRADE 8', 'GRADE 9'];
+    const cleanCurrentGrade = String(currentGrade || '').trim().toUpperCase();
+    const currentIndex = gradeSequence.findIndex(g => g === cleanCurrentGrade);
+    
+    if (currentIndex !== -1) {
+      if (currentIndex + 1 < gradeSequence.length) {
+        return gradeSequence[currentIndex + 1];
+      }
+      return 'Alumni';
+    }
+
+    const gradeMatch = currentGrade.match(/Grade (\d+)/i);
     if (gradeMatch) {
       const currentNum = parseInt(gradeMatch[1]);
+      if (currentNum >= 9) return 'Alumni';
       return `Grade ${currentNum + 1}`;
     }
     return currentGrade;
