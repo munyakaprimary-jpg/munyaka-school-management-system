@@ -39,12 +39,30 @@ export default function CentralDataServicePage() {
       const notices = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
       const ictAssets = JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]');
 
-      const teachingStaff = staff.filter((s: any) => {
-        const cat = String(s.staffCategory || s.category || '').toUpperCase();
-        return cat === 'TEACHING' || cat.includes('TEACH');
+      // Get highest count staff array across all storage keys
+      const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
+      const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
+      const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+      const s4 = JSON.parse(localStorage.getItem('staff') || '[]');
+      const candidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
+      const masterStaff = candidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
+
+      // Learners count sync
+      const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
+      const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
+      const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
+
+      // Check teaching vs non-teaching staff
+      const teachingStaff = masterStaff.filter((s: any) => {
+        const cat = String(s.staffCategory || s.category || s.type || '').toUpperCase();
+        const role = String(s.role || s.systemRole || '').toLowerCase();
+        if (cat.includes('NON') || role.includes('support') || role.includes('bursar') || role.includes('accountant') || role.includes('librarian') || role.includes('ict') || role.includes('store') || role.includes('driver')) {
+          return false;
+        }
+        return true;
       }).length;
 
-      const nonTeachingStaff = Math.max(0, staff.length - teachingStaff);
+      const nonTeachingStaff = Math.max(0, masterStaff.length - teachingStaff);
 
       const attendanceCount = Array.isArray(attendance)
         ? attendance.length
@@ -54,9 +72,9 @@ export default function CentralDataServicePage() {
       const marksCount = Array.isArray(marks) ? marks.length : Object.keys(marks || {}).length;
 
       setStats({
-        registeredStudents: learners.length,
-        teachingStaff,
-        nonTeachingStaff: Math.max(0, nonTeachingStaff),
+        registeredStudents: masterLearners.length,
+        teachingStaff: masterStaff.length,
+        nonTeachingStaff,
         attendanceRecords: attendanceCount,
         feeRecords: feeCount,
         examsCount: Array.isArray(exams) ? exams.length : 0,
@@ -86,14 +104,38 @@ export default function CentralDataServicePage() {
   const handleExportSeedData = () => {
     try {
       const generatedSeedVersion = "BUILD_OFFLINE_" + Date.now();
-      const state = { learners, staff, fees, attendance, exams, marks, timetable, settings };
+
+      // Ensure masterStaff captures all 14 records across any active storage key
+      const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
+      const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
+      const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+      const s4 = JSON.parse(localStorage.getItem('staff') || '[]');
+      const staffCandidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
+      const masterStaff = staffCandidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
+
+      // Learners master array
+      const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
+      const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
+      const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
+
+      // Fees master array
+      const f1 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
+      const f2 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
+      const masterFees = [fees, f1, f2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), fees);
+
+      // Marks master record
+      const m1 = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
+      const m2 = JSON.parse(localStorage.getItem('munyaka_marks_records') || '[]');
+      const masterMarks = m1.length > 0 ? m1 : (Array.isArray(m2) && m2.length > 0 ? m2 : marks);
+
+      const state = { learners: masterLearners, staff: masterStaff, fees: masterFees, attendance, exams, marks: masterMarks, timetable, settings };
 
       // Read live store across all 12+ menus with full state fallback
       const fullDbObject = {
-        students: state.learners || learners,
-        staff: state.staff || staff,
-        fees: state.fees || fees,
-        payments: JSON.parse(localStorage.getItem('munyaka_payments') || JSON.stringify(state.fees || fees)),
+        students: masterLearners,
+        staff: masterStaff,
+        fees: masterFees,
+        payments: JSON.parse(localStorage.getItem('munyaka_payments') || JSON.stringify(masterFees)),
         transactions: JSON.parse(localStorage.getItem('munyaka_transactions') || '[]'),
         attendance: state.attendance || attendance,
         grades: JSON.parse(localStorage.getItem('munyaka_grades') || JSON.stringify((initialSeedData as any).grades || {})),
@@ -102,7 +144,7 @@ export default function CentralDataServicePage() {
         learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || JSON.stringify((initialSeedData as any).learningAreas || [])),
         exams: state.exams || exams,
         examSchedules: JSON.parse(localStorage.getItem('examSchedules') || JSON.stringify((initialSeedData as any).examSchedules || [])),
-        marks: state.marks || marks,
+        marks: masterMarks,
         assessments: JSON.parse(localStorage.getItem('munyaka_assessment_scores') || '[]'),
         questions: JSON.parse(localStorage.getItem('question_bank') || JSON.stringify((initialSeedData as any).questions || [])),
         reportCards: JSON.parse(localStorage.getItem('munyaka_report_cards') || '[]'),
