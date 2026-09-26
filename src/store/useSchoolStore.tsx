@@ -28,6 +28,7 @@ try {
 } catch {}
 
 let storeState = {
+  isActivated: localStorage.getItem('munyaka_is_activated') === 'true' || localStorage.getItem('active_license_key') !== null,
   learners: initialSeedData.students || initialSeedData.learners || [],
   staff: initialSeedData.staff || [],
   fees: (initialSeedData as any).fees || [],
@@ -63,6 +64,14 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
     settings: getInitialStorage('munyaka_system_settings_v3', storeState.settings),
     notices: getInitialStorage('munyaka_notices', storeState.notices),
     events: getInitialStorage('munyaka_events', storeState.events),
+    isActivated: localStorage.getItem('munyaka_is_activated') === 'true' || localStorage.getItem('active_license_key') !== null,
+
+    setActivated: (val: boolean) => {
+      localStorage.setItem('munyaka_is_activated', String(val));
+      (storeState as any).isActivated = val;
+      listeners.forEach(l => l());
+      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+    },
 
     setLearners: (learners: any[]) => {
       localStorage.setItem('munyaka_students', JSON.stringify(learners));
@@ -135,6 +144,7 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
       if (partial.marks) state.setMarks(partial.marks);
       if (partial.timetable) state.setTimetable(partial.timetable);
       if (partial.settings) state.setSettings(partial.settings);
+      if (typeof partial.isActivated === 'boolean') state.setActivated(partial.isActivated);
     }
   };
 
