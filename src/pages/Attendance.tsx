@@ -689,11 +689,32 @@ const Attendance = () => {
     const filteredLearners = useMemo(() => {
       const selectedGrade = filters.grade;
       const selectedStream = filters.stream;
-      return learners.filter(l => {
+
+      const getDigits = (val: any) => String(val ?? '').replace(/[^0-9]/g, '');
+
+      const targetGradeDigits = getDigits(selectedGrade);
+      const targetStream = String(selectedStream || '').toLowerCase().trim();
+
+      return (Array.isArray(learners) ? learners : []).filter((l) => {
+        if (!l) return false;
         if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
-        const gradeMatch = !selectedGrade || selectedGrade === 'all' || String(l.grade || l.class || '').toLowerCase().includes(selectedGrade.toLowerCase().replace('grade', '').trim());
-        const streamMatch = !selectedStream || selectedStream === 'all' || String(l.stream || '').toLowerCase().trim() === selectedStream.toLowerCase().trim();
-        return gradeMatch && streamMatch;
+
+        const learnerGradeDigits = getDigits(l.grade || l.class || l.gradeLevel);
+        const learnerStream = String(l.stream || '').toLowerCase().trim();
+
+        const matchesGrade =
+          !selectedGrade ||
+          selectedGrade === 'all' ||
+          targetGradeDigits === '' ||
+          learnerGradeDigits === targetGradeDigits;
+
+        const matchesStream =
+          !selectedStream ||
+          selectedStream === 'all' ||
+          targetStream === '' ||
+          learnerStream === targetStream;
+
+        return matchesGrade && matchesStream;
       }).map(l => ({
         id: String(l.id),
         name: l.name || 'Unknown',
