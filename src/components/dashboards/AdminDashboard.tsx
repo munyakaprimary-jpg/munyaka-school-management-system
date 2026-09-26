@@ -54,15 +54,9 @@ export const AdminDashboardComponent: React.FC = () => {
     setPrimaryCount(primary.length);
     setJuniorCount(junior);
 
-    // Compute Enrolment Table Rows
-    const gradeLevels = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
-    
-    let sumBoys = 0;
-    let sumGirls = 0;
-
     // Compute Enrolment Table Rows with promotion & advancement logic
     const gradeLevels = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
-    const gradeSequence = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+    const gradeSequence = gradeLevels;
 
     const currentBaseYear = 2026;
     const targetYearNum = parseInt(selectedYear, 10) || 2026;
