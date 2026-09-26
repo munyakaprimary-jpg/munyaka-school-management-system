@@ -70,6 +70,7 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
       storeState.learners = learners;
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+      fetch('/api/save-seed', { method: 'POST', body: JSON.stringify(useSchoolStore.getState()) }).catch(() => {});
     },
     setStaff: (staff: any[]) => {
       localStorage.setItem('munyaka_staff', JSON.stringify(staff));
@@ -79,42 +80,49 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
       window.dispatchEvent(new CustomEvent('staff-changed'));
+      fetch('/api/save-seed', { method: 'POST', body: JSON.stringify(useSchoolStore.getState()) }).catch(() => {});
     },
     setFees: (fees: any[]) => {
       localStorage.setItem('munyaka_fees', JSON.stringify(fees));
       storeState.fees = fees;
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+      fetch('/api/save-seed', { method: 'POST', body: JSON.stringify(useSchoolStore.getState()) }).catch(() => {});
     },
     setAttendance: (attendance: any) => {
       localStorage.setItem('munyaka_attendance', JSON.stringify(attendance));
       storeState.attendance = attendance;
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+      fetch('/api/save-seed', { method: 'POST', body: JSON.stringify(useSchoolStore.getState()) }).catch(() => {});
     },
     setExams: (exams: any[]) => {
       localStorage.setItem('all_set_exams', JSON.stringify(exams));
       storeState.exams = exams;
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+      fetch('/api/save-seed', { method: 'POST', body: JSON.stringify(useSchoolStore.getState()) }).catch(() => {});
     },
     setMarks: (marks: any) => {
       localStorage.setItem('marked_student_submissions', JSON.stringify(marks));
       storeState.marks = marks;
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+      fetch('/api/save-seed', { method: 'POST', body: JSON.stringify(useSchoolStore.getState()) }).catch(() => {});
     },
     setTimetable: (timetable: any) => {
       localStorage.setItem('school-timetable-data', JSON.stringify(timetable));
       storeState.timetable = timetable;
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+      fetch('/api/save-seed', { method: 'POST', body: JSON.stringify(useSchoolStore.getState()) }).catch(() => {});
     },
     setSettings: (settings: any) => {
       localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(settings));
       storeState.settings = settings;
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+      fetch('/api/save-seed', { method: 'POST', body: JSON.stringify(useSchoolStore.getState()) }).catch(() => {});
     },
     refreshStore: () => {
       listeners.forEach(l => l());
