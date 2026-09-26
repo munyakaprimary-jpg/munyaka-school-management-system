@@ -1,4 +1,3 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { initialSeedData } from '@/data/initialSeedData';
@@ -129,25 +128,6 @@ export const useSchoolStore = create<SchoolState>()(
   )
 );
 
-export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [learners] = useState<any[]>(() => {
-    return initialSeedData.students || initialSeedData.learners || [];
-  });
-  const [staff] = useState<any[]>(() => {
-    return initialSeedData.staff || [];
-  });
-  const [fees] = useState<any[]>(() => {
-    return (initialSeedData as any).fees || [];
-  });
-  const [attendance] = useState<any>(() => {
-    return (initialSeedData as any).attendance || {};
-  });
-
-  useEffect(() => {
-    useSchoolStore.getState().syncFromStorage();
-  }, []);
-
-  return <>{children}</>;
-};
+export const SchoolStoreProvider = ({ children }: { children?: any }) => children ?? null;
 
 export default useSchoolStore;
