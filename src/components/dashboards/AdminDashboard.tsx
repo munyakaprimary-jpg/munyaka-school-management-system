@@ -60,9 +60,20 @@ export const AdminDashboardComponent: React.FC = () => {
     let sumBoys = 0;
     let sumGirls = 0;
 
-    const rows = gradeLevels.map(gradeName => {
-      // Filter learners matching grade and strict academic year check
-      const gradeLearners = learners.filter((l: any) => {
+    // Compute Enrolment Table Rows with promotion & advancement logic
+    const gradeLevels = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+    const gradeSequence = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+
+    const currentBaseYear = 2026;
+    const targetYearNum = parseInt(selectedYear, 10) || 2026;
+    const yearDiff = targetYearNum - currentBaseYear;
+
+    let sumBoys = 0;
+    let sumGirls = 0;
+
+    const rows = gradeLevels.map((gradeName, gradeIndex) => {
+      // Find learners who explicitly have this grade and matching year
+      const explicitLearners = learners.filter((l: any) => {
         const lGrade = String(l.grade || l.class || '').trim();
         const matchesGrade = lGrade.toLowerCase() === gradeName.toLowerCase() ||
           (gradeName === 'PP1' && lGrade.toLowerCase().includes('pp1')) ||
@@ -74,6 +85,32 @@ export const AdminDashboardComponent: React.FC = () => {
         const lYear = String(l.academicYear || l.year || l.enrollmentYear || '2026');
         return lYear === String(selectedYear);
       });
+
+      let gradeLearners = explicitLearners;
+
+      // If no explicit records exist for this future year, compute projected advancement from base year (2026)
+      if (explicitLearners.length === 0 && yearDiff > 0) {
+        // Learners from base grade who advance by yearDiff steps
+        const baseGradeIndex = gradeIndex - yearDiff;
+        if (baseGradeIndex >= 0 && baseGradeIndex < gradeSequence.length) {
+          const baseGradeName = gradeSequence[baseGradeIndex];
+          const baseLearners = learners.filter((l: any) => {
+            const lGrade = String(l.grade || l.class || '').trim();
+            const matchesGrade = lGrade.toLowerCase() === baseGradeName.toLowerCase() ||
+              (baseGradeName === 'PP1' && lGrade.toLowerCase().includes('pp1')) ||
+              (baseGradeName === 'PP2' && lGrade.toLowerCase().includes('pp2')) ||
+              lGrade.toLowerCase().includes(baseGradeName.toLowerCase());
+
+            if (!matchesGrade) return false;
+            const lYear = String(l.academicYear || l.year || l.enrollmentYear || '2026');
+            return lYear === '2026';
+          });
+          gradeLearners = baseLearners;
+        } else {
+          // If baseGradeIndex < 0 (e.g. PP1/PP2 in future years with no intake), count as 0
+          gradeLearners = [];
+        }
+      }
 
       const boys = gradeLearners.filter((l: any) => {
         const g = String(l.gender || l.sex || '').trim().toLowerCase();
