@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import CentralDataService from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
-import { Users, GraduationCap, Briefcase, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Users, GraduationCap, Briefcase, Calendar, CheckCircle2, AlertCircle, Table as TableIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const AdminDashboardComponent: React.FC = () => {
   const storeLearners = useSchoolStore(state => state.learners);
@@ -15,6 +17,10 @@ export const AdminDashboardComponent: React.FC = () => {
   const [nonTeachingStaffCount, setNonTeachingStaffCount] = useState(0);
   const [primaryCount, setPrimaryCount] = useState(0);
   const [juniorCount, setJuniorCount] = useState(0);
+
+  const [selectedYear, setSelectedYear] = useState('2026');
+  const [enrolmentRows, setEnrolmentRows] = useState<Array<{ grade: string; boys: number; girls: number; total: number }>>([]);
+  const [totalsRow, setTotalsRow] = useState({ boys: 0, girls: 0, total: 0 });
 
   const computeMetrics = () => {
     const learners = storeLearners && storeLearners.length > 0 ? storeLearners : CentralDataService.getLearners();
@@ -47,6 +53,64 @@ export const AdminDashboardComponent: React.FC = () => {
     setNonTeachingStaffCount(nonTeaching.length);
     setPrimaryCount(primary.length);
     setJuniorCount(junior);
+
+    // Compute Enrolment Table Rows
+    const gradeLevels = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+    
+    let sumBoys = 0;
+    let sumGirls = 0;
+
+    const rows = gradeLevels.map(gradeName => {
+      // Filter learners matching grade and optional year check if present
+      const gradeLearners = learners.filter((l: any) => {
+        const lGrade = String(l.grade || l.class || '').trim();
+        const matchesGrade = lGrade.toLowerCase() === gradeName.toLowerCase() ||
+          (gradeName === 'PP1' && lGrade.toLowerCase().includes('pp1')) ||
+          (gradeName === 'PP2' && lGrade.toLowerCase().includes('pp2')) ||
+          lGrade.toLowerCase().includes(gradeName.toLowerCase());
+        
+        if (!matchesGrade) return false;
+
+        if (l.enrollmentYear || l.year || l.academicYear) {
+          const lYear = String(l.enrollmentYear || l.year || l.academicYear);
+          if (lYear && lYear !== selectedYear) return false;
+        }
+        return true;
+      });
+
+      const boys = gradeLearners.filter((l: any) => {
+        const g = String(l.gender || l.sex || '').trim().toLowerCase();
+        return g.startsWith('m') || g === 'boy';
+      }).length;
+
+      const girls = gradeLearners.filter((l: any) => {
+        const g = String(l.gender || l.sex || '').trim().toLowerCase();
+        return g.startsWith('f') || g === 'girl';
+      }).length;
+
+      // If gender wasn't explicit, split evenly or count remaining
+      const unassigned = gradeLearners.length - (boys + girls);
+      const adjustedBoys = boys + Math.ceil(unassigned / 2);
+      const adjustedGirls = girls + Math.floor(unassigned / 2);
+      const total = adjustedBoys + adjustedGirls;
+
+      sumBoys += adjustedBoys;
+      sumGirls += adjustedGirls;
+
+      return {
+        grade: gradeName,
+        boys: adjustedBoys,
+        girls: adjustedGirls,
+        total
+      };
+    });
+
+    setEnrolmentRows(rows);
+    setTotalsRow({
+      boys: sumBoys,
+      girls: sumGirls,
+      total: sumBoys + sumGirls
+    });
   };
 
   useEffect(() => {
@@ -62,7 +126,7 @@ export const AdminDashboardComponent: React.FC = () => {
       window.removeEventListener('students-updated', handleDataChange);
       window.removeEventListener('storage', handleDataChange);
     };
-  }, [storeLearners, storeStaff]);
+  }, [storeLearners, storeStaff, selectedYear]);
 
   return (
     <div className="p-6 space-y-6">
@@ -150,6 +214,65 @@ export const AdminDashboardComponent: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* SCHOOL ENROLMENT TABLE SECTION */}
+      <Card className="border shadow-sm rounded-3xl overflow-hidden mt-8">
+        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center">
+              <TableIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-bold">SCHOOL ENROLMENT TABLE</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">Real-time enrolment breakdown by grade and gender.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Select Academic Year:</span>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-32 rounded-xl bg-white dark:bg-slate-800">
+                <SelectValue placeholder="Select Year" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="2024">2024</SelectItem>
+                <SelectItem value="2025">2025</SelectItem>
+                <SelectItem value="2026">2026</SelectItem>
+                <SelectItem value="2027">2027</SelectItem>
+                <SelectItem value="2028">2028</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-slate-100/70 dark:bg-slate-800/50">
+              <TableRow>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6">GRADE</TableHead>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">BOYS</TableHead>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">GIRLS</TableHead>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">TOTAL</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {enrolmentRows.map((row, idx) => (
+                <TableRow key={idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                  <TableCell className="font-semibold text-slate-900 dark:text-slate-100 py-3.5 px-6">{row.grade}</TableCell>
+                  <TableCell className="text-center font-medium text-slate-700 dark:text-slate-300 py-3.5 px-6">{row.boys}</TableCell>
+                  <TableCell className="text-center font-medium text-slate-700 dark:text-slate-300 py-3.5 px-6">{row.girls}</TableCell>
+                  <TableCell className="text-center font-bold text-indigo-600 dark:text-indigo-400 py-3.5 px-6">{row.total}</TableCell>
+                </TableRow>
+              ))}
+              {/* Summary Totals Row */}
+              <TableRow className="bg-indigo-50/70 dark:bg-indigo-950/40 border-t-2 border-indigo-200 dark:border-indigo-900">
+                <TableCell className="font-black text-slate-900 dark:text-white py-4 px-6 text-base">TOTALS</TableCell>
+                <TableCell className="text-center font-black text-slate-900 dark:text-white py-4 px-6 text-base">{totalsRow.boys}</TableCell>
+                <TableCell className="text-center font-black text-slate-900 dark:text-white py-4 px-6 text-base">{totalsRow.girls}</TableCell>
+                <TableCell className="text-center font-black text-indigo-600 dark:text-indigo-400 py-4 px-6 text-lg">{totalsRow.total}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 };
