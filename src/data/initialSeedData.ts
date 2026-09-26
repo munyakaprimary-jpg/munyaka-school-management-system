@@ -368,7 +368,7 @@ export const initialSeedData = {
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
-export const SEED_VERSION = "2026.09.25.FULL_PORTAL_v1";
+// SEED_VERSION is defined at the top of the file
 
 export const initialAttendance = (initialSeedData as any).attendance || {};
 export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
