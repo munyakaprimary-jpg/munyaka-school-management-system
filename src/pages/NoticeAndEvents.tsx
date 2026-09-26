@@ -52,6 +52,7 @@ import { showSuccess } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
 import { format, isToday, isSameDay, addDays } from 'date-fns';
 import { Notice, SchoolEvent } from '@/types/notice';
+import { useSchoolStore } from '@/store/useSchoolStore';
 import { useAuth } from '@/context/AuthContext';
 
 // Generate mock blob URLs at module load time so seed attachments are genuinely downloadable
@@ -101,6 +102,8 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     return user.role === 'admin' || user.role === 'accountant';
   };
   // LocalStorage Persistence for Notices and Events
+  const { calendarEvents, setCalendarEvents } = useSchoolStore();
+
   const [notices, setNotices] = useState<Notice[]>(() => {
     try {
       const saved = localStorage.getItem('munyaka_notices') || localStorage.getItem('munyaka_notices_v2');
@@ -120,19 +123,8 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     return INITIAL_NOTICES;
   });
 
-  const [events, setEvents] = useState<SchoolEvent[]>(() => {
-    try {
-      localStorage.removeItem('events');
-      const saved = localStorage.getItem('munyaka_events') || localStorage.getItem('munyaka_events_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return [];
-  });
+  const events = calendarEvents;
+  const setEvents = setCalendarEvents;
 
   // Mobile/responsive segmented toggle: 'announcements' | 'events'
   const [mobileTab, setMobileTab] = useState<'announcements' | 'events'>(defaultTab);
@@ -209,11 +201,6 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     const h12 = h % 12 || 12;
     return `${h12}:${minutes} ${ampm}`;
   };
-
-  useEffect(() => {
-    localStorage.setItem('munyaka_events_v2', JSON.stringify(events));
-    notifyDataChanged('munyaka_events_v2');
-  }, [events]);
 
   const handlePublishNotice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -589,7 +576,15 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
             <div className="space-y-5">
               {events.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">No upcoming events scheduled.</div>
+                <div className="py-12 text-center flex flex-col items-center justify-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center">
+                    <CalendarDays size={24} />
+                  </div>
+                  <div>
+                    <p className="text-slate-800 dark:text-slate-200 font-bold text-sm">No upcoming events scheduled</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Use the + Add Event button to create a new entry.</p>
+                  </div>
+                </div>
               ) : (
                 events.map((event) => {
                 const dateObj = new Date(event.date);
