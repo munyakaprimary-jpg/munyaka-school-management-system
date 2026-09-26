@@ -38,7 +38,7 @@ import { toast } from '@/utils/toast';
 import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
-import LANServerConfig from '@/pages/LANServerConfig';
+// Removed LANServerConfig import
 
 interface ServerInfo {
   ip: string;
@@ -983,11 +983,6 @@ export default function AdminControlCenter() {
           </Dialog>
         </>
       )}
-
-      {/* ── LAN & Local Server Config Section ─────────────────────────────── */}
-      <div id="lan-network-config-section">
-        <LANServerConfig />
-      </div>
 
       {/* Server Settings Dialog */}
       <Dialog open={showServerSettings} onOpenChange={setShowServerSettings}>
