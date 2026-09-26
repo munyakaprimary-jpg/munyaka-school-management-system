@@ -55,6 +55,22 @@ export const UnifiedDataStorage = {
     window.dispatchEvent(new Event('munyaka:data-changed'));
   },
 
+  exportFullDatabase: (): any => {
+    return {
+      students: UnifiedDataStorage.getLearners(),
+      staff: UnifiedDataStorage.getStaff(),
+      attendance: UnifiedDataStorage.getAttendance(),
+      fees: UnifiedDataStorage.getFees(),
+      marks: UnifiedDataStorage.getMarks(),
+      grades: UnifiedDataStorage.get('munyaka_grades', {}),
+      examTypes: UnifiedDataStorage.get('munyaka_exam_types', []),
+      libraryBooks: UnifiedDataStorage.get('munyaka_library_books', []),
+      feeStructures: UnifiedDataStorage.get('munyaka_fee_structures', []),
+      notices: UnifiedDataStorage.get('munyaka_notices', []),
+      settings: UnifiedDataStorage.get('munyaka_system_settings_v3', {}),
+    };
+  },
+
   getStaff: (): any[] => {
     if (localStorage.getItem('munyaka_staff_cleared_explicitly') === 'true') {
       return [];
@@ -247,18 +263,49 @@ export const CentralDataService = {
   getData: <T>(key: string, fallback: T): T => UnifiedDataStorage.get<T>(key, fallback),
   setData: <T>(key: string, value: T): void => { UnifiedDataStorage.set(key, value); },
 
+  getFullStateDump: (): any => {
+    return UnifiedDataStorage.exportFullDatabase();
+  },
+
+  importCentralData: async (snapshotData: any): Promise<boolean> => {
+    try {
+      const data = typeof snapshotData === 'string' ? JSON.parse(snapshotData) : snapshotData;
+      if (!data || typeof data !== 'object') return false;
+
+      if (data.students) UnifiedDataStorage.saveLearners(data.students);
+      if (data.staff) UnifiedDataStorage.saveStaff(data.staff);
+      if (data.attendance) UnifiedDataStorage.saveAttendance(data.attendance);
+      if (data.fees) UnifiedDataStorage.saveFees(data.fees);
+      if (data.marks) UnifiedDataStorage.set(STORAGE_KEYS.MARKS, data.marks);
+      if (data.grades) UnifiedDataStorage.set('munyaka_grades', data.grades);
+      if (data.examTypes) UnifiedDataStorage.set('munyaka_exam_types', data.examTypes);
+      if (data.libraryBooks) UnifiedDataStorage.set('munyaka_library_books', data.libraryBooks);
+      if (data.feeStructures) UnifiedDataStorage.set('munyaka_fee_structures', data.feeStructures);
+      if (data.notices) UnifiedDataStorage.set('munyaka_notices', data.notices);
+      if (data.settings) UnifiedDataStorage.set('munyaka_system_settings_v3', data.settings);
+
+      localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(data));
+      try {
+        await Preferences.set({ key: CENTRAL_DB_STORAGE_KEY, value: JSON.stringify(data) });
+      } catch {}
+
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+      window.dispatchEvent(new Event('staff-changed'));
+      window.dispatchEvent(new Event('students-updated'));
+      return true;
+    } catch (err) {
+      console.error('[CentralDataService] importCentralData failed:', err);
+      return false;
+    }
+  },
+
   generateFullSnapshot: async () => {
-    const backup = {
-      students: UnifiedDataStorage.getLearners(),
-      staff: UnifiedDataStorage.getStaff(),
-      attendance: UnifiedDataStorage.getAttendance(),
-      fees: UnifiedDataStorage.getFees(),
-    };
+    const backup = CentralDataService.getFullStateDump();
     return JSON.stringify(backup, null, 2);
   },
 
   exportCentralData: (): any => {
-    const db = UnifiedDataStorage.exportFullDatabase();
+    const db = CentralDataService.getFullStateDump();
     if (!db.staff || db.staff.length === 0) {
       db.staff = initialSeedData.staff || [];
     }
@@ -283,16 +330,7 @@ export const CentralDataService = {
   },
   
   restoreSnapshot: async (snapshot: string) => {
-    try {
-      const data = JSON.parse(snapshot);
-      if (data.students) UnifiedDataStorage.saveLearners(data.students);
-      if (data.staff) UnifiedDataStorage.saveStaff(data.staff);
-      if (data.attendance) UnifiedDataStorage.saveAttendance(data.attendance);
-      if (data.fees) UnifiedDataStorage.saveFees(data.fees);
-      return true;
-    } catch {
-      return false;
-    }
+    return await CentralDataService.importCentralData(snapshot);
   },
 
   async fetchRemoteDump(): Promise<any | null> {
