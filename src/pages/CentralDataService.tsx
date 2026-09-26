@@ -171,104 +171,23 @@ export default function CentralDataServicePage() {
     };
   }, [learners, staff, fees, attendance, exams, marks, timetable, settings]);
 
-  const handleExportSeedData = () => {
+  const handleExportSeedData = async () => {
     try {
-      const generatedSeedVersion = "BUILD_OFFLINE_" + Date.now();
-
-      // Automatically trigger a full state dump and store sync immediately before generating export
-      const fullDbObject = CentralDataService.getFullStateDump();
-      CentralDataService.importCentralData(fullDbObject);
-
-      // Ensure staff and students are never sliced or omitted
-      if (!fullDbObject.staff || fullDbObject.staff.length === 0) {
-        fullDbObject.staff = initialSeedData.staff || [];
+      const res = await fetch('/api/save-seed', {
+        method: 'POST',
+        body: JSON.stringify(useSchoolStore.getState())
+      });
+      if (res.ok) {
+        const jsonRes = await res.json();
+        if (jsonRes.success) {
+          showSuccess("Master seed file saved directly to src/data/initialSeedData.ts on disk!");
+          return;
+        }
       }
-      if (!fullDbObject.students || fullDbObject.students.length === 0) {
-        fullDbObject.students = initialSeedData.students || [];
-      }
-
-      const fileContent = `export const SEED_VERSION = "${generatedSeedVersion}";
-
-export const DEFAULT_CBC_CLUSTERS = [
-  {
-    id: "cluster_1",
-    name: "Languages & Literacy",
-    description: "English, Kiswahili, Indigenous Languages, Foreign Languages",
-    color: "bg-indigo-500",
-    icon: "BookOpen",
-    learningAreas: [
-      { id: "la_eng", name: "English Language Activities", code: "ENG-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
-      { id: "la_kisw", name: "Kiswahili Language Activities", code: "KISW-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] }
-    ]
-  },
-  {
-    id: "cluster_2",
-    name: "Mathematics & Science",
-    description: "Mathematics, Integrated Science, Health Education",
-    color: "bg-emerald-500",
-    icon: "Calculator",
-    learningAreas: [
-      { id: "la_math", name: "Mathematics Activities", code: "MATH-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
-      { id: "la_sci", name: "Integrated Science", code: "SCI-01", category: "Core", gradeLevels: ["Grade 4", "Grade 5", "Grade 6"] }
-    ]
-  }
-];
-
-export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
-
-export const initialSeedData = ${JSON.stringify(fullDbObject, null, 2)};
-
-(initialSeedData as any).learners = initialSeedData.students;
-
-export const INITIAL_SEED_DATA = initialSeedData;
-
-export const initialAttendance = (initialSeedData as any).attendance || {};
-export const initialIctEquipment = (initialSeedData as any).ictEquipment || (initialSeedData as any).ictLabEquipment || [];
-export const initialScienceInventory = (initialSeedData as any).scienceInventory || (initialSeedData as any).scienceLabInventory || [];
-export const initialStoreInventory = (initialSeedData as any).storeInventory || (initialSeedData as any).storeStock || [];
-export const initialSettings = (initialSeedData as any).settings || (initialSeedData as any).schoolSettings || {};
-export const initialNotices = (initialSeedData as any).notices || (initialSeedData as any).munyaka_notices || [];
-export const initialEvents = (initialSeedData as any).events || [];
-export const initialExams = (initialSeedData as any).exams || (initialSeedData as any).all_set_exams || (initialSeedData as any).question_bank || [];
-export const initialExamSchedules = (initialSeedData as any).examSchedules || (initialSeedData as any).assessment_schedules || [];
-export const initialExamTypes = (initialSeedData as any).examTypes || (initialSeedData as any).exam_types || [];
-export const initialMarks = (initialSeedData as any).marks || (initialSeedData as any).assessments || (initialSeedData as any).marked_student_submissions || [];
-export const initialQuestions = (initialSeedData as any).questions || (initialSeedData as any).question_bank || [];
-export const initialLearners = initialSeedData.students || [];
-export const initialStaff = initialSeedData.staff || [];
-export const initialReportCards = (initialSeedData as any).reportCards || [];
-export const initialFeeStructures = (initialSeedData as any).feeStructures || (initialSeedData as any).fees_structures || [];
-export const initialFeePayments = (initialSeedData as any).fees || (initialSeedData as any).payments || [];
-export const initialStudyCorner = (initialSeedData as any).studyCorner || (initialSeedData as any).study_materials || [];
-export const initialLibraryBooks = (initialSeedData as any).libraryBooks || (initialSeedData as any).library_books || [];
-export const initialLibraryLogs = (initialSeedData as any).libraryLogs || (initialSeedData as any).library_logs || [];
-export const mockLearners = initialSeedData.students || [];
-export const mockStudents = initialSeedData.students || [];
-export const mockStaff = initialSeedData.staff || [];
-export const initialGrades = (initialSeedData as any).grades || [];
-export const initialStreams = (initialSeedData as any).streams || [];
-export const initialClassAssignments = (initialSeedData as any).classAssignments || [];
-export const mockExams = (initialSeedData as any).exams || [];
-export const mockLibrary = (initialSeedData as any).libraryBooks || [];
-export const mockFinances = (initialSeedData as any).fees || [];
-
-export default initialSeedData;
-`;
-
-      const blob = new Blob([fileContent], { type: 'text/typescript;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'initialSeedData.ts';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      showSuccess(`Exported initialSeedData.ts (${generatedSeedVersion}) with full un-sliced state across all modules!`);
+      throw new Error('Server returned non-ok status');
     } catch (err: any) {
       console.error('[CentralDataServicePage] Export seed error:', err);
-      showError('Failed to generate initialSeedData.ts: ' + (err?.message || err));
+      showError('Failed to save seed file: ' + (err?.message || err));
     }
   };
 
@@ -303,20 +222,16 @@ export default initialSeedData;
       localStorage.setItem('munyaka_central_db', JSON.stringify(dump));
 
       // Post directly to local dev server endpoint /api/save-seed to write to src/data/initialSeedData.ts on disk
-      let diskWriteMsg = '';
-      try {
-        const res = await fetch('/api/save-seed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dump)
-        });
-        if (res.ok) {
-          const jsonRes = await res.json();
-          if (jsonRes.success) {
-            diskWriteMsg = ' (and saved directly to initialSeedData.ts on disk!)';
-          }
+      const res = await fetch('/api/save-seed', {
+        method: 'POST',
+        body: JSON.stringify(useSchoolStore.getState())
+      });
+      if (res.ok) {
+        const jsonRes = await res.json();
+        if (jsonRes.success) {
+          showSuccess("Master seed file saved directly to src/data/initialSeedData.ts on disk!");
         }
-      } catch {}
+      }
 
       refreshStore();
       refreshStats();
@@ -324,7 +239,7 @@ export default initialSeedData;
       window.dispatchEvent(new Event('staff-changed'));
       window.dispatchEvent(new Event('students-updated'));
 
-      showSuccess(`Successfully synced useSchoolStore, localStorage, and central dataset${diskWriteMsg}!`);
+      showSuccess(`Successfully synced useSchoolStore, localStorage, and central dataset!`);
     } catch (err: any) {
       showError('Failed to sync central data: ' + (err?.message || err));
     } finally {
