@@ -512,6 +512,14 @@ export const CentralDataService = {
 
     setTimeout(async () => {
       await CentralDataService.syncBatchToRemote({ [key]: data });
+      try {
+        const fullDump = CentralDataService.getFullStateDump();
+        fetch('/api/save-seed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fullDump)
+        }).catch(() => {});
+      } catch {}
     }, 50);
   }
 };
