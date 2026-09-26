@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
 import { useAuth } from '@/context/AuthContext';
+import { useSchoolStore } from '@/store/useSchoolStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Download, Printer, Save, Loader2, Calendar, CheckCircle2,
@@ -226,6 +227,11 @@ const Attendance = () => {
   const userId = user?.id ?? '';
   const isAdminRole = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'super_admin' || userRole.toLowerCase() === 'owner';
   const isTeacherRole = userRole.toLowerCase() === 'teacher' || userRole.toLowerCase() === 'class_teacher' || userRole.toLowerCase() === 'subject_teacher' || userRole.toLowerCase() === 'senior_teacher';
+
+  // ── Global School Store (eliminating separate storage layer) ──
+  const learners = useSchoolStore((state) => state.learners);
+  const globalAttendanceStore = useSchoolStore((state) => state.attendance);
+  const setGlobalAttendanceStore = useSchoolStore((state) => state.setAttendance);
 
   // If user is a teacher with an assigned class/stream, automatically set default filter
   const assignedClassStr = (user as any)?.assignedClass || '';
@@ -676,13 +682,22 @@ const Attendance = () => {
     }, [filters.grade]);
   
     const filteredLearners = useMemo(() => {
-      if (!String(searchTerm || '').trim()) return liveStudents;
-      const term = searchTerm.toLowerCase();
-      return liveStudents.filter(
-        s => s.name.toLowerCase().includes(term) ||
-             s.assessment.toLowerCase().includes(term)
-      );
-    }, [liveStudents, searchTerm]);
+      const selectedGrade = filters.grade;
+      const selectedStream = filters.stream;
+      return learners.filter(l => {
+        if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
+        const gradeMatch = !selectedGrade || selectedGrade === 'all' || String(l.grade || l.class || '').toLowerCase().includes(selectedGrade.toLowerCase().replace('grade', '').trim());
+        const streamMatch = !selectedStream || selectedStream === 'all' || String(l.stream || '').toLowerCase().trim() === selectedStream.toLowerCase().trim();
+        return gradeMatch && streamMatch;
+      }).map(l => ({
+        id: String(l.id),
+        name: l.name || 'Unknown',
+        assessment: l.admNo || l.id || '',
+        grade: l.grade || l.class || '',
+        stream: l.stream || '',
+        gender: (l.gender || 'M') as 'M' | 'F',
+      }));
+    }, [learners, filters.grade, filters.stream]);
 
   const isSessionFullyMarked = (session: SessionType): boolean => {
     if (filteredLearners.length === 0) return false;
