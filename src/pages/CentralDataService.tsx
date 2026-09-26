@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { CentralDataService, UnifiedDataStorage } from '@/services/centralDataService';
+import { useSchoolStore } from '@/store/useSchoolStore';
 import { showSuccess, showError } from '@/utils/toast';
-import { Download, Upload, Database, RefreshCw, Layers, CheckCircle2, ShieldCheck, Users, GraduationCap, DollarSign, CalendarCheck, BookOpen, Clock, Settings as SettingsIcon } from 'lucide-react';
+import { Download, Upload, Database, RefreshCw, Layers, ShieldCheck, Users, GraduationCap, DollarSign, CalendarCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { initialSeedData } from '@/data/initialSeedData';
 
 export default function CentralDataServicePage() {
+  const { learners, staff, fees, attendance, exams, marks, timetable, settings, refreshStore } = useSchoolStore();
+
   const [stats, setStats] = useState({
     registeredStudents: 0,
     teachingStaff: 0,
@@ -32,20 +33,11 @@ export default function CentralDataServicePage() {
 
   const refreshStats = () => {
     try {
-      const learners = UnifiedDataStorage.getLearners();
-      const staff = UnifiedDataStorage.getStaff();
-      const attendance = UnifiedDataStorage.getAttendance();
-      const fees = UnifiedDataStorage.getFees();
-
-      // Read from live unified storage / localStorage
-      const exams = UnifiedDataStorage.get<any[]>('munyaka_exam_types', UnifiedDataStorage.get<any[]>('all_set_exams', []));
-      const marks = UnifiedDataStorage.get<any>('munyaka_marks_records', UnifiedDataStorage.get<any>('marks', []));
-      const marksCount = Array.isArray(marks) ? marks.length : Object.keys(marks || {}).length;
-      const timetable = UnifiedDataStorage.get<any[]>('school-timetable-data', []);
-      const library = UnifiedDataStorage.get<any[]>('munyaka_library_books', []);
-      const notices = UnifiedDataStorage.get<any[]>('munyaka_notices', []);
-      const ictAssets = UnifiedDataStorage.get<any[]>('munyaka_ict_assets', []);
-      const settings = UnifiedDataStorage.get<any>('munyaka_system_settings_v3', {});
+      refreshStore();
+      
+      const library = JSON.parse(localStorage.getItem('munyaka_library_books') || '[]');
+      const notices = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
+      const ictAssets = JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]');
 
       const teachingStaff = staff.filter((s: any) => {
         const role = (s.role || s.systemRole || '').toLowerCase();
@@ -66,6 +58,7 @@ export default function CentralDataServicePage() {
         : Object.keys(attendance || {}).length;
 
       const feeCount = Array.isArray(fees) ? fees.length : Object.keys(fees || {}).length;
+      const marksCount = Array.isArray(marks) ? marks.length : Object.keys(marks || {}).length;
 
       setStats({
         registeredStudents: learners.length,
@@ -95,42 +88,32 @@ export default function CentralDataServicePage() {
       window.removeEventListener('munyaka:data-changed', handleDataChange);
       window.removeEventListener('storage', handleDataChange);
     };
-  }, []);
+  }, [learners, staff, fees, attendance, exams, marks, timetable, settings]);
 
   const handleExportSeedData = () => {
     try {
       const generatedSeedVersion = "BUILD_OFFLINE_" + Date.now();
 
       // Read live store across all 12+ menus
-      const learners = UnifiedDataStorage.getLearners();
-      const staff = UnifiedDataStorage.getStaff();
-      const fees = UnifiedDataStorage.getFees();
-      const attendance = UnifiedDataStorage.getAttendance();
-
-      const transactions = UnifiedDataStorage.get<any[]>('munyaka_transactions', []);
-      const payments = UnifiedDataStorage.get<any[]>('munyaka_payments', fees);
-      const grades = UnifiedDataStorage.get<any>('munyaka_grades', (initialSeedData as any).grades || {});
-      const streams = UnifiedDataStorage.get<any>('munyaka_streams', (initialSeedData as any).streams || []);
-      const classAssignments = UnifiedDataStorage.get<any>('munyaka_class_assignments', (initialSeedData as any).classAssignments || []);
-      const learningAreas = UnifiedDataStorage.get<any>('munyaka_learning_areas', (initialSeedData as any).learningAreas || []);
-      const exams = UnifiedDataStorage.get<any>('munyaka_exam_types', UnifiedDataStorage.get<any>('all_set_exams', []));
-      const examSchedules = UnifiedDataStorage.get<any>('munyaka_exam_schedules', (initialSeedData as any).examSchedules || []);
-      const marks = UnifiedDataStorage.get<any>('munyaka_marks_records', UnifiedDataStorage.get<any>('marks', {}));
-      const assessments = UnifiedDataStorage.get<any>('munyaka_assessment_scores', []);
-      const questions = UnifiedDataStorage.get<any>('munyaka_question_bank', (initialSeedData as any).questions || []);
-      const reportCards = UnifiedDataStorage.get<any>('munyaka_report_cards', []);
-      const feeStructures = UnifiedDataStorage.get<any>('munyaka_fee_structures', (initialSeedData as any).feeStructures || []);
-      const studyCorner = UnifiedDataStorage.get<any>('munyaka_study_materials', (initialSeedData as any).studyCorner || []);
-      const libraryBooks = UnifiedDataStorage.get<any>('munyaka_library_books', (initialSeedData as any).libraryBooks || []);
-      const libraryLogs = UnifiedDataStorage.get<any>('munyaka_library_logs', []);
-      const ictEquipment = UnifiedDataStorage.get<any>('munyaka_ict_assets', (initialSeedData as any).ictEquipment || []);
-      const scienceInventory = UnifiedDataStorage.get<any>('munyaka_science_inventory', (initialSeedData as any).scienceInventory || []);
-      const storeInventory = UnifiedDataStorage.get<any>('munyaka_store_inventory', (initialSeedData as any).storeInventory || []);
-      const notices = UnifiedDataStorage.get<any>('munyaka_notices', (initialSeedData as any).notices || []);
-      const events = UnifiedDataStorage.get<any>('munyaka_events', []);
-      const timetable = UnifiedDataStorage.get<any>('school-timetable-data', {});
-      const timetableGrades = UnifiedDataStorage.get<any>('school-timetable-grades', []);
-      const settings = UnifiedDataStorage.get<any>('munyaka_system_settings_v3', UnifiedDataStorage.get<any>('schoolSettings', {}));
+      const transactions = JSON.parse(localStorage.getItem('munyaka_transactions') || '[]');
+      const payments = JSON.parse(localStorage.getItem('munyaka_payments') || JSON.stringify(fees));
+      const grades = JSON.parse(localStorage.getItem('munyaka_grades') || JSON.stringify((initialSeedData as any).grades || {}));
+      const streams = JSON.parse(localStorage.getItem('munyaka_streams') || JSON.stringify((initialSeedData as any).streams || []));
+      const classAssignments = JSON.parse(localStorage.getItem('munyaka_class_assignments') || JSON.stringify((initialSeedData as any).classAssignments || []));
+      const learningAreas = JSON.parse(localStorage.getItem('munyaka_learning_areas') || JSON.stringify((initialSeedData as any).learningAreas || []));
+      const examSchedules = JSON.parse(localStorage.getItem('examSchedules') || JSON.stringify((initialSeedData as any).examSchedules || []));
+      const assessments = JSON.parse(localStorage.getItem('munyaka_assessment_scores') || '[]');
+      const questions = JSON.parse(localStorage.getItem('question_bank') || JSON.stringify((initialSeedData as any).questions || []));
+      const reportCards = JSON.parse(localStorage.getItem('munyaka_report_cards') || '[]');
+      const feeStructures = JSON.parse(localStorage.getItem('munyaka_fee_structures') || JSON.stringify((initialSeedData as any).feeStructures || []));
+      const studyCorner = JSON.parse(localStorage.getItem('munyaka_study_materials') || JSON.stringify((initialSeedData as any).studyCorner || []));
+      const libraryBooks = JSON.parse(localStorage.getItem('munyaka_library_books') || JSON.stringify((initialSeedData as any).libraryBooks || []));
+      const libraryLogs = JSON.parse(localStorage.getItem('munyaka_library_borrowings') || '[]');
+      const ictEquipment = JSON.parse(localStorage.getItem('munyaka_ict_assets') || JSON.stringify((initialSeedData as any).ictEquipment || []));
+      const scienceInventory = JSON.parse(localStorage.getItem('munyaka_science_lab') || JSON.stringify((initialSeedData as any).scienceInventory || []));
+      const storeInventory = JSON.parse(localStorage.getItem('munyaka_store_items') || JSON.stringify((initialSeedData as any).storeInventory || []));
+      const notices = JSON.parse(localStorage.getItem('munyaka_notices') || JSON.stringify((initialSeedData as any).notices || []));
+      const events = JSON.parse(localStorage.getItem('munyaka_events') || '[]');
 
       const fullDbObject = {
         students: learners,
@@ -159,7 +142,6 @@ export default function CentralDataServicePage() {
         notices,
         events,
         timetable,
-        timetableGrades,
         settings,
         schoolSettings: settings
       };
@@ -242,7 +224,7 @@ export default initialSeedData;
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      showSuccess(`Exported initialSeedData.ts (${generatedSeedVersion}) with live store state across all menus!`);
+      showSuccess(`Exported initialSeedData.ts (${generatedSeedVersion}) with live useSchoolStore state across all menus!`);
     } catch (err: any) {
       showError('Failed to generate initialSeedData.ts: ' + (err?.message || err));
     }
@@ -251,9 +233,19 @@ export default initialSeedData;
   const handleGenerateSnapshot = async () => {
     try {
       setLoading(true);
-      const snapshot = await CentralDataService.generateFullSnapshot();
+      const snapshot = JSON.stringify({
+        students: learners,
+        staff,
+        fees,
+        attendance,
+        exams,
+        marks,
+        timetable,
+        settings,
+        timestamp: new Date().toISOString()
+      }, null, 2);
       setSnapshotJson(snapshot);
-      showSuccess('Live database snapshot generated successfully.');
+      showSuccess('Live useSchoolStore snapshot generated successfully.');
     } catch {
       showError('Failed to generate snapshot.');
     } finally {
@@ -279,8 +271,18 @@ export default initialSeedData;
     }
     try {
       setLoading(true);
-      const success = await CentralDataService.restoreSnapshot(restoreJson);
-      if (success) {
+      const parsed = JSON.parse(restoreJson);
+      if (parsed) {
+        if (parsed.students) localStorage.setItem('munyaka_students', JSON.stringify(parsed.students));
+        if (parsed.staff) localStorage.setItem('munyaka_staff', JSON.stringify(parsed.staff));
+        if (parsed.fees) localStorage.setItem('munyaka_fees', JSON.stringify(parsed.fees));
+        if (parsed.attendance) localStorage.setItem('munyaka_attendance', JSON.stringify(parsed.attendance));
+        if (parsed.exams) localStorage.setItem('all_set_exams', JSON.stringify(parsed.exams));
+        if (parsed.marks) localStorage.setItem('marked_student_submissions', JSON.stringify(parsed.marks));
+        if (parsed.timetable) localStorage.setItem('school-timetable-data', JSON.stringify(parsed.timetable));
+        if (parsed.settings) localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(parsed.settings));
+
+        refreshStore();
         showSuccess('System restored successfully from snapshot.');
         setIsRestoreOpen(false);
         setRestoreJson('');
@@ -308,7 +310,7 @@ export default initialSeedData;
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight">Central Data & APK Master Export</h1>
             <p className="text-indigo-200 text-sm max-w-2xl leading-relaxed">
-              All student, staff, exam, fee, and timetable records are synchronized in a single unified live storage engine. Export your active live store directly into <code className="bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">initialSeedData.ts</code> for offline APK builds or perform full JSON backups and restores.
+              Connected directly to live <code className="bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">useSchoolStore</code> state. Export your active live store directly into <code className="bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">initialSeedData.ts</code> for offline APK builds or perform full JSON backups and restores.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -415,7 +417,7 @@ export default initialSeedData;
               <CardTitle>Generate JSON Backup</CardTitle>
             </div>
             <CardDescription>
-              Create a structured JSON dump of all core learners, staff, attendance, and financial data.
+              Create a structured JSON dump of all core learners, staff, attendance, and financial data from <code className="text-xs font-mono">useSchoolStore</code>.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -448,7 +450,7 @@ export default initialSeedData;
               <CardTitle>Restore JSON Snapshot</CardTitle>
             </div>
             <CardDescription>
-              Paste a previously exported snapshot to safely hydrate and overwrite live local state.
+              Paste a previously exported snapshot to safely hydrate and overwrite live <code className="text-xs font-mono">useSchoolStore</code> state.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -486,7 +488,7 @@ export default initialSeedData;
 
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs text-muted-foreground flex items-start gap-2">
               <ShieldCheck className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
-              <p>Restoring a snapshot will immediately trigger global event dispatches to update all open tabs and active dashboards in real time.</p>
+              <p>Restoring a snapshot will immediately update the Zustand store and dispatch global events to refresh all open dashboards in real time.</p>
             </div>
           </CardContent>
         </Card>
