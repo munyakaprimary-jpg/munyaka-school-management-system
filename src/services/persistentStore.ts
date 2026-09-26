@@ -256,6 +256,8 @@ const LS_KEY_TO_IDB_STORE: Record<string, string> = {
   'munyaka_fee_structures': 'fee_structures',
   'munyaka_fees_records': 'fee_ledgers',
   'munyaka_student_fees': 'fee_ledgers',
+  'munyaka_fees': 'fee_ledgers',
+  'munyaka_payments': 'transactions',
   'munyaka_transactions': 'transactions',
   'munyaka_library_books': 'library_books',
   'munyaka_ict_assets': 'ict_assets',

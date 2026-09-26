@@ -360,8 +360,7 @@ export const initialSeedData = {
       "savedAt": "2026-08-26T08:56:37.698Z"
     }
   },
-  "fees": []
-};
+  };
 
 (initialSeedData as any).learners = initialSeedData.students;
 
