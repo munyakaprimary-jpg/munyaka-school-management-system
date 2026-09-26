@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import CentralDataService from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
-import { Users, GraduationCap, Briefcase, Calendar, CheckCircle2, AlertCircle, Table as TableIcon } from 'lucide-react';
+import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -12,148 +11,127 @@ export const AdminDashboardComponent: React.FC = () => {
   const storeLearners = useSchoolStore(state => state.learners);
   const storeStaff = useSchoolStore(state => state.staff);
 
-  const [totalStudents, setTotalStudents] = useState(0);
-  const [teachingStaffCount, setTeachingStaffCount] = useState(0);
-  const [nonTeachingStaffCount, setNonTeachingStaffCount] = useState(0);
-  const [primaryCount, setPrimaryCount] = useState(0);
-  const [juniorCount, setJuniorCount] = useState(0);
+  useEffect(() => {
+    try {
+      const syncFn = (useSchoolStore.getState() as any).syncFromStorage;
+      if (typeof syncFn === 'function') {
+        syncFn();
+      }
+    } catch {}
+  }, []);
+
+  const learners = storeLearners && storeLearners.length > 0 ? storeLearners : CentralDataService.getLearners();
+  const staff = storeStaff && storeStaff.length > 0 ? storeStaff : CentralDataService.getStaff();
+
+  const teaching = staff.filter((s: any) => {
+    const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
+    if (roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician')) {
+      return false;
+    }
+    return roleStr.includes('teach') || roleStr.includes('head_teacher') || roleStr.includes('senior_teacher') || roleStr.includes('class_teacher') || roleStr.includes('subject_teacher') || roleStr.includes('teacher') || roleStr.includes('head teacher') || roleStr.includes('deputy');
+  });
+
+  const nonTeaching = staff.filter((s: any) => {
+    const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
+    if (roleStr.includes('teach') || roleStr.includes('head_teacher') || roleStr.includes('senior_teacher') || roleStr.includes('class_teacher') || roleStr.includes('subject_teacher') || roleStr.includes('teacher') || roleStr.includes('head teacher') || roleStr.includes('deputy')) {
+      if (roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician')) {
+        return true;
+      }
+      return false;
+    }
+    return true;
+  });
+
+  const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
+  const junior = learners.length - primary.length;
+
+  const totalStudents = learners.length;
+  const teachingStaffCount = teaching.length;
+  const nonTeachingStaffCount = nonTeaching.length;
+  const primaryCount = primary.length;
+  const juniorCount = junior;
 
   const [selectedYear, setSelectedYear] = useState('2026');
-  const [enrolmentRows, setEnrolmentRows] = useState<Array<{ grade: string; boys: number; girls: number; total: number }>>([]);
-  const [totalsRow, setTotalsRow] = useState({ boys: 0, girls: 0, total: 0 });
 
-  const computeMetrics = () => {
-    const learners = storeLearners && storeLearners.length > 0 ? storeLearners : CentralDataService.getLearners();
-    const staff = storeStaff && storeStaff.length > 0 ? storeStaff : CentralDataService.getStaff();
+  // Compute Enrolment Table Rows with promotion & advancement logic
+  const gradeLevels = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+  const gradeSequence = gradeLevels;
 
-    const teaching = staff.filter((s: any) => {
-      const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
-      if (roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician')) {
-        return false;
+  const currentBaseYear = 2026;
+  const targetYearNum = parseInt(selectedYear, 10) || 2026;
+  const yearDiff = targetYearNum - currentBaseYear;
+
+  let sumBoys = 0;
+  let sumGirls = 0;
+
+  const enrolmentRows = gradeLevels.map((gradeName, gradeIndex) => {
+    const explicitLearners = learners.filter((l: any) => {
+      const lGrade = String(l.grade || l.class || '').trim();
+      const matchesGrade = lGrade.toLowerCase() === gradeName.toLowerCase() || 
+        (gradeName === 'PP1' && lGrade.toLowerCase().includes('pp1')) ||
+        (gradeName === 'PP2' && lGrade.toLowerCase().includes('pp2')) ||
+        lGrade.toLowerCase().includes(gradeName.toLowerCase());
+      
+      if (!matchesGrade) return false;
+
+      const lYear = String(l.academicYear || l.year || l.enrollmentYear || '2026');
+      return lYear === String(selectedYear);
+    });
+
+    let gradeLearners = explicitLearners;
+
+    if (explicitLearners.length === 0 && yearDiff > 0) {
+      const baseGradeIndex = gradeIndex - yearDiff;
+      if (baseGradeIndex >= 0 && baseGradeIndex < gradeSequence.length) {
+        const baseGradeName = gradeSequence[baseGradeIndex];
+        const baseLearners = learners.filter((l: any) => {
+          const lGrade = String(l.grade || l.class || '').trim();
+          const matchesGrade = lGrade.toLowerCase() === baseGradeName.toLowerCase() || 
+            (baseGradeName === 'PP1' && lGrade.toLowerCase().includes('pp1')) ||
+            (baseGradeName === 'PP2' && lGrade.toLowerCase().includes('pp2')) ||
+            lGrade.toLowerCase().includes(baseGradeName.toLowerCase());
+
+          if (!matchesGrade) return false;
+          const lYear = String(l.academicYear || l.year || l.enrollmentYear || '2026');
+          return lYear === '2026';
+        });
+        gradeLearners = baseLearners;
+      } else {
+        gradeLearners = [];
       }
-      return roleStr.includes('teach') || roleStr.includes('head_teacher') || roleStr.includes('senior_teacher') || roleStr.includes('class_teacher') || roleStr.includes('subject_teacher') || roleStr.includes('teacher') || roleStr.includes('head teacher') || roleStr.includes('deputy');
-    });
+    }
 
-    const nonTeaching = staff.filter((s: any) => {
-      const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
-      if (roleStr.includes('teach') || roleStr.includes('head_teacher') || roleStr.includes('senior_teacher') || roleStr.includes('class_teacher') || roleStr.includes('subject_teacher') || roleStr.includes('teacher') || roleStr.includes('head teacher') || roleStr.includes('deputy')) {
-        if (roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician')) {
-          return true;
-        }
-        return false;
-      }
-      return true;
-    });
+    const boys = gradeLearners.filter((l: any) => {
+      const g = String(l.gender || l.sex || '').trim().toLowerCase();
+      return g.startsWith('m') || g === 'boy';
+    }).length;
 
-    const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
-    const junior = learners.length - primary.length;
+    const girls = gradeLearners.filter((l: any) => {
+      const g = String(l.gender || l.sex || '').trim().toLowerCase();
+      return g.startsWith('f') || g === 'girl';
+    }).length;
 
-    setTotalStudents(learners.length);
-    setTeachingStaffCount(teaching.length);
-    setNonTeachingStaffCount(nonTeaching.length);
-    setPrimaryCount(primary.length);
-    setJuniorCount(junior);
+    const unassigned = gradeLearners.length - (boys + girls);
+    const adjustedBoys = boys + Math.ceil(unassigned / 2);
+    const adjustedGirls = girls + Math.floor(unassigned / 2);
+    const total = adjustedBoys + adjustedGirls;
 
-    // Compute Enrolment Table Rows with promotion & advancement logic
-    const gradeLevels = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
-    const gradeSequence = gradeLevels;
+    sumBoys += adjustedBoys;
+    sumGirls += adjustedGirls;
 
-    const currentBaseYear = 2026;
-    const targetYearNum = parseInt(selectedYear, 10) || 2026;
-    const yearDiff = targetYearNum - currentBaseYear;
-
-    let sumBoys = 0;
-    let sumGirls = 0;
-
-    const rows = gradeLevels.map((gradeName, gradeIndex) => {
-      // Find learners who explicitly have this grade and matching year
-      const explicitLearners = learners.filter((l: any) => {
-        const lGrade = String(l.grade || l.class || '').trim();
-        const matchesGrade = lGrade.toLowerCase() === gradeName.toLowerCase() ||
-          (gradeName === 'PP1' && lGrade.toLowerCase().includes('pp1')) ||
-          (gradeName === 'PP2' && lGrade.toLowerCase().includes('pp2')) ||
-          lGrade.toLowerCase().includes(gradeName.toLowerCase());
-        
-        if (!matchesGrade) return false;
-
-        const lYear = String(l.academicYear || l.year || l.enrollmentYear || '2026');
-        return lYear === String(selectedYear);
-      });
-
-      let gradeLearners = explicitLearners;
-
-      // If no explicit records exist for this future year, compute projected advancement from base year (2026)
-      if (explicitLearners.length === 0 && yearDiff > 0) {
-        // Learners from base grade who advance by yearDiff steps
-        const baseGradeIndex = gradeIndex - yearDiff;
-        if (baseGradeIndex >= 0 && baseGradeIndex < gradeSequence.length) {
-          const baseGradeName = gradeSequence[baseGradeIndex];
-          const baseLearners = learners.filter((l: any) => {
-            const lGrade = String(l.grade || l.class || '').trim();
-            const matchesGrade = lGrade.toLowerCase() === baseGradeName.toLowerCase() ||
-              (baseGradeName === 'PP1' && lGrade.toLowerCase().includes('pp1')) ||
-              (baseGradeName === 'PP2' && lGrade.toLowerCase().includes('pp2')) ||
-              lGrade.toLowerCase().includes(baseGradeName.toLowerCase());
-
-            if (!matchesGrade) return false;
-            const lYear = String(l.academicYear || l.year || l.enrollmentYear || '2026');
-            return lYear === '2026';
-          });
-          gradeLearners = baseLearners;
-        } else {
-          // If baseGradeIndex < 0 (e.g. PP1/PP2 in future years with no intake), count as 0
-          gradeLearners = [];
-        }
-      }
-
-      const boys = gradeLearners.filter((l: any) => {
-        const g = String(l.gender || l.sex || '').trim().toLowerCase();
-        return g.startsWith('m') || g === 'boy';
-      }).length;
-
-      const girls = gradeLearners.filter((l: any) => {
-        const g = String(l.gender || l.sex || '').trim().toLowerCase();
-        return g.startsWith('f') || g === 'girl';
-      }).length;
-
-      const unassigned = gradeLearners.length - (boys + girls);
-      const adjustedBoys = boys + Math.ceil(unassigned / 2);
-      const adjustedGirls = girls + Math.floor(unassigned / 2);
-      const total = adjustedBoys + adjustedGirls;
-
-      sumBoys += adjustedBoys;
-      sumGirls += adjustedGirls;
-
-      return {
-        grade: gradeName,
-        boys: adjustedBoys,
-        girls: adjustedGirls,
-        total
-      };
-    });
-
-    setEnrolmentRows(rows);
-    setTotalsRow({
-      boys: sumBoys,
-      girls: sumGirls,
-      total: sumBoys + sumGirls
-    });
-  };
-
-  useEffect(() => {
-    computeMetrics();
-    const handleDataChange = () => computeMetrics();
-    window.addEventListener('munyaka:data-changed', handleDataChange);
-    window.addEventListener('staff-changed', handleDataChange);
-    window.addEventListener('students-updated', handleDataChange);
-    window.addEventListener('storage', handleDataChange);
-    return () => {
-      window.removeEventListener('munyaka:data-changed', handleDataChange);
-      window.removeEventListener('staff-changed', handleDataChange);
-      window.removeEventListener('students-updated', handleDataChange);
-      window.removeEventListener('storage', handleDataChange);
+    return {
+      grade: gradeName,
+      boys: adjustedBoys,
+      girls: adjustedGirls,
+      total
     };
-  }, [storeLearners, storeStaff, selectedYear]);
+  });
+
+  const totalsRow = {
+    boys: sumBoys,
+    girls: sumGirls,
+    total: sumBoys + sumGirls
+  };
 
   return (
     <div className="p-6 space-y-6">
