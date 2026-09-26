@@ -18,7 +18,6 @@ import {
   RefreshCw, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useFileDownload } from "@/utils/fileDownloader";
-import { useSchoolStore } from '@/store/useSchoolStore';
 import { cn } from "@/lib/utils";
 import { logActivity } from '@/services/activityLog';
 import { useLiveStreamAttendance } from '@/hooks/useLiveStreamAttendance';
