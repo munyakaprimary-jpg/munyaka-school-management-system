@@ -64,20 +64,21 @@ export const UnifiedDataStorage = {
     const directory = readStorage<any[]>('munyaka_staff_directory', []);
     const master = readStorage<any[]>('munyaka_master_staff_list', []);
 
-    const combined = [...master, ...directory, ...primary];
+    const combined = [...primary, ...directory, ...master];
     if (combined.length === 0) {
-      return [];
+      return initialSeedData.staff || [];
     }
 
     const map = new Map<string, any>();
     combined.forEach(s => {
-      if (s && (s.id || s.email || s.name)) {
-        const key = String(s.id || s.email || s.name).trim().toLowerCase();
+      if (s && (s.id || s.email || s.name || s.staffId)) {
+        const key = String(s.id || s.email || s.name || s.staffId).trim().toLowerCase();
         map.set(key, s);
       }
     });
 
-    return Array.from(map.values());
+    const res = Array.from(map.values());
+    return res.length > 0 ? res : (initialSeedData.staff || []);
   },
 
   saveStaff: (staffList: any[]): boolean => {
@@ -218,7 +219,10 @@ export const CentralDataService = {
   saveStudents: (learners: any[]) => UnifiedDataStorage.saveLearners(learners),
   
   getStaff: () => UnifiedDataStorage.getStaff(),
-  saveStaff: (staff: any[]) => UnifiedDataStorage.saveStaff(staff),
+  saveStaff: (staff: any[]) => {
+    const list = (staff && staff.length > 0) ? staff : (initialSeedData.staff || []);
+    UnifiedDataStorage.saveStaff(list);
+  },
   addStaff: (record: any) => UnifiedDataStorage.addStaff(record),
   updateStaff: (id: string, updates: any) => UnifiedDataStorage.updateStaff(id, updates),
   deleteStaff: (id: string) => UnifiedDataStorage.deleteStaff(id),
@@ -251,6 +255,14 @@ export const CentralDataService = {
       fees: UnifiedDataStorage.getFees(),
     };
     return JSON.stringify(backup, null, 2);
+  },
+
+  exportCentralData: (): any => {
+    const db = UnifiedDataStorage.exportFullDatabase();
+    if (!db.staff || db.staff.length === 0) {
+      db.staff = initialSeedData.staff || [];
+    }
+    return db;
   },
 
   isTermLocked: (termKey: string): boolean => {

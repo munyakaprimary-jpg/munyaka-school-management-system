@@ -134,8 +134,16 @@ export const getStaffMetrics = (_schoolId?: string | null) => {
 
 export const getCategorizedMetrics = (_schoolId?: string | null) => {
   const staff = getStaffMaster();
-  const teachingStaff = staff.filter(s => TEACHING_SYSTEM_ROLES.includes(s.systemRole));
-  const nonTeachingStaff = staff.filter(s => !TEACHING_SYSTEM_ROLES.includes(s.systemRole));
+  const teachingStaff = staff.filter(s => {
+    const roleStr = `${s.role || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
+    const isExplicitNonTeaching = roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician');
+    return (TEACHING_SYSTEM_ROLES.includes(s.systemRole) || roleStr.includes('teach')) && !isExplicitNonTeaching;
+  });
+  const nonTeachingStaff = staff.filter(s => {
+    const roleStr = `${s.role || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
+    const isExplicitNonTeaching = roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician');
+    return !TEACHING_SYSTEM_ROLES.includes(s.systemRole) || isExplicitNonTeaching;
+  });
   const teachingTotal = teachingStaff.length;
   const teachingActive = teachingStaff.filter(s => s.status === 'Active').length;
   const teachingPending = teachingTotal - teachingActive;

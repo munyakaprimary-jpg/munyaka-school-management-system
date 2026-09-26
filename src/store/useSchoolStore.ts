@@ -64,8 +64,9 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const s2 = getInitialStorage('munyaka_staff_directory', null);
     const s3 = getInitialStorage('munyaka_master_staff_list', null);
     const s4 = getInitialStorage('staff', null);
-    const list = s1 || s2 || s3 || s4 || initialSeedData.staff || [];
-    return Array.isArray(list) ? list : [];
+    const list = s1 || s2 || s3 || s4;
+    if (Array.isArray(list) && list.length > 0) return list;
+    return initialSeedData.staff || [];
   });
   const [fees, setFeesState] = useState<any[]>(() =>
     getInitialStorage('munyaka_fees', (initialSeedData as any).fees || [])
@@ -118,7 +119,7 @@ export const SchoolStoreProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const s2 = getInitialStorage('munyaka_staff_directory', null);
     const s3 = getInitialStorage('munyaka_master_staff_list', null);
     const s4 = getInitialStorage('staff', null);
-    const staffList = s1 || s2 || s3 || s4 || initialSeedData.staff || [];
+    const staffList = (s1 && s1.length > 0 ? s1 : null) || (s2 && s2.length > 0 ? s2 : null) || (s3 && s3.length > 0 ? s3 : null) || (s4 && s4.length > 0 ? s4 : null) || initialSeedData.staff || [];
     setStaffState(Array.isArray(staffList) ? staffList : []);
 
     setFeesState(getInitialStorage('munyaka_fees', (initialSeedData as any).fees || []));

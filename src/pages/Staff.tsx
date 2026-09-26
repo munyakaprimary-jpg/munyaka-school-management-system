@@ -167,11 +167,13 @@ const Staff = () => {
       const matchesStatus = statusFilter === 'All' || s.status === statusFilter;
       
       // Category filter: Teaching vs Non-Teaching
-      const isTeaching = s.systemRole ? TEACHING_SYSTEM_ROLES.includes(s.systemRole as any) : false;
+      const roleStr = `${s.role || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
+      const isExplicitNonTeaching = roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician');
+      const isTeaching = (s.systemRole ? TEACHING_SYSTEM_ROLES.includes(s.systemRole as any) : false) || (roleStr.includes('teach') && !isExplicitNonTeaching);
       const matchesCategory =
         categoryFilter === 'All' ||
-        (categoryFilter === 'Teaching' && isTeaching) ||
-        (categoryFilter === 'Non-Teaching' && !isTeaching);
+        (categoryFilter === 'Teaching' && isTeaching && !isExplicitNonTeaching) ||
+        (categoryFilter === 'Non-Teaching' && (!isTeaching || isExplicitNonTeaching));
       
       return matchesSearch && matchesStatus && matchesCategory;
     });
