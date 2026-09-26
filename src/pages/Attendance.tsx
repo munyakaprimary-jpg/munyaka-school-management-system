@@ -2197,7 +2197,7 @@ const Attendance = () => {
               <table className="w-full text-xs text-left border-collapse min-w-[760px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-4 py-2 font-black text-[10px] uppercase tracking-wider text-slate-500">CLASS / STREAM</th>
+                    <th className="w-44 min-w-[150px] align-top text-left px-3 py-2 whitespace-nowrap font-black text-[10px] uppercase tracking-wider text-slate-500">CLASS / STREAM</th>
                     <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-slate-500">LEARNERS</th>
                     <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-amber-600 text-center">MORNING ROLL</th>
                     <th className="px-3 py-2 font-black text-[10px] uppercase tracking-wider text-amber-600 text-center">MORNING PRESENT</th>
@@ -2209,14 +2209,18 @@ const Attendance = () => {
                 <tbody className="divide-y divide-slate-100">
                   {filteredStreamSummaries.length > 0 ? filteredStreamSummaries.map((s) => (
                     <tr key={`${s.grade}-${s.stream}`} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-2.5 align-top">
+                      <td className="w-44 min-w-[150px] align-top text-left px-3 py-2 whitespace-nowrap">
                         <div className="flex items-center gap-2.5">
                           <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0">
                             <Layers size={14} />
                           </div>
-                          <div>
-                            <p className="font-bold text-slate-900 text-xs leading-tight">{s.grade}</p>
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-tight">{s.stream}</p>
+                          <div className="flex flex-col text-left whitespace-nowrap">
+                            <span className="text-xs font-bold text-slate-900 whitespace-nowrap">
+                              {s.grade.toUpperCase().startsWith('GRADE ') ? s.grade.toUpperCase() : `GRADE ${s.grade}`}
+                            </span>
+                            <span className="text-[11px] font-semibold text-slate-500 uppercase whitespace-nowrap">
+                              {s.stream}
+                            </span>
                           </div>
                         </div>
                       </td>
