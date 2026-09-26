@@ -246,6 +246,60 @@ export default initialSeedData;
     }
   };
 
+  const handleSyncStoreToCentralData = () => {
+    try {
+      setLoading(true);
+      // Read current store state and master lists
+      const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
+      const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
+      const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+      const s4 = JSON.parse(localStorage.getItem('staff') || '[]');
+      const staffCandidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
+      const masterStaff = staffCandidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
+
+      const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
+      const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
+      const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
+
+      const f1 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
+      const f2 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
+      const masterFees = [fees, f1, f2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), fees);
+
+      const dump = {
+        students: masterLearners,
+        staff: masterStaff.length > 0 ? masterStaff : (initialSeedData.staff || []),
+        fees: masterFees,
+        attendance,
+        exams,
+        marks,
+        timetable,
+        settings,
+        timestamp: new Date().toISOString()
+      };
+
+      // Write full updated dataset to localStorage keys
+      localStorage.setItem('munyaka_students', JSON.stringify(masterLearners));
+      localStorage.setItem('munyaka_staff', JSON.stringify(dump.staff));
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(dump.staff));
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(dump.staff));
+      localStorage.setItem('munyaka_fees', JSON.stringify(masterFees));
+      localStorage.setItem('munyaka_attendance', JSON.stringify(attendance));
+      localStorage.setItem('munyaka_central_db', JSON.stringify(dump));
+
+      refreshStore();
+      refreshStats();
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+      window.dispatchEvent(new Event('staff-changed'));
+      window.dispatchEvent(new Event('students-updated'));
+
+      showSuccess('Successfully synced useSchoolStore and localStorage with latest central dataset!');
+    } catch (err: any) {
+      showError('Failed to sync central data: ' + (err?.message || err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGenerateSnapshot = async () => {
     try {
       setLoading(true);
@@ -337,6 +391,14 @@ export default initialSeedData;
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
+            </Button>
+            <Button
+              onClick={handleSyncStoreToCentralData}
+              disabled={loading}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-900/30 font-semibold"
+            >
+              <Database className="w-4 h-4 mr-2" />
+              Sync Store to Central Data
             </Button>
             <Button
               onClick={handleExportSeedData}
