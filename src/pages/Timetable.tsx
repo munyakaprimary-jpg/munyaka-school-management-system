@@ -24,15 +24,15 @@ const GRADES = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'
 const STREAMS = ['Green', 'Blue', 'Red', 'Yellow', 'East', 'West'];
 
 const LESSON_SLOTS = [
-  { id: 'slot-1', name: 'Lesson 1', time: '08:20 - 09:00' },
-  { id: 'slot-2', name: 'Lesson 2', time: '09:00 - 09:40' },
+  { id: 'slot-1', name: 'Lesson 1', time: '08:20 - 09:00', isBreak: false },
+  { id: 'slot-2', name: 'Lesson 2', time: '09:00 - 09:40', isBreak: false },
   { id: 'break', name: 'Break Time', time: '09:40 - 10:10', isBreak: true },
-  { id: 'slot-3', name: 'Lesson 3', time: '10:10 - 10:50' },
-  { id: 'slot-4', name: 'Lesson 4', time: '10:50 - 11:30' },
-  { id: 'slot-5', name: 'Lesson 5', time: '11:30 - 12:10' },
+  { id: 'slot-3', name: 'Lesson 3', time: '10:10 - 10:50', isBreak: false },
+  { id: 'slot-4', name: 'Lesson 4', time: '10:50 - 11:30', isBreak: false },
+  { id: 'slot-5', name: 'Lesson 5', time: '11:30 - 12:10', isBreak: false },
   { id: 'lunch', name: 'Lunch Break', time: '12:10 - 01:30', isBreak: true },
-  { id: 'slot-6', name: 'Lesson 6', time: '01:30 - 02:10' },
-  { id: 'slot-7', name: 'Lesson 7', time: '02:10 - 02:50' },
+  { id: 'slot-6', name: 'Lesson 6', time: '01:30 - 02:10', isBreak: false },
+  { id: 'slot-7', name: 'Lesson 7', time: '02:10 - 02:50', isBreak: false },
 ];
 
 const PRESET_SUBJECTS = [
@@ -208,81 +208,76 @@ export default function Timetable() {
         </div>
       </div>
 
-      {/* Grid Table */}
+      {/* Grid Table with Transposed Axes: Columns = Lesson Slots, Rows = Days of the Week */}
       <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
             Active Class Schedule: <span className="text-emerald-700">{selectedClassKey}</span>
           </span>
           {isAdmin && (
-            <span className="text-xs text-slate-500 font-medium">Click any lesson slot to assign subject & teacher</span>
+            <span className="text-xs text-slate-500 font-medium">Click any lesson cell to assign subject & teacher</span>
           )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-200">
-                <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">Time / Day</th>
-                {DAYS.map(day => (
-                  <th key={day} className="p-4 text-xs font-bold uppercase tracking-wider text-slate-800 text-center min-w-[180px]">
-                    {day}
+                <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">DAY / LESSON</th>
+                {LESSON_SLOTS.map(slot => (
+                  <th key={slot.id} className="p-4 text-xs font-bold uppercase tracking-wider text-slate-800 text-center min-w-[160px]">
+                    <div>{slot.name}</div>
+                    <div className="font-mono font-normal text-[10px] text-slate-400 mt-0.5">{slot.time}</div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {LESSON_SLOTS.map(slot => {
-                if (slot.isBreak) {
-                  return (
-                    <tr key={slot.id} className="bg-amber-50/40">
-                      <td className="p-3 pl-6 font-bold text-xs text-amber-800">
-                        <div>{slot.name}</div>
-                        <div className="font-mono font-normal text-[10px] text-amber-600">{slot.time}</div>
-                      </td>
-                      <td colSpan={5} className="p-3 text-center text-xs font-bold text-amber-700 tracking-wide uppercase">
-                        ☕ {slot.name} ({slot.time})
-                      </td>
-                    </tr>
-                  );
-                }
-
-                return (
-                  <tr key={slot.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-4 pl-6 align-middle bg-slate-50/40">
-                      <div className="font-bold text-slate-900 text-sm">{slot.name}</div>
-                      <div className="font-mono text-xs text-slate-400 mt-0.5">{slot.time}</div>
-                    </td>
-                    {DAYS.map(day => {
-                      const assigned = Array.isArray(allocations)
-                        ? allocations.find(a => a.classKey === selectedClassKey && a.day === day && a.slotId === slot.id)
-                        : null;
+              {DAYS.map(day => (
+                <tr key={day} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="p-4 pl-6 align-middle bg-slate-50/40 font-bold text-slate-900 text-sm">
+                    {day}
+                  </td>
+                  {LESSON_SLOTS.map(slot => {
+                    if (slot.isBreak) {
                       return (
-                        <td key={`${day}-${slot.id}`} className="p-3 align-top border-l border-slate-100">
-                          <div
-                            onClick={() => handleCellClick(day, slot)}
-                            className={`p-3 rounded-2xl border transition-all min-h-[90px] flex flex-col items-center justify-center text-center ${
-                              !isAdmin
-                                ? 'bg-slate-50/50 border-slate-100 cursor-default shadow-none'
-                                : 'bg-white border-slate-200 hover:border-emerald-400 hover:shadow-md cursor-pointer group'
-                            }`}
-                          >
-                            {assigned ? (
-                              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-emerald-50 border border-emerald-200 w-full animate-in fade-in duration-200">
-                                <span className="font-bold text-sm text-emerald-900">{assigned.subject}</span>
-                                <span className="text-xs text-emerald-700 font-medium mt-0.5">{assigned.teacher}</span>
-                              </div>
-                            ) : isAdmin ? (
-                              <span className="text-xs text-blue-600 font-semibold group-hover:underline">+ Assign Lesson</span>
-                            ) : (
-                              <span className="text-xs text-slate-400 font-medium">Unassigned</span>
-                            )}
-                          </div>
+                        <td key={slot.id} className="p-3 align-middle bg-amber-50/30 text-center">
+                          <span className="inline-flex px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-bold text-[11px]">
+                            {slot.name}
+                          </span>
                         </td>
                       );
-                    })}
-                  </tr>
-                );
-              })}
+                    }
+
+                    const assignment = Array.isArray(allocations)
+                      ? allocations.find(a => a.classKey === selectedClassKey && a.day === day && a.slotId === slot.id)
+                      : null;
+
+                    return (
+                      <td key={`${day}-${slot.id}`} className="p-3 align-top border-l border-slate-100">
+                        <div
+                          onClick={() => handleCellClick(day, slot)}
+                          className={`p-3 rounded-2xl border transition-all min-h-[90px] flex flex-col items-center justify-center text-center ${
+                            !isAdmin
+                              ? 'bg-slate-50/50 border-slate-100 cursor-default shadow-none'
+                              : 'bg-white border-slate-200 hover:border-emerald-400 hover:shadow-md cursor-pointer group'
+                          }`}
+                        >
+                          {assignment ? (
+                            <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-emerald-50 border border-emerald-200 w-full animate-in fade-in duration-200">
+                              <span className="font-bold text-sm text-emerald-900">{assignment.subject}</span>
+                              <span className="text-xs text-emerald-700 font-medium mt-0.5">{assignment.teacher}</span>
+                            </div>
+                          ) : isAdmin ? (
+                            <span className="text-xs text-blue-600 font-semibold group-hover:underline">+ Assign Lesson</span>
+                          ) : (
+                            <span className="text-xs text-slate-400 font-medium">Unassigned</span>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
