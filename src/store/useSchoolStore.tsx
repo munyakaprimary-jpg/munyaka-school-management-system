@@ -40,11 +40,7 @@ let storeState = {
     { id: 'not-1', title: 'Opening Day for Term 1', content: 'All students are expected to report back by 8:00 AM sharp in full proper school uniform.', date: 'Today', category: 'Notice', color: 'bg-indigo-50 text-indigo-600' },
     { id: 'not-2', title: 'Parent-Teacher Association AGM', content: 'Annual General Meeting for all parents and guardians to discuss school development and fee structures.', date: '2 days ago', category: 'Event', color: 'bg-emerald-50 text-emerald-600' }
   ]),
-  events: (initialSeedData as any).events || [],
-  campuses: getInitialStorage('munyaka_campuses', [
-    { id: '1', name: 'Munyaka Primary & Junior School', activeSeats: 120, pricePerSeat: 250, status: 'Active', expiryDate: '2028-09-27' },
-    { id: '2', name: 'Munyaka Academy - Annex', activeSeats: 80, pricePerSeat: 250, status: 'Active', expiryDate: '2027-12-31' }
-  ])
+  events: (initialSeedData as any).events || []
 };
 
 const listeners = new Set<any>();
@@ -70,40 +66,6 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
     settings: getInitialStorage('munyaka_system_settings_v3', storeState.settings),
     notices: getInitialStorage('munyaka_notices_board', storeState.notices),
     events: getInitialStorage('munyaka_events', storeState.events),
-    campuses: getInitialStorage('munyaka_campuses', storeState.campuses),
-
-    addCampus: (campusData: any) => {
-      const current = getInitialStorage('munyaka_campuses', storeState.campuses);
-      const newCampus = {
-        id: `campus-${Date.now()}`,
-        name: campusData.name || 'New Campus',
-        activeSeats: Number(campusData.activeSeats || campusData.seats || 50),
-        pricePerSeat: Number(campusData.pricePerSeat || 250),
-        status: campusData.status || 'Active',
-        expiryDate: campusData.expiryDate || '2028-12-31'
-      };
-      const updated = [newCampus, ...current];
-      localStorage.setItem('munyaka_campuses', JSON.stringify(updated));
-      storeState.campuses = updated;
-      listeners.forEach(l => l());
-      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
-    },
-    deleteCampus: (id: string) => {
-      const current = getInitialStorage('munyaka_campuses', storeState.campuses);
-      const updated = current.filter((c: any) => c.id !== id);
-      localStorage.setItem('munyaka_campuses', JSON.stringify(updated));
-      storeState.campuses = updated;
-      listeners.forEach(l => l());
-      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
-    },
-    updateCampusSeats: (id: string, seatCount: number) => {
-      const current = getInitialStorage('munyaka_campuses', storeState.campuses);
-      const updated = current.map((c: any) => c.id === id ? { ...c, activeSeats: seatCount } : c);
-      localStorage.setItem('munyaka_campuses', JSON.stringify(updated));
-      storeState.campuses = updated;
-      listeners.forEach(l => l());
-      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
-    },
 
     setLearners: (learners: any[]) => {
       localStorage.setItem('munyaka_students', JSON.stringify(learners));
