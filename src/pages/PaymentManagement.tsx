@@ -64,6 +64,13 @@ export default function PaymentManagement() {
   const [licenseKey, setLicenseKey] = useState(dynamicLicenseKey);
   const [isRenewed, setIsRenewed] = useState(false);
 
+  // Register New Campus Modal State / Add Campus Modal State
+  const [isRegisterCampusModalOpen, setIsRegisterCampusModalOpen] = useState(false);
+  const [isAddCampusModalOpen, setIsAddCampusModalOpen] = useState(false);
+  const [newCampusName, setNewCampusName] = useState('');
+  const [newCampusSeats, setNewCampusSeats] = useState('100');
+  const [newCampusExpiry, setNewCampusExpiry] = useState('2028-12-31');
+
   // Record Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentCampus, setPaymentCampus] = useState('Munyaka Primary & Junior School');
