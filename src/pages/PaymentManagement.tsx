@@ -30,7 +30,7 @@ export default function PaymentManagement() {
   const [mpesaNumber, setMpesaNumber] = useState('0738873359');
   const [selectedPlan, setSelectedPlan] = useState('Enterprise Annual (KES 120,000)');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [licenseKey, setLicenseKey] = useState('MUNYAKA-ENT-2026-9982');
+  const [licenseKey, setLicenseKey] = useState(dynamicLicenseKey);
   const [isRenewed, setIsRenewed] = useState(false);
 
   // Record Payment Modal State
@@ -61,6 +61,9 @@ export default function PaymentManagement() {
   // Access active store data for students and staff
   const students = useSchoolStore((state) => state.students) || [];
   const staff = useSchoolStore((state) => state.staff) || [];
+  const activeLearners = students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length;
+  const PRICE_PER_SEAT = 250;
+  const annualSubtotal = activeLearners * PRICE_PER_SEAT;
 
   // Real Data from munyaka_central_db and school store
   const { totalActiveStudents, totalActiveStaff, totalCapacity, availableSlots } = useMemo(() => {
@@ -94,7 +97,7 @@ export default function PaymentManagement() {
         availableSlots: Math.max(0, capacity - totalAllocated),
       };
     } catch {}
-    const sCount = students.length;
+    const sCount = activeLearners;
     const staffCount = staff.length;
     const totalAllocated = sCount + staffCount;
     return {
@@ -103,11 +106,27 @@ export default function PaymentManagement() {
       totalCapacity: 500,
       availableSlots: Math.max(0, 500 - totalAllocated),
     };
-  }, [students, staff]);
+  }, [students, staff, activeLearners]);
 
   // Seat allocation state (dynamically derived from live active students + staff)
   const allocatedSeats = totalActiveStudents + totalActiveStaff;
   const [maxSeats, setMaxSeats] = useState(totalCapacity);
+
+  // Dynamic license key formatting based on active school ID / name
+  const schoolIdHex = useMemo(() => {
+    try {
+      const name = localStorage.getItem('munyaka_school_name') || 'MUNYAKA';
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = (hash << 5) - hash + name.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash).toString(16).toUpperCase().substring(0, 4);
+    } catch {
+      return '9982';
+    }
+  }, []);
+  const dynamicLicenseKey = `MUNYAKA-ENT-2026-${schoolIdHex}`;
 
   // Keep maxSeats synchronized if capacity changes or store updates
   useEffect(() => {
@@ -300,12 +319,12 @@ export default function PaymentManagement() {
             <div className="bg-gradient-to-r from-indigo-50 to-slate-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <p className="text-[11px] font-bold uppercase text-indigo-600 tracking-wider">Per-Seat Subscription Summary</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5">Total Licensed Seats: <span className="text-indigo-600 font-extrabold">{allocatedSeats} Seats</span></p>
+                <p className="text-sm font-bold text-slate-900 mt-0.5">Total Licensed Seats: <span className="text-indigo-600 font-extrabold">{activeLearners} Active Seats</span></p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <p className="text-[10px] uppercase font-bold text-slate-400">Total Commitment</p>
-                  <p className="text-sm font-extrabold text-emerald-600">KES {(allocatedSeats * 250).toLocaleString()}</p>
+                  <p className="text-sm font-extrabold text-emerald-600">KES {annualSubtotal.toLocaleString()}</p>
                 </div>
                 <Button
                   onClick={() => {
@@ -352,7 +371,7 @@ export default function PaymentManagement() {
                             tier: 'Enterprise Tier',
                             status: 'Active',
                             expires: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
-                            amount: `KES ${(allocatedSeats * 250).toLocaleString()}`
+                            amount: `KES ${annualSubtotal.toLocaleString()}`
                           };
                           const updated = [newCampus];
                           setSubscriptions(updated);
@@ -374,8 +393,8 @@ export default function PaymentManagement() {
                   ) : (
                     subscriptions.map((sub) => {
                       const isMain = sub.id === 1;
-                      const subtotal = isMain ? allocatedSeats * 250 : (sub.school.includes('Eldoret') ? 180 * 250 : 120 * 250);
-                      const seatCount = isMain ? allocatedSeats : (sub.school.includes('Eldoret') ? 180 : 120);
+                      const subtotal = isMain ? annualSubtotal : (sub.school.includes('Eldoret') ? 180 * 250 : 120 * 250);
+                      const seatCount = isMain ? activeLearners : (sub.school.includes('Eldoret') ? 180 : 120);
 
                       return (
                         <div key={sub.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
@@ -477,7 +496,7 @@ export default function PaymentManagement() {
                 <CreditCard className="text-indigo-600" size={18} /> Instant M-Pesa Renewal
               </h3>
               <p className="text-xs text-slate-500 mb-4 font-medium">
-                Trigger automated STK Push for total per-seat commitment: <strong className="text-emerald-600">KES {(allocatedSeats * 250).toLocaleString()}</strong>.
+                Trigger automated STK Push for total per-seat commitment: <strong className="text-emerald-600">KES {annualSubtotal.toLocaleString()}</strong>.
               </p>
 
               <form onSubmit={handleMpesaCheckout} className="space-y-3.5">
@@ -488,7 +507,7 @@ export default function PaymentManagement() {
                     onChange={(e) => setSelectedPlan(e.target.value)}
                     className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
                   >
-                    <option value="Enterprise Per-Seat Annual">Enterprise Per-Seat Annual (KES {(allocatedSeats * 250).toLocaleString()})</option>
+                    <option value="Enterprise Per-Seat Annual">Enterprise Per-Seat Annual (KES {annualSubtotal.toLocaleString()})</option>
                     <option value="Standard Per-Seat Annual">Standard Per-Seat Annual</option>
                     <option value="Starter Per-Seat Annual">Starter Per-Seat Annual</option>
                   </select>
@@ -515,7 +534,7 @@ export default function PaymentManagement() {
                   className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm gap-1.5 mt-1"
                 >
                   {isProcessing ? <RefreshCw className="animate-spin" size={15} /> : <CheckCircle2 size={15} />}
-                  {isProcessing ? 'Processing STK Push...' : `Pay KES ${(allocatedSeats * 250).toLocaleString()} via M-Pesa`}
+                  {isProcessing ? 'Processing STK Push...' : `Pay KES ${annualSubtotal.toLocaleString()} via M-Pesa`}
                 </Button>
               </form>
 
@@ -646,7 +665,7 @@ export default function PaymentManagement() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <p className="text-xs font-black uppercase text-slate-400">Active Learners</p>
-                <p className="text-3xl font-black text-slate-900 mt-2">{allocatedSeats}</p>
+                <p className="text-3xl font-black text-slate-900 mt-2">{activeLearners}</p>
                 <p className="text-xs text-slate-500 mt-1">Billed monthly</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
@@ -656,7 +675,7 @@ export default function PaymentManagement() {
               </div>
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <p className="text-xs font-black uppercase text-slate-400">Estimated Monthly Total</p>
-                <p className="text-3xl font-black text-emerald-600 mt-2">KES {(allocatedSeats * monthlyFeePerStudent).toLocaleString()}</p>
+                <p className="text-3xl font-black text-emerald-600 mt-2">KES {(activeLearners * monthlyFeePerStudent).toLocaleString()}</p>
                 <p className="text-xs text-slate-500 mt-1">Auto-calculated</p>
               </div>
             </div>
