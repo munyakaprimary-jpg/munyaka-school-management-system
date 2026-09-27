@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   Calendar as CalendarIcon,
   Printer,
@@ -297,6 +297,22 @@ export default function Timetable() {
   const [chosenSubject, setChosenSubject] = useState('Mathematics');
   const [chosenTeacher, setChosenTeacher] = useState(teacherOptions[0] || 'ANN NDUTA MBUGUA');
 
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const gridScrollRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  const handleTopScroll = () => {
+    if (gridScrollRef.current && topScrollRef.current) {
+      gridScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  };
+
+  const handleGridScroll = () => {
+    if (topScrollRef.current && gridScrollRef.current) {
+      topScrollRef.current.scrollLeft = gridScrollRef.current.scrollLeft;
+    }
+  };
+
   const handleSaveAllocations = (newAllocations: Allocation[]) => {
     setAllocations(newAllocations);
     try {
@@ -440,8 +456,22 @@ export default function Timetable() {
             <span className="text-xs text-slate-500 font-medium">Click any lesson cell to assign subject & teacher</span>
           )}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left">
+
+        {/* Synchronized Top Horizontal Scroll Track */}
+        <div
+          ref={topScrollRef}
+          onScroll={handleTopScroll}
+          className="overflow-x-auto overflow-y-hidden bg-slate-100/90 border-b border-slate-200 py-2 px-4"
+        >
+          <div style={{ width: '1200px', height: '1px' }} />
+        </div>
+
+        <div
+          ref={gridScrollRef}
+          onScroll={handleGridScroll}
+          className="overflow-x-auto"
+        >
+          <table ref={tableRef} className="w-full border-collapse text-left min-w-[1100px]">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-200">
                 <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">DAY / EVENT</th>
@@ -519,6 +549,7 @@ export default function Timetable() {
             </tbody>
           </table>
         </div>
+      </div>
       </Card>
 
       {/* Advanced Timetable Settings Modal with Dual Short Breaks */}
