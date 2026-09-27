@@ -534,7 +534,7 @@ const Login: React.FC = () => {
 
           {/* ── Portal Access Tabs ── */}
           <Tabs defaultValue="staff" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
+            <TabsList className="grid w-full grid-cols-2 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
                           <TabsTrigger
                             value="admin"
                             className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
@@ -542,14 +542,6 @@ const Login: React.FC = () => {
                             <Settings2 size={12} className="mr-1 shrink-0" />
                             <span className="hidden sm:inline">Admin</span>
                             <span className="sm:hidden">Admin</span>
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="super"
-                            className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                          >
-                            <Crown size={12} className="mr-1 shrink-0" />
-                            <span className="hidden sm:inline">Owner</span>
-                            <span className="sm:hidden">Owner</span>
                           </TabsTrigger>
               <TabsTrigger
                 value="staff"
@@ -626,106 +618,6 @@ const Login: React.FC = () => {
                             </CardContent>
                           </Card>
                         </TabsContent>
-
-            {/* ── OWNER TAB ── */}
-                        <TabsContent value="super" className="mt-4 space-y-4">
-                          {!selectedAdminRole ? (
-                            <>
-                              {adminAuthError && (
-                                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
-                                  <ShieldAlert size={20} className="shrink-0" />
-                                  <span>{adminAuthError}</span>
-                                </div>
-                              )}
-                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
-                                Choose Your Role
-                              </p>
-                              <RoleCard
-                                role={ROLE_CONFIGS.owner}
-                                onClick={() => handleRoleSelect('owner')}
-                                bgColor="bg-amber-50"
-                                textColor="text-amber-700"
-                                borderColor="border-amber-200"
-                                featureIcons={[
-                                  { Icon: CreditCard, label: 'Payments' },
-                                  { Icon: Crown, label: 'Owner' },
-                                  { Icon: Shield, label: 'Billing' },
-                                ]}
-                                hasCustomPassword={hasCustomAdminPassword()}
-                              />
-                            </>
-              ) : (
-                <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
-                  <CardContent className="p-6 md:p-8 space-y-6">
-                    <button
-                      onClick={handleBackToRoleSelect}
-                      className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm transition-colors"
-                    >
-                      <ChevronLeft size={20} /> Back to role selection
-                    </button>
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-amber-50 text-amber-600 shadow-amber-100 mb-4">
-                        {AdminIcon && <AdminIcon size={32} />}
-                      </div>
-                      <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                        {adminConfig!.label}
-                      </h2>
-                      <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
-                        {adminConfig!.fullDescription}
-                      </p>
-                    </div>
-                    {adminAuthError && (
-                      <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                        <ShieldAlert size={18} className="shrink-0" />
-                        <span>{adminAuthError}</span>
-                      </div>
-                    )}
-                    <form onSubmit={handleAdminLogin} className="space-y-5">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
-                        <div className="relative">
-                          <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                          <Input
-                            type={showAdminPassword ? 'text' : 'password'}
-                            value={adminPassword}
-                            onChange={e => { setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
-                            placeholder="Enter your password"
-                            className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowAdminPassword(!showAdminPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                          >
-                            {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-medium pt-1">
-                          {hasCustomAdminPassword() ? (
-                            <span className="flex items-center gap-1">
-                              <KeyRound size={9} />
-                              Custom PIN — set via Configuration &rarr; Owner Security
-                            </span>
-                          ) : null}
-                        </p>
-                      </div>
-                      <Button
-                        type="submit"
-                                                disabled={isAdminVerifying || !String(adminPassword || '').trim()}
-                                                className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
-                      >
-                        {isAdminVerifying ? (
-                          <><Loader2 className="animate-spin" size={20} /> Verifying...</>
-                        ) : (
-                          <><Unlock size={20} /> Sign In</>
-                        )}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
 
             {/* ── STAFF / TEACHER / BURSAR TAB ── */}
             <TabsContent value="staff" className="mt-4">
