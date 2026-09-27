@@ -228,8 +228,8 @@ const Timetable = () => {
                                 )}
                               </div>
                             ) : (
-                              <div className="py-2 text-center text-slate-300 text-xs font-medium">
-                                {isTeacher ? '—' : '+ Add Lesson'}
+                              <div className="py-2 text-center text-slate-400 text-xs font-medium">
+                                {isTeacher ? '—' : '+ Assign Subject / Teacher'}
                               </div>
                             )}
                           </div>
