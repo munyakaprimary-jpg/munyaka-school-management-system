@@ -215,21 +215,16 @@ const Timetable = () => {
                             }`}
                           >
                             {entry?.subject ? (
-                              <div className="space-y-1">
-                                <div className="font-bold text-slate-900 text-xs flex items-center justify-between gap-1">
-                                  <span className="truncate">{resolveSubjectName(entry.subject)}</span>
-                                  {!isTeacher && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>}
-                                </div>
-                                {resolveTeacherName(entry.teacherId, entry.teacherName) && (
-                                  <div className="text-[11px] text-slate-500 font-medium truncate">{resolveTeacherName(entry.teacherId, entry.teacherName)}</div>
-                                )}
+                              <div className="flex flex-col">
+                                <span className="font-bold text-sm text-gray-900">{resolveSubjectName(entry.subject)}</span>
+                                <span className="text-xs text-gray-500">{resolveTeacherName(entry.teacherId, entry.teacherName) || 'No Teacher'}</span>
                                 {entry.room && (
-                                  <div className="text-[9px] text-slate-400 font-mono">Room: {entry.room}</div>
+                                  <span className="text-[9px] text-slate-400 font-mono">Room: {entry.room}</span>
                                 )}
                               </div>
                             ) : (
                               <div className="py-2 text-center text-slate-400 text-xs font-medium">
-                                {isTeacher ? '—' : '+ Assign Subject / Teacher'}
+                                {isTeacher ? '—' : '+ Assign Lesson'}
                               </div>
                             )}
                           </div>
