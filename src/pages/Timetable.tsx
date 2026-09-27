@@ -110,7 +110,7 @@ const Timetable = () => {
 
   // Helper to resolve subject name
   const resolveSubjectName = (subject?: string): string => {
-    if (!subject) return 'No Subject';
+    if (!subject || subject === 'normal') return '';
     const subjectsList = (useSchoolStore as any).getState?.()?.subjects || PRESET_SUBJECTS;
     const matched = subjectsList.find((p: any) => String(p.id) === String(subject) || String(p.name).toLowerCase() === String(subject).toLowerCase());
     if (matched) return matched.name || matched.title || subject;
@@ -237,8 +237,10 @@ const Timetable = () => {
                           >
                             {(() => {
                               const entry = (entries[slotIndex]?.[dayKey] || null) as (LessonEntry & { subjectName?: string; teacherName?: string; teacherId?: string; staffId?: string; teacher?: string; title?: string; room?: string }) | null;
-                              const displaySubject = entry?.subject && entry.subject !== 'normal' ? resolveSubjectName(entry.subject) : (entry?.subjectName || entry?.title || '');
-                              const displayTeacher = entry?.teacherName || entry?.teacher || resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName);
+                              const rawSubject = entry?.subject || entry?.subjectName || entry?.title || '';
+                              const displaySubject = rawSubject && rawSubject !== 'normal' ? resolveSubjectName(rawSubject) : '';
+                              const rawTeacher = entry?.teacherName || entry?.teacher || resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName);
+                              const displayTeacher = rawTeacher && rawTeacher !== 'No Teacher' ? rawTeacher : '';
 
                               if (displaySubject) {
                                 return (
