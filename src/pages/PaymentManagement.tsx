@@ -29,6 +29,11 @@ export default function PaymentManagement() {
   // Access active store data for students and staff FIRST (to avoid Temporal Dead Zone)
   const students = useSchoolStore((state) => state.students) || [];
   const staff = useSchoolStore((state) => state.staff) || [];
+  const campuses = useSchoolStore((state) => state.campuses) || [];
+  const addCampus = useSchoolStore((state) => state.addCampus);
+  const deleteCampus = useSchoolStore((state) => state.deleteCampus);
+  const updateCampusSeats = useSchoolStore((state) => state.updateCampusSeats);
+
   const activeLearners = students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length;
   const PRICE_PER_SEAT = 250;
   const annualSubtotal = activeLearners * PRICE_PER_SEAT;
@@ -352,61 +357,55 @@ export default function PaymentManagement() {
             </div>
 
             <Card className="border border-slate-200 shadow-sm rounded-2xl overflow-hidden bg-white">
-              <CardHeader className="bg-slate-50/70 border-b border-slate-100 px-5 py-3.5">
+              <CardHeader className="bg-slate-50/70 border-b border-slate-100 px-5 py-3.5 flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-bold text-slate-900 flex items-center justify-between">
                   <span>Registered Campuses & Per-Seat Tiers</span>
-                  <Badge className="bg-indigo-100 text-indigo-700 font-bold px-2.5 py-0.5 text-xs">{subscriptions.length} Active</Badge>
+                  <Badge className="bg-indigo-100 text-indigo-700 font-bold px-2.5 py-0.5 text-xs ml-3">{campuses.length} Active</Badge>
                 </CardTitle>
+                <Button
+                  onClick={() => setIsRegisterCampusModalOpen(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl px-3.5 py-1.5 shadow-sm flex items-center gap-1.5"
+                >
+                  <span>+ Register New Campus</span>
+                </Button>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y divide-slate-100 text-xs">
-                  {subscriptions.length === 0 ? (
+                  {campuses.length === 0 ? (
                     <div className="p-8 text-center text-slate-500 font-medium space-y-3">
-                      <p>No active campuses registered in munyaka_central_db.</p>
+                      <p>No active campuses registered.</p>
                       <Button
                         onClick={() => {
-                          const newCampus = {
-                            id: Date.now(),
-                            school: 'Munyaka Primary & Junior School',
-                            tier: 'Enterprise Tier',
+                          addCampus({
+                            name: 'Munyaka Primary & Junior School',
+                            activeSeats: activeLearners || 120,
+                            pricePerSeat: 250,
                             status: 'Active',
-                            expires: new Date(Date.now() + 365*24*60*60*1000).toISOString().split('T')[0],
-                            amount: `KES ${annualSubtotal.toLocaleString()}`
-                          };
-                          const updated = [newCampus];
-                          setSubscriptions(updated);
-                          try {
-                            const centralRaw = localStorage.getItem('munyaka_central_db');
-                            if (centralRaw) {
-                              const centralDb = JSON.parse(centralRaw);
-                              centralDb.campuses = updated;
-                              localStorage.setItem('munyaka_central_db', JSON.stringify(centralDb));
-                            }
-                          } catch {}
-                          showSuccess('Primary campus registered successfully from database records.');
+                            expiryDate: '2028-09-27'
+                          });
+                          showSuccess('Default campus registered successfully.');
                         }}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl px-4 py-2"
                       >
-                        Register Primary Campus from Database
+                        Register Default Campus
                       </Button>
                     </div>
                   ) : (
-                    subscriptions.map((sub) => {
-                      const isMain = sub.id === 1;
-                      const subtotal = isMain ? annualSubtotal : (sub.school.includes('Eldoret') ? 180 * 250 : 120 * 250);
-                      const seatCount = isMain ? activeLearners : (sub.school.includes('Eldoret') ? 180 : 120);
+                    campuses.map((campus: any) => {
+                      const campusSeats = Number(campus.activeSeats || 50);
+                      const campusSubtotal = campusSeats * Number(campus.pricePerSeat || 250);
 
                       return (
-                        <div key={sub.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
+                        <div key={campus.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
                           <div className="flex items-start gap-3">
                             <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shrink-0 font-bold">
                               <Building2 size={20} />
                             </div>
                             <div>
-                              <h4 className="font-bold text-slate-900 text-sm">{sub.school}</h4>
+                              <h4 className="font-bold text-slate-900 text-sm">{campus.name}</h4>
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge className="bg-slate-100 text-slate-700 font-semibold text-[11px] px-2 py-0.5">{seatCount} Active Seats @ KES 250 / seat</Badge>
-                                <span className="text-[11px] text-slate-400 font-medium">Expires: {sub.expires}</span>
+                                <Badge className="bg-slate-100 text-slate-700 font-semibold text-[11px] px-2 py-0.5">{campusSeats} Active Seats @ KES {campus.pricePerSeat || 250} / seat</Badge>
+                                <span className="text-[11px] text-slate-400 font-medium">Expires: {campus.expiryDate || '2028-12-31'}</span>
                               </div>
                             </div>
                           </div>
@@ -414,28 +413,16 @@ export default function PaymentManagement() {
                           <div className="flex items-center justify-between md:justify-end gap-2.5">
                           <div className="text-right">
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Annual Subtotal</p>
-                            <p className="font-extrabold text-slate-900 text-xs">KES {subtotal.toLocaleString()}</p>
+                            <p className="font-extrabold text-slate-900 text-xs">KES {campusSubtotal.toLocaleString()}</p>
                           </div>
-                          <Badge className={sub.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-0.5' : 'bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-0.5'}>
-                            {sub.status}
+                          <Badge className={campus.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-0.5' : 'bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-0.5'}>
+                            {campus.status}
                           </Badge>
                           <div className="flex items-center gap-1.5">
                             <Button
                               onClick={() => {
-                                setPaymentCampus(sub.school);
-                                // Dynamically compute amount based on campus learner count & monthly fee from munyaka_central_db
-                                let computedAmt = subtotal;
-                                try {
-                                  const centralRaw = localStorage.getItem('munyaka_central_db');
-                                  if (centralRaw) {
-                                    const centralDb = JSON.parse(centralRaw);
-                                    const learners = Array.isArray(centralDb.students) ? centralDb.students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED') : [];
-                                    const staffList = Array.isArray(centralDb.staff) ? centralDb.staff : [];
-                                    const count = (learners.length + staffList.length) > 0 ? (learners.length + staffList.length) : seatCount;
-                                    computedAmt = count * 250 * 12; // 12 months standard annual fee
-                                  }
-                                } catch {}
-                                setPaymentAmount(String(computedAmt));
+                                setPaymentCampus(campus.name);
+                                setPaymentAmount(String(campusSubtotal));
                                 setPaymentPeriod('1 Year Extension');
                                 setIsPaymentModalOpen(true);
                               }}
@@ -452,12 +439,21 @@ export default function PaymentManagement() {
                               </Button>
                               <Button
                                 variant="outline"
-                                onClick={() => setCampusToDelete({ id: sub.id, school: sub.school })}
+                                onClick={() => deleteCampus(campus.id)}
                                 className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                                 title="Remove Campus"
                               >
                                 <Trash2 size={13} />
                               </Button>
+                          </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </CardContent>
+            </Card>
                             </div>
                           </div>
                         </div>
