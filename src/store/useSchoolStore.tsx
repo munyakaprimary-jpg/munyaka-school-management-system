@@ -110,6 +110,36 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
     },
+    saveAllocation: (item: { day: string; slotId: string | number; classId?: string; gradeStream?: string; subject?: string; subjectName?: string; teacher?: string; teacherName?: string }) => {
+      try {
+        const current = getInitialStorage('school-timetable-data', storeState.timetable || {});
+        const targetClass = item.classId || item.gradeStream || 'Grade 4 Green';
+        const gradeObj = current[targetClass] || { timeSlots: [], entries: [] };
+        
+        let slotIdx = typeof item.slotId === 'number' ? item.slotId : gradeObj.timeSlots.findIndex((s: any) => s.id === item.slotId);
+        if (slotIdx !== -1 && gradeObj.timeSlots[slotIdx]) {
+          const slotIdStr = gradeObj.timeSlots[slotIdx].id;
+          if (!gradeObj.entries[slotIdx]) {
+            gradeObj.entries[slotIdx] = {};
+          }
+          gradeObj.entries[slotIdx][item.day.toLowerCase()] = {
+            id: item.id || `${item.day}-${slotIdStr}`,
+            subject: item.subjectName || item.subject || '',
+            color: 'bg-indigo-100 text-indigo-700 border border-indigo-200',
+            teacherId: (item as any).teacherId || '',
+            teacherName: item.teacherName || item.teacher || '',
+          };
+        }
+        const updated = { ...current, [targetClass]: gradeObj };
+        localStorage.setItem('school-timetable-data', JSON.stringify(updated));
+        localStorage.setItem('munyaka_timetable', JSON.stringify(updated));
+        storeState.timetable = updated;
+        listeners.forEach(l => l());
+        window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+      } catch (err) {
+        console.error('[useSchoolStore] Failed to save allocation:', err);
+      }
+    },
     setSettings: (settings: any) => {
       localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(settings));
       storeState.settings = settings;

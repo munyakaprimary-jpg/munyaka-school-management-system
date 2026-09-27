@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { LessonEntry } from '@/hooks/useTimetable';
 import { getTeachingStaffFromLocalStorage } from '@/hooks/useTimetable';
 
+import { useSchoolStore } from '@/store/useSchoolStore';
+
 interface LessonDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -90,15 +92,28 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
     const selectedTeacherObj = teachingStaff.find(s => s.id === assignedTeacherId);
     const finalTeacherName = selectedTeacherObj?.name || assignedTeacherName || '';
     
-    console.log('SAVING TIMETABLE LESSON:', {
+    const payload = {
+      id: `${day}-${slotIndex}`,
+      day: day.toLowerCase(),
+      slotId: slotIndex,
+      classId: 'Grade 4 Green', // or active grade
       subject: finalSubject,
       subjectName: finalSubject,
       teacher: finalTeacherName,
       teacherName: finalTeacherName,
       teacherId: assignedTeacherId,
-      day,
-      slotIndex,
-    });
+    };
+
+    console.log('SAVING TIMETABLE LESSON:', payload);
+
+    try {
+      const store = useSchoolStore.getState();
+      if (store && typeof (store as any).saveAllocation === 'function') {
+        (store as any).saveAllocation(payload);
+      }
+    } catch (e) {
+      console.error('Failed to dispatch saveAllocation:', e);
+    }
 
     // Ensure all required properties are passed to persistence
     onSave(
