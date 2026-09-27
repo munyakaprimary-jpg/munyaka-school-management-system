@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  Plus, 
-  Printer, 
-  Download, 
-  ChevronDown, 
+import { useState, useMemo } from 'react';
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  Plus,
+  Printer,
+  Download,
+  ChevronDown,
   Sparkles,
   BookOpen,
   CheckCircle2,
@@ -22,8 +22,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useSchoolStore } from '@/store/useSchoolStore';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+
+const PRESET_SUBJECTS = [
+  { name: 'Mathematics', color: 'bg-indigo-100 text-indigo-700 border border-indigo-200' },
+  { name: 'English', color: 'bg-emerald-100 text-emerald-700 border border-emerald-200' },
+  { name: 'Kiswahili', color: 'bg-rose-100 text-rose-700 border border-rose-200' },
+  { name: 'Science', color: 'bg-cyan-100 text-cyan-700 border border-cyan-200' },
+  { name: 'Social Studies', color: 'bg-amber-100 text-amber-700 border border-amber-200' },
+  { name: 'Religious Education', color: 'bg-violet-100 text-violet-700 border border-violet-200' },
+  { name: 'Physical Education', color: 'bg-orange-100 text-orange-700 border border-orange-200' },
+  { name: 'Creative Arts', color: 'bg-pink-100 text-pink-700 border border-pink-200' },
+  { name: 'Music', color: 'bg-teal-100 text-teal-700 border border-teal-200' },
+  { name: 'Library', color: 'bg-sky-100 text-sky-700 border border-sky-200' },
+  { name: 'Computer Studies', color: 'bg-indigo-100 text-indigo-700 border border-indigo-200' },
+  { name: 'Agriculture', color: 'bg-emerald-100 text-emerald-700 border border-emerald-200' },
+];
 
 const Timetable = () => {
   const { user } = useAuth();
@@ -43,6 +60,9 @@ const Timetable = () => {
     resetTimetable,
   } = useTimetable();
 
+  // Get staff/teachers from store for teacher name resolution
+  const staff = useSchoolStore(state => state.staff);
+
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState<any>(null);
   const [selectedCell, setSelectedCell] = useState<{ day: string; slotId: string } | null>(null);
@@ -57,6 +77,42 @@ const Timetable = () => {
     ? (entries[currentSlotIndex][selectedCell.day] || null)
     : null) as LessonEntry | null;
 
+  // Parse selectedGrade to extract grade and stream
+  // e.g., "Grade 4 Green" -> grade: "Grade 4", stream: "Green"
+  const { grade: selectedGradeName, stream: selectedStream } = useMemo(() => {
+    const parts = selectedGrade.split(' ');
+    if (parts.length >= 2 && parts[0] === 'Grade') {
+      // Format: "Grade X StreamName"
+      const gradeNum = parts[1];
+      const streamName = parts.slice(2).join(' ');
+      return { grade: `Grade ${gradeNum}`, stream: streamName };
+    }
+    // Fallback: try to split on last space
+    const lastSpace = selectedGrade.lastIndexOf(' ');
+    if (lastSpace > 0) {
+      return { grade: selectedGrade.substring(0, lastSpace), stream: selectedGrade.substring(lastSpace + 1) };
+    }
+    return { grade: selectedGrade, stream: '' };
+  }, [selectedGrade]);
+
+  // Helper to resolve teacher name from teacherId
+  const resolveTeacherName = (teacherId?: string, teacherName?: string): string => {
+    if (teacherName) return teacherName;
+    if (!teacherId) return '';
+    const teacher = staff.find((s: any) => String(s.id) === String(teacherId));
+    return teacher?.name || teacher?.fullName || '';
+  };
+
+  // Helper to resolve subject name (could be ID or name)
+  const resolveSubjectName = (subject?: string): string => {
+    if (!subject) return '';
+    // Check if it's a preset subject
+    const preset = PRESET_SUBJECTS.find(p => p.name === subject);
+    if (preset) return preset.name;
+    // Otherwise return as-is (could be a custom subject name)
+    return subject;
+  };
+
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full font-sans">
       {/* Header Banner */}
@@ -69,8 +125,8 @@ const Timetable = () => {
             {isTeacher ? 'My Class Timetable' : 'School Timetable Management'}
           </h1>
           <p className="text-slate-500 text-sm">
-            {isTeacher 
-              ? `Read-only weekly timetable schedule for ${selectedGrade}.` 
+            {isTeacher
+              ? `Read-only weekly timetable schedule for ${selectedGrade}.`
               : 'Configure time slots, assign learning areas, and manage weekly class schedules.'}
           </p>
         </div>
@@ -123,7 +179,7 @@ const Timetable = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {timeSlots.map(slot => {
+              {timeSlots.map((slot, slotIndex) => {
                 const isCategorySlot = slot.category && slot.category !== 'normal';
                 if (isCategorySlot) {
                   return (
@@ -146,26 +202,30 @@ const Timetable = () => {
                       <div className="font-bold text-slate-800 text-sm">{(slot as any).label || 'Lesson'}</div>
                       <div className="font-mono text-xs text-slate-400 mt-0.5">{slot.startTime} - {slot.endTime}</div>
                     </td>
-                    {DAYS.map(day => {
-                      const entry = entries.find(e => e.day === day && e.slotId === slot.id);
+                    {DAYS.map((day, dayIndex) => {
+                      // FIX: Use slotIndex and day key to lookup entry correctly
+                      // entries is TimetableEntry[] where each entry is { [day: string]: LessonEntry | null }
+                      const dayKey = DAY_KEYS[dayIndex];
+                      const entry = entries[slotIndex]?.[dayKey] || null;
+
                       return (
                         <td key={day} className="p-3 align-top border-l border-slate-100">
                           <div
                             onClick={() => handleCellClick(day, slot.id)}
                             className={`p-3 rounded-2xl border transition-all ${
-                              isTeacher 
-                                ? 'bg-slate-50/60 border-slate-100 cursor-default shadow-none' 
+                              isTeacher
+                                ? 'bg-slate-50/60 border-slate-100 cursor-default shadow-none'
                                 : 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
                             }`}
                           >
                             {entry?.subject ? (
                               <div className="space-y-1">
                                 <div className="font-bold text-slate-900 text-sm flex items-center justify-between">
-                                  <span>{entry.subject}</span>
+                                  <span>{resolveSubjectName(entry.subject)}</span>
                                   {!isTeacher && <Badge className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0">Active</Badge>}
                                 </div>
-                                {entry.teacher && (
-                                  <div className="text-xs text-slate-500 font-medium">{entry.teacher}</div>
+                                {resolveTeacherName(entry.teacherId, entry.teacherName) && (
+                                  <div className="text-xs text-slate-500 font-medium">{resolveTeacherName(entry.teacherId, entry.teacherName)}</div>
                                 )}
                                 {entry.room && (
                                   <div className="text-[10px] text-slate-400 font-mono">Room: {entry.room}</div>
