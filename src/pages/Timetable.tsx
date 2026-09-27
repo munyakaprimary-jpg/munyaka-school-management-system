@@ -3,7 +3,10 @@ import {
   Calendar as CalendarIcon,
   Printer,
   Trash2,
-  X
+  X,
+  Settings,
+  SlidersHorizontal,
+  Clock
 } from 'lucide-react';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { Button } from '@/components/ui/button';
@@ -19,21 +22,8 @@ interface Allocation {
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
 const GRADES = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 const STREAMS = ['Green', 'Blue', 'Red', 'Yellow', 'East', 'West'];
-
-const LESSON_SLOTS = [
-  { id: 'slot-1', name: 'Lesson 1', time: '08:20 - 09:00', isBreak: false },
-  { id: 'slot-2', name: 'Lesson 2', time: '09:00 - 09:40', isBreak: false },
-  { id: 'break', name: 'Break Time', time: '09:40 - 10:10', isBreak: true },
-  { id: 'slot-3', name: 'Lesson 3', time: '10:10 - 10:50', isBreak: false },
-  { id: 'slot-4', name: 'Lesson 4', time: '10:50 - 11:30', isBreak: false },
-  { id: 'slot-5', name: 'Lesson 5', time: '11:30 - 12:10', isBreak: false },
-  { id: 'lunch', name: 'Lunch Break', time: '12:10 - 01:30', isBreak: true },
-  { id: 'slot-6', name: 'Lesson 6', time: '01:30 - 02:10', isBreak: false },
-  { id: 'slot-7', name: 'Lesson 7', time: '02:10 - 02:50', isBreak: false },
-];
 
 const PRESET_SUBJECTS = [
   'Mathematics',
@@ -48,6 +38,26 @@ const PRESET_SUBJECTS = [
   'Computer Studies',
   'Music'
 ];
+
+interface TimeSlot {
+  id: string;
+  name: string;
+  time: string;
+  isBreak: boolean;
+}
+
+// Helper to convert "HH:MM" to total minutes from midnight
+const timeToMinutes = (timeStr: string): number => {
+  const [h, m] = timeStr.split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+// Helper to convert total minutes back to "HH:MM"
+const minutesToTime = (totalMinutes: number): string => {
+  const hours = Math.floor(totalMinutes / 60) % 24;
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
 
 export default function Timetable() {
   const currentUser = useSchoolStore(state => (state as any).currentUser || { role: 'admin', name: 'Administrator' });
@@ -69,6 +79,75 @@ export default function Timetable() {
   const [selectedGrade, setSelectedGrade] = useState('Grade 4');
   const [selectedStream, setSelectedStream] = useState('Green');
   const selectedClassKey = `${selectedGrade} ${selectedStream}`;
+
+  // Timetable Configuration Settings state
+  const [config, setConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_timetable_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch {}
+    return {
+      startTime: '08:20',
+      lessonDuration: 40,
+      breakDuration: 30,
+      totalLessons: 8
+    };
+  });
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [tempConfig, setTempConfig] = useState(config);
+
+  // Dynamic Time Slot Calculator
+  const LESSON_SLOTS = useMemo<TimeSlot[]>(() => {
+    const slots: TimeSlot[] = [];
+    let currentMinutes = timeToMinutes(config.startTime || '08:20');
+    const lessonDur = Number(config.lessonDuration) || 40;
+    const breakDur = Number(config.breakDuration) || 30;
+    const total = Number(config.totalLessons) || 8;
+
+    for (let i = 1; i <= total; i++) {
+      // Insert Break after Lesson 2 (or roughly middle)
+      if (i === 3) {
+        const breakStart = minutesToTime(currentMinutes);
+        currentMinutes += breakDur;
+        const breakEnd = minutesToTime(currentMinutes);
+        slots.push({
+          id: 'break-1',
+          name: 'Break Time',
+          time: `${breakStart} - ${breakEnd}`,
+          isBreak: true
+        });
+      }
+      // Insert Lunch Break after Lesson 5
+      if (i === 6) {
+        const lunchStart = minutesToTime(currentMinutes);
+        currentMinutes += 60; // 1 hour lunch
+        const lunchEnd = minutesToTime(currentMinutes);
+        slots.push({
+          id: 'lunch-1',
+          name: 'Lunch Break',
+          time: `${lunchStart} - ${lunchEnd}`,
+          isBreak: true
+        });
+      }
+
+      const lessonStart = minutesToTime(currentMinutes);
+      currentMinutes += lessonDur;
+      const lessonEnd = minutesToTime(currentMinutes);
+
+      slots.push({
+        id: `slot-${i}`,
+        name: `Lesson ${i}`,
+        time: `${lessonStart} - ${lessonEnd}`,
+        isBreak: false
+      });
+    }
+
+    return slots;
+  }, [config]);
 
   // Allocations state
   const [allocations, setAllocations] = useState<Allocation[]>(() => {
@@ -100,7 +179,7 @@ export default function Timetable() {
     } catch {}
   };
 
-  const handleCellClick = (day: string, slot: typeof LESSON_SLOTS[0]) => {
+  const handleCellClick = (day: string, slot: TimeSlot) => {
     if (slot.isBreak) return;
     if (!isAdmin) return;
 
@@ -152,6 +231,15 @@ export default function Timetable() {
     setSelectedSlot(null);
   };
 
+  const handleSaveConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    setConfig(tempConfig);
+    try {
+      localStorage.setItem('munyaka_timetable_config', JSON.stringify(tempConfig));
+    } catch {}
+    setIsSettingsOpen(false);
+  };
+
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full font-sans">
       {/* Header Banner */}
@@ -168,7 +256,7 @@ export default function Timetable() {
           </p>
         </div>
 
-        {/* Grade & Stream Selectors */}
+        {/* Grade, Stream & Settings Controls */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Grade</label>
@@ -196,7 +284,16 @@ export default function Timetable() {
             </select>
           </div>
 
-          <div className="flex items-end pt-5">
+          <div className="flex items-end gap-2 pt-5">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                onClick={() => { setTempConfig(config); setIsSettingsOpen(true); }}
+                className="rounded-xl font-bold border-slate-200 flex items-center gap-1.5 h-10 text-slate-700 hover:bg-slate-50"
+              >
+                <SlidersHorizontal size={16} /> Timetable Settings
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => window.print()}
@@ -282,6 +379,100 @@ export default function Timetable() {
           </table>
         </div>
       </Card>
+
+      {/* Timetable Settings Modal / Drawer */}
+      {isAdmin && isSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700">
+                  <SlidersHorizontal size={20} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">Timetable Settings</h3>
+                  <p className="text-xs text-slate-500">Configure schedule timing & period counts</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveConfig} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Start Time (First Lesson)</label>
+                <input
+                  type="time"
+                  value={tempConfig.startTime}
+                  onChange={(e) => setTempConfig({ ...tempConfig, startTime: e.target.value })}
+                  className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Lesson Duration (Minutes)</label>
+                <input
+                  type="number"
+                  min="15"
+                  max="120"
+                  value={tempConfig.lessonDuration}
+                  onChange={(e) => setTempConfig({ ...tempConfig, lessonDuration: parseInt(e.target.value) || 40 })}
+                  className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Short Break Duration (Minutes)</label>
+                <input
+                  type="number"
+                  min="10"
+                  max="60"
+                  value={tempConfig.breakDuration}
+                  onChange={(e) => setTempConfig({ ...tempConfig, breakDuration: parseInt(e.target.value) || 30 })}
+                  className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Total Lessons per Day</label>
+                <input
+                  type="number"
+                  min="4"
+                  max="10"
+                  value={tempConfig.totalLessons}
+                  onChange={(e) => setTempConfig({ ...tempConfig, totalLessons: parseInt(e.target.value) || 8 })}
+                  className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="rounded-xl font-bold text-slate-600"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold px-6 shadow-md"
+                >
+                  Save Settings
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Assign Lesson Drawer / Modal */}
       {isDrawerOpen && selectedSlot && (
