@@ -237,8 +237,7 @@ const Timetable = () => {
                           >
                             {(() => {
                               const entry = (entries[slotIndex]?.[dayKey] || null) as (LessonEntry & { subjectName?: string; teacherName?: string; teacherId?: string; staffId?: string; teacher?: string; title?: string; room?: string }) | null;
-                              const rawSubject = entry?.subject || entry?.subjectName || entry?.title;
-                              const displaySubject = rawSubject && rawSubject !== 'normal' ? resolveSubjectName(rawSubject) : '';
+                              const displaySubject = entry?.subject && entry.subject !== 'normal' ? resolveSubjectName(entry.subject) : (entry?.subjectName || entry?.title || '');
                               const displayTeacher = entry?.teacherName || entry?.teacher || resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName);
 
                               if (displaySubject) {
