@@ -22,7 +22,7 @@ interface Props {
 const AuthGate: React.FC<Props> = ({ children }) => {
   const { isLoading } = useAuth();
 
-  if (isLoading && false) {
+  if (isLoading) {
     return <AuthLoadingFallback />;
   }
 
