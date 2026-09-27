@@ -148,7 +148,7 @@ const makeEntryForSlot = (slot: TimeSlot): TimetableEntry => {
   return Object.fromEntries(
     DAYS.map(day => [
       day,
-      slot.category
+      slot.category && slot.category !== 'normal'
         ? { id: crypto.randomUUID(), subject: slot.category, color: `${color.bg} ${color.text} border ${color.border}` }
         : null,
     ])
