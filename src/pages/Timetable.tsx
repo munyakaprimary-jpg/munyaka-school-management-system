@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   Calendar as CalendarIcon,
   Printer,
@@ -297,6 +297,21 @@ export default function Timetable() {
   const [chosenSubject, setChosenSubject] = useState('Mathematics');
   const [chosenTeacher, setChosenTeacher] = useState(teacherOptions[0] || 'ANN NDUTA MBUGUA');
 
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const gridScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleTopScroll = () => {
+    if (gridScrollRef.current && topScrollRef.current) {
+      gridScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  };
+
+  const handleGridScroll = () => {
+    if (topScrollRef.current && gridScrollRef.current) {
+      topScrollRef.current.scrollLeft = gridScrollRef.current.scrollLeft;
+    }
+  };
+
   const handleSaveAllocations = (newAllocations: Allocation[]) => {
     setAllocations(newAllocations);
     try {
@@ -431,8 +446,8 @@ export default function Timetable() {
       </div>
 
       {/* Grid Table with Columns = Lesson Slots & Events, Rows = Days */}
-      <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+      <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden p-4 space-y-3">
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
             Active Class Schedule: <span className="text-emerald-700">{selectedClassKey}</span>
           </span>
@@ -440,8 +455,24 @@ export default function Timetable() {
             <span className="text-xs text-slate-500 font-medium">Click any lesson cell to assign subject & teacher</span>
           )}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left">
+
+        <div className="w-full space-y-2">
+          {/* TOP HORIZONTAL SCROLLBAR */}
+          <div
+            ref={topScrollRef}
+            onScroll={handleTopScroll}
+            className="w-full overflow-x-auto overflow-y-hidden h-3 bg-slate-100 rounded-md"
+          >
+            <div className="h-1 min-w-[1400px]" />
+          </div>
+
+          {/* MAIN TIMETABLE GRID */}
+          <div
+            ref={gridScrollRef}
+            onScroll={handleGridScroll}
+            className="w-full overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm"
+          >
+            <table className="w-full min-w-[1400px] border-collapse text-left">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-200">
                 <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">DAY / EVENT</th>
@@ -518,6 +549,7 @@ export default function Timetable() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </Card>
 
