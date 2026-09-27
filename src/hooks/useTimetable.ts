@@ -399,13 +399,13 @@ export function useTimetable() {
         if (!current) return prev;
         const slotIdx = current.timeSlots.findIndex(s => s.id === slotId);
         if (slotIdx === -1) return prev;
-        const color = updates.color || SUBJECT_COLORS[Math.floor(Math.random() * SUBJECT_COLORS.length)];
+        const existingEntry = current.entries[slotIdx]?.[day];
         const newEntry: LessonEntry | null = updates.subject ? {
-          id: crypto.randomUUID(),
+          id: existingEntry?.id || crypto.randomUUID(),
           subject: updates.subject,
-          color,
-          teacherId: updates.teacherId,
-          teacherName: updates.teacherName,
+          color: updates.color || existingEntry?.color || SUBJECT_COLORS[Math.floor(Math.random() * SUBJECT_COLORS.length)],
+          teacherId: updates.teacherId !== undefined ? updates.teacherId : existingEntry?.teacherId,
+          teacherName: updates.teacherName !== undefined ? updates.teacherName : existingEntry?.teacherName,
         } : null;
 
         const updatedEntries = current.entries.map((entry, idx) => {
