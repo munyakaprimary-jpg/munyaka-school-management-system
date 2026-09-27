@@ -90,6 +90,16 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
     const selectedTeacherObj = teachingStaff.find(s => s.id === assignedTeacherId);
     const finalTeacherName = selectedTeacherObj?.name || assignedTeacherName || '';
     
+    console.log('SAVING TIMETABLE LESSON:', {
+      subject: finalSubject,
+      subjectName: finalSubject,
+      teacher: finalTeacherName,
+      teacherName: finalTeacherName,
+      teacherId: assignedTeacherId,
+      day,
+      slotIndex,
+    });
+
     // Ensure all required properties are passed to persistence
     onSave(
       finalSubject,

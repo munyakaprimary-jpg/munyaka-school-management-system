@@ -242,11 +242,11 @@ const Timetable = () => {
 
                               if (displaySubject) {
                                 return (
-                                  <div className="flex flex-col p-1 text-center">
-                                    <span className="font-bold text-sm text-gray-900">{displaySubject}</span>
-                                    <span className="text-xs text-gray-600">{displayTeacher || 'No Teacher'}</span>
+                                  <div className="p-1">
+                                    <div className="font-bold text-sm text-gray-900">{displaySubject}</div>
+                                    <div className="text-xs text-gray-600">{displayTeacher || 'No Teacher'}</div>
                                     {entry?.room && (
-                                      <span className="text-[9px] text-slate-400 font-mono mt-1">Room: {entry.room}</span>
+                                      <div className="text-[9px] text-slate-400 font-mono mt-1">Room: {entry.room}</div>
                                     )}
                                   </div>
                                 );
