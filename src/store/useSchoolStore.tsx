@@ -116,6 +116,50 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
     },
+    exportBackup: () => {
+      const state = useSchoolStore();
+      const backup = {
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        staff: state.staff,
+        learners: state.learners,
+        attendance: state.attendance,
+        fees: state.fees,
+        exams: state.exams,
+        marks: state.marks,
+        timetables: getInitialStorage('munyaka_timetable_allocations', []),
+        timetableConfig: getInitialStorage('munyaka_timetable_config_dual_breaks', {}),
+        customLearningAreas: getInitialStorage('munyaka_cbc_learning_area_clusters', null)
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `munyaka_school_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    importBackup: (jsonData: string) => {
+      try {
+        const data = JSON.parse(jsonData);
+        if (data && typeof data === 'object') {
+          if (data.staff) localStorage.setItem('munyaka_staff', JSON.stringify(data.staff));
+          if (data.learners) localStorage.setItem('munyaka_students', JSON.stringify(data.learners));
+          if (data.attendance) localStorage.setItem('munyaka_attendance', JSON.stringify(data.attendance));
+          if (data.fees) localStorage.setItem('munyaka_fees', JSON.stringify(data.fees));
+          if (data.timetables) localStorage.setItem('munyaka_timetable_allocations', JSON.stringify(data.timetables));
+          if (data.timetableConfig) localStorage.setItem('munyaka_timetable_config_dual_breaks', JSON.stringify(data.timetableConfig));
+          if (data.customLearningAreas) {
+            localStorage.setItem('munyaka_cbc_learning_area_clusters', JSON.stringify(data.customLearningAreas));
+            window.dispatchEvent(new Event('learning_areas_updated'));
+          }
+          listeners.forEach(l => l());
+          window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+          return true;
+        }
+      } catch {}
+      return false;
+    },
     refreshStore: () => {
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
@@ -149,7 +193,3 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
   const st = useSchoolStore();
   st.setState(partial);
 };
-
-export const SchoolStoreProvider = ({ children }: { children?: any }) => children ?? null;
-
-export default useSchoolStore;
