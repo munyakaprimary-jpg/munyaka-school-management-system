@@ -24,6 +24,7 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const GRADES = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 const STREAMS = ['Green', 'Blue', 'Red', 'Yellow', 'East', 'West'];
 const YEARS = ['2024', '2025', '2026', '2027'];
+const TERMS = ['Term 1', 'Term 2', 'Term 3'];
 
 interface TimeSlot {
   id: string;
@@ -62,11 +63,12 @@ export default function Timetable() {
   const role = (currentUser?.role || 'admin').toLowerCase();
   const isAdmin = role === 'admin' || role === 'headteacher' || role === 'principal' || role === 'super_admin' || true;
 
-  // Grade, Stream & Year state
+  // Grade, Stream, Year & Term state
   const [selectedGrade, setSelectedGrade] = useState('Grade 4');
   const [selectedStream, setSelectedStream] = useState('Green');
   const [selectedYear, setSelectedYear] = useState('2026');
-  const selectedClassKey = `${selectedYear}-${selectedGrade}-${selectedStream}`;
+  const [selectedTerm, setSelectedTerm] = useState('Term 3');
+  const selectedClassKey = `${selectedYear}-${selectedTerm}-${selectedGrade}-${selectedStream}`;
 
   // Dynamic Learning Areas from LocalStorage / Learning Area Manager store with window storage event listening
   const [learningAreaClusters, setLearningAreaClusters] = useState(() => {
@@ -286,10 +288,10 @@ export default function Timetable() {
       }
     } catch {}
     return [
-      { id: '2026-Grade 4-Green-Monday-slot-1', classKey: '2026-Grade 4-Green', day: 'Monday', slotId: 'slot-1', subject: 'Mathematics', teacher: teacherOptions[0] || 'ANN NDUTA MBUGUA' },
-      { id: '2026-Grade 4-Green-Monday-slot-2', classKey: '2026-Grade 4-Green', day: 'Monday', slotId: 'slot-2', subject: 'English', teacher: teacherOptions[1] || 'JOHN KAMAU' },
-      { id: '2026-Grade 4-Green-Tuesday-slot-3', classKey: '2026-Grade 4-Green', day: 'Tuesday', slotId: 'slot-3', subject: 'Agriculture', teacher: teacherOptions[0] || 'ANN NDUTA MBUGUA' },
-      { id: '2026-Grade 4-Green-Wednesday-slot-4', classKey: '2026-Grade 4-Green', day: 'Wednesday', slotId: 'slot-4', subject: 'Science', teacher: teacherOptions[2] || 'MARY WANJIKU' }
+      { id: '2026-Term 3-Grade 4-Green-Monday-slot-1', classKey: '2026-Term 3-Grade 4-Green', day: 'Monday', slotId: 'slot-1', subject: 'Mathematics', teacher: teacherOptions[0] || 'ANN NDUTA MBUGUA' },
+      { id: '2026-Term 3-Grade 4-Green-Monday-slot-2', classKey: '2026-Term 3-Grade 4-Green', day: 'Monday', slotId: 'slot-2', subject: 'English', teacher: teacherOptions[1] || 'JOHN KAMAU' },
+      { id: '2026-Term 3-Grade 4-Green-Tuesday-slot-3', classKey: '2026-Term 3-Grade 4-Green', day: 'Tuesday', slotId: 'slot-3', subject: 'Agriculture', teacher: teacherOptions[0] || 'ANN NDUTA MBUGUA' },
+      { id: '2026-Term 3-Grade 4-Green-Wednesday-slot-4', classKey: '2026-Term 3-Grade 4-Green', day: 'Wednesday', slotId: 'slot-4', subject: 'Science', teacher: teacherOptions[2] || 'MARY WANJIKU' }
     ];
   });
 
@@ -394,11 +396,11 @@ export default function Timetable() {
             {isAdmin ? 'Timetable Management' : 'Teacher Timetable (Read-Only)'}
           </h1>
           <p className="text-slate-500 text-sm">
-            Showing Timetable for <strong className="text-emerald-700 font-bold">{selectedYear} - {selectedGrade} {selectedStream}</strong>
+            Showing Timetable for <strong className="text-emerald-700 font-bold">{selectedYear} • {selectedTerm} • {selectedGrade} {selectedStream}</strong>
           </p>
         </div>
 
-        {/* Grade, Stream, Year & Settings Controls */}
+        {/* Grade, Stream, Year, Term & Settings Controls */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Year</label>
@@ -409,6 +411,19 @@ export default function Timetable() {
             >
               {YEARS.map(yr => (
                 <option key={yr} value={yr}>{yr}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Term</label>
+            <select
+              value={selectedTerm}
+              onChange={(e) => setSelectedTerm(e.target.value)}
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              {TERMS.map(term => (
+                <option key={term} value={term}>{term}</option>
               ))}
             </select>
           </div>
@@ -464,7 +479,7 @@ export default function Timetable() {
       <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden p-4 space-y-3">
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
-            Active Class Schedule: <span className="text-emerald-700">{selectedYear} {selectedGrade} {selectedStream}</span>
+            Active Class Schedule: <span className="text-emerald-700">{selectedYear} • {selectedTerm} • {selectedGrade} {selectedStream}</span>
           </span>
           {isAdmin && (
             <span className="text-xs text-slate-500 font-medium">Click any lesson cell to assign subject & teacher</span>
