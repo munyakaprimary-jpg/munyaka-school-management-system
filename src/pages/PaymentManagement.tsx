@@ -26,6 +26,29 @@ import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
 import { useSchoolStore } from '@/store/useSchoolStore';
 
 export default function PaymentManagement() {
+  // Access active store data for students and staff FIRST (to avoid Temporal Dead Zone)
+  const students = useSchoolStore((state) => state.students) || [];
+  const staff = useSchoolStore((state) => state.staff) || [];
+  const activeLearners = students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length;
+  const PRICE_PER_SEAT = 250;
+  const annualSubtotal = activeLearners * PRICE_PER_SEAT;
+
+  // Dynamic license key formatting based on active school ID / name
+  const schoolIdHex = useMemo(() => {
+    try {
+      const name = localStorage.getItem('munyaka_school_name') || 'MUNYAKA';
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = (hash << 5) - hash + name.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash).toString(16).toUpperCase().substring(0, 4);
+    } catch {
+      return '9982';
+    }
+  }, []);
+  const dynamicLicenseKey = `MUNYAKA-ENT-2026-${schoolIdHex}`;
+
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'seats' | 'monthly' | 'gateways' | 'invoices'>('subscriptions');
   const [mpesaNumber, setMpesaNumber] = useState('0738873359');
   const [selectedPlan, setSelectedPlan] = useState('Enterprise Annual (KES 120,000)');
@@ -57,13 +80,6 @@ export default function PaymentManagement() {
       return false;
     }
   });
-
-  // Access active store data for students and staff
-  const students = useSchoolStore((state) => state.students) || [];
-  const staff = useSchoolStore((state) => state.staff) || [];
-  const activeLearners = students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length;
-  const PRICE_PER_SEAT = 250;
-  const annualSubtotal = activeLearners * PRICE_PER_SEAT;
 
   // Real Data from munyaka_central_db and school store
   const { totalActiveStudents, totalActiveStaff, totalCapacity, availableSlots } = useMemo(() => {
@@ -111,22 +127,6 @@ export default function PaymentManagement() {
   // Seat allocation state (dynamically derived from live active students + staff)
   const allocatedSeats = totalActiveStudents + totalActiveStaff;
   const [maxSeats, setMaxSeats] = useState(totalCapacity);
-
-  // Dynamic license key formatting based on active school ID / name
-  const schoolIdHex = useMemo(() => {
-    try {
-      const name = localStorage.getItem('munyaka_school_name') || 'MUNYAKA';
-      let hash = 0;
-      for (let i = 0; i < name.length; i++) {
-        hash = (hash << 5) - hash + name.charCodeAt(i);
-        hash |= 0;
-      }
-      return Math.abs(hash).toString(16).toUpperCase().substring(0, 4);
-    } catch {
-      return '9982';
-    }
-  }, []);
-  const dynamicLicenseKey = `MUNYAKA-ENT-2026-${schoolIdHex}`;
 
   // Keep maxSeats synchronized if capacity changes or store updates
   useEffect(() => {
