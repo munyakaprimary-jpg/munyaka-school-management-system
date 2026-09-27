@@ -57,40 +57,63 @@ export default function PaymentManagement() {
     }
   });
 
-  // Real Data from munyaka_central_db (Learners and Staff)
+  // Access active store data for students and staff
+  const students = useSchoolStore((state) => state.students) || [];
+  const staff = useSchoolStore((state) => state.staff) || [];
+
+  // Real Data from munyaka_central_db and school store
   const { totalActiveStudents, totalActiveStaff, totalCapacity, availableSlots } = useMemo(() => {
     try {
+      const centralStudents = students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED');
+      const centralStaff = staff;
+
       const raw = localStorage.getItem('munyaka_central_db');
+      let dbStudents = centralStudents;
+      let dbStaff = centralStaff;
+
       if (raw) {
         const db = JSON.parse(raw);
-        const students = Array.isArray(db.students)
-          ? db.students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED')
-          : [];
-        const staffList = Array.isArray(db.staff) ? db.staff : [];
-        const sCount = students.length > 0 ? students.length : 142;
-        const staffCount = staffList.length > 0 ? staffList.length : 28;
-        // Total license seats required = active learners + active staff
-        const totalCombined = sCount + staffCount;
-        const capacity = Math.max(totalCombined + 120, 500);
-        return {
-          totalActiveStudents: sCount,
-          totalActiveStaff: staffCount,
-          totalCapacity: capacity,
-          availableSlots: Math.max(0, capacity - totalCombined),
-        };
+        if (Array.isArray(db.students) && db.students.length > 0 && dbStudents.length === 0) {
+          dbStudents = db.students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED');
+        }
+        if (Array.isArray(db.staff) && db.staff.length > 0 && dbStaff.length === 0) {
+          dbStaff = db.staff;
+        }
       }
-    } catch {}
-    return {
-      totalActiveStudents: 142,
-      totalActiveStaff: 28,
-      totalCapacity: 500,
-      availableSlots: 330,
-    };
-  }, []);
 
-  // Seat allocation state (dynamically derived from real active students + staff)
-  const [allocatedSeats, setAllocatedSeats] = useState(totalActiveStudents + totalActiveStaff);
+      const sCount = dbStudents.length;
+      const staffCount = dbStaff.length;
+      const totalAllocated = sCount + staffCount;
+      const capacity = Math.max(totalAllocated + 120, 500);
+
+      return {
+        totalActiveStudents: sCount,
+        totalActiveStaff: staffCount,
+        totalCapacity: capacity,
+        availableSlots: Math.max(0, capacity - totalAllocated),
+      };
+    } catch {}
+    const sCount = students.length;
+    const staffCount = staff.length;
+    const totalAllocated = sCount + staffCount;
+    return {
+      totalActiveStudents: sCount,
+      totalActiveStaff: staffCount,
+      totalCapacity: 500,
+      availableSlots: Math.max(0, 500 - totalAllocated),
+    };
+  }, [students, staff]);
+
+  // Seat allocation state (dynamically derived from live active students + staff)
+  const allocatedSeats = totalActiveStudents + totalActiveStaff;
   const [maxSeats, setMaxSeats] = useState(totalCapacity);
+
+  // Keep maxSeats synchronized if capacity changes or store updates
+  useEffect(() => {
+    if (totalCapacity > maxSeats) {
+      setMaxSeats(totalCapacity);
+    }
+  }, [totalCapacity, maxSeats]);
 
   // Monthly billing setting state
   const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState(1200);
@@ -524,7 +547,7 @@ export default function PaymentManagement() {
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <p className="text-xs font-black uppercase text-slate-400">Currently Allocated Seats</p>
                 <p className="text-4xl font-black text-indigo-600 mt-2">{allocatedSeats}</p>
-                <p className="text-xs text-slate-600 font-bold mt-1">Active registered learners in database</p>
+                <p className="text-xs text-slate-600 font-bold mt-1">Active learners ({totalActiveStudents}) & staff ({totalActiveStaff})</p>
               </div>
 
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
