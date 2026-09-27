@@ -95,21 +95,23 @@ const Timetable = () => {
     return { grade: selectedGrade, stream: '' };
   }, [selectedGrade]);
 
-  // Helper to resolve teacher name from teacherId or entry.teacherName
-  const resolveTeacherName = (teacherId?: string, teacherName?: string): string => {
+  // Helper to resolve teacher name from teacherId, staffId, or teacher
+  const resolveTeacherName = (teacherId?: string, staffId?: string, teacherName?: string): string => {
     if (teacherName && teacherName.trim()) return teacherName;
-    if (!teacherId) return '';
-    const teacher = staff.find((s: any) => String(s.id) === String(teacherId));
-    return teacher?.name || teacher?.fullName || '';
+    const lookupId = teacherId || staffId;
+    if (!lookupId) return 'No Teacher';
+    const teacher = staff.find((s: any) => String(s.id) === String(lookupId));
+    return teacher?.name || teacher?.fullName || 'No Teacher';
   };
 
-  // Helper to resolve subject name (could be ID or name)
+  // Helper to resolve subject name
   const resolveSubjectName = (subject?: string): string => {
-    if (!subject) return '';
-    // Check if it's a preset subject
+    if (!subject) return 'No Subject';
+    const subjectsList = (useSchoolStore as any).getState?.()?.subjects || PRESET_SUBJECTS;
+    const matched = subjectsList.find((p: any) => String(p.id) === String(subject) || String(p.name).toLowerCase() === String(subject).toLowerCase());
+    if (matched) return matched.name || matched.title || subject;
     const preset = PRESET_SUBJECTS.find(p => p.name === subject);
     if (preset) return preset.name;
-    // Otherwise return as-is (could be a custom subject name)
     return subject;
   };
 
@@ -217,7 +219,7 @@ const Timetable = () => {
                             {entry?.subject ? (
                               <div className="flex flex-col">
                                 <span className="font-bold text-sm text-gray-900">{resolveSubjectName(entry.subject)}</span>
-                                <span className="text-xs text-gray-500">{resolveTeacherName(entry.teacherId, entry.teacherName) || 'No Teacher'}</span>
+                                <span className="text-xs text-gray-500">{resolveTeacherName(entry.teacherId, entry.staffId, entry.teacherName)}</span>
                                 {entry.room && (
                                   <span className="text-[9px] text-slate-400 font-mono">Room: {entry.room}</span>
                                 )}
