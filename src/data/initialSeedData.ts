@@ -2,25 +2,71 @@ export const SEED_VERSION = "BUILD_OFFLINE_1790480870934";
 
 export const DEFAULT_CBC_CLUSTERS = [
   {
-    id: "cluster_1",
-    name: "Languages & Literacy",
-    description: "English, Kiswahili, Indigenous Languages, Foreign Languages",
-    color: "bg-indigo-500",
-    icon: "BookOpen",
+    id: "pre-primary",
+    name: "Pre-Primary (PP1, PP2)",
+    description: "Language Activities, Mathematical Activities, Environmental Activities, Psychomotor & Creative Activities",
+    color: "bg-pink-500",
+    icon: "Baby",
     learningAreas: [
-      { id: "la_eng", name: "English Language Activities", code: "ENG-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
-      { id: "la_kisw", name: "Kiswahili Language Activities", code: "KISW-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] }
+      { id: "la_pp_lang", name: "Language Activities", periodsPerWeek: 5, type: "Core", isDefault: true },
+      { id: "la_pp_math", name: "Mathematical Activities", periodsPerWeek: 5, type: "Core", isDefault: true },
+      { id: "la_pp_env", name: "Environmental Activities", periodsPerWeek: 4, type: "Core", isDefault: true },
+      { id: "la_pp_cre", name: "Psychomotor & Creative Activities", periodsPerWeek: 5, type: "Core", isDefault: true },
+      { id: "la_pp_re", name: "Religious Education Activities", periodsPerWeek: 3, type: "Core", isDefault: true }
     ]
   },
   {
-    id: "cluster_2",
-    name: "Mathematics & Science",
-    description: "Mathematics, Integrated Science, Health Education",
-    color: "bg-emerald-500",
-    icon: "Calculator",
+    id: "lower-primary",
+    name: "Lower Primary (Grade 1 - 3)",
+    description: "English, Kiswahili, Mathematical Activities, Environmental Activities, Hygiene & Nutrition, Religious Education",
+    color: "bg-indigo-500",
+    icon: "BookOpen",
     learningAreas: [
-      { id: "la_math", name: "Mathematics Activities", code: "MATH-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
-      { id: "la_sci", name: "Integrated Science", code: "SCI-01", category: "Core", gradeLevels: ["Grade 4", "Grade 5", "Grade 6"] }
+      { id: "la_lp_eng", name: "English Language Activities", periodsPerWeek: 5, type: "Core", isDefault: true },
+      { id: "la_lp_kisw", name: "Kiswahili Language Activities / Lugha", periodsPerWeek: 4, type: "Core", isDefault: true },
+      { id: "la_lp_math", name: "Mathematical Activities", periodsPerWeek: 5, type: "Core", isDefault: true },
+      { id: "la_lp_env", name: "Environmental Activities", periodsPerWeek: 3, type: "Core", isDefault: true },
+      { id: "la_lp_hyg", name: "Hygiene and Nutrition Activities", periodsPerWeek: 2, type: "Core", isDefault: true },
+      { id: "la_lp_cre", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 3, type: "Core", isDefault: true },
+      { id: "la_lp_mov", name: "Movement and Creative Activities", periodsPerWeek: 5, type: "Core", isDefault: true }
+    ]
+  },
+  {
+    id: "upper-primary",
+    name: "Upper Primary (Grade 4 - 6)",
+    description: "English, Kiswahili, Mathematics, Science & Tech, Agriculture, Social Studies, CRE/IRE/HRE, Creative Arts, PE",
+    color: "bg-emerald-500",
+    icon: "GraduationCap",
+    learningAreas: [
+      { id: "la_up_eng", name: "English", periodsPerWeek: 5, type: "Core", isDefault: true },
+      { id: "la_up_kisw", name: "Kiswahili", periodsPerWeek: 4, type: "Core", isDefault: true },
+      { id: "la_up_math", name: "Mathematics", periodsPerWeek: 6, type: "Core", isDefault: true },
+      { id: "la_up_sci", name: "Science and Technology", periodsPerWeek: 4, type: "Core", isDefault: true },
+      { id: "la_up_agri", name: "Agriculture and Nutrition", periodsPerWeek: 4, type: "Core", isDefault: true },
+      { id: "la_up_soc", name: "Social Studies", periodsPerWeek: 3, type: "Core", isDefault: true },
+      { id: "la_up_cre", name: "Christian/Islamic/Hindu Religious Education", periodsPerWeek: 3, type: "Core", isDefault: true },
+      { id: "la_up_creart", name: "Creative Arts", periodsPerWeek: 3, type: "Core", isDefault: true },
+      { id: "la_up_pe", name: "Physical Education and Sport", periodsPerWeek: 2, type: "Core", isDefault: true }
+    ]
+  },
+  {
+    id: "junior-school",
+    name: "Junior School (Grade 7 - 9)",
+    description: "Core subjects and optional learning areas for Junior Secondary",
+    color: "bg-purple-500",
+    icon: "Award",
+    learningAreas: [
+      { id: "la_js_eng", name: "English", periodsPerWeek: 4, type: "Core", isDefault: true },
+      { id: "la_js_kisw", name: "Kiswahili", periodsPerWeek: 4, type: "Core", isDefault: true },
+      { id: "la_js_math", name: "Mathematics", periodsPerWeek: 5, type: "Core", isDefault: true },
+      { id: "la_js_integ", name: "Integrated Science", periodsPerWeek: 4, type: "Core", isDefault: true },
+      { id: "la_js_soc", name: "Social Studies", periodsPerWeek: 3, type: "Core", isDefault: true },
+      { id: "la_js_agri", name: "Agriculture", periodsPerWeek: 4, type: "Core", isDefault: true },
+      { id: "la_js_pretech", name: "Pre-Technical Studies", periodsPerWeek: 4, type: "Core", isDefault: true },
+      { id: "la_js_re", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 3, type: "Core", isDefault: true },
+      { id: "la_js_arts", name: "Creative Arts and Sports", periodsPerWeek: 3, type: "Core", isDefault: true },
+      { id: "la_js_comp", name: "Computer Studies", periodsPerWeek: 3, type: "Elective", isDefault: true },
+      { id: "la_js_french", name: "Foreign Languages (French/German/Arabic)", periodsPerWeek: 3, type: "Elective", isDefault: true }
     ]
   }
 ];
