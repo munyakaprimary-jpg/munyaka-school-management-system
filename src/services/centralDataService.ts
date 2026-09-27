@@ -69,8 +69,15 @@ export const UnifiedDataStorage = {
     const masterStudents = [l1, l2, l3, initialSeedData.students || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
 
     const f1 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
-    const f2 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
-    const masterFees = [f1, f2, (initialSeedData as any).fees || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
+        const f2 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
+        const f3 = JSON.parse(localStorage.getItem('munyaka_student_fees') || '[]');
+        const masterFees = [f1, f2, f3, (initialSeedData as any).fees || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
+    
+        // Also capture fee payments from dedicated payment DB
+        const p1 = JSON.parse(localStorage.getItem('munyaka_fee_payments_db') || '[]');
+        const p2 = JSON.parse(localStorage.getItem('munyaka_payments') || '[]');
+        const p3 = JSON.parse(localStorage.getItem('munyaka_transactions') || '[]');
+        const masterPayments = [p1, p2, p3, (initialSeedData as any).payments || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
 
     const n1 = JSON.parse(localStorage.getItem('munyaka_notices_v2') || '[]');
     const n2 = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
@@ -94,29 +101,29 @@ export const UnifiedDataStorage = {
     const settingsVal = JSON.parse(localStorage.getItem('munyaka_system_settings_v3') || JSON.stringify((initialSeedData as any).settings || {}));
 
     return {
-      students: masterStudents.length > 0 ? masterStudents : (initialSeedData.students || []),
-      staff: masterStaff.length > 0 ? masterStaff : (initialSeedData.staff || []),
-      attendance: masterAttendance,
-      fees: masterFees,
-      payments: masterFees,
-      transactions: JSON.parse(localStorage.getItem('munyaka_transactions') || '[]'),
-      marks: masterMarks,
-      exams: masterExams,
-      grades: JSON.parse(localStorage.getItem('munyaka_grades') || JSON.stringify((initialSeedData as any).grades || {})),
-      streams: JSON.parse(localStorage.getItem('munyaka_streams') || JSON.stringify((initialSeedData as any).streams || [])),
-      classAssignments: JSON.parse(localStorage.getItem('munyaka_class_assignments') || JSON.stringify((initialSeedData as any).classAssignments || [])),
-      learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || JSON.stringify((initialSeedData as any).learningAreas || [])),
-      examTypes: JSON.parse(localStorage.getItem('munyaka_exam_types') || JSON.stringify((initialSeedData as any).examTypes || [])),
-      libraryBooks: JSON.parse(localStorage.getItem('munyaka_library_books') || JSON.stringify((initialSeedData as any).libraryBooks || [])),
-      feeStructures: JSON.parse(localStorage.getItem('munyaka_fee_structures') || JSON.stringify((initialSeedData as any).feeStructures || [])),
-      notices: masterNotices,
-      events: masterEvents,
-      ictEquipment: JSON.parse(localStorage.getItem('munyaka_ict_assets') || JSON.stringify((initialSeedData as any).ictEquipment || [])),
-      scienceInventory: JSON.parse(localStorage.getItem('munyaka_science_lab') || JSON.stringify((initialSeedData as any).scienceInventory || [])),
-      storeInventory: JSON.parse(localStorage.getItem('munyaka_store_items') || JSON.stringify((initialSeedData as any).storeInventory || [])),
-      timetable: JSON.parse(localStorage.getItem('school-timetable-data') || JSON.stringify((initialSeedData as any).timetable || [])),
-      settings: settingsVal,
-    };
+          students: masterStudents.length > 0 ? masterStudents : (initialSeedData.students || []),
+          staff: masterStaff.length > 0 ? masterStaff : (initialSeedData.staff || []),
+          attendance: masterAttendance,
+          fees: masterFees,
+          payments: masterPayments,
+          transactions: masterPayments,
+          marks: masterMarks,
+          exams: masterExams,
+          grades: JSON.parse(localStorage.getItem('munyaka_grades') || JSON.stringify((initialSeedData as any).grades || {})),
+          streams: JSON.parse(localStorage.getItem('munyaka_streams') || JSON.stringify((initialSeedData as any).streams || [])),
+          classAssignments: JSON.parse(localStorage.getItem('munyaka_class_assignments') || JSON.stringify((initialSeedData as any).classAssignments || [])),
+          learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || JSON.stringify((initialSeedData as any).learningAreas || [])),
+          examTypes: JSON.parse(localStorage.getItem('munyaka_exam_types') || JSON.stringify((initialSeedData as any).examTypes || [])),
+          libraryBooks: JSON.parse(localStorage.getItem('munyaka_library_books') || JSON.stringify((initialSeedData as any).libraryBooks || [])),
+          feeStructures: JSON.parse(localStorage.getItem('munyaka_fee_structures') || JSON.stringify((initialSeedData as any).feeStructures || [])),
+          notices: masterNotices,
+          events: masterEvents,
+          ictEquipment: JSON.parse(localStorage.getItem('munyaka_ict_assets') || JSON.stringify((initialSeedData as any).ictEquipment || [])),
+          scienceInventory: JSON.parse(localStorage.getItem('munyaka_science_lab') || JSON.stringify((initialSeedData as any).scienceInventory || [])),
+          storeInventory: JSON.parse(localStorage.getItem('munyaka_store_items') || JSON.stringify((initialSeedData as any).storeInventory || [])),
+          timetable: JSON.parse(localStorage.getItem('school-timetable-data') || JSON.stringify((initialSeedData as any).timetable || [])),
+          settings: settingsVal,
+        };
   },
 
   getStaff: (): any[] => {
