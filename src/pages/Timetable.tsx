@@ -9,6 +9,7 @@ import {
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { DEFAULT_CBC_CLUSTERS } from '@/data/initialSeedData';
 
 interface Allocation {
   id: string; // `${classKey}-${day}-${slotId}`
@@ -22,20 +23,6 @@ interface Allocation {
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const GRADES = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 const STREAMS = ['Green', 'Blue', 'Red', 'Yellow', 'East', 'West'];
-
-const PRESET_SUBJECTS = [
-  'Mathematics',
-  'English',
-  'Kiswahili',
-  'Science',
-  'Agriculture',
-  'Social Studies',
-  'Religious Education',
-  'Creative Arts',
-  'Physical Education',
-  'Computer Studies',
-  'Music'
-];
 
 interface TimeSlot {
   id: string;
@@ -78,6 +65,36 @@ export default function Timetable() {
   const [selectedGrade, setSelectedGrade] = useState('Grade 4');
   const [selectedStream, setSelectedStream] = useState('Green');
   const selectedClassKey = `${selectedGrade} ${selectedStream}`;
+
+  // Dynamic Learning Areas from LocalStorage / Learning Area Manager store
+  const learningAreaClusters = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_cbc_learning_area_clusters');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_CBC_CLUSTERS;
+  }, []);
+
+  // Map Grade to CBC Level ID
+  const activeClusterId = useMemo(() => {
+    const g = selectedGrade.toLowerCase();
+    if (g.includes('pp1') || g.includes('pp2') || g.includes('pre-primary')) return 'pre-primary';
+    if (g.includes('grade 1') || g.includes('grade 2') || g.includes('grade 3')) return 'lower-primary';
+    if (g.includes('grade 4') || g.includes('grade 5') || g.includes('grade 6')) return 'upper-primary';
+    if (g.includes('grade 7') || g.includes('grade 8') || g.includes('grade 9')) return 'junior-school';
+    return 'upper-primary';
+  }, [selectedGrade]);
+
+  const availableSubjectsForGrade = useMemo(() => {
+    const cluster = learningAreaClusters.find((c: any) => c.id === activeClusterId);
+    if (cluster && Array.isArray(cluster.learningAreas) && cluster.learningAreas.length > 0) {
+      return cluster.learningAreas.map((la: any) => la.name);
+    }
+    return ['Mathematics', 'English', 'Kiswahili', 'Science and Technology', 'Social Studies', 'Religious Education'];
+  }, [learningAreaClusters, activeClusterId]);
 
   // Timetable Configuration Settings state with TWO distinct short breaks
   const [config, setConfig] = useState(() => {
@@ -264,7 +281,7 @@ export default function Timetable() {
       setChosenSubject(existing.subject);
       setChosenTeacher(existing.teacher);
     } else {
-      setChosenSubject('Mathematics');
+      setChosenSubject(availableSubjectsForGrade[0] || 'Mathematics');
       setChosenTeacher(teacherOptions[0] || 'ANN NDUTA MBUGUA');
     }
 
@@ -697,7 +714,7 @@ export default function Timetable() {
                   onChange={(e) => setChosenSubject(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
-                  {PRESET_SUBJECTS.map(sub => (
+                  {availableSubjectsForGrade.map(sub => (
                     <option key={sub} value={sub}>{sub}</option>
                   ))}
                 </select>
