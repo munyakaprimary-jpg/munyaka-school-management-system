@@ -10,38 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { Megaphone, Calendar, Pin, Plus, Send } from 'lucide-react';
-import { CentralDataService } from '@/services/centralDataService';
-interface NoticeRecord {
-  id: string;
-  title: string;
-  content: string;
-  description?: string;
-  date: string;
-  category: string;
-  color: string;
-}
-const NOTICES_STORAGE_KEY = 'munyaka_notices_board';
-const loadLocalNotices = (): NoticeRecord[] => {
-  try {
-    const raw = CentralDataService.getData<NoticeRecord[]>(NOTICES_STORAGE_KEY, []);
-    if (raw && raw.length > 0) return raw;
-    return [
-      { id: 'not-1', title: 'Opening Day for Term 1', content: 'All students are expected to report back by 8:00 AM sharp in full proper school uniform.', date: 'Today', category: 'Notice', color: 'bg-indigo-50 text-indigo-600' },
-      { id: 'not-2', title: 'Parent-Teacher Association AGM', content: 'Annual General Meeting for all parents and guardians to discuss school development and fee structures.', date: '2 days ago', category: 'Event', color: 'bg-emerald-50 text-emerald-600' }
-    ];
-  } catch {
-    return [];
-  }
-};
-const saveLocalNotices = (notices: NoticeRecord[]) => {
-  try {
-    CentralDataService.setData(NOTICES_STORAGE_KEY, notices);
-  } catch {}
-};
+import { useSchoolStore } from '@/store/useSchoolStore';
 import { showSuccess } from '@/utils/toast';
 
 const Notices = () => {
-  const [noticesList, setNoticesList] = useState<NoticeRecord[]>(loadLocalNotices());
+  const noticesList = useSchoolStore((state) => state.notices) || [];
+  const addNotice = useSchoolStore((state) => state.addNotice);
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Notice");
@@ -50,9 +24,9 @@ const Notices = () => {
   const handlePostNotice = () => {
     if (!String(title || '').trim() || !String(content || '').trim()) return;
     const newNotice = { id: Date.now().toString(), title, content, date: "Just now", category, color: "bg-emerald-50 text-emerald-600" };
-    const updated = [newNotice, ...noticesList];
-    setNoticesList(updated);
-    saveLocalNotices(updated);
+    if (typeof addNotice === 'function') {
+      addNotice(newNotice);
+    }
     setIsOpen(false);
     setTitle(""); setContent("");
     showSuccess("New notice published successfully!");
