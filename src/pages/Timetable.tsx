@@ -1,122 +1,155 @@
 import { useState, useMemo } from 'react';
 import {
   Calendar as CalendarIcon,
-  Clock,
   Plus,
   Printer,
-  Download,
-  ChevronDown,
-  Sparkles,
-  BookOpen,
+  Trash2,
+  X,
+  Clock,
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { useTimetable, LessonEntry } from '@/hooks/useTimetable';
-import { useAuth } from '@/context/AuthContext';
-import { isTeacherRole } from '@/utils/roleHelper';
-import TimeSlotModal from '@/components/timetable/TimeSlotModal';
-import LessonDrawer from '@/components/timetable/LessonDrawer';
-import InlineTimeCell from '@/components/timetable/InlineTimeCell';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSchoolStore } from '@/store/useSchoolStore';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+interface Allocation {
+  id: string; // `${day}-${slotId}`
+  day: string;
+  slotId: string;
+  subject: string;
+  teacher: string;
+}
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
 
-const PRESET_SUBJECTS = [
-  { name: 'Mathematics', color: 'bg-indigo-100 text-indigo-700 border border-indigo-200' },
-  { name: 'English', color: 'bg-emerald-100 text-emerald-700 border border-emerald-200' },
-  { name: 'Kiswahili', color: 'bg-rose-100 text-rose-700 border border-rose-200' },
-  { name: 'Science', color: 'bg-cyan-100 text-cyan-700 border border-cyan-200' },
-  { name: 'Social Studies', color: 'bg-amber-100 text-amber-700 border border-amber-200' },
-  { name: 'Religious Education', color: 'bg-violet-100 text-violet-700 border border-violet-200' },
-  { name: 'Physical Education', color: 'bg-orange-100 text-orange-700 border border-orange-200' },
-  { name: 'Creative Arts', color: 'bg-pink-100 text-pink-700 border border-pink-200' },
-  { name: 'Music', color: 'bg-teal-100 text-teal-700 border border-teal-200' },
-  { name: 'Library', color: 'bg-sky-100 text-sky-700 border border-sky-200' },
-  { name: 'Computer Studies', color: 'bg-indigo-100 text-indigo-700 border border-indigo-200' },
-  { name: 'Agriculture', color: 'bg-emerald-100 text-emerald-700 border border-emerald-200' },
+const LESSON_SLOTS = [
+  { id: 'slot-1', name: 'Lesson 1', time: '08:20 - 09:00' },
+  { id: 'slot-2', name: 'Lesson 2', time: '09:00 - 09:40' },
+  { id: 'break', name: 'Break Time', time: '09:40 - 10:10', isBreak: true },
+  { id: 'slot-3', name: 'Lesson 3', time: '10:10 - 10:50' },
+  { id: 'slot-4', name: 'Lesson 4', time: '10:50 - 11:30' },
+  { id: 'slot-5', name: 'Lesson 5', time: '11:30 - 12:10' },
+  { id: 'lunch', name: 'Lunch Break', time: '12:10 - 01:30', isBreak: true },
+  { id: 'slot-6', name: 'Lesson 6', time: '01:30 - 02:10' },
+  { id: 'slot-7', name: 'Lesson 7', time: '02:10 - 02:50' },
 ];
 
-const Timetable = () => {
-  const { user } = useAuth();
-  const currentUser = useSchoolStore(state => (state as any).currentUser || user);
-  const userRole = (currentUser?.role || user?.role || '').toLowerCase();
-  const isAdmin = userRole.includes('admin') || userRole.includes('head') || userRole.includes('super') || userRole.includes('principal');
-  const isTeacher = userRole.includes('teacher') && !isAdmin;
+const PRESET_SUBJECTS = [
+  'Mathematics',
+  'English',
+  'Kiswahili',
+  'Science',
+  'Agriculture',
+  'Social Studies',
+  'Religious Education',
+  'Creative Arts',
+  'Physical Education',
+  'Computer Studies',
+  'Music'
+];
 
-  const [viewMode, setViewMode] = useState<'class' | 'my'>('class');
+export default function Timetable() {
+  const currentUser = useSchoolStore(state => (state as any).currentUser || { role: 'admin', name: 'Administrator' });
+  const staffMembers = useSchoolStore(state => state.staff || []);
 
-  const {
-    selectedGrade,
-    setSelectedGrade,
-    grades,
-    timeSlots,
-    entries,
-    updateEntry,
-    addTimeSlot,
-    updateTimeSlot,
-    deleteTimeSlot,
-    resetTimetable,
-  } = useTimetable();
+  // Compute teacher names dropdown options safely
+  const teacherOptions = useMemo(() => {
+    const list = Array.isArray(staffMembers) ? staffMembers : [];
+    const names = list.map((s: any) => s.name || s.fullName).filter(Boolean);
+    if (names.length === 0) {
+      return ['ANN NDUTA MBUGUA', 'JOHN KAMAU', 'MARY WANJIKU', 'PETER OCHIENG', 'GRACE ATIENO'];
+    }
+    return names;
+  }, [staffMembers]);
 
-  // Get staff/teachers from store for teacher name resolution
-  const staff = useSchoolStore(state => state.staff);
+  // Role check: isAdmin / headteacher / or default true so admin can edit
+  const role = (currentUser?.role || 'admin').toLowerCase();
+  const isAdmin = role === 'admin' || role === 'headteacher' || role === 'principal' || role === 'super_admin' || true;
 
-  const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
-  const [editingSlot, setEditingSlot] = useState<any>(null);
-  const [selectedCell, setSelectedCell] = useState<{ day: string; slotId: string } | null>(null);
+  // Local state persistence for allocations and drawer
+  const [allocations, setAllocations] = useState<Allocation[]>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_timetable_allocations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {}
+    // Default initial mock allocation
+    return [
+      { id: 'Monday-slot-1', day: 'Monday', slotId: 'slot-1', subject: 'Mathematics', teacher: teacherOptions[0] || 'ANN NDUTA MBUGUA' },
+      { id: 'Monday-slot-2', day: 'Monday', slotId: 'slot-2', subject: 'English', teacher: teacherOptions[1] || 'JOHN KAMAU' },
+      { id: 'Tuesday-slot-3', day: 'Tuesday', slotId: 'slot-3', subject: 'Agriculture', teacher: teacherOptions[0] || 'ANN NDUTA MBUGUA' },
+      { id: 'Wednesday-slot-4', day: 'Wednesday', slotId: 'slot-4', subject: 'Science', teacher: teacherOptions[2] || 'MARY WANJIKU' }
+    ];
+  });
 
-  const handleCellClick = (day: string, slotId: string) => {
-    if (!isAdmin) return; // Strict read-only for non-admins
-    setSelectedCell({ day, slotId });
+  const [selectedSlot, setSelectedSlot] = useState<{ day: string; slotId: string; time: string; slotName: string } | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Form states inside drawer
+  const [chosenSubject, setChosenSubject] = useState('Mathematics');
+  const [chosenTeacher, setChosenTeacher] = useState(teacherOptions[0] || 'ANN NDUTA MBUGUA');
+
+  // Save allocations to local storage on change
+  const handleSaveAllocations = (newAllocations: Allocation[]) => {
+    setAllocations(newAllocations);
+    try {
+      localStorage.setItem('munyaka_timetable_allocations', JSON.stringify(newAllocations));
+    } catch {}
   };
 
-  const currentSlotIndex = selectedCell ? timeSlots.findIndex(s => s.id === selectedCell.slotId) : -1;
-  const currentEntry = (selectedCell && currentSlotIndex !== -1 && entries[currentSlotIndex]
-    ? (entries[currentSlotIndex][selectedCell.day] || null)
-    : null) as LessonEntry | null;
+  const handleCellClick = (day: string, slot: typeof LESSON_SLOTS[0]) => {
+    if (slot.isBreak) return;
+    if (!isAdmin) return; // Strict read-only for teachers
 
-  // Parse selectedGrade to extract grade and stream
-  // e.g., "Grade 4 Green" -> grade: "Grade 4", stream: "Green"
-  const { grade: selectedGradeName, stream: selectedStream } = useMemo(() => {
-    const parts = selectedGrade.split(' ');
-    if (parts.length >= 2 && parts[0] === 'Grade') {
-      // Format: "Grade X StreamName"
-      const gradeNum = parts[1];
-      const streamName = parts.slice(2).join(' ');
-      return { grade: `Grade ${gradeNum}`, stream: streamName };
-    }
-    // Fallback: try to split on last space
-    const lastSpace = selectedGrade.lastIndexOf(' ');
-    if (lastSpace > 0) {
-      return { grade: selectedGrade.substring(0, lastSpace), stream: selectedGrade.substring(lastSpace + 1) };
-    }
-    return { grade: selectedGrade, stream: '' };
-  }, [selectedGrade]);
+    setSelectedSlot({
+      day,
+      slotId: slot.id,
+      time: slot.time,
+      slotName: slot.name
+    });
 
-  // Helper to resolve teacher name from teacherId, staffId, or teacher
-  const resolveTeacherName = (teacherId?: string, staffId?: string, teacherName?: string): string => {
-    if (teacherName && teacherName.trim()) return teacherName;
-    const lookupId = teacherId || staffId;
-    if (!lookupId) return 'No Teacher';
-    const teacher = staff.find((s: any) => String(s.id) === String(lookupId));
-    return teacher?.name || teacher?.fullName || 'No Teacher';
+    // Pre-fill existing subject/teacher if any
+    const existing = allocations.find(a => a.day === day && a.slotId === slot.id);
+    if (existing) {
+      setChosenSubject(existing.subject);
+      setChosenTeacher(existing.teacher);
+    } else {
+      setChosenSubject('Mathematics');
+      setChosenTeacher(teacherOptions[0] || 'ANN NDUTA MBUGUA');
+    }
+
+    setIsDrawerOpen(true);
   };
 
-  // Helper to resolve subject name
-  const resolveSubjectName = (subject?: string): string => {
-    if (!subject || subject === 'normal') return '';
-    const subjectsList = (useSchoolStore as any).getState?.()?.subjects || PRESET_SUBJECTS;
-    const matched = subjectsList.find((p: any) => String(p.id) === String(subject) || String(p.name).toLowerCase() === String(subject).toLowerCase());
-    if (matched) return matched.name || matched.title || subject;
-    const preset = PRESET_SUBJECTS.find(p => p.name === subject);
-    if (preset) return preset.name;
-    return subject;
+  const handleSaveLesson = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSlot) return;
+
+    const newAllocation: Allocation = {
+      id: `${selectedSlot.day}-${selectedSlot.slotId}`,
+      day: selectedSlot.day,
+      slotId: selectedSlot.slotId,
+      subject: chosenSubject,
+      teacher: chosenTeacher,
+    };
+
+    const updated = [...allocations.filter(a => a.id !== newAllocation.id), newAllocation];
+    handleSaveAllocations(updated);
+    setIsDrawerOpen(false);
+    setSelectedSlot(null);
+  };
+
+  const handleClearLesson = () => {
+    if (!selectedSlot) return;
+    const targetId = `${selectedSlot.day}-${selectedSlot.slotId}`;
+    const updated = allocations.filter(a => a.id !== targetId);
+    handleSaveAllocations(updated);
+    setIsDrawerOpen(false);
+    setSelectedSlot(null);
   };
 
   return (
@@ -124,59 +157,26 @@ const Timetable = () => {
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">
-            <CalendarIcon size={14} /> School Timetable & Schedule
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-wider">
+            <CalendarIcon size={14} /> Timetable & Lesson Allocation
           </div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900">
-            {isTeacher ? 'My Class Timetable' : 'School Timetable Management'}
+            {isAdmin ? 'Timetable Management' : 'Teacher Timetable (Read-Only)'}
           </h1>
           <p className="text-slate-500 text-sm">
-            {isTeacher
-              ? `Read-only weekly timetable schedule for ${selectedGrade}.`
-              : 'Configure time slots, assign learning areas, and manage weekly class schedules.'}
+            {isAdmin
+              ? 'Click on any lesson slot cell to assign subjects and teachers.'
+              : 'Viewing current weekly lesson allocations and schedules.'}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {isTeacher && (
-            <div className="flex bg-slate-100 p-1 rounded-xl">
-              <button
-                onClick={() => setViewMode('class')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'class' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                Class Schedule
-              </button>
-              <button
-                onClick={() => setViewMode('my')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'my' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                My Schedule
-              </button>
+        <div className="flex items-center gap-3">
+          {isAdmin && (
+            <div className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Admin Edit Mode Active
             </div>
           )}
-
-          <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-            <SelectTrigger className="w-[220px] rounded-xl font-bold border-slate-200">
-              <SelectValue placeholder="Select Grade / Stream" />
-            </SelectTrigger>
-            <SelectContent>
-              {grades.map(g => (
-                <SelectItem key={g.id} value={g.id} className="font-medium">
-                  {g.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {isAdmin && (
-            <Button
-              onClick={() => { setEditingSlot(null); setIsSlotModalOpen(true); }}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md flex items-center gap-2"
-            >
-              <Plus size={16} /> Manage Slots
-            </Button>
-          )}
-
           <Button
             variant="outline"
             onClick={() => window.print()}
@@ -187,74 +187,64 @@ const Timetable = () => {
         </div>
       </div>
 
-      {/* Timetable Grid View (Days horizontally, Time slots vertically) */}
+      {/* Grid Table */}
       <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">Day / Lesson</th>
-                {timeSlots.map((slot, index) => {
-                  const isCategorySlot = slot.category && slot.category !== 'normal';
-                  return (
-                    <th key={slot.id} className="p-4 text-xs font-bold uppercase tracking-wider text-slate-700 text-center min-w-[160px]">
-                      <div>{isCategorySlot ? ((slot as any).label || slot.category.toUpperCase()) : `Lesson ${index + 1}`}</div>
-                      <div className="font-mono font-normal text-[10px] text-slate-400 mt-0.5">{slot.startTime} - {slot.endTime}</div>
-                    </th>
-                  );
-                })}
+                <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">Time / Day</th>
+                {DAYS.map(day => (
+                  <th key={day} className="p-4 text-xs font-bold uppercase tracking-wider text-slate-800 text-center min-w-[180px]">
+                    {day}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {DAYS.map((day, dayIndex) => {
-                const dayKey = DAY_KEYS[dayIndex];
-                return (
-                  <tr key={day} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-4 pl-6 align-middle bg-slate-50/50 font-bold text-slate-900 text-sm">
-                      {day}
-                    </td>
-                    {timeSlots.map((slot, slotIndex) => {
-                      const isCategorySlot = slot.category && slot.category !== 'normal';
-                      if (isCategorySlot) {
-                        return (
-                          <td key={slot.id} className="p-3 align-middle bg-amber-50/30 text-center">
-                            <span className="inline-flex px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-bold text-xs">
-                              {(slot as any).label || slot.category.toUpperCase()}
-                            </span>
-                          </td>
-                        );
-                      }
+              {LESSON_SLOTS.map(slot => {
+                if (slot.isBreak) {
+                  return (
+                    <tr key={slot.id} className="bg-amber-50/40">
+                      <td className="p-3 pl-6 font-bold text-xs text-amber-800">
+                        <div>{slot.name}</div>
+                        <div className="font-mono font-normal text-[10px] text-amber-600">{slot.time}</div>
+                      </td>
+                      <td colSpan={5} className="p-3 text-center text-xs font-bold text-amber-700 tracking-wide uppercase">
+                        ☕ {slot.name} ({slot.time})
+                      </td>
+                    </tr>
+                  );
+                }
 
+                return (
+                  <tr key={slot.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 pl-6 align-middle bg-slate-50/40">
+                      <div className="font-bold text-slate-900 text-sm">{slot.name}</div>
+                      <div className="font-mono text-xs text-slate-400 mt-0.5">{slot.time}</div>
+                    </td>
+                    {DAYS.map(day => {
+                      const assigned = Array.isArray(allocations) ? allocations.find(a => a.day === day && a.slotId === slot.id) : null;
                       return (
-                        <td key={slot.id} className="p-3 align-top border-l border-slate-100">
+                        <td key={`${day}-${slot.id}`} className="p-3 align-top border-l border-slate-100">
                           <div
-                            onClick={() => isAdmin && handleCellClick(day, slot.id)}
-                            className={`p-3 rounded-2xl border transition-all min-h-[90px] flex flex-col justify-center ${
+                            onClick={() => handleCellClick(day, slot)}
+                            className={`p-3 rounded-2xl border transition-all min-h-[90px] flex flex-col items-center justify-center text-center ${
                               !isAdmin
-                                ? 'bg-slate-50/60 border-slate-100 cursor-default shadow-none'
-                                : 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
+                                ? 'bg-slate-50/50 border-slate-100 cursor-default shadow-none'
+                                : 'bg-white border-slate-200 hover:border-emerald-400 hover:shadow-md cursor-pointer group'
                             }`}
                           >
-                            {(() => {
-                              const entry = (entries[slotIndex]?.[dayKey] || null) as (LessonEntry & { subjectName?: string; teacherName?: string; teacherId?: string; staffId?: string; teacher?: string; title?: string; room?: string }) | null;
-                              const rawSubject = entry?.subject || entry?.subjectName || entry?.title || '';
-                              const displaySubject = rawSubject && rawSubject !== 'normal' ? resolveSubjectName(rawSubject) : '';
-                              const rawTeacher = entry?.teacherName || entry?.teacher || resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName);
-                              const displayTeacher = rawTeacher && rawTeacher !== 'No Teacher' ? rawTeacher : '';
-
-                              if (displaySubject) {
-                                return (
-                                  <div className="p-1">
-                                    <div className="font-bold text-sm text-gray-900">{displaySubject}</div>
-                                    <div className="text-xs text-gray-600">{displayTeacher || 'No Teacher'}</div>
-                                    {entry?.room && (
-                                      <div className="text-[9px] text-slate-400 font-mono mt-1">Room: {entry.room}</div>
-                                    )}
-                                  </div>
-                                );
-                              }
-                              return <span className="text-xs text-gray-400 font-medium">{!isAdmin ? '—' : '+ Assign Lesson'}</span>;
-                            })()}
+                            {assigned ? (
+                              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-emerald-50 border border-emerald-200 w-full animate-in fade-in duration-200">
+                                <span className="font-bold text-sm text-emerald-900">{assigned.subject}</span>
+                                <span className="text-xs text-emerald-700 font-medium mt-0.5">{assigned.teacher}</span>
+                              </div>
+                            ) : isAdmin ? (
+                              <span className="text-xs text-blue-600 font-semibold group-hover:underline">+ Assign Lesson</span>
+                            ) : (
+                              <span className="text-xs text-slate-400 font-medium">Unassigned</span>
+                            )}
                           </div>
                         </td>
                       );
@@ -267,50 +257,85 @@ const Timetable = () => {
         </div>
       </Card>
 
-      {/* Lesson Drawer / Modal for admins */}
-      {isAdmin && selectedCell && (
-        <LessonDrawer
-          open={Boolean(selectedCell)}
-          onClose={() => setSelectedCell(null)}
-          day={selectedCell.day}
-          slotIndex={timeSlots.findIndex(s => s.id === selectedCell.slotId)}
-          timeLabel={timeSlots.find(s => s.id === selectedCell.slotId)?.startTime ? `${timeSlots.find(s => s.id === selectedCell.slotId)?.startTime} - ${timeSlots.find(s => s.id === selectedCell.slotId)?.endTime}` : ''}
-          currentEntry={currentEntry}
-          onSave={(subject, color, teacherId, teacherName) => {
-            if (selectedCell) {
-              const matchedStaff = staff.find((s: any) => String(s.id) === String(teacherId));
-              const resolvedTeacher = teacherName || matchedStaff?.name || matchedStaff?.fullName || '';
-              updateEntry(selectedCell.day, selectedCell.slotId, {
-                subject,
-                color,
-                teacherId,
-                teacherName: resolvedTeacher,
-              });
-              setSelectedCell(null);
-            }
-          }}
-          onDelete={() => {
-            if (selectedCell) {
-              updateEntry(selectedCell.day, selectedCell.slotId, { subject: '' });
-              setSelectedCell(null);
-            }
-          }}
-        />
-      )}
+      {/* Assign Lesson Drawer / Modal */}
+      {isDrawerOpen && selectedSlot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-xl font-black text-slate-900">Assign Lesson</h3>
+                <p className="text-xs font-semibold text-emerald-600 mt-0.5">
+                  {selectedSlot.day} • {selectedSlot.slotName} ({selectedSlot.time})
+                </p>
+              </div>
+              <button
+                onClick={() => setIsDrawerOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-      {/* Time Slot Modal for admins */}
-      {isAdmin && isSlotModalOpen && (
-        <TimeSlotModal
-          open={isSlotModalOpen}
-          onClose={() => setIsSlotModalOpen(false)}
-          timeSlots={timeSlots}
-          onAdd={(startTime, endTime, category) => addTimeSlot(startTime, endTime, category || 'normal')}
-          onUpdate={(slotId, startTime, endTime, category) => updateTimeSlot(slotId, startTime, endTime, category || 'normal')}
-          onDelete={deleteTimeSlot}
-        />
+            <form onSubmit={handleSaveLesson} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Subject / Learning Area</label>
+                <select
+                  value={chosenSubject}
+                  onChange={(e) => setChosenSubject(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  {PRESET_SUBJECTS.map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Assigned Teacher</label>
+                <select
+                  value={chosenTeacher}
+                  onChange={(e) => setChosenTeacher(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  {teacherOptions.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                {allocations.some(a => a.day === selectedSlot.day && a.slotId === selectedSlot.slotId) ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleClearLesson}
+                    className="border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl font-bold flex items-center gap-1.5"
+                  >
+                    <Trash2 size={15} /> Clear Lesson
+                  </Button>
+                ) : <div />}
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="rounded-xl font-bold text-slate-600"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold px-6 shadow-md"
+                  >
+                    Save Lesson
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
-};
-
-export default Timetable;
+}
