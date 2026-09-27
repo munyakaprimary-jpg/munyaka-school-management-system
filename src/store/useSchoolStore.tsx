@@ -143,21 +143,52 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
       try {
         const data = JSON.parse(jsonData);
         if (data && typeof data === 'object') {
-          if (data.staff) localStorage.setItem('munyaka_staff', JSON.stringify(data.staff));
-          if (data.learners) localStorage.setItem('munyaka_students', JSON.stringify(data.learners));
-          if (data.attendance) localStorage.setItem('munyaka_attendance', JSON.stringify(data.attendance));
-          if (data.fees) localStorage.setItem('munyaka_fees', JSON.stringify(data.fees));
+          const importedStaff = data.staff || data.teachers || [];
+          const importedLearners = data.learners || data.students || [];
+          const importedFees = data.feeRecords || data.fees || data.transactions || [];
+          const importedAttendance = data.attendance || {};
+          const importedExams = data.exams || [];
+          const importedMarks = data.marks || [];
+
+          if (importedStaff.length > 0) localStorage.setItem('munyaka_staff', JSON.stringify(importedStaff));
+          if (importedLearners.length > 0) {
+            localStorage.setItem('munyaka_students', JSON.stringify(importedLearners));
+            localStorage.setItem('school_learners_data', JSON.stringify(importedLearners));
+          }
+          if (importedFees.length > 0) localStorage.setItem('munyaka_fees', JSON.stringify(importedFees));
+          if (importedAttendance && Object.keys(importedAttendance).length > 0) {
+            localStorage.setItem('munyaka_attendance', JSON.stringify(importedAttendance));
+          }
+          if (importedExams.length > 0) localStorage.setItem('all_set_exams', JSON.stringify(importedExams));
+          if (importedMarks.length > 0) localStorage.setItem('marked_student_submissions', JSON.stringify(importedMarks));
+
           if (data.timetables) localStorage.setItem('munyaka_timetable_allocations', JSON.stringify(data.timetables));
           if (data.timetableConfig) localStorage.setItem('munyaka_timetable_config_dual_breaks', JSON.stringify(data.timetableConfig));
           if (data.customLearningAreas) {
             localStorage.setItem('munyaka_cbc_learning_area_clusters', JSON.stringify(data.customLearningAreas));
             window.dispatchEvent(new Event('learning_areas_updated'));
           }
+
+          storeState.learners = getInitialStorage('munyaka_students', importedLearners);
+          storeState.staff = getInitialStorage('munyaka_staff', importedStaff);
+          storeState.fees = getInitialStorage('munyaka_fees', importedFees);
+          storeState.attendance = getInitialStorage('munyaka_attendance', importedAttendance);
+          storeState.exams = getInitialStorage('all_set_exams', importedExams);
+          storeState.marks = getInitialStorage('marked_student_submissions', importedMarks);
+
           listeners.forEach(l => l());
           window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+          window.dispatchEvent(new CustomEvent('staff-changed'));
+
+          const restoredSummary = `Successfully restored ${importedFees.length} fee records and ${importedLearners.length} students!`;
+          if (typeof window !== 'undefined' && (window as any).alert) {
+            console.log(restoredSummary);
+          }
           return true;
         }
-      } catch {}
+      } catch (err) {
+        console.error('Backup import error:', err);
+      }
       return false;
     },
     refreshStore: () => {
