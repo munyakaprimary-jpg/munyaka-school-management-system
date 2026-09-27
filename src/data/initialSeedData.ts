@@ -1,72 +1,26 @@
-export const SEED_VERSION = "BUILD_OFFLINE_1790480870934";
+export const SEED_VERSION = "BUILD_OFFLINE_1790520444119";
 
 export const DEFAULT_CBC_CLUSTERS = [
   {
-    id: "pre-primary",
-    name: "Pre-Primary (PP1, PP2)",
-    description: "Language Activities, Mathematical Activities, Environmental Activities, Psychomotor & Creative Activities",
-    color: "bg-pink-500",
-    icon: "Baby",
-    learningAreas: [
-      { id: "la_pp_lang", name: "Language Activities", periodsPerWeek: 5, type: "Core", isDefault: true },
-      { id: "la_pp_math", name: "Mathematical Activities", periodsPerWeek: 5, type: "Core", isDefault: true },
-      { id: "la_pp_env", name: "Environmental Activities", periodsPerWeek: 4, type: "Core", isDefault: true },
-      { id: "la_pp_cre", name: "Psychomotor & Creative Activities", periodsPerWeek: 5, type: "Core", isDefault: true },
-      { id: "la_pp_re", name: "Religious Education Activities", periodsPerWeek: 3, type: "Core", isDefault: true }
-    ]
-  },
-  {
-    id: "lower-primary",
-    name: "Lower Primary (Grade 1 - 3)",
-    description: "English, Kiswahili, Mathematical Activities, Environmental Activities, Hygiene & Nutrition, Religious Education",
+    id: "cluster_1",
+    name: "Languages & Literacy",
+    description: "English, Kiswahili, Indigenous Languages, Foreign Languages",
     color: "bg-indigo-500",
     icon: "BookOpen",
     learningAreas: [
-      { id: "la_lp_eng", name: "English Language Activities", periodsPerWeek: 5, type: "Core", isDefault: true },
-      { id: "la_lp_kisw", name: "Kiswahili Language Activities / Lugha", periodsPerWeek: 4, type: "Core", isDefault: true },
-      { id: "la_lp_math", name: "Mathematical Activities", periodsPerWeek: 5, type: "Core", isDefault: true },
-      { id: "la_lp_env", name: "Environmental Activities", periodsPerWeek: 3, type: "Core", isDefault: true },
-      { id: "la_lp_hyg", name: "Hygiene and Nutrition Activities", periodsPerWeek: 2, type: "Core", isDefault: true },
-      { id: "la_lp_cre", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 3, type: "Core", isDefault: true },
-      { id: "la_lp_mov", name: "Movement and Creative Activities", periodsPerWeek: 5, type: "Core", isDefault: true }
+      { id: "la_eng", name: "English Language Activities", code: "ENG-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
+      { id: "la_kisw", name: "Kiswahili Language Activities", code: "KISW-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] }
     ]
   },
   {
-    id: "upper-primary",
-    name: "Upper Primary (Grade 4 - 6)",
-    description: "English, Kiswahili, Mathematics, Science & Tech, Agriculture, Social Studies, CRE/IRE/HRE, Creative Arts, PE",
+    id: "cluster_2",
+    name: "Mathematics & Science",
+    description: "Mathematics, Integrated Science, Health Education",
     color: "bg-emerald-500",
-    icon: "GraduationCap",
+    icon: "Calculator",
     learningAreas: [
-      { id: "la_up_eng", name: "English", periodsPerWeek: 5, type: "Core", isDefault: true },
-      { id: "la_up_kisw", name: "Kiswahili", periodsPerWeek: 4, type: "Core", isDefault: true },
-      { id: "la_up_math", name: "Mathematics", periodsPerWeek: 6, type: "Core", isDefault: true },
-      { id: "la_up_sci", name: "Science and Technology", periodsPerWeek: 4, type: "Core", isDefault: true },
-      { id: "la_up_agri", name: "Agriculture and Nutrition", periodsPerWeek: 4, type: "Core", isDefault: true },
-      { id: "la_up_soc", name: "Social Studies", periodsPerWeek: 3, type: "Core", isDefault: true },
-      { id: "la_up_cre", name: "Christian/Islamic/Hindu Religious Education", periodsPerWeek: 3, type: "Core", isDefault: true },
-      { id: "la_up_creart", name: "Creative Arts", periodsPerWeek: 3, type: "Core", isDefault: true },
-      { id: "la_up_pe", name: "Physical Education and Sport", periodsPerWeek: 2, type: "Core", isDefault: true }
-    ]
-  },
-  {
-    id: "junior-school",
-    name: "Junior School (Grade 7 - 9)",
-    description: "Core subjects and optional learning areas for Junior Secondary",
-    color: "bg-purple-500",
-    icon: "Award",
-    learningAreas: [
-      { id: "la_js_eng", name: "English", periodsPerWeek: 4, type: "Core", isDefault: true },
-      { id: "la_js_kisw", name: "Kiswahili", periodsPerWeek: 4, type: "Core", isDefault: true },
-      { id: "la_js_math", name: "Mathematics", periodsPerWeek: 5, type: "Core", isDefault: true },
-      { id: "la_js_integ", name: "Integrated Science", periodsPerWeek: 4, type: "Core", isDefault: true },
-      { id: "la_js_soc", name: "Social Studies", periodsPerWeek: 3, type: "Core", isDefault: true },
-      { id: "la_js_agri", name: "Agriculture", periodsPerWeek: 4, type: "Core", isDefault: true },
-      { id: "la_js_pretech", name: "Pre-Technical Studies", periodsPerWeek: 4, type: "Core", isDefault: true },
-      { id: "la_js_re", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 3, type: "Core", isDefault: true },
-      { id: "la_js_arts", name: "Creative Arts and Sports", periodsPerWeek: 3, type: "Core", isDefault: true },
-      { id: "la_js_comp", name: "Computer Studies", periodsPerWeek: 3, type: "Elective", isDefault: true },
-      { id: "la_js_french", name: "Foreign Languages (French/German/Arabic)", periodsPerWeek: 3, type: "Elective", isDefault: true }
+      { id: "la_math", name: "Mathematics Activities", code: "MATH-01", category: "Core", gradeLevels: ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] },
+      { id: "la_sci", name: "Integrated Science", code: "SCI-01", category: "Core", gradeLevels: ["Grade 4", "Grade 5", "Grade 6"] }
     ]
   }
 ];
@@ -464,143 +418,92 @@ export const initialSeedData = {
     "Grade 4 Green": {
       "timeSlots": [
         {
-          "id": "72f76b6d-4620-4068-af7c-e3617274b98c",
-          "startTime": "08:00",
-          "endTime": "08:30",
-          "category": null
+          "id": "9b47b2cd-931c-4c4f-bf4d-fdb71eccbdf3",
+          "startTime": "08:20",
+          "endTime": "09:00",
+          "category": "normal"
         },
         {
-          "id": "8689acdc-9bbf-403c-b2e9-5b928f829668",
-          "startTime": "08:30",
-          "endTime": "09:10",
-          "category": null
-        },
-        {
-          "id": "f24e2c0a-2cb5-4850-91d6-013e6773ccea",
-          "startTime": "09:10",
-          "endTime": "09:50",
-          "category": null
-        },
-        {
-          "id": "2d85931f-8c73-4003-a775-ff762fa73796",
-          "startTime": "09:50",
-          "endTime": "10:30",
-          "category": null
-        },
-        {
-          "id": "113b5f7d-2cfa-4b10-b7b8-c675c48159f5",
-          "startTime": "10:30",
-          "endTime": "11:00",
-          "category": "Break"
-        },
-        {
-          "id": "78f41970-0a7e-4c3a-afc1-181228a83ca9",
-          "startTime": "11:00",
-          "endTime": "11:40",
-          "category": null
-        },
-        {
-          "id": "77c80909-f92f-4372-82c3-ba48109edd3e",
-          "startTime": "12:00",
-          "endTime": "13:00",
-          "category": "Lunch Break"
+          "id": "06ae62d5-5be1-4bea-9440-b05441f26dde",
+          "startTime": "09:00",
+          "endTime": "09:40",
+          "category": "normal"
         }
       ],
       "entries": [
         {
-          "mon": null,
-          "tue": null,
-          "wed": null,
-          "thu": null,
-          "fri": null,
+          "mon": {
+            "id": "1b0649c5-14bc-4933-8e77-7ccce876a022",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "tue": {
+            "id": "967f1337-f832-4671-ae97-da0131b93633",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "wed": {
+            "id": "ed1d78b5-3e9c-4d02-9f8e-a33cab7bb1c5",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "thu": {
+            "id": "bebe7d0a-48b6-424f-a09b-482b6a2729de",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "fri": {
+            "id": "5928d30b-cc46-4f5f-844a-6917fc170b7d",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
           "Monday": {
-            "id": "d732ed55-ac43-4ce1-894a-ab9e716f6797",
+            "id": "df1c9ab0-612e-481e-8b89-01401f49f7d8",
+            "subject": "Agriculture",
+            "color": "bg-emerald-100 text-emerald-700 border border-emerald-200",
+            "teacherId": "staff_1790157907618_qk42q",
+            "teacherName": "ANN NDUTA MBUGUA"
+          },
+          "Tuesday": {
+            "id": "bb2469b5-fd0e-4115-8e75-22132fe04119",
+            "subject": "Science",
+            "color": "bg-cyan-100 text-cyan-700 border border-cyan-200",
+            "teacherId": "staff_1790174007943_xtycd",
+            "teacherName": "LAWRENCE NDEGWA GIOSHE"
+          }
+        },
+        {
+          "mon": {
+            "id": "6567ad52-3c3e-47ea-b58c-08ac8de81a95",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "tue": {
+            "id": "1be1d344-bed1-45a0-a42a-7436af060bca",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "wed": {
+            "id": "b252da7e-a035-4d0c-bcc1-42510840e7ea",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "thu": {
+            "id": "876fb114-5e97-48e2-8a0c-d4faa6a8ec29",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "fri": {
+            "id": "92048cb4-6f9d-40a2-8a39-22affe19d045",
+            "subject": "normal",
+            "color": "bg-cyan-50 text-cyan-700 border border-cyan-200"
+          },
+          "Monday": {
+            "id": "af6c7080-8081-459a-a44e-28eb215c217d",
             "subject": "English",
             "color": "bg-emerald-100 text-emerald-700 border border-emerald-200",
             "teacherId": "staff_1790157907618_qk42q",
             "teacherName": "ANN NDUTA MBUGUA"
-          }
-        },
-        {
-          "mon": null,
-          "tue": null,
-          "wed": null,
-          "thu": null,
-          "fri": null
-        },
-        {
-          "mon": null,
-          "tue": null,
-          "wed": null,
-          "thu": null,
-          "fri": null
-        },
-        {
-          "mon": null,
-          "tue": null,
-          "wed": null,
-          "thu": null,
-          "fri": null
-        },
-        {
-          "mon": {
-            "id": "01a46229-a4c2-4cf3-a786-b934b1fb3f81",
-            "subject": "Break",
-            "color": "bg-amber-50 text-amber-700 border border-amber-200"
-          },
-          "tue": {
-            "id": "baf20cf6-a067-4181-ae6c-a52995acb96e",
-            "subject": "Break",
-            "color": "bg-amber-50 text-amber-700 border border-amber-200"
-          },
-          "wed": {
-            "id": "c2a8947e-3498-447b-9d6d-02848dcd116c",
-            "subject": "Break",
-            "color": "bg-amber-50 text-amber-700 border border-amber-200"
-          },
-          "thu": {
-            "id": "2fe03886-ea12-4252-a94d-791670b018b1",
-            "subject": "Break",
-            "color": "bg-amber-50 text-amber-700 border border-amber-200"
-          },
-          "fri": {
-            "id": "3f78b11a-74ac-4ac1-b9bb-89e4643a7bc6",
-            "subject": "Break",
-            "color": "bg-amber-50 text-amber-700 border border-amber-200"
-          }
-        },
-        {
-          "mon": null,
-          "tue": null,
-          "wed": null,
-          "thu": null,
-          "fri": null
-        },
-        {
-          "mon": {
-            "id": "37e0346c-7403-4cd1-b608-2aea1d4e4cef",
-            "subject": "Lunch Break",
-            "color": "bg-orange-50 text-orange-700 border border-orange-200"
-          },
-          "tue": {
-            "id": "6e7958dc-5dce-4a71-819b-f5871ccb337b",
-            "subject": "Lunch Break",
-            "color": "bg-orange-50 text-orange-700 border border-orange-200"
-          },
-          "wed": {
-            "id": "365a22a6-7cc1-46d1-9698-f9ffd1d7c172",
-            "subject": "Lunch Break",
-            "color": "bg-orange-50 text-orange-700 border border-orange-200"
-          },
-          "thu": {
-            "id": "a5accad0-d7fe-495a-8fd2-292a104235a3",
-            "subject": "Lunch Break",
-            "color": "bg-orange-50 text-orange-700 border border-orange-200"
-          },
-          "fri": {
-            "id": "65b10445-9cfb-4ded-9436-d7a571d24e4c",
-            "subject": "Lunch Break",
-            "color": "bg-orange-50 text-orange-700 border border-orange-200"
           }
         }
       ]
