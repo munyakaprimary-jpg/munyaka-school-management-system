@@ -1,4 +1,4 @@
-export const SEED_VERSION = "BUILD_OFFLINE_1790480699166";
+export const SEED_VERSION = "BUILD_OFFLINE_1790480856509";
 
 export const DEFAULT_CBC_CLUSTERS = [
   {
@@ -28,7 +28,7 @@ export const DEFAULT_CBC_CLUSTERS = [
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
 export const initialSeedData = {
-  "students": [
+  "learners": [
     {
       "id": "1790437574910",
       "name": "MICHAEL GICHUHI KADALA",
@@ -257,29 +257,6 @@ export const initialSeedData = {
       "joined": "2026-09-23"
     }
   ],
-  "attendance": {
-    "Grade 4_Blue_2026-08-26_morning": {
-      "session": "morning",
-      "class": "Grade 4",
-      "stream": "Blue",
-      "date": "2026-08-26",
-      "savedAt": "2026-08-26T07:05:17.006Z"
-    },
-    "Grade 4_all_2026-08-26_morning": {
-      "session": "morning",
-      "class": "Grade 4",
-      "stream": "all",
-      "date": "2026-08-26",
-      "savedAt": "2026-08-26T07:13:13.158Z"
-    },
-    "Grade 6_all_2026-08-26_morning": {
-      "session": "morning",
-      "class": "Grade 6",
-      "stream": "all",
-      "date": "2026-08-26",
-      "savedAt": "2026-08-26T08:56:37.698Z"
-    }
-  },
   "fees": [
     {
       "id": "FEE-001",
@@ -346,159 +323,29 @@ export const initialSeedData = {
       "feePaid": 0
     }
   ],
-  "payments": [
-    {
-      "id": "FEE-001",
-      "studentId": "1789826147758",
-      "student": "PETER MWANGI",
-      "admNo": "MUN-G1-001-2026",
-      "grade": "Grade 1",
-      "stream": "North",
-      "total": 1400,
-      "paid": 900,
-      "balance": 500,
-      "status": "Partial",
-      "year": "2026",
-      "term": "term1",
-      "reason": "Full payment received",
-      "feePaid": 900
+  "attendance": {
+    "Grade 4_Blue_2026-08-26_morning": {
+      "session": "morning",
+      "class": "Grade 4",
+      "stream": "Blue",
+      "date": "2026-08-26",
+      "savedAt": "2026-08-26T07:05:17.006Z"
     },
-    {
-      "id": "FEE-002",
-      "studentId": "1789881428012",
-      "student": "FRED KAPONDI",
-      "admNo": "MUN-G1-002-2026",
-      "grade": "GRADE 1",
-      "stream": "GREEN",
-      "total": 0,
-      "paid": 800,
-      "balance": 0,
-      "status": "Cleared",
-      "year": "2026",
-      "term": "term1",
-      "reason": "Partial deposit",
-      "feePaid": 800
+    "Grade 4_all_2026-08-26_morning": {
+      "session": "morning",
+      "class": "Grade 4",
+      "stream": "all",
+      "date": "2026-08-26",
+      "savedAt": "2026-08-26T07:13:13.158Z"
     },
-    {
-      "id": "FEE-003",
-      "studentId": "1789880616052",
-      "student": "GRACE MUTHONI",
-      "admNo": "MUN-G6-002-2026",
-      "grade": "GRADE 6",
-      "stream": "GREEN",
-      "total": 1400,
-      "paid": 250,
-      "balance": 1150,
-      "status": "Partial",
-      "year": "2026",
-      "term": "term1",
-      "reason": "Cleared in full",
-      "feePaid": 250
-    },
-    {
-      "id": "FEE-004",
-      "studentId": "1789880087460",
-      "student": "BRIGHTON KIPKOECH",
-      "admNo": "MUN-G6-001-2026",
-      "grade": "GRADE 6",
-      "stream": "BLUE",
-      "total": 1400,
-      "paid": 0,
-      "balance": 1400,
-      "status": "Pending",
-      "year": "2026",
-      "term": "term1",
-      "reason": "Pending balance",
-      "feePaid": 0
+    "Grade 6_all_2026-08-26_morning": {
+      "session": "morning",
+      "class": "Grade 6",
+      "stream": "all",
+      "date": "2026-08-26",
+      "savedAt": "2026-08-26T08:56:37.698Z"
     }
-  ],
-  "transactions": [
-    {
-      "id": "TX-ADJ-1790416429340",
-      "date": "2026-09-26",
-      "amount": 900,
-      "method": "Admin Direct Override",
-      "ref": "OVERRIDE-429340",
-      "category": "Direct Edit",
-      "studentId": "1789826147758",
-      "grade": "Grade 1"
-    },
-    {
-      "id": "TX-ADJ-1790416413785",
-      "date": "2026-09-26",
-      "amount": 0,
-      "method": "Admin Direct Override",
-      "ref": "OVERRIDE-413785",
-      "category": "Direct Edit",
-      "studentId": "1789880087460",
-      "grade": "Grade 6"
-    },
-    {
-      "id": "TX-ADJ-1790416403436",
-      "date": "2026-09-26",
-      "amount": 250,
-      "method": "Admin Direct Override",
-      "ref": "OVERRIDE-403436",
-      "category": "Direct Edit",
-      "studentId": "1789880616052",
-      "grade": "Grade 6"
-    },
-    {
-      "id": "TX-ADJ-1790416350059",
-      "date": "2026-09-26",
-      "amount": 800,
-      "method": "Admin Direct Override",
-      "ref": "OVERRIDE-350059",
-      "category": "Direct Edit",
-      "studentId": "1789881428012",
-      "grade": "Grade 1"
-    },
-    {
-      "id": "TX-101",
-      "date": "2026-01-15",
-      "amount": 12000,
-      "method": "Bank Deposit",
-      "ref": "REF-981273",
-      "category": "Payment",
-      "studentId": "1789826147758",
-      "grade": "Grade 1",
-      "stream": "North"
-    },
-    {
-      "id": "TX-102",
-      "date": "2026-01-18",
-      "amount": 8000,
-      "method": "M-Pesa",
-      "ref": "QHJ8921KLO",
-      "category": "Payment",
-      "studentId": "1789881428012",
-      "grade": "GRADE 1",
-      "stream": "GREEN"
-    },
-    {
-      "id": "TX-103",
-      "date": "2026-01-10",
-      "amount": 15000,
-      "method": "Bank Deposit",
-      "ref": "REF-441209",
-      "category": "Payment",
-      "studentId": "1789880616052",
-      "grade": "GRADE 6",
-      "stream": "GREEN"
-    },
-    {
-      "id": "TX-104",
-      "date": "2026-01-22",
-      "amount": 5000,
-      "method": "Cash",
-      "ref": "CSH-00192",
-      "category": "Payment",
-      "studentId": "1789880087460",
-      "grade": "GRADE 6",
-      "stream": "BLUE"
-    }
-  ],
-  "marks": [],
+  },
   "exams": [
     {
       "id": "asm-1790420055653-kg33sf",
@@ -566,18 +413,7 @@ export const initialSeedData = {
       "updatedAt": "2026-09-26T10:54:15.653Z"
     }
   ],
-  "grades": [],
-  "streams": [],
-  "classAssignments": [],
-  "learningAreas": [],
-  "examTypes": [],
-  "libraryBooks": [],
-  "feeStructures": [],
-  "notices": [],
-  "events": [],
-  "ictEquipment": [],
-  "scienceInventory": [],
-  "storeInventory": [],
+  "marks": [],
   "timetable": {
     "Grade 4 Green": {
       "timeSlots": [
@@ -724,7 +560,9 @@ export const initialSeedData = {
       ]
     }
   },
-  "settings": {}
+  "settings": {},
+  "notices": [],
+  "events": []
 };
 
 (initialSeedData as any).learners = initialSeedData.students;
