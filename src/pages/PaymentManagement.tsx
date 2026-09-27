@@ -26,12 +26,20 @@ import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
 import { useSchoolStore } from '@/store/useSchoolStore';
 
 export default function PaymentManagement() {
-  // Access active store data for students and staff FIRST (to avoid Temporal Dead Zone)
+  // Access active store data for students, staff, and campuses FIRST (to avoid Temporal Dead Zone)
   const students = useSchoolStore((state) => state.students) || [];
   const staff = useSchoolStore((state) => state.staff) || [];
+  const campuses = useSchoolStore((state) => state.campuses) || [];
+  const addCampus = useSchoolStore((state) => state.addCampus);
+  const deleteCampus = useSchoolStore((state) => state.deleteCampus);
+  const updateCampusSeats = useSchoolStore((state) => state.updateCampusSeats);
   const activeLearners = students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length;
   const PRICE_PER_SEAT = 250;
   const annualSubtotal = activeLearners * PRICE_PER_SEAT;
+
+  // Calculate total combined seats and commitment across all campuses
+  const totalCampusSeats = campuses.reduce((acc, c: any) => acc + Number(c.activeSeats || 0), 0);
+  const totalCampusCommitment = campuses.reduce((acc, c: any) => acc + (Number(c.activeSeats || 0) * Number(c.pricePerSeat || 250) * 12), 0);
 
   // Dynamic license key formatting based on active school ID / name
   const schoolIdHex = useMemo(() => {
