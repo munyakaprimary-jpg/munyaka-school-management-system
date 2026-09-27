@@ -44,8 +44,12 @@ const PRESET_SUBJECTS = [
 
 const Timetable = () => {
   const { user } = useAuth();
-  const userRole = user?.role || '';
-  const isTeacher = userRole.toLowerCase().includes('teacher') && !userRole.toLowerCase().includes('admin');
+  const currentUser = useSchoolStore(state => (state as any).currentUser || user);
+  const userRole = (currentUser?.role || user?.role || '').toLowerCase();
+  const isAdmin = userRole.includes('admin') || userRole.includes('head') || userRole.includes('super') || userRole.includes('principal');
+  const isTeacher = userRole.includes('teacher') && !isAdmin;
+
+  const [viewMode, setViewMode] = useState<'class' | 'my'>('class');
 
   const {
     selectedGrade,
@@ -68,7 +72,7 @@ const Timetable = () => {
   const [selectedCell, setSelectedCell] = useState<{ day: string; slotId: string } | null>(null);
 
   const handleCellClick = (day: string, slotId: string) => {
-    if (isTeacher) return; // Strict read-only for teachers
+    if (!isAdmin) return; // Strict read-only for non-admins
     setSelectedCell({ day, slotId });
   };
 
@@ -134,6 +138,23 @@ const Timetable = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {isTeacher && (
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+              <button
+                onClick={() => setViewMode('class')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'class' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                Class Schedule
+              </button>
+              <button
+                onClick={() => setViewMode('my')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'my' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                My Schedule
+              </button>
+            </div>
+          )}
+
           <Select value={selectedGrade} onValueChange={setSelectedGrade}>
             <SelectTrigger className="w-[220px] rounded-xl font-bold border-slate-200">
               <SelectValue placeholder="Select Grade / Stream" />
@@ -147,7 +168,7 @@ const Timetable = () => {
             </SelectContent>
           </Select>
 
-          {!isTeacher && (
+          {isAdmin && (
             <Button
               onClick={() => { setEditingSlot(null); setIsSlotModalOpen(true); }}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md flex items-center gap-2"
@@ -208,12 +229,27 @@ const Timetable = () => {
                       const assignedSubject = entry?.subjectName || entry?.subject || entry?.title;
                       const assignedTeacher = entry?.teacherName || entry?.teacher || resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName);
 
+                      // If in 'my' schedule mode, check if the lesson belongs to the logged-in teacher
+                      const teacherStaffId = currentUser?.id || currentUser?.staffId || '';
+                      const teacherStaffName = (currentUser?.name || currentUser?.fullName || '').toLowerCase();
+                      const isMyLesson =
+                        (entry?.teacherId && String(entry.teacherId) === String(teacherStaffId)) ||
+                        (assignedTeacher && assignedTeacher.toLowerCase().includes(teacherStaffName) && teacherStaffName.length > 2);
+
+                      if (viewMode === 'my' && !isMyLesson) {
+                        return (
+                          <td key={slot.id} className="p-3 align-middle bg-slate-50/20 text-center border-l border-slate-100">
+                            <span className="text-slate-300 text-xs">—</span>
+                          </td>
+                        );
+                      }
+
                       return (
                         <td key={slot.id} className="p-3 align-top border-l border-slate-100">
                           <div
                             onClick={() => handleCellClick(day, slot.id)}
                             className={`p-3 rounded-2xl border transition-all min-h-[90px] flex flex-col justify-center ${
-                              isTeacher
+                              !isAdmin
                                 ? 'bg-slate-50/60 border-slate-100 cursor-default shadow-none'
                                 : 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
                             }`}
@@ -228,7 +264,7 @@ const Timetable = () => {
                               </div>
                             ) : (
                               <div className="py-2 text-center text-slate-400 text-xs font-medium">
-                                {isTeacher ? '—' : '+ Assign Lesson'}
+                                {!isAdmin ? '—' : '+ Assign Lesson'}
                               </div>
                             )}
                           </div>
