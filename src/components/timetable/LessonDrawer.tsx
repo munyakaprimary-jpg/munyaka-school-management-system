@@ -87,7 +87,9 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
     const finalSubject = isCustom ? String(customSubject || '').trim() : subject;
     if (!finalSubject) return;
     const preset = PRESET_SUBJECTS.find(p => p.name === finalSubject);
-    onSave(finalSubject, preset?.color, assignedTeacherId || undefined, assignedTeacherName || undefined);
+    const selectedTeacherObj = teachingStaff.find(s => s.id === assignedTeacherId);
+    const finalTeacherName = selectedTeacherObj?.name || assignedTeacherName || '';
+    onSave(finalSubject, preset?.color, assignedTeacherId || undefined, finalTeacherName || undefined);
   };
 
   return (

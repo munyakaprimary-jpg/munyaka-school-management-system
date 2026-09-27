@@ -95,9 +95,9 @@ const Timetable = () => {
     return { grade: selectedGrade, stream: '' };
   }, [selectedGrade]);
 
-  // Helper to resolve teacher name from teacherId
+  // Helper to resolve teacher name from teacherId or entry.teacherName
   const resolveTeacherName = (teacherId?: string, teacherName?: string): string => {
-    if (teacherName) return teacherName;
+    if (teacherName && teacherName.trim()) return teacherName;
     if (!teacherId) return '';
     const teacher = staff.find((s: any) => String(s.id) === String(teacherId));
     return teacher?.name || teacher?.fullName || '';
