@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Clock, ShieldAlert, ArrowRight, X } from 'lucide-react';
 import { getAutoLockStatus } from '@/utils/billingAutoLock';
+import { getActiveLicense, daysRemainingUntil } from '@/services/licenseService';
 
 interface BillingWarningBannerProps {
   currentRole?: string | null;
@@ -17,17 +18,27 @@ export const BillingWarningBanner: React.FC<BillingWarningBannerProps> = ({ curr
     return () => clearInterval(interval);
   }, []);
 
-  // If already locked or paid or dismissed, don't show the warning banner
+  // 1. Check license status first: if valid license exists with daysRemaining > 0, OR app is licensed, DO NOT show banner.
+  const activeLicense = getActiveLicense();
+  const daysRemainingLicense = activeLicense ? daysRemainingUntil(activeLicense.expiresAt) : 0;
+  const isLicensed = activeLicense !== null && daysRemainingLicense > 0;
+
+  if (isLicensed || daysRemainingLicense > 0) {
+    return null;
+  }
+
+  // 2. If already locked or paid or dismissed, don't show the warning banner
   if (status.isLocked || status.isCurrentCyclePaid || dismissed) {
     return null;
   }
 
-  // Check if we are within 5 days of deadline or past due date (before lock triggers or if close)
+  // Check auto-lock payment deadline status
   const daysRemaining = status.daysUntilDeadline;
   const isPastDue = status.isPastDeadline;
 
-  // Show warning if 5 days or fewer remaining, or if past due
-  if (daysRemaining > 5 && !isPastDue) {
+  // Only show red/orange "Payment Overdue" banner if daysRemaining <= 0 AND payment status is strictly unpaid (not current cycle paid)
+  // Also never show if payment status is paid (isCurrentCyclePaid is handled above)
+  if (daysRemaining > 0 && !isPastDue) {
     return null;
   }
 
