@@ -226,15 +226,15 @@ const Timetable = () => {
                       }
 
                       const entry = (entries[slotIndex]?.[dayKey] || null) as (LessonEntry & { subjectName?: string; teacherName?: string; teacherId?: string; staffId?: string; teacher?: string; title?: string; room?: string }) | null;
-                      const assignedSubject = entry?.subjectName || entry?.subject || entry?.title;
-                      const assignedTeacher = entry?.teacherName || entry?.teacher || resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName);
+                      const subjectName = resolveSubjectName(entry?.subjectName || entry?.subject || entry?.title);
+                      const teacherName = resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName || entry?.teacher);
 
                       // If in 'my' schedule mode, check if the lesson belongs to the logged-in teacher
                       const teacherStaffId = currentUser?.id || currentUser?.staffId || '';
                       const teacherStaffName = (currentUser?.name || currentUser?.fullName || '').toLowerCase();
                       const isMyLesson =
                         (entry?.teacherId && String(entry.teacherId) === String(teacherStaffId)) ||
-                        (assignedTeacher && assignedTeacher.toLowerCase().includes(teacherStaffName) && teacherStaffName.length > 2);
+                        (teacherName && teacherName.toLowerCase().includes(teacherStaffName) && teacherStaffName.length > 2);
 
                       if (viewMode === 'my' && !isMyLesson) {
                         return (
@@ -254,10 +254,10 @@ const Timetable = () => {
                                 : 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
                             }`}
                           >
-                            {assignedSubject ? (
-                              <div className="flex flex-col p-2">
-                                <span className="font-bold text-gray-900">{resolveSubjectName(assignedSubject)}</span>
-                                <span className="text-xs text-gray-600">{assignedTeacher || 'No Teacher'}</span>
+                            {entry?.subject ? (
+                              <div className="flex flex-col p-1">
+                                <span className="font-bold text-sm text-gray-900">{subjectName || entry?.subject || 'No Subject'}</span>
+                                <span className="text-xs text-gray-500">{teacherName || entry?.teacher || 'No Teacher'}</span>
                                 {entry?.room && (
                                   <span className="text-[9px] text-slate-400 font-mono mt-1">Room: {entry.room}</span>
                                 )}
