@@ -66,8 +66,8 @@ export default function Timetable() {
   const [selectedStream, setSelectedStream] = useState('Green');
   const selectedClassKey = `${selectedGrade} ${selectedStream}`;
 
-  // Dynamic Learning Areas from LocalStorage / Learning Area Manager store
-  const learningAreaClusters = useMemo(() => {
+  // Dynamic Learning Areas from LocalStorage / Learning Area Manager store with window storage event listening
+  const [learningAreaClusters, setLearningAreaClusters] = useState(() => {
     try {
       const saved = localStorage.getItem('munyaka_cbc_learning_area_clusters');
       if (saved) {
@@ -76,15 +76,44 @@ export default function Timetable() {
       }
     } catch {}
     return DEFAULT_CBC_CLUSTERS;
+  });
+
+  // Listen for storage or custom events when learning areas are updated in Learning Areas manager
+  useMemo(() => {
+    const handleStorageChange = () => {
+      try {
+        const saved = localStorage.getItem('munyaka_cbc_learning_area_clusters');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setLearningAreaClusters(parsed);
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('learning_areas_updated', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('learning_areas_updated', handleStorageChange);
+    };
   }, []);
 
-  // Map Grade to CBC Level ID
+  // Map Grade to exact CBC Level ID
   const activeClusterId = useMemo(() => {
-    const g = selectedGrade.toLowerCase();
-    if (g.includes('pp1') || g.includes('pp2') || g.includes('pre-primary')) return 'pre-primary';
-    if (g.includes('grade 1') || g.includes('grade 2') || g.includes('grade 3')) return 'lower-primary';
-    if (g.includes('grade 4') || g.includes('grade 5') || g.includes('grade 6')) return 'upper-primary';
-    if (g.includes('grade 7') || g.includes('grade 8') || g.includes('grade 9')) return 'junior-school';
+    const g = selectedGrade.toLowerCase().trim();
+    if (g.includes('pp1') || g.includes('pp2') || g.includes('pre-primary') || g.includes('playgroup')) {
+      return 'pre-primary';
+    }
+    if (g.includes('grade 1') || g.includes('grade 2') || g.includes('grade 3')) {
+      return 'lower-primary';
+    }
+    if (g.includes('grade 4') || g.includes('grade 5') || g.includes('grade 6')) {
+      return 'upper-primary';
+    }
+    if (g.includes('grade 7') || g.includes('grade 8') || g.includes('grade 9')) {
+      return 'junior-school';
+    }
     return 'upper-primary';
   }, [selectedGrade]);
 
@@ -93,7 +122,17 @@ export default function Timetable() {
     if (cluster && Array.isArray(cluster.learningAreas) && cluster.learningAreas.length > 0) {
       return cluster.learningAreas.map((la: any) => la.name);
     }
-    return ['Mathematics', 'English', 'Kiswahili', 'Science and Technology', 'Social Studies', 'Religious Education'];
+    // Fallbacks per level if empty
+    if (activeClusterId === 'pre-primary') {
+      return ['Language Activities', 'Mathematical Activities', 'Environmental Activities', 'Psychomotor & Creative Activities', 'Religious Education Activities'];
+    }
+    if (activeClusterId === 'lower-primary') {
+      return ['English Language Activities', 'Kiswahili Language Activities', 'Mathematical Activities', 'Environmental Activities', 'Hygiene and Nutrition', 'Religious Education'];
+    }
+    if (activeClusterId === 'junior-school') {
+      return ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Social Studies', 'Agriculture', 'Pre-Technical Studies', 'Religious Education', 'Creative Arts and Sports'];
+    }
+    return ['English', 'Kiswahili', 'Mathematics', 'Science and Technology', 'Agriculture and Nutrition', 'Social Studies', 'Religious Education', 'Creative Arts', 'Physical Education'];
   }, [learningAreaClusters, activeClusterId]);
 
   // Timetable Configuration Settings state with TWO distinct short breaks

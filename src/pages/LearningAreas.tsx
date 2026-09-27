@@ -85,6 +85,7 @@ const LearningAreas = () => {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(clusters));
+    window.dispatchEvent(new Event('learning_areas_updated'));
     notifyDataChanged('munyaka_learning_areas');
   }, [clusters]);
 
