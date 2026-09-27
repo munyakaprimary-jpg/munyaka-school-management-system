@@ -205,8 +205,8 @@ const Timetable = () => {
                       }
 
                       const entry = (entries[slotIndex]?.[dayKey] || null) as (LessonEntry & { subjectName?: string; teacherName?: string; teacherId?: string; staffId?: string; teacher?: string; title?: string; room?: string }) | null;
-                      const displaySubject = resolveSubjectName(entry?.subjectName || entry?.subject || entry?.title);
-                      const displayTeacher = resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName || entry?.teacher);
+                      const assignedSubject = entry?.subjectName || entry?.subject || entry?.title;
+                      const assignedTeacher = entry?.teacherName || entry?.teacher || resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName);
 
                       return (
                         <td key={slot.id} className="p-3 align-top border-l border-slate-100">
@@ -218,11 +218,11 @@ const Timetable = () => {
                                 : 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
                             }`}
                           >
-                            {entry?.subject ? (
-                              <div className="flex flex-col">
-                                <span className="font-bold text-sm text-gray-900">{displaySubject}</span>
-                                <span className="text-xs text-gray-500">{displayTeacher}</span>
-                                {entry.room && (
+                            {assignedSubject ? (
+                              <div className="flex flex-col p-2">
+                                <span className="font-bold text-gray-900">{resolveSubjectName(assignedSubject)}</span>
+                                <span className="text-xs text-gray-600">{assignedTeacher || 'No Teacher'}</span>
+                                {entry?.room && (
                                   <span className="text-[9px] text-slate-400 font-mono mt-1">Room: {entry.room}</span>
                                 )}
                               </div>
