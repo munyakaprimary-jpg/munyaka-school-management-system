@@ -89,7 +89,14 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
     const preset = PRESET_SUBJECTS.find(p => p.name === finalSubject);
     const selectedTeacherObj = teachingStaff.find(s => s.id === assignedTeacherId);
     const finalTeacherName = selectedTeacherObj?.name || assignedTeacherName || '';
-    onSave(finalSubject, preset?.color, assignedTeacherId || undefined, finalTeacherName || undefined);
+    
+    // Ensure all required properties are passed to persistence
+    onSave(
+      finalSubject,
+      preset?.color,
+      assignedTeacherId || undefined,
+      finalTeacherName || undefined
+    );
   };
 
   return (

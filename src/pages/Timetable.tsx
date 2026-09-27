@@ -276,7 +276,14 @@ const Timetable = () => {
           currentEntry={currentEntry}
           onSave={(subject, color, teacherId, teacherName) => {
             if (selectedCell) {
-              updateEntry(selectedCell.day, selectedCell.slotId, { subject, color, teacherId, teacherName });
+              const matchedStaff = staff.find((s: any) => String(s.id) === String(teacherId));
+              const resolvedTeacher = teacherName || matchedStaff?.name || matchedStaff?.fullName || '';
+              updateEntry(selectedCell.day, selectedCell.slotId, {
+                subject,
+                color,
+                teacherId,
+                teacherName: resolvedTeacher,
+              });
               setSelectedCell(null);
             }
           }}

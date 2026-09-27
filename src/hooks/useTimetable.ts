@@ -406,6 +406,7 @@ export function useTimetable() {
           color: updates.color || existingEntry?.color || SUBJECT_COLORS[Math.floor(Math.random() * SUBJECT_COLORS.length)],
           teacherId: updates.teacherId !== undefined ? updates.teacherId : existingEntry?.teacherId,
           teacherName: updates.teacherName !== undefined ? updates.teacherName : existingEntry?.teacherName,
+          ...(updates as any),
         } : null;
 
         const updatedEntries = current.entries.map((entry, idx) => {
