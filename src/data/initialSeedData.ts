@@ -27,7 +27,8 @@ export const DEFAULT_CBC_CLUSTERS = [
 
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
-export const initialSeedData: any = {
+export const initialSeedData = {
+  "learners": [
     {
       "id": "1790437574910",
       "name": "MICHAEL GICHUHI KADALA",
