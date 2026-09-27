@@ -164,55 +164,51 @@ const Timetable = () => {
         </div>
       </div>
 
-      {/* Timetable Grid View */}
+      {/* Timetable Grid View (Days horizontally, Time slots vertically) */}
       <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">Time / Day</th>
-                {DAYS.map(day => (
-                  <th key={day} className="p-4 text-xs font-bold uppercase tracking-wider text-slate-700 text-center">
-                    {day}
-                  </th>
-                ))}
+                <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">Day / Lesson</th>
+                {timeSlots.map((slot, index) => {
+                  const isCategorySlot = slot.category && slot.category !== 'normal';
+                  return (
+                    <th key={slot.id} className="p-4 text-xs font-bold uppercase tracking-wider text-slate-700 text-center min-w-[160px]">
+                      <div>{isCategorySlot ? ((slot as any).label || slot.category.toUpperCase()) : `Lesson ${index + 1}`}</div>
+                      <div className="font-mono font-normal text-[10px] text-slate-400 mt-0.5">{slot.startTime} - {slot.endTime}</div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {timeSlots.map((slot, slotIndex) => {
-                const isCategorySlot = slot.category && slot.category !== 'normal';
-                if (isCategorySlot) {
-                  return (
-                    <tr key={slot.id} className="bg-slate-50/80">
-                      <td className="p-4 pl-6 font-mono text-xs text-slate-500">
-                        {slot.startTime} - {slot.endTime}
-                      </td>
-                      <td colSpan={DAYS.length} className="p-4 text-center">
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-bold text-xs">
-                          <Clock size={14} /> {(slot as any).label || slot.category.toUpperCase()} ({slot.startTime} - {slot.endTime})
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                }
-
+              {DAYS.map((day, dayIndex) => {
+                const dayKey = DAY_KEYS[dayIndex];
                 return (
-                  <tr key={slot.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-4 pl-6 align-top">
-                      <div className="font-bold text-slate-800 text-sm">{(slot as any).label || 'Lesson'}</div>
-                      <div className="font-mono text-xs text-slate-400 mt-0.5">{slot.startTime} - {slot.endTime}</div>
+                  <tr key={day} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 pl-6 align-middle bg-slate-50/50 font-bold text-slate-900 text-sm">
+                      {day}
                     </td>
-                    {DAYS.map((day, dayIndex) => {
-                      // FIX: Use slotIndex and day key to lookup entry correctly
-                      // entries is TimetableEntry[] where each entry is { [day: string]: LessonEntry | null }
-                      const dayKey = DAY_KEYS[dayIndex];
+                    {timeSlots.map((slot, slotIndex) => {
+                      const isCategorySlot = slot.category && slot.category !== 'normal';
+                      if (isCategorySlot) {
+                        return (
+                          <td key={slot.id} className="p-3 align-middle bg-amber-50/30 text-center">
+                            <span className="inline-flex px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-bold text-xs">
+                              {(slot as any).label || slot.category.toUpperCase()}
+                            </span>
+                          </td>
+                        );
+                      }
+
                       const entry = entries[slotIndex]?.[dayKey] || null;
 
                       return (
-                        <td key={day} className="p-3 align-top border-l border-slate-100">
+                        <td key={slot.id} className="p-3 align-top border-l border-slate-100">
                           <div
                             onClick={() => handleCellClick(day, slot.id)}
-                            className={`p-3 rounded-2xl border transition-all ${
+                            className={`p-3 rounded-2xl border transition-all min-h-[90px] flex flex-col justify-center ${
                               isTeacher
                                 ? 'bg-slate-50/60 border-slate-100 cursor-default shadow-none'
                                 : 'bg-white border-slate-200 hover:border-blue-400 hover:shadow-md cursor-pointer'
@@ -220,20 +216,20 @@ const Timetable = () => {
                           >
                             {entry?.subject ? (
                               <div className="space-y-1">
-                                <div className="font-bold text-slate-900 text-sm flex items-center justify-between">
-                                  <span>{resolveSubjectName(entry.subject)}</span>
-                                  {!isTeacher && <Badge className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0">Active</Badge>}
+                                <div className="font-bold text-slate-900 text-xs flex items-center justify-between gap-1">
+                                  <span className="truncate">{resolveSubjectName(entry.subject)}</span>
+                                  {!isTeacher && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>}
                                 </div>
                                 {resolveTeacherName(entry.teacherId, entry.teacherName) && (
-                                  <div className="text-xs text-slate-500 font-medium">{resolveTeacherName(entry.teacherId, entry.teacherName)}</div>
+                                  <div className="text-[11px] text-slate-500 font-medium truncate">{resolveTeacherName(entry.teacherId, entry.teacherName)}</div>
                                 )}
                                 {entry.room && (
-                                  <div className="text-[10px] text-slate-400 font-mono">Room: {entry.room}</div>
+                                  <div className="text-[9px] text-slate-400 font-mono">Room: {entry.room}</div>
                                 )}
                               </div>
                             ) : (
                               <div className="py-2 text-center text-slate-300 text-xs font-medium">
-                                {isTeacher ? '—' : '+ Assign Lesson'}
+                                {isTeacher ? '—' : '+ Add Lesson'}
                               </div>
                             )}
                           </div>
