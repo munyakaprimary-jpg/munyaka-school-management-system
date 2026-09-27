@@ -461,9 +461,9 @@ export default function Timetable() {
         <div
           ref={topScrollRef}
           onScroll={handleTopScroll}
-          className="overflow-x-auto overflow-y-hidden bg-slate-100/90 border-b border-slate-200 py-2 px-4"
+          className="overflow-x-auto overflow-y-hidden mb-1 bg-slate-100/90 border-b border-slate-200 py-2 px-4"
         >
-          <div style={{ width: '1200px', height: '1px' }} />
+          <div style={{ width: tableRef.current ? `${tableRef.current.scrollWidth}px` : '1200px', height: '1px' }} />
         </div>
 
         <div
@@ -471,7 +471,7 @@ export default function Timetable() {
           onScroll={handleGridScroll}
           className="overflow-x-auto"
         >
-          <table ref={tableRef} className="w-full border-collapse text-left min-w-[1100px]">
+          <table ref={tableRef} className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-200">
                 <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">DAY / EVENT</th>
