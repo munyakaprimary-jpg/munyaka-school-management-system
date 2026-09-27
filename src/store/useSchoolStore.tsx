@@ -36,7 +36,10 @@ let storeState = {
   marks: (initialSeedData as any).marks || [],
   timetable: (initialSeedData as any).timetable || {},
   settings: (initialSeedData as any).settings || {},
-  notices: (initialSeedData as any).notices || [],
+  notices: getInitialStorage('munyaka_notices_board', [
+    { id: 'not-1', title: 'Opening Day for Term 1', content: 'All students are expected to report back by 8:00 AM sharp in full proper school uniform.', date: 'Today', category: 'Notice', color: 'bg-indigo-50 text-indigo-600' },
+    { id: 'not-2', title: 'Parent-Teacher Association AGM', content: 'Annual General Meeting for all parents and guardians to discuss school development and fee structures.', date: '2 days ago', category: 'Event', color: 'bg-emerald-50 text-emerald-600' }
+  ]),
   events: (initialSeedData as any).events || []
 };
 
@@ -61,7 +64,7 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
     marks: getInitialStorage('marked_student_submissions', storeState.marks),
     timetable: getInitialStorage('school-timetable-data', storeState.timetable),
     settings: getInitialStorage('munyaka_system_settings_v3', storeState.settings),
-    notices: getInitialStorage('munyaka_notices', storeState.notices),
+    notices: getInitialStorage('munyaka_notices_board', storeState.notices),
     events: getInitialStorage('munyaka_events', storeState.events),
 
     setLearners: (learners: any[]) => {
@@ -110,9 +113,25 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
     },
-    setSettings: (settings: any) => {
-      localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(settings));
-      storeState.settings = settings;
+    setNotices: (notices: any[]) => {
+      localStorage.setItem('munyaka_notices_board', JSON.stringify(notices));
+      storeState.notices = notices;
+      listeners.forEach(l => l());
+      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+    },
+    addNotice: (notice: any) => {
+      const current = getInitialStorage('munyaka_notices_board', storeState.notices);
+      const updated = [notice, ...current];
+      localStorage.setItem('munyaka_notices_board', JSON.stringify(updated));
+      storeState.notices = updated;
+      listeners.forEach(l => l());
+      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+    },
+    deleteNotice: (id: string) => {
+      const current = getInitialStorage('munyaka_notices_board', storeState.notices);
+      const updated = current.filter((n: any) => n.id !== id);
+      localStorage.setItem('munyaka_notices_board', JSON.stringify(updated));
+      storeState.notices = updated;
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
     },
@@ -127,6 +146,7 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
         fees: state.fees,
         exams: state.exams,
         marks: state.marks,
+        notices: state.notices || [],
         timetables: getInitialStorage('munyaka_timetable_allocations', []),
         timetableConfig: getInitialStorage('munyaka_timetable_config_dual_breaks', {}),
         customLearningAreas: getInitialStorage('munyaka_cbc_learning_area_clusters', null)
@@ -164,6 +184,10 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
 
           if (data.timetables) localStorage.setItem('munyaka_timetable_allocations', JSON.stringify(data.timetables));
           if (data.timetableConfig) localStorage.setItem('munyaka_timetable_config_dual_breaks', JSON.stringify(data.timetableConfig));
+          if (data.notices) {
+            localStorage.setItem('munyaka_notices_board', JSON.stringify(data.notices));
+            storeState.notices = data.notices;
+          }
           if (data.customLearningAreas) {
             localStorage.setItem('munyaka_cbc_learning_area_clusters', JSON.stringify(data.customLearningAreas));
             window.dispatchEvent(new Event('learning_areas_updated'));
