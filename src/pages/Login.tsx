@@ -161,7 +161,7 @@ const RoleCard: React.FC<RoleCardProps> = ({
             <ArrowRight size={18} className={cn("shrink-0 transition-transform group-hover:translate-x-1", textColor)} />
           </div>
           <p className="text-xs md:text-sm text-slate-500 font-medium mb-3">{role.description}</p>
-          <div className="flex flex-wrap gap-1.5 mb-3">
+          <div className="flex flex-wrap gap-1.5">
             {featureIcons.map(({ Icon: FeatureIcon, label }, idx) => (
               <div key={idx} className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold", bgColor, textColor)}>
                 <FeatureIcon size={10} />
@@ -169,15 +169,6 @@ const RoleCard: React.FC<RoleCardProps> = ({
               </div>
             ))}
           </div>
-          <Badge variant="outline" className={cn("font-bold text-[10px] border", borderColor, textColor)}>
-            {hasCustomPassword ? (
-              <span className="flex items-center gap-1">
-                <KeyRound size={9} /> Custom PIN set
-              </span>
-            ) : (
-              `Default PIN: ${role.defaultPassword}`
-            )}
-          </Badge>
         </div>
       </div>
     </button>
@@ -617,12 +608,7 @@ const Login: React.FC = () => {
                                         <KeyRound size={9} />
                                         Custom PIN — set via Configuration &rarr; Owner Security
                                       </span>
-                                    ) : (
-                                      <>
-                                        Default PIN:{' '}
-                                        <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span>
-                                      </>
-                                    )}
+                                    ) : null}
                                   </p>
                                 </div>
                                 <Button
@@ -721,12 +707,7 @@ const Login: React.FC = () => {
                               <KeyRound size={9} />
                               Custom PIN — set via Configuration &rarr; Owner Security
                             </span>
-                          ) : (
-                            <>
-                              Default PIN:{' '}
-                              <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span>
-                            </>
-                          )}
+                          ) : null}
                         </p>
                       </div>
                       <Button
