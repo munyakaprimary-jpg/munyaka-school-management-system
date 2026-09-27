@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
 import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
+import { useSchoolStore } from '@/store/useSchoolStore';
 
 export default function PaymentManagement() {
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'seats' | 'monthly' | 'gateways' | 'invoices'>('subscriptions');
