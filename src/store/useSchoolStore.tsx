@@ -70,7 +70,6 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
       storeState.learners = learners;
       listeners.forEach(l => l());
       window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
-      fetch('/api/save-seed', { method: 'POST', body: JSON.stringify(useSchoolStore.getState()) }).catch(() => {});
     },
     setStaff: (staff: any[]) => {
       localStorage.setItem('munyaka_staff', JSON.stringify(staff));

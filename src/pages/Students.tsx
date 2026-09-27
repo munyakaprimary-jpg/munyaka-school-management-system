@@ -604,21 +604,6 @@ export default function Students() {
       localStorage.setItem('munyaka_students', JSON.stringify(updated));
       localStorage.setItem('school_learners_data', JSON.stringify(updated));
 
-      // Automatically push to /api/save-seed so initialSeedData.ts is updated on disk immediately
-      try {
-        const fullState = {
-          students: updated,
-          staff: JSON.parse(localStorage.getItem('munyaka_staff') || '[]'),
-          fees: JSON.parse(localStorage.getItem('munyaka_fees') || '[]'),
-          attendance: JSON.parse(localStorage.getItem('munyaka_attendance') || '{}'),
-        };
-        fetch('/api/save-seed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(fullState)
-        }).catch(() => {});
-      } catch {}
-
       // Save and synchronize with munyaka_central_db central database key & sync endpoint
       try {
       const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');

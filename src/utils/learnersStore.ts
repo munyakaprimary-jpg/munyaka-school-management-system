@@ -136,22 +136,6 @@ export function saveStoredLearner(learner: Partial<PersistentLearner> & { id?: s
     localStorage.setItem('school_learners_data', JSON.stringify(updated));
     localStorage.setItem('munyaka_students', JSON.stringify(updated));
 
-    // Automatically push to /api/save-seed so initialSeedData.ts is updated on disk immediately
-    try {
-      const fullState = {
-        ...(typeof window !== 'undefined' && (window as any).__munyaka_get_full_state ? (window as any).__munyaka_get_full_state() : {}),
-        students: updated,
-        staff: JSON.parse(localStorage.getItem('munyaka_staff') || '[]'),
-        fees: JSON.parse(localStorage.getItem('munyaka_fees') || '[]'),
-        attendance: JSON.parse(localStorage.getItem('munyaka_attendance') || '{}'),
-      };
-      fetch('/api/save-seed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fullState)
-      }).catch(() => {});
-    } catch {}
-
     // Dispatch update events for reactive UI subscribers
     window.dispatchEvent(new Event('students-updated'));
     window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: LEARNERS_DB_KEY } }));
