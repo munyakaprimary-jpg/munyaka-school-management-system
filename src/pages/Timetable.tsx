@@ -4,9 +4,7 @@ import {
   Printer,
   Trash2,
   X,
-  Settings,
-  SlidersHorizontal,
-  Clock
+  SlidersHorizontal
 } from 'lucide-react';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { Button } from '@/components/ui/button';
@@ -44,6 +42,7 @@ interface TimeSlot {
   name: string;
   time: string;
   isBreak: boolean;
+  breakType?: 'assembly' | 'tea' | 'lunch' | 'games';
 }
 
 // Helper to convert "HH:MM" to total minutes from midnight
@@ -80,71 +79,112 @@ export default function Timetable() {
   const [selectedStream, setSelectedStream] = useState('Green');
   const selectedClassKey = `${selectedGrade} ${selectedStream}`;
 
-  // Timetable Configuration Settings state
+  // Expanded Timetable Configuration Settings state
   const [config, setConfig] = useState(() => {
     try {
-      const saved = localStorage.getItem('munyaka_timetable_config');
+      const saved = localStorage.getItem('munyaka_timetable_config_expanded');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') return parsed;
       }
     } catch {}
     return {
-      startTime: '08:20',
+      startTime: '08:00',
+      assemblyDuration: 20,
       lessonDuration: 40,
-      breakDuration: 30,
-      totalLessons: 8
+      teaDuration: 30,
+      teaAfterLesson: 2,
+      lunchDuration: 60,
+      lunchAfterLesson: 5,
+      gamesDuration: 40,
+      totalLessons: 7
     };
   });
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempConfig, setTempConfig] = useState(config);
 
-  // Dynamic Time Slot Calculator
+  // Dynamic Full Schedule Sequence Generator
   const LESSON_SLOTS = useMemo<TimeSlot[]>(() => {
     const slots: TimeSlot[] = [];
-    let currentMinutes = timeToMinutes(config.startTime || '08:20');
-    const lessonDur = Number(config.lessonDuration) || 40;
-    const breakDur = Number(config.breakDuration) || 30;
-    const total = Number(config.totalLessons) || 8;
+    let currentMinutes = timeToMinutes(config.startTime || '08:00');
 
-    for (let i = 1; i <= total; i++) {
-      // Insert Break after Lesson 2 (or roughly middle)
-      if (i === 3) {
-        const breakStart = minutesToTime(currentMinutes);
-        currentMinutes += breakDur;
-        const breakEnd = minutesToTime(currentMinutes);
+    const assemblyDur = Number(config.assemblyDuration) || 20;
+    const lessonDur = Number(config.lessonDuration) || 40;
+    const teaDur = Number(config.teaDuration) || 30;
+    const teaAfter = Number(config.teaAfterLesson) || 2;
+    const lunchDur = Number(config.lunchDuration) || 60;
+    const lunchAfter = Number(config.lunchAfterLesson) || 5;
+    const gamesDur = Number(config.gamesDuration) || 40;
+    const totalLessons = Number(config.totalLessons) || 7;
+
+    // 1. Morning Assembly / Registration
+    const asmStart = minutesToTime(currentMinutes);
+    currentMinutes += assemblyDur;
+    const asmEnd = minutesToTime(currentMinutes);
+    slots.push({
+      id: 'assembly',
+      name: 'Assembly & Registration',
+      time: `${asmStart} - ${asmEnd}`,
+      isBreak: true,
+      breakType: 'assembly'
+    });
+
+    let lessonCounter = 1;
+    for (let i = 1; i <= totalLessons; i++) {
+      // Check if Tea Break should be inserted before this lesson
+      if (lessonCounter === teaAfter + 1) {
+        const teaStart = minutesToTime(currentMinutes);
+        currentMinutes += teaDur;
+        const teaEnd = minutesToTime(currentMinutes);
         slots.push({
-          id: 'break-1',
-          name: 'Break Time',
-          time: `${breakStart} - ${breakEnd}`,
-          isBreak: true
+          id: 'tea-break',
+          name: 'Morning Tea Break',
+          time: `${teaStart} - ${teaEnd}`,
+          isBreak: true,
+          breakType: 'tea'
         });
       }
-      // Insert Lunch Break after Lesson 5
-      if (i === 6) {
+
+      // Check if Lunch Break should be inserted before this lesson
+      if (lessonCounter === lunchAfter + 1) {
         const lunchStart = minutesToTime(currentMinutes);
-        currentMinutes += 60; // 1 hour lunch
+        currentMinutes += lunchDur;
         const lunchEnd = minutesToTime(currentMinutes);
         slots.push({
-          id: 'lunch-1',
+          id: 'lunch-break',
           name: 'Lunch Break',
           time: `${lunchStart} - ${lunchEnd}`,
-          isBreak: true
+          isBreak: true,
+          breakType: 'lunch'
         });
       }
 
-      const lessonStart = minutesToTime(currentMinutes);
+      const lStart = minutesToTime(currentMinutes);
       currentMinutes += lessonDur;
-      const lessonEnd = minutesToTime(currentMinutes);
+      const lEnd = minutesToTime(currentMinutes);
 
       slots.push({
-        id: `slot-${i}`,
-        name: `Lesson ${i}`,
-        time: `${lessonStart} - ${lessonEnd}`,
+        id: `slot-${lessonCounter}`,
+        name: `Lesson ${lessonCounter}`,
+        time: `${lStart} - ${lEnd}`,
         isBreak: false
       });
+
+      lessonCounter++;
     }
+
+    // 2. Games / Co-Curricular at day end
+    const gamesStart = minutesToTime(currentMinutes);
+    currentMinutes += gamesDur;
+    const gamesEnd = minutesToTime(currentMinutes);
+    slots.push({
+      id: 'games',
+      name: 'Games & Co-Curricular',
+      time: `${gamesStart} - ${gamesEnd}`,
+      isBreak: true,
+      breakType: 'games'
+    });
 
     return slots;
   }, [config]);
@@ -235,7 +275,7 @@ export default function Timetable() {
     e.preventDefault();
     setConfig(tempConfig);
     try {
-      localStorage.setItem('munyaka_timetable_config', JSON.stringify(tempConfig));
+      localStorage.setItem('munyaka_timetable_config_expanded', JSON.stringify(tempConfig));
     } catch {}
     setIsSettingsOpen(false);
   };
@@ -305,7 +345,7 @@ export default function Timetable() {
         </div>
       </div>
 
-      {/* Grid Table with Transposed Axes: Columns = Lesson Slots, Rows = Days of the Week */}
+      {/* Grid Table with Transposed Axes: Columns = Lesson Slots & Events, Rows = Days of the Week */}
       <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
@@ -319,13 +359,23 @@ export default function Timetable() {
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-200">
-                <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">DAY / LESSON</th>
-                {LESSON_SLOTS.map(slot => (
-                  <th key={slot.id} className="p-4 text-xs font-bold uppercase tracking-wider text-slate-800 text-center min-w-[160px]">
-                    <div>{slot.name}</div>
-                    <div className="font-mono font-normal text-[10px] text-slate-400 mt-0.5">{slot.time}</div>
-                  </th>
-                ))}
+                <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">DAY / EVENT</th>
+                {LESSON_SLOTS.map(slot => {
+                  const isSpecial = slot.isBreak;
+                  return (
+                    <th
+                      key={slot.id}
+                      className={`p-4 text-xs font-bold uppercase tracking-wider text-center min-w-[150px] ${
+                        isSpecial ? 'bg-amber-50/70 text-amber-900 border-x border-amber-200/50' : 'text-slate-800'
+                      }`}
+                    >
+                      <div>{slot.name}</div>
+                      <div className={`font-mono font-normal text-[10px] mt-0.5 ${isSpecial ? 'text-amber-700 font-medium' : 'text-slate-400'}`}>
+                        {slot.time}
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -336,9 +386,14 @@ export default function Timetable() {
                   </td>
                   {LESSON_SLOTS.map(slot => {
                     if (slot.isBreak) {
+                      let badgeColor = 'bg-amber-50 border-amber-200 text-amber-800';
+                      if (slot.breakType === 'assembly') badgeColor = 'bg-blue-50 border-blue-200 text-blue-800';
+                      if (slot.breakType === 'lunch') badgeColor = 'bg-orange-50 border-orange-200 text-orange-800';
+                      if (slot.breakType === 'games') badgeColor = 'bg-indigo-50 border-indigo-200 text-indigo-800';
+
                       return (
-                        <td key={slot.id} className="p-3 align-middle bg-amber-50/30 text-center">
-                          <span className="inline-flex px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-bold text-[11px]">
+                        <td key={slot.id} className="p-2 align-middle bg-slate-50/30 text-center">
+                          <span className={`inline-flex px-2 py-1 rounded-lg border font-bold text-[10px] tracking-wide shadow-2xs ${badgeColor}`}>
                             {slot.name}
                           </span>
                         </td>
@@ -380,18 +435,18 @@ export default function Timetable() {
         </div>
       </Card>
 
-      {/* Timetable Settings Modal / Drawer */}
+      {/* Expanded Timetable Settings Modal */}
       {isAdmin && isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-6 my-8">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700">
                   <SlidersHorizontal size={20} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-slate-900">Timetable Settings</h3>
-                  <p className="text-xs text-slate-500">Configure schedule timing & period counts</p>
+                  <h3 className="text-xl font-black text-slate-900">Advanced Timetable Settings</h3>
+                  <p className="text-xs text-slate-500">Customize school intervals & event sequencing</p>
                 </div>
               </div>
               <button
@@ -402,52 +457,125 @@ export default function Timetable() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveConfig} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Start Time (First Lesson)</label>
-                <input
-                  type="time"
-                  value={tempConfig.startTime}
-                  onChange={(e) => setTempConfig({ ...tempConfig, startTime: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  required
-                />
+            <form onSubmit={handleSaveConfig} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">School Start Time</label>
+                  <input
+                    type="time"
+                    value={tempConfig.startTime}
+                    onChange={(e) => setTempConfig({ ...tempConfig, startTime: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Assembly Duration (Mins)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="60"
+                    value={tempConfig.assemblyDuration}
+                    onChange={(e) => setTempConfig({ ...tempConfig, assemblyDuration: parseInt(e.target.value) || 20 })}
+                    className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Lesson Duration (Minutes)</label>
-                <input
-                  type="number"
-                  min="15"
-                  max="120"
-                  value={tempConfig.lessonDuration}
-                  onChange={(e) => setTempConfig({ ...tempConfig, lessonDuration: parseInt(e.target.value) || 40 })}
-                  className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Lesson Duration (Mins)</label>
+                  <input
+                    type="number"
+                    min="15"
+                    max="90"
+                    value={tempConfig.lessonDuration}
+                    onChange={(e) => setTempConfig({ ...tempConfig, lessonDuration: parseInt(e.target.value) || 40 })}
+                    className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Total Lessons / Day</label>
+                  <input
+                    type="number"
+                    min="4"
+                    max="10"
+                    value={tempConfig.totalLessons}
+                    onChange={(e) => setTempConfig({ ...tempConfig, totalLessons: parseInt(e.target.value) || 7 })}
+                    className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Short Break Duration (Minutes)</label>
-                <input
-                  type="number"
-                  min="10"
-                  max="60"
-                  value={tempConfig.breakDuration}
-                  onChange={(e) => setTempConfig({ ...tempConfig, breakDuration: parseInt(e.target.value) || 30 })}
-                  className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Tea Break Duration (Mins)</label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="60"
+                    value={tempConfig.teaDuration}
+                    onChange={(e) => setTempConfig({ ...tempConfig, teaDuration: parseInt(e.target.value) || 30 })}
+                    className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Tea Break After Lesson #</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={tempConfig.teaAfterLesson}
+                    onChange={(e) => setTempConfig({ ...tempConfig, teaAfterLesson: parseInt(e.target.value) || 2 })}
+                    className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Total Lessons per Day</label>
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Lunch Break Duration (Mins)</label>
+                  <input
+                    type="number"
+                    min="30"
+                    max="120"
+                    value={tempConfig.lunchDuration}
+                    onChange={(e) => setTempConfig({ ...tempConfig, lunchDuration: parseInt(e.target.value) || 60 })}
+                    className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Lunch After Lesson #</label>
+                  <input
+                    type="number"
+                    min="3"
+                    max="8"
+                    value={tempConfig.lunchAfterLesson}
+                    onChange={(e) => setTempConfig({ ...tempConfig, lunchAfterLesson: parseInt(e.target.value) || 5 })}
+                    className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Games / Co-Curricular Duration (Mins)</label>
                 <input
                   type="number"
-                  min="4"
-                  max="10"
-                  value={tempConfig.totalLessons}
-                  onChange={(e) => setTempConfig({ ...tempConfig, totalLessons: parseInt(e.target.value) || 8 })}
+                  min="20"
+                  max="90"
+                  value={tempConfig.gamesDuration}
+                  onChange={(e) => setTempConfig({ ...tempConfig, gamesDuration: parseInt(e.target.value) || 40 })}
                   className="w-full rounded-xl border border-slate-200 p-3 text-sm font-semibold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   required
                 />
