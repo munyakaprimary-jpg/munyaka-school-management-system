@@ -237,7 +237,7 @@ const Timetable = () => {
                           >
                             {(() => {
                               const entry = (entries[slotIndex]?.[dayKey] || null) as (LessonEntry & { subjectName?: string; teacherName?: string; teacherId?: string; staffId?: string; teacher?: string; title?: string; room?: string }) | null;
-                              const displaySubject = entry?.subjectName || entry?.subject || entry?.title || resolveSubjectName(entry?.subject);
+                              const displaySubject = entry?.subjectName || entry?.subject || entry?.title || (entry?.subject ? resolveSubjectName(entry.subject) : '');
                               const displayTeacher = entry?.teacherName || entry?.teacher || resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName);
 
                               if (displaySubject) {
@@ -251,7 +251,7 @@ const Timetable = () => {
                                   </div>
                                 );
                               }
-                              return <span className="text-xs text-blue-600 font-medium">{!isAdmin ? '—' : '+ Assign Lesson'}</span>;
+                              return <span className="text-xs text-gray-400">{!isAdmin ? 'Empty Slot' : '+ Assign Lesson'}</span>;
                             })()}
                           </div>
                         </td>
