@@ -204,7 +204,9 @@ const Timetable = () => {
                         );
                       }
 
-                      const entry = entries[slotIndex]?.[dayKey] || null;
+                      const entry = (entries[slotIndex]?.[dayKey] || null) as (LessonEntry & { subjectName?: string; teacherName?: string; teacherId?: string; staffId?: string; teacher?: string; title?: string; room?: string }) | null;
+                      const displaySubject = resolveSubjectName(entry?.subjectName || entry?.subject || entry?.title);
+                      const displayTeacher = resolveTeacherName(entry?.teacherId, entry?.staffId, entry?.teacherName || entry?.teacher);
 
                       return (
                         <td key={slot.id} className="p-3 align-top border-l border-slate-100">
@@ -218,10 +220,10 @@ const Timetable = () => {
                           >
                             {entry?.subject ? (
                               <div className="flex flex-col">
-                                <span className="font-bold text-sm text-gray-900">{resolveSubjectName(entry.subject)}</span>
-                                <span className="text-xs text-gray-500">{resolveTeacherName(entry.teacherId, entry.staffId, entry.teacherName)}</span>
+                                <span className="font-bold text-sm text-gray-900">{displaySubject}</span>
+                                <span className="text-xs text-gray-500">{displayTeacher}</span>
                                 {entry.room && (
-                                  <span className="text-[9px] text-slate-400 font-mono">Room: {entry.room}</span>
+                                  <span className="text-[9px] text-slate-400 font-mono mt-1">Room: {entry.room}</span>
                                 )}
                               </div>
                             ) : (
