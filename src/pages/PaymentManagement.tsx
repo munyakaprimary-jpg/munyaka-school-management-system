@@ -375,12 +375,12 @@ export default function PaymentManagement() {
                   </span>
                 </div>
                 <button
-                  type="button"
-                  onClick={() => setIsRegisterCampusModalOpen(true)}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors flex items-center gap-2"
-                >
-                  <span>+</span> Add Campus
-                </button>
+                                  type="button"
+                                  onClick={() => setIsAddCampusModalOpen(true)}
+                                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors flex items-center gap-2"
+                                >
+                                  <span>+</span> Add Campus
+                                </button>
               </div>
               <div className="divide-y divide-slate-100 text-xs">
                   {campuses.length === 0 ? (
@@ -1280,6 +1280,66 @@ export default function PaymentManagement() {
                 Yes, Remove Campus
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Campus Modal */}
+      {isAddCampusModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md p-6 bg-white rounded-xl shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Register New Campus</h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const name = (form.elements.namedItem('campusName') as HTMLInputElement).value;
+                const seats = Number((form.elements.namedItem('seats') as HTMLInputElement).value) || 0;
+                
+                if (typeof addCampus === 'function') {
+                  addCampus({ name, activeSeats: seats, pricePerSeat: 250, status: 'Active' });
+                }
+                setIsAddCampusModalOpen(false);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Campus Name</label>
+                <input
+                  name="campusName"
+                  type="text"
+                  required
+                  placeholder="e.g. Munyaka Academy - Annex"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Allocated Learner Seats</label>
+                <input
+                  name="seats"
+                  type="number"
+                  required
+                  defaultValue={50}
+                  min={1}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsAddCampusModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                >
+                  Register Campus
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
