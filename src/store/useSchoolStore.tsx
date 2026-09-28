@@ -1,3 +1,30 @@
+export interface Campus {
+  id: string;
+  name: string;
+  activeSeats: number;
+  pricePerSeat: number;
+  status: string;
+  expiryDate: string;
+}
+
+export interface SchoolStore {
+  learners: any[];
+  staff: any[];
+  fees: any[];
+  attendance: any;
+  exams: any[];
+  marks: any[];
+  timetable: any;
+  settings: any;
+  notices: any[];
+  events: any[];
+  campuses: Campus[];
+  addCampus: (campus: Partial<Campus>) => void;
+  deleteCampus: (id: string) => void;
+  updateCampusSeats: (id: string, activeSeats: number) => void;
+  [key: string]: any;
+}
+
 import initialSeedData from '../data/initialSeedData';
 
 const getInitialStorage = (key: string, fallback: any) => {
@@ -40,7 +67,17 @@ let storeState = {
     { id: 'not-1', title: 'Opening Day for Term 1', content: 'All students are expected to report back by 8:00 AM sharp in full proper school uniform.', date: 'Today', category: 'Notice', color: 'bg-indigo-50 text-indigo-600' },
     { id: 'not-2', title: 'Parent-Teacher Association AGM', content: 'Annual General Meeting for all parents and guardians to discuss school development and fee structures.', date: '2 days ago', category: 'Event', color: 'bg-emerald-50 text-emerald-600' }
   ]),
-  events: (initialSeedData as any).events || []
+  events: (initialSeedData as any).events || [],
+  campuses: getInitialStorage('munyaka_campuses', [
+    {
+      id: '1',
+      name: 'Munyaka Primary & Junior School',
+      activeSeats: 120,
+      pricePerSeat: 250,
+      status: 'Active',
+      expiryDate: '2027-09-27',
+    },
+  ])
 };
 
 const listeners = new Set<any>();
@@ -66,6 +103,48 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
     settings: getInitialStorage('munyaka_system_settings_v3', storeState.settings),
     notices: getInitialStorage('munyaka_notices_board', storeState.notices),
     events: getInitialStorage('munyaka_events', storeState.events),
+    campuses: getInitialStorage('munyaka_campuses', storeState.campuses),
+
+    setCampuses: (campuses: Campus[]) => {
+      localStorage.setItem('munyaka_campuses', JSON.stringify(campuses));
+      storeState.campuses = campuses;
+      listeners.forEach(l => l());
+      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+    },
+    addCampus: (newCampus: Partial<Campus>) => {
+      const currentCampuses = getInitialStorage('munyaka_campuses', storeState.campuses);
+      const updated = [
+        ...(currentCampuses || []),
+        {
+          id: Date.now().toString(),
+          name: newCampus.name || 'New Campus',
+          activeSeats: Number(newCampus.activeSeats) || 0,
+          pricePerSeat: Number(newCampus.pricePerSeat) || 250,
+          status: newCampus.status || 'Active',
+          expiryDate: newCampus.expiryDate || '2027-09-27',
+        },
+      ];
+      localStorage.setItem('munyaka_campuses', JSON.stringify(updated));
+      storeState.campuses = updated;
+      listeners.forEach(l => l());
+      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+    },
+    deleteCampus: (id: string) => {
+      const currentCampuses = getInitialStorage('munyaka_campuses', storeState.campuses);
+      const updated = currentCampuses.filter((c: Campus) => c.id !== id);
+      localStorage.setItem('munyaka_campuses', JSON.stringify(updated));
+      storeState.campuses = updated;
+      listeners.forEach(l => l());
+      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+    },
+    updateCampusSeats: (id: string, activeSeats: number) => {
+      const currentCampuses = getInitialStorage('munyaka_campuses', storeState.campuses);
+      const updated = currentCampuses.map((c: Campus) => c.id === id ? { ...c, activeSeats } : c);
+      localStorage.setItem('munyaka_campuses', JSON.stringify(updated));
+      storeState.campuses = updated;
+      listeners.forEach(l => l());
+      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+    },
 
     setLearners: (learners: any[]) => {
       localStorage.setItem('munyaka_students', JSON.stringify(learners));
