@@ -55,62 +55,7 @@ export interface Grade {
   streams: Stream[];
 }
 
-export const GRADES_DATA: Grade[] = sortGrades([
-  { id: 'gpp1', name: 'PP1',  category: 'Pre-Primary', streams: [
-    { id: 'spp1a', name: 'Yellow', teacher: 'Unassigned', studentsCount: 0 },
-    { id: 'spp1b', name: 'Green',  teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-  { id: 'gpp2', name: 'PP2',  category: 'Pre-Primary', streams: [
-    { id: 'spp2a', name: 'Yellow', teacher: 'Unassigned', studentsCount: 0 },
-    { id: 'spp2b', name: 'Green',  teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-  { id: 'g1', name: 'Grade 1', category: 'Primary', streams: [
-    { id: 's1', name: 'Blue',  teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's2', name: 'Green', teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-  { id: 'g2', name: 'Grade 2', category: 'Primary', streams: [
-    { id: 's2a', name: 'Blue',  teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's2b', name: 'Green', teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-  { id: 'g3', name: 'Grade 3', category: 'Primary', streams: [
-    { id: 's3a', name: 'Blue',  teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's3b', name: 'Green', teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-  { id: 'g4', name: 'Grade 4', category: 'Primary', streams: [
-    { id: 's3', name: 'Blue',  teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's4', name: 'Green', teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-  { id: 'g5', name: 'Grade 5', category: 'Primary', streams: [
-    { id: 's5', name: 'Alpha', teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's6', name: 'Beta',  teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-  { id: 'g6', name: 'Grade 6', category: 'Primary', streams: [
-    { id: 's6a', name: 'Yellow', teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's6b', name: 'Green',  teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's6c', name: 'South',  teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's6d', name: 'East',   teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-  { id: 'g7', name: 'Grade 7', category: 'Junior School', streams: [
-    { id: 's7a', name: 'MERCURY', teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's7b', name: 'VENUS',   teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's7c', name: 'JUPITER', teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's7d', name: 'NEPTUNE', teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-  { id: 'g8', name: 'Grade 8', category: 'Junior School', streams: [
-    { id: 's9',  name: 'Alpha', teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's10', name: 'Beta',  teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-  { id: 'g9', name: 'Grade 9', category: 'Junior School', streams: [
-    { id: 's11', name: 'Alpha', teacher: 'Unassigned', studentsCount: 0 },
-    { id: 's12', name: 'Beta',  teacher: 'Unassigned', studentsCount: 0 },
-  ]},
-].map((g) => ({
-  ...g,
-  name: formatGradeName(g.name),
-  streams: Array.from(
-    new Map(g.streams.map((s) => [String(s.name || '').trim().toLowerCase(), s])).values()
-  ),
-})) as unknown as Grade[]);
+export const GRADES_DATA: Grade[] = [];
 
 /** Empty library — books are created through the Library page. */
 export const BOOKS: unknown[] = [];

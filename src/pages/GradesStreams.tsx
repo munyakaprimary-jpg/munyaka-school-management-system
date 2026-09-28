@@ -28,14 +28,12 @@ const SCHOOL_INFO_KEY = 'munyaka_school_info';
 // "BETA" / "Blue" / "Green" — is treated as a placeholder and filtered
 // out. Real user-created entries (which have localStorage-only IDs and
 // were never part of the seed list) survive this filter untouched.
-const isSeedGrade = (g: Grade): boolean => {
-  return GRADES_DATA.some((seed) => seed.id === g.id);
+const isSeedGrade = (_g: Grade): boolean => {
+  return false;
 };
 
-const isSeedStream = (g: Grade, s: Stream): boolean => {
-  const seedGrade = GRADES_DATA.find((sg) => sg.id === g.id);
-  if (!seedGrade) return false;
-  return seedGrade.streams.some((ss) => ss.id === s.id);
+const isSeedStream = (_g: Grade, _s: Stream): boolean => {
+  return false;
 };
 
 const GradesStreams = () => {

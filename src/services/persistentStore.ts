@@ -346,9 +346,9 @@ export function hydrateFromSeed(): void {
     seedIfAbsent('munyaka_staff_prereg', (INITIAL_SEED_DATA as any).staffPrereg);
   }
 
-  // Grades
-  if (Array.isArray((INITIAL_SEED_DATA as any).grades)) {
-    seedIfAbsent('munyaka_grades', (INITIAL_SEED_DATA as any).grades);
+  // Grades - empty by default (no hardcoded default grades/streams)
+  if (!localStorage.getItem('munyaka_grades')) {
+    localStorage.setItem('munyaka_grades', JSON.stringify([]));
   }
 
   // Exam types

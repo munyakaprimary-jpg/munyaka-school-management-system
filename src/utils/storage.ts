@@ -380,9 +380,9 @@ export function hydrateAllStores(): HydrationReport {
     }
     report.keys.push(STORAGE_KEYS.STAFF_PREREG);
 
-    // 1d. Grades / Classes
-    if (Array.isArray((INITIAL_SEED_DATA as any)?.grades)) {
-      seedIfAbsent(STORAGE_KEYS.GRADES, (INITIAL_SEED_DATA as any).grades);
+    // 1d. Grades / Classes - empty by default (no hardcoded default grades/streams)
+    if (!localStorage.getItem(STORAGE_KEYS.GRADES)) {
+      localStorage.setItem(STORAGE_KEYS.GRADES, JSON.stringify([]));
     }
     report.keys.push(STORAGE_KEYS.GRADES);
 

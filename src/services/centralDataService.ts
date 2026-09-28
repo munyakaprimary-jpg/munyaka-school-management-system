@@ -109,7 +109,7 @@ export const UnifiedDataStorage = {
           transactions: masterPayments,
           marks: masterMarks,
           exams: masterExams,
-          grades: JSON.parse(localStorage.getItem('munyaka_grades') || JSON.stringify((initialSeedData as any).grades || {})),
+          grades: JSON.parse(localStorage.getItem('munyaka_grades') || '[]'),
           streams: JSON.parse(localStorage.getItem('munyaka_streams') || JSON.stringify((initialSeedData as any).streams || [])),
           classAssignments: JSON.parse(localStorage.getItem('munyaka_class_assignments') || JSON.stringify((initialSeedData as any).classAssignments || [])),
           learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || JSON.stringify((initialSeedData as any).learningAreas || [])),

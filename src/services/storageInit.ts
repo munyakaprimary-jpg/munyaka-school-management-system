@@ -32,7 +32,7 @@ export const initializeApplicationStorage = (): void => {
     { key: CANONICAL_KEYS.FEES_RECORDS, data: (initialSeedData as any).fees || [] },
     { key: CANONICAL_KEYS.FEE_STRUCTURES, data: (initialSeedData as any).feeStructures || [] },
     { key: CANONICAL_KEYS.ATTENDANCE, data: (initialSeedData as any).attendance || [] },
-    { key: CANONICAL_KEYS.GRADES, data: (initialSeedData as any).grades || [] },
+    { key: CANONICAL_KEYS.GRADES, data: [] },
     { key: CANONICAL_KEYS.LEARNING_AREAS, data: (initialSeedData as any).learningAreas || [] },
     { key: CANONICAL_KEYS.ASSESSMENT_SCORES, data: (initialSeedData as any).assessmentScores || [] },
     { key: CANONICAL_KEYS.ICT_ASSETS, data: (initialSeedData as any).ictAssets || [] },
