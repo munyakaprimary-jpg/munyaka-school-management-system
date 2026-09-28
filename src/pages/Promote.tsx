@@ -39,6 +39,10 @@ const calculateNextGrade = (currentGrade: string): string => {
   return currentGrade;
 };
 
+const normalizeStr = (str: string | undefined): string => {
+  return (str || '').toString().trim().toLowerCase();
+};
+
 export default function PromotePage() {
   const { learners, saveLearners } = useSchoolStore();
   const [targetYear, setTargetYear] = useState('2027');
@@ -59,7 +63,7 @@ export default function PromotePage() {
   // Selected student IDs for granular control
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
-  // Load configured grades and streams from persistent storage (munyaka_grades / configured_streams)
+  // Load configured grades and streams from persistent storage
   const [storedGrades, setStoredGrades] = useState<any[]>([]);
 
   useEffect(() => {
@@ -85,72 +89,78 @@ export default function PromotePage() {
     };
   }, []);
 
-  // Compute learner counts per grade
-  const gradeCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    learners.forEach(l => {
-      const g = String(l.grade || l.class || '').trim();
-      if (g) {
-        counts[g] = (counts[g] || 0) + 1;
-        counts[g.toLowerCase()] = (counts[g.toLowerCase()] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [learners]);
-
   // Available grades combining stored grades and learner grades
   const availableGrades = useMemo(() => {
     const gradeMap = new Map<string, string>();
     storedGrades.forEach(g => {
-      if (g && g.name) {
-        gradeMap.set(g.name.trim().toLowerCase(), g.name.trim());
+      if (g && (g.name || g.id)) {
+        const label = g.name || g.id;
+        gradeMap.set(normalizeStr(label), label);
       }
     });
     learners.forEach(l => {
-      const g = String(l.grade || l.class || '').trim();
+      const g = l.grade || l.gradeLevel || l.gradeId || l.class;
       if (g) {
-        gradeMap.set(g.toLowerCase(), g);
+        gradeMap.set(normalizeStr(g), String(g).trim());
       }
     });
 
     const list = Array.from(gradeMap.values());
     return list.sort((a, b) => {
-      const idxA = GRADE_SEQUENCE.findIndex(g => g.toLowerCase() === a.toLowerCase());
-      const idxB = GRADE_SEQUENCE.findIndex(g => g.toLowerCase() === b.toLowerCase());
+      const idxA = GRADE_SEQUENCE.findIndex(g => normalizeStr(g) === normalizeStr(a));
+      const idxB = GRADE_SEQUENCE.findIndex(g => normalizeStr(g) === normalizeStr(b));
       if (idxA !== -1 && idxB !== -1) return idxA - idxB;
       return a.localeCompare(b);
     });
   }, [storedGrades, learners]);
 
+  // Grade counts calculation using normalized matching
+  const gradeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    availableGrades.forEach(gradeName => {
+      const normGrade = normalizeStr(gradeName);
+      const count = learners.filter(l => {
+        const lGrade = normalizeStr(l.grade || l.gradeLevel || l.gradeId || l.class);
+        return lGrade === normGrade;
+      }).length;
+      counts[normGrade] = count;
+    });
+    return counts;
+  }, [availableGrades, learners]);
+
   // Available streams based on selected grade
   const availableStreams = useMemo(() => {
     const streamSet = new Set<string>();
     
-    // Check storedGrades
     if (sourceGrade === 'all') {
       storedGrades.forEach(g => {
         if (Array.isArray(g.streams)) {
           g.streams.forEach((s: any) => {
-            if (s && s.name) streamSet.add(s.name.trim());
+            if (s && (s.name || s.id)) {
+              streamSet.add(String(s.name || s.id).trim());
+            }
           });
         }
       });
     } else {
-      const matchedGradeObj = storedGrades.find(g => g && g.name && g.name.trim().toLowerCase() === sourceGrade.toLowerCase());
+      const matchedGradeObj = storedGrades.find(g => 
+        g && (normalizeStr(g.name) === normalizeStr(sourceGrade) || normalizeStr(g.id) === normalizeStr(sourceGrade))
+      );
       if (matchedGradeObj && Array.isArray(matchedGradeObj.streams)) {
         matchedGradeObj.streams.forEach((s: any) => {
-          if (s && s.name) streamSet.add(s.name.trim());
+          if (s && (s.name || s.id)) {
+            streamSet.add(String(s.name || s.id).trim());
+          }
         });
       }
     }
 
-    // Also collect from learners
     learners.forEach(l => {
-      const g = String(l.grade || l.class || '').trim();
-      const s = String(l.stream || l.classStream || '').trim();
-      if (s) {
-        if (sourceGrade === 'all' || g.toLowerCase() === sourceGrade.toLowerCase()) {
-          streamSet.add(s);
+      const lGrade = normalizeStr(l.grade || l.gradeLevel || l.gradeId || l.class);
+      const lStream = String(l.stream || l.streamId || l.classStream || '').trim();
+      if (lStream) {
+        if (sourceGrade === 'all' || lGrade === normalizeStr(sourceGrade)) {
+          streamSet.add(lStream);
         }
       }
     });
@@ -158,14 +168,17 @@ export default function PromotePage() {
     return Array.from(streamSet).sort();
   }, [storedGrades, learners, sourceGrade]);
 
-  // Filtered learners list with robust normalization
+  // Filtered learners list with robust normalized matching
   const filteredLearners = useMemo(() => {
-    return learners.filter(l => {
-      const g = String(l.grade || l.class || '').trim().toLowerCase();
-      const s = String(l.stream || l.classStream || '').trim().toLowerCase();
+    return learners.filter(learner => {
+      const learnerGrade = normalizeStr(learner.grade || learner.gradeLevel || learner.gradeId || learner.class);
+      const selectedGradeNorm = normalizeStr(sourceGrade);
+      
+      const learnerStream = normalizeStr(learner.stream || learner.streamId || learner.classStream);
+      const selectedStreamNorm = normalizeStr(sourceStream);
 
-      const matchesGrade = sourceGrade === 'all' || g === sourceGrade.toLowerCase();
-      const matchesStream = sourceStream === 'all' || s === sourceStream.toLowerCase();
+      const matchesGrade = sourceGrade === 'all' || learnerGrade === selectedGradeNorm;
+      const matchesStream = sourceStream === 'all' || learnerStream === selectedStreamNorm;
 
       return matchesGrade && matchesStream;
     });
@@ -220,10 +233,10 @@ export default function PromotePage() {
           return l;
         }
 
-        const current = l.grade || l.class || 'Grade 1';
+        const current = l.grade || l.gradeLevel || l.gradeId || l.class || 'Grade 1';
         const defaultNext = calculateNextGrade(current);
         const nextGrade = targetGradeOverride.trim() ? targetGradeOverride : defaultNext;
-        const nextStream = targetStreamOverride.trim() ? targetStreamOverride : (l.stream || l.classStream || '');
+        const nextStream = targetStreamOverride.trim() ? targetStreamOverride : (l.stream || l.streamId || l.classStream || '');
 
         return {
           ...l,
@@ -295,7 +308,7 @@ export default function PromotePage() {
             >
               <option value="all">All Grades ({learners.length} students)</option>
               {availableGrades.map(g => {
-                const count = gradeCounts[g] || gradeCounts[g.toLowerCase()] || 0;
+                const count = gradeCounts[normalizeStr(g)] || 0;
                 return (
                   <option key={g} value={g}>
                     {g} ({count} students)
@@ -387,10 +400,11 @@ export default function PromotePage() {
                   filteredLearners.map((learner: any, idx: number) => {
                     const studentKey = learner.id || learner.admissionNumber;
                     const isChecked = selectedStudentIds.includes(studentKey);
-                    const currentGrade = learner.grade || learner.class || 'Grade 1';
+                    const currentGrade = learner.grade || learner.gradeLevel || learner.gradeId || learner.class || 'Grade 1';
                     const defaultNext = calculateNextGrade(currentGrade);
                     const nextGrade = targetGradeOverride.trim() ? targetGradeOverride : defaultNext;
                     const isGraduated = nextGrade === 'Graduated';
+                    const currentStream = learner.stream || learner.streamId || learner.classStream || '';
 
                     return (
                       <TableRow key={studentKey || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
@@ -402,7 +416,7 @@ export default function PromotePage() {
                         </TableCell>
                         <TableCell className="text-xs md:text-sm font-bold text-slate-900 dark:text-white py-2.5 px-3 whitespace-nowrap">{learner.name || learner.fullName || 'Student'}</TableCell>
                         <TableCell className="text-xs font-mono text-muted-foreground py-2.5 px-3 whitespace-nowrap">{learner.admissionNumber || learner.admNo || 'MUN-000'}</TableCell>
-                        <TableCell className="text-xs md:text-sm py-2.5 px-3 font-medium whitespace-nowrap">{currentGrade} {learner.stream ? `— ${learner.stream}` : ''}</TableCell>
+                        <TableCell className="text-xs md:text-sm py-2.5 px-3 font-medium whitespace-nowrap">{currentGrade} {currentStream ? `— ${currentStream}` : ''}</TableCell>
                         <TableCell className="text-xs md:text-sm py-2.5 px-3 font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <span>{nextGrade}</span>
