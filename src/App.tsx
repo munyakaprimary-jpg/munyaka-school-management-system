@@ -293,7 +293,7 @@ const App = () => {
       const existingDb = localStorage.getItem('munyaka_central_db');
       if (!existingDb) {
         const initialDb = {
-          students: initialSeedData.students || [],
+          students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
           staff: initialSeedData.staff || [],
         };
         localStorage.setItem('munyaka_central_db', JSON.stringify(initialDb));
@@ -301,7 +301,7 @@ const App = () => {
       } else {
         const parsed = JSON.parse(existingDb);
         if (!parsed.students || parsed.students.length === 0) {
-          parsed.students = initialSeedData.students || [];
+          parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
           localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
           window.dispatchEvent(new Event('central_db_updated'));
         }
@@ -372,14 +372,14 @@ const App = () => {
           const existingDb = localStorage.getItem('munyaka_central_db');
           if (!existingDb) {
             const initialDb = {
-              students: initialSeedData.students || [],
+              students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
               staff: initialSeedData.staff || [],
             };
             localStorage.setItem('munyaka_central_db', JSON.stringify(initialDb));
           } else {
             const parsed = JSON.parse(existingDb);
             if (!parsed.students || parsed.students.length === 0) {
-              parsed.students = initialSeedData.students || [];
+              parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
               localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
             }
           }

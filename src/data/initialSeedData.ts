@@ -514,7 +514,7 @@ export const initialSeedData = {
   "events": []
 };
 
-(initialSeedData as any).learners = initialSeedData.students;
+(initialSeedData as any).learners = (initialSeedData as any).students;
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
@@ -530,7 +530,7 @@ export const initialExamSchedules = (initialSeedData as any).examSchedules || (i
 export const initialExamTypes = (initialSeedData as any).examTypes || (initialSeedData as any).exam_types || [];
 export const initialMarks = (initialSeedData as any).marks || (initialSeedData as any).assessments || (initialSeedData as any).marked_student_submissions || [];
 export const initialQuestions = (initialSeedData as any).questions || (initialSeedData as any).question_bank || [];
-export const initialLearners = initialSeedData.students || [];
+export const initialLearners = (initialSeedData as any).students || (initialSeedData as any).learners || [];
 export const initialStaff = initialSeedData.staff || [];
 export const initialReportCards = (initialSeedData as any).reportCards || [];
 export const initialFeeStructures = (initialSeedData as any).feeStructures || (initialSeedData as any).fees_structures || [];
@@ -538,8 +538,8 @@ export const initialFeePayments = (initialSeedData as any).fees || (initialSeedD
 export const initialStudyCorner = (initialSeedData as any).studyCorner || (initialSeedData as any).study_materials || [];
 export const initialLibraryBooks = (initialSeedData as any).libraryBooks || (initialSeedData as any).library_books || [];
 export const initialLibraryLogs = (initialSeedData as any).libraryLogs || (initialSeedData as any).library_logs || [];
-export const mockLearners = initialSeedData.students || [];
-export const mockStudents = initialSeedData.students || [];
+export const mockLearners = (initialSeedData as any).students || (initialSeedData as any).learners || [];
+export const mockStudents = (initialSeedData as any).students || (initialSeedData as any).learners || [];
 export const mockStaff = initialSeedData.staff || [];
 export const initialGrades = (initialSeedData as any).grades || [];
 export const initialStreams = (initialSeedData as any).streams || [];
