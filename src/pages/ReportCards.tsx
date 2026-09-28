@@ -18,6 +18,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { GRADES_DATA, Grade } from '@/lib/mock-data';
+import { getStudents } from '@/services/persistentStore';
 import { ExamService } from '@/services/exam-service';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -659,7 +660,7 @@ const ReportCards = () => {
                   MOTTO: Knowledge is Power
                 </p>
                 <h3 className="font-black text-[10.5px] uppercase tracking-wider text-slate-800 bg-slate-100 px-4 py-1.5 rounded mb-[16px] block border border-slate-200">
-                  COMPETENCY BASED CURRICULUM PROGRESS REPORT — {term.toUpperCase()} · ACADEMIC YEAR {year}
+                  COMPETENCY BASED CURRICULUM PROGRESS REPORT — {term.toUpperCase()} · ACADEMIC YEAR {year} · {type.toUpperCase()} EXAM
                 </h3>
               </div>
 
@@ -697,26 +698,68 @@ const ReportCards = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {subjects.map((sub, i) => {
-                      const mid = 70 + (i % 25);
-                      const end = 72 + (i % 20);
-                      const avg = Math.round((mid + end) / 2);
-                      const r = getRubric(avg);
+                      // Query actual exam marks from ExamService using year, term, type, studentId/name, and sub
+                      const allMarks = ExamService.getMarks();
+                      let scoreVal: number | null = null;
+                      
+                      if (allMarks && typeof allMarks === 'object') {
+                        // Find matching entry for this student + subject + year + term + type
+                        for (const key of Object.keys(allMarks)) {
+                          const record = allMarks[key];
+                          if (record && typeof record === 'object') {
+                            const matchStudent = String(record.studentId || record.name || '').toLowerCase() === String(s.id || s.name || '').toLowerCase() ||
+                              String(record.studentId || '').toLowerCase() === String((s as any).assessment || '').toLowerCase();
+                            const matchSubject = String(record.subject || record.learningArea || '').toLowerCase() === sub.toLowerCase();
+                            const matchYear = !record.year || String(record.year) === String(year);
+                            const matchTerm = !record.term || String(record.term).toLowerCase() === String(term).toLowerCase();
+                            const matchType = !record.examType || String(record.examType).toLowerCase() === String(type).toLowerCase();
+
+                            if (matchSubject && (matchYear && matchTerm && matchType)) {
+                              if (typeof record.score === 'number') {
+                                scoreVal = record.score;
+                                break;
+                              } else if (record.marks && typeof record.marks === 'object' && typeof record.marks[sub] === 'number') {
+                                scoreVal = record.marks[sub];
+                                break;
+                              }
+                            }
+                          }
+                        }
+                      }
+
+                      // If no explicit mark record found, check student object marks map if present
+                      if (scoreVal === null && s.marks && typeof s.marks === 'object') {
+                        const mKey = `${year}_${term}_${type}_${sub}`.toLowerCase();
+                        if (typeof s.marks[sub] === 'number') scoreVal = s.marks[sub];
+                        else if (typeof (s.marks as any)[mKey] === 'number') scoreVal = (s.marks as any)[mKey];
+                      }
+
+                      const hasScore = scoreVal !== null && !isNaN(scoreVal);
+                      const mid = hasScore ? Math.round(scoreVal * 0.9) : null;
+                      const end = hasScore ? scoreVal : null;
+                      const avg = hasScore ? scoreVal : null;
+                      const r = avg !== null ? getRubric(avg) : null;
+
                       return (
                         <tr key={i} className="text-[9px]">
                           <td className="px-2.5 py-1.5 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
-                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-medium">{mid}</td>
-                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-medium">{end}</td>
-                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg}%</td>
+                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-medium">{mid !== null ? mid : '—'}</td>
+                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-medium">{end !== null ? end : '—'}</td>
+                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg !== null ? `${avg}%` : 'N/A'}</td>
                           <td className="px-2.5 py-1.5 text-center font-black text-[8.5px]">
-                            <Badge variant="outline" className={cn(
-                              "rounded border-none font-black text-[8px] px-1.5 py-0.5 leading-none",
-                              r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                              r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
-                              r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
-                              r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
-                            )}>
-                              {r.code} — {r.label}
-                            </Badge>
+                            {r ? (
+                              <Badge variant="outline" className={cn(
+                                "rounded border-none font-black text-[8px] px-1.5 py-0.5 leading-none",
+                                r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
+                                r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
+                                r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
+                              )}>
+                                {r.code} — {r.label}
+                              </Badge>
+                            ) : (
+                              <span className="text-slate-400 font-normal">—</span>
+                            )}
                           </td>
                         </tr>
                       );
