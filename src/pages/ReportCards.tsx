@@ -18,7 +18,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { GRADES_DATA, Grade } from '@/lib/mock-data';
-import { getStudents } from '@/services/persistentStore';
+import { ExamService } from '@/services/exam-service';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { downloadCSV, SCHOOL_HEADERS, generateCSVHeader } from '@/utils/downloadHelper';
