@@ -48,7 +48,8 @@ try {
   const currentVersion = parseInt(localStorage.getItem(STORE_VERSION_KEY) || '0', 10);
   if (currentVersion < TARGET_STORE_VERSION) {
     localStorage.setItem(STORE_VERSION_KEY, String(TARGET_STORE_VERSION));
-    if (initialSeedData.students) localStorage.setItem('munyaka_students', JSON.stringify(initialSeedData.students));
+    const seedStudents = (initialSeedData as any).students || (initialSeedData as any).learners || [];
+    if (seedStudents.length > 0) localStorage.setItem('munyaka_students', JSON.stringify(seedStudents));
     if (initialSeedData.staff) localStorage.setItem('munyaka_staff', JSON.stringify(initialSeedData.staff));
     if ((initialSeedData as any).fees) localStorage.setItem('munyaka_fees', JSON.stringify((initialSeedData as any).fees));
     if ((initialSeedData as any).attendance) localStorage.setItem('munyaka_attendance', JSON.stringify((initialSeedData as any).attendance));
@@ -56,7 +57,7 @@ try {
 } catch {}
 
 let storeState = {
-  learners: initialSeedData.students || initialSeedData.learners || [],
+  learners: (initialSeedData as any).students || (initialSeedData as any).learners || [],
   staff: initialSeedData.staff || [],
   fees: (initialSeedData as any).fees || [],
   attendance: (initialSeedData as any).attendance || {},
@@ -84,7 +85,13 @@ let storeState = {
 
 const listeners = new Set<any>();
 
-export const useSchoolStore = (selector?: (state: any) => any) => {
+export interface SchoolStoreHook {
+  (selector?: (state: any) => any): any;
+  getState: () => any;
+  setState: (partial: any) => void;
+}
+
+const schoolStoreInner = (selector?: (state: any) => any) => {
   const state = {
     ...storeState,
     learners: getInitialStorage('munyaka_students', getInitialStorage('school_learners_data', storeState.learners)),
@@ -329,7 +336,7 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
       if (partial.exams) state.setExams(partial.exams);
       if (partial.marks) state.setMarks(partial.marks);
       if (partial.timetable) state.setTimetable(partial.timetable);
-      if (partial.settings) state.setSettings(partial.settings);
+      if (partial.settings && (state as any).setSettings) (state as any).setSettings(partial.settings);
     }
   };
 
@@ -337,10 +344,14 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
     return selector(state);
   }
   return state;
-};
+} as any;
 
-(useSchoolStore as any).getState = () => useSchoolStore();
+(useSchoolStore as any).getState = () => storeState;
 (useSchoolStore as any).setState = (partial: any) => {
-  const st = useSchoolStore();
-  st.setState(partial);
+  if (typeof partial === 'function') {
+    storeState = { ...storeState, ...partial(storeState) };
+  } else {
+    storeState = { ...storeState, ...partial };
+  }
+  listeners.forEach(l => l());
 };

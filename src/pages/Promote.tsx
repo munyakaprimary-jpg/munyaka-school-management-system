@@ -42,6 +42,9 @@ export default function PromotePage() {
 
   const statsData = {
     totalStudents: learners.length,
+    activeStudents: learners.filter(l => calculateNextGrade(l.grade || l.class) !== 'Graduated').length,
+    graduatedStudents: learners.filter(l => calculateNextGrade(l.grade || l.class) === 'Graduated').length,
+    highestGrade: 'Grade 9',
     eligibleForPromotion: learners.filter(l => calculateNextGrade(l.grade || l.class) !== 'Graduated').length,
     graduating: learners.filter(l => calculateNextGrade(l.grade || l.class) === 'Graduated').length,
     retained: 0

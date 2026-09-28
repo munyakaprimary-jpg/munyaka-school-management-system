@@ -350,9 +350,10 @@ export function hydrateAllStores(): HydrationReport {
 
   try {
     // 1. Students
-    if (Array.isArray(INITIAL_SEED_DATA?.students) && INITIAL_SEED_DATA.students.length > 0) {
-      seedIfAbsent(STORAGE_KEYS.STUDENTS, INITIAL_SEED_DATA.students);
-      seedIfAbsent(STORAGE_KEYS.STUDENTS_LEGACY, INITIAL_SEED_DATA.students);
+    const seedStudents = (INITIAL_SEED_DATA as any)?.students || (INITIAL_SEED_DATA as any)?.learners || [];
+    if (Array.isArray(seedStudents) && seedStudents.length > 0) {
+      seedIfAbsent(STORAGE_KEYS.STUDENTS, seedStudents);
+      seedIfAbsent(STORAGE_KEYS.STUDENTS_LEGACY, seedStudents);
     }
     report.keys.push(STORAGE_KEYS.STUDENTS);
 

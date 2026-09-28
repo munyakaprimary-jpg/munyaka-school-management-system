@@ -22,8 +22,8 @@ const CANONICAL_KEYS = {
 
 export const initializeApplicationStorage = (): void => {
   const seedMappings: Array<{ key: string; data: unknown }> = [
-    { key: CANONICAL_KEYS.LEARNERS, data: initialSeedData.students },
-    { key: CANONICAL_KEYS.STUDENTS, data: initialSeedData.students },
+    { key: CANONICAL_KEYS.LEARNERS, data: (initialSeedData as any).students || (initialSeedData as any).learners || [] },
+    { key: CANONICAL_KEYS.STUDENTS, data: (initialSeedData as any).students || (initialSeedData as any).learners || [] },
     { key: CANONICAL_KEYS.STAFF, data: initialSeedData.staff },
     { key: CANONICAL_KEYS.STAFF_LEGACY, data: initialSeedData.staff },
     { key: CANONICAL_KEYS.EXAMS, data: (initialSeedData as any).exams || [] },

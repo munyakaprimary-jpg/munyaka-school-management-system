@@ -329,9 +329,10 @@ export function hydrateFromSeed(): void {
   };
 
   // Learners — seed from the hardcoded initialSeedData snapshot on clean installs.
-  if (Array.isArray(INITIAL_SEED_DATA?.students) && INITIAL_SEED_DATA.students.length > 0) {
-    seedIfAbsent('school_learners_data', INITIAL_SEED_DATA.students);
-    seedIfAbsent('munyaka_students', INITIAL_SEED_DATA.students);
+  const seedStudents = (INITIAL_SEED_DATA as any)?.students || (INITIAL_SEED_DATA as any)?.learners || [];
+  if (Array.isArray(seedStudents) && seedStudents.length > 0) {
+    seedIfAbsent('school_learners_data', seedStudents);
+    seedIfAbsent('munyaka_students', seedStudents);
   }
 
   // Staff — also seeded from the hardcoded initialSeedData snapshot.

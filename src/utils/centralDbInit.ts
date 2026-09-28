@@ -43,7 +43,7 @@ export function initializeCentralStorage(force = false): {
     // 1. Check or Seed Learners
     let learners = getStoredArray(STORAGE_KEYS.STUDENTS) || getStoredArray(STORAGE_KEYS.LEARNERS);
     if (!learners || learners.length === 0) {
-      learners = initialSeedData.students || [];
+      learners = (initialSeedData as any).students || (initialSeedData as any).learners || [];
       localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(learners));
       localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(learners));
       localStorage.setItem(STORAGE_KEYS.LEGACY_LEARNERS, JSON.stringify(learners));

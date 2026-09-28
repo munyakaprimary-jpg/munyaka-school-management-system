@@ -333,7 +333,7 @@ const App = () => {
       if (typeof window !== 'undefined' && window.localStorage) {
         try {
           const seedKeys: [string, unknown][] = [
-            ['munyaka_students', initialSeedData.students || []],
+            ['munyaka_students', (initialSeedData as any).students || (initialSeedData as any).learners || []],
             ['munyaka_fees_records', (initialSeedData as any).fees || []],
             ['munyaka_student_fees', (initialSeedData as any).fees || []],
             ['munyaka_fees', (initialSeedData as any).fees || []],

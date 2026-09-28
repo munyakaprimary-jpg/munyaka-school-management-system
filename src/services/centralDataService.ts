@@ -66,7 +66,7 @@ export const UnifiedDataStorage = {
     const l1 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
     const l2 = JSON.parse(localStorage.getItem('munyaka_master_learner_list') || '[]');
     const l3 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-    const masterStudents = [l1, l2, l3, initialSeedData.students || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
+    const masterStudents = [l1, l2, l3, (initialSeedData as any).students || (initialSeedData as any).learners || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
 
     const f1 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
         const f2 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
@@ -101,7 +101,7 @@ export const UnifiedDataStorage = {
     const settingsVal = JSON.parse(localStorage.getItem('munyaka_system_settings_v3') || JSON.stringify((initialSeedData as any).settings || {}));
 
     return {
-          students: masterStudents.length > 0 ? masterStudents : (initialSeedData.students || []),
+          students: masterStudents.length > 0 ? masterStudents : ((initialSeedData as any).students || (initialSeedData as any).learners || []),
           staff: masterStaff.length > 0 ? masterStaff : (initialSeedData.staff || []),
           attendance: masterAttendance,
           fees: masterFees,
@@ -488,7 +488,7 @@ export const CentralDataService = {
 
     console.log('[CentralDataService] Initializing from initialSeedData.ts fallback.');
     const fallbackDb = {
-      students: initialSeedData.students || [],
+      students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
       staff: initialSeedData.staff || [],
       attendance: (initialSeedData as any).attendance || {},
       fees: (initialSeedData as any).fees || [],
