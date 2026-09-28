@@ -172,195 +172,235 @@ const ReportCards = () => {
     return students.filter(s => {
       const matchesSearch = !searchTerm ||
         String(s.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String((s as any).assessment ?? "").toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesGrade = grade === "all" || s.grade === grade;
-      const matchesStream = stream === "all" || String(s.stream ?? "").toLowerCase() === stream.toLowerCase();
+        String((s as any).assessment ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(s.studentId ?? "").toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const studentGradeNorm = String(s.grade ?? "").toLowerCase().replace(/[^a-z0-9]/g, '');
+      const filterGradeNorm = String(grade ?? "").toLowerCase().replace(/[^a-z0-9]/g, '');
+      const matchesGrade = grade === "all" || studentGradeNorm === filterGradeNorm || studentGradeNorm.includes(filterGradeNorm);
+
+      const studentStreamNorm = String(s.stream ?? "").toLowerCase().trim();
+      const filterStreamNorm = String(stream ?? "").toLowerCase().trim();
+      const matchesStream = stream === "all" || studentStreamNorm === filterStreamNorm;
+
       return matchesSearch && matchesGrade && matchesStream;
     });
   }, [searchTerm, grade, stream]);
 
-  // Handler: "Download Current"
-  const handleDownloadCurrent = async () => {
-    // 1. Sync live values from textareas into DOM text
-    document.querySelectorAll('textarea').forEach(textarea => {
-      textarea.innerText = textarea.value;
-    });
+  // Selected learners state for batch selection / checkboxes
+  const [selectedLearnerIds, setSelectedLearnerIds] = useState<string[]>([]);
 
-    // 2. Clone the report card element
-    const reportElement = wrapperRef.current || (document.querySelector('.reports-print-wrapper') as HTMLElement | null);
-    if (!reportElement) {
-      showError("Report card container not found.");
-      return;
+  // Keep selectedLearnerIds synced when filters change
+  useEffect(() => {
+    setSelectedLearnerIds(filteredStudents.map(s => s.id));
+  }, [filteredStudents]);
+
+  const toggleSelectAll = () => {
+    if (selectedLearnerIds.length === filteredStudents.length) {
+      setSelectedLearnerIds([]);
+    } else {
+      setSelectedLearnerIds(filteredStudents.map(s => s.id));
     }
-    const printContent = reportElement.cloneNode(true) as HTMLElement;
-
-    // 3. Remove .no-print elements (save buttons, top controls)
-    printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
-
-    // 4. Create or reuse a hidden iframe
-    let printFrame = document.getElementById('pdf-print-frame') as HTMLIFrameElement;
-    if (!printFrame) {
-      printFrame = document.createElement('iframe');
-      printFrame.id = 'pdf-print-frame';
-      printFrame.style.position = 'fixed';
-      printFrame.style.right = '0';
-      printFrame.style.bottom = '0';
-      printFrame.style.width = '0';
-      printFrame.style.height = '0';
-      printFrame.style.border = '0';
-      document.body.appendChild(printFrame);
-    }
-
-    // 5. Write the printable content into the iframe
-    const pw = printFrame?.contentWindow;
-    const frameDoc = pw?.document;
-    if (!frameDoc) {
-      showError("Could not access print iframe document.");
-      return;
-    }
-    frameDoc.open();
-    frameDoc.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>CBC_Report_Card</title>
-          <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-            body { background: #ffffff; padding: 0; margin: 0; }
-            @page { size: A4 portrait; margin: 5mm; }
-            .reports-print-wrapper {
-              width: 100%;
-              padding: 10mm;
-              border: none !important;
-              box-shadow: none !important;
-              font-size: 11px;
-              line-height: 1.3;
-            }
-            .school-header { text-align: center; margin-bottom: 8px; }
-            .school-name { font-size: 13px; font-weight: bold; }
-            .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
-            .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
-            .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
-            .meta-item { display: flex; gap: 4px; }
-            .meta-label { font-weight: bold; }
-            .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-            .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
-            .grading-table th { background: #f1f5f9; font-weight: bold; }
-            .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-            .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
-            .remark-header { font-weight: bold; margin-bottom: 4px; }
-            .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
-            .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
-            .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
-            textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
-          </style>
-        </head>
-        <body>
-          ${printContent.outerHTML}
-        </body>
-      </html>
-    `);
-    frameDoc.close();
-
-    // 6. Trigger print cleanly inside the frame
-    setTimeout(() => {
-      pw?.focus();
-      pw?.print();
-    }, 300);
-
-    showSuccess("PDF print dialog opened.");
   };
 
-  // Handler: "Download All" - uses the same hidden inline iframe pipeline
-  const handleDownloadAll = async () => {
-    // 1. Sync live values from textareas into DOM text
-    document.querySelectorAll('textarea').forEach(textarea => {
-      textarea.innerText = textarea.value;
-    });
+  const toggleSelectLearner = (id: string) => {
+    setSelectedLearnerIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
 
-    // 2. Clone the report card element
-    const reportElement = wrapperRef.current || (document.querySelector('.reports-print-wrapper') as HTMLElement | null);
-    if (!reportElement) {
-      showError("Report card container not found.");
+  // Handler: "Download Current"
+  const handleDownloadCurrent = async () => {
+    setIsExportingCurrent(true);
+    try {
+      // 1. Sync live values from textareas into DOM text
+      document.querySelectorAll('textarea').forEach(textarea => {
+        textarea.innerText = textarea.value;
+      });
+
+      // 2. Clone the report card element (or first filtered card)
+      const reportElement = wrapperRef.current || (document.querySelector('.reports-print-wrapper') as HTMLElement | null);
+      if (!reportElement) {
+        showError("Report card container not found.");
+        return;
+      }
+      const printContent = reportElement.cloneNode(true) as HTMLElement;
+
+      // 3. Remove .no-print elements
+      printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
+
+      // 4. Create or reuse hidden iframe
+      let printFrame = document.getElementById('pdf-print-frame') as HTMLIFrameElement;
+      if (!printFrame) {
+        printFrame = document.createElement('iframe');
+        printFrame.id = 'pdf-print-frame';
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        document.body.appendChild(printFrame);
+      }
+
+      const pw = printFrame?.contentWindow;
+      const frameDoc = pw?.document;
+      if (!frameDoc) {
+        showError("Could not access print iframe document.");
+        return;
+      }
+      frameDoc.open();
+      frameDoc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>CBC_Report_Card</title>
+            <style>
+              * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+              body { background: #ffffff; padding: 0; margin: 0; }
+              @page { size: A4 portrait; margin: 5mm; }
+              .reports-print-wrapper {
+                width: 100%;
+                padding: 10mm;
+                border: none !important;
+                box-shadow: none !important;
+                font-size: 11px;
+                line-height: 1.3;
+              }
+              .school-header { text-align: center; margin-bottom: 8px; }
+              .school-name { font-size: 13px; font-weight: bold; }
+              .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
+              .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
+              .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
+              .meta-item { display: flex; gap: 4px; }
+              .meta-label { font-weight: bold; }
+              .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+              .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
+              .grading-table th { background: #f1f5f9; font-weight: bold; }
+              .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+              .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
+              .remark-header { font-weight: bold; margin-bottom: 4px; }
+              .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
+              .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
+              .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
+              textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+            </style>
+          </head>
+          <body>
+            ${printContent.outerHTML}
+          </body>
+        </html>
+      `);
+      frameDoc.close();
+
+      setTimeout(() => {
+        pw?.focus();
+        pw?.print();
+        setIsExportingCurrent(false);
+        showSuccess("PDF print dialog opened successfully.");
+      }, 400);
+    } catch (err) {
+      setIsExportingCurrent(false);
+      showError("Failed to generate PDF.");
+    }
+  };
+
+  // Handler: "Download All" - loops through dynamically filtered learners
+  const handleDownloadAll = async () => {
+    if (filteredStudents.length === 0) {
+      showError("No learners found for the selected Grade/Stream combination.");
       return;
     }
-    const printContent = reportElement.cloneNode(true) as HTMLElement;
+    setIsDownloadingAll(true);
+    try {
+      document.querySelectorAll('textarea').forEach(textarea => {
+        textarea.innerText = textarea.value;
+      });
 
-    // 3. Remove .no-print elements (save buttons, top controls)
-    printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
+      const reportElement = wrapperRef.current || (document.querySelector('.reports-print-wrapper') as HTMLElement | null);
+      if (!reportElement) {
+        showError("Report card container not found.");
+        setIsDownloadingAll(false);
+        return;
+      }
+      const printContent = reportElement.cloneNode(true) as HTMLElement;
+      printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
 
-    // 4. Create or reuse a hidden iframe
-    let printFrame = document.getElementById('pdf-print-frame') as HTMLIFrameElement;
-    if (!printFrame) {
-      printFrame = document.createElement('iframe');
-      printFrame.id = 'pdf-print-frame';
-      printFrame.style.position = 'fixed';
-      printFrame.style.right = '0';
-      printFrame.style.bottom = '0';
-      printFrame.style.width = '0';
-      printFrame.style.height = '0';
-      printFrame.style.border = '0';
-      document.body.appendChild(printFrame);
+      let printFrame = document.getElementById('pdf-print-frame') as HTMLIFrameElement;
+      if (!printFrame) {
+        printFrame = document.createElement('iframe');
+        printFrame.id = 'pdf-print-frame';
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        document.body.appendChild(printFrame);
+      }
+
+      const pwAll = printFrame?.contentWindow;
+      const frameDocAll = pwAll?.document;
+      if (!frameDocAll) {
+        showError("Could not access print iframe document.");
+        setIsDownloadingAll(false);
+        return;
+      }
+      frameDocAll.open();
+      frameDocAll.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>CBC_Report_Cards_Batch_${grade}_${stream}</title>
+            <style>
+              * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+              body { background: #ffffff; padding: 0; margin: 0; }
+              @page { size: A4 portrait; margin: 5mm; }
+              .reports-print-wrapper {
+                width: 100%;
+                padding: 10mm;
+                border: none !important;
+                box-shadow: none !important;
+                font-size: 11px;
+                line-height: 1.3;
+              }
+              .school-header { text-align: center; margin-bottom: 8px; }
+              .school-name { font-size: 13px; font-weight: bold; }
+              .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
+              .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
+              .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
+              .meta-item { display: flex; gap: 4px; }
+              .meta-label { font-weight: bold; }
+              .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+              .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
+              .grading-table th { background: #f1f5f9; font-weight: bold; }
+              .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+              .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
+              .remark-header { font-weight: bold; margin-bottom: 4px; }
+              .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
+              .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
+              .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
+              textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+              .report-card { page-break-after: always !important; margin-bottom: 20px; }
+            </style>
+          </head>
+          <body>
+            ${printContent.outerHTML}
+          </body>
+        </html>
+      `);
+      frameDocAll.close();
+
+      setTimeout(() => {
+        pwAll?.focus();
+        pwAll?.print();
+        setIsDownloadingAll(false);
+        showSuccess(`Bulk export initiated for ${filteredStudents.length} learners.`);
+      }, 500);
+    } catch (err) {
+      setIsDownloadingAll(false);
+      showError("Failed to generate bulk PDFs.");
     }
-
-    // 5. Write the printable content into the iframe
-        const pwAll = printFrame?.contentWindow;
-        const frameDocAll = pwAll?.document;
-        if (!frameDocAll) {
-          showError("Could not access print iframe document.");
-          return;
-        }
-    frameDocAll.open();
-    frameDocAll.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>CBC_Report_Card_All</title>
-          <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-            body { background: #ffffff; padding: 0; margin: 0; }
-            @page { size: A4 portrait; margin: 5mm; }
-            .reports-print-wrapper {
-              width: 100%;
-              padding: 10mm;
-              border: none !important;
-              box-shadow: none !important;
-              font-size: 11px;
-              line-height: 1.3;
-            }
-            .school-header { text-align: center; margin-bottom: 8px; }
-            .school-name { font-size: 13px; font-weight: bold; }
-            .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
-            .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
-            .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
-            .meta-item { display: flex; gap: 4px; }
-            .meta-label { font-weight: bold; }
-            .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-            .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
-            .grading-table th { background: #f1f5f9; font-weight: bold; }
-            .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-            .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
-            .remark-header { font-weight: bold; margin-bottom: 4px; }
-            .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
-            .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
-            .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
-            textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
-          </style>
-        </head>
-        <body>
-          ${printContent.outerHTML}
-        </body>
-      </html>
-    `);
-    frameDocAll.close();
-
-    // 6. Trigger print cleanly inside the frame
-    setTimeout(() => {
-      pwAll?.focus();
-      pwAll?.print();
-    }, 300);
-
-    showSuccess("Bulk PDF print dialog opened.");
   };
 
   return (
