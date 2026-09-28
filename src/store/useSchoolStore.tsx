@@ -11,6 +11,7 @@ export interface Campus {
 
 export interface SchoolStore {
   learners: any[];
+  students: any[];
   staff: any[];
   fees: any;
   attendance: any;
@@ -18,7 +19,8 @@ export interface SchoolStore {
   marks: any;
   timetable: any;
   settings: any;
-  notices: any;
+  notices: any[];
+  addNotice: (notice: any) => void;
   events: any[];
   campuses: Campus[];
   tenants: any[];
@@ -61,6 +63,9 @@ try {
 
 let storeState: SchoolStore = {
   learners: [],
+  get students() {
+    return this.learners;
+  },
   staff: [],
   fees: {},
   attendance: {},
@@ -69,6 +74,10 @@ let storeState: SchoolStore = {
   timetable: {},
   settings: {},
   notices: [],
+  addNotice: (notice: any) => {
+    const updated = [notice, ...storeState.notices];
+    storeState.setNotices(updated);
+  },
   events: [],
   campuses: [],
   tenants: [],
