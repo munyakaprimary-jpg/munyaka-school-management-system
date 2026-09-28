@@ -48,7 +48,6 @@ export default function PromotePage() {
   const storeLearners = useSchoolStore((state) => state.learners);
   const saveLearners = useSchoolStore((state) => state.saveLearners);
   
-  // Direct fallback to persistent store getStudents() to ensure students from directory appear instantly
   const [learners, setLearners] = useState<any[]>(() => {
     const direct = getStudents();
     return direct && direct.length > 0 ? direct : (storeLearners || []);
@@ -87,14 +86,11 @@ export default function PromotePage() {
   useEffect(() => {
     const loadGradesAndStreams = () => {
       try {
-        const saved = localStorage.getItem('munyaka_grades') || localStorage.getItem('configured_streams') || localStorage.getItem('munyaka_students');
+        const saved = localStorage.getItem('munyaka_grades') || localStorage.getItem('configured_streams');
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // Check if it's grades or students
-            if (parsed[0]?.name || parsed[0]?.id || parsed[0]?.streams) {
-              setGradesList(parsed);
-            }
+            setGradesList(parsed);
           }
         }
         const directStudents = getStudents();
@@ -134,7 +130,6 @@ export default function PromotePage() {
       const g = l.gradeId || l.grade || l.gradeLevel || l.currentGrade || l.class;
       if (g) {
         const strG = String(g).trim();
-        // Extract number or format nicely if it's raw like '6'
         const cleanName = strG.toLowerCase().startsWith('grade') ? strG : (/^[0-9]+$/.test(strG) ? `Grade ${strG}` : strG);
         const key = normalizeStr(cleanName);
         if (!gradeMap.has(key)) {
@@ -198,7 +193,7 @@ export default function PromotePage() {
     return Array.from(streamSet).sort();
   }, [gradesList, learners, sourceGrade]);
 
-  // Grade student counts calculation with robust flexible matching
+  // Grade student counts calculation with exact robust matching
   const gradeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     availableGrades.forEach(gradeObj => {
@@ -223,7 +218,7 @@ export default function PromotePage() {
     return counts;
   }, [availableGrades, learners]);
 
-  // Filtered learners list using robust flexible matching
+  // Filtered learners list with strict combined Grade AND Stream matching
   const filteredLearners = useMemo(() => {
     return learners.filter((learner) => {
       const learnerGradeIdentifier = 
@@ -245,10 +240,12 @@ export default function PromotePage() {
         normLGrade.includes(normSourceGrade) ||
         normSourceGrade.includes(normLGrade);
 
-      const learnerStream = learner.streamId || learner.stream || learner.currentStream || learner.classStream;
+      const learnerStream = String(learner.streamId || learner.stream || learner.currentStream || learner.classStream || '').trim().toUpperCase();
+      const selectedStreamUpper = String(sourceStream || '').trim().toUpperCase();
+      
       const matchesStream = 
         sourceStream === 'all' || 
-        normalizeStr(learnerStream) === normalizeStr(sourceStream);
+        learnerStream === selectedStreamUpper;
 
       return matchesGrade && matchesStream;
     });
@@ -433,7 +430,7 @@ export default function PromotePage() {
             <div>
               <CardTitle className="text-lg font-bold">Promotion Preview Table</CardTitle>
               <CardDescription>
-                Showing {filteredLearners.length} student(s) matching selected filters.
+                Showing {filteredLearners.length} student(s) matching grade "{sourceGrade === 'all' ? 'All Grades' : sourceGrade}" and stream "{sourceStream === 'all' ? 'All Streams' : sourceStream}".
               </CardDescription>
             </div>
             <div className="text-sm font-bold text-indigo-600">
