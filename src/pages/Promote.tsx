@@ -59,40 +59,104 @@ export default function PromotePage() {
   // Selected student IDs for granular control
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
-  // Unique grades & streams from learners with dynamic counts
+  // Load configured grades and streams from persistent storage (munyaka_grades / configured_streams)
+  const [storedGrades, setStoredGrades] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadGradesAndStreams = () => {
+      try {
+        const saved = localStorage.getItem('munyaka_grades') || localStorage.getItem('configured_streams');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setStoredGrades(parsed);
+          }
+        }
+      } catch (e) {
+        console.error("Error loading grades from storage:", e);
+      }
+    };
+    loadGradesAndStreams();
+    window.addEventListener('storage', loadGradesAndStreams);
+    window.addEventListener('munyaka_grades_updated', loadGradesAndStreams);
+    return () => {
+      window.removeEventListener('storage', loadGradesAndStreams);
+      window.removeEventListener('munyaka_grades_updated', loadGradesAndStreams);
+    };
+  }, []);
+
+  // Compute learner counts per grade
   const gradeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     learners.forEach(l => {
       const g = String(l.grade || l.class || '').trim();
       if (g) {
         counts[g] = (counts[g] || 0) + 1;
+        counts[g.toLowerCase()] = (counts[g.toLowerCase()] || 0) + 1;
       }
     });
     return counts;
   }, [learners]);
 
+  // Available grades combining stored grades and learner grades
   const availableGrades = useMemo(() => {
-    return Object.keys(gradeCounts).sort((a, b) => {
+    const gradeMap = new Map<string, string>();
+    storedGrades.forEach(g => {
+      if (g && g.name) {
+        gradeMap.set(g.name.trim().toLowerCase(), g.name.trim());
+      }
+    });
+    learners.forEach(l => {
+      const g = String(l.grade || l.class || '').trim();
+      if (g) {
+        gradeMap.set(g.toLowerCase(), g);
+      }
+    });
+
+    const list = Array.from(gradeMap.values());
+    return list.sort((a, b) => {
       const idxA = GRADE_SEQUENCE.findIndex(g => g.toLowerCase() === a.toLowerCase());
       const idxB = GRADE_SEQUENCE.findIndex(g => g.toLowerCase() === b.toLowerCase());
       if (idxA !== -1 && idxB !== -1) return idxA - idxB;
       return a.localeCompare(b);
     });
-  }, [gradeCounts]);
+  }, [storedGrades, learners]);
 
+  // Available streams based on selected grade
   const availableStreams = useMemo(() => {
-    const set = new Set<string>();
+    const streamSet = new Set<string>();
+    
+    // Check storedGrades
+    if (sourceGrade === 'all') {
+      storedGrades.forEach(g => {
+        if (Array.isArray(g.streams)) {
+          g.streams.forEach((s: any) => {
+            if (s && s.name) streamSet.add(s.name.trim());
+          });
+        }
+      });
+    } else {
+      const matchedGradeObj = storedGrades.find(g => g && g.name && g.name.trim().toLowerCase() === sourceGrade.toLowerCase());
+      if (matchedGradeObj && Array.isArray(matchedGradeObj.streams)) {
+        matchedGradeObj.streams.forEach((s: any) => {
+          if (s && s.name) streamSet.add(s.name.trim());
+        });
+      }
+    }
+
+    // Also collect from learners
     learners.forEach(l => {
       const g = String(l.grade || l.class || '').trim();
       const s = String(l.stream || l.classStream || '').trim();
       if (s) {
         if (sourceGrade === 'all' || g.toLowerCase() === sourceGrade.toLowerCase()) {
-          set.add(s);
+          streamSet.add(s);
         }
       }
     });
-    return Array.from(set).sort();
-  }, [learners, sourceGrade]);
+
+    return Array.from(streamSet).sort();
+  }, [storedGrades, learners, sourceGrade]);
 
   // Filtered learners list with robust normalization
   const filteredLearners = useMemo(() => {
@@ -225,14 +289,19 @@ export default function PromotePage() {
               value={sourceGrade}
               onChange={(e) => {
                 setSourceGrade(e.target.value);
-                setSourceStream('all'); // reset stream when grade changes
+                setSourceStream('all');
               }}
               className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-sm font-bold"
             >
               <option value="all">All Grades ({learners.length} students)</option>
-              {availableGrades.map(g => (
-                <option key={g} value={g}>{g} ({gradeCounts[g]} students)</option>
-              ))}
+              {availableGrades.map(g => {
+                const count = gradeCounts[g] || gradeCounts[g.toLowerCase()] || 0;
+                return (
+                  <option key={g} value={g}>
+                    {g} ({count} students)
+                  </option>
+                );
+              })}
             </select>
           </div>
 
