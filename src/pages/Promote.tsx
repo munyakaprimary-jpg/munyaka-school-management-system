@@ -44,7 +44,9 @@ const normalizeStr = (str: string | undefined): string => {
 };
 
 export default function PromotePage() {
-  const { learners, saveLearners } = useSchoolStore();
+  const learners = useSchoolStore((state) => state.learners);
+  const saveLearners = useSchoolStore((state) => state.saveLearners);
+  
   const [targetYear, setTargetYear] = useState('2027');
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -63,8 +65,8 @@ export default function PromotePage() {
   // Selected student IDs for granular control
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
-  // Load configured grades and streams from persistent storage
-  const [storedGrades, setStoredGrades] = useState<any[]>([]);
+  // Load configured grades from persistent storage
+  const [gradesList, setGradesList] = useState<any[]>([]);
 
   useEffect(() => {
     const loadGradesAndStreams = () => {
@@ -73,7 +75,7 @@ export default function PromotePage() {
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) {
-            setStoredGrades(parsed);
+            setGradesList(parsed);
           }
         }
       } catch (e) {
@@ -89,100 +91,129 @@ export default function PromotePage() {
     };
   }, []);
 
+  // Debug logs to verify data structures
+  useEffect(() => {
+    console.log("PROMOTION LEARNERS:", learners);
+    console.log("STORE GRADELIST:", gradesList);
+  }, [learners, gradesList]);
+
   // Available grades combining stored grades and learner grades
   const availableGrades = useMemo(() => {
-    const gradeMap = new Map<string, string>();
-    storedGrades.forEach(g => {
-      if (g && (g.name || g.id)) {
-        const label = g.name || g.id;
-        gradeMap.set(normalizeStr(label), label);
-      }
-    });
-    learners.forEach(l => {
-      const g = l.grade || l.gradeLevel || l.gradeId || l.class;
+    const gradeMap = new Map<string, { id: string; name: string }>();
+    
+    gradesList.forEach(g => {
       if (g) {
-        gradeMap.set(normalizeStr(g), String(g).trim());
+        const id = g.id || g.name;
+        const name = g.name || g.id;
+        if (id && name) {
+          gradeMap.set(String(id), { id: String(id), name: String(name) });
+        }
       }
     });
 
-    const list = Array.from(gradeMap.values());
-    return list.sort((a, b) => {
-      const idxA = GRADE_SEQUENCE.findIndex(g => normalizeStr(g) === normalizeStr(a));
-      const idxB = GRADE_SEQUENCE.findIndex(g => normalizeStr(g) === normalizeStr(b));
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      return a.localeCompare(b);
+    learners.forEach(l => {
+      const g = l.gradeId || l.grade || l.gradeLevel || l.currentGrade || l.class;
+      if (g) {
+        const strG = String(g).trim();
+        if (!gradeMap.has(strG)) {
+          gradeMap.set(strG, { id: strG, name: strG });
+        }
+      }
     });
-  }, [storedGrades, learners]);
 
-  // Grade counts calculation using normalized matching
-  const gradeCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    availableGrades.forEach(gradeName => {
-      const normGrade = normalizeStr(gradeName);
-      const count = learners.filter(l => {
-        const lGrade = normalizeStr(l.grade || l.gradeLevel || l.gradeId || l.class);
-        return lGrade === normGrade;
-      }).length;
-      counts[normGrade] = count;
+    return Array.from(gradeMap.values()).sort((a, b) => {
+      const idxA = GRADE_SEQUENCE.findIndex(seq => normalizeStr(seq) === normalizeStr(a.name));
+      const idxB = GRADE_SEQUENCE.findIndex(seq => normalizeStr(seq) === normalizeStr(b.name));
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      return a.name.localeCompare(b.name);
     });
-    return counts;
-  }, [availableGrades, learners]);
+  }, [gradesList, learners]);
 
   // Available streams based on selected grade
   const availableStreams = useMemo(() => {
     const streamSet = new Set<string>();
     
     if (sourceGrade === 'all') {
-      storedGrades.forEach(g => {
+      gradesList.forEach(g => {
         if (Array.isArray(g.streams)) {
           g.streams.forEach((s: any) => {
-            if (s && (s.name || s.id)) {
-              streamSet.add(String(s.name || s.id).trim());
+            if (s) {
+              const sName = s.name || s.id;
+              if (sName) streamSet.add(String(sName).trim());
             }
           });
         }
       });
     } else {
-      const matchedGradeObj = storedGrades.find(g => 
-        g && (normalizeStr(g.name) === normalizeStr(sourceGrade) || normalizeStr(g.id) === normalizeStr(sourceGrade))
-      );
+      const matchedGradeObj = gradesList.find(g => g && (g.id === sourceGrade || g.name === sourceGrade));
       if (matchedGradeObj && Array.isArray(matchedGradeObj.streams)) {
         matchedGradeObj.streams.forEach((s: any) => {
-          if (s && (s.name || s.id)) {
-            streamSet.add(String(s.name || s.id).trim());
+          if (s) {
+            const sName = s.name || s.id;
+            if (sName) streamSet.add(String(sName).trim());
           }
         });
       }
     }
 
     learners.forEach(l => {
-      const lGrade = normalizeStr(l.grade || l.gradeLevel || l.gradeId || l.class);
-      const lStream = String(l.stream || l.streamId || l.classStream || '').trim();
-      if (lStream) {
-        if (sourceGrade === 'all' || lGrade === normalizeStr(sourceGrade)) {
-          streamSet.add(lStream);
+      const learnerGradeIdentifier = l.gradeId || l.grade || l.gradeLevel || l.currentGrade || l.class;
+      const learnerStream = l.streamId || l.stream || l.currentStream || l.classStream;
+      
+      if (learnerStream) {
+        const matchesGrade = 
+          sourceGrade === 'all' || 
+          String(learnerGradeIdentifier) === sourceGrade ||
+          normalizeStr(learnerGradeIdentifier) === normalizeStr(sourceGrade);
+
+        if (matchesGrade) {
+          streamSet.add(String(learnerStream).trim());
         }
       }
     });
 
     return Array.from(streamSet).sort();
-  }, [storedGrades, learners, sourceGrade]);
+  }, [gradesList, learners, sourceGrade]);
 
-  // Filtered learners list with robust normalized matching
+  // Filtered learners list using robust ID and name matching
   const filteredLearners = useMemo(() => {
-    return learners.filter(learner => {
-      const learnerGrade = normalizeStr(learner.grade || learner.gradeLevel || learner.gradeId || learner.class);
-      const selectedGradeNorm = normalizeStr(sourceGrade);
-      
-      const learnerStream = normalizeStr(learner.stream || learner.streamId || learner.classStream);
-      const selectedStreamNorm = normalizeStr(sourceStream);
+    return learners.filter((learner) => {
+      const learnerGradeIdentifier = 
+        learner.gradeId || 
+        learner.grade || 
+        learner.gradeLevel || 
+        learner.currentGrade ||
+        learner.class;
 
-      const matchesGrade = sourceGrade === 'all' || learnerGrade === selectedGradeNorm;
-      const matchesStream = sourceStream === 'all' || learnerStream === selectedStreamNorm;
+      const selectedGradeObj = gradesList.find(g => g.id === sourceGrade || g.name === sourceGrade);
+      
+      const matchesGrade = 
+        sourceGrade === 'all' || 
+        String(learnerGradeIdentifier) === sourceGrade ||
+        (selectedGradeObj && (String(learnerGradeIdentifier) === String(selectedGradeObj.id) || String(learnerGradeIdentifier) === String(selectedGradeObj.name))) ||
+        normalizeStr(learnerGradeIdentifier) === normalizeStr(sourceGrade);
+
+      const learnerStream = learner.streamId || learner.stream || learner.currentStream || learner.classStream;
+      const matchesStream = 
+        sourceStream === 'all' || 
+        normalizeStr(learnerStream) === normalizeStr(sourceStream);
 
       return matchesGrade && matchesStream;
     });
-  }, [learners, sourceGrade, sourceStream]);
+  }, [learners, sourceGrade, sourceStream, gradesList]);
+
+  // Grade student counts calculation
+  const gradeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    availableGrades.forEach(gradeObj => {
+      const count = learners.filter(l => {
+        const lGrade = l.gradeId || l.grade || l.gradeLevel || l.currentGrade || l.class;
+        return String(lGrade) === gradeObj.id || String(lGrade) === gradeObj.name || normalizeStr(lGrade) === normalizeStr(gradeObj.name);
+      }).length;
+      counts[gradeObj.id] = count;
+    });
+    return counts;
+  }, [availableGrades, learners]);
 
   // Sync selected IDs when filter changes
   useEffect(() => {
@@ -233,10 +264,10 @@ export default function PromotePage() {
           return l;
         }
 
-        const current = l.grade || l.gradeLevel || l.gradeId || l.class || 'Grade 1';
+        const current = l.gradeId || l.grade || l.gradeLevel || l.currentGrade || l.class || 'Grade 1';
         const defaultNext = calculateNextGrade(current);
         const nextGrade = targetGradeOverride.trim() ? targetGradeOverride : defaultNext;
-        const nextStream = targetStreamOverride.trim() ? targetStreamOverride : (l.stream || l.streamId || l.classStream || '');
+        const nextStream = targetStreamOverride.trim() ? targetStreamOverride : (l.streamId || l.stream || l.currentStream || l.classStream || '');
 
         return {
           ...l,
@@ -307,11 +338,11 @@ export default function PromotePage() {
               className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-sm font-bold"
             >
               <option value="all">All Grades ({learners.length} students)</option>
-              {availableGrades.map(g => {
-                const count = gradeCounts[normalizeStr(g)] || 0;
+              {availableGrades.map(gObj => {
+                const count = gradeCounts[gObj.id] || 0;
                 return (
-                  <option key={g} value={g}>
-                    {g} ({count} students)
+                  <option key={gObj.id} value={gObj.id}>
+                    {gObj.name} ({count} students)
                   </option>
                 );
               })}
@@ -363,7 +394,7 @@ export default function PromotePage() {
             <div>
               <CardTitle className="text-lg font-bold">Promotion Preview Table</CardTitle>
               <CardDescription>
-                Showing {filteredLearners.length} student(s) matching grade "{sourceGrade}" and stream "{sourceStream}".
+                Showing {filteredLearners.length} student(s) matching selected filters.
               </CardDescription>
             </div>
             <div className="text-sm font-bold text-indigo-600">
@@ -400,11 +431,11 @@ export default function PromotePage() {
                   filteredLearners.map((learner: any, idx: number) => {
                     const studentKey = learner.id || learner.admissionNumber;
                     const isChecked = selectedStudentIds.includes(studentKey);
-                    const currentGrade = learner.grade || learner.gradeLevel || learner.gradeId || learner.class || 'Grade 1';
+                    const currentGrade = learner.gradeId || learner.grade || learner.gradeLevel || learner.currentGrade || learner.class || 'Grade 1';
                     const defaultNext = calculateNextGrade(currentGrade);
                     const nextGrade = targetGradeOverride.trim() ? targetGradeOverride : defaultNext;
                     const isGraduated = nextGrade === 'Graduated';
-                    const currentStream = learner.stream || learner.streamId || learner.classStream || '';
+                    const currentStream = learner.streamId || learner.stream || learner.currentStream || learner.classStream || '';
 
                     return (
                       <TableRow key={studentKey || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
