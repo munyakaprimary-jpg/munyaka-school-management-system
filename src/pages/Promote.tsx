@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import Modal from '@/components/ui/Modal';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { showSuccess, showError } from '@/utils/toast';
-import { ArrowRight, CheckCircle2, Users, GraduationCap, RefreshCw } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Users, GraduationCap, RefreshCw, Filter } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import PromotionStats from '@/components/promote/PromotionStats';
 
@@ -40,26 +44,112 @@ export default function PromotePage() {
   const [targetYear, setTargetYear] = useState('2027');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Filter States
+  const [sourceGrade, setSourceGrade] = useState('all');
+  const [sourceStream, setSourceStream] = useState('all');
+  
+  // Target overrides
+  const [targetGradeOverride, setTargetGradeOverride] = useState('');
+  const [targetStreamOverride, setTargetStreamOverride] = useState('');
+
+  // Confirmation modal state
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [promotionMode, setPromotionMode] = useState<'all' | 'selected'>('all');
+
+  // Selected student IDs for granular control
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+
+  // Unique grades & streams from learners
+  const availableGrades = useMemo(() => {
+    const set = new Set<string>();
+    learners.forEach(l => {
+      const g = l.grade || l.class;
+      if (g) set.add(String(g).trim());
+    });
+    return Array.from(set).sort();
+  }, [learners]);
+
+  const availableStreams = useMemo(() => {
+    const set = new Set<string>();
+    learners.forEach(l => {
+      const s = l.stream || l.classStream;
+      if (s) set.add(String(s).trim());
+    });
+    return Array.from(set).sort();
+  }, [learners]);
+
+  // Filtered learners list
+  const filteredLearners = useMemo(() => {
+    return learners.filter(l => {
+      const g = String(l.grade || l.class || '').trim();
+      const s = String(l.stream || l.classStream || '').trim();
+
+      const matchesGrade = sourceGrade === 'all' || g.toLowerCase() === sourceGrade.toLowerCase();
+      const matchesStream = sourceStream === 'all' || s.toLowerCase() === sourceStream.toLowerCase();
+
+      return matchesGrade && matchesStream;
+    });
+  }, [learners, sourceGrade, sourceStream]);
+
+  // Sync selected IDs when filter changes
+  useEffect(() => {
+    setSelectedStudentIds(filteredLearners.map(l => l.id || l.admissionNumber));
+  }, [filteredLearners]);
+
+  const toggleSelectAll = () => {
+    if (selectedStudentIds.length === filteredLearners.length) {
+      setSelectedStudentIds([]);
+    } else {
+      setSelectedStudentIds(filteredLearners.map(l => l.id || l.admissionNumber));
+    }
+  };
+
+  const toggleStudent = (id: string) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
   const statsData = {
     totalStudents: learners.length,
     activeStudents: learners.filter(l => calculateNextGrade(l.grade || l.class) !== 'Graduated').length,
     graduatedStudents: learners.filter(l => calculateNextGrade(l.grade || l.class) === 'Graduated').length,
     highestGrade: 'Grade 9',
-    eligibleForPromotion: learners.filter(l => calculateNextGrade(l.grade || l.class) !== 'Graduated').length,
-    graduating: learners.filter(l => calculateNextGrade(l.grade || l.class) === 'Graduated').length,
+    eligibleForPromotion: filteredLearners.length,
+    graduating: filteredLearners.filter(l => calculateNextGrade(l.grade || l.class) === 'Graduated').length,
     retained: 0
+  };
+
+  const handleOpenConfirm = (mode: 'all' | 'selected') => {
+    setPromotionMode(mode);
+    if (mode === 'selected' && selectedStudentIds.length === 0) {
+      showError('Please select at least one student to promote.');
+      return;
+    }
+    setIsConfirmOpen(true);
   };
 
   const handleExecutePromotions = () => {
     try {
       setIsProcessing(true);
+      const targetIds = new Set(selectedStudentIds);
+
       const updated = learners.map(l => {
+        const studentKey = l.id || l.admissionNumber;
+        if (promotionMode === 'selected' && !targetIds.has(studentKey)) {
+          return l; // Skip unselected students when promoting selected subset
+        }
+
         const current = l.grade || l.class || 'Grade 1';
-        const next = calculateNextGrade(current);
+        const defaultNext = calculateNextGrade(current);
+        const nextGrade = targetGradeOverride.trim() ? targetGradeOverride : defaultNext;
+        const nextStream = targetStreamOverride.trim() ? targetStreamOverride : (l.stream || l.classStream || '');
+
         return {
           ...l,
-          grade: next === 'Graduated' ? current : next,
-          status: next === 'Graduated' ? 'Graduated' : 'Active',
+          grade: nextGrade === 'Graduated' ? current : nextGrade,
+          stream: nextStream || l.stream,
+          status: nextGrade === 'Graduated' ? 'Graduated' : 'Active',
           academicYear: targetYear,
           year: targetYear,
           enrollmentYear: targetYear
@@ -67,7 +157,8 @@ export default function PromotePage() {
       });
 
       saveLearners(updated);
-      showSuccess(`Successfully promoted all students to academic year ${targetYear}!`);
+      setIsConfirmOpen(false);
+      showSuccess(`Successfully promoted ${promotionMode === 'selected' ? selectedStudentIds.length : filteredLearners.length} students to academic year ${targetYear}!`);
     } catch (err: any) {
       showError('Promotion execution failed: ' + (err?.message || err));
     } finally {
@@ -84,81 +175,189 @@ export default function PromotePage() {
         </div>
         <div className="flex items-center gap-3">
           <Button
-            onClick={handleExecutePromotions}
-            disabled={isProcessing}
+            onClick={() => handleOpenConfirm('selected')}
+            disabled={isProcessing || selectedStudentIds.length === 0}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-lg shadow-indigo-900/20"
           >
             <ArrowRight className="w-4 h-4 mr-2" />
-            Execute Promotions for {targetYear}
+            Promote Selected Class ({selectedStudentIds.length})
+          </Button>
+          <Button
+            onClick={() => handleOpenConfirm('all')}
+            disabled={isProcessing}
+            variant="outline"
+            className="rounded-xl border-slate-300 font-semibold"
+          >
+            Promote All School
           </Button>
         </div>
       </div>
 
       <PromotionStats stats={statsData} />
 
+      {/* Promotion Controls Bar */}
+      <Card className="rounded-3xl border-slate-200 dark:border-slate-800 shadow-sm p-5 bg-white dark:bg-slate-900">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-4 h-4 text-indigo-600" />
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Class & Stream Filters & Target Mapping</h3>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-500">Source Grade Level</Label>
+            <select
+              value={sourceGrade}
+              onChange={(e) => setSourceGrade(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-sm font-bold"
+            >
+              <option value="all">All Grades ({learners.length})</option>
+              {availableGrades.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-500">Source Stream</Label>
+            <select
+              value={sourceStream}
+              onChange={(e) => setSourceStream(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-sm font-bold"
+            >
+              <option value="all">All Streams</option>
+              {availableStreams.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-500">Target Grade Override</Label>
+            <Input
+              placeholder="Auto (Next Grade)"
+              value={targetGradeOverride}
+              onChange={(e) => setTargetGradeOverride(e.target.value)}
+              className="rounded-xl h-10 bg-slate-50 dark:bg-slate-800 text-sm font-bold"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-slate-500">Target Year</Label>
+            <select
+              value={targetYear}
+              onChange={(e) => setTargetYear(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-sm font-bold"
+            >
+              <option value="2027">2027</option>
+              <option value="2028">2028</option>
+              <option value="2029">2029</option>
+            </select>
+          </div>
+        </div>
+      </Card>
+
       <Card className="rounded-3xl border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-lg font-bold">Promotion Preview Table</CardTitle>
-              <CardDescription>Review projected grade advancement for all registered students.</CardDescription>
+              <CardDescription>
+                Showing {filteredLearners.length} student(s) matching grade "{sourceGrade}" and stream "{sourceStream}".
+              </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Target Year:</span>
-              <select
-                value={targetYear}
-                onChange={(e) => setTargetYear(e.target.value)}
-                className="bg-white dark:bg-slate-800 border rounded-xl px-3 py-1.5 text-sm font-bold"
-              >
-                <option value="2027">2027</option>
-                <option value="2028">2028</option>
-                <option value="2029">2029</option>
-              </select>
+            <div className="text-sm font-bold text-indigo-600">
+              {selectedStudentIds.length} Selected
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="w-full overflow-x-auto">
-            <Table className="min-w-[650px]">
+            <Table className="min-w-[700px]">
               <TableHeader className="bg-slate-100/70 dark:bg-slate-800/50">
                 <TableRow>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3 min-w-[150px]">STUDENT NAME</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3 min-w-[110px]">ADMISSION NO</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3 min-w-[110px]">CURRENT GRADE</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3 min-w-[160px]">NEXT GRADE (PREVIEW)</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3 min-w-[100px]">STATUS</TableHead>
+                  <TableHead className="w-12 py-3 px-3">
+                    <Checkbox
+                      checked={filteredLearners.length > 0 && selectedStudentIds.length === filteredLearners.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3">STUDENT NAME</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3">ADMISSION NO</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3">CURRENT GRADE/STREAM</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3">NEXT GRADE (PREVIEW)</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 py-3 px-3">STATUS</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {learners.map((learner: any, idx: number) => {
-                  const currentGrade = learner.grade || learner.class || 'Grade 1';
-                  const nextGrade = calculateNextGrade(currentGrade);
-                  const isGraduated = nextGrade === 'Graduated';
+                {filteredLearners.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-slate-400 font-medium">
+                      No students found matching the selected Grade and Stream combination.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredLearners.map((learner: any, idx: number) => {
+                    const studentKey = learner.id || learner.admissionNumber;
+                    const isChecked = selectedStudentIds.includes(studentKey);
+                    const currentGrade = learner.grade || learner.class || 'Grade 1';
+                    const defaultNext = calculateNextGrade(currentGrade);
+                    const nextGrade = targetGradeOverride.trim() ? targetGradeOverride : defaultNext;
+                    const isGraduated = nextGrade === 'Graduated';
 
-                  return (
-                    <TableRow key={learner.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                      <TableCell className="text-xs md:text-sm font-bold text-slate-900 dark:text-white py-2.5 px-3 whitespace-nowrap">{learner.name || learner.fullName || 'Student'}</TableCell>
-                      <TableCell className="text-xs font-mono text-muted-foreground py-2.5 px-3 whitespace-nowrap">{learner.admissionNumber || learner.admNo || 'MUN-000'}</TableCell>
-                      <TableCell className="text-xs md:text-sm py-2.5 px-3 font-medium whitespace-nowrap">{currentGrade}</TableCell>
-                      <TableCell className="text-xs md:text-sm py-2.5 px-3 font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span>{nextGrade}</span>
-                          {!isGraduated && <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs py-2.5 px-3 whitespace-nowrap">
-                        <Badge variant={isGraduated ? 'secondary' : 'default'} className={isGraduated ? 'bg-amber-100 text-amber-800 font-bold text-[10px]' : 'bg-emerald-100 text-emerald-800 font-bold text-[10px]'}>
-                          {isGraduated ? 'Graduated' : 'Active'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                    return (
+                      <TableRow key={studentKey || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                        <TableCell className="py-2.5 px-3">
+                          <Checkbox
+                            checked={isChecked}
+                            onCheckedChange={() => toggleStudent(studentKey)}
+                          />
+                        </TableCell>
+                        <TableCell className="text-xs md:text-sm font-bold text-slate-900 dark:text-white py-2.5 px-3 whitespace-nowrap">{learner.name || learner.fullName || 'Student'}</TableCell>
+                        <TableCell className="text-xs font-mono text-muted-foreground py-2.5 px-3 whitespace-nowrap">{learner.admissionNumber || learner.admNo || 'MUN-000'}</TableCell>
+                        <TableCell className="text-xs md:text-sm py-2.5 px-3 font-medium whitespace-nowrap">{currentGrade} {learner.stream ? `— ${learner.stream}` : ''}</TableCell>
+                        <TableCell className="text-xs md:text-sm py-2.5 px-3 font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <span>{nextGrade}</span>
+                            {!isGraduated && <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs py-2.5 px-3 whitespace-nowrap">
+                          <Badge variant={isGraduated ? 'secondary' : 'default'} className={isGraduated ? 'bg-amber-100 text-amber-800 font-bold text-[10px]' : 'bg-emerald-100 text-emerald-800 font-bold text-[10px]'}>
+                            {isGraduated ? 'Graduated' : 'Active'}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirmation Modal */}
+      <Modal isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} title="Confirm Student Promotion">
+        <div className="space-y-4 pt-2">
+          <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100 dark:border-indigo-900 text-sm text-indigo-900 dark:text-indigo-200">
+            You are about to advance <span className="font-bold">{promotionMode === 'selected' ? selectedStudentIds.length : filteredLearners.length}</span> students to academic year <span className="font-bold">{targetYear}</span>.
+            {sourceGrade !== 'all' && <span> From grade <span className="font-bold">{sourceGrade}</span></span>}.
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setIsConfirmOpen(false)} className="rounded-xl">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleExecutePromotions}
+              disabled={isProcessing}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+            >
+              {isProcessing ? 'Processing...' : 'Confirm & Promote'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
