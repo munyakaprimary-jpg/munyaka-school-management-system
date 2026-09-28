@@ -244,7 +244,7 @@ export default function Timetable() {
           name: 'Mid-Morning Break',
           time: `${sbStart} - ${sbEnd}`,
           isBreak: true,
-          breakType: 'mid_morning_break'
+          breakType: 'tea'
         });
       }
 
@@ -535,7 +535,7 @@ export default function Timetable() {
                       let badgeColor = 'bg-amber-50 border-amber-200 text-amber-800';
                       if (slot.breakType === 'assembly') badgeColor = 'bg-blue-50 border-blue-200 text-blue-800';
                       if (slot.breakType === 'lunch') badgeColor = 'bg-orange-50 border-orange-200 text-orange-800';
-                      if (slot.breakType === 'mid_morning_break') badgeColor = 'bg-amber-100 border-amber-300 text-amber-900';
+                      if (slot.breakType === 'tea') badgeColor = 'bg-amber-100 border-amber-300 text-amber-900';
                       if (slot.breakType === 'games') badgeColor = 'bg-indigo-50 border-indigo-200 text-indigo-800';
 
                       return (
