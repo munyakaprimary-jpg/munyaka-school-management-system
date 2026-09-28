@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import Modal from '@/components/ui/Modal';
 import { useSchoolStore } from '@/store/useSchoolStore';
+import { getStudents } from '@/services/persistentStore';
 import { showSuccess, showError } from '@/utils/toast';
 import { ArrowRight, CheckCircle2, Users, GraduationCap, RefreshCw, Filter } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -44,9 +45,24 @@ const normalizeStr = (str: string | undefined): string => {
 };
 
 export default function PromotePage() {
-  const learners = useSchoolStore((state) => state.learners);
+  const storeLearners = useSchoolStore((state) => state.learners);
   const saveLearners = useSchoolStore((state) => state.saveLearners);
   
+  // Direct fallback to persistent store getStudents() to ensure students from directory appear instantly
+  const [learners, setLearners] = useState<any[]>(() => {
+    const direct = getStudents();
+    return direct && direct.length > 0 ? direct : (storeLearners || []);
+  });
+
+  useEffect(() => {
+    const currentList = getStudents();
+    if (currentList && currentList.length > 0) {
+      setLearners(currentList);
+    } else if (storeLearners && storeLearners.length > 0) {
+      setLearners(storeLearners);
+    }
+  }, [storeLearners]);
+
   const [targetYear, setTargetYear] = useState('2027');
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -71,31 +87,34 @@ export default function PromotePage() {
   useEffect(() => {
     const loadGradesAndStreams = () => {
       try {
-        const saved = localStorage.getItem('munyaka_grades') || localStorage.getItem('configured_streams');
+        const saved = localStorage.getItem('munyaka_grades') || localStorage.getItem('configured_streams') || localStorage.getItem('munyaka_students');
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            setGradesList(parsed);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Check if it's grades or students
+            if (parsed[0]?.name || parsed[0]?.id || parsed[0]?.streams) {
+              setGradesList(parsed);
+            }
           }
         }
+        const directStudents = getStudents();
+        if (directStudents && directStudents.length > 0) {
+          setLearners(directStudents);
+        }
       } catch (e) {
-        console.error("Error loading grades from storage:", e);
+        console.error("Error loading data:", e);
       }
     };
     loadGradesAndStreams();
     window.addEventListener('storage', loadGradesAndStreams);
     window.addEventListener('munyaka_grades_updated', loadGradesAndStreams);
+    window.addEventListener('munyaka_students_updated', loadGradesAndStreams);
     return () => {
       window.removeEventListener('storage', loadGradesAndStreams);
       window.removeEventListener('munyaka_grades_updated', loadGradesAndStreams);
+      window.removeEventListener('munyaka_students_updated', loadGradesAndStreams);
     };
   }, []);
-
-  // Debug logs to verify data structures
-  useEffect(() => {
-    console.log("PROMOTION LEARNERS:", learners);
-    console.log("STORE GRADELIST:", gradesList);
-  }, [learners, gradesList]);
 
   // Available grades combining stored grades and learner grades
   const availableGrades = useMemo(() => {
@@ -106,7 +125,7 @@ export default function PromotePage() {
         const id = g.id || g.name;
         const name = g.name || g.id;
         if (id && name) {
-          gradeMap.set(String(id), { id: String(id), name: String(name) });
+          gradeMap.set(String(id).trim(), { id: String(id).trim(), name: String(name).trim() });
         }
       }
     });
@@ -115,15 +134,18 @@ export default function PromotePage() {
       const g = l.gradeId || l.grade || l.gradeLevel || l.currentGrade || l.class;
       if (g) {
         const strG = String(g).trim();
-        if (!gradeMap.has(strG)) {
-          gradeMap.set(strG, { id: strG, name: strG });
+        // Extract number or format nicely if it's raw like '6'
+        const cleanName = strG.toLowerCase().startsWith('grade') ? strG : (/^[0-9]+$/.test(strG) ? `Grade ${strG}` : strG);
+        const key = normalizeStr(cleanName);
+        if (!gradeMap.has(key)) {
+          gradeMap.set(key, { id: strG, name: cleanName });
         }
       }
     });
 
     return Array.from(gradeMap.values()).sort((a, b) => {
-      const idxA = GRADE_SEQUENCE.findIndex(seq => normalizeStr(seq) === normalizeStr(a.name));
-      const idxB = GRADE_SEQUENCE.findIndex(seq => normalizeStr(seq) === normalizeStr(b.name));
+      const idxA = GRADE_SEQUENCE.findIndex(seq => normalizeStr(seq) === normalizeStr(a.name) || normalizeStr(seq).includes(normalizeStr(a.name)));
+      const idxB = GRADE_SEQUENCE.findIndex(seq => normalizeStr(seq) === normalizeStr(b.name) || normalizeStr(seq).includes(normalizeStr(b.name)));
       if (idxA !== -1 && idxB !== -1) return idxA - idxB;
       return a.name.localeCompare(b.name);
     });
@@ -139,18 +161,18 @@ export default function PromotePage() {
           g.streams.forEach((s: any) => {
             if (s) {
               const sName = s.name || s.id;
-              if (sName) streamSet.add(String(sName).trim());
+              if (sName) streamSet.add(String(sName).trim().toUpperCase());
             }
           });
         }
       });
     } else {
-      const matchedGradeObj = gradesList.find(g => g && (g.id === sourceGrade || g.name === sourceGrade));
+      const matchedGradeObj = gradesList.find(g => g && (g.id === sourceGrade || normalizeStr(g.name) === normalizeStr(sourceGrade)));
       if (matchedGradeObj && Array.isArray(matchedGradeObj.streams)) {
         matchedGradeObj.streams.forEach((s: any) => {
           if (s) {
             const sName = s.name || s.id;
-            if (sName) streamSet.add(String(sName).trim());
+            if (sName) streamSet.add(String(sName).trim().toUpperCase());
           }
         });
       }
@@ -164,10 +186,11 @@ export default function PromotePage() {
         const matchesGrade = 
           sourceGrade === 'all' || 
           String(learnerGradeIdentifier) === sourceGrade ||
-          normalizeStr(learnerGradeIdentifier) === normalizeStr(sourceGrade);
+          normalizeStr(learnerGradeIdentifier) === normalizeStr(sourceGrade) ||
+          normalizeStr(learnerGradeIdentifier).replace(/[^0-9]/g, '') === normalizeStr(sourceGrade).replace(/[^0-9]/g, '');
 
         if (matchesGrade) {
-          streamSet.add(String(learnerStream).trim());
+          streamSet.add(String(learnerStream).trim().toUpperCase());
         }
       }
     });
@@ -175,7 +198,32 @@ export default function PromotePage() {
     return Array.from(streamSet).sort();
   }, [gradesList, learners, sourceGrade]);
 
-  // Filtered learners list using robust ID and name matching
+  // Grade student counts calculation with robust flexible matching
+  const gradeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    availableGrades.forEach(gradeObj => {
+      const count = learners.filter(l => {
+        const lGrade = l.gradeId || l.grade || l.gradeLevel || l.currentGrade || l.class;
+        const normL = normalizeStr(lGrade);
+        const normObjId = normalizeStr(gradeObj.id);
+        const normObjName = normalizeStr(gradeObj.name);
+        const lNum = normL.replace(/[^0-9]/g, '');
+        const objNum = normObjName.replace(/[^0-9]/g, '');
+
+        return (
+          normL === normObjId ||
+          normL === normObjName ||
+          (lNum && objNum && lNum === objNum) ||
+          normL.includes(normObjName) ||
+          normObjName.includes(normL)
+        );
+      }).length;
+      counts[gradeObj.id] = count;
+    });
+    return counts;
+  }, [availableGrades, learners]);
+
+  // Filtered learners list using robust flexible matching
   const filteredLearners = useMemo(() => {
     return learners.filter((learner) => {
       const learnerGradeIdentifier = 
@@ -185,13 +233,17 @@ export default function PromotePage() {
         learner.currentGrade ||
         learner.class;
 
-      const selectedGradeObj = gradesList.find(g => g.id === sourceGrade || g.name === sourceGrade);
-      
+      const normLGrade = normalizeStr(learnerGradeIdentifier);
+      const normSourceGrade = normalizeStr(sourceGrade);
+      const lNum = normLGrade.replace(/[^0-9]/g, '');
+      const sourceNum = normSourceGrade.replace(/[^0-9]/g, '');
+
       const matchesGrade = 
         sourceGrade === 'all' || 
-        String(learnerGradeIdentifier) === sourceGrade ||
-        (selectedGradeObj && (String(learnerGradeIdentifier) === String(selectedGradeObj.id) || String(learnerGradeIdentifier) === String(selectedGradeObj.name))) ||
-        normalizeStr(learnerGradeIdentifier) === normalizeStr(sourceGrade);
+        normLGrade === normSourceGrade ||
+        (lNum && sourceNum && lNum === sourceNum) ||
+        normLGrade.includes(normSourceGrade) ||
+        normSourceGrade.includes(normLGrade);
 
       const learnerStream = learner.streamId || learner.stream || learner.currentStream || learner.classStream;
       const matchesStream = 
@@ -200,20 +252,7 @@ export default function PromotePage() {
 
       return matchesGrade && matchesStream;
     });
-  }, [learners, sourceGrade, sourceStream, gradesList]);
-
-  // Grade student counts calculation
-  const gradeCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    availableGrades.forEach(gradeObj => {
-      const count = learners.filter(l => {
-        const lGrade = l.gradeId || l.grade || l.gradeLevel || l.currentGrade || l.class;
-        return String(lGrade) === gradeObj.id || String(lGrade) === gradeObj.name || normalizeStr(lGrade) === normalizeStr(gradeObj.name);
-      }).length;
-      counts[gradeObj.id] = count;
-    });
-    return counts;
-  }, [availableGrades, learners]);
+  }, [learners, sourceGrade, sourceStream]);
 
   // Sync selected IDs when filter changes
   useEffect(() => {
@@ -335,14 +374,14 @@ export default function PromotePage() {
                 setSourceGrade(e.target.value);
                 setSourceStream('all');
               }}
-              className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-sm font-bold"
+              className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-sm font-bold uppercase"
             >
-              <option value="all">All Grades ({learners.length} students)</option>
+              <option value="all">ALL GRADES ({learners.length} STUDENTS)</option>
               {availableGrades.map(gObj => {
                 const count = gradeCounts[gObj.id] || 0;
                 return (
                   <option key={gObj.id} value={gObj.id}>
-                    {gObj.name} ({count} students)
+                    {gObj.name.toUpperCase()} ({count} STUDENTS)
                   </option>
                 );
               })}
@@ -354,9 +393,9 @@ export default function PromotePage() {
             <select
               value={sourceStream}
               onChange={(e) => setSourceStream(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-sm font-bold"
+              className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-sm font-bold uppercase"
             >
-              <option value="all">All Streams</option>
+              <option value="all">ALL STREAMS</option>
               {availableStreams.map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
@@ -369,7 +408,7 @@ export default function PromotePage() {
               placeholder="Auto (Next Grade)"
               value={targetGradeOverride}
               onChange={(e) => setTargetGradeOverride(e.target.value)}
-              className="rounded-xl h-10 bg-slate-50 dark:bg-slate-800 text-sm font-bold"
+              className="rounded-xl h-10 bg-slate-50 dark:bg-slate-800 text-sm font-bold uppercase"
             />
           </div>
 
