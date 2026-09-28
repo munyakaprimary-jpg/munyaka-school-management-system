@@ -59,33 +59,49 @@ export default function PromotePage() {
   // Selected student IDs for granular control
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
 
-  // Unique grades & streams from learners
-  const availableGrades = useMemo(() => {
-    const set = new Set<string>();
+  // Unique grades & streams from learners with dynamic counts
+  const gradeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
     learners.forEach(l => {
-      const g = l.grade || l.class;
-      if (g) set.add(String(g).trim());
+      const g = String(l.grade || l.class || '').trim();
+      if (g) {
+        counts[g] = (counts[g] || 0) + 1;
+      }
     });
-    return Array.from(set).sort();
+    return counts;
   }, [learners]);
+
+  const availableGrades = useMemo(() => {
+    return Object.keys(gradeCounts).sort((a, b) => {
+      const idxA = GRADE_SEQUENCE.findIndex(g => g.toLowerCase() === a.toLowerCase());
+      const idxB = GRADE_SEQUENCE.findIndex(g => g.toLowerCase() === b.toLowerCase());
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      return a.localeCompare(b);
+    });
+  }, [gradeCounts]);
 
   const availableStreams = useMemo(() => {
     const set = new Set<string>();
     learners.forEach(l => {
-      const s = l.stream || l.classStream;
-      if (s) set.add(String(s).trim());
-    });
-    return Array.from(set).sort();
-  }, [learners]);
-
-  // Filtered learners list
-  const filteredLearners = useMemo(() => {
-    return learners.filter(l => {
       const g = String(l.grade || l.class || '').trim();
       const s = String(l.stream || l.classStream || '').trim();
+      if (s) {
+        if (sourceGrade === 'all' || g.toLowerCase() === sourceGrade.toLowerCase()) {
+          set.add(s);
+        }
+      }
+    });
+    return Array.from(set).sort();
+  }, [learners, sourceGrade]);
 
-      const matchesGrade = sourceGrade === 'all' || g.toLowerCase() === sourceGrade.toLowerCase();
-      const matchesStream = sourceStream === 'all' || s.toLowerCase() === sourceStream.toLowerCase();
+  // Filtered learners list with robust normalization
+  const filteredLearners = useMemo(() => {
+    return learners.filter(l => {
+      const g = String(l.grade || l.class || '').trim().toLowerCase();
+      const s = String(l.stream || l.classStream || '').trim().toLowerCase();
+
+      const matchesGrade = sourceGrade === 'all' || g === sourceGrade.toLowerCase();
+      const matchesStream = sourceStream === 'all' || s === sourceStream.toLowerCase();
 
       return matchesGrade && matchesStream;
     });
@@ -137,7 +153,7 @@ export default function PromotePage() {
       const updated = learners.map(l => {
         const studentKey = l.id || l.admissionNumber;
         if (promotionMode === 'selected' && !targetIds.has(studentKey)) {
-          return l; // Skip unselected students when promoting selected subset
+          return l;
         }
 
         const current = l.grade || l.class || 'Grade 1';
@@ -207,12 +223,15 @@ export default function PromotePage() {
             <Label className="text-xs font-bold text-slate-500">Source Grade Level</Label>
             <select
               value={sourceGrade}
-              onChange={(e) => setSourceGrade(e.target.value)}
+              onChange={(e) => {
+                setSourceGrade(e.target.value);
+                setSourceStream('all'); // reset stream when grade changes
+              }}
               className="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl px-3 py-2 text-sm font-bold"
             >
-              <option value="all">All Grades ({learners.length})</option>
+              <option value="all">All Grades ({learners.length} students)</option>
               {availableGrades.map(g => (
-                <option key={g} value={g}>{g}</option>
+                <option key={g} value={g}>{g} ({gradeCounts[g]} students)</option>
               ))}
             </select>
           </div>
@@ -323,7 +342,7 @@ export default function PromotePage() {
                         </TableCell>
                         <TableCell className="text-xs py-2.5 px-3 whitespace-nowrap">
                           <Badge variant={isGraduated ? 'secondary' : 'default'} className={isGraduated ? 'bg-amber-100 text-amber-800 font-bold text-[10px]' : 'bg-emerald-100 text-emerald-800 font-bold text-[10px]'}>
-                            {isGraduated ? 'Graduated' : 'Active'}
+                            {isGraduated ? 'Graduated' : 'Eligible for Promotion'}
                           </Badge>
                         </TableCell>
                       </TableRow>
