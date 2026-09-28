@@ -28,11 +28,12 @@ import { useSchoolStore } from '@/store/useSchoolStore';
 export default function PaymentManagement() {
   // Access active store data for students, staff, and campuses FIRST (to avoid Temporal Dead Zone)
   const students = useSchoolStore((state) => state.students) || [];
-  const staff = useSchoolStore((state) => state.staff) || [];
-  const campuses = useSchoolStore((state) => state.campuses) || [];
-  const addCampus = useSchoolStore((state) => state.addCampus);
-  const deleteCampus = useSchoolStore((state) => state.deleteCampus);
-  const updateCampusSeats = useSchoolStore((state) => state.updateCampusSeats);
+    const staff = useSchoolStore((state) => state.staff) || [];
+    const campuses = useSchoolStore((state) => state.campuses) || [];
+    const tenants = useSchoolStore((state) => state.tenants) || [];
+    const addCampus = useSchoolStore((state) => state.addCampus);
+    const deleteCampus = useSchoolStore((state) => state.deleteCampus);
+    const updateCampusSeats = useSchoolStore((state) => state.updateCampusSeats);
   const activeLearners = students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length;
   const PRICE_PER_SEAT = 250;
   const annualSubtotal = activeLearners * PRICE_PER_SEAT;
@@ -66,10 +67,6 @@ export default function PaymentManagement() {
 
   // Register New Campus Modal State / Add Campus Modal State
   const [isRegisterCampusModalOpen, setIsRegisterCampusModalOpen] = useState(false);
-  const [isAddCampusModalOpen, setIsAddCampusModalOpen] = useState(false);
-  const [newCampusName, setNewCampusName] = useState('');
-  const [newCampusSeats, setNewCampusSeats] = useState('100');
-  const [newCampusExpiry, setNewCampusExpiry] = useState('2028-12-31');
 
   // Record Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -368,100 +365,80 @@ export default function PaymentManagement() {
 
             <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden p-5">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-bold text-gray-900">Registered Campuses & Per-Seat Tiers</h3>
-                  <span className="px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
-                    {campuses.length} Active
-                  </span>
-                </div>
-                <button
-                                  type="button"
-                                  onClick={() => setIsAddCampusModalOpen(true)}
-                                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors flex items-center gap-2"
-                                >
-                                  <span>+</span> Add Campus
-                                </button>
-              </div>
-              <div className="divide-y divide-slate-100 text-xs">
-                  {campuses.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500 font-medium space-y-3">
-                      <p>No active campuses registered.</p>
-                      <Button
-                        onClick={() => {
-                          addCampus({
-                            name: 'Munyaka Primary & Junior School',
-                            activeSeats: activeLearners || 120,
-                            pricePerSeat: 250,
-                            status: 'Active',
-                            expiryDate: '2028-09-27'
-                          });
-                          showSuccess('Default campus registered successfully.');
-                        }}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl px-4 py-2"
-                      >
-                        Register Default Campus
-                      </Button>
-                    </div>
-                  ) : (
-                    campuses.map((campus: any) => {
-                      const campusSeats = Number(campus.activeSeats || 50);
-                      const campusSubtotal = campusSeats * Number(campus.pricePerSeat || 250) * 12;
-
-                      return (
-                        <div key={campus.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shrink-0 font-bold">
-                              <Building2 size={20} />
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-slate-900 text-sm">{campus.name}</h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge className="bg-slate-100 text-slate-700 font-semibold text-[11px] px-2 py-0.5">{campusSeats} Active Seats @ KES {campus.pricePerSeat || 250} / seat</Badge>
-                                <span className="text-[11px] text-slate-400 font-medium">Expires: {campus.expiryDate || '2028-12-31'}</span>
+                              <div className="flex items-center gap-3">
+                                <h3 className="text-lg font-bold text-gray-900">Registered Campuses & Per-Seat Tiers</h3>
+                                <span className="px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">
+                                  {tenants.filter((t: any) => t.status === 'Active').length} Active
+                                </span>
                               </div>
                             </div>
-                          </div>
-
-                          <div className="flex items-center justify-between md:justify-end gap-2.5">
-                          <div className="text-right">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Annual Subtotal</p>
-                            <p className="font-extrabold text-slate-900 text-xs">KES {campusSubtotal.toLocaleString()}</p>
-                          </div>
-                          <Badge className={campus.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-0.5' : 'bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-0.5'}>
-                            {campus.status}
-                          </Badge>
-                          <div className="flex items-center gap-1.5">
-                            <Button
-                              onClick={() => {
-                                setPaymentCampus(campus.name);
-                                setPaymentAmount(String(campusSubtotal));
-                                setPaymentPeriod('1 Year Extension');
-                                setIsPaymentModalOpen(true);
-                              }}
-                              className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm"
-                            >
-                              Record Payment
-                            </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => setActiveTab('seats')}
-                                className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-slate-200"
-                              >
-                                Manage Seats
-                              </Button>
-                              <Button
-                                variant="outline"
-                                onClick={() => deleteCampus(campus.id)}
-                                className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                                title="Remove Campus"
-                              >
-                                <Trash2 size={13} />
-                              </Button>
-                          </div>
-                          </div>
-                        </div>
-                      );
-                    })
+                            <div className="divide-y divide-slate-100 text-xs">
+                                {tenants.length === 0 ? (
+                                  <div className="p-8 text-center text-slate-500 font-medium space-y-3">
+                                    <p>No active tenants registered.</p>
+                                    <p className="text-xs text-slate-400">Provision new tenants via the Multi-Tenant Platform Hub.</p>
+                                  </div>
+                                ) : (
+                                  tenants.map((tenant: any) => {
+                                                        const tenantSeats = Number(tenant.maxSeats || 50);
+                                                        const tenantPricePerSeat = tenant.plan === 'Enterprise' ? 300 : tenant.plan === 'Starter' ? 200 : 250;
+                                                        const tenantSubtotal = tenantSeats * tenantPricePerSeat * 12;
+                                  
+                                                        return (
+                                                          <div key={tenant.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
+                                                            <div className="flex items-start gap-3">
+                                                              <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shrink-0 font-bold">
+                                                                <Building2 size={20} />
+                                                              </div>
+                                                              <div>
+                                                                <h4 className="font-bold text-slate-900 text-sm">{tenant.name}</h4>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                  <Badge className="bg-slate-100 text-slate-700 font-semibold text-[11px] px-2 py-0.5">{tenantSeats} Active Seats @ KES {tenantPricePerSeat} / seat</Badge>
+                                                                  <span className="text-[11px] text-slate-400 font-medium">Plan: {tenant.plan}</span>
+                                                                </div>
+                                                              </div>
+                                                            </div>
+                                  
+                                                            <div className="flex items-center justify-between md:justify-end gap-2.5">
+                                                            <div className="text-right">
+                                                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Annual Subtotal</p>
+                                                              <p className="font-extrabold text-slate-900 text-xs">KES {tenantSubtotal.toLocaleString()}</p>
+                                                            </div>
+                                                            <Badge className={tenant.status === 'Active' ? 'bg-emerald-100 text-emerald-700 font-bold text-[11px] px-2.5 py-0.5' : 'bg-amber-100 text-amber-700 font-bold text-[11px] px-2.5 py-0.5'}>
+                                                              {tenant.status}
+                                                            </Badge>
+                                                            <div className="flex items-center gap-1.5">
+                                                              <Button
+                                                                onClick={() => {
+                                                                  setPaymentCampus(tenant.name);
+                                                                  setPaymentAmount(String(tenantSubtotal));
+                                                                  setPaymentPeriod('1 Year Extension');
+                                                                  setIsPaymentModalOpen(true);
+                                                                }}
+                                                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm"
+                                                              >
+                                                                Record Payment
+                                                              </Button>
+                                                                <Button
+                                                                  variant="outline"
+                                                                  onClick={() => setActiveTab('seats')}
+                                                                  className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-slate-200"
+                                                                >
+                                                                  Manage Seats
+                                                                </Button>
+                                                                <Button
+                                                                  variant="outline"
+                                                                  onClick={() => useSchoolStore.getState().deleteTenant(tenant.id)}
+                                                                  className="text-[11px] font-semibold h-7 px-2.5 rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                                                                  title="Remove Tenant"
+                                                                >
+                                                                  <Trash2 size={13} />
+                                                                </Button>
+                                                            </div>
+                                                            </div>
+                                                          </div>
+                                                        );
+                                                      })
                   )}
                 </div>
             </div>
@@ -1284,65 +1261,6 @@ export default function PaymentManagement() {
         </div>
       )}
 
-      {/* Add Campus Modal */}
-      {isAddCampusModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md p-6 bg-white rounded-xl shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Register New Campus</h3>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const name = (form.elements.namedItem('campusName') as HTMLInputElement).value;
-                const seats = Number((form.elements.namedItem('seats') as HTMLInputElement).value) || 0;
-                
-                if (typeof addCampus === 'function') {
-                  addCampus({ name, activeSeats: seats, pricePerSeat: 250, status: 'Active' });
-                }
-                setIsAddCampusModalOpen(false);
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Campus Name</label>
-                <input
-                  name="campusName"
-                  type="text"
-                  required
-                  placeholder="e.g. Munyaka Academy - Annex"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase text-gray-500 mb-1">Allocated Learner Seats</label>
-                <input
-                  name="seats"
-                  type="number"
-                  required
-                  defaultValue={50}
-                  min={1}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsAddCampusModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
-                >
-                  Register Campus
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+      </div>
+        );
+      }

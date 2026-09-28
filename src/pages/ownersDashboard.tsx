@@ -14,6 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { TenantConfigModal, TenantFormData } from '@/components/TenantConfigModal';
 import { CentralDataService } from '@/services/centralDataService';
+import { useSchoolStore } from '@/store/useSchoolStore';
 
 export interface Tenant {
   id: string;
@@ -130,28 +131,30 @@ export default function OwnersDashboard() {
   const [isEditing, setIsEditing] = useState<Tenant | null>(null);
 
   // Persist tenants and active tenant
-  useEffect(() => {
-    try {
-      CentralDataService.setData(STORAGE_KEY, tenants);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tenants));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [tenants]);
-
-  useEffect(() => {
-    try {
-      CentralDataService.setData(ACTIVE_TENANT_KEY, activeTenantId);
-      localStorage.setItem(ACTIVE_TENANT_KEY, activeTenantId);
-      const activeObj = tenants.find(t => t.id === activeTenantId);
-      if (activeObj) {
-        localStorage.setItem('munyaka_active_tenant_name', activeObj.name);
-        localStorage.setItem('munyaka_active_tenant_code', activeObj.code);
+    useEffect(() => {
+      try {
+        CentralDataService.setData(STORAGE_KEY, tenants);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tenants));
+        // Sync tenants into useSchoolStore so Payment Management can read them
+        useSchoolStore.getState().setTenants(tenants);
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      console.error(e);
-    }
-  }, [activeTenantId, tenants]);
+    }, [tenants]);
+  
+    useEffect(() => {
+      try {
+        CentralDataService.setData(ACTIVE_TENANT_KEY, activeTenantId);
+        localStorage.setItem(ACTIVE_TENANT_KEY, activeTenantId);
+        const activeObj = tenants.find(t => t.id === activeTenantId);
+        if (activeObj) {
+          localStorage.setItem('munyaka_active_tenant_name', activeObj.name);
+          localStorage.setItem('munyaka_active_tenant_code', activeObj.code);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }, [activeTenantId, tenants]);
 
   const activeTenant = tenants.find(t => t.id === activeTenantId) || tenants[0];
 

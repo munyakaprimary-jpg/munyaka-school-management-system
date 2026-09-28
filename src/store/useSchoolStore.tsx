@@ -19,6 +19,7 @@ export interface SchoolStore {
   notices: any[];
   events: any[];
   campuses: Campus[];
+  tenants: any[];
   addCampus: (campus: Partial<Campus>) => void;
   deleteCampus: (id: string) => void;
   updateCampusSeats: (id: string, activeSeats: number) => void;
@@ -68,17 +69,18 @@ let storeState = {
     { id: 'not-2', title: 'Parent-Teacher Association AGM', content: 'Annual General Meeting for all parents and guardians to discuss school development and fee structures.', date: '2 days ago', category: 'Event', color: 'bg-emerald-50 text-emerald-600' }
   ]),
   events: (initialSeedData as any).events || [],
-  campuses: getInitialStorage('munyaka_campuses', [
-    {
-      id: '1',
-      name: 'Munyaka Primary & Junior School',
-      activeSeats: 120,
-      pricePerSeat: 250,
-      status: 'Active',
-      expiryDate: '2027-09-27',
-    },
-  ])
-};
+    campuses: getInitialStorage('munyaka_campuses', [
+      {
+        id: '1',
+        name: 'Munyaka Primary & Junior School',
+        activeSeats: 120,
+        pricePerSeat: 250,
+        status: 'Active',
+        expiryDate: '2027-09-27',
+      },
+    ]),
+    tenants: getInitialStorage('munyaka_tenants', [])
+  };
 
 const listeners = new Set<any>();
 
@@ -104,14 +106,29 @@ export const useSchoolStore = (selector?: (state: any) => any) => {
     notices: getInitialStorage('munyaka_notices_board', storeState.notices),
     events: getInitialStorage('munyaka_events', storeState.events),
     campuses: getInitialStorage('munyaka_campuses', storeState.campuses),
-
-    setCampuses: (campuses: Campus[]) => {
-      localStorage.setItem('munyaka_campuses', JSON.stringify(campuses));
-      storeState.campuses = campuses;
-      listeners.forEach(l => l());
-      window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
-    },
-    addCampus: (newCampus: Partial<Campus>) => {
+        tenants: getInitialStorage('munyaka_tenants', storeState.tenants),
+    
+        setCampuses: (campuses: Campus[]) => {
+          localStorage.setItem('munyaka_campuses', JSON.stringify(campuses));
+          storeState.campuses = campuses;
+          listeners.forEach(l => l());
+          window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+        },
+        setTenants: (tenants: any[]) => {
+              localStorage.setItem('munyaka_tenants', JSON.stringify(tenants));
+              storeState.tenants = tenants;
+              listeners.forEach(l => l());
+              window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+            },
+            deleteTenant: (id: string) => {
+              const currentTenants = getInitialStorage('munyaka_tenants', storeState.tenants);
+              const updated = currentTenants.filter((t: any) => t.id !== id);
+              localStorage.setItem('munyaka_tenants', JSON.stringify(updated));
+              storeState.tenants = updated;
+              listeners.forEach(l => l());
+              window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
+            },
+            addCampus: (newCampus: Partial<Campus>) => {
       const currentCampuses = getInitialStorage('munyaka_campuses', storeState.campuses);
       const updated = [
         ...(currentCampuses || []),
