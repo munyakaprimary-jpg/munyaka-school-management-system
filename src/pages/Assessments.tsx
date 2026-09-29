@@ -851,7 +851,7 @@ const Assessments = () => {
 Grade: ${grade}
 Stream: ${stream}
 Academic Year: ${academicYear}
-Term: ${term}
+Term: ${historyMode ? historyTerm : term}
 Exam Type: ${examType}
 Generated: ${new Date().toLocaleString()}
 
@@ -870,6 +870,13 @@ ${filteredStudents.length} learner(s) included.
       errorMessage: 'Download failed. Please check app permissions.',
     });
   };
+
+  // State for View Marks History / Academic Archive tab
+  const [historyMode, setHistoryMode] = useState<boolean>(false);
+  const [historyYear, setHistoryYear] = useState<string>(() => new Date().getFullYear().toString());
+  const [historyTerm, setHistoryTerm] = useState<string>("Term 1");
+  const [historyGrade, setHistoryGrade] = useState<string>(() => "Grade 4");
+  const [historyExamType, setHistoryExamType] = useState<string>("Formative Assessment");
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -902,10 +909,22 @@ ${filteredStudents.length} learner(s) included.
             )}
           </div>
           <p className="text-sm text-slate-500 mt-1 break-words hyphens-auto">
-            Enter class marks for one subject or switch to All Subjects to fill a full matrix. Valid scores autosave to localStorage; use Save All for bulk commit.
+            {historyMode ? "Academic Archive & Marks History Review (Read-Only Mode)." : "Enter class marks for one subject or switch to All Subjects to fill a full matrix. Valid scores autosave to localStorage; use Save All for bulk commit."}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant={historyMode ? "default" : "outline"}
+            className={cn(
+              "rounded-xl h-11 px-5 font-bold gap-2 text-sm shadow-sm w-full sm:w-auto transition-all",
+              historyMode
+                ? "bg-slate-900 hover:bg-slate-800 text-white shadow-md"
+                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            )}
+            onClick={() => setHistoryMode(!historyMode)}
+          >
+            <ClipboardCheck size={16} /> {historyMode ? "Back to Live Marks Entry" : "View Marks History"}
+          </Button>
           <Button
             variant="outline"
             className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
@@ -922,15 +941,37 @@ ${filteredStudents.length} learner(s) included.
           >
             {pdfExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download PDF
           </Button>
-<Button
-  className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2 w-full sm:w-auto disabled:opacity-50"
-  onClick={handleSaveAll}
-  disabled={isSaving || isLocked}
->
-  {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All Marks
-</Button>
+          {!historyMode && (
+            <Button
+              className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2 w-full sm:w-auto disabled:opacity-50"
+              onClick={handleSaveAll}
+              disabled={isSaving || isLocked}
+            >
+              {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All Marks
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* History Mode Active Banner */}
+      {historyMode && (
+        <div className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-900 dark:text-indigo-300 px-5 py-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse shrink-0" />
+            <div className="text-sm font-semibold">
+              <strong>Academic Archive Mode:</strong> Reviewing historical marks for <strong>{historyTerm} {historyYear}</strong> ({historyGrade}, {historyExamType}). All filters below are fully enabled in read-only mode for audit and reporting.
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs font-bold text-indigo-700 hover:bg-indigo-100/50 rounded-lg h-8"
+            onClick={() => setHistoryMode(false)}
+          >
+            Exit Archive
+          </Button>
+        </div>
+      )}
 
       {/* 3. Dynamic Filter Bar & Controls (Responsive Grid Card Container) */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 w-full max-w-full overflow-hidden">
@@ -939,7 +980,10 @@ ${filteredStudents.length} learner(s) included.
           {/* 1. Academic Year */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Academic Year</label>
-            <Select value={academicYear} onValueChange={setAcademicYear}>
+            <Select
+              value={historyMode ? historyYear : academicYear}
+              onValueChange={historyMode ? setHistoryYear : setAcademicYear}
+            >
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
@@ -954,7 +998,10 @@ ${filteredStudents.length} learner(s) included.
           {/* 2. Grade */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Grade</label>
-            <Select value={grade} onValueChange={setGrade}>
+            <Select
+              value={historyMode ? historyGrade : grade}
+              onValueChange={historyMode ? setHistoryGrade : setGrade}
+            >
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="Grade" />
               </SelectTrigger>
@@ -985,7 +1032,10 @@ ${filteredStudents.length} learner(s) included.
           {/* 4. Exam Type */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Exam Type</label>
-            <Select value={examType} onValueChange={setExamType}>
+            <Select
+              value={historyMode ? historyExamType : examType}
+              onValueChange={historyMode ? setHistoryExamType : setExamType}
+            >
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="Exam Type" />
               </SelectTrigger>
@@ -1002,22 +1052,35 @@ ${filteredStudents.length} learner(s) included.
           {/* 5. Term */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Term</label>
-            <div className="relative pointer-events-none select-none">
-              <Select value={term} onValueChange={setTerm}>
-                <SelectTrigger
-                  disabled={true}
-                  className="rounded-xl h-11 bg-gray-100 border-none font-bold text-slate-700 pointer-events-none opacity-90 focus:ring-0 focus:outline-none ring-0 outline-none select-none shadow-none [&>svg]:opacity-30 [&>svg]:pointer-events-none"
-                  tabIndex={-1}
-                >
-                  <SelectValue placeholder="Term 1" />
+            {historyMode ? (
+              <Select value={historyTerm} onValueChange={setHistoryTerm}>
+                <SelectTrigger className="rounded-xl h-11 bg-indigo-50/50 border border-indigo-200 font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500">
+                  <SelectValue placeholder="Term" />
                 </SelectTrigger>
-                <SelectContent className="hidden">
+                <SelectContent>
                   <SelectItem value="Term 1">Term 1</SelectItem>
                   <SelectItem value="Term 2">Term 2</SelectItem>
                   <SelectItem value="Term 3">Term 3</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            ) : (
+              <div className="relative pointer-events-none select-none">
+                <Select value={term} onValueChange={setTerm}>
+                  <SelectTrigger
+                    disabled={true}
+                    className="rounded-xl h-11 bg-gray-100 border-none font-bold text-slate-700 pointer-events-none opacity-90 focus:ring-0 focus:outline-none ring-0 outline-none select-none shadow-none [&>svg]:opacity-30 [&>svg]:pointer-events-none"
+                    tabIndex={-1}
+                  >
+                    <SelectValue placeholder="Term 1" />
+                  </SelectTrigger>
+                  <SelectContent className="hidden">
+                    <SelectItem value="Term 1">Term 1</SelectItem>
+                    <SelectItem value="Term 2">Term 2</SelectItem>
+                    <SelectItem value="Term 3">Term 3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* 6. Subject */}
