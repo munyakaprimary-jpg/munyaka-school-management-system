@@ -103,7 +103,19 @@ const Assessments = () => {
   const [grade, setGrade] = useState<string>(() => "Grade 4");
   const [stream, setStream] = useState<string>("All Streams");
   const [examType, setExamType] = useState<string>("Formative Assessment");
-  const [term, setTerm] = useState<string>("Term 1");
+  const [term, setTerm] = useState<string>(() => {
+    try {
+      const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
+      if (settingsRaw) {
+        const settings = JSON.parse(settingsRaw);
+        const activeT = settings.academic?.activeTerm || settings.term;
+        if (activeT) return activeT;
+      }
+    } catch {
+      // ignore
+    }
+    return "Term 1";
+  });
   const [subject, setSubject] = useState<string>("All Subjects");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
@@ -111,7 +123,21 @@ const Assessments = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
 
-  // Term locking logic
+  // Load system settings for default academic year and active term on mount
+  useEffect(() => {
+    try {
+      const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
+      if (settingsRaw) {
+        const settings = JSON.parse(settingsRaw);
+        const activeY = settings.academic?.activeYear || settings.academicYear;
+        if (activeY) setAcademicYear(activeY);
+        const activeT = settings.academic?.activeTerm || settings.term;
+        if (activeT) setTerm(activeT);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
   const [lockedTermsMap, setLockedTermsMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -1071,7 +1097,7 @@ ${filteredStudents.length} learner(s) included.
                     className="rounded-xl h-11 bg-gray-100 border-none font-bold text-slate-700 pointer-events-none opacity-90 focus:ring-0 focus:outline-none ring-0 outline-none select-none shadow-none [&>svg]:opacity-30 [&>svg]:pointer-events-none"
                     tabIndex={-1}
                   >
-                    <SelectValue placeholder="Term 1" />
+                    <SelectValue placeholder={term} />
                   </SelectTrigger>
                   <SelectContent className="hidden">
                     <SelectItem value="Term 1">Term 1</SelectItem>
