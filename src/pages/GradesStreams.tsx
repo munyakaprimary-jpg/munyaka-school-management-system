@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Layers, Plus, Users, User, Trash2, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { Layers, Plus, Users, User, Trash2, Edit2, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 import { sortGrades, GRADE_ORDER } from '@/utils/gradeSort';
@@ -74,7 +74,15 @@ const GradesStreams = () => {
 
   const [isGradeOpen, setIsGradeOpen] = useState(false);
   const [isStreamOpen, setIsStreamOpen] = useState(false);
+  const [isEditStreamOpen, setIsEditStreamOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  // Edit stream state
+  const [editingGradeId, setEditingGradeId] = useState("");
+  const [editingStreamId, setEditingStreamId] = useState("");
+  const [editStreamName, setEditStreamName] = useState("");
+  const [editStreamTeacher, setEditStreamTeacher] = useState("");
+  const [editStreamStudents, setEditStreamStudents] = useState("");
 
   // Auth state
   const [authPassword, setAuthPassword] = useState("");
@@ -252,6 +260,61 @@ const GradesStreams = () => {
     showSuccess(`Successfully added ${trimmedStreamName} stream!`);
   };
 
+  const handleOpenEditStream = (gradeId: string, stream: Stream) => {
+    setEditingGradeId(gradeId);
+    setEditingStreamId(stream.id);
+    setEditStreamName(stream.name);
+    setEditStreamTeacher(stream.teacher === "Unassigned" ? "" : stream.teacher);
+    setEditStreamStudents(String(stream.studentsCount));
+    setIsEditStreamOpen(true);
+  };
+
+  const handleUpdateStream = () => {
+    const trimmedName = String(editStreamName || '').trim();
+    if (!editingGradeId || !editingStreamId) return;
+    if (!trimmedName) {
+      showError("Please enter a stream name.");
+      return;
+    }
+
+    const parentGrade = grades.find(g => g.id === editingGradeId);
+    if (parentGrade) {
+      const normalizedNew = trimmedName.toLowerCase();
+      const duplicate = parentGrade.streams.some(
+        s => s.id !== editingStreamId && String(s.name || '').trim().toLowerCase() === normalizedNew
+      );
+      if (duplicate) {
+        showError(`Stream "${trimmedName}" already exists in ${parentGrade.name}.`);
+        return;
+      }
+    }
+
+    const studentsCount = parseInt(editStreamStudents) || 0;
+    const updatedGrades = grades.map(grade => {
+      if (grade.id === editingGradeId) {
+        const updatedStreams = grade.streams.map(stream => {
+          if (stream.id === editingStreamId) {
+            return {
+              ...stream,
+              name: trimmedName,
+              teacher: String(editStreamTeacher || '').trim() || "Unassigned",
+              studentsCount
+            };
+          }
+          return stream;
+        });
+        return { ...grade, streams: updatedStreams };
+      }
+      return grade;
+    });
+
+    setGrades(updatedGrades);
+    setIsEditStreamOpen(false);
+    setEditingGradeId("");
+    setEditingStreamId("");
+    showSuccess(`Successfully updated ${trimmedName} stream!`);
+  };
+
   const requestDelete = (type: 'grade' | 'stream', gradeId: string, streamId?: string) => {
     setPendingDelete({ type, gradeId, streamId });
     setAuthPassword("");
@@ -413,17 +476,31 @@ const GradesStreams = () => {
                         <div>
                           <h4 className="text-lg font-bold text-slate-900">{stream.name} Stream</h4>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 h-8 w-8"
-                          onClick={() => requestDelete('stream', grade.id, stream.id)}
-                          title="Delete stream"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 h-8 w-8"
+                            onClick={() => handleOpenEditStream(grade.id, stream)}
+                            title="Edit stream"
+                          >
+                            <Edit2 size={14} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 h-8 w-8"
+                            onClick={() => requestDelete('stream', grade.id, stream.id)}
+                            title="Delete stream"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="space-y-3 pt-4 border-t border-slate-100">
+                      <div
+                        onClick={() => handleOpenEditStream(grade.id, stream)}
+                        className="space-y-3 pt-4 border-t border-slate-100 cursor-pointer group-hover/stream:bg-indigo-50/20 transition-colors rounded-xl p-2 -mx-2"
+                      >
                         <div className="flex items-center gap-2.5 text-sm text-slate-600">
                           <User size={16} className="text-slate-400" />
                           <span className="font-medium">
@@ -563,6 +640,57 @@ const GradesStreams = () => {
               min="0"
               value={newStreamStudents}
               onChange={(e) => setNewStreamStudents(e.target.value)}
+              placeholder="e.g. 40"
+              className="rounded-xl h-12"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Stream Modal */}
+      <Modal
+        isOpen={isEditStreamOpen}
+        onClose={() => setIsEditStreamOpen(false)}
+        title="Edit Stream Details"
+        description="Update stream name, assigned teacher, and student count."
+        footer={
+          <>
+            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsEditStreamOpen(false)}>Cancel</Button>
+            <Button
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
+              onClick={handleUpdateStream}
+            >
+              Save Changes
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Stream Name</Label>
+            <Input
+              value={editStreamName}
+              onChange={(e) => setEditStreamName(e.target.value)}
+              placeholder="e.g. Blue"
+              className="rounded-xl h-12"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Class Teacher</Label>
+            <Input
+              value={editStreamTeacher}
+              onChange={(e) => setEditStreamTeacher(e.target.value)}
+              placeholder="e.g. Jane Mwangi"
+              className="rounded-xl h-12"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Total Student Count</Label>
+            <Input
+              type="number"
+              min="0"
+              value={editStreamStudents}
+              onChange={(e) => setEditStreamStudents(e.target.value)}
               placeholder="e.g. 40"
               className="rounded-xl h-12"
             />
