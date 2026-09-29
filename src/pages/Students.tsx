@@ -34,52 +34,68 @@ const generateAdmissionNumber = (grade: string, existingStudents: any[] = []) =>
   const currentYear = new Date().getFullYear();
   const admissionYear = currentYear - (gradeNum - 1);
 
-  let maxSeq = 0;
+  // Find the single highest global sequence number across ALL existing students
+  let maxGlobalSeq = 0;
   existingStudents.forEach(s => {
     const adm = s.admissionNumber || s.admNo || '';
-    if (adm.includes(String(admissionYear))) {
-      const parts = adm.split('-');
-      if (parts.length >= 2) {
-        const seqNum = parseInt(parts[1], 10);
-        if (!isNaN(seqNum) && seqNum > maxSeq) {
-          maxSeq = seqNum;
-        }
+    const parts = adm.split('-');
+    if (parts.length >= 2) {
+      const seqNum = parseInt(parts[1], 10);
+      if (!isNaN(seqNum) && seqNum > maxGlobalSeq) {
+        maxGlobalSeq = seqNum;
       }
     }
   });
 
-  const nextSeq = String(maxSeq + 1).padStart(3, '0');
-  return `MUN-${nextSeq}-${admissionYear}`;
+  const nextGlobalSeq = String(maxGlobalSeq + 1).padStart(3, '0');
+  return `MUN-${nextGlobalSeq}-${admissionYear}`;
 };
 
+// Re-sequence all existing learners with a single continuous unbroken global sequence
 const ensureProperAdmissionNumbers = (list: any[]) => {
   const currentYear = new Date().getFullYear();
-  const yearCounts: Record<number, number> = {};
 
-  return list.map(student => {
-    let adm = student.admissionNumber || student.admNo || '';
-    const matchFormat = /^MUN-\d{3}-\d{4}$/.test(adm);
-    if (matchFormat) {
-      const parts = adm.split('-');
-      const year = parseInt(parts[2], 10);
-      const seq = parseInt(parts[1], 10);
-      if (!isNaN(year) && !isNaN(seq)) {
-        yearCounts[year] = Math.max(yearCounts[year] || 0, seq);
-      }
-      return student;
-    }
-
+  // Attach calculated admission year and retain original relative order
+  const mapped = list.map((student, idx) => {
     const gradeStr = student.grade || student.class || 'Grade 6';
     const gMatch = gradeStr.match(/(\d+)/);
     const gradeNum = gMatch ? parseInt(gMatch[1], 10) : 6;
     const admissionYear = currentYear - (gradeNum - 1);
 
-    const nextSeq = (yearCounts[admissionYear] || 0) + 1;
-    yearCounts[admissionYear] = nextSeq;
+    let originalSeq = 999999;
+    const adm = student.admissionNumber || student.admNo || '';
+    const parts = adm.split('-');
+    if (parts.length >= 2) {
+      const parsedSeq = parseInt(parts[1], 10);
+      if (!isNaN(parsedSeq)) originalSeq = parsedSeq;
+    }
 
-    const newAdm = `MUN-${String(nextSeq).padStart(3, '0')}-${admissionYear}`;
     return {
-      ...student,
+      student,
+      admissionYear,
+      originalSeq,
+      originalIndex: idx
+    };
+  });
+
+  // Sort chronologically by intake year (earliest first), then original sequence/index
+  mapped.sort((a, b) => {
+    if (a.admissionYear !== b.admissionYear) {
+      return a.admissionYear - b.admissionYear;
+    }
+    if (a.originalSeq !== b.originalSeq) {
+      return a.originalSeq - b.originalSeq;
+    }
+    return a.originalIndex - b.originalIndex;
+  });
+
+  // Assign continuous global sequence numbers 1, 2, 3...
+  let globalSeq = 1;
+  return mapped.map(item => {
+    const newAdm = `MUN-${String(globalSeq).padStart(3, '0')}-${item.admissionYear}`;
+    globalSeq++;
+    return {
+      ...item.student,
       admissionNumber: newAdm,
       admNo: newAdm
     };
