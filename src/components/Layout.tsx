@@ -543,8 +543,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                       const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
 
                       return (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm whitespace-nowrap">
-                          <span>{greeting}, {displayName} 👋</span>
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 shadow-sm whitespace-nowrap">
+                          <span className="text-sm sm:text-base font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent tracking-tight">
+                            {greeting}, {displayName} 👋
+                          </span>
                         </div>
                       );
                     })()}
