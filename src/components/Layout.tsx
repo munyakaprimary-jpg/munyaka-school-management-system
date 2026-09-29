@@ -535,11 +535,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                       } else if (hour >= 17 || hour < 5) {
                         greeting = "Good evening";
                       }
-                      const userName = user?.name || "Admin";
+                      
+                      let rawName = user?.name || user?.role || "Admin";
+                      if (/^(school|munyaka|portal|system)$/i.test(rawName.trim()) || rawName.length > 25) {
+                        rawName = "Admin";
+                      }
+                      const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+
                       return (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm">
-                          <span className="hidden sm:inline">{greeting}, {userName} 👋</span>
-                          <span className="sm:hidden">Hi, {userName.split(' ')[0]} 👋</span>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm whitespace-nowrap">
+                          <span>{greeting}, {displayName} 👋</span>
                         </div>
                       );
                     })()}
