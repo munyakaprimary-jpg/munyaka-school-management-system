@@ -32,6 +32,7 @@ import SudokuMini from "@/components/games/SudokuMini";
 import BilingualMatch from "@/components/games/BilingualMatch";
 import TargetMath from "@/components/games/TargetMath";
 import PatternMemory from "@/components/games/PatternMemory";
+import CbcGamesHubExtensionView from "@/components/games/CbcGamesHubExtension";
 import {
   loadMeta,
   getHighScore,
