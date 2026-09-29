@@ -46,7 +46,7 @@ const normalizeStr = (str: string | undefined): string => {
 
 export default function PromotePage() {
   const storeLearners = useSchoolStore((state) => state.learners);
-  const saveLearners = useSchoolStore((state) => state.saveLearners);
+  const setStoreLearners = useSchoolStore((state) => state.setLearners);
   
   const [learners, setLearners] = useState<any[]>(() => {
     const direct = getStudents();
