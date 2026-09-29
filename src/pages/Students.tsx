@@ -871,15 +871,28 @@ export default function Students() {
                   const sAdm = student.admissionNumber || student.admNo || student.admissionNo || '—';
                   const sAss = student.assessmentNo || student.assessmentNumber || student.assessment || student.assNo || '—';
                   const sGender = student.gender || 'Male';
-                  const sDobRaw = student.dateOfBirth || student.dob || '';
+                  const sDobRaw = student.dateOfBirth || student.dob || student.birthDate || '';
                   let sDob = '—';
                   if (sDobRaw) {
                     try {
-                      const d = new Date(sDobRaw);
-                      if (!isNaN(d.getTime())) {
-                        sDob = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                      const cleanDate = sDobRaw.includes('T') ? sDobRaw.split('T')[0] : sDobRaw;
+                      const parts = cleanDate.split('-');
+                      if (parts.length === 3 && parts[0].length === 4) {
+                        // YYYY-MM-DD -> DD MMM YYYY
+                        const [yyyy, mm, dd] = parts;
+                        const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                        if (!isNaN(dateObj.getTime())) {
+                          sDob = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        } else {
+                          sDob = cleanDate;
+                        }
                       } else {
-                        sDob = sDobRaw;
+                        const d = new Date(sDobRaw);
+                        if (!isNaN(d.getTime())) {
+                          sDob = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        } else {
+                          sDob = sDobRaw;
+                        }
                       }
                     } catch {
                       sDob = sDobRaw;
