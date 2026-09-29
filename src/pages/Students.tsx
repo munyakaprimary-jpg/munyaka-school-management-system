@@ -22,15 +22,17 @@ import {
   UserCheck
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { generateAdmissionNo } from '@/utils/backfillAdmissionNumbers';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 
 const STUDENTS_STORAGE_KEY = 'munyaka_students';
 const CENTRAL_DB_KEY = 'munyaka_central_db';
 const API_BASE_URL = '/api';
 
-const generateAdmissionNumber = (grade: string, existingList: any[] = []) => {
-  return generateAdmissionNo(grade, existingList, new Date().getFullYear());
+const generateAdmissionNumber = (grade: string) => {
+  const match = grade.match(/(\d+)/);
+  const num = match ? match[1] : '1';
+  const randomSeq = Math.floor(1000 + Math.random() * 9000);
+  return `Mny/${num}/${randomSeq}`;
 };
 
 export default function Students() {
@@ -199,8 +201,8 @@ export default function Students() {
         id: editingId || `learner-${Date.now()}`,
         name: fullName.trim(),
         fullName: fullName.trim(),
-        admissionNumber: admissionNumber.trim() ? admissionNumber.trim() : generateAdmissionNumber(grade, students),
-        admNo: admissionNumber.trim() ? admissionNumber.trim() : generateAdmissionNumber(grade, students),
+        admissionNumber: admissionNumber || generateAdmissionNumber(grade),
+        admNo: admissionNumber || generateAdmissionNumber(grade),
         assessmentNo: assessmentNumber.trim(),
         dateOfBirth: dateOfBirth,
         dob: dateOfBirth,
@@ -528,10 +530,9 @@ export default function Students() {
               <Input
                 value={admissionNumber}
                 onChange={(e) => setAdmissionNumber(e.target.value)}
-                placeholder={`Auto-generates as ${generateAdmissionNumber(grade, students)}`}
+                placeholder="Leave blank to auto-generate"
                 className="rounded-xl h-12 border-slate-200 font-mono text-xs"
               />
-              <p className="text-[11px] text-slate-500 font-medium">Format: MUN-G[Grade]-[Sequence]-[Year] (e.g. MUN-G6-003-2026)</p>
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-bold text-slate-700 uppercase">Assessment Number</Label>

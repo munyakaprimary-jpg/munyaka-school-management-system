@@ -1,18 +1,12 @@
 /**
  * Admission-number generation & one-time backfill for the `admissionNo` field.
  *
- * Format Pattern Specification:
- *   - Enforce the format standard: `MUN-G[Grade]-[Sequence]-[Year]`.
- *   - Examples:
- *     * Grade 1, 3rd student registered in 2026: `MUN-G1-003-2026`
- *     * Grade 6, 12th student registered in 2026: `MUN-G6-012-2026`
- *
- * Supported formats (permissive parser for backfill & historical numbers):
+ * Supported formats
  * ─────────────────
- *  • Numbered primary school grades:  MUN-G{n}-{seq:03d}-{year} or MUN-G{n}-{seq:03d}/{year}
- *      Examples: MUN-G1-001-2026, MUN-G4-007-2026, MUN-G9-015-2026
- *  • Early Childhood Education (ECE):  MUN-PP{1|2}-{seq:03d}-{year} or MUN-PP{1|2}-{seq:03d}/{year}
- *      Examples: MUN-PP1-001-2026, MUN-PP2-001-2026
+ *  • Numbered primary school grades:  MUN-G{n}-{seq:03d}/{year}
+ *      Examples: MUN-G1-001/2026, MUN-G4-007/2026, MUN-G9-015/2026
+ *  • Early Childhood Education (ECE):  MUN-PP{1|2}-{seq:03d}/{year}
+ *      Examples: MUN-PP1-001/2026, MUN-PP2-001/2026
  *
  *   seq   — zero-padded 3-digit integer, unique within (family, year)
  *   year  — 4-digit enrollment / admission year
@@ -83,7 +77,7 @@ interface AdmNoParts {
 function parseAdmissionNo(value: unknown): AdmNoParts | null {
   const s = typeof value === 'string' ? value.trim() : '';
   if (!s) return null;
-  const m = s.match(/^MUN-(G\d+|PP[12])-(\d+)[\/-](\d{4})$/);
+  const m = s.match(/^MUN-(G\d+|PP[12])-(\d+)\/(\d{4})$/);
   if (!m) return null;
   const family = m[1] as FamilyCode;
   const seq = parseInt(m[2], 10);
@@ -202,7 +196,7 @@ function resolveEnrollmentYear(
  */
 function buildAdmissionNo(grade: string, year: number, seq: number): string {
   const family = gradeToFamilyCode(grade);
-  return `MUN-${family}-${String(seq).padStart(3, '0')}-${year}`;
+  return `MUN-${family}-${String(seq).padStart(3, '0')}/${year}`;
 }
 
 /**
@@ -236,8 +230,8 @@ function deriveCohortInfo(
  *      (G{n} for numbered grades, PP1 / PP2 for early childhood).
  *
  * Output format:
- *   • Grade 1–9:    MUN-G{n}-{seq:03d}-{year}  e.g. MUN-G4-008-2026
- *   • PP1 / PP2:    MUN-PP{n}-{seq:03d}-{year} e.g. MUN-PP1-001-2026
+ *   • Grade 1–9:    MUN-G{n}-{seq:03d}/{year}  e.g. MUN-G4-008/2026
+ *   • PP1 / PP2:    MUN-PP{n}-{seq:03d}/{year} e.g. MUN-PP1-001/2026
  */
 export function generateAdmissionNo(
   grade: string,
@@ -328,7 +322,7 @@ export interface BackfillReport {
  *      • missing → collect into (grade, year) cohorts
  *   2. Sort each cohort's rows by original array index (deterministic).
  *   3. Assign `positionInCohort + 1` as the sequence for each row
- *      in that cohort, formatted as MUN-G{grade}-{seq:03d}-{year}.
+ *      in that cohort, formatted as MUN-G{grade}-{seq:03d}/{year}.
  *
  * Idempotent: already-populated rows are never touched.
  */
@@ -408,7 +402,7 @@ export function backfillMissingAdmissionNumbers(): BackfillReport {
     // Each backfill row gets `positionInCohort + 1` as its sequence. Rows
     // are sorted by their original array index so the assignment is
     // deterministic and reproducible across re-runs.
-    // Format per row: MUN-G{gradeDigit}-{positionInCohort+1:03d}-{year}
+    // Format per row: MUN-G{gradeDigit}-{positionInCohort+1:03d}/{year}
     // Example cohort [row-idx 3, row-idx 7, row-idx 12] → 001, 002, 003
     cohorts.forEach((cohort) => {
       const sortedRows = cohort.rows.slice().sort((a, b) => a.idx - b.idx);
