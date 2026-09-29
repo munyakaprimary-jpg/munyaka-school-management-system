@@ -106,6 +106,7 @@ const Assessments = () => {
   const [term, setTerm] = useState<string>(() => {
     try {
       localStorage.removeItem("munyaka_term_filter_stale");
+      localStorage.removeItem("selectedTerm");
       const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
       if (settingsRaw) {
         const settings = JSON.parse(settingsRaw);
@@ -115,7 +116,7 @@ const Assessments = () => {
     } catch {
       // ignore
     }
-    return "Term 1";
+    return "";
   });
   const [subject, setSubject] = useState<string>("All Subjects");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -124,20 +125,33 @@ const Assessments = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
 
-  // Load system settings for default academic year and active term on mount
+  // Load system settings for default academic year and active term on mount and setup sync effect
   useEffect(() => {
-    try {
-      const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
-      if (settingsRaw) {
-        const settings = JSON.parse(settingsRaw);
-        const activeY = settings.academic?.activeYear || settings.academicYear;
-        if (activeY) setAcademicYear(activeY);
-        const activeT = settings.academic?.activeTerm || settings.term;
-        if (activeT) setTerm(activeT);
+    const syncSettings = () => {
+      try {
+        const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
+        if (settingsRaw) {
+          const settings = JSON.parse(settingsRaw);
+          const activeY = settings.academic?.activeYear || settings.academicYear;
+          if (activeY) setAcademicYear(activeY);
+          const activeT = settings.academic?.activeTerm || settings.term || settings.currentTerm;
+          if (activeT) setTerm(activeT);
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
+    };
+
+    syncSettings();
+
+    // Listen for storage changes or custom settings update events
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "munyaka_system_settings_v3" || e.key === "munyaka_system_settings") {
+        syncSettings();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
   const [lockedTermsMap, setLockedTermsMap] = useState<Record<string, boolean>>({});
 
@@ -1101,9 +1115,7 @@ ${filteredStudents.length} learner(s) included.
                     <SelectValue placeholder={term} />
                   </SelectTrigger>
                   <SelectContent className="hidden">
-                    <SelectItem value="Term 1">Term 1</SelectItem>
-                    <SelectItem value="Term 2">Term 2</SelectItem>
-                    <SelectItem value="Term 3">Term 3</SelectItem>
+                    <SelectItem value={term || "Term 1"}>{term || "Term 1"}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
