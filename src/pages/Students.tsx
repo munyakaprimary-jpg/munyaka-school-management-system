@@ -28,11 +28,31 @@ const STUDENTS_STORAGE_KEY = 'munyaka_students';
 const CENTRAL_DB_KEY = 'munyaka_central_db';
 const API_BASE_URL = '/api';
 
-const generateAdmissionNumber = (grade: string) => {
+const generateAdmissionNumber = (grade: string, existingStudents: any[] = []) => {
+  // Extract grade number (e.g. "Grade 6" -> 6, "PP1" -> 0, "PP2" -> 0, "Grade 1" -> 1)
   const match = grade.match(/(\d+)/);
-  const num = match ? match[1] : '1';
-  const randomSeq = Math.floor(1000 + Math.random() * 9000);
-  return `Mny/${num}/${randomSeq}`;
+  const gradeNum = match ? parseInt(match[1], 10) : 1;
+  const currentYear = new Date().getFullYear(); // 2026
+  const admissionYear = currentYear - (gradeNum - 1);
+
+  // Find next available sequence number for this admission year
+  let maxSeq = 0;
+  existingStudents.forEach(s => {
+    const adm = s.admissionNumber || s.admNo || '';
+    // Expected format MUN-[Seq]-[Year] or similar, e.g. MUN-014-2021 or Mny/6/4821
+    if (adm.includes(String(admissionYear))) {
+      const parts = adm.split('-');
+      if (parts.length >= 2) {
+        const seqNum = parseInt(parts[1], 10);
+        if (!isNaN(seqNum) && seqNum > maxSeq) {
+          maxSeq = seqNum;
+        }
+      }
+    }
+  });
+
+  const nextSeq = String(maxSeq + 1).padStart(3, '0');
+  return `MUN-${nextSeq}-${admissionYear}`;
 };
 
 export default function Students() {
@@ -171,6 +191,9 @@ export default function Students() {
 
   const handleOpenAdd = () => {
     resetForm();
+    const initialGrade = 'Grade 6';
+    setGrade(initialGrade);
+    setAdmissionNumber(generateAdmissionNumber(initialGrade, students));
     setIsModalOpen(true);
   };
 
@@ -561,7 +584,10 @@ export default function Students() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-bold text-slate-700 uppercase">Grade Level</Label>
-              <Select value={grade} onValueChange={setGrade}>
+              <Select value={grade} onValueChange={(val) => {
+                setGrade(val);
+                setAdmissionNumber(generateAdmissionNumber(val, students));
+              }}>
                 <SelectTrigger className="rounded-xl h-12 border-slate-200">
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
