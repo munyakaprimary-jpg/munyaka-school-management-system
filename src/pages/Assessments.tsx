@@ -1002,16 +1002,22 @@ ${filteredStudents.length} learner(s) included.
           {/* 5. Term */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Term</label>
-            <Select value={term} onValueChange={setTerm}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Term" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Term 1">Term 1</SelectItem>
-                <SelectItem value="Term 2">Term 2</SelectItem>
-                <SelectItem value="Term 3">Term 3</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="relative pointer-events-none select-none">
+              <Select value={term} onValueChange={setTerm}>
+                <SelectTrigger
+                  disabled={true}
+                  className="rounded-xl h-11 bg-gray-100 border-none font-bold text-slate-700 pointer-events-none opacity-90 focus:ring-0 focus:outline-none ring-0 outline-none select-none shadow-none [&>svg]:opacity-30 [&>svg]:pointer-events-none"
+                  tabIndex={-1}
+                >
+                  <SelectValue placeholder="Term 1" />
+                </SelectTrigger>
+                <SelectContent className="hidden">
+                  <SelectItem value="Term 1">Term 1</SelectItem>
+                  <SelectItem value="Term 2">Term 2</SelectItem>
+                  <SelectItem value="Term 3">Term 3</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* 6. Subject */}
