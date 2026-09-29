@@ -159,21 +159,38 @@ const GradesStreams = () => {
   }, [grades]);
 
   const normalizeGradeKey = (name: string) => {
-      return String(name || '').trim().toLowerCase();
-    };
-  
-    const handleAddGrade = () => {
-      const trimmedName = String(newGradeName || '').trim();
+    return String(name || '').trim().toLowerCase();
+  };
+
+  const duplicateGradeExists = useMemo(() => {
+    const trimmed = String(newGradeName || '').trim();
+    if (!trimmed) return false;
+    const norm = normalizeGradeKey(trimmed);
+    return grades.some(g => normalizeGradeKey(g.name) === norm);
+  }, [newGradeName, grades]);
+
+  const selectedParentGrade = useMemo(() => {
+    return grades.find(g => g.id === selectedGradeId);
+  }, [selectedGradeId, grades]);
+
+  const duplicateStreamExists = useMemo(() => {
+    const trimmed = String(newStreamName || '').trim();
+    if (!trimmed || !selectedParentGrade) return false;
+    const norm = trimmed.toLowerCase();
+    return selectedParentGrade.streams.some(
+      s => String(s.name || '').trim().toLowerCase() === norm
+    );
+  }, [newStreamName, selectedParentGrade]);
+
+  const handleAddGrade = () => {
+    const trimmedName = String(newGradeName || '').trim();
     if (!trimmedName) {
       showError("Please enter a grade name.");
       return;
     }
 
-    const normalizedKey = normalizeGradeKey(trimmedName);
-    const exists = grades.some(g => normalizeGradeKey(g.name) === normalizedKey);
-
-    if (exists) {
-      showError(`A grade matching "${trimmedName}" already exists.`);
+    if (duplicateGradeExists) {
+      showError("Grade already exists!");
       return;
     }
 
@@ -195,7 +212,7 @@ const GradesStreams = () => {
   };
 
   const handleAddStream = () => {
-      const trimmedStreamName = String(newStreamName || '').trim();
+    const trimmedStreamName = String(newStreamName || '').trim();
 
     if (!selectedGradeId) {
       showError("Please select a grade level.");
@@ -206,17 +223,9 @@ const GradesStreams = () => {
       return;
     }
 
-    const parentGrade = grades.find(g => g.id === selectedGradeId);
-    if (parentGrade) {
-      // Case-normalize the new stream name to deduplicate (e.g. "BLUE" vs "Blue")
-      const normalizedNew = trimmedStreamName.charAt(0).toUpperCase() + trimmedStreamName.slice(1).toLowerCase();
-      const streamExists = parentGrade.streams.some(
-        s => String(s.name || '').trim().toLowerCase() === normalizedNew.toLowerCase()
-      );
-      if (streamExists) {
-        showError(`Stream "${trimmedStreamName}" already exists in ${parentGrade.name}.`);
-        return;
-      }
+    if (duplicateStreamExists && selectedParentGrade) {
+      showError(`Stream "${trimmedStreamName}" already exists in this Grade!`);
+      return;
     }
 
     const studentsCount = parseInt(newStreamStudents) || 0;
@@ -445,7 +454,13 @@ const GradesStreams = () => {
         footer={
           <>
             <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsGradeOpen(false)}>Cancel</Button>
-            <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100" onClick={handleAddGrade}>Create Grade</Button>
+            <Button
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 disabled:opacity-50"
+              onClick={handleAddGrade}
+              disabled={!String(newGradeName || '').trim() || duplicateGradeExists}
+            >
+              Create Grade
+            </Button>
           </>
         }
       >
@@ -456,8 +471,13 @@ const GradesStreams = () => {
               value={newGradeName}
               onChange={(e) => setNewGradeName(e.target.value)}
               placeholder="e.g. Grade 9"
-              className="rounded-xl h-12"
+              className={cn("rounded-xl h-12", duplicateGradeExists && "border-red-500 focus-visible:ring-red-500")}
             />
+            {duplicateGradeExists && (
+              <p className="text-xs font-bold text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircle size={13} /> Grade already exists!
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Category</Label>
@@ -485,9 +505,9 @@ const GradesStreams = () => {
           <>
             <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsStreamOpen(false)}>Cancel</Button>
             <Button
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 disabled:opacity-50"
               onClick={handleAddStream}
-              disabled={!selectedGradeId}
+              disabled={!selectedGradeId || !String(newStreamName || '').trim() || duplicateStreamExists}
             >
               Add Stream
             </Button>
@@ -518,8 +538,13 @@ const GradesStreams = () => {
               value={newStreamName}
               onChange={(e) => setNewStreamName(e.target.value)}
               placeholder="e.g. Blue"
-              className="rounded-xl h-12"
+              className={cn("rounded-xl h-12", duplicateStreamExists && "border-red-500 focus-visible:ring-red-500")}
             />
+            {duplicateStreamExists && selectedParentGrade && (
+              <p className="text-xs font-bold text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircle size={13} /> Stream {newStreamName.trim()} already exists in this Grade!
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Class Teacher (Optional)</Label>
