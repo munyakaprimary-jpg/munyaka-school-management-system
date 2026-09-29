@@ -671,7 +671,7 @@ const ReportCards = () => {
                   <span className="font-bold text-slate-900 truncate max-w-[130px]">{s.name}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">ULI</span>
+                  <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">ASSESSMENT NUMBER</span>
                   <span className="font-black font-mono text-slate-900">{String((s as any).assessment ?? "")}</span>
                 </div>
                 <div className="flex justify-between items-center">
