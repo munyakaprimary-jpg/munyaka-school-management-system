@@ -29,17 +29,14 @@ const CENTRAL_DB_KEY = 'munyaka_central_db';
 const API_BASE_URL = '/api';
 
 const generateAdmissionNumber = (grade: string, existingStudents: any[] = []) => {
-  // Extract grade number (e.g. "Grade 6" -> 6, "PP1" -> 0, "PP2" -> 0, "Grade 1" -> 1)
   const match = grade.match(/(\d+)/);
   const gradeNum = match ? parseInt(match[1], 10) : 1;
-  const currentYear = new Date().getFullYear(); // 2026
+  const currentYear = new Date().getFullYear();
   const admissionYear = currentYear - (gradeNum - 1);
 
-  // Find next available sequence number for this admission year
   let maxSeq = 0;
   existingStudents.forEach(s => {
     const adm = s.admissionNumber || s.admNo || '';
-    // Expected format MUN-[Seq]-[Year] or similar, e.g. MUN-014-2021 or Mny/6/4821
     if (adm.includes(String(admissionYear))) {
       const parts = adm.split('-');
       if (parts.length >= 2) {
@@ -55,60 +52,102 @@ const generateAdmissionNumber = (grade: string, existingStudents: any[] = []) =>
   return `MUN-${nextSeq}-${admissionYear}`;
 };
 
+const ensureProperAdmissionNumbers = (list: any[]) => {
+  const currentYear = new Date().getFullYear();
+  const yearCounts: Record<number, number> = {};
+
+  return list.map(student => {
+    let adm = student.admissionNumber || student.admNo || '';
+    const matchFormat = /^MUN-\d{3}-\d{4}$/.test(adm);
+    if (matchFormat) {
+      const parts = adm.split('-');
+      const year = parseInt(parts[2], 10);
+      const seq = parseInt(parts[1], 10);
+      if (!isNaN(year) && !isNaN(seq)) {
+        yearCounts[year] = Math.max(yearCounts[year] || 0, seq);
+      }
+      return student;
+    }
+
+    const gradeStr = student.grade || student.class || 'Grade 6';
+    const gMatch = gradeStr.match(/(\d+)/);
+    const gradeNum = gMatch ? parseInt(gMatch[1], 10) : 6;
+    const admissionYear = currentYear - (gradeNum - 1);
+
+    const nextSeq = (yearCounts[admissionYear] || 0) + 1;
+    yearCounts[admissionYear] = nextSeq;
+
+    const newAdm = `MUN-${String(nextSeq).padStart(3, '0')}-${admissionYear}`;
+    return {
+      ...student,
+      admissionNumber: newAdm,
+      admNo: newAdm
+    };
+  });
+};
+
 export default function Students() {
   const [students, setStudents] = useState<any[]>(() => {
+    let rawList: any[] = [];
     try {
       const saved = localStorage.getItem(STUDENTS_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) rawList = parsed;
       }
-      const central = localStorage.getItem(CENTRAL_DB_KEY);
-      if (central) {
-        const parsedCentral = JSON.parse(central);
-        if (Array.isArray(parsedCentral.students) && parsedCentral.students.length > 0) {
-          return parsedCentral.students;
+      if (rawList.length === 0) {
+        const central = localStorage.getItem(CENTRAL_DB_KEY);
+        if (central) {
+          const parsedCentral = JSON.parse(central);
+          if (Array.isArray(parsedCentral.students) && parsedCentral.students.length > 0) {
+            rawList = parsedCentral.students;
+          }
         }
       }
     } catch {}
-    return [
-      {
-        id: 's-101',
-        name: 'Amina Kiprop',
-        fullName: 'Amina Kiprop',
-        admissionNumber: 'Mny/6/4821',
-        admNo: 'Mny/6/4821',
-        assessmentNo: 'ASS-827361',
-        gender: 'Female',
-        dateOfBirth: '2013-05-14',
-        dob: '2013-05-14',
-        grade: 'Grade 6',
-        class: 'Grade 6',
-        stream: 'BLUE',
-        parentName: 'Sarah Kiprop',
-        guardian: 'Sarah Kiprop',
-        phoneNumber: '+254 712 345 678',
-        parentPhone: '+254 712 345 678'
-      },
-      {
-        id: 's-102',
-        name: 'Brian Omondi',
-        fullName: 'Brian Omondi',
-        admissionNumber: 'Mny/6/9132',
-        admNo: 'Mny/6/9132',
-        assessmentNo: 'ASS-827362',
-        gender: 'Male',
-        dateOfBirth: '2013-11-22',
-        dob: '2013-11-22',
-        grade: 'Grade 6',
-        class: 'Grade 6',
-        stream: 'BLUE',
-        parentName: 'James Omondi',
-        guardian: 'James Omondi',
-        phoneNumber: '+254 722 987 654',
-        parentPhone: '+254 722 987 654'
-      }
-    ];
+
+    if (rawList.length === 0) {
+      rawList = [
+        {
+          id: 's-101',
+          name: 'Amina Kiprop',
+          fullName: 'Amina Kiprop',
+          admissionNumber: 'Mny/6/4821',
+          admNo: 'Mny/6/4821',
+          assessmentNo: 'ASS-827361',
+          gender: 'Female',
+          dateOfBirth: '2013-05-14',
+          dob: '2013-05-14',
+          grade: 'Grade 6',
+          class: 'Grade 6',
+          stream: 'BLUE',
+          parentName: 'Sarah Kiprop',
+          guardian: 'Sarah Kiprop',
+          phoneNumber: '+254 712 345 678',
+          parentPhone: '+254 712 345 678'
+        },
+        {
+          id: 's-102',
+          name: 'Brian Omondi',
+          fullName: 'Brian Omondi',
+          admissionNumber: 'Mny/6/9132',
+          admNo: 'Mny/6/9132',
+          assessmentNo: 'ASS-827362',
+          gender: 'Male',
+          dateOfBirth: '2013-11-22',
+          dob: '2013-11-22',
+          grade: 'Grade 6',
+          class: 'Grade 6',
+          stream: 'BLUE',
+          parentName: 'James Omondi',
+          guardian: 'James Omondi',
+          phoneNumber: '+254 722 987 654',
+          parentPhone: '+254 722 987 654'
+        }
+      ];
+    }
+
+    return ensureProperAdmissionNumbers(rawList);
   });
 
   const [searchTerm, setSearchTerm] = useState('');
