@@ -103,7 +103,14 @@ const Assessments = () => {
   const [grade, setGrade] = useState<string>(() => "Grade 4");
   const [stream, setStream] = useState<string>("All Streams");
   const [examType, setExamType] = useState<string>("Formative Assessment");
-  const [term, setTerm] = useState<string>(() => {
+  // Helper function to ensure consistent string formatting
+  const formatTerm = (val: any): string => {
+    if (!val) return 'Term 3'; // Safety fallback
+    const s = val.toString().trim();
+    return s.toLowerCase().includes('term') ? s : `Term ${s}`;
+  };
+
+  const getActiveTermFromStorage = (): string => {
     try {
       localStorage.removeItem("munyaka_term_filter_stale");
       localStorage.removeItem("selectedTerm");
@@ -111,13 +118,17 @@ const Assessments = () => {
       if (settingsRaw) {
         const settings = JSON.parse(settingsRaw);
         const activeT = settings.academic?.activeTerm || settings.term || settings.currentTerm;
-        if (activeT) return activeT;
+        if (activeT) return formatTerm(activeT);
       }
+      const rawTerm = localStorage.getItem('activeTerm');
+      if (rawTerm) return formatTerm(rawTerm);
     } catch {
       // ignore
     }
-    return "";
-  });
+    return 'Term 3';
+  };
+
+  const [term, setTerm] = useState<string>(() => getActiveTermFromStorage());
   const [subject, setSubject] = useState<string>("All Subjects");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
@@ -135,7 +146,13 @@ const Assessments = () => {
           const activeY = settings.academic?.activeYear || settings.academicYear;
           if (activeY) setAcademicYear(activeY);
           const activeT = settings.academic?.activeTerm || settings.term || settings.currentTerm;
-          if (activeT) setTerm(activeT);
+          if (activeT) {
+            setTerm(formatTerm(activeT));
+          }
+        }
+        const rawTerm = localStorage.getItem('activeTerm');
+        if (rawTerm) {
+          setTerm(formatTerm(rawTerm));
         }
       } catch {
         // ignore
@@ -146,7 +163,7 @@ const Assessments = () => {
 
     // Listen for storage changes or custom settings update events
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === "munyaka_system_settings_v3" || e.key === "munyaka_system_settings") {
+      if (e.key === "munyaka_system_settings_v3" || e.key === "munyaka_system_settings" || e.key === "activeTerm") {
         syncSettings();
       }
     };
@@ -1106,7 +1123,7 @@ ${filteredStudents.length} learner(s) included.
               </Select>
             ) : (
               <div className="relative pointer-events-none select-none">
-                <Select value={term} onValueChange={setTerm}>
+                <Select value={term} onValueChange={() => {}}>
                   <SelectTrigger
                     disabled={true}
                     className="rounded-xl h-11 bg-gray-100 border-none font-bold text-slate-700 pointer-events-none opacity-90 focus:ring-0 focus:outline-none ring-0 outline-none select-none shadow-none [&>svg]:opacity-30 [&>svg]:pointer-events-none"
@@ -1115,7 +1132,7 @@ ${filteredStudents.length} learner(s) included.
                     <SelectValue placeholder={term} />
                   </SelectTrigger>
                   <SelectContent className="hidden">
-                    <SelectItem value={term || "Term 1"}>{term || "Term 1"}</SelectItem>
+                    <SelectItem value={term}>{term}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
