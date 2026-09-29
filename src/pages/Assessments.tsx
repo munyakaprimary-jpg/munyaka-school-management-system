@@ -105,10 +105,11 @@ const Assessments = () => {
   const [examType, setExamType] = useState<string>("Formative Assessment");
   const [term, setTerm] = useState<string>(() => {
     try {
+      localStorage.removeItem("munyaka_term_filter_stale");
       const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
       if (settingsRaw) {
         const settings = JSON.parse(settingsRaw);
-        const activeT = settings.academic?.activeTerm || settings.term;
+        const activeT = settings.academic?.activeTerm || settings.term || settings.currentTerm;
         if (activeT) return activeT;
       }
     } catch {
