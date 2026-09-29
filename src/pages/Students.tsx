@@ -1,846 +1,377 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Edit3, Trash2, X, Eye, Users, Loader2, FileSpreadsheet, Printer, ArrowRightLeft, Archive } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Modal from '@/components/ui/Modal';
+import BackButton from '@/components/ui/BackButton';
+import { 
+  Users, 
+  Plus, 
+  Search, 
+  Filter, 
+  Edit, 
+  Trash2, 
+  Lock, 
+  AlertCircle, 
+  Loader2, 
+  FileSpreadsheet, 
+  ArrowUpDown,
+  UserCheck
+} from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { useAuth } from '@/context/AuthContext';
-import TransferInModal from '@/components/students/TransferInModal';
-import TransferWorkflow from '@/components/transfer/TransferWorkflow';
+import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 
-const API_BASE_URL = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:5000/api' : '/api';
+const STUDENTS_STORAGE_KEY = 'munyaka_students';
+const CENTRAL_DB_KEY = 'munyaka_central_db';
+const API_BASE_URL = '/api';
+
+const generateAdmissionNumber = (grade: string) => {
+  const match = grade.match(/(\d+)/);
+  const num = match ? match[1] : '1';
+  const randomSeq = Math.floor(1000 + Math.random() * 9000);
+  return `Mny/${num}/${randomSeq}`;
+};
 
 export default function Students() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  
-  // Safe user resolution with local storage fallbacks
-  const activeUser = useMemo(() => {
-    if (user) return user;
+  const [students, setStudents] = useState<any[]>(() => {
     try {
-      const stored = localStorage.getItem('munyaka_user') || localStorage.getItem('user') || localStorage.getItem('currentUser');
-      return stored ? JSON.parse(stored) : {};
-    } catch {
-      return {};
-    }
-  }, [user]);
+      const saved = localStorage.getItem(STUDENTS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      const central = localStorage.getItem(CENTRAL_DB_KEY);
+      if (central) {
+        const parsedCentral = JSON.parse(central);
+        if (Array.isArray(parsedCentral.students) && parsedCentral.students.length > 0) {
+          return parsedCentral.students;
+        }
+      }
+    } catch {}
+    return [
+      {
+        id: 's-101',
+        name: 'Amina Kiprop',
+        fullName: 'Amina Kiprop',
+        admissionNumber: 'Mny/6/4821',
+        admNo: 'Mny/6/4821',
+        assessmentNo: 'ASS-827361',
+        gender: 'Female',
+        dateOfBirth: '2013-05-14',
+        dob: '2013-05-14',
+        grade: 'Grade 6',
+        class: 'Grade 6',
+        stream: 'BLUE',
+        parentName: 'Sarah Kiprop',
+        guardian: 'Sarah Kiprop',
+        phoneNumber: '+254 712 345 678',
+        parentPhone: '+254 712 345 678'
+      },
+      {
+        id: 's-102',
+        name: 'Brian Omondi',
+        fullName: 'Brian Omondi',
+        admissionNumber: 'Mny/6/9132',
+        admNo: 'Mny/6/9132',
+        assessmentNo: 'ASS-827362',
+        gender: 'Male',
+        dateOfBirth: '2013-11-22',
+        dob: '2013-11-22',
+        grade: 'Grade 6',
+        class: 'Grade 6',
+        stream: 'BLUE',
+        parentName: 'James Omondi',
+        guardian: 'James Omondi',
+        phoneNumber: '+254 722 987 654',
+        parentPhone: '+254 722 987 654'
+      }
+    ];
+  });
 
-  const [students, setStudents] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('All');
-  const [streamFilter, setStreamFilter] = useState('All');
-  const [isTransferInModalOpen, setIsTransferInModalOpen] = useState(false);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [selectedStudentForTransfer, setSelectedStudentForTransfer] = useState<any | null>(null);
+  const [gradeFilter, setGradeFilter] = useState('all');
+  const [streamFilter, setStreamFilter] = useState('all');
+  const [genderFilter, setGenderFilter] = useState('all');
 
-  // Admin Password Modal State for Reset Database
-  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState('');
-  const [resetError, setResetError] = useState<string | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
-
-  // Check if current user is admin/super_admin
-  const isUserAdminOrSuperAdmin = useMemo(() => {
-    const role = String(activeUser?.role || activeUser?.staffCategory || '').toLowerCase();
-    return role === 'admin' || role === 'super_admin';
-  }, [activeUser]);
-
-  // Database Reset Handler (Verified via Admin Password Modal)
-  const handleVerifyAndResetDatabase = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!adminPasswordInput) {
-      setResetError("Please enter the admin password.");
-      return;
-    }
-
-    setIsResetting(true);
-    setResetError(null);
-
-    try {
-      // 1. Verify password against backend API or local auth check
-      let isValidPassword = false;
-      try {
-        const authRes = await fetch(`${API_BASE_URL}/auth/verify-password`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: adminPasswordInput, email: activeUser?.email }),
-          signal: AbortSignal.timeout(3000),
-        });
-        if (authRes.ok) {
-          const json = await authRes.json();
-          if (json.success || json.valid) isValidPassword = true;
-        }
-      } catch {
-        // Fallback check against stored admin session or default password if offline
-        const sessionPwd = activeUser?.password || localStorage.getItem('munyaka_admin_pwd') || 'admin123';
-        if (adminPasswordInput === 'admin123' || adminPasswordInput === 'password' || adminPasswordInput === '123456' || adminPasswordInput === sessionPwd) {
-          isValidPassword = true;
-        }
-      }
-
-      if (!isValidPassword) {
-        setResetError("Invalid Admin Password. Access Denied.");
-        setIsResetting(false);
-        return;
-      }
-
-      // 2. Wipe student/learner records from central DB and storage keys while preserving other configs
-      try {
-        const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-        delete centralData.students;
-        centralData.lastUpdated = new Date().toISOString();
-        localStorage.setItem('munyaka_central_db', JSON.stringify(centralData));
-        window.dispatchEvent(new CustomEvent('central-data-updated', { detail: centralData }));
-      } catch {}
-
-      const keysToWipe = [
-        'munyaka_students',
-        'school_learners_data',
-        'students',
-        'learners',
-        'pupils',
-        'school_students',
-        'munyaka_master_learner_list'
-      ];
-      keysToWipe.forEach(k => {
-        try { localStorage.removeItem(k); } catch {}
-      });
-      sessionStorage.clear();
-
-      // 3. Clear IndexedDB if present
-      if (typeof indexedDB !== 'undefined' && indexedDB.databases) {
-        try {
-          const dbs = await indexedDB.databases();
-          dbs.forEach(db => {
-            if (db.name && (db.name.includes('student') || db.name.includes('learner') || db.name.includes('munyaka'))) {
-              indexedDB.deleteDatabase(db.name);
-            }
-          });
-        } catch {}
-      }
-
-      // 4. Send reset request to backend API
-      try {
-        await fetch(`${API_BASE_URL}/students/reset`, {
-          method: 'DELETE',
-          signal: AbortSignal.timeout(3000)
-        });
-      } catch {}
-
-      // 5. Reset React state & close modal
-      setStudents([]);
-      showSuccess("All learner records wiped successfully.");
-      setIsResetModalOpen(false);
-      setAdminPasswordInput('');
-    } catch (err) {
-      console.error("Failed to reset database", err);
-      setStudents([]);
-      showSuccess("All learner records wiped successfully.");
-      setIsResetModalOpen(false);
-      setAdminPasswordInput('');
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
-  // Modal State & Controlled Form Fields
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  
+  const [pendingDelete, setPendingDelete] = useState<any | null>(null);
+
+  // Form fields
   const [fullName, setFullName] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [assessmentNumber, setAssessmentNumber] = useState('');
+  const [grade, setGrade] = useState('Grade 6');
+  const [stream, setStream] = useState('BLUE');
+  const [gender, setGender] = useState('Female');
   const [dateOfBirth, setDateOfBirth] = useState('');
-  const [gender, setGender] = useState('Male');
-  const [grade, setGrade] = useState('Grade 1');
-  const [stream, setStream] = useState('North');
   const [parentName, setParentName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  // Fetch learners from API with fallback to localStorage & munyaka_central_db
+  // Synchronized scroll refs for the table
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const tableContentRef = useRef<HTMLTableElement>(null);
+  const [tableWidth, setTableWidth] = useState(1050);
+
   useEffect(() => {
-    let isMounted = true;
-    const fetchStudents = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        let fetched = [];
-        try {
-          const res = await fetch(`${API_BASE_URL}/students`, { signal: AbortSignal.timeout(3000) });
-          if (res.ok) {
-            const json = await res.json();
-            if (Array.isArray(json)) fetched = json;
-          }
-        } catch (netErr) {
-          console.warn('Backend API unavailable, falling back to central storage:', netErr);
-        }
-
-        if (fetched.length === 0) {
-          try {
-            const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-            if (Array.isArray(centralData.students) && centralData.students.length > 0) {
-              fetched = centralData.students;
-            }
-          } catch {}
-        }
-
-        if (fetched.length === 0) {
-          const localData = localStorage.getItem('munyaka_students') || localStorage.getItem('school_learners_data') || localStorage.getItem('students');
-          if (localData) {
-            const parsed = JSON.parse(localData);
-            if (Array.isArray(parsed)) fetched = parsed;
-          }
-        }
-
-        if (isMounted) {
-          setStudents(fetched);
-        }
-      } catch (err) {
-        console.error("Failed to load student data", err);
-        if (isMounted) setError("Could not load student list safely.");
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    fetchStudents();
-
-    // Listen to central-data-updated event for instant live sync
-    const handleCentralUpdate = (e: any) => {
-      if (e?.detail?.students && Array.isArray(e.detail.students)) {
-        setStudents(e.detail.students);
-      } else {
-        try {
-          const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-          if (Array.isArray(centralData.students)) {
-            setStudents(centralData.students);
-          }
-        } catch {}
-      }
-    };
-    window.addEventListener('central-data-updated', handleCentralUpdate);
-    window.addEventListener('storage', handleCentralUpdate);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener('central-data-updated', handleCentralUpdate);
-      window.removeEventListener('storage', handleCentralUpdate);
-    };
-  }, []);
-
-  // Filtered and sorted students list in strict ascending order by admission number sequence
-  const filteredStudents = useMemo(() => {
-    if (!Array.isArray(students)) return [];
-    const filtered = students.filter(s => {
-      const nameVal = s.name || s.fullName || '';
-      const admVal = s.admNo || s.admissionNumber || s.admissionNo || '';
-      const assVal = s.assessmentNo || s.assessmentNumber || s.assNo || '';
-      const matchesSearch = !searchTerm ||
-        nameVal.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admVal.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        assVal.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const gradeVal = s.grade || s.class || '';
-      const matchesGrade = gradeFilter === 'All' ||
-        gradeVal.toLowerCase() === gradeFilter.toLowerCase();
-
-      const streamVal = s.stream || '';
-      const matchesStream = streamFilter === 'All' ||
-        streamVal.toLowerCase() === streamFilter.toLowerCase();
-
-      return matchesSearch && matchesGrade && matchesStream;
-    });
-
-    return [...filtered].sort((a, b) => {
-      // 1. Extract numeric grade values (e.g., "Grade 1" or "GRADE 6" -> 1, 6)
-      const getGradeNum = (gradeStr: any) => {
-        const match = String(gradeStr || '').match(/\d+/);
-        return match ? parseInt(match[0], 10) : 0;
-      };
-
-      const gradeA = getGradeNum(a.grade || a.gradeClass || a.class);
-      const gradeB = getGradeNum(b.grade || b.gradeClass || b.class);
-      if (gradeA !== gradeB) return gradeA - gradeB;
-
-      // 2. Sort by stream alphabetically (e.g., BLUE vs GREEN)
-      const streamA = String(a.stream || '').toUpperCase();
-      const streamB = String(b.stream || '').toUpperCase();
-      if (streamA < streamB) return -1;
-      if (streamA > streamB) return 1;
-
-      // 3. Sort by admission number sequence
-      const admA = String(a.admissionNumber || a.admNo || a.admissionNo || '');
-      const admB = String(b.admissionNumber || b.admNo || b.admissionNo || '');
-      return admA.localeCompare(admB);
-    });
-  }, [students, searchTerm, gradeFilter, streamFilter]);
-
-  const formatStreamLabel = (streamItem: any): string => {
-    if (!streamItem) return '';
-    if (typeof streamItem === 'string') return streamItem;
-    
-    // Deeply inspect object properties
-    const possibleVal =
-      streamItem.name ||
-      streamItem.streamName ||
-      streamItem.label ||
-      streamItem.title ||
-      streamItem.value ||
-      streamItem.code;
-
-    if (typeof possibleVal === 'string') return possibleVal;
-    if (typeof possibleVal === 'object' && possibleVal !== null) {
-      return formatStreamLabel(possibleVal); // Handle double-nested objects
+    if (tableContentRef.current) {
+      setTableWidth(tableContentRef.current.scrollWidth || 1050);
     }
+  }, [students, gradeFilter, streamFilter, searchTerm]);
 
-    return String(streamItem.id || 'Stream');
+  const handleTopScroll = () => {
+    if (topScrollRef.current && tableScrollRef.current) {
+      if (tableScrollRef.current.scrollLeft !== topScrollRef.current.scrollLeft) {
+        tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+      }
+    }
   };
 
-  const extractStreamName = (item: any): string => {
-    return formatStreamLabel(item);
+  const handleTableScroll = () => {
+    if (topScrollRef.current && tableScrollRef.current) {
+      if (topScrollRef.current.scrollLeft !== tableScrollRef.current.scrollLeft) {
+        topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
+      }
+    }
   };
 
-  // Retrieve configured grades and streams dynamically from central storage or local state
-  const getConfiguredGrades = (): any[] => {
+  // Dynamic grades & streams config
+  const gradesConfig = useMemo(() => readGradesAndStreams(), []);
+  const availableGrades = gradesConfig.grades.length > 0 ? gradesConfig.grades : ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+  const availableStreams = gradesConfig.streams.length > 0 ? gradesConfig.streams : ['BLUE', 'RED', 'GREEN', 'YELLOW'];
+
+  // Persist students
+  useEffect(() => {
     try {
-      const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-      const configured = centralData.grades || centralData.gradesAndStreams || JSON.parse(localStorage.getItem('munyaka_grades') || localStorage.getItem('munyaka_grades_streams') || '[]');
-      if (Array.isArray(configured) && configured.length > 0) return configured;
-      if (configured && Array.isArray(configured.grades)) return configured.grades;
+      localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(students));
     } catch {}
-    return ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
-  };
-
-  const configuredGradesList = getConfiguredGrades();
-
-  // Count learners whose status is active (or default active)
-  const activeCount = useMemo(() => {
-    if (!Array.isArray(students)) return 0;
-    return students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length;
   }, [students]);
 
-  // Active streams list for the selected grade filter
-  const availableStreamsForFilter = useMemo(() => {
-    const gradesArray = getConfiguredGrades();
-    if (gradeFilter === 'All') {
-      const allStreamsSet = new Set<string>();
-      gradesArray.forEach((g: any) => {
-        if (g && Array.isArray(g.streams)) {
-          g.streams.forEach((st: any) => {
-            const sName = formatStreamLabel(st);
-            if (sName) allStreamsSet.add(sName);
-          });
-        }
-      });
-      return Array.from(allStreamsSet);
-    }
-
-    const gradeObj = gradesArray.find((g: any) => {
-      const gName = typeof g === 'string' ? g : (g.name || g.gradeName || g.title || '');
-      return String(gName).trim().toLowerCase() === String(gradeFilter || '').trim().toLowerCase() ||
-        (g.id && String(g.id) === String(gradeFilter));
-    });
-
-    if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
-      return gradeObj.streams.map((st: any) => formatStreamLabel(st)).filter(Boolean);
-    }
-    return ['BLUE', 'GREEN', 'YELLOW', 'RED', 'MERCURY', 'VENUS'];
-  }, [gradeFilter]);
-  const [availableStreams, setAvailableStreams] = useState<any[]>([]);
-  const [availableStreamsForModal, setAvailableStreamsForModal] = useState<any[]>([]);
-
-  useEffect(() => {
-    const gradesArray = getConfiguredGrades();
-    
-    // Match streams configured specifically for the currently selected grade
-    const gradeObj = gradesArray.find((g: any) => {
-      const gName = typeof g === 'string' ? g : (g.name || g.gradeName || g.title || '');
-      return String(gName).trim().toLowerCase() === String(grade || '').trim().toLowerCase() ||
-        (g.id && String(g.id) === String(grade));
-    });
-    
-    if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
-      setAvailableStreams(gradeObj.streams);
-      const firstStreamName = formatStreamLabel(gradeObj.streams[0]);
-      if (firstStreamName) setStream(firstStreamName);
-      return;
-    }
-    
-    setAvailableStreams([]);
-    setStream('');
-  }, [grade]);
-
-  // Synchronize availableStreamsForModal with availableStreams
-  useEffect(() => {
-    if (availableStreams.length > 0) {
-      const clean = availableStreams.map(st => formatStreamLabel(st)).filter(Boolean);
-      setAvailableStreamsForModal(clean);
-      if (clean.length > 0 && (!stream || !clean.includes(stream))) {
-        setStream(clean[0]);
-      }
-    } else {
-      const defaultStreams = ['GREEN', 'BLUE', 'YELLOW', 'RED'];
-      setAvailableStreamsForModal(defaultStreams);
-      if (!stream || !defaultStreams.includes(stream)) {
-        setStream(defaultStreams[0]);
-      }
-    }
-  }, [availableStreams]);
-  const generateAdmissionNumber = (selectedGrade: string) => {
-    const currentYear = new Date().getFullYear();
-
-    // Extract precise numeric grade (e.g. "Grade 6 (RED)" -> "6", "GRADE 6" -> "6", "PP1" -> "PP1")
-    const gradeMatch = String(selectedGrade || '').match(/(\d+|PP1|PP2|KG)/i);
-    const rawGradeToken = gradeMatch ? gradeMatch[1].toUpperCase() : '1';
-    const gradeCode = rawGradeToken.match(/^\d+$/) ? `G${rawGradeToken}` : rawGradeToken;
-
-    // Filter existing students strictly matching BOTH the exact extracted grade code AND the current year
-    const gradeAndYearStudents = (students || []).filter((s: any) => {
-      if (editingId && (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId)) {
-        return false;
-      }
-      const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '').trim().toUpperCase();
-      // Verify year match in admission number (e.g., ends with -2026 or contains currentYear)
-      const hasCurrentYear = admNo.includes(String(currentYear));
-      
-      // Verify grade match
-      const sGrade = String(s.grade || s.class || '').trim().toLowerCase();
-      const targetGrade = String(selectedGrade || '').trim().toLowerCase();
-      const matchesGradeString = sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade);
-      const matchesAdmCode = admNo.includes(`-${gradeCode}-`);
-
-      return (matchesGradeString || matchesAdmCode) && hasCurrentYear;
-    });
-
-    // Find the highest sequence number among strictly filtered records
-    let maxSeq = 0;
-    gradeAndYearStudents.forEach((s: any) => {
-      const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '');
-      const parts = admNo.split('-');
-      // Expected format: MUN-G6-001-2026 -> parts[2] is sequence
-      if (parts.length >= 3) {
-        const seq = parseInt(parts[2], 10);
-        if (!isNaN(seq) && seq > maxSeq) {
-          maxSeq = seq;
-        }
-      }
-    });
-
-    // Fallback across all students for the grade if year filter yielded 0 (e.g., first record of the year)
-    if (maxSeq === 0) {
-      const allGradeStudents = (students || []).filter((s: any) => {
-        if (editingId && (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId)) {
-          return false;
-        }
-        const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '').trim().toUpperCase();
-        const sGrade = String(s.grade || s.class || '').trim().toLowerCase();
-        const targetGrade = String(selectedGrade || '').trim().toLowerCase();
-        return (sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade)) || admNo.includes(`-${gradeCode}-`);
-      });
-
-      allGradeStudents.forEach((s: any) => {
-        const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '');
-        const parts = admNo.split('-');
-        if (parts.length >= 3) {
-          const seq = parseInt(parts[2], 10);
-          if (!isNaN(seq) && seq > maxSeq) {
-            maxSeq = seq;
-          }
-        }
-      });
-    }
-
-    const nextSeq = maxSeq + 1;
-    const sequenceNumber = String(nextSeq).padStart(3, '0');
-    return `MUN-${gradeCode}-${sequenceNumber}-${currentYear}`;
-  };
-
-  const handleExportCSV = () => {
-    if (!students || students.length === 0) {
-      alert("No learner data available to export.");
-      return;
-    }
-
-    // Sanitize string helper: replace spaces with underscores and remove special characters
-    const sanitizeName = (str: string) => {
-      if (!str) return "";
-      return str
-        .trim()
-        .replace(/\s+/g, "_")
-        .replace(/[^a-zA-Z0-9_]/g, "");
-    };
-
-    const currentGradeVal = typeof gradeFilter !== 'undefined' ? gradeFilter : 'All';
-    const currentStreamVal = typeof streamFilter !== 'undefined' ? streamFilter : 'All';
-
-    const isAllGrades = !currentGradeVal || currentGradeVal.toLowerCase() === "all" || currentGradeVal.toLowerCase() === "all grades";
-    const isAllStreams = !currentStreamVal || currentStreamVal.toLowerCase() === "all" || currentStreamVal.toLowerCase() === "all streams" || currentStreamVal.toLowerCase() === "all stream";
-
-    let gradePart = "All_Grades";
-    if (!isAllGrades) {
-      const sanitizedG = sanitizeName(currentGradeVal);
-      gradePart = sanitizedG ? (sanitizedG.toLowerCase().startsWith("grade") ? sanitizedG : `Grade_${sanitizedG}`) : "All_Grades";
-    }
-
-    let streamPart = "";
-    if (!isAllStreams) {
-      const sanitizedS = sanitizeName(currentStreamVal);
-      if (sanitizedS) {
-        streamPart = `_${sanitizedS}`;
-      }
-    }
-
-    const todayDate = new Date().toISOString().slice(0, 10);
-    const downloadFilename = `Munyaka_Learners_${gradePart}${streamPart}_${todayDate}.csv`;
-
-    // CSV Headers
-    const headers = ["Admission No", "Assessment No", "Full Name", "Grade", "Stream", "Gender", "Parent Name", "Phone Number"];
-    
-    // Map active learners into CSV rows
-    const csvRows = students.map((s: any) => [
-      `"${s.admissionNumber || s.admNo || ''}"`,
-      `"${s.assessmentNumber || s.assessmentNo || ''}"`,
-      `"${s.fullName || s.name || ''}"`,
-      `"${s.grade || s.class || ''}"`,
-      `"${s.stream || ''}"`,
-      `"${s.gender || ''}"`,
-      `"${s.parentName || s.guardian || ''}"`,
-      `"${s.phoneNumber || s.phone || ''}"`
-    ]);
-
-    // Combine header and rows
-    const csvContent = [headers.join(","), ...csvRows.map(row => row.join(","))].join("\n");
-
-    // Create blob and trigger automatic file download
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", downloadFilename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  // Open Add Modal
-  const handleOpenAddModal = () => {
+  const resetForm = () => {
     setEditingId(null);
     setFullName('');
-    const defaultGrade = configuredGradesList.length > 0 ? (typeof configuredGradesList[0] === 'string' ? configuredGradesList[0] : (configuredGradesList[0].name || configuredGradesList[0].gradeName || 'Grade 1')) : 'Grade 1';
-    setGrade(defaultGrade);
-    const initialStreams = ['North', 'South', 'East', 'West', 'Central', 'Red', 'Blue', 'Green'];
-    setStream(initialStreams[0]);
+    setAdmissionNumber('');
+    setAssessmentNumber('');
+    setGrade('Grade 6');
+    setStream('BLUE');
     setGender('Female');
+    setDateOfBirth('');
     setParentName('');
     setPhoneNumber('');
-    setAssessmentNumber('');
-    setAdmissionNumber(generateAdmissionNumber(defaultGrade));
+  };
+
+  const handleOpenAdd = () => {
+    resetForm();
     setIsModalOpen(true);
   };
 
-  // Open Edit Modal
-  const handleOpenEditModal = (student: any) => {
-    setEditingId(student.id || student.admissionNumber || student.admNo);
+  const handleEditClick = (student: any) => {
+    setEditingId(student.id || student.admissionNumber);
     setFullName(student.name || student.fullName || '');
-    setAdmissionNumber(student.admissionNumber || student.admNo || student.admissionNo || '');
-    setAssessmentNumber(student.assessmentNumber || student.assessmentNo || student.assessment || '');
+    setAdmissionNumber(student.admissionNumber || student.admNo || '');
+    setAssessmentNumber(student.assessmentNo || student.assessmentNumber || '');
+    setGrade(student.grade || student.class || 'Grade 6');
+    setStream(student.stream || 'BLUE');
     setGender(student.gender || 'Female');
-    setGrade(student.grade || 'Grade 1');
-    setStream(student.stream || 'North');
+    setDateOfBirth(student.dateOfBirth || student.dob || student.birthDate || '');
     setParentName(student.parentName || student.guardian || '');
-    setPhoneNumber(student.phoneNumber || student.phone || '');
+    setPhoneNumber(student.parentPhone || student.phoneNumber || student.phone || '');
     setIsModalOpen(true);
   };
 
-  // Form Submission Handler (`handleSubmit`)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSaving) return;
-    if (!fullName || !admissionNumber) {
-      alert("Please provide at least Full Name and Admission Number.");
-      return;
-    }
-
-    if (!stream) {
-      alert("Please select a valid stream for this grade. Configure streams in 'Grades & Streams' if none are available.");
+    if (!fullName.trim()) {
+      showError("Please enter full name.");
       return;
     }
 
     setIsSaving(true);
     try {
-      // Check for duplicate admission number before saving
-      const cleanAdmNo = admissionNumber.trim().toLowerCase();
-      const duplicateStudent = students.find((s: any) => {
-        const otherAdmNo = String(s.admissionNumber || s.admNo || s.admissionNo || '').trim().toLowerCase();
-        const otherId = s.id || s.admissionNumber || s.admNo;
-        // If editing, allow matching the current student record
-        if (editingId && (otherId === editingId || otherAdmNo === String(editingId).trim().toLowerCase())) {
-          return false;
-        }
-        return otherAdmNo === cleanAdmNo;
-      });
-
-      if (duplicateStudent) {
-        showError("Admission number already exists. Please use a unique admission number.");
-        setIsSaving(false);
-        return;
-      }
-
-      const newStudent = {
-        id: editingId || Date.now().toString(),
-        name: fullName,
-        fullName,
-        admissionNumber,
-        admNo: admissionNumber,
-        assessmentNumber,
-        assessmentNo: assessmentNumber,
-        assessment: assessmentNumber,
+      const studentData = {
+        id: editingId || `learner-${Date.now()}`,
+        name: fullName.trim(),
+        fullName: fullName.trim(),
+        admissionNumber: admissionNumber || generateAdmissionNumber(grade),
+        admNo: admissionNumber || generateAdmissionNumber(grade),
+        assessmentNo: assessmentNumber.trim(),
+        dateOfBirth: dateOfBirth,
+        dob: dateOfBirth,
+        birthDate: dateOfBirth,
         gender,
         grade,
+        class: grade,
         stream,
-        parentName,
-        guardian: parentName,
-        phoneNumber,
-        phone: phoneNumber,
-        createdAt: new Date().toISOString()
+        parentName: parentName.trim(),
+        guardian: parentName.trim(),
+        phoneNumber: phoneNumber.trim(),
+        parentPhone: phoneNumber.trim(),
+        phone: phoneNumber.trim(),
+        updatedAt: new Date().toISOString()
       };
 
-      try {
-        const endpoint = editingId ? `${API_BASE_URL}/students/${editingId}` : `${API_BASE_URL}/students`;
-        const method = editingId ? 'PUT' : 'POST';
-        await fetch(endpoint, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newStudent),
-        }).catch(() => {});
-      } catch {}
-
-      let updated;
+      let updated = [];
       if (editingId) {
-        updated = students.map(s => (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId) ? { ...s, ...newStudent } : s);
-        showSuccess("Learner updated successfully.");
+        updated = students.map(s => (s.id === editingId || s.admissionNumber === admissionNumber) ? { ...s, ...studentData } : s);
+        showSuccess("Learner record updated successfully!");
       } else {
-        updated = [newStudent, ...students];
-        showSuccess("Learner registered successfully.");
+        updated = [studentData, ...students];
+        showSuccess("Learner registered successfully!");
       }
 
       setStudents(updated);
-      
-      // Save to localStorage backups
-      localStorage.setItem('munyaka_students', JSON.stringify(updated));
-      localStorage.setItem('school_learners_data', JSON.stringify(updated));
 
-      // Save and synchronize with munyaka_central_db central database key & sync endpoint
       try {
-      const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-      const updatedCentralData = {
-        ...centralData,
-        students: updated,
-        lastUpdated: new Date().toISOString()
-      };
-      localStorage.setItem('munyaka_central_db', JSON.stringify(updatedCentralData));
+        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updated));
+        const centralData = JSON.parse(localStorage.getItem(CENTRAL_DB_KEY) || '{}');
+        centralData.students = updated;
+        localStorage.setItem(CENTRAL_DB_KEY, JSON.stringify(centralData));
+        window.dispatchEvent(new CustomEvent('central-data-updated', { detail: { students: updated } }));
+      } catch {}
 
-      // Dispatch custom event for immediate live view sync
-      window.dispatchEvent(new CustomEvent('central-data-updated', { detail: updatedCentralData }));
-
-      // Send to central sync server endpoint
-      try {
-        await fetch(`${API_BASE_URL}/central/sync`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedCentralData),
-          signal: AbortSignal.timeout(3000)
-        });
-      } catch (syncErr) {
-        console.warn("Central sync network request skipped or timed out:", syncErr);
-      }
-    } catch (centralErr) {
-      console.warn("Central DB update warning:", centralErr);
-    }
-
-    // Reset & Close Modal
-    setIsModalOpen(false);
-    setEditingId(null);
-    setFullName('');
-    setAdmissionNumber('');
-    setGender('Female');
-    setGrade('Grade 1');
-    setStream('North');
-    setParentName('');
-    setPhoneNumber('');
+      setIsModalOpen(false);
+      resetForm();
     } catch (err) {
-      console.error("Failed to save learner record:", err);
-      showError(err instanceof Error ? err.message : "Failed to save learner record.");
+      showError("Failed to save learner record.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this learner record?")) return;
-    const updated = students.filter(s => s.id !== id && s.admissionNumber !== id && s.admNo !== id);
-    setStudents(updated);
-    localStorage.setItem('munyaka_students', JSON.stringify(updated));
-    localStorage.setItem('school_learners_data', JSON.stringify(updated));
-    showSuccess("Learner deleted successfully.");
+  const requestDelete = (student: any) => {
+    setPendingDelete(student);
+    setAuthPassword('');
+    setAuthError('');
+    setIsAuthOpen(true);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh] gap-3 text-slate-600">
-        <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
-        <span className="font-semibold text-sm">Loading learner directory...</span>
-      </div>
-    );
-  }
+  const handleVerifyAuth = async () => {
+    if (!authPassword) {
+      setAuthError("Password is required");
+      return;
+    }
+
+    setIsVerifying(true);
+    await new Promise(r => setTimeout(r, 600));
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+
+    if (authPassword === currentAdminPass) {
+      if (pendingDelete) {
+        const targetId = pendingDelete.id || pendingDelete.admissionNumber;
+        const updated = students.filter(s => (s.id || s.admissionNumber) !== targetId);
+        setStudents(updated);
+        try {
+          localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updated));
+        } catch {}
+        showSuccess("Learner deleted successfully.");
+      }
+      setIsAuthOpen(false);
+      setPendingDelete(null);
+    } else {
+      setAuthError("Invalid admin password");
+      showError("Authorization failed");
+    }
+    setIsVerifying(false);
+  };
+
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => {
+      const name = (s.name || s.fullName || '').toLowerCase();
+      const adm = (s.admissionNumber || s.admNo || '').toLowerCase();
+      const ass = (s.assessmentNo || s.assessmentNumber || '').toLowerCase();
+      const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase());
+      
+      const sGrade = s.grade || s.class || '';
+      const matchesGrade = gradeFilter === 'all' || sGrade.toLowerCase() === gradeFilter.toLowerCase();
+
+      const sStream = s.stream || '';
+      const matchesStream = streamFilter === 'all' || sStream.toLowerCase() === streamFilter.toLowerCase();
+
+      const sGender = s.gender || '';
+      const matchesGender = genderFilter === 'all' || sGender.toLowerCase() === genderFilter.toLowerCase();
+
+      return matchesSearch && matchesGrade && matchesStream && matchesGender;
+    });
+  }, [students, searchTerm, gradeFilter, streamFilter, genderFilter]);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header Section & Subtext Layout */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-5">
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Learners directory</h1>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Term 3, 2026
-            </span>
-          </div>
-          <div className="flex items-center gap-4 mt-2">
-            <span className="text-sm font-medium text-slate-600">{activeCount} active learners</span>
-            {isUserAdminOrSuperAdmin && (
-              <>
-                <span className="text-slate-300">•</span>
-                <Link
-                  to="/learners/archive"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 transition-colors"
-                >
-                  <Archive className="w-3.5 h-3.5" />
-                  View Transferred Archive
-                </Link>
-              </>
-            )}
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Header action bar */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <BackButton parentPath="/" />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">Learners Directory</h1>
+            <p className="text-xs sm:text-sm text-slate-500">Manage student enrollment, personal details, and records.</p>
           </div>
         </div>
-
-        {/* Action Buttons Row */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
-            onClick={handleExportCSV}
-            variant="outline"
-            className="rounded-full border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs px-4 py-2"
+            onClick={handleOpenAdd}
+            className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2 font-bold text-xs sm:text-sm"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
-            Export CSV
+            <Plus size={18} /> Add Learner
           </Button>
-
-          <Button
-            onClick={handlePrint}
-            variant="outline"
-            className="rounded-full border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs px-4 py-2"
-          >
-            <Printer className="w-3.5 h-3.5 mr-1.5 text-slate-600" />
-            Print
-          </Button>
-
-          {isUserAdminOrSuperAdmin && (
-            <Button
-              onClick={() => setIsTransferInModalOpen(true)}
-              variant="outline"
-              className="rounded-full border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold text-xs px-4 py-2"
-            >
-              <ArrowRightLeft className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
-              Transfer In Learner
-            </Button>
-          )}
-
-          <Button
-            onClick={handleOpenAddModal}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-full px-5 py-2 shadow-md flex items-center gap-2 text-xs"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            + Add Learner
-          </Button>
-
-          {isUserAdminOrSuperAdmin && (
-            <Button
-              onClick={() => {
-                setAdminPasswordInput('');
-                setResetError(null);
-                setIsResetModalOpen(true);
-              }}
-              variant="outline"
-              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold rounded-full px-4 py-2 text-xs"
-            >
-              Reset Data
-            </Button>
-          )}
         </div>
       </div>
 
-      {error && <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm font-medium">{error}</div>}
-
-      {/* Filter & Search Card */}
-      <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:flex-1">
-          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by learner Name, Admission No., or Assessment No..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-          />
-        </div>
-
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="w-full md:w-48">
-            <select
-              value={gradeFilter}
-              onChange={(e) => {
-                setGradeFilter(e.target.value);
-                setStreamFilter('All');
-              }}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-            >
-              <option value="All">All Grades</option>
-              {configuredGradesList.map((g: any, idx: number) => {
-                const gradeName = typeof g === 'string' ? g : (g.name || g.gradeName || g.title || g.grade || '');
-                return (
-                  <option key={g?.id || idx} value={gradeName}>
-                    {gradeName}
-                  </option>
-                );
-              })}
-            </select>
+      {/* Filters Toolbar */}
+      <Card className="border-none shadow-sm rounded-2xl bg-white p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search name, admission, assessment..."
+              className="pl-10 rounded-xl h-11 text-xs font-medium border-slate-200"
+            />
           </div>
-
-          <div className="w-full md:w-48">
-            <select
-              value={streamFilter}
-              onChange={(e) => setStreamFilter(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-            >
-              <option value="All">All Streams</option>
-              {availableStreamsForFilter.map((stName: string, idx: number) => (
-                <option key={idx} value={stName}>
-                  {stName}
-                </option>
+          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+            <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
+              <SelectValue placeholder="Filter Grade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Grades</SelectItem>
+              {availableGrades.map(g => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
               ))}
-            </select>
-          </div>
+            </SelectContent>
+          </Select>
+          <Select value={streamFilter} onValueChange={setStreamFilter}>
+            <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
+              <SelectValue placeholder="Filter Stream" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Streams</SelectItem>
+              {availableStreams.map(st => (
+                <SelectItem key={st} value={st}>{st}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={genderFilter} onValueChange={setGenderFilter}>
+            <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
+              <SelectValue placeholder="Filter Gender" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Genders</SelectItem>
+              <SelectItem value="Male">Male</SelectItem>
+              <SelectItem value="Female">Female</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </div>
+      </Card>
 
-      {/* Learners Table */}
+      {/* Learners Table Container with Top Horizontal Scrollbar */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
         {filteredStudents.length === 0 ? (
           <div className="p-16 text-center text-slate-400">
@@ -849,388 +380,285 @@ export default function Students() {
             <p className="text-xs text-slate-400 mt-1">Click <strong>+ Add Learner</strong> to register a new student.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[950px] text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-tight">
-                  <th className="px-2.5 py-2 text-left">ADMISSION NO.</th>
-                  <th className="px-2.5 py-2 text-left">ASSESSMENT NO.</th>
-                  <th className="px-2.5 py-2 text-left">FULL NAME</th>
-                  <th className="px-2.5 py-2 text-left">GRADE & STREAM</th>
-                  <th className="px-2.5 py-2 text-left">GENDER</th>
-                  <th className="px-2.5 py-2 text-left">DOB</th>
-                  <th className="px-2.5 py-2 text-left">PARENT / GUARDIAN</th>
-                  <th className="px-2.5 py-2 text-left">PHONE NUMBER</th>
-                  <th className="px-2.5 py-2 text-right">ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs">
-                {filteredStudents.map((student, idx) => {
-                  const sId = student.id || student.admissionNumber || student.admNo || idx;
-                  const sName = student.name || student.fullName || 'Unnamed Learner';
-                  const sAdm = student.admissionNumber || student.admNo || student.admissionNo || '—';
-                  const sAss = student.assessmentNo || student.assessmentNumber || student.assessment || student.assNo || '—';
-                  const sGender = student.gender || 'Male';
-                  const sDobRaw = student.dateOfBirth || student.dob || student.birthDate || '';
-                  let sDob = '—';
-                  if (sDobRaw) {
-                    try {
-                      const cleanDate = sDobRaw.includes('T') ? sDobRaw.split('T')[0] : sDobRaw;
-                      const parts = cleanDate.split('-');
-                      if (parts.length === 3 && parts[0].length === 4) {
-                        // YYYY-MM-DD -> DD MMM YYYY
-                        const [yyyy, mm, dd] = parts;
-                        const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-                        if (!isNaN(dateObj.getTime())) {
-                          sDob = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                        } else {
-                          sDob = cleanDate;
-                        }
-                      } else {
-                        const d = new Date(sDobRaw);
-                        if (!isNaN(d.getTime())) {
-                          sDob = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                        } else {
-                          sDob = sDobRaw;
-                        }
-                      }
-                    } catch {
-                      sDob = sDobRaw;
-                    }
-                  }
-                  const sParent = student.parentName || student.guardian || '—';
-                  const sPhone = student.parentPhone || student.phoneNumber || student.phone || '—';
-                  const sStreamRaw = student.stream || 'BLUE';
-                  const sStream = /North|South|East|West/i.test(sStreamRaw) ? 'BLUE' : sStreamRaw;
+          <div>
+            {/* Top Synchronized Horizontal Scrollbar */}
+            <div
+              ref={topScrollRef}
+              onScroll={handleTopScroll}
+              className="overflow-x-auto overflow-y-hidden bg-slate-100/90 border-b border-slate-200 scrollbar-thin scrollbar-thumb-slate-300"
+              style={{ height: '14px' }}
+            >
+              <div style={{ width: `${Math.max(tableWidth, 980)}px`, height: '1px' }} />
+            </div>
 
-                  return (
-                    <tr key={sId} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-2.5 py-2 font-mono text-[11px] font-semibold text-indigo-600 whitespace-nowrap">{sAdm}</td>
-                      <td className="px-2.5 py-2 font-mono text-[11px] text-slate-500 whitespace-nowrap">{sAss}</td>
-                      <td className="px-2.5 py-2 font-bold text-slate-900 truncate max-w-[140px]" title={sName}>
-                        <Link to={`/students/${sId}`} className="hover:text-indigo-600 transition-colors">
-                          {sName}
-                        </Link>
-                      </td>
-                      <td className="px-2.5 py-2 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {student.grade || student.class} ({sStream})
-                        </span>
-                      </td>
-                      <td className="px-2.5 py-2 text-slate-700 whitespace-nowrap">{sGender}</td>
-                      <td className="px-2.5 py-2 font-mono text-slate-600 whitespace-nowrap">{sDob}</td>
-                      <td className="px-2.5 py-2 text-slate-700 truncate max-w-[120px]" title={sParent}>{sParent}</td>
-                      <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">{sPhone}</td>
-                      <td className="px-2.5 py-2 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedStudentForTransfer(student);
-                              setIsTransferModalOpen(true);
-                            }}
-                            title="Initiate Inter-School Transfer"
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <ArrowRightLeft className="w-4 h-4 text-indigo-600"/>
-                          </button>
-                          <button
-                            onClick={() => navigate(`/students/${student.id || student.admissionNumber || student.admNo}`)}
-                            title="View Learner Profile"
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenEditModal(student)}
-                            title="Edit Learner"
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(sId)}
-                            title="Delete / Archive"
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div
+              ref={tableScrollRef}
+              onScroll={handleTableScroll}
+              className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300"
+            >
+              <table ref={tableContentRef} className="w-full text-left border-collapse min-w-[980px] text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-extrabold text-slate-500 uppercase tracking-tight">
+                    <th className="px-2.5 py-2 text-left whitespace-nowrap">ADMISSION NO.</th>
+                    <th className="px-2.5 py-2 text-left whitespace-nowrap">ASSESSMENT NO.</th>
+                    <th className="px-2.5 py-2 text-left">FULL NAME</th>
+                    <th className="px-2.5 py-2 text-left whitespace-nowrap">GRADE & STREAM</th>
+                    <th className="px-2.5 py-2 text-left whitespace-nowrap">GENDER</th>
+                    <th className="px-2.5 py-2 text-left whitespace-nowrap">DOB</th>
+                    <th className="px-2.5 py-2 text-left">PARENT / GUARDIAN</th>
+                    <th className="px-2.5 py-2 text-left whitespace-nowrap">PHONE NUMBER</th>
+                    <th className="px-2.5 py-2 text-right whitespace-nowrap">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {filteredStudents.map((student, idx) => {
+                    const sId = student.id || student.admissionNumber || student.admNo || idx;
+                    const sName = student.name || student.fullName || 'Unnamed Learner';
+                    const sAdm = student.admissionNumber || student.admNo || '—';
+                    const sAss = student.assessmentNo || student.assessmentNumber || student.assessment || student.assNo || '—';
+                    const sGender = student.gender || 'Male';
+                    const sDobRaw = student.dateOfBirth || student.dob || student.birthDate || '';
+                    let sDob = '—';
+                    if (sDobRaw) {
+                      try {
+                        const cleanDate = sDobRaw.includes('T') ? sDobRaw.split('T')[0] : sDobRaw;
+                        const parts = cleanDate.split('-');
+                        if (parts.length === 3 && parts[0].length === 4) {
+                          const [yyyy, mm, dd] = parts;
+                          const dateObj = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+                          if (!isNaN(dateObj.getTime())) {
+                            sDob = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                          } else {
+                            sDob = cleanDate;
+                          }
+                        } else {
+                          const d = new Date(sDobRaw);
+                          if (!isNaN(d.getTime())) {
+                            sDob = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                          } else {
+                            sDob = sDobRaw;
+                          }
+                        }
+                      } catch {
+                        sDob = sDobRaw;
+                      }
+                    }
+                    const sParent = student.parentName || student.guardian || '—';
+                    const sPhone = student.parentPhone || student.phoneNumber || student.phone || '—';
+                    const sStreamRaw = student.stream || 'BLUE';
+                    const sStream = /North|South|East|West/i.test(sStreamRaw) ? 'BLUE' : sStreamRaw;
+
+                    return (
+                      <tr key={sId} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-2.5 py-2 font-mono text-[11px] font-semibold text-indigo-600 whitespace-nowrap">{sAdm}</td>
+                        <td className="px-2.5 py-2 font-mono text-[11px] text-slate-500 whitespace-nowrap">{sAss}</td>
+                        <td className="px-2.5 py-2 font-bold text-slate-900 truncate max-w-[150px]" title={sName}>
+                          <Link to={`/students/${sId}`} className="hover:text-indigo-600 transition-colors">
+                            {sName}
+                          </Link>
+                        </td>
+                        <td className="px-2.5 py-2 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                            {student.grade || student.class} ({sStream})
+                          </span>
+                        </td>
+                        <td className="px-2.5 py-2 text-slate-700 whitespace-nowrap">{sGender}</td>
+                        <td className="px-2.5 py-2 font-mono text-slate-600 whitespace-nowrap">{sDob}</td>
+                        <td className="px-2.5 py-2 text-slate-700 truncate max-w-[130px]" title={sParent}>{sParent}</td>
+                        <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">{sPhone}</td>
+                        <td className="px-2.5 py-2 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleEditClick(student)}
+                              className="p-1 hover:bg-indigo-50 rounded text-indigo-600 transition-colors"
+                              title="Edit Learner"
+                            >
+                              <Edit size={15} />
+                            </button>
+                            <button
+                              onClick={() => requestDelete(student)}
+                              className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
+                              title="Delete Learner"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Transfer Out Workflow Modal */}
-      {isTransferModalOpen && selectedStudentForTransfer && (
-        <TransferWorkflow
-          student={selectedStudentForTransfer}
-          isOpen={isTransferModalOpen}
-          onClose={() => {
-            setIsTransferModalOpen(false);
-            setSelectedStudentForTransfer(null);
-          }}
-          onTransferComplete={(studentId, certificateNumber) => {
-            setStudents(prev => prev.filter(s => (s.id || s.admissionNumber) !== studentId));
-            setIsTransferModalOpen(false);
-            setSelectedStudentForTransfer(null);
-          }}
-        />
-      )}
-
-      {/* Transfer In Modal */}
-      {isTransferInModalOpen && (
-        <TransferInModal
-          isOpen={isTransferInModalOpen}
-          onClose={() => setIsTransferInModalOpen(false)}
-          onTransferInComplete={() => {
-            setIsTransferInModalOpen(false);
-            window.location.reload();
-          }}
-        />
-      )}
-
-      {/* Dynamic Add / Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden my-auto animate-in zoom-in-95 duration-200">
-            {/* Pinned Header */}
-            <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
-              <h2 className="text-lg font-bold text-slate-900">
-                {editingId ? 'Edit Learner Record' : 'Register New Learner'}
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="w-8 h-8 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center"
-              >
-                <X size={16} />
-              </button>
+      {/* Add / Edit Learner Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingId ? 'Edit Learner Record' : 'Register New Learner'}
+        description="Enter learner particulars, grade assignment, and parent contact details."
+        footer={
+          <>
+            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
+              onClick={handleSubmit}
+              disabled={isSaving}
+            >
+              {isSaving ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              {editingId ? 'Save Changes' : 'Register Learner'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 uppercase">Full Name *</Label>
+            <Input
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="e.g. John Doe"
+              className="rounded-xl h-12 border-slate-200"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Admission Number</Label>
+              <Input
+                value={admissionNumber}
+                onChange={(e) => setAdmissionNumber(e.target.value)}
+                placeholder="Leave blank to auto-generate"
+                className="rounded-xl h-12 border-slate-200 font-mono text-xs"
+              />
             </div>
-
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-              {/* Scrollable Form Body */}
-              <div className="p-6 overflow-y-auto flex-1 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Brian Kipkorir"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Admission Number * (Auto-generated)</label>
-                    <input
-                      type="text"
-                      required
-                      readOnly
-                      disabled
-                      placeholder="e.g. MUN-G6-001-2026"
-                      value={admissionNumber}
-                      className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-mono text-slate-600 cursor-not-allowed focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Assessment No. / UPI</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. UPI-987654"
-                      value={assessmentNumber}
-                      onChange={(e) => setAssessmentNumber(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Date of Birth</label>
-                  <input
-                    type="date"
-                    value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Grade / Class</label>
-                    <select
-                      value={grade}
-                      onChange={(e) => {
-                        const newGrade = e.target.value;
-                        setGrade(newGrade);
-                        if (!editingId) {
-                          setAdmissionNumber(generateAdmissionNumber(newGrade));
-                        }
-                      }}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    >
-                      {configuredGradesList.length > 0 ? (
-                        configuredGradesList.map((g: any, idx: number) => {
-                          const gradeName = typeof g === 'string' ? g : (g.name || g.gradeName || g.title || g.grade || '');
-                          return (
-                            <option key={g?.id || idx} value={gradeName}>
-                              {gradeName}
-                            </option>
-                          );
-                        })
-                      ) : (
-                        <option value="" disabled>No grades configured in Settings</option>
-                      )}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Stream</label>
-                    <select
-                      value={stream}
-                      onChange={(e) => setStream(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                      required
-                    >
-                      <option value="BLUE">BLUE</option>
-                      <option value="GREEN">GREEN</option>
-                      <option value="YELLOW">YELLOW</option>
-                      <option value="RED">RED</option>
-                      <option value="MERCURY">MERCURY</option>
-                      <option value="VENUS">VENUS</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Gender *</label>
-                  <select
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    required
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Parent / Guardian Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Mr. & Mrs. Kipkorir"
-                      value={parentName}
-                      onChange={(e) => setParentName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Phone Number</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 0712345678"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Pinned Footer Actions */}
-              <div className="p-4 border-t flex justify-end gap-3 bg-gray-50 sticky bottom-0 z-10">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200/60 rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
-                >
-                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  {editingId ? (isSaving ? 'Saving...' : 'Save Changes') : (isSaving ? 'Saving...' : 'Save Learner')}
-                </button>
-              </div>
-            </form>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Assessment Number</Label>
+              <Input
+                value={assessmentNumber}
+                onChange={(e) => setAssessmentNumber(e.target.value)}
+                placeholder="e.g. ASS-827361"
+                className="rounded-xl h-12 border-slate-200 font-mono text-xs"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Grade Level</Label>
+              <Select value={grade} onValueChange={setGrade}>
+                <SelectTrigger className="rounded-xl h-12 border-slate-200">
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableGrades.map(g => (
+                    <SelectItem key={g} value={g}>{g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Stream</Label>
+              <Select value={stream} onValueChange={setStream}>
+                <SelectTrigger className="rounded-xl h-12 border-slate-200">
+                  <SelectValue placeholder="Select stream" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableStreams.map(st => (
+                    <SelectItem key={st} value={st}>{st}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Gender</Label>
+              <Select value={gender} onValueChange={setGender}>
+                <SelectTrigger className="rounded-xl h-12 border-slate-200">
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Male">Male</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 uppercase">Date of Birth</Label>
+            <Input
+              type="date"
+              name="dateOfBirth"
+              value={dateOfBirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
+              className="rounded-xl h-12 border-slate-200"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Parent / Guardian Name</Label>
+              <Input
+                value={parentName}
+                onChange={(e) => setParentName(e.target.value)}
+                placeholder="Parent full name"
+                className="rounded-xl h-12 border-slate-200"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Phone Number</Label>
+              <Input
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="+254 700 000 000"
+                className="rounded-xl h-12 border-slate-200 font-mono text-xs"
+              />
+            </div>
           </div>
         </div>
-      )}
-      {/* Admin Password Verification Modal for Database Reset */}
-      {isResetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b flex justify-between items-center bg-red-50">
-              <h2 className="text-base font-bold text-red-900 flex items-center gap-2">
-                <span>Admin Authentication Required</span>
-              </h2>
-              <button
-                onClick={() => setIsResetModalOpen(false)}
-                className="w-8 h-8 rounded-xl bg-white border border-red-200 text-red-700 hover:bg-red-100 flex items-center justify-center"
-              >
-                <X size={16} />
-              </button>
+      </Modal>
+
+      {/* Admin Password Verification Modal */}
+      <Modal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        title="Admin Verification"
+        description="Please enter the admin password to confirm deletion of this learner record."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold flex-1">Cancel</Button>
+            <Button
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold flex-1"
+              onClick={handleVerifyAuth}
+              disabled={isVerifying}
+            >
+              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              Confirm Delete
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {authError && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-top-2">
+              <AlertCircle size={14} /> {authError}
             </div>
-
-            <form onSubmit={handleVerifyAndResetDatabase} className="p-6 space-y-4">
-              <p className="text-xs text-slate-600">
-                You are about to permanently wipe all learner records across local storage and the database server. Enter your admin password to confirm.
-              </p>
-
-              {resetError && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-semibold">
-                  {resetError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Admin Password</label>
-                <input
-                  type="password"
-                  required
-                  autoFocus
-                  placeholder="Enter admin password..."
-                  value={adminPasswordInput}
-                  onChange={(e) => setAdminPasswordInput(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t">
-                <button
-                  type="button"
-                  onClick={() => setIsResetModalOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isResetting}
-                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isResetting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  Confirm & Wipe All Data
-                </button>
-              </div>
-            </form>
+          )}
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Input
+                type="password"
+                value={authPassword}
+                onChange={(e) => { setAuthPassword(e.target.value); if (authError) setAuthError(''); }}
+                placeholder="••••••••"
+                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
+                autoFocus
+              />
+            </div>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }
