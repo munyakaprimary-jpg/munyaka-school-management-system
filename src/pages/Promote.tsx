@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import Modal from '@/components/ui/Modal';
+import { CentralDataService } from '@/services/centralDataService';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { getStudents } from '@/services/persistentStore';
 import { showSuccess, showError } from '@/utils/toast';
@@ -316,7 +317,8 @@ export default function PromotePage() {
         };
       });
 
-      saveLearners(updated);
+      CentralDataService.saveLearners(updated);
+      setStoreLearners(updated);
       setIsConfirmOpen(false);
       showSuccess(`Successfully promoted ${promotionMode === 'selected' ? selectedStudentIds.length : filteredLearners.length} students to academic year ${targetYear}!`);
     } catch (err: any) {
