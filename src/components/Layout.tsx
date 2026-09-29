@@ -527,6 +527,22 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         
                   <div className="flex items-center gap-2">
                     <NotificationBell />
+                    {(() => {
+                      const hour = new Date().getHours();
+                      let greeting = "Good morning";
+                      if (hour >= 12 && hour < 17) {
+                        greeting = "Good afternoon";
+                      } else if (hour >= 17 || hour < 5) {
+                        greeting = "Good evening";
+                      }
+                      const userName = user?.name || "Admin";
+                      return (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm">
+                          <span className="hidden sm:inline">{greeting}, {userName} 👋</span>
+                          <span className="sm:hidden">Hi, {userName.split(' ')[0]} 👋</span>
+                        </div>
+                      );
+                    })()}
                     <button
                       onClick={() => setIsDarkMode(!isDarkMode)}
                       className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors h-11 w-11 flex items-center justify-center active:scale-95"
