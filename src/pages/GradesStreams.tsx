@@ -14,6 +14,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 import { sortGrades, GRADE_ORDER } from '@/utils/gradeSort';
 import { notifyDataChanged } from '@/utils/storage';
+import { cn } from '@/lib/utils';
 
 // Primary canonical key — all readers should now use `configured_streams`.
 const STORAGE_KEY = 'configured_streams';
