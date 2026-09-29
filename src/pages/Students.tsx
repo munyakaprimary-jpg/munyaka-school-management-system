@@ -390,38 +390,39 @@ export default function Students() {
       }
     }
   }, [availableStreams]);
-  const getNextSequenceForGrade = (gradeNum: string) => {
-    try {
-      const stored = localStorage.getItem('munyaka_students_v3') || localStorage.getItem('munyaka_students');
-      const list = stored ? JSON.parse(stored) : (students || []);
-      const gradeFiltered = list.filter((s: any) => {
-        if (editingId && (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId)) {
-          return false;
-        }
-        const g = String(s.grade || s.class || '').toUpperCase();
-        return g.includes(gradeNum) || g.includes(`GRADE ${gradeNum}`) || g.includes(`G${gradeNum}`);
-      });
-      let maxSeq = 0;
-      gradeFiltered.forEach((s: any) => {
-        const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '');
-        const parts = admNo.split('-');
-        if (parts.length >= 3) {
-          const seq = parseInt(parts[2], 10);
-          if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
-        }
-      });
-      return String(maxSeq + 1).padStart(3, '0');
-    } catch {
-      return '001';
-    }
-  };
-
   const generateAdmissionNumber = (selectedGrade: string) => {
-    const gradeNum = String(selectedGrade || '').match(/\d+/)?.[0] || '1';
-    const sequence = getNextSequenceForGrade(gradeNum);
+    // Filter existing students belonging strictly to the selected grade (excluding current editing student if any)
+    const gradeStudents = (students || []).filter((s: any) => {
+      if (editingId && (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId)) {
+        return false;
+      }
+      const sGrade = String(s.grade || s.class || '').trim().toLowerCase();
+      const targetGrade = String(selectedGrade || '').trim().toLowerCase();
+      return sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade);
+    });
+
+    // Extract grade number or code (e.g., "Grade 6" -> "G6", "PP1" -> "PP1")
+    const gradeMatch = selectedGrade.match(/\d+/);
+    const gradeCode = gradeMatch ? `G${gradeMatch[0]}` : (selectedGrade.toUpperCase().replace(/\s+/g, '') || 'G1');
+
+    // Find the highest sequence number among existing records for this grade
+    let maxSeq = 0;
+    gradeStudents.forEach((s: any) => {
+      const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '');
+      const parts = admNo.split('-');
+      // Expected format: MUN-G6-001-2026 -> parts[2] is sequence
+      if (parts.length >= 3) {
+        const seq = parseInt(parts[2], 10);
+        if (!isNaN(seq) && seq > maxSeq) {
+          maxSeq = seq;
+        }
+      }
+    });
+
+    const nextSeq = maxSeq + 1;
+    const sequenceNumber = String(nextSeq).padStart(3, '0');
     const currentYear = new Date().getFullYear();
-    return `MUN-G${gradeNum}-${sequence}-${currentYear}`;
-  };
+    return `MUN-${gradeCode}-${sequenceNumber}-${currentYear}`;
   };
 
   const handleExportCSV = () => {
@@ -1158,3 +1159,4 @@ export default function Students() {
       )}
     </div>
   );
+}
