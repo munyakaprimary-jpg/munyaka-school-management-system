@@ -24,6 +24,9 @@ import { CentralDataService } from '@/services/centralDataService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { downloadCSV, SCHOOL_HEADERS, generateCSVHeader } from '@/utils/downloadHelper';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import { downloadJsPdf } from '@/utils/pdfDownloader';
 
 // Rubric Logic
 const getRubric = (score: number) => {
