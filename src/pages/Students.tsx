@@ -7,19 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { 
-  Users, 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
-  Lock, 
-  AlertCircle, 
-  Loader2, 
-  FileSpreadsheet, 
+import {
+  Users,
+  Plus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  Lock,
+  AlertCircle,
+  Loader2,
+  FileSpreadsheet,
   ArrowUpDown,
-  UserCheck
+  UserCheck,
+  ArrowRightLeft
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
@@ -172,11 +173,12 @@ export default function Students() {
   const [genderFilter, setGenderFilter] = useState('all');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<any | null>(null);
 
-  // Form fields
+  // Form fields for regular student
   const [fullName, setFullName] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [assessmentNumber, setAssessmentNumber] = useState('');
@@ -186,6 +188,19 @@ export default function Students() {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [parentName, setParentName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+
+  // Form fields for Transfer In
+  const [transferFullName, setTransferFullName] = useState('');
+  const [transferYear, setTransferYear] = useState(String(new Date().getFullYear()));
+  const [transferGrade, setTransferGrade] = useState('Grade 6');
+  const [transferStream, setTransferStream] = useState('BLUE');
+  const [transferAssessmentNo, setTransferAssessmentNo] = useState('');
+  const [transferPreviousSchool, setTransferPreviousSchool] = useState('');
+  const [transferGender, setTransferGender] = useState('Female');
+  const [transferDob, setTransferDob] = useState('');
+  const [transferParentName, setTransferParentName] = useState('');
+  const [transferPhone, setTransferPhone] = useState('');
+  const [transferAdmissionNumber, setTransferAdmissionNumber] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -250,6 +265,92 @@ export default function Students() {
     setGrade(initialGrade);
     setAdmissionNumber(generateAdmissionNumber(initialGrade, students));
     setIsModalOpen(true);
+  };
+
+  const handleOpenTransferModal = () => {
+    setTransferFullName('');
+    const currentYr = String(new Date().getFullYear());
+    setTransferYear(currentYr);
+    setTransferGrade('Grade 6');
+    setTransferStream('BLUE');
+    setTransferAssessmentNo('');
+    setTransferPreviousSchool('');
+    setTransferGender('Female');
+    setTransferDob('');
+    setTransferParentName('');
+    setTransferPhone('');
+
+    // Compute global sequence with transfer year
+    let maxGlobalSeq = 0;
+    students.forEach(s => {
+      const adm = s.admissionNumber || s.admNo || '';
+      const parts = adm.split('-');
+      if (parts.length >= 2) {
+        const seqNum = parseInt(parts[1], 10);
+        if (!isNaN(seqNum) && seqNum > maxGlobalSeq) {
+          maxGlobalSeq = seqNum;
+        }
+      }
+    });
+    const nextGlobalSeq = String(maxGlobalSeq + 1).padStart(3, '0');
+    setTransferAdmissionNumber(`MUN-${nextGlobalSeq}-${currentYr}`);
+
+    setIsTransferModalOpen(true);
+  };
+
+  const handleTransferSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferFullName.trim()) {
+      showError("Please enter full name.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const studentData = {
+        id: `transfer-${Date.now()}`,
+        name: transferFullName.trim(),
+        fullName: transferFullName.trim(),
+        admissionNumber: transferAdmissionNumber,
+        admNo: transferAdmissionNumber,
+        assessmentNo: transferAssessmentNo.trim(),
+        assessmentNumber: transferAssessmentNo.trim(),
+        dateOfBirth: transferDob,
+        dob: transferDob,
+        birthDate: transferDob,
+        gender: transferGender,
+        grade: transferGrade,
+        class: transferGrade,
+        stream: transferStream,
+        parentName: transferParentName.trim(),
+        guardian: transferParentName.trim(),
+        phoneNumber: transferPhone.trim(),
+        parentPhone: transferPhone.trim(),
+        phone: transferPhone.trim(),
+        previousSchool: transferPreviousSchool.trim(),
+        isTransferredIn: true,
+        updatedAt: new Date().toISOString()
+      };
+
+      const updated = [studentData, ...students];
+      const resequenced = ensureProperAdmissionNumbers(updated);
+      setStudents(resequenced);
+
+      try {
+        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(resequenced));
+        const centralData = JSON.parse(localStorage.getItem(CENTRAL_DB_KEY) || '{}');
+        centralData.students = resequenced;
+        localStorage.setItem(CENTRAL_DB_KEY, JSON.stringify(centralData));
+        window.dispatchEvent(new CustomEvent('central-data-updated', { detail: { students: resequenced } }));
+      } catch {}
+
+      showSuccess("Learner transferred in successfully!");
+      setIsTransferModalOpen(false);
+    } catch (err) {
+      showError("Failed to transfer in learner.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEditClick = (student: any) => {
@@ -393,6 +494,13 @@ export default function Students() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            onClick={handleOpenTransferModal}
+            variant="outline"
+            className="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 font-bold text-xs sm:text-sm"
+          >
+            <ArrowRightLeft size={18} /> Transfer In Learner
+          </Button>
           <Button
             onClick={handleOpenAdd}
             className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2 font-bold text-xs sm:text-sm"
@@ -704,6 +812,164 @@ export default function Students() {
               <Input
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="+254 700 000 000"
+                className="rounded-xl h-12 border-slate-200 font-mono text-xs"
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Transfer In Learner Modal */}
+      <Modal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        title="Transfer In Learner"
+        description="Register a learner transferring from another school with transfer credentials."
+        footer={
+          <>
+            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsTransferModalOpen(false)}>Cancel</Button>
+            <Button
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
+              onClick={handleTransferSubmit}
+              disabled={isSaving}
+            >
+              {isSaving ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              Complete Transfer In
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 uppercase">Full Name *</Label>
+            <Input
+              value={transferFullName}
+              onChange={(e) => setTransferFullName(e.target.value)}
+              placeholder="e.g. Jane Mwangi"
+              className="rounded-xl h-12 border-slate-200"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Transfer-In Year</Label>
+              <Select value={transferYear} onValueChange={(val) => {
+                setTransferYear(val);
+                let maxGlobalSeq = 0;
+                students.forEach(s => {
+                  const adm = s.admissionNumber || s.admNo || '';
+                  const parts = adm.split('-');
+                  if (parts.length >= 2) {
+                    const seqNum = parseInt(parts[1], 10);
+                    if (!isNaN(seqNum) && seqNum > maxGlobalSeq) maxGlobalSeq = seqNum;
+                  }
+                });
+                const nextGlobalSeq = String(maxGlobalSeq + 1).padStart(3, '0');
+                setTransferAdmissionNumber(`MUN-${nextGlobalSeq}-${val}`);
+              }}>
+                <SelectTrigger className="rounded-xl h-12 border-slate-200">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="2025">2025</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Generated Admission Number</Label>
+              <Input
+                value={transferAdmissionNumber}
+                onChange={(e) => setTransferAdmissionNumber(e.target.value)}
+                className="rounded-xl h-12 border-slate-200 font-mono text-xs bg-slate-50"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Grade Level</Label>
+              <Select value={transferGrade} onValueChange={setTransferGrade}>
+                <SelectTrigger className="rounded-xl h-12 border-slate-200">
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableGrades.map(g => (
+                    <SelectItem key={g} value={g}>{g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Stream</Label>
+              <Select value={transferStream} onValueChange={setTransferStream}>
+                <SelectTrigger className="rounded-xl h-12 border-slate-200">
+                  <SelectValue placeholder="Select stream" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableStreams.map(st => (
+                    <SelectItem key={st} value={st}>{st}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Gender</Label>
+              <Select value={transferGender} onValueChange={setTransferGender}>
+                <SelectTrigger className="rounded-xl h-12 border-slate-200">
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Male">Male</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Assessment No. / NEMIS / UPI</Label>
+              <Input
+                value={transferAssessmentNo}
+                onChange={(e) => setTransferAssessmentNo(e.target.value)}
+                placeholder="e.g. ASS-992817"
+                className="rounded-xl h-12 border-slate-200 font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Previous School Name</Label>
+              <Input
+                value={transferPreviousSchool}
+                onChange={(e) => setTransferPreviousSchool(e.target.value)}
+                placeholder="e.g. Greenwood Primary"
+                className="rounded-xl h-12 border-slate-200"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 uppercase">Date of Birth</Label>
+            <Input
+              type="date"
+              value={transferDob}
+              onChange={(e) => setTransferDob(e.target.value)}
+              className="rounded-xl h-12 border-slate-200"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Parent / Guardian Name</Label>
+              <Input
+                value={transferParentName}
+                onChange={(e) => setTransferParentName(e.target.value)}
+                placeholder="Parent full name"
+                className="rounded-xl h-12 border-slate-200"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 uppercase">Phone Number</Label>
+              <Input
+                value={transferPhone}
+                onChange={(e) => setTransferPhone(e.target.value)}
                 placeholder="+254 700 000 000"
                 className="rounded-xl h-12 border-slate-200 font-mono text-xs"
               />
