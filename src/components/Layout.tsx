@@ -544,7 +544,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
                       return (
                         <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 shadow-sm whitespace-nowrap">
-                          <span className="font-sans text-sm font-medium text-slate-800 dark:text-slate-200 tracking-tight">
+                          <span className="font-sans text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
                             {greeting}, {displayName} 👋
                           </span>
                         </div>
