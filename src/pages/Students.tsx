@@ -422,6 +422,7 @@ export default function Students() {
     const currentYear = new Date().getFullYear();
     return `MUN-G${gradeNum}-${sequence}-${currentYear}`;
   };
+  };
 
   const handleExportCSV = () => {
     if (!students || students.length === 0) {
