@@ -20,6 +20,7 @@ import {
 import { GRADES_DATA, Grade } from '@/lib/mock-data';
 import { getStudents } from '@/services/persistentStore';
 import { ExamService } from '@/services/exam-service';
+import { CentralDataService } from '@/services/centralDataService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { downloadCSV, SCHOOL_HEADERS, generateCSVHeader } from '@/utils/downloadHelper';
@@ -43,7 +44,7 @@ const SUBJECT_MAP: Record<string, string[]> = {
 const getCategory = (grade: string) => {
   const g = grade.toUpperCase();
   if (g.includes('PP')) return 'PP';
-  const num = parseInt(g.replace(/[^0-9]/g, ''));
+  const num = parseInt(g.replace(new RegExp('[^0-9]', 'g'), ''));
   if (num <= 3) return 'Lower';
   if (num <= 6) return 'Upper';
   return 'Junior';
@@ -698,72 +699,130 @@ const ReportCards = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {subjects.map((sub, i) => {
-                      // Query actual exam marks from ExamService using year, term, type, studentId/name, and sub
-                      const allMarks = ExamService.getMarks();
-                      let scoreVal: number | null = null;
-                      
-                      if (allMarks && typeof allMarks === 'object') {
-                        // Find matching entry for this student + subject + year + term + type
-                        for (const key of Object.keys(allMarks)) {
-                          const record = allMarks[key];
-                          if (record && typeof record === 'object') {
-                            const matchStudent = String(record.studentId || record.name || '').toLowerCase() === String(s.id || s.name || '').toLowerCase() ||
-                              String(record.studentId || '').toLowerCase() === String((s as any).assessment || '').toLowerCase();
-                            const matchSubject = String(record.subject || record.learningArea || '').toLowerCase() === sub.toLowerCase();
-                            const matchYear = !record.year || String(record.year) === String(year);
-                            const matchTerm = !record.term || String(record.term).toLowerCase() === String(term).toLowerCase();
-                            const matchType = !record.examType || String(record.examType).toLowerCase() === String(type).toLowerCase();
+                      // Query actual exam marks from ExamService or CentralDataService marks records
+                      // Supporting both ExamService.getMarks() matrix array & CentralDataService.getMarks() object matrices
+                      const allExamServiceMarks = ExamService.getMarks();
+                      const allCentralMarks = CentralDataService.getMarks();
 
-                            if (matchSubject && (matchYear && matchTerm && matchType)) {
-                              if (typeof record.score === 'number') {
-                                scoreVal = record.score;
-                                break;
-                              } else if (record.marks && typeof record.marks === 'object' && typeof record.marks[sub] === 'number') {
-                                scoreVal = record.marks[sub];
-                                break;
-                              }
-                            }
+                      let midScore: number | null = null;
+                      let endScore: number | null = null;
+
+                      // 1. Check ExamService records (array format: { learnerId, grade, year, term, examType, marks: {} })
+                      if (Array.isArray(allExamServiceMarks)) {
+                        // Find mid term
+                        const midRec = allExamServiceMarks.find(m =>
+                          (String(m.learnerId) === String(s.id) || String(m.learnerId) === String((s as any).assessment) || String(m.learnerId) === String(s.studentId)) &&
+                          String(m.year) === String(year) &&
+                          String(m.term).toLowerCase() === String(term).toLowerCase() &&
+                          String(m.examType).toLowerCase() === 'midterm'
+                        );
+                        if (midRec && midRec.marks && typeof midRec.marks === 'object') {
+                          if (typeof midRec.marks[sub] === 'number') midScore = midRec.marks[sub];
+                          else {
+                            // Try case-insensitive key search
+                            const foundKey = Object.keys(midRec.marks).find(k => k.toLowerCase() === sub.toLowerCase());
+                            if (foundKey && typeof midRec.marks[foundKey] === 'number') midScore = midRec.marks[foundKey];
+                          }
+                        }
+
+                        // Find end term
+                        const endRec = allExamServiceMarks.find(m =>
+                          (String(m.learnerId) === String(s.id) || String(m.learnerId) === String((s as any).assessment) || String(m.learnerId) === String(s.studentId)) &&
+                          String(m.year) === String(year) &&
+                          String(m.term).toLowerCase() === String(term).toLowerCase() &&
+                          (String(m.examType).toLowerCase() === 'endterm' || String(m.examType).toLowerCase() === 'end-term')
+                        );
+                        if (endRec && endRec.marks && typeof endRec.marks === 'object') {
+                          if (typeof endRec.marks[sub] === 'number') endScore = endRec.marks[sub];
+                          else {
+                            const foundKey = Object.keys(endRec.marks).find(k => k.toLowerCase() === sub.toLowerCase());
+                            if (foundKey && typeof endRec.marks[foundKey] === 'number') endScore = endRec.marks[foundKey];
                           }
                         }
                       }
 
-                      // If no explicit mark record found, check student object marks map if present
-                      if (scoreVal === null && s.marks && typeof s.marks === 'object') {
-                        const mKey = `${year}_${term}_${type}_${sub}`.toLowerCase();
-                        if (typeof s.marks[sub] === 'number') scoreVal = s.marks[sub];
-                        else if (typeof (s.marks as any)[mKey] === 'number') scoreVal = (s.marks as any)[mKey];
+                      // 2. Check CentralDataService marks records (object or array format)
+                      if ((midScore === null || endScore === null) && allCentralMarks) {
+                        // If allCentralMarks is an object keyed by exam_id or student_id
+                        if (typeof allCentralMarks === 'object' && !Array.isArray(allCentralMarks)) {
+                          // Try examId format: academic_year|term|exam_type|gradeId|streamId
+                          const midExamId = `${year}|${term}|midterm|${s.grade}|${s.stream || 'all'}`;
+                          const endExamId = `${year}|${term}|endterm|${s.grade}|${s.stream || 'all'}`;
+                          
+                          const studentMarksMid = allCentralMarks[s.id]?.[sub] || allCentralMarks[s.id]?.[sub.toLowerCase()] || allCentralMarks[midExamId]?.[s.id]?.[sub];
+                          if (midScore === null && studentMarksMid !== undefined && studentMarksMid !== '') {
+                            midScore = Number(studentMarksMid);
+                          }
+
+                          const studentMarksEnd = allCentralMarks[s.id]?.[sub] || allCentralMarks[s.id]?.[sub.toLowerCase()] || allCentralMarks[endExamId]?.[s.id]?.[sub];
+                          if (endScore === null && studentMarksEnd !== undefined && studentMarksEnd !== '') {
+                            endScore = Number(studentMarksEnd);
+                          }
+                        } else if (Array.isArray(allCentralMarks)) {
+                          // Array of MarkRecord { exam_id, student_id, subject_id, score, ... }
+                          const midRec = allCentralMarks.find(r =>
+                            (String(r.student_id) === String(s.id) || String(r.student_id) === String((s as any).assessment)) &&
+                            (String(r.subject_id).toLowerCase() === sub.toLowerCase() || String(r.subject_id) === sub) &&
+                            String(r.academic_year) === String(year) &&
+                            String(r.term_id || r.term).toLowerCase() === String(term).toLowerCase() &&
+                            String(r.exam_type_id || r.examType).toLowerCase() === 'midterm'
+                          );
+                          if (midRec && typeof midRec.score === 'number') midScore = midRec.score;
+
+                          const endRec = allCentralMarks.find(r =>
+                            (String(r.student_id) === String(s.id) || String(r.student_id) === String((s as any).assessment)) &&
+                            (String(r.subject_id).toLowerCase() === sub.toLowerCase() || String(r.subject_id) === sub) &&
+                            String(r.academic_year) === String(year) &&
+                            String(r.term_id || r.term).toLowerCase() === String(term).toLowerCase() &&
+                            (String(r.exam_type_id || r.examType).toLowerCase() === 'endterm' || String(r.exam_type_id || r.examType).toLowerCase() === 'end-term')
+                          );
+                          if (endRec && typeof endRec.score === 'number') endScore = endRec.score;
+                        }
                       }
 
-                      const hasScore = scoreVal !== null && !isNaN(scoreVal);
-                      const mid = hasScore ? Math.round(scoreVal * 0.9) : null;
-                      const end = hasScore ? scoreVal : null;
-                      const avg = hasScore ? scoreVal : null;
-                      const r = avg !== null ? getRubric(avg) : null;
+                      // 3. Fallback to student object marks property if present
+                      if ((midScore === null || endScore === null) && s.marks && typeof s.marks === 'object') {
+                        if (midScore === null && typeof (s.marks as any)[sub] === 'number') midScore = (s.marks as any)[sub];
+                        if (endScore === null && typeof (s.marks as any)[sub] === 'number') endScore = (s.marks as any)[sub];
+                      }
 
-                      return (
-                        <tr key={i} className="text-[9px]">
-                          <td className="px-2.5 py-1.5 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
-                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-medium">{mid !== null ? mid : '—'}</td>
-                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-medium">{end !== null ? end : '—'}</td>
-                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg !== null ? `${avg}%` : 'N/A'}</td>
-                          <td className="px-2.5 py-1.5 text-center font-black text-[8.5px]">
-                            {r ? (
-                              <Badge variant="outline" className={cn(
-                                "rounded border-none font-black text-[8px] px-1.5 py-0.5 leading-none",
-                                r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                                r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
-                                r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
-                                r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
-                              )}>
-                                {r.code} — {r.label}
-                              </Badge>
-                            ) : (
-                              <span className="text-slate-400 font-normal">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                      // Calculate Average dynamically: (MID + END) / 2
+                      // If either is missing, compute based on available entry instead of showing N/A
+                      let avg: number | null = null;
+                      if (midScore !== null && endScore !== null) {
+                        avg = Math.round((midScore + endScore) / 2);
+                      } else if (midScore !== null) {
+                        avg = midScore;
+                      } else if (endScore !== null) {
+                        avg = endScore;
+                      }
+
+                                            const r = avg !== null ? getRubric(avg) : null;
+                      
+                                            return (
+                                              <tr key={i} className="text-[9px]">
+                                                <td className="px-2.5 py-1.5 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
+                                                <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-medium">{midScore !== null ? midScore : '—'}</td>
+                                                <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-medium">{endScore !== null ? endScore : '—'}</td>
+                                                <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg !== null ? avg + '%' : '—'}</td>
+                                                <td className="px-2.5 py-1.5 text-center font-black text-[8.5px]">
+                                                  {r ? (
+                                                    <Badge variant="outline" className={cn(
+                                                      "rounded border-none font-black text-[8px] px-1.5 py-0.5 leading-none",
+                                                      r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                                      r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
+                                                      r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
+                                                      r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
+                                                    )}>
+                                                      {r.code} — {r.label}
+                                                    </Badge>
+                                                  ) : (
+                                                    <span className="text-slate-400 font-normal">—</span>
+                                                  )}
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
                   </tbody>
                 </table>
               </div>
