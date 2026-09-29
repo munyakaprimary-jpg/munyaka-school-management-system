@@ -40,10 +40,8 @@ const ExamTypes = () => {
   const [examToDelete, setExamToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const [name, setName] = useState("");
-  const [code, setCode] = useState("");
   const [weight, setWeight] = useState("40");
   const [category, setCategory] = useState<'Formative' | 'Summative' | 'Other'>("Formative");
-  const [description, setDescription] = useState("");
 
   useEffect(() => {
     localStorage.setItem('munyaka_exam_types', JSON.stringify(examTypes));
@@ -52,24 +50,25 @@ const ExamTypes = () => {
 
   const handleAddExamType = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(name || '').trim() || !String(code || '').trim()) return;
+    if (!String(name || '').trim()) return;
     
-        const newExam: ExamType = {
-          id: `et-${Date.now()}`,
-          name: String(name || '').trim(),
-          code: String(code || '').trim().toUpperCase(),
-          weight: parseInt(weight) || 0,
-          category,
-          description: String(description || '').trim() || undefined
-        };
+    const trimmedName = String(name || '').trim();
+    // Auto-generate code from name, e.g. "End Term Exam" -> "END_TERM_EXAM"
+    const autoCode = trimmedName.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+
+    const newExam: ExamType = {
+      id: `et-${Date.now()}`,
+      name: trimmedName,
+      code: autoCode,
+      weight: parseInt(weight) || 0,
+      category
+    };
 
     setExamTypes([...examTypes, newExam]);
     setIsOpen(false);
     setName("");
-    setCode("");
     setWeight("0");
     setCategory("Formative");
-    setDescription("");
     showSuccess(`Successfully created exam type "${newExam.name}"!`);
   };
 
@@ -157,10 +156,6 @@ const ExamTypes = () => {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Unique Code</Label>
-              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. ENDTERM" className="rounded-xl h-12 uppercase" />
-            </div>
-            <div className="space-y-2">
               <Label>Category</Label>
               <Select value={category} onValueChange={(val: any) => setCategory(val)}>
                 <SelectTrigger className="rounded-xl h-12">
@@ -173,14 +168,10 @@ const ExamTypes = () => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Report Card Weight (%)</Label>
-            <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 60" className="rounded-xl h-12" />
-          </div>
-          <div className="space-y-2">
-            <Label>Description (Optional)</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Final comprehensive exam" className="rounded-xl h-12" />
+            <div className="space-y-2">
+              <Label>Report Card Weight (%)</Label>
+              <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 60" className="rounded-xl h-12" />
+            </div>
           </div>
         </div>
       </Modal>
