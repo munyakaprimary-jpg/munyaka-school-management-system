@@ -391,23 +391,34 @@ export default function Students() {
     }
   }, [availableStreams]);
   const generateAdmissionNumber = (selectedGrade: string) => {
-    // Filter existing students belonging strictly to the selected grade (excluding current editing student if any)
-    const gradeStudents = (students || []).filter((s: any) => {
+    const currentYear = new Date().getFullYear();
+
+    // Extract precise numeric grade (e.g. "Grade 6 (RED)" -> "6", "GRADE 6" -> "6", "PP1" -> "PP1")
+    const gradeMatch = String(selectedGrade || '').match(/(\d+|PP1|PP2|KG)/i);
+    const rawGradeToken = gradeMatch ? gradeMatch[1].toUpperCase() : '1';
+    const gradeCode = rawGradeToken.match(/^\d+$/) ? `G${rawGradeToken}` : rawGradeToken;
+
+    // Filter existing students strictly matching BOTH the exact extracted grade code AND the current year
+    const gradeAndYearStudents = (students || []).filter((s: any) => {
       if (editingId && (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId)) {
         return false;
       }
+      const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '').trim().toUpperCase();
+      // Verify year match in admission number (e.g., ends with -2026 or contains currentYear)
+      const hasCurrentYear = admNo.includes(String(currentYear));
+      
+      // Verify grade match
       const sGrade = String(s.grade || s.class || '').trim().toLowerCase();
       const targetGrade = String(selectedGrade || '').trim().toLowerCase();
-      return sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade);
+      const matchesGradeString = sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade);
+      const matchesAdmCode = admNo.includes(`-${gradeCode}-`);
+
+      return (matchesGradeString || matchesAdmCode) && hasCurrentYear;
     });
 
-    // Extract grade number or code (e.g., "Grade 6" -> "G6", "PP1" -> "PP1")
-    const gradeMatch = selectedGrade.match(/\d+/);
-    const gradeCode = gradeMatch ? `G${gradeMatch[0]}` : (selectedGrade.toUpperCase().replace(/\s+/g, '') || 'G1');
-
-    // Find the highest sequence number among existing records for this grade
+    // Find the highest sequence number among strictly filtered records
     let maxSeq = 0;
-    gradeStudents.forEach((s: any) => {
+    gradeAndYearStudents.forEach((s: any) => {
       const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '');
       const parts = admNo.split('-');
       // Expected format: MUN-G6-001-2026 -> parts[2] is sequence
@@ -419,9 +430,32 @@ export default function Students() {
       }
     });
 
+    // Fallback across all students for the grade if year filter yielded 0 (e.g., first record of the year)
+    if (maxSeq === 0) {
+      const allGradeStudents = (students || []).filter((s: any) => {
+        if (editingId && (s.id === editingId || s.admissionNumber === editingId || s.admNo === editingId)) {
+          return false;
+        }
+        const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '').trim().toUpperCase();
+        const sGrade = String(s.grade || s.class || '').trim().toLowerCase();
+        const targetGrade = String(selectedGrade || '').trim().toLowerCase();
+        return (sGrade === targetGrade || sGrade.includes(targetGrade) || targetGrade.includes(sGrade)) || admNo.includes(`-${gradeCode}-`);
+      });
+
+      allGradeStudents.forEach((s: any) => {
+        const admNo = String(s.admissionNumber || s.admNo || s.admissionNo || '');
+        const parts = admNo.split('-');
+        if (parts.length >= 3) {
+          const seq = parseInt(parts[2], 10);
+          if (!isNaN(seq) && seq > maxSeq) {
+            maxSeq = seq;
+          }
+        }
+      });
+    }
+
     const nextSeq = maxSeq + 1;
     const sequenceNumber = String(nextSeq).padStart(3, '0');
-    const currentYear = new Date().getFullYear();
     return `MUN-${gradeCode}-${sequenceNumber}-${currentYear}`;
   };
 
