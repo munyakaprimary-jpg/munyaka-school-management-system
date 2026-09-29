@@ -858,6 +858,7 @@ export default function Students() {
                   <th className="px-2.5 py-2 text-left">FULL NAME</th>
                   <th className="px-2.5 py-2 text-left">GRADE & STREAM</th>
                   <th className="px-2.5 py-2 text-left">GENDER</th>
+                  <th className="px-2.5 py-2 text-left">DOB</th>
                   <th className="px-2.5 py-2 text-left">PARENT / GUARDIAN</th>
                   <th className="px-2.5 py-2 text-left">PHONE NUMBER</th>
                   <th className="px-2.5 py-2 text-right">ACTIONS</th>
@@ -870,6 +871,20 @@ export default function Students() {
                   const sAdm = student.admissionNumber || student.admNo || student.admissionNo || '—';
                   const sAss = student.assessmentNo || student.assessmentNumber || student.assessment || student.assNo || '—';
                   const sGender = student.gender || 'Male';
+                  const sDobRaw = student.dateOfBirth || student.dob || '';
+                  let sDob = '—';
+                  if (sDobRaw) {
+                    try {
+                      const d = new Date(sDobRaw);
+                      if (!isNaN(d.getTime())) {
+                        sDob = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                      } else {
+                        sDob = sDobRaw;
+                      }
+                    } catch {
+                      sDob = sDobRaw;
+                    }
+                  }
                   const sParent = student.parentName || student.guardian || '—';
                   const sPhone = student.parentPhone || student.phoneNumber || student.phone || '—';
                   const sStreamRaw = student.stream || 'BLUE';
@@ -890,6 +905,7 @@ export default function Students() {
                         </span>
                       </td>
                       <td className="px-2.5 py-2 text-slate-700 whitespace-nowrap">{sGender}</td>
+                      <td className="px-2.5 py-2 font-mono text-slate-600 whitespace-nowrap">{sDob}</td>
                       <td className="px-2.5 py-2 text-slate-700 truncate max-w-[120px]" title={sParent}>{sParent}</td>
                       <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">{sPhone}</td>
                       <td className="px-2.5 py-2 text-right whitespace-nowrap">
