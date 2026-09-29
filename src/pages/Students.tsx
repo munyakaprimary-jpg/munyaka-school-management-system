@@ -325,49 +325,63 @@ export default function Students() {
       </div>
 
       {/* Filters Toolbar */}
-      <Card className="border-none shadow-sm rounded-2xl bg-white p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="relative">
+      <Card className="border-none shadow-sm rounded-2xl bg-white p-3 sm:p-4">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search name, admission, assessment..."
-              className="pl-10 rounded-xl h-11 text-xs font-medium border-slate-200"
+              className="pl-10 rounded-xl h-11 text-xs font-medium border-slate-200 w-full"
             />
           </div>
-          <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
-              <SelectValue placeholder="Filter Grade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Grades</SelectItem>
-              {availableGrades.map(g => (
-                <SelectItem key={g} value={g}>{g}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={streamFilter} onValueChange={setStreamFilter}>
-            <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
-              <SelectValue placeholder="Filter Stream" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Streams</SelectItem>
-              {availableStreams.map(st => (
-                <SelectItem key={st} value={st}>{st}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={genderFilter} onValueChange={setGenderFilter}>
-            <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
-              <SelectValue placeholder="Filter Gender" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Genders</SelectItem>
-              <SelectItem value="Male">Male</SelectItem>
-              <SelectItem value="Female">Female</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
+            <Select value={gradeFilter} onValueChange={setGradeFilter}>
+              <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
+                <SelectValue placeholder="All Grades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Grades</SelectItem>
+                {availableGrades.map(g => (
+                  <SelectItem key={g} value={g}>{g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={streamFilter} onValueChange={setStreamFilter}>
+              <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
+                <SelectValue placeholder="All Streams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Streams</SelectItem>
+                {availableStreams.map(st => (
+                  <SelectItem key={st} value={st}>{st}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={genderFilter} onValueChange={setGenderFilter}>
+              <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
+                <SelectValue placeholder="All Genders" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genders</SelectItem>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchTerm('');
+                setGradeFilter('all');
+                setStreamFilter('all');
+                setGenderFilter('all');
+              }}
+              className="rounded-xl h-11 text-xs font-bold border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              Clear Filters
+            </Button>
+          </div>
         </div>
       </Card>
 

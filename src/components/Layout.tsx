@@ -514,15 +514,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                         </button>
                       )}
                     </div>
-        
-                    <div className="relative hidden md:block flex-1 min-w-0 max-w-md ml-4">
-                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                      <input
-                        type="text"
-                        placeholder="Search learners, staff, grades..."
-                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm font-medium focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white whitespace-normal break-words"
-                      />
-                    </div>
+
+                    {location.pathname !== '/students' && (
+                      <div className="relative hidden md:block flex-1 min-w-0 max-w-md ml-4">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <input
+                          type="text"
+                          placeholder="Search learners, staff, grades..."
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm font-medium focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white whitespace-normal break-words"
+                        />
+                      </div>
+                    )}
                   </div>
         
                   <div className="flex items-center gap-2">
