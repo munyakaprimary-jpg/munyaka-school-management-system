@@ -221,7 +221,7 @@ export default function LearningAreasPage() {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-10 pb-24 animate-in fade-in duration-500">
+    <div className="w-full max-w-7xl mx-auto px-4 py-6 space-y-12 pb-24 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -229,7 +229,7 @@ export default function LearningAreasPage() {
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Learning Area Manager</h1>
             <p className="text-sm text-slate-500 mt-1">
-              Complete CBC subject and curriculum directory organized across all grade levels.
+              Complete CBC subject directory organized in flat sections by educational level.
             </p>
           </div>
         </div>
@@ -248,41 +248,40 @@ export default function LearningAreasPage() {
         </Button>
       </div>
 
-      {/* Notice Banner */}
+      {/* Info Banner */}
       <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-blue-50 border border-indigo-100 rounded-3xl p-5 flex items-start gap-4">
         <div className="p-3 bg-indigo-600 text-white rounded-2xl shrink-0 shadow-md shadow-indigo-200">
           <BookOpen size={20} />
         </div>
         <div>
-          <h3 className="font-bold text-indigo-900 text-sm">Full CBC Curriculum Directory</h3>
+          <h3 className="font-bold text-indigo-900 text-sm">Flat Educational Level Directory</h3>
           <p className="text-xs text-indigo-700/80 mt-0.5 leading-relaxed">
-            All subjects are fully displayed below by grade cluster. You can view, edit, or remove any learning area or add custom subjects instantly.
+            Subjects are displayed directly under clean headings for Pre-Primary, Lower Primary, Upper Primary, and Junior School. Manage periods, classifications, and custom subjects instantly.
           </p>
         </div>
       </div>
 
-      {/* Expanded Sections for All Clusters */}
-      <div className="space-y-12">
+      {/* Flat Sections by Educational Level */}
+      <div className="space-y-16">
         {clusters.map((cluster) => (
-          <div key={cluster.id} className="space-y-4">
-            {/* Cluster Title Banner */}
-            <div className="bg-slate-900 text-white rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-inner">
-                  <GraduationCap size={24} />
-                </div>
+          <div key={cluster.id} className="space-y-6">
+            {/* Clean Educational Level Heading */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-8 bg-indigo-600 rounded-full" />
                 <div>
-                  <h2 className="text-xl font-black tracking-tight">{cluster.name}</h2>
-                  <p className="text-xs text-slate-300 mt-0.5">{cluster.description || 'CBC grade level curriculum subjects'}</p>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">{cluster.name}</h2>
+                  <p className="text-xs text-slate-500 font-medium">{cluster.description || 'CBC curriculum level'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-indigo-500/30 text-indigo-200 border-indigo-400/30 font-bold px-3 py-1">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="bg-white text-slate-700 border-slate-200 font-bold px-3 py-1 text-xs rounded-xl">
                   {cluster.learningAreas.length} {cluster.learningAreas.length === 1 ? 'Subject' : 'Subjects'}
                 </Badge>
                 <Button
                   size="sm"
-                  className="rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold gap-1.5 h-9 px-4 border border-white/10"
+                  variant="outline"
+                  className="rounded-xl text-xs font-bold gap-1.5 h-9 px-4 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
                   onClick={() => {
                     setSelectedClusterId(cluster.id);
                     setName('');
@@ -292,17 +291,17 @@ export default function LearningAreasPage() {
                     setIsAddOpen(true);
                   }}
                 >
-                  <Plus size={14} /> Add to {cluster.name}
+                  <Plus size={14} /> Add Subject
                 </Button>
               </div>
             </div>
 
             {/* Subject Cards Grid */}
             {cluster.learningAreas.length === 0 ? (
-              <div className="bg-slate-50 border border-dashed border-slate-200 rounded-3xl p-12 text-center text-slate-400">
-                <BookOpen size={36} className="mx-auto mb-2 opacity-40" />
-                <p className="font-semibold text-sm">No learning areas in this category yet.</p>
-                <p className="text-xs mt-1">Click &ldquo;Add to {cluster.name}&rdquo; to add a subject.</p>
+              <div className="bg-slate-50 border border-dashed border-slate-200 rounded-3xl p-10 text-center text-slate-400">
+                <BookOpen size={32} className="mx-auto mb-2 opacity-40" />
+                <p className="font-semibold text-sm">No subjects listed under {cluster.name}.</p>
+                <p className="text-xs mt-1">Click &ldquo;Add Subject&rdquo; to add a learning area.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -330,7 +329,7 @@ export default function LearningAreasPage() {
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 opacity-80 group-hover:opacity-150 transition-opacity">
+                          <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -402,7 +401,7 @@ export default function LearningAreasPage() {
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="font-bold text-slate-700">CBC Level / Cluster</Label>
+            <Label className="font-bold text-slate-700">Educational Level</Label>
             <Select value={selectedClusterId} onValueChange={setSelectedClusterId}>
               <SelectTrigger className="rounded-xl h-12">
                 <SelectValue placeholder="Select level" />
@@ -486,7 +485,7 @@ export default function LearningAreasPage() {
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="font-bold text-slate-700">CBC Level / Cluster</Label>
+            <Label className="font-bold text-slate-700">Educational Level</Label>
             <Select value={targetClusterId} onValueChange={setTargetClusterId}>
               <SelectTrigger className="rounded-xl h-12">
                 <SelectValue placeholder="Select level" />
