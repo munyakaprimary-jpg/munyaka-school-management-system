@@ -271,13 +271,23 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
           )}
 
           {!errorMsg && isPdf && (
-            <div className="w-full h-full flex items-center justify-center overflow-auto">
+            <div className="w-full h-full flex flex-col items-center justify-center overflow-auto p-2">
               <iframe
                 src={`${sourceUrl}#toolbar=1&view=FitH`}
                 title={fileName}
-                className="w-full h-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white shadow-inner"
+                className="w-full h-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white shadow-inner min-h-[500px]"
                 style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center', transition: 'transform 0.2s ease' }}
               />
+              <div className="mt-3 flex items-center gap-3">
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5 hover:bg-indigo-100 transition-colors"
+                >
+                  <ExternalLink size={14} /> Open in New Tab
+                </a>
+              </div>
             </div>
           )}
 
