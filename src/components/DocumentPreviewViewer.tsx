@@ -341,23 +341,45 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
           )}
 
           {!errorMsg && !isPdf && !isImage && !isDocx && !isText && (
-            <div className="flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
-              <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
-                <FileCheck size={24} />
+            <div className="w-full h-full flex flex-col items-center justify-center overflow-auto p-4 sm:p-8">
+              <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 text-center flex flex-col items-center gap-5">
+                <div className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-md">
+                  <FileText size={38} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg break-all">{fileName}</h3>
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-wider">
+                      {fileName.split('.').pop() || 'FILE'}
+                    </span>
+                    {attachment?.size && (
+                      <span className="text-xs text-slate-400 font-medium">
+                        ({Math.round(attachment.size / 1024)} KB)
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(sourceUrl, '_blank');
+                    }}
+                    className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-xl shadow-indigo-200 dark:shadow-none transition-all flex items-center justify-center gap-2"
+                  >
+                    <ExternalLink size={16} /> Open Document
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2"
+                  >
+                    <Download size={16} /> Download File
+                  </button>
+                </div>
               </div>
-              <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">File Ready</h4>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                This file format ({fileName.split('.').pop()?.toUpperCase() || 'FILE'}) can be downloaded and opened with your device's native app.
-              </p>
-              <button
-                type="button"
-                onClick={handleDownload}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-200 dark:shadow-none transition-all flex items-center gap-2"
-              >
-                <Download size={16} />
-                Download File
-              </button>
             </div>
+          )}
           )}
         </div>
 
