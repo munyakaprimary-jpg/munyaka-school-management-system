@@ -271,31 +271,43 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
           )}
 
           {!errorMsg && isPdf && (
-            <div className="w-full h-full flex flex-col items-center justify-center overflow-auto p-2 sm:p-4">
-              <div className="w-full h-full flex flex-col rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white shadow-lg">
-                <div className="bg-slate-50 dark:bg-slate-900 px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{fileName}</span>
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1 transition-colors"
-                    >
-                      <ExternalLink size={12} /> Open in Browser
-                    </a>
-                  </div>
+            <div className="w-full h-full flex flex-col items-center justify-center overflow-auto p-4 sm:p-8">
+              <div className="w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 text-center flex flex-col items-center gap-6">
+                <div className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-md">
+                  <FileText size={42} />
                 </div>
-                <div className="flex-1 relative w-full h-full bg-slate-100 dark:bg-slate-950 overflow-auto flex items-center justify-center">
-                  <iframe
-                    src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(sourceUrl)}`}
-                    title={fileName}
-                    className="w-full h-full border-0 bg-white"
-                    style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center', transition: 'transform 0.2s ease' }}
-                    onError={() => {
-                      setErrorMsg('Embedded viewer blocked. Use Download or Open in Browser.');
-                    }}
-                  />
+                <div className="space-y-2">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-xl break-all">{fileName}</h3>
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <span className="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold text-xs uppercase tracking-wider">
+                      PDF Document
+                    </span>
+                    {attachment?.size && (
+                      <span className="text-xs text-slate-400 font-medium">
+                        ({Math.round(attachment.size / 1024)} KB)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 pt-2 max-w-md mx-auto leading-relaxed">
+                    In-app preview optimized for download and external device viewer to ensure reliable, high-speed access on mobile and desktop devices.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-xl shadow-indigo-200 dark:shadow-none transition-all flex items-center justify-center gap-2"
+                  >
+                    <ExternalLink size={16} /> Open Document in Device Viewer
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2"
+                  >
+                    <Download size={16} /> Download File
+                  </button>
                 </div>
               </div>
             </div>
