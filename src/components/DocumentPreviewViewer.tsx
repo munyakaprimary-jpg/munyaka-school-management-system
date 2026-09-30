@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  X, ZoomIn, ZoomOut, RotateCcw, Download, FileText, 
-  FileCheck, AlertCircle, Loader2, Maximize2, Minimize2, ExternalLink
+  X, Download, FileText, ExternalLink, Maximize2, Minimize2 
 } from 'lucide-react';
 import mammoth from 'mammoth';
 
@@ -25,19 +24,12 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
   onClose,
   attachment,
 }) => {
-  const [zoomLevel, setZoomLevel] = useState<number>(100);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [docxHtml, setDocxHtml] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen) {
-      setZoomLevel(100);
-      setIsLoading(true);
-      setErrorMsg(null);
       setDocxHtml(null);
       setTextContent(null);
       setIsFullscreen(false);
@@ -47,23 +39,14 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
   useEffect(() => {
     if (!isOpen || !attachment) return;
 
-    let isMounted = true;
-    setIsLoading(true);
-    setErrorMsg(null);
-    setDocxHtml(null);
-    setTextContent(null);
+    const sourceUrl = attachment.url || attachment.data;
+    if (!sourceUrl) return;
 
-    const processAttachment = async () => {
-      try {
-        const sourceUrl = attachment.url || attachment.data;
-        if (!sourceUrl) {
-          throw new Error('No valid document URL or data provided.');
-        }
+    const fileName = (attachment.name || attachment.filename || 'document').toLowerCase();
 
-        const fileName = (attachment.name || attachment.filename || 'document').toLowerCase();
-
-        // Check if docx
-        if (fileName.endsWith('.docx') || fileName.includes('word') || attachment.type?.includes('wordprocessingml')) {
+    if (fileName.endsWith('.docx') || fileName.includes('word') || attachment.type?.includes('wordprocessingml')) {
+      (async () => {
+        try {
           let arrayBuffer: ArrayBuffer;
           if (sourceUrl.startsWith('data:')) {
             const base64Part = sourceUrl.split(',')[1] || '';
@@ -78,329 +61,145 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
             const response = await fetch(sourceUrl);
             arrayBuffer = await response.arrayBuffer();
           }
-
-          try {
-            const result = await mammoth.convertToHtml({ arrayBuffer });
-            if (isMounted) {
-              setDocxHtml(result.value || '<p>No content extracted from Word document.</p>');
-              setIsLoading(false);
-            }
-          } catch (mammothErr: any) {
-            console.warn('[DocumentPreviewViewer] Mammoth failed, fallback to raw text:', mammothErr);
-            if (isMounted) {
-              setDocxHtml(`<div class="p-4 bg-amber-50 text-amber-800 rounded mb-4">Note: Could not parse complex Word structures directly. Showing extracted text/error.</div><pre class="whitespace-pre-wrap font-mono text-xs">${String(mammothErr?.message || mammothErr)}</pre>`);
-              setIsLoading(false);
-            }
-          }
-          return;
+          const result = await mammoth.convertToHtml({ arrayBuffer });
+          setDocxHtml(result.value || '<p>No content extracted.</p>');
+        } catch (e) {
+          console.error('Docx parse error:', e);
         }
-
-        // Check if txt or md or json or csv
-        if (fileName.endsWith('.txt') || fileName.endsWith('.md') || fileName.endsWith('.json') || fileName.endsWith('.csv') || attachment.type?.includes('text/')) {
+      })();
+    } else if (fileName.endsWith('.txt') || fileName.endsWith('.md') || fileName.endsWith('.json') || fileName.endsWith('.csv')) {
+      (async () => {
+        try {
           const response = await fetch(sourceUrl);
           const text = await response.text();
-          if (isMounted) {
-            setTextContent(text);
-            setIsLoading(false);
-          }
-          return;
+          setTextContent(text);
+        } catch (e) {
+          console.error('Text parse error:', e);
         }
-
-        // For pdf, images, etc.
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      } catch (err: any) {
-        console.error('[DocumentPreviewViewer] Error processing file:', err);
-        if (isMounted) {
-          setErrorMsg(err.message || 'Failed to load document preview.');
-          setIsLoading(false);
-        }
-      }
-    };
-
-    processAttachment();
-
-    return () => {
-      isMounted = false;
-    };
+      })();
+    }
   }, [isOpen, attachment]);
 
   if (!isOpen || !attachment) return null;
 
-  const fileName = attachment.name || attachment.filename || 'Document Preview';
   const sourceUrl = attachment.url || attachment.data || '';
-  const lowerName = fileName.toLowerCase();
-
-  const isPdf = lowerName.endsWith('.pdf') || attachment.type === 'application/pdf';
-  const isImage = /\.(png|jpg|jpeg|webp|svg|gif)$/i.test(lowerName) || attachment.type?.startsWith('image/');
-  const isDocx = lowerName.endsWith('.docx') || attachment.type?.includes('wordprocessingml');
-  const isText = lowerName.endsWith('.txt') || lowerName.endsWith('.md') || lowerName.endsWith('.json') || lowerName.endsWith('.csv') || attachment.type?.includes('text/');
-
-  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 25, 250));
-  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 25, 50));
-  const handleZoomReset = () => setZoomLevel(100);
+  const fileName = attachment.name || attachment.filename || 'Document';
+  const fileExt = fileName.split('.').pop()?.toUpperCase() || 'FILE';
 
   const handleDownload = () => {
     if (!sourceUrl) return;
-    const a = document.createElement('a');
-    a.href = sourceUrl;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const link = document.createElement('a');
+    link.href = sourceUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
+  const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileName) || attachment.type?.includes('image/');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-2 sm:p-4 animate-in fade-in duration-200">
-      <div 
-        ref={containerRef}
-        className={`bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 w-full ${
-          isFullscreen ? 'h-full max-h-none max-w-none rounded-none' : 'max-w-5xl h-[90vh]'
-        }`}
-      >
-        {/* Header Toolbar */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 shrink-0">
-              <FileText size={20} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className={`bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden w-full ${isFullscreen ? 'h-full max-w-none rounded-none' : 'max-w-xl max-h-[90vh]'}`}>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-bold text-xs">
+              {fileExt}
             </div>
-            <div className="overflow-hidden">
-              <h3 className="font-bold text-slate-800 dark:text-slate-100 truncate text-sm sm:text-base">
-                {fileName}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
-                {isPdf ? 'PDF Document' : isImage ? 'Image File' : isDocx ? 'Word Document' : isText ? 'Text / Code File' : 'Document Preview'}
+            <div className="min-w-0">
+              <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{fileName}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {attachment.size ? `${Math.round(attachment.size / 1024)} KB · ` : ''}Secure Document Viewer
               </p>
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {!isText && (
-              <div className="hidden sm:flex items-center gap-1 bg-slate-200/60 dark:bg-slate-800 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={handleZoomOut}
-                  title="Zoom Out"
-                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
-                >
-                  <ZoomOut size={16} />
-                </button>
-                <span className="text-xs font-mono font-medium px-1.5 text-slate-600 dark:text-slate-300 min-w-[3rem] text-center">
-                  {zoomLevel}%
-                </span>
-                <button
-                  type="button"
-                  onClick={handleZoomIn}
-                  title="Zoom In"
-                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
-                >
-                  <ZoomIn size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleZoomReset}
-                  title="Reset Zoom"
-                  className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
-                >
-                  <RotateCcw size={16} />
-                </button>
-              </div>
-            )}
-
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleDownload}
-              title="Download File"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 font-semibold text-xs transition-colors"
-            >
-              <Download size={16} />
-              <span className="hidden md:inline">Download</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={toggleFullscreen}
+              onClick={() => setIsFullscreen(!isFullscreen)}
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
               className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors"
             >
               {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
             </button>
-
             <button
               type="button"
               onClick={onClose}
               title="Close Preview"
-              className="p-2 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400 transition-colors ml-1"
+              className="p-2 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400 transition-colors"
             >
               <X size={20} />
             </button>
           </div>
         </div>
 
-        {/* Viewer Body */}
-        <div className="flex-1 relative overflow-auto bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-2 sm:p-6">
-          {isLoading && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm gap-3">
-              <Loader2 size={36} className="animate-spin text-indigo-600 dark:text-indigo-400" />
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Loading document securely...</p>
-            </div>
-          )}
-
-          {errorMsg && (
-            <div className="flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-red-100 dark:border-red-950">
-              <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center mb-3">
-                <AlertCircle size={24} />
-              </div>
-              <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">Preview Unavailable</h4>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{errorMsg}</p>
-              <button
-                type="button"
-                onClick={handleDownload}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-200 dark:shadow-none transition-all flex items-center gap-2"
-              >
-                <Download size={16} />
-                Download File Instead
-              </button>
-            </div>
-          )}
-
-          {!errorMsg && isPdf && (
-            <div className="w-full h-full flex flex-col items-center justify-center overflow-auto p-4 sm:p-8">
-              <div className="w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 text-center flex flex-col items-center gap-6">
-                <div className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-md">
-                  <FileText size={42} />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-xl break-all">{fileName}</h3>
-                  <div className="flex items-center justify-center gap-2 pt-1">
-                    <span className="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold text-xs uppercase tracking-wider">
-                      PDF Document
-                    </span>
-                    {attachment?.size && (
-                      <span className="text-xs text-slate-400 font-medium">
-                        ({Math.round(attachment.size / 1024)} KB)
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 pt-2 max-w-md mx-auto leading-relaxed">
-                    In-app preview optimized for download and external device viewer to ensure reliable, high-speed access on mobile and desktop devices.
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
-                  <a
-                    href={sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-xl shadow-indigo-200 dark:shadow-none transition-all flex items-center justify-center gap-2"
-                  >
-                    <ExternalLink size={16} /> Open Document in Device Viewer
-                  </a>
-                  <button
-                    type="button"
-                    onClick={handleDownload}
-                    className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2"
-                  >
-                    <Download size={16} /> Download File
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!errorMsg && isImage && (
-            <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
+        {/* Content Body */}
+        <div className="flex-1 overflow-auto p-6 sm:p-8 flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-950/50">
+          {isImage ? (
+            <div className="max-w-full max-h-[60vh] flex items-center justify-center p-2">
               <img
                 src={sourceUrl}
                 alt={fileName}
-                className="max-w-full max-h-full object-contain rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 bg-white"
-                style={{ transform: `scale(${zoomLevel / 100})`, transition: 'transform 0.2s ease' }}
+                className="max-w-full max-h-full object-contain rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800 bg-white"
               />
             </div>
-          )}
-
-          {!errorMsg && isDocx && (
-            <div className="w-full h-full overflow-auto bg-white dark:bg-slate-900 rounded-xl shadow-inner border border-slate-200 dark:border-slate-800 p-6 sm:p-12 flex items-center justify-center">
-              <div
-                className="prose dark:prose-invert max-w-4xl w-full text-slate-800 dark:text-slate-200 origin-top transition-transform duration-200"
-                style={{ transform: `scale(${zoomLevel / 100})` }}
-                dangerouslySetInnerHTML={{ __html: docxHtml || '<p>Loading Word document content...</p>' }}
-              />
+          ) : docxHtml ? (
+            <div className="w-full max-h-[60vh] overflow-auto bg-white dark:bg-slate-900 rounded-2xl shadow-inner border border-slate-200 dark:border-slate-800 p-6 text-slate-800 dark:text-slate-200">
+              <div dangerouslySetInnerHTML={{ __html: docxHtml }} />
             </div>
-          )}
-
-          {!errorMsg && isText && (
-            <div className="w-full h-full overflow-auto bg-slate-900 text-emerald-400 font-mono rounded-xl shadow-inner border border-slate-800 p-4 sm:p-8 max-w-4xl mx-auto">
-              <pre className="whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">
-                {textContent || 'Loading text file...'}
-              </pre>
+          ) : textContent ? (
+            <div className="w-full max-h-[60vh] overflow-auto bg-slate-900 text-emerald-400 font-mono rounded-2xl shadow-inner border border-slate-800 p-6 text-xs leading-relaxed">
+              <pre className="whitespace-pre-wrap">{textContent}</pre>
             </div>
-          )}
-
-          {!errorMsg && !isPdf && !isImage && !isDocx && !isText && (
-            <div className="w-full h-full flex flex-col items-center justify-center overflow-auto p-4 sm:p-8">
-              <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 text-center flex flex-col items-center gap-5">
-                <div className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-md">
-                  <FileText size={38} />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg break-all">{fileName}</h3>
-                  <div className="flex items-center justify-center gap-2 pt-1">
-                    <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-wider">
-                      {fileName.split('.').pop() || 'FILE'}
-                    </span>
-                    {attachment?.size && (
-                      <span className="text-xs text-slate-400 font-medium">
-                        ({Math.round(attachment.size / 1024)} KB)
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.open(sourceUrl, '_blank');
-                    }}
-                    className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-xl shadow-indigo-200 dark:shadow-none transition-all flex items-center justify-center gap-2"
-                  >
-                    <ExternalLink size={16} /> Open Document
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDownload}
-                    className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2"
-                  >
-                    <Download size={16} /> Download File
-                  </button>
-                </div>
+          ) : (
+            <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 text-center flex flex-col items-center gap-5">
+              <div className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-md">
+                <FileText size={40} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg break-all">{fileName}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Tap below to open this file in your device viewer or download it directly to your storage.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-xl shadow-indigo-200 dark:shadow-none transition-all flex items-center justify-center gap-2"
+                >
+                  <ExternalLink size={16} /> Open File
+                </a>
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2"
+                >
+                  <Download size={16} /> Download
+                </button>
               </div>
             </div>
-          )}
           )}
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0">
-          <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Offline Universal Document Viewer Active
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Universal File Reader
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors"
-            >
-              Close Preview
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors"
+          >
+            Close
+          </button>
         </div>
+
       </div>
     </div>
   );
