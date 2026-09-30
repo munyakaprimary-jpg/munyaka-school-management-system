@@ -462,7 +462,7 @@ const Fees = () => {
         const stream = learner.stream || '';
         const studentGradeId = findGradeIdForLearner(grade);
 
-        const termFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : Number(learner.termFee || 5000);
+        const termFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : Number(learner.termFee || 0);
         const totalPaid = getTotalPaidForStudent(studentId);
         const balance = Math.max(0, termFee - totalPaid);
         const status = deriveStatus(termFee, totalPaid);
