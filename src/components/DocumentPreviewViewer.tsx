@@ -271,22 +271,33 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
           )}
 
           {!errorMsg && isPdf && (
-            <div className="w-full h-full flex flex-col items-center justify-center overflow-auto p-2">
-              <iframe
-                src={`${sourceUrl}#toolbar=1&view=FitH`}
-                title={fileName}
-                className="w-full h-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white shadow-inner min-h-[500px]"
-                style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center', transition: 'transform 0.2s ease' }}
-              />
-              <div className="mt-3 flex items-center gap-3">
-                <a
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5 hover:bg-indigo-100 transition-colors"
-                >
-                  <ExternalLink size={14} /> Open in New Tab
-                </a>
+            <div className="w-full h-full flex flex-col items-center justify-center overflow-auto p-4 sm:p-8">
+              <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 text-center flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <FileText size={32} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg">{fileName}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">PDF Document Ready for Viewing or Download</p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-3 w-full pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(sourceUrl, '_blank');
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-200 dark:shadow-none transition-all flex items-center gap-2"
+                  >
+                    <ExternalLink size={16} /> Tap to Open PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition-all flex items-center gap-2"
+                  >
+                    <Download size={16} /> Download File
+                  </button>
+                </div>
               </div>
             </div>
           )}
