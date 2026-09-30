@@ -40,51 +40,24 @@ export function hydrateFromInitialSeed(): void {
       sessionStorage.clear();
     }
 
+    // ── Enforce non-destructive smart merge & initialization ─────────────────
+    // If user data, custom learning areas, or fee structures already exist, preserve them entirely instead of overwriting.
     const isInitialized = localStorage.getItem('munyaka_initialized') === 'true';
     const learnersRaw = localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students');
-    const staffRaw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory');
-    const attendanceRaw = localStorage.getItem('munyaka_attendance');
-    const ictRaw = localStorage.getItem('munyaka_ict_lab');
-    const scienceRaw = localStorage.getItem('munyaka_science_lab');
-    const storeRaw = localStorage.getItem('munyaka_store_items');
-    const settingsRaw = localStorage.getItem('munyaka_system_settings_v3') || localStorage.getItem('munyaka_settings');
-    const noticesRaw = localStorage.getItem('munyaka_notices');
-    const eventsRaw = localStorage.getItem('munyaka_events');
-    const examsRaw = localStorage.getItem('all_set_exams') || localStorage.getItem('exams');
-    const schedulesRaw = localStorage.getItem('examSchedules');
-    const examTypesRaw = localStorage.getItem('munyaka_exam_types');
-    const marksRaw = localStorage.getItem('marked_student_submissions') || localStorage.getItem('marks');
-    const questionsRaw = localStorage.getItem('question_bank') || localStorage.getItem('questions');
-    const reportCardsRaw = localStorage.getItem('munyaka_report_cards');
-    const feeStructuresRaw = localStorage.getItem('munyaka_fee_structures');
-    const paymentsRaw = localStorage.getItem('munyaka_payments') || localStorage.getItem('munyaka_fees');
-    const studyCornerRaw = localStorage.getItem('munyaka_study_materials');
-    const libraryBooksRaw = localStorage.getItem('munyaka_library_books');
-    const libraryLogsRaw = localStorage.getItem('munyaka_library_borrowings');
+    const learningAreasRaw = localStorage.getItem('munyaka_flat_learning_areas_v2') || localStorage.getItem('munyaka_learning_areas');
     
     const isLearnersEmpty = !learnersRaw || learnersRaw === '[]' || learnersRaw.length < 5;
-    const isStaffEmpty = !staffRaw || staffRaw === '[]' || staffRaw.length < 5;
-    const isAttendanceEmpty = !attendanceRaw || attendanceRaw === '{}' || attendanceRaw === '[]' || attendanceRaw.length < 5;
-    const isIctEmpty = !ictRaw || ictRaw === '[]' || ictRaw.length < 5;
-    const isScienceEmpty = !scienceRaw || scienceRaw === '[]' || scienceRaw.length < 5;
-    const isStoreEmpty = !storeRaw || storeRaw === '[]' || storeRaw.length < 5;
-    const isSettingsEmpty = !settingsRaw || settingsRaw === '{}' || settingsRaw.length < 5;
-    const isNoticesEmpty = !noticesRaw || noticesRaw === '[]' || noticesRaw.length < 5;
-    const isEventsEmpty = !eventsRaw || eventsRaw === '[]' || eventsRaw.length < 5;
-    const isExamsEmpty = !examsRaw || examsRaw === '[]' || examsRaw.length < 5;
-    const isSchedulesEmpty = !schedulesRaw || schedulesRaw === '[]' || schedulesRaw.length < 5;
-    const isExamTypesEmpty = !examTypesRaw || examTypesRaw === '[]' || examTypesRaw.length < 5;
-    const isMarksEmpty = !marksRaw || marksRaw === '[]' || marksRaw.length < 5;
-    const isQuestionsEmpty = !questionsRaw || questionsRaw === '[]' || questionsRaw.length < 5;
-    const isReportCardsEmpty = !reportCardsRaw || reportCardsRaw === '[]' || reportCardsRaw.length < 5;
-    const isFeeStructuresEmpty = !feeStructuresRaw || feeStructuresRaw === '[]' || feeStructuresRaw.length < 5;
-    const isPaymentsEmpty = !paymentsRaw || paymentsRaw === '[]' || paymentsRaw.length < 5;
-    const isStudyCornerEmpty = !studyCornerRaw || studyCornerRaw === '[]' || studyCornerRaw.length < 5;
-    const isLibraryBooksEmpty = !libraryBooksRaw || libraryBooksRaw === '[]' || libraryBooksRaw.length < 5;
-    const isLibraryLogsEmpty = !libraryLogsRaw || libraryLogsRaw === '[]' || libraryLogsRaw.length < 5;
+    const isLearningAreasEmpty = !learningAreasRaw || learningAreasRaw === '[]' || learningAreasRaw.length < 5;
 
-    if (!isInitialized || storedSeedVersion !== seedVersion || isLearnersEmpty || isStaffEmpty || isAttendanceEmpty || isIctEmpty || isScienceEmpty || isStoreEmpty || isSettingsEmpty || isNoticesEmpty || isEventsEmpty || isExamsEmpty || isSchedulesEmpty || isExamTypesEmpty || isMarksEmpty || isQuestionsEmpty || isReportCardsEmpty || isFeeStructuresEmpty || isPaymentsEmpty || isStudyCornerEmpty || isLibraryBooksEmpty || isLibraryLogsEmpty) {
-      console.log('[StorageHydration] First-boot storage hydration: Forcing full portal hydration across all menus (exams, fees, report cards, library, inventory, settings)...');
+    // If already initialized and learners/learning areas exist, preserve user data completely (non-destructive)
+    if (isInitialized && !isLearnersEmpty && !isLearningAreasEmpty) {
+      console.log('[StorageHydration] Non-destructive boot: Preserving existing user data, custom students, and learning areas.');
+      return;
+    }
+
+    // First-time boot or completely empty installation: load baseline clean structure once
+    if (!isInitialized || isLearnersEmpty || isLearningAreasEmpty) {
+      console.log('[StorageHydration] First-time install boot: Loading baseline clean storage structure...');
 
       const snapshot = {
         students: (initialSeedData as any).students || [],
