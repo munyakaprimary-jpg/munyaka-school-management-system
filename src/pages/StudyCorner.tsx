@@ -1194,15 +1194,15 @@ export default function StudyCorner() {
   return (
     <div className="min-h-screen bg-gray-50/50">
       {/* Page Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 rounded-xl bg-blue-100">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 sm:py-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-blue-100 shrink-0">
               <GraduationCap size={22} className="text-blue-700" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Study Corner</h1>
-              <p className="text-sm text-gray-500">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight truncate">Study Corner</h1>
+              <p className="text-xs sm:text-sm text-gray-500 font-medium truncate">
                 CBC learning resources — Grades 1–9 · {totalTopics} topics
                 {customItems.length > 0 && (
                   <span className="ml-1 text-indigo-500 font-medium">
@@ -1220,7 +1220,7 @@ export default function StudyCorner() {
                   setPreSelectedStrand(undefined);
                   setShowAddModal(true);
                 }}
-                className="flex items-center gap-2 shrink-0 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition-colors"
+                className="flex items-center justify-center gap-2 w-full sm:w-auto shrink-0 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition-colors whitespace-nowrap"
               >
                 <PlusCircle size={16} />
                 Add Learning Material
