@@ -286,16 +286,33 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
 
   // ── Load students from central storage (CentralDataService / students) ─────────────────
   useEffect(() => {
-    try {
-      const loadedStudents = CentralDataService.getLearners() || [];
-      const active = loadedStudents.filter(
-        (s: any) => !s.status || s.status === "Active" || s.status === "active"
-      ) as RegisteredStudent[];
-      setStudents(active);
-    } catch (err) {
-      console.error("[LearnerIdentificationModal] Failed to load students:", err);
-    }
-    setIsLoading(false);
+    const loadStudents = () => {
+      try {
+        const loadedStudents = CentralDataService.getLearners() || [];
+        const active = loadedStudents.map((s: any) => ({
+          ...s,
+          name: s.name || s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown Learner',
+          admissionNumber: s.admissionNo || s.admissionNumber || s.assessmentNo || s.id || '',
+          id: s.id || s.admNo || s.admissionNo || String(Math.random()),
+        })).filter(
+          (s: any) => !s.status || s.status === "Active" || s.status === "active" || s.status === true || s.status === undefined
+        ) as RegisteredStudent[];
+        setStudents(active);
+      } catch (err) {
+        console.error("[LearnerIdentificationModal] Failed to load students:", err);
+      }
+      setIsLoading(false);
+    };
+
+    loadStudents();
+    window.addEventListener('storage', loadStudents);
+    window.addEventListener('munyaka_learners_updated', loadStudents);
+    window.addEventListener('munyaka:data-changed', loadStudents);
+    return () => {
+      window.removeEventListener('storage', loadStudents);
+      window.removeEventListener('munyaka_learners_updated', loadStudents);
+      window.removeEventListener('munyaka:data-changed', loadStudents);
+    };
   }, []);
 
   // ── Close student dropdown on outside click ───────────────────────────────
