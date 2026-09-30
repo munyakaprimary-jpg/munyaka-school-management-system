@@ -375,29 +375,43 @@ const Fees = () => {
   
   /** Get term fee for a specific grade with fallback to ALL / bulk or global default */
   const getTermFeeForGrade = useCallback((gradeId: string): number => {
-    // 1. Check exact grade configuration in state
+    // 1. Check global default term fee set in school settings / user settings / system settings first
+    try {
+      for (const k of ['munyaka_system_settings_v3', 'munyaka_user_settings', 'settings']) {
+        const rawSettings = localStorage.getItem(k);
+        if (rawSettings) {
+          const parsed = JSON.parse(rawSettings);
+          const globalFee = parsed?.defaultTermFee || parsed?.termFee || parsed?.schoolSettings?.termFee;
+          if (globalFee && Number(globalFee) > 0) {
+            return Number(globalFee);
+          }
+        }
+      }
+    } catch {}
+
+    // 2. Check exact grade configuration in state
     const exact = feeStructures.find(f =>
       f.year === selectedYear && f.term === selectedTerm && f.gradeId === gradeId
     );
     if (exact && exact.amount > 0) return exact.amount;
 
-    // 2. Check munyaka_fee_structures_db in localStorage for exact grade or ALL
+    // 3. Check munyaka_fee_structures_db in localStorage for exact grade or ALL
     try {
       const raw = localStorage.getItem('munyaka_fee_structures_db');
       if (raw) {
         const structuresMap = JSON.parse(raw);
         const exactKey = `${selectedYear}_${selectedTerm}_${gradeId}`;
-        if (structuresMap[exactKey] !== undefined) {
+        if (structuresMap[exactKey] !== undefined && Number(structuresMap[exactKey]) > 0) {
           return Number(structuresMap[exactKey]);
         }
         const bulkKey = `${selectedYear}_${selectedTerm}_ALL`;
-        if (structuresMap[bulkKey] !== undefined) {
+        if (structuresMap[bulkKey] !== undefined && Number(structuresMap[bulkKey]) > 0) {
           return Number(structuresMap[bulkKey]);
         }
       }
     } catch {}
 
-    // 3. Check general fee structures raw item
+    // 4. Check general fee structures raw item
     try {
       const rawStructs = localStorage.getItem(FEE_STRUCT_KEY);
       if (rawStructs) {
@@ -409,23 +423,13 @@ const Fees = () => {
       }
     } catch {}
 
-    // 4. Check global default term fee set in school settings
-    try {
-      const rawSettings = localStorage.getItem('munyaka_system_settings_v3') || localStorage.getItem('munyaka_user_settings');
-      if (rawSettings) {
-        const parsed = JSON.parse(rawSettings);
-        const globalFee = parsed?.defaultTermFee || parsed?.termFee || parsed?.schoolSettings?.termFee;
-        if (globalFee && Number(globalFee) > 0) return Number(globalFee);
-      }
-    } catch {}
-
     // 5. Fallback to ALL in feeStructures state
     const bulkConfig = feeStructures.find(f =>
       f.year === selectedYear && f.term === selectedTerm && (f.gradeId === "ALL" || f.gradeId === "all")
     );
     if (bulkConfig && bulkConfig.amount > 0) return bulkConfig.amount;
 
-    return exact ? exact.amount : 0;
+    return exact ? exact.amount : 15000;
   }, [selectedYear, selectedTerm, feeStructures]);
 
   /** Calculate total paid for a student from transactions and direct localStorage overrides */
@@ -484,7 +488,10 @@ const Fees = () => {
         const stream = learner.stream || '';
         const studentGradeId = findGradeIdForLearner(grade);
 
-        const termFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : Number(learner.termFee || 0);
+        // Ensure termFee falls back to global/grade term fee if learner.termFee is missing or 0
+        const gradeTermFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : 0;
+        const globalDefaultFee = getTermFeeForGrade('ALL');
+        const termFee = Number(learner.termFee) > 0 ? Number(learner.termFee) : (gradeTermFee > 0 ? gradeTermFee : (globalDefaultFee > 0 ? globalDefaultFee : 15000));
         const totalPaid = getTotalPaidForStudent(studentId);
         const balance = Math.max(0, termFee - totalPaid);
         const status = deriveStatus(termFee, totalPaid);
