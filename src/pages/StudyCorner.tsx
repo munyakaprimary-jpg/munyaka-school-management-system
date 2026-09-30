@@ -1710,44 +1710,46 @@ export default function StudyCorner() {
               </div>
             </div>
 
-            {/* Zoom controls for files */}
-            <div className="px-6 py-2 bg-slate-100/70 border-b border-slate-200 flex items-center justify-between text-xs text-slate-600">
-              <span className="font-medium">In-App Document Preview Viewer</span>
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500">Zoom: {zoomLevel}%</span>
-                <button
-                  onClick={() => setZoomLevel(z => Math.max(50, z - 25))}
-                  className="px-2 py-1 bg-white border border-slate-300 rounded font-bold hover:bg-slate-50 shadow-xs"
-                >
-                  -
-                </button>
-                <button
-                  onClick={() => setZoomLevel(100)}
-                  className="px-2 py-1 bg-white border border-slate-300 rounded font-medium hover:bg-slate-50 shadow-xs"
-                >
-                  Reset
-                </button>
-                <button
-                  onClick={() => setZoomLevel(z => Math.min(200, z + 25))}
-                  className="px-2 py-1 bg-white border border-slate-300 rounded font-bold hover:bg-slate-50 shadow-xs"
-                >
-                  +
-                </button>
+            {/* Clean Document Reader Card */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-10 bg-slate-50/50 flex items-center justify-center">
+              <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-slate-200 p-8 text-center flex flex-col items-center gap-5">
+                <div className="w-20 h-20 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-md">
+                  <GraduationCap size={40} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-slate-900 text-lg break-all">
+                    {previewAttachment.name || (previewAttachment as any).fileName || 'Study Document'}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {previewAttachment.size || (previewAttachment as any).fileSize ? formatBytes(previewAttachment.size || (previewAttachment as any).fileSize || 0) : 'Document File'}
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full pt-2">
+                  <a
+                    href={previewAttachment.dataUrl || (previewAttachment as any).url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-xl shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>Open Document</span>
+                  </a>
+                  <button
+                    onClick={() => {
+                      const dataUri = previewAttachment.dataUrl || (previewAttachment as any).url || '#';
+                      const link = document.createElement('a');
+                      link.href = dataUri;
+                      link.download = previewAttachment.name || (previewAttachment as any).fileName || 'study-document';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>Download File</span>
+                  </button>
+                </div>
               </div>
             </div>
-
-            {/* Viewer body */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
-              <div className="max-w-4xl mx-auto bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-                {previewAttachment.dataUrl ? (
-                  (() => {
-                    const rawUrl = previewAttachment.dataUrl;
-                    const mime = previewAttachment.type || (rawUrl.startsWith('data:') ? rawUrl.split(';')[0].replace('data:', '') : '');
-                    const name = previewAttachment.name || (previewAttachment as any).fileName || 'document';
-                    
-                    const isImage =
-                      mime.includes('image') ||
-                      rawUrl.startsWith('data:image/') ||
                       /\.(png|jpg|jpeg|webp|gif|svg)$/i.test(name);
                       
                     const isPdfOrText =
