@@ -981,19 +981,6 @@ const OwnerDashboard: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleOpenLanConfig}
-                    className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50"
-                  >
-                    {isConnected ? (
-                      <Wifi size={14} className="mr-1.5 text-emerald-600" />
-                    ) : (
-                      <WifiOff size={14} className="mr-1.5 text-slate-400" />
-                    )}
-                    LAN Server Config
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
                     onClick={handleOpenProfileSettings}
                     className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50"
                   >
