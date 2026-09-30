@@ -429,7 +429,21 @@ const Fees = () => {
     );
     if (bulkConfig && bulkConfig.amount > 0) return bulkConfig.amount;
 
-    return exact ? exact.amount : 15000;
+    return exact ? exact.amount : (
+      (() => {
+        try {
+          for (const k of ['munyaka_system_settings_v3', 'munyaka_user_settings', 'settings']) {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              const p = JSON.parse(raw);
+              const f = p?.defaultTermFee || p?.termFee || p?.schoolSettings?.termFee;
+              if (f && Number(f) > 0) return Number(f);
+            }
+          }
+        } catch {}
+        return 15000;
+      })()
+    );
   }, [selectedYear, selectedTerm, feeStructures]);
 
   /** Calculate total paid for a student from transactions and direct localStorage overrides */
@@ -488,10 +502,30 @@ const Fees = () => {
         const stream = learner.stream || '';
         const studentGradeId = findGradeIdForLearner(grade);
 
-        // Ensure termFee falls back to global/grade term fee if learner.termFee is missing or 0
+        // Ensure termFee dynamic binding: Check student record termFee, grade term fee structure, global settings termFee, or default
         const gradeTermFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : 0;
         const globalDefaultFee = getTermFeeForGrade('ALL');
-        const termFee = Number(learner.termFee) > 0 ? Number(learner.termFee) : (gradeTermFee > 0 ? gradeTermFee : (globalDefaultFee > 0 ? globalDefaultFee : 15000));
+        const termFee = Number(learner.termFee) > 0
+          ? Number(learner.termFee)
+          : (gradeTermFee > 0
+              ? gradeTermFee
+              : (globalDefaultFee > 0
+                  ? globalDefaultFee
+                  : (() => {
+                      try {
+                        for (const k of ['munyaka_system_settings_v3', 'munyaka_user_settings', 'settings']) {
+                          const raw = localStorage.getItem(k);
+                          if (raw) {
+                            const p = JSON.parse(raw);
+                            const f = p?.defaultTermFee || p?.termFee || p?.schoolSettings?.termFee;
+                            if (f && Number(f) > 0) return Number(f);
+                          }
+                        }
+                      } catch {}
+                      return 15000;
+                    })()
+                )
+            );
         const totalPaid = getTotalPaidForStudent(studentId);
         const balance = Math.max(0, termFee - totalPaid);
         const status = deriveStatus(termFee, totalPaid);
