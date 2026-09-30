@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,8 @@ import {
   FileSpreadsheet,
   ArrowUpDown,
   UserCheck,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Eye
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
@@ -104,6 +105,7 @@ const ensureProperAdmissionNumbers = (list: any[]) => {
 };
 
 export default function Students() {
+  const navigate = useNavigate();
   const [students, setStudents] = useState<any[]>(() => {
     let rawList: any[] = [];
     try {
@@ -174,6 +176,7 @@ export default function Students() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [selectedStudentForTransfer, setSelectedStudentForTransfer] = useState<any | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<any | null>(null);
@@ -666,21 +669,38 @@ export default function Students() {
                         <td className="px-2.5 py-2 font-mono text-slate-600 whitespace-nowrap">{sDob}</td>
                         <td className="px-2.5 py-2 text-slate-700 truncate max-w-[130px]" title={sParent}>{sParent}</td>
                         <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">{sPhone}</td>
-                        <td className="px-2.5 py-2 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1">
+                        <td className="px-3.5 py-2 text-right whitespace-nowrap min-w-[160px]">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => navigate(`/students/${sId}`)}
+                              className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
+                              title="View Profile"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedStudentForTransfer(student);
+                                setIsTransferModalOpen(true);
+                              }}
+                              className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-600 transition-colors"
+                              title="Transfer Learner"
+                            >
+                              <ArrowRightLeft size={16} />
+                            </button>
                             <button
                               onClick={() => handleEditClick(student)}
-                              className="p-1 hover:bg-indigo-50 rounded text-indigo-600 transition-colors"
+                              className="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
                               title="Edit Learner"
                             >
-                              <Edit size={15} />
+                              <Edit size={16} />
                             </button>
                             <button
                               onClick={() => requestDelete(student)}
-                              className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
+                              className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
                               title="Delete Learner"
                             >
-                              <Trash2 size={15} />
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         </td>

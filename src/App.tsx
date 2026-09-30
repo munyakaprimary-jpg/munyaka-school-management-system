@@ -299,7 +299,7 @@ const App = () => {
               };
               const ok = safeWrite('munyaka_central_db', initialDb, { operation: 'seed' });
               if (!ok) {
-                showError('Storage quota exceeded during initial seed. Please clear old records.');
+                console.error('Storage quota exceeded during initial seed. Please clear old records.');
               } else {
                 window.dispatchEvent(new Event('central_db_updated'));
               }
@@ -309,7 +309,7 @@ const App = () => {
                 parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
                 const ok = safeWrite('munyaka_central_db', parsed, { operation: 're-seed' });
                 if (!ok) {
-                  showError('Storage quota exceeded while re-seeding munyaka_central_db. Please clear old records.');
+                  console.error('Storage quota exceeded while re-seeding munyaka_central_db. Please clear old records.');
                 } else {
                   window.dispatchEvent(new Event('central_db_updated'));
                 }
