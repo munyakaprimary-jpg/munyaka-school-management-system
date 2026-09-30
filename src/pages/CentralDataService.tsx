@@ -8,6 +8,46 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { initialSeedData } from '@/data/initialSeedData';
 import { CentralDataService } from '@/services/centralDataService';
+import { safeWrite, isQuotaExceeded, lsSizeOf } from '@/utils/storageUtils';
+
+/**
+ * Recursively strip base64-encoded blobs (images, PDFs, etc.) from a data
+ * object to reduce payload size and avoid localStorage quota crashes.
+ *
+ * Looks for any string value that starts with a base64 data URI prefix
+ * (e.g. "data:image/png;base64,") or is a long base64 string, and replaces
+ * it with a short placeholder.
+ */
+function stripBase64Blobs(obj: any): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+
+  if (Array.isArray(obj)) {
+    return obj.map(stripBase64Blobs);
+  }
+
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'string') {
+      // Detect base64 data URIs: "data:<mime>;base64,..."
+      const dataUriMatch = value.match(/^data:[^;]+;base64,/i);
+      if (dataUriMatch) {
+        result[key] = `[stripped:${dataUriMatch[0].slice(5, 30)}...]`;
+        continue;
+      }
+      // Detect long base64 strings (≥ 1 KB, no spaces, typical base64 charset)
+      if (value.length >= 1024 && /^[A-Za-z0-9+/]+=*$/.test(value)) {
+        result[key] = `[stripped:base64_${value.length}_bytes]`;
+        continue;
+      }
+      result[key] = value;
+    } else if (typeof value === 'object') {
+      result[key] = stripBase64Blobs(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
 
 export default function CentralDataServicePage() {
   const { learners, staff, fees, attendance, exams, marks, timetable, settings, refreshStore } = useSchoolStore();
@@ -26,60 +66,104 @@ export default function CentralDataServicePage() {
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        setLoading(true);
-        const content = event.target?.result as string;
-        const parsed = JSON.parse(content);
-        if (!parsed || typeof parsed !== 'object') {
-          showError('Invalid JSON backup file.');
-          return;
+      const file = e.target.files?.[0];
+      if (!file) return;
+  
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          setLoading(true);
+          const content = event.target?.result as string;
+          const parsed = JSON.parse(content);
+          if (!parsed || typeof parsed !== 'object') {
+            showError('Invalid JSON backup file.');
+            return;
+          }
+  
+          // ── Strip unnecessary base64 blobs to reduce payload size ──────
+          // Large base64 strings (e.g. images, PDFs) can blow past the
+          // localStorage quota limit (typically 5–10 MB). We remove them
+          // from the parsed data before serializing back to storage.
+          const stripped = stripBase64Blobs(parsed);
+  
+          // ── Check approximate payload size before writing ─────────────
+          const payloadSize = JSON.stringify(stripped).length;
+          const estimatedBytes = payloadSize * 2; // JS UTF-16 encoding ~2 bytes/char
+          if (estimatedBytes > 8 * 1024 * 1024) {
+            // 8 MB safety threshold (localStorage limits vary 5–10 MB)
+            showError(
+              `Backup payload is too large (${(estimatedBytes / (1024 * 1024)).toFixed(1)} MB). ` +
+              'Please export a smaller snapshot or clear old records first.'
+            );
+            setLoading(false);
+            if (e.target) e.target.value = '';
+            return;
+          }
+  
+          // ── Write to localStorage with quota error handling ────────────
+          const storageOps: Array<[string, unknown]> = [
+            ['munyaka_students', stripped.students],
+            ['munyaka_staff', stripped.staff],
+            ['munyaka_fees', stripped.fees],
+            ['munyaka_attendance', stripped.attendance],
+            ['all_set_exams', stripped.exams],
+            ['marked_student_submissions', stripped.marks],
+            ['school-timetable-data', stripped.timetable],
+            ['munyaka_system_settings_v3', stripped.settings],
+            ['munyaka_central_db', stripped],
+          ];
+  
+          const failures: string[] = [];
+          for (const [key, value] of storageOps) {
+            if (value === undefined || value === null) continue;
+            const ok = safeWrite(key, value, { operation: 'import' });
+            if (!ok) {
+              failures.push(key);
+            }
+          }
+  
+          if (failures.length > 0) {
+            // Quota errors were already reported by safeWrite → handleQuotaError
+            if (failures.some(k => k === 'munyaka_central_db')) {
+              showError(
+                'Storage quota exceeded while importing backup. ' +
+                'Please export your data and clear old records to free up space, ' +
+                'then try importing a smaller snapshot.'
+              );
+            }
+            setLoading(false);
+            if (e.target) e.target.value = '';
+            return;
+          }
+  
+          // Force update Zustand store state
+          useSchoolStore.setState({
+            learners: stripped.students || learners,
+            staff: stripped.staff || staff,
+            fees: stripped.fees || fees,
+            attendance: stripped.attendance || attendance,
+            exams: stripped.exams || exams,
+            marks: stripped.marks || marks,
+            timetable: stripped.timetable || timetable,
+            settings: stripped.settings || settings,
+          });
+  
+          refreshStore();
+          refreshStats();
+          window.dispatchEvent(new Event('munyaka:data-changed'));
+          window.dispatchEvent(new Event('staff-changed'));
+          window.dispatchEvent(new Event('students-updated'));
+  
+          showSuccess('Successfully uploaded and hydrated store from backup file!');
+        } catch (err: any) {
+          showError('Failed to parse uploaded JSON: ' + (err?.message || err));
+        } finally {
+          setLoading(false);
+          if (e.target) e.target.value = '';
         }
-
-        // Overwrite local storage keys
-        if (parsed.students) localStorage.setItem('munyaka_students', JSON.stringify(parsed.students));
-        if (parsed.staff) localStorage.setItem('munyaka_staff', JSON.stringify(parsed.staff));
-        if (parsed.fees) localStorage.setItem('munyaka_fees', JSON.stringify(parsed.fees));
-        if (parsed.attendance) localStorage.setItem('munyaka_attendance', JSON.stringify(parsed.attendance));
-        if (parsed.exams) localStorage.setItem('all_set_exams', JSON.stringify(parsed.exams));
-        if (parsed.marks) localStorage.setItem('marked_student_submissions', JSON.stringify(parsed.marks));
-        if (parsed.timetable) localStorage.setItem('school-timetable-data', JSON.stringify(parsed.timetable));
-        if (parsed.settings) localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(parsed.settings));
-
-        localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
-
-        // Force update Zustand store state
-        useSchoolStore.setState({
-          learners: parsed.students || learners,
-          staff: parsed.staff || staff,
-          fees: parsed.fees || fees,
-          attendance: parsed.attendance || attendance,
-          exams: parsed.exams || exams,
-          marks: parsed.marks || marks,
-          timetable: parsed.timetable || timetable,
-          settings: parsed.settings || settings,
-        });
-
-        refreshStore();
-        refreshStats();
-        window.dispatchEvent(new Event('munyaka:data-changed'));
-        window.dispatchEvent(new Event('staff-changed'));
-        window.dispatchEvent(new Event('students-updated'));
-
-        showSuccess('Successfully uploaded and hydrated store from backup file!');
-      } catch (err: any) {
-        showError('Failed to parse uploaded JSON: ' + (err?.message || err));
-      } finally {
-        setLoading(false);
-        if (e.target) e.target.value = '';
-      }
+      };
+      reader.readAsText(file);
     };
-    reader.readAsText(file);
-  };
 
   const [stats, setStats] = useState({
     registeredStudents: 0,
@@ -192,60 +276,80 @@ export default function CentralDataServicePage() {
   };
 
   const handleSyncStoreToCentralData = async () => {
-    try {
-      setLoading(true);
-      // Read current store state and master lists
-      const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
-      const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
-      const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
-      const s4 = JSON.parse(localStorage.getItem('staff') || '[]');
-      const staffCandidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
-      const masterStaff = staffCandidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
-
-      const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-      const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
-      const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
-
-      const f1 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
-      const f2 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
-      const masterFees = [fees, f1, f2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), fees);
-
-      const dump = CentralDataService.getFullStateDump();
-
-      // Write full updated dataset to localStorage keys
-      localStorage.setItem('munyaka_students', JSON.stringify(masterLearners));
-      localStorage.setItem('munyaka_staff', JSON.stringify(dump.staff));
-      localStorage.setItem('munyaka_staff_directory', JSON.stringify(dump.staff));
-      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(dump.staff));
-      localStorage.setItem('munyaka_fees', JSON.stringify(masterFees));
-      localStorage.setItem('munyaka_attendance', JSON.stringify(attendance));
-      localStorage.setItem('munyaka_central_db', JSON.stringify(dump));
-
-      // Post directly to local dev server endpoint /api/save-seed to write to src/data/initialSeedData.ts on disk
-      const res = await fetch('/api/save-seed', {
-        method: 'POST',
-        body: JSON.stringify(useSchoolStore.getState())
-      });
-      if (res.ok) {
-        const jsonRes = await res.json();
-        if (jsonRes.success) {
-          showSuccess("Master seed file saved directly to src/data/initialSeedData.ts on disk!");
+      try {
+        setLoading(true);
+        // Read current store state and master lists
+        const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
+        const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
+        const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+        const s4 = JSON.parse(localStorage.getItem('staff') || '[]');
+        const staffCandidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
+        const masterStaff = staffCandidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
+  
+        const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
+        const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
+        const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
+  
+        const f1 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
+        const f2 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
+        const masterFees = [fees, f1, f2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), fees);
+  
+        const dump = CentralDataService.getFullStateDump();
+  
+        // Write full updated dataset to localStorage keys with quota error handling
+        const storageOps: Array<[string, unknown]> = [
+          ['munyaka_students', masterLearners],
+          ['munyaka_staff', dump.staff],
+          ['munyaka_staff_directory', dump.staff],
+          ['munyaka_master_staff_list', dump.staff],
+          ['munyaka_fees', masterFees],
+          ['munyaka_attendance', attendance],
+          ['munyaka_central_db', dump],
+        ];
+  
+        const failures: string[] = [];
+        for (const [key, value] of storageOps) {
+          const ok = safeWrite(key, value, { operation: 'sync' });
+          if (!ok) {
+            failures.push(key);
+          }
         }
+  
+        if (failures.length > 0) {
+          // Quota errors were already reported by safeWrite → handleQuotaError
+          showError(
+            'Storage quota exceeded while syncing. ' +
+            'Please export your data and clear old records to free up space.'
+          );
+          setLoading(false);
+          return;
+        }
+  
+        // Post directly to local dev server endpoint /api/save-seed to write to src/data/initialSeedData.ts on disk
+        const res = await fetch('/api/save-seed', {
+          method: 'POST',
+          body: JSON.stringify(useSchoolStore.getState())
+        });
+        if (res.ok) {
+          const jsonRes = await res.json();
+          if (jsonRes.success) {
+            showSuccess("Master seed file saved directly to src/data/initialSeedData.ts on disk!");
+          }
+        }
+  
+        refreshStore();
+        refreshStats();
+        window.dispatchEvent(new Event('munyaka:data-changed'));
+        window.dispatchEvent(new Event('staff-changed'));
+        window.dispatchEvent(new Event('students-updated'));
+  
+        showSuccess(`Successfully synced useSchoolStore, localStorage, and central dataset!`);
+      } catch (err: any) {
+        showError('Failed to sync central data: ' + (err?.message || err));
+      } finally {
+        setLoading(false);
       }
-
-      refreshStore();
-      refreshStats();
-      window.dispatchEvent(new Event('munyaka:data-changed'));
-      window.dispatchEvent(new Event('staff-changed'));
-      window.dispatchEvent(new Event('students-updated'));
-
-      showSuccess(`Successfully synced useSchoolStore, localStorage, and central dataset!`);
-    } catch (err: any) {
-      showError('Failed to sync central data: ' + (err?.message || err));
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   const handleGenerateSnapshot = async () => {
     try {
@@ -282,38 +386,63 @@ export default function CentralDataServicePage() {
   };
 
   const handleRestoreSnapshot = async () => {
-    if (!restoreJson.trim()) {
-      showError('Please paste a valid JSON snapshot');
-      return;
-    }
-    try {
-      setLoading(true);
-      const parsed = JSON.parse(restoreJson);
-      if (parsed) {
-        if (parsed.students) localStorage.setItem('munyaka_students', JSON.stringify(parsed.students));
-        if (parsed.staff) localStorage.setItem('munyaka_staff', JSON.stringify(parsed.staff));
-        if (parsed.fees) localStorage.setItem('munyaka_fees', JSON.stringify(parsed.fees));
-        if (parsed.attendance) localStorage.setItem('munyaka_attendance', JSON.stringify(parsed.attendance));
-        if (parsed.exams) localStorage.setItem('all_set_exams', JSON.stringify(parsed.exams));
-        if (parsed.marks) localStorage.setItem('marked_student_submissions', JSON.stringify(parsed.marks));
-        if (parsed.timetable) localStorage.setItem('school-timetable-data', JSON.stringify(parsed.timetable));
-        if (parsed.settings) localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(parsed.settings));
-
-        refreshStore();
-        showSuccess('System restored successfully from snapshot.');
-        setIsRestoreOpen(false);
-        setRestoreJson('');
-        refreshStats();
-        window.dispatchEvent(new Event('munyaka:data-changed'));
-      } else {
-        showError('Invalid JSON format or corrupted snapshot.');
+      if (!restoreJson.trim()) {
+        showError('Please paste a valid JSON snapshot');
+        return;
       }
-    } catch {
-      showError('Failed to restore snapshot.');
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        setLoading(true);
+        const parsed = JSON.parse(restoreJson);
+        if (parsed) {
+          // Strip base64 blobs to reduce payload size
+          const stripped = stripBase64Blobs(parsed);
+  
+          // Write to localStorage with quota error handling
+          const storageOps: Array<[string, unknown]> = [
+            ['munyaka_students', stripped.students],
+            ['munyaka_staff', stripped.staff],
+            ['munyaka_fees', stripped.fees],
+            ['munyaka_attendance', stripped.attendance],
+            ['all_set_exams', stripped.exams],
+            ['marked_student_submissions', stripped.marks],
+            ['school-timetable-data', stripped.timetable],
+            ['munyaka_system_settings_v3', stripped.settings],
+          ];
+  
+          const failures: string[] = [];
+          for (const [key, value] of storageOps) {
+            if (value === undefined || value === null) continue;
+            const ok = safeWrite(key, value, { operation: 'restore' });
+            if (!ok) {
+              failures.push(key);
+            }
+          }
+  
+          if (failures.length > 0) {
+            // Quota errors were already reported by safeWrite → handleQuotaError
+            showError(
+              'Storage quota exceeded while restoring snapshot. ' +
+              'Please export your data and clear old records to free up space.'
+            );
+            setLoading(false);
+            return;
+          }
+  
+          refreshStore();
+          showSuccess('System restored successfully from snapshot.');
+          setIsRestoreOpen(false);
+          setRestoreJson('');
+          refreshStats();
+          window.dispatchEvent(new Event('munyaka:data-changed'));
+        } else {
+          showError('Invalid JSON format or corrupted snapshot.');
+        }
+      } catch {
+        showError('Failed to restore snapshot.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">

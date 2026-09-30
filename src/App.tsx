@@ -48,6 +48,7 @@ import ICTLabManagement from "./pages/ICTLabManagement";
 import SystemAndAccountManagement from "./pages/SystemAndAccountManagement";
 import DigitalSkillsAssessment from "./pages/DigitalSkillsAssessment";
 import PracticalCompetencies from "./pages/PracticalCompetencies";
+import { safeWrite } from "@/utils/storageUtils";
 import ScienceLab from "./pages/ScienceLab";
 import StudyCorner from "./pages/StudyCorner";
 import CentralDataService from "./pages/CentralDataService";
@@ -292,20 +293,28 @@ const App = () => {
     try {
       const existingDb = localStorage.getItem('munyaka_central_db');
       if (!existingDb) {
-        const initialDb = {
-          students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
-          staff: initialSeedData.staff || [],
-        };
-        localStorage.setItem('munyaka_central_db', JSON.stringify(initialDb));
-        window.dispatchEvent(new Event('central_db_updated'));
-      } else {
-        const parsed = JSON.parse(existingDb);
-        if (!parsed.students || parsed.students.length === 0) {
-          parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
-          localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
-          window.dispatchEvent(new Event('central_db_updated'));
-        }
-      }
+              const initialDb = {
+                students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
+                staff: initialSeedData.staff || [],
+              };
+              const ok = safeWrite('munyaka_central_db', initialDb, { operation: 'seed' });
+              if (!ok) {
+                showError('Storage quota exceeded during initial seed. Please clear old records.');
+              } else {
+                window.dispatchEvent(new Event('central_db_updated'));
+              }
+            } else {
+              const parsed = JSON.parse(existingDb);
+              if (!parsed.students || parsed.students.length === 0) {
+                parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
+                const ok = safeWrite('munyaka_central_db', parsed, { operation: 're-seed' });
+                if (!ok) {
+                  showError('Storage quota exceeded while re-seeding munyaka_central_db. Please clear old records.');
+                } else {
+                  window.dispatchEvent(new Event('central_db_updated'));
+                }
+              }
+            }
     } catch (err) {
       console.error("Failed to seed munyaka_central_db:", err);
     }
