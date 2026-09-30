@@ -52,6 +52,11 @@ function stripBase64Blobs(obj: any): any {
 export default function CentralDataServicePage() {
   const { learners, staff, fees, attendance, exams, marks, timetable, settings, refreshStore } = useSchoolStore();
 
+  useEffect(() => {
+    refreshStore();
+    refreshStats();
+  }, [learners, staff, fees, attendance]);
+
   const [pasteJsonInput, setPasteJsonInput] = useState('');
 
   const handleCopyLiveStoreJson = async () => {
