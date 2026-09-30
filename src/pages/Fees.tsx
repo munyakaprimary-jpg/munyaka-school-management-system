@@ -373,7 +373,7 @@ const Fees = () => {
 
   // ── Dynamic fee calculations ───────────────────────────────────────────────
   
-  /** Get term fee for a specific grade with fallback to ALL / bulk */
+  /** Get term fee for a specific grade with fallback to ALL / bulk or global default */
   const getTermFeeForGrade = useCallback((gradeId: string): number => {
     // 1. Check exact grade configuration in state
     const exact = feeStructures.find(f =>
@@ -397,7 +397,29 @@ const Fees = () => {
       }
     } catch {}
 
-    // 3. Fallback to ALL in feeStructures state
+    // 3. Check general fee structures raw item
+    try {
+      const rawStructs = localStorage.getItem(FEE_STRUCT_KEY);
+      if (rawStructs) {
+        const parsed = JSON.parse(rawStructs);
+        if (Array.isArray(parsed)) {
+          const match = parsed.find(f => String(f.year) === String(selectedYear) && String(f.term) === String(selectedTerm) && (f.gradeId === gradeId || f.gradeId === 'ALL' || f.gradeId === 'all'));
+          if (match && Number(match.amount) > 0) return Number(match.amount);
+        }
+      }
+    } catch {}
+
+    // 4. Check global default term fee set in school settings
+    try {
+      const rawSettings = localStorage.getItem('munyaka_system_settings_v3') || localStorage.getItem('munyaka_user_settings');
+      if (rawSettings) {
+        const parsed = JSON.parse(rawSettings);
+        const globalFee = parsed?.defaultTermFee || parsed?.termFee || parsed?.schoolSettings?.termFee;
+        if (globalFee && Number(globalFee) > 0) return Number(globalFee);
+      }
+    } catch {}
+
+    // 5. Fallback to ALL in feeStructures state
     const bulkConfig = feeStructures.find(f =>
       f.year === selectedYear && f.term === selectedTerm && (f.gradeId === "ALL" || f.gradeId === "all")
     );
