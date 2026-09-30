@@ -41,6 +41,7 @@ export interface SchoolStore {
   setEvents: (events: any) => void;
   setState: (partial: any) => void;
   exportBackup: () => void;
+  refreshStore: () => void;
 }
 
 export interface SchoolStoreHook {
@@ -205,6 +206,24 @@ let storeState: SchoolStore = {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+  },
+  refreshStore: () => {
+    try {
+      storeState.learners = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
+      storeState.staff = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
+      storeState.fees = JSON.parse(localStorage.getItem('munyaka_fees') || '{}');
+      storeState.attendance = JSON.parse(localStorage.getItem('munyaka_attendance') || '{}');
+      storeState.exams = JSON.parse(localStorage.getItem('all_set_exams') || '[]');
+      storeState.marks = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
+      storeState.timetable = JSON.parse(localStorage.getItem('munyaka_timetable') || '{}');
+      storeState.settings = JSON.parse(localStorage.getItem('munyaka_settings') || '{}');
+      storeState.notices = JSON.parse(localStorage.getItem('munyaka_notices_board') || '[]');
+      storeState.events = JSON.parse(localStorage.getItem('munyaka_events') || '[]');
+      storeState.campuses = JSON.parse(localStorage.getItem('munyaka_campuses') || '[]');
+      storeState.tenants = JSON.parse(localStorage.getItem('munyaka_tenants') || '[]');
+    } catch {}
+    listeners.forEach(l => l());
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed'));
   }
 };
 
