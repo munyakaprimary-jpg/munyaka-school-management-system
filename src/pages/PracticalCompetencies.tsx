@@ -487,7 +487,7 @@ const PracticalCompetencies = () => {
     };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6 overflow-y-auto pb-28">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <BackButton parentPath="/" />
