@@ -338,17 +338,6 @@ export default function Students() {
       };
 
       const updated = [studentData, ...students];
-      setStudents(updated);
-      localStorage.setItem('munyaka_students', JSON.stringify(updated));
-      notifyDataChanged('munyaka_students');
-      setIsTransferModalOpen(false);
-      showSuccess(`Successfully transferred in ${studentData.fullName}`);
-    } catch (err) {
-      showError("Failed to transfer in learner.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
       const resequenced = ensureProperAdmissionNumbers(updated);
       setStudents(resequenced);
 
@@ -360,7 +349,7 @@ export default function Students() {
         window.dispatchEvent(new CustomEvent('central-data-updated', { detail: { students: resequenced } }));
       } catch {}
 
-      showSuccess("Learner transferred in successfully!");
+      showSuccess(`Successfully transferred in ${studentData.fullName}`);
       setIsTransferModalOpen(false);
     } catch (err) {
       showError("Failed to transfer in learner.");
