@@ -542,59 +542,59 @@ const PracticalCompetencies = () => {
       {activeTab === 'projects' && (
         <div className="space-y-6">
           {/* Metric Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                  <Layers size={24} />
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4 sm:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
+                  <Layers size={22} className="sm:w-6 sm:h-6" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Projects</p>
-                  <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{projectStats.activeProjects}</h3>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                  <CheckCircle2 size={24} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Completed</p>
-                  <h3 className="text-2xl font-black text-emerald-700 leading-none mt-1">{projectStats.completedProjects}</h3>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">Active Projects</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-none mt-1">{projectStats.activeProjects}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
-                  <AlertCircle size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4 sm:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
+                  <CheckCircle2 size={22} className="sm:w-6 sm:h-6" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pending Grading</p>
-                  <h3 className="text-2xl font-black text-amber-700 leading-none mt-1">{projectStats.pendingGrading}</h3>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                  <ClipboardCheck size={24} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Graded %</p>
-                  <h3 className="text-2xl font-black text-blue-700 leading-none mt-1">{projectStats.gradedPct}%</h3>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">Completed</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-emerald-700 leading-none mt-1">{projectStats.completedProjects}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-                  <FileCheck size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4 sm:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-amber-50 text-amber-600 rounded-2xl shrink-0">
+                  <AlertCircle size={22} className="sm:w-6 sm:h-6" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Submissions</p>
-                  <h3 className="text-2xl font-black text-purple-700 leading-none mt-1">{projectStats.totalSubmissions}</h3>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">Pending Grading</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-amber-700 leading-none mt-1">{projectStats.pendingGrading}</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4 sm:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                  <ClipboardCheck size={22} className="sm:w-6 sm:h-6" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">Graded %</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-blue-700 leading-none mt-1">{projectStats.gradedPct}%</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4 sm:p-6 col-span-2 lg:col-span-1">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-purple-50 text-purple-600 rounded-2xl shrink-0">
+                  <FileCheck size={22} className="sm:w-6 sm:h-6" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">Total Submissions</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-purple-700 leading-none mt-1">{projectStats.totalSubmissions}</h3>
                 </div>
               </div>
             </Card>
