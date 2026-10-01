@@ -360,7 +360,7 @@ export default function Students() {
 
   const handleDownloadLearners = () => {
     try {
-      const headers = generateCSVHeader("LEARNERS DIRECTORY EXPORT", `Grade: ${selectedGrade} | Stream: ${selectedStream} | Search: "${searchTerm}"`);
+      const headers = generateCSVHeader("LEARNERS DIRECTORY EXPORT", `Grade: ${gradeFilter} | Stream: ${streamFilter} | Search: "${searchTerm}"`);
       const csvHeaders = ["Admission No", "Assessment No", "Full Name", "Grade", "Stream", "Gender", "Date of Birth", "Parent / Guardian", "Phone Number"];
       
       const rows = filteredStudents.map(s => [
@@ -376,7 +376,7 @@ export default function Students() {
       ]);
 
       const csvContent = [...headers, csvHeaders.join(","), ...rows.map(r => r.join(","))].join("\n");
-      const filename = `Learners_Directory_${selectedGrade.replace(/\s+/g, '_')}_${selectedStream}_${Date.now()}.csv`;
+      const filename = `Learners_Directory_${gradeFilter.replace(/\s+/g, '_')}_${streamFilter}_${Date.now()}.csv`;
       
       downloadCSV(csvContent, filename);
       showSuccess("Learners list downloaded successfully!");
