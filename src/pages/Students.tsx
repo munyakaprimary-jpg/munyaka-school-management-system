@@ -499,6 +499,13 @@ export default function Students() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button
+            variant="outline"
+            className="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 font-bold text-xs sm:text-sm"
+            onClick={handleDownloadLearners}
+          >
+            <Download size={18} /> Download List
+          </Button>
+          <Button
             onClick={handleOpenTransferModal}
             variant="outline"
             className="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 font-bold text-xs sm:text-sm"
