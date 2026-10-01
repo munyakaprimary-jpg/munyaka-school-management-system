@@ -67,7 +67,7 @@ const DEFAULT_LEVELS: EducationalLevelSection[] = [
       { id: 'up-2', name: 'Kiswahili', periodsPerWeek: 4, type: 'Core', description: 'Fasihi, sarufi, na ukuzaji wa lugha', isDefault: true },
       { id: 'up-3', name: 'Mathematics', periodsPerWeek: 6, type: 'Core', description: 'Algebraic thinking, geometry, fractions, and statistics', isDefault: true },
       { id: 'up-4', name: 'Science and Technology', periodsPerWeek: 4, type: 'Core', description: 'Living things, environment, matter, and computing', isDefault: true },
-      { id: 'up-5', name: 'Social Studies', periodsPerKey: 3, periodsPerWeek: 3, type: 'Core', description: 'History, citizenship, geography, and resources', isDefault: true },
+      { id: 'up-5', name: 'Social Studies', periodsPerWeek: 3, type: 'Core', description: 'History, citizenship, geography, and resources', isDefault: true },
       { id: 'up-6', name: 'Agriculture & Nutrition', periodsPerWeek: 4, type: 'Core', description: 'Crop production, domestic animal rearing, and foods', isDefault: true },
       { id: 'up-7', name: 'Creative Arts', periodsPerWeek: 3, type: 'Core', description: 'Visual arts, performing arts, music, and drama', isDefault: true },
       { id: 'up-8', name: 'Religious Education (CRE/IRE/HRE)', periodsPerWeek: 3, type: 'Core', description: 'Moral and spiritual development', isDefault: true },

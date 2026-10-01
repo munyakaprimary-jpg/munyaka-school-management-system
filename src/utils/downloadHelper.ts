@@ -14,7 +14,14 @@ export const SCHOOL_HEADERS = [
   ""
 ];
 
-export const MUNYAKA_HEADERS = SCHOOL_HEADERS;
+export const MUNYAKA_HEADERS = Object.assign(
+  [...SCHOOL_HEADERS],
+  {
+    schoolLine1: "MUNYAKA PRIMARY AND JUNIOR",
+    schoolLine2: "P.O. BOX 5239, ELDORET",
+    schoolLine3: "MOTTO: Knowledge Is Power"
+  }
+);
 
 export function generateCSVHeader(title: string, subtitle?: string): string[] {
   return [
@@ -64,12 +71,14 @@ export async function downloadDocument(options: DownloadOptions): Promise<Downlo
       if (!response.ok) {
         throw new Error(`Failed to fetch file: ${response.statusText}`);
       }
-      fileData = await response.arrayBuffer();
+      const arrayBuf = await response.arrayBuffer();
+      fileData = new Uint8Array(arrayBuf);
       contentType = response.headers.get('content-type') || mimeType;
     } else if (base64) {
       fileData = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
     } else if (blob) {
-      fileData = await blob.arrayBuffer();
+      const arrayBuf = await blob.arrayBuffer();
+      fileData = new Uint8Array(arrayBuf);
       contentType = blob.type || mimeType;
     } else {
       throw new Error('Invalid input parameters');
