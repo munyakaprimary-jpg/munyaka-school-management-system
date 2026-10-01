@@ -358,6 +358,33 @@ export default function Students() {
     }
   };
 
+  const handleDownloadLearners = () => {
+    try {
+      const headers = generateCSVHeader("LEARNERS DIRECTORY EXPORT", `Grade: ${selectedGrade} | Stream: ${selectedStream} | Search: "${searchTerm}"`);
+      const csvHeaders = ["Admission No", "Assessment No", "Full Name", "Grade", "Stream", "Gender", "Date of Birth", "Parent / Guardian", "Phone Number"];
+      
+      const rows = filteredStudents.map(s => [
+        `"${s.admissionNumber || s.admNo || ''}"`,
+        `"${s.assessmentNo || s.assessmentNumber || ''}"`,
+        `"${s.fullName || s.name || ''}"`,
+        `"${s.grade || s.class || ''}"`,
+        `"${s.stream || ''}"`,
+        `"${s.gender || ''}"`,
+        `"${s.dateOfBirth || s.dob || s.birthDate || ''}"`,
+        `"${s.parentName || s.guardian || ''}"`,
+        `"${s.phoneNumber || s.parentPhone || s.phone || ''}"`
+      ]);
+
+      const csvContent = [...headers, csvHeaders.join(","), ...rows.map(r => r.join(","))].join("\n");
+      const filename = `Learners_Directory_${selectedGrade.replace(/\s+/g, '_')}_${selectedStream}_${Date.now()}.csv`;
+      
+      downloadCSV(csvContent, filename);
+      showSuccess("Learners list downloaded successfully!");
+    } catch (err) {
+      showError("Failed to download learners list.");
+    }
+  };
+
   const handleEditClick = (student: any) => {
     setEditingId(student.id || student.admissionNumber);
     setFullName(student.name || student.fullName || '');
@@ -502,7 +529,7 @@ export default function Students() {
           <Button
             variant="outline"
             className="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 font-bold text-xs sm:text-sm"
-            onClick={handleDownloadLearners}
+            onClick={() => handleDownloadLearners()}
           >
             <Download size={18} /> Download List
           </Button>
