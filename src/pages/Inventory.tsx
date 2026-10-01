@@ -291,26 +291,34 @@ const Inventory = () => {
           </div>
 
           {filteredAssets.length > 0 ? (
-            <div className="overflow-x-auto custom-scrollbar pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-w-[1000px] lg:min-w-0">
+            <div className="pb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {filteredAssets.map((item) => (
-                  <Card key={item.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white group overflow-hidden">
-                    <CardContent className="p-8">
-                      <div className="flex justify-between items-start mb-6">
-                        <div className={cn("w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center", item.color)}><Box size={28} /></div>
-                        <Button variant="ghost" size="icon" className="rounded-full text-slate-300 hover:text-red-500" onClick={() => { setAssetToDelete(item.id); setIsDeleteOpen(true); }}><Trash2 size={18} /></Button>
+                  <Card key={item.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[1.75rem] sm:rounded-[2rem] bg-white group overflow-hidden">
+                    <CardContent className="p-4 sm:p-5 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div className={cn("w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0", item.color)}>
+                          <Box size={22} className="sm:w-6 sm:h-6" />
+                        </div>
+                        <div className="min-w-0 flex-1 pr-1">
+                          <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate leading-tight">{item.item}</h3>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider truncate">{item.category}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className={cn("text-[9px] font-bold uppercase shrink-0",
+                              item.status === 'Available' ? "text-emerald-600" :
+                              item.status === 'Low Stock' ? "text-amber-600" : "text-blue-600")}>
+                              {item.status}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-1 mb-6">
-                        <h3 className="text-lg font-bold text-slate-900 leading-tight">{item.item}</h3>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</p>
-                      </div>
-                      <div className="flex items-end justify-between pt-6 border-t border-slate-50">
-                        <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Stock</p><p className="text-2xl font-black text-slate-900">{item.qty}</p></div>
-                        <Badge className={cn("rounded-lg border-none px-3 py-1 font-bold text-[10px] uppercase", 
-                          item.status === 'Available' ? "bg-emerald-50 text-emerald-600" : 
-                          item.status === 'Low Stock' ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700")}>
-                          {item.status}
-                        </Badge>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Stock</p>
+                          <p className="text-xl sm:text-2xl font-black text-slate-900 leading-none">{item.qty}</p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 -mr-1" onClick={() => { setAssetToDelete(item.id); setIsDeleteOpen(true); }}><Trash2 size={16} /></Button>
                       </div>
                     </CardContent>
                   </Card>
