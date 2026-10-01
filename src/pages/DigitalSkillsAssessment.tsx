@@ -512,48 +512,48 @@ const DigitalSkillsAssessment = () => {
       {activeTab === 'competencies' && (
         <div className="space-y-6">
           {/* Metric Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                  <Award size={24} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
+                  <Award size={20} className="sm:w-6 sm:h-6" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Evaluated</p>
-                  <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{competencyStats.total}</h3>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                  <CheckCircle2 size={24} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">EE (Exceeding)</p>
-                  <h3 className="text-2xl font-black text-emerald-700 leading-none mt-1">{competencyStats.ee}</h3>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">Total Evaluated</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-none mt-1">{competencyStats.total}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                  <CheckCircle2 size={24} />
+            <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
+                  <CheckCircle2 size={20} className="sm:w-6 sm:h-6" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">ME (Meeting)</p>
-                  <h3 className="text-2xl font-black text-blue-700 leading-none mt-1">{competencyStats.me}</h3>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">EE (Exceeding)</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-emerald-700 leading-none mt-1">{competencyStats.ee}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
-                  <AlertCircle size={24} />
+            <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                  <CheckCircle2 size={20} className="sm:w-6 sm:h-6" />
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">AE / BE (Support Needed)</p>
-                  <h3 className="text-2xl font-black text-amber-700 leading-none mt-1">{competencyStats.aeBe}</h3>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">ME (Meeting)</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-blue-700 leading-none mt-1">{competencyStats.me}</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5 col-span-2 lg:col-span-1">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-amber-50 text-amber-600 rounded-2xl shrink-0">
+                  <AlertCircle size={20} className="sm:w-6 sm:h-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">AE / BE (Support)</p>
+                  <h3 className="text-xl sm:text-2xl font-black text-amber-700 leading-none mt-1">{competencyStats.aeBe}</h3>
                 </div>
               </div>
             </Card>
