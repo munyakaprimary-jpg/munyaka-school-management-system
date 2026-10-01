@@ -837,7 +837,7 @@ const ICTLabManagement = () => {
               <Card key={i} className="border-none shadow-sm rounded-[1.5rem] sm:rounded-[2rem] bg-white p-3 sm:p-4">
                 <div className="flex items-center gap-2.5 sm:gap-4">
                   <div className={cn("p-2 sm:p-2.5 rounded-2xl shrink-0", s.bg)}>
-                    <s.icon className={s.color} size={18} className="sm:w-5 sm:h-5" />
+                    <s.icon className={cn(s.color, "sm:w-5 sm:h-5")} size={18} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">{s.label}</p>
