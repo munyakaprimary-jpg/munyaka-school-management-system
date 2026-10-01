@@ -344,7 +344,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             });
 
   return (
-    <div className={cn("flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
+      <div className={cn("flex min-h-screen w-full bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
       {/* Mobile Sidebar Overlay Backdrop */}
       {isOpen && (
         <div
@@ -572,12 +572,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 </header>
 
         {/* Dynamic Main Viewport - prevent horizontal clipping */}
-        <div
-                  ref={scrollContainerRef}
-                  className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 pb-safe custom-scrollbar"
-                >
-          <div className="max-w-7xl mx-auto w-full max-w-full overflow-x-hidden px-0 table-scroll-viewport">
-            {children}
+                <div
+                          ref={scrollContainerRef}
+                          className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-8 pb-36 lg:pb-8 pb-safe custom-scrollbar"
+                        >
+                  <div className="max-w-7xl mx-auto w-full max-w-full overflow-x-hidden px-0 table-scroll-viewport">
+                    {children}
           </div>
         </div>
 

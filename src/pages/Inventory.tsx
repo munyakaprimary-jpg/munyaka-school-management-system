@@ -227,7 +227,7 @@ const Inventory = () => {
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-36">
       <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 action-bar w-full max-w-full">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <BackButton parentPath="/" />
