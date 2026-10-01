@@ -382,7 +382,6 @@ export const DocumentPreviewViewer: React.FC<DocumentPreviewViewerProps> = ({
               </div>
             </div>
           )}
-          )}
         </div>
 
         {/* Footer */}
