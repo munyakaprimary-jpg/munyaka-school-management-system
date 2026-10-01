@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2, X, Code, Zap, Database, Cpu } from 'lucide-react';
+import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, AlertTriangle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2, X, Code, Zap, Database, Cpu } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface CompetencyRecord {
@@ -364,12 +364,13 @@ const DigitalSkillsAssessment = () => {
   }, [records, softwareSearchTerm, softwareToolFilter, softwareLevelFilter, selectedGrade, selectedStream]);
 
   const competencyStats = useMemo(() => {
-    const total = MOCK_COMPETENCIES.length;
-    const ee = MOCK_COMPETENCIES.filter(r => r.rating === 'EE').length;
-    const me = MOCK_COMPETENCIES.filter(r => r.rating === 'ME').length;
-    const aeBe = MOCK_COMPETENCIES.filter(r => r.rating === 'AE' || r.rating === 'BE').length;
-    return { total, ee, me, aeBe };
-  }, []);
+      const total = MOCK_COMPETENCIES.length;
+      const ee = MOCK_COMPETENCIES.filter(r => r.rating === 'EE').length;
+      const me = MOCK_COMPETENCIES.filter(r => r.rating === 'ME').length;
+      const ae = MOCK_COMPETENCIES.filter(r => r.rating === 'AE').length;
+      const be = MOCK_COMPETENCIES.filter(r => r.rating === 'BE').length;
+      return { total, ee, me, ae, be };
+    }, []);
 
   const typingStats = useMemo(() => {
     const totalSessions = MOCK_TYPING_RECORDS.length;
@@ -512,52 +513,63 @@ const DigitalSkillsAssessment = () => {
       {activeTab === 'competencies' && (
         <div className="space-y-6">
           {/* Metric Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
-                  <Award size={20} className="sm:w-6 sm:h-6" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">Total Evaluated</p>
-                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-none mt-1">{competencyStats.total}</h3>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
-                  <CheckCircle2 size={20} className="sm:w-6 sm:h-6" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">EE (Exceeding)</p>
-                  <h3 className="text-xl sm:text-2xl font-black text-emerald-700 leading-none mt-1">{competencyStats.ee}</h3>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
-                  <CheckCircle2 size={20} className="sm:w-6 sm:h-6" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">ME (Meeting)</p>
-                  <h3 className="text-xl sm:text-2xl font-black text-blue-700 leading-none mt-1">{competencyStats.me}</h3>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5 col-span-2 lg:col-span-1">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 bg-amber-50 text-amber-600 rounded-2xl shrink-0">
-                  <AlertCircle size={20} className="sm:w-6 sm:h-6" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">AE / BE (Support)</p>
-                  <h3 className="text-xl sm:text-2xl font-black text-amber-700 leading-none mt-1">{competencyStats.aeBe}</h3>
-                </div>
-              </div>
-            </Card>
-          </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                      <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="p-2 sm:p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
+                            <Award size={20} className="sm:w-6 sm:h-6" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">Total Evaluated</p>
+                            <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-none mt-1">{competencyStats.total}</h3>
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="p-2 sm:p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
+                            <CheckCircle2 size={20} className="sm:w-6 sm:h-6" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">EE (Exceeding)</p>
+                            <h3 className="text-xl sm:text-2xl font-black text-emerald-700 leading-none mt-1">{competencyStats.ee}</h3>
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="p-2 sm:p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                            <CheckCircle2 size={20} className="sm:w-6 sm:h-6" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">ME (Meeting)</p>
+                            <h3 className="text-xl sm:text-2xl font-black text-blue-700 leading-none mt-1">{competencyStats.me}</h3>
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="p-2 sm:p-3 bg-amber-50 text-amber-600 rounded-2xl shrink-0">
+                            <AlertCircle size={20} className="sm:w-6 sm:h-6" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">AE (Approaching)</p>
+                            <h3 className="text-xl sm:text-2xl font-black text-amber-700 leading-none mt-1">{competencyStats.ae}</h3>
+                          </div>
+                        </div>
+                      </Card>
+                      <Card className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-3.5 sm:p-5">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="p-2 sm:p-3 bg-rose-50 text-rose-600 rounded-2xl shrink-0">
+                            <AlertTriangle size={20} className="sm:w-6 sm:h-6" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">BE (Below)</p>
+                            <h3 className="text-xl sm:text-2xl font-black text-rose-700 leading-none mt-1">{competencyStats.be}</h3>
+                          </div>
+                        </div>
+                      </Card>
+                    </div>
 
           {/* Filters & Search */}
           <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
