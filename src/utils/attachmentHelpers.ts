@@ -13,6 +13,7 @@
  */
 
 import type { Att, Attachment } from "@/data/cbcStudyContent";
+import { downloadFromUrl, downloadFromBase64 } from "@/utils/downloadHelper";
 
 /** Default soft cap per attachment: 4 MB. */
 export const DEFAULT_MAX_BYTES = 4 * 1024 * 1024;
@@ -127,18 +128,28 @@ export function openAttachment(att: Att): void {
 
 /** Trigger a Save As for an attachment via an anchor click. */
 export function downloadAttachment(att: Attachment): void {
-  try {
-    const link = document.createElement("a");
-    link.href = att.dataUrl || att.url;
-    link.download = att.name || att.title || 'download';
-    link.rel = "noopener";
-    link.style.display = "none";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } catch (err) {
-    console.error("[attachmentHelpers] downloadAttachment failed:", err);
+  const url = att.dataUrl || att.url;
+  const name = att.name || att.title || 'download';
+  
+  if (!url) {
+    console.error("[attachmentHelpers] downloadAttachment failed: No URL", att);
+    return;
   }
+
+  if (url.startsWith('data:')) {
+    const arr = url.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+    const b64Data = arr[1];
+    downloadFromBase64(b64Data, name, mimeType).catch(err => {
+      console.error("[attachmentHelpers] downloadFromBase64 failed:", err);
+    });
+    return;
+  }
+
+  downloadFromUrl(url, name).catch(err => {
+    console.error("[attachmentHelpers] downloadFromUrl failed:", err);
+  });
 }
 
 /** Human-friendly description of a file (used in badges / previews). */
