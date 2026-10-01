@@ -488,22 +488,22 @@ const PracticalCompetencies = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <BackButton parentPath="/" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Practical Competencies</h1>
-            <p className="text-gray-500">CBC project assessments, observational rubrics, and practical task logs.</p>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Practical Competencies</h1>
+            <p className="text-xs sm:text-sm text-gray-500 truncate sm:whitespace-normal">CBC project assessments, observational rubrics, and practical task logs.</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto justify-end">
           {activeTab === 'projects' && (
-            <Button onClick={() => setIsAddProjectOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 gap-2">
+            <Button onClick={() => setIsAddProjectOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 gap-2 text-xs sm:text-sm h-9 sm:h-10">
               <Plus size={16} /> New Project
             </Button>
           )}
           {activeTab === 'observations' && (
-            <Button onClick={() => setIsAddObsOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 gap-2">
+            <Button onClick={() => setIsAddObsOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 gap-2 text-xs sm:text-sm h-9 sm:h-10">
               <Plus size={16} /> Log Observation
             </Button>
           )}
