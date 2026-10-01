@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
+import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 
 const STUDENTS_STORAGE_KEY = 'munyaka_students';
 const CENTRAL_DB_KEY = 'munyaka_central_db';
