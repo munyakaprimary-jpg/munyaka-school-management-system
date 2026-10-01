@@ -827,21 +827,21 @@ const ICTLabManagement = () => {
         </TabsList>
 
         <TabsContent value="inventory" className="space-y-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
             {[
               { label: 'Total Devices', value: stats.total, icon: Monitor, color: 'text-blue-600', bg: 'bg-blue-50' },
               { label: 'Operational', value: stats.active, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
               { label: 'Needs Repair', value: stats.repair, icon: Wrench, color: 'text-rose-600', bg: 'bg-rose-50' },
               { label: 'Assigned', value: stats.assigned, icon: UserCheck, color: 'text-indigo-600', bg: 'bg-indigo-50' },
             ].map((s, i) => (
-              <Card key={i} className="border-none shadow-sm rounded-[1.75rem] sm:rounded-[2rem] bg-white p-4 sm:p-5">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className={cn("p-2.5 sm:p-3 rounded-2xl shrink-0", s.bg)}>
-                    <s.icon className={s.color} size={20} className="sm:w-6 sm:h-6" />
+              <Card key={i} className="border-none shadow-sm rounded-[1.5rem] sm:rounded-[2rem] bg-white p-3 sm:p-4">
+                <div className="flex items-center gap-2.5 sm:gap-4">
+                  <div className={cn("p-2 sm:p-2.5 rounded-2xl shrink-0", s.bg)}>
+                    <s.icon className={s.color} size={18} className="sm:w-5 sm:h-5" />
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider sm:tracking-widest whitespace-nowrap">{s.label}</p>
-                    <h3 className="text-xl sm:text-2xl font-black text-slate-900 leading-none mt-1">{s.value}</h3>
+                    <h3 className="text-lg sm:text-2xl font-black text-slate-900 leading-none mt-1 whitespace-nowrap">{s.value}</h3>
                   </div>
                 </div>
               </Card>
