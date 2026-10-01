@@ -21,7 +21,8 @@ import {
   ArrowUpDown,
   UserCheck,
   ArrowRightLeft,
-  Eye
+  Eye,
+  Download
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
@@ -337,6 +338,17 @@ export default function Students() {
       };
 
       const updated = [studentData, ...students];
+      setStudents(updated);
+      localStorage.setItem('munyaka_students', JSON.stringify(updated));
+      notifyDataChanged('munyaka_students');
+      setIsTransferModalOpen(false);
+      showSuccess(`Successfully transferred in ${studentData.fullName}`);
+    } catch (err) {
+      showError("Failed to transfer in learner.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
       const resequenced = ensureProperAdmissionNumbers(updated);
       setStudents(resequenced);
 
