@@ -72,6 +72,7 @@ import ExamCreatorPage from "./pages/ExamCreatorPage";
 import SetExamsListPage from "./pages/SetExamsListPage";
 import MarkedScriptsPage from "./pages/MarkedScriptsPage";
 import Communication from "./pages/Communication";
+import TeacherCommunication from "./pages/TeacherCommunication";
 import TeacherExportPage from "./pages/TeacherExportPage";
 import Library from "./pages/Library";
 import Inventory from "./pages/Inventory";
