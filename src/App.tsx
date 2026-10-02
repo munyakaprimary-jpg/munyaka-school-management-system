@@ -64,6 +64,10 @@ import AdminHarmonizationHub from "./components/admin/AdminHarmonizationHub";
 import TeacherExportView from "./pages/TeacherExportView";
 import LibrarianPortalView from "./pages/LibrarianPortalView";
 import ICTTechnicalPortalView from "./pages/ICTTechnicalPortalView";
+import BursarPortalView from "./pages/BursarPortalView";
+import HeadteacherPortalView from "./pages/HeadteacherPortalView";
+import SupportStaffPortalView from "./pages/SupportStaffPortalView";
+import SecurityPortalView from "./pages/SecurityPortalView";
 import AssessmentSettings from "./pages/AssessmentSettings";
 import QuestionCreator from "./pages/QuestionCreator";
 import StudentAssessment from "./pages/StudentAssessment";
@@ -462,6 +466,10 @@ const App = () => {
                                             <Route path="/teacher-export" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'admin']}><AppUnlock><Layout><TeacherExportView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/librarian/portal" element={<ProtectedRoute allowedRoles={['librarian', 'library_teacher', 'admin']}><AppUnlock><Layout><LibrarianPortalView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/ict/portal" element={<ProtectedRoute allowedRoles={['ict_teacher', 'ict_technician', 'admin']}><AppUnlock><Layout><ICTTechnicalPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/bursar/portal" element={<ProtectedRoute allowedRoles={['bursar', 'admin']}><AppUnlock><Layout><BursarPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/headteacher/portal" element={<ProtectedRoute allowedRoles={['head_teacher', 'senior_teacher', 'admin']}><AppUnlock><Layout><HeadteacherPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/support/portal" element={<ProtectedRoute allowedRoles={['support', 'maintenance', 'admin']}><AppUnlock><Layout><SupportStaffPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/security/portal" element={<ProtectedRoute allowedRoles={['security', 'guard', 'admin']}><AppUnlock><Layout><SecurityPortalView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/question-creator" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><QuestionCreator /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/student-assessment" element={<ProtectedRoute><AppUnlock><Layout><StudentAssessment /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/grading" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><GradingReview /></Layout></AppUnlock></ProtectedRoute>} />
