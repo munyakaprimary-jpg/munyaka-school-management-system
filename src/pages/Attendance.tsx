@@ -312,6 +312,14 @@ export default function Attendance() {
     const id = l.id || l.admissionNo || l.admissionNumber || '';
     return attendanceMap[id]?.morning === 'Absent';
   }).length;
+  const presentAfternoonCount = filteredLearners.filter(l => {
+    const id = l.id || l.admissionNo || l.admissionNumber || '';
+    return attendanceMap[id]?.afternoon === 'Present';
+  }).length;
+  const absentAfternoonCount = filteredLearners.filter(l => {
+    const id = l.id || l.admissionNo || l.admissionNumber || '';
+    return attendanceMap[id]?.afternoon === 'Absent';
+  }).length;
 
   const getFilterBannerDescription = () => {
     const gText = selectedGrade === 'all' ? 'All Grades' : selectedGrade;
@@ -372,57 +380,85 @@ export default function Attendance() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <Card className="border-emerald-100 shadow-sm bg-gradient-to-br from-white to-emerald-50/30">
-          <CardContent className="p-5 flex items-center justify-between">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Learners</p>
-              <h3 className="text-2xl font-bold text-slate-800 mt-1">{totalLearnersCount}</h3>
-              <p className="text-xs text-emerald-600 font-medium mt-1">Master DB Total: {masterTotalCount}</p>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Learners</p>
+              <h3 className="text-xl font-bold text-slate-800 mt-1">{totalLearnersCount}</h3>
+              <p className="text-[10px] text-emerald-600 font-medium mt-1">Master DB: {masterTotalCount}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
-              <Users className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
+              <Users className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-emerald-100 shadow-sm bg-gradient-to-br from-white to-emerald-50/30">
-          <CardContent className="p-5 flex items-center justify-between">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Present (Morning)</p>
-              <h3 className="text-2xl font-bold text-emerald-600 mt-1">{presentMorningCount}</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                {totalLearnersCount > 0 ? `${Math.round((presentMorningCount / totalLearnersCount) * 100)}% attendance rate` : '0%'}
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Present (Morning)</p>
+              <h3 className="text-xl font-bold text-emerald-600 mt-1">{presentMorningCount}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {totalLearnersCount > 0 ? `${Math.round((presentMorningCount / totalLearnersCount) * 100)}% rate` : '0%'}
               </p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
-              <CheckCircle2 className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-amber-100 shadow-sm bg-gradient-to-br from-white to-amber-50/30">
-          <CardContent className="p-5 flex items-center justify-between">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Absent (Morning)</p>
-              <h3 className="text-2xl font-bold text-amber-600 mt-1">{absentMorningCount}</h3>
-              <p className="text-xs text-amber-600 font-medium mt-1">Requires follow-up</p>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Absent (Morning)</p>
+              <h3 className="text-xl font-bold text-amber-600 mt-1">{absentMorningCount}</h3>
+              <p className="text-[10px] text-amber-600 font-medium mt-1">Follow-up needed</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-inner">
-              <XCircle className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-inner">
+              <XCircle className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-indigo-100 shadow-sm bg-gradient-to-br from-white to-indigo-50/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Present (Afternoon)</p>
+              <h3 className="text-xl font-bold text-indigo-600 mt-1">{presentAfternoonCount}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {totalLearnersCount > 0 ? `${Math.round((presentAfternoonCount / totalLearnersCount) * 100)}% rate` : '0%'}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-orange-100 shadow-sm bg-gradient-to-br from-white to-orange-50/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Absent (Afternoon)</p>
+              <h3 className="text-xl font-bold text-orange-600 mt-1">{absentAfternoonCount}</h3>
+              <p className="text-[10px] text-orange-600 font-medium mt-1">Follow-up needed</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 shadow-inner">
+              <XCircle className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-cyan-100 shadow-sm bg-gradient-to-br from-white to-cyan-50/30">
-          <CardContent className="p-5 flex items-center justify-between">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Roll Call Storage</p>
-              <h3 className="text-lg font-bold text-cyan-700 mt-1 truncate">roll_call_records</h3>
-              <p className="text-xs text-cyan-600 font-medium mt-1">Synced with Admin</p>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Roll Storage</p>
+              <h3 className="text-sm font-bold text-cyan-700 mt-1 truncate">roll_call</h3>
+              <p className="text-[10px] text-cyan-600 font-medium mt-1">Synced</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-700 shadow-inner">
-              <ShieldCheck className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-700 shadow-inner">
+              <ShieldCheck className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
