@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { getStoredLearners } from '@/utils/learnersStore';
 
 interface Learner {
   id?: string;
@@ -39,9 +40,26 @@ export default function Attendance() {
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
 
-  // 1. Direct Master Directory Fetch on mount
+  // 1. Master State Synchronization: Pull from primary master learners store
   useEffect(() => {
     loadMasterLearners();
+    loadRollCallRecords();
+
+    // Listen for storage changes across modules
+    const handleStorageChange = () => {
+      loadMasterLearners();
+      loadRollCallRecords();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('munyaka:data-changed', handleStorageChange);
+    window.addEventListener('munyaka_learners_updated', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('munyaka:data-changed', handleStorageChange);
+      window.removeEventListener('munyaka_learners_updated', handleStorageChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -52,21 +70,44 @@ export default function Attendance() {
 
   const loadMasterLearners = () => {
     try {
-      const raw = localStorage.getItem('school_learners_v1') || localStorage.getItem('learners') || '[]';
-      const parsed = JSON.parse(raw);
-      const list: Learner[] = Array.isArray(parsed) ? parsed : (parsed.learners || parsed.data || []);
-      
+      // 1. Try unified getStoredLearners from learnersStore
+      let list: Learner[] = [];
+      try {
+        const storedFromHelper = getStoredLearners();
+        if (Array.isArray(storedFromHelper) && storedFromHelper.length > 0) {
+          list = storedFromHelper;
+        }
+      } catch (err) {}
+
+      // 2. Fallback to direct keys if needed
+      if (list.length === 0) {
+        const keys = ['munyaka_learners_db', 'munyaka_central_db', 'munyaka_learners', 'school_learners_v1', 'school_learners_data', 'learners'];
+        for (const key of keys) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              const items = Array.isArray(parsed) ? parsed : (parsed.learners || parsed.students || parsed.data || []);
+              if (Array.isArray(items) && items.length > 0) {
+                list = items;
+                break;
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
       setLearners(list);
 
-      // Extract unique grades & streams
+      // Extract unique grades & streams with case-insensitivity
       const gradeSet = new Set<string>();
       const streamSet = new Set<string>();
 
       list.forEach((l) => {
         const g = l.grade || l.classLevel;
         const s = l.stream;
-        if (g && g.trim()) gradeSet.add(g.trim());
-        if (s && s.trim()) streamSet.add(s.trim());
+        if (g && String(g).trim()) gradeSet.add(String(g).trim());
+        if (s && String(s).trim()) streamSet.add(String(s).trim());
       });
 
       const sortedGrades = Array.from(gradeSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
@@ -75,7 +116,7 @@ export default function Attendance() {
       setGrades(sortedGrades);
       setStreams(sortedStreams);
     } catch (err) {
-      console.error('Failed to load school_learners_v1:', err);
+      console.error('Failed to load master learners directory:', err);
       toast.error('Failed to load registered learners from master directory.');
     }
   };
@@ -118,16 +159,19 @@ export default function Attendance() {
     }
   };
 
-  // 2. Strict Filter Query Correction
+  // 2 & 3. Case-Insensitive String Normalization & All Grades/Streams Fallback (Displaying all learners)
   const getFilteredLearners = () => {
     if (!learners || learners.length === 0) return [];
 
     const filtered = learners.filter(l => {
-      const g = (l.grade || l.classLevel || '').trim();
-      const s = (l.stream || '').trim();
+      const g = String(l.grade || l.classLevel || '').trim().toLowerCase();
+      const s = String(l.stream || '').trim().toLowerCase();
       
-      const matchesGrade = selectedGrade === 'all' || g.toLowerCase() === selectedGrade.toLowerCase();
-      const matchesStream = selectedStream === 'all' || s.toLowerCase() === selectedStream.toLowerCase();
+      const targetGrade = String(selectedGrade).trim().toLowerCase();
+      const targetStream = String(selectedStream).trim().toLowerCase();
+
+      const matchesGrade = targetGrade === 'all' || g === targetGrade;
+      const matchesStream = targetStream === 'all' || s === targetStream;
 
       return matchesGrade && matchesStream;
     });
@@ -135,7 +179,6 @@ export default function Attendance() {
     return filtered;
   };
 
-  // Helper to clean admission number format (remove old grade/stream tags if present e.g. -G1-)
   const cleanAdmissionNo = (adm: string = '') => {
     if (!adm) return 'N/A';
     return adm.replace(/-G\d+-/gi, '-').replace(/\s+/g, '');
@@ -286,12 +329,12 @@ export default function Attendance() {
               Teacher Portal
             </Badge>
             <Badge variant="outline" className="bg-emerald-500/30 text-emerald-100 border-emerald-400/40 text-xs flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> Master Directory Sync
+              <Sparkles className="w-3 h-3" /> Master Directory Sync (`munyaka_learners_db`)
             </Badge>
           </div>
           <h1 className="text-2xl font-black tracking-tight">Student Attendance & Roll Call</h1>
           <p className="text-emerald-100 text-sm mt-1">
-            Directly connected to master learner directory (`school_learners_v1`) & Admin Roll Call records.
+            Directly synchronized with the primary master learners database and Admin Roll Call records.
           </p>
         </div>
 
@@ -335,7 +378,7 @@ export default function Attendance() {
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Learners</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-1">{totalLearnersCount}</h3>
-              <p className="text-xs text-emerald-600 font-medium mt-1">Master Total: {masterTotalCount}</p>
+              <p className="text-xs text-emerald-600 font-medium mt-1">Master DB Total: {masterTotalCount}</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
               <Users className="w-6 h-6" />
@@ -476,7 +519,7 @@ export default function Attendance() {
           <div className="bg-emerald-50/50 px-6 py-3 border-b border-emerald-100 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-emerald-800 font-medium">
               <AlertCircle className="w-4 h-4 text-emerald-600" />
-              <span>Showing <strong>{totalLearnersCount}</strong> learners ({getFilterBannerDescription()})</span>
+              <span>Showing <strong>{totalLearnersCount}</strong> learners ({getFilterBannerDescription()}) — Master DB Total: <strong>{masterTotalCount}</strong></span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -510,8 +553,8 @@ export default function Attendance() {
                     <td colSpan={7} className="text-center py-12 text-slate-400">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <Users className="w-10 h-10 text-slate-300" />
-                        <p className="font-medium text-slate-600">No learners found matching the filter.</p>
-                        <p className="text-slate-400 text-xs">Select "All Grades" and "All Streams" to view all registered learners.</p>
+                        <p className="font-medium text-slate-600">No learners found in master database matching this filter.</p>
+                        <p className="text-slate-400 text-xs">Select "All Grades" and "All Streams" to view all registered master learners.</p>
                       </div>
                     </td>
                   </tr>
