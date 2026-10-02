@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { 
   Box, 
   Wrench, 
@@ -17,7 +18,6 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { cn } from '@/lib/utils';
 
 export const SupportStaffPortalView: React.FC = () => {
   const { user } = useAuth();

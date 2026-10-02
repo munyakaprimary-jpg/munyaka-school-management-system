@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { 
   ShieldCheck, 
   UserCheck, 
@@ -13,11 +14,10 @@ import {
   Check, 
   FileText, 
   Lock,
-  Search
+  Search,
+  CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { cn } from '@/lib/utils';
-import { CheckCircle2 } from 'lucide-react';
 
 export const SecurityPortalView: React.FC = () => {
   const { user } = useAuth();

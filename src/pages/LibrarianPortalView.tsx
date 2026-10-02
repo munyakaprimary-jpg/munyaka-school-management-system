@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { 
   Library, 
   BookOpen, 
@@ -23,7 +24,6 @@ import {
   Layers
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { cn } from '@/lib/utils';
 import { Book, BorrowLog } from '@/types/library';
 
 export const LibrarianPortalView: React.FC = () => {
@@ -246,8 +246,8 @@ export const LibrarianPortalView: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-4 text-xs font-medium">
                       <div className="text-right">
-                        <p className="text-slate-900 font-bold">{book.available} / {book.total} Available</p>
-                        <p className="text-amber-700">{book.borrowed} Checked out</p>
+                        <p className="text-slate-900 font-bold">{book.availableCopies} / {book.totalCopies} Available</p>
+                        <p className="text-amber-700">Checked out</p>
                       </div>
                     </div>
                   </div>
@@ -280,7 +280,7 @@ export const LibrarianPortalView: React.FC = () => {
                     <div>
                       <Badge className={cn(
                         "font-bold text-xs border-0 px-3 py-1",
-                        log.status === 'Issued' ? 'bg-blue-100 text-blue-700' :
+                        log.status === 'Active' || log.status === 'Issued' ? 'bg-blue-100 text-blue-700' :
                         log.status === 'Returned' ? 'bg-emerald-100 text-emerald-700' :
                         'bg-rose-100 text-rose-700'
                       )}>
