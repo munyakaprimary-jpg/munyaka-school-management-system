@@ -29,7 +29,7 @@ import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { useToast } from '@/components/ui/use-toast';
 import { Book, BorrowLog, getLogStatusInfo } from '@/types/library';
-import { exportDepartmentPackage } from '@/services/departmentExportService';
+import departmentExportService from '@/services/departmentExportService';
 
 export const LibrarianPortalView: React.FC = () => {
   const { user } = useAuth();

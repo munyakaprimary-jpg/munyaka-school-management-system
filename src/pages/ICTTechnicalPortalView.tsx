@@ -23,7 +23,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { exportDepartmentPackage } from '@/services/departmentExportService';
+import departmentExportService from '@/services/departmentExportService';
 
 export const ICTTechnicalPortalView: React.FC = () => {
   const { user } = useAuth();
