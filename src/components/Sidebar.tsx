@@ -70,7 +70,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'owner', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'] },
-    { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+    { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
+    { icon: Database, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
+    { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin'] },
@@ -107,8 +109,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
-    { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
-    { icon: Database, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
     { icon: Upload, label: 'Export Class Package', path: '/teacher/export', roles: ['teacher', 'class_teacher', 'subject_teacher', 'head_teacher'] },
     { icon: UserCheck, label: 'Staff Access Master', path: '/staff/access', roles: ['admin'] },
     { icon: Archive, label: 'Transferred Archive', path: '/transferred-archive', roles: ['admin'] },
