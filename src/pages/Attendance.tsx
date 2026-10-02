@@ -65,11 +65,11 @@ export default function Attendance() {
       list.forEach((l) => {
         const g = l.grade || l.classLevel;
         const s = l.stream;
-        if (g) gradeSet.add(g.trim());
-        if (s) streamSet.add(s.trim());
+        if (g && g.trim()) gradeSet.add(g.trim());
+        if (s && s.trim()) streamSet.add(s.trim());
       });
 
-      const sortedGrades = Array.from(gradeSet).sort();
+      const sortedGrades = Array.from(gradeSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
       const sortedStreams = Array.from(streamSet).sort();
 
       setGrades(sortedGrades);
@@ -118,7 +118,7 @@ export default function Attendance() {
     }
   };
 
-  // 1 & 2. Strict Filtering & Fallback
+  // 2. Strict Filter Query Correction
   const getFilteredLearners = () => {
     if (!learners || learners.length === 0) return [];
 
@@ -132,12 +132,13 @@ export default function Attendance() {
       return matchesGrade && matchesStream;
     });
 
-    // Fallback: If strict grade/stream filter returns 0 students, return all learners so the table is never blank
-    if (filtered.length === 0 && learners.length > 0 && selectedGrade !== 'all') {
-      return learners;
-    }
-
     return filtered;
+  };
+
+  // Helper to clean admission number format (remove old grade/stream tags if present e.g. -G1-)
+  const cleanAdmissionNo = (adm: string = '') => {
+    if (!adm) return 'N/A';
+    return adm.replace(/-G\d+-/gi, '-').replace(/\s+/g, '');
   };
 
   const handleStatusChange = (id: string, session: 'morning' | 'afternoon', status: string) => {
@@ -195,9 +196,10 @@ export default function Attendance() {
           targetLearners.map(l => {
             const id = l.id || l.admissionNo || l.admissionNumber || '';
             const data = attendanceMap[id] || { morning: 'Present', afternoon: 'Present', remarks: '' };
+            const cleanAdm = cleanAdmissionNo(l.admissionNo || l.admissionNumber || id);
             return [id, {
               id,
-              admissionNo: l.admissionNo || l.admissionNumber || id,
+              admissionNo: cleanAdm,
               name: l.name || l.fullName || l.learnerName || 'Unknown Learner',
               morning: data.morning,
               afternoon: data.afternoon,
@@ -253,7 +255,7 @@ export default function Attendance() {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     const name = (l.name || l.fullName || l.learnerName || '').toLowerCase();
-    const adm = (l.admissionNo || l.admissionNumber || '').toLowerCase();
+    const adm = cleanAdmissionNo(l.admissionNo || l.admissionNumber || '').toLowerCase();
     return name.includes(q) || adm.includes(q);
   });
 
@@ -267,6 +269,12 @@ export default function Attendance() {
     const id = l.id || l.admissionNo || l.admissionNumber || '';
     return attendanceMap[id]?.morning === 'Absent';
   }).length;
+
+  const getFilterBannerDescription = () => {
+    const gText = selectedGrade === 'all' ? 'All Grades' : selectedGrade;
+    const sText = selectedStream === 'all' ? 'All Streams' : selectedStream;
+    return `${gText}, ${sText}`;
+  };
 
   return (
     <div className="space-y-6 pb-16">
@@ -403,7 +411,7 @@ export default function Attendance() {
             </div>
           </div>
 
-          {/* Filter Bar with All Grades & All Streams */}
+          {/* Filter Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-200/60">
             <div>
               <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Grade / Class</label>
@@ -464,11 +472,11 @@ export default function Attendance() {
         </CardHeader>
 
         <CardContent className="p-0">
-          {/* Updated Count Banner */}
+          {/* Banner Message */}
           <div className="bg-emerald-50/50 px-6 py-3 border-b border-emerald-100 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-emerald-800 font-medium">
               <AlertCircle className="w-4 h-4 text-emerald-600" />
-              <span>Showing <strong>{totalLearnersCount}</strong> learners (Total: <strong>{masterTotalCount}</strong>) {selectedGrade !== 'all' ? `• Grade: ${selectedGrade}` : ''} {selectedStream !== 'all' ? `• Stream: ${selectedStream}` : ''}</span>
+              <span>Showing <strong>{totalLearnersCount}</strong> learners ({getFilterBannerDescription()})</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -503,14 +511,14 @@ export default function Attendance() {
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <Users className="w-10 h-10 text-slate-300" />
                         <p className="font-medium text-slate-600">No learners found matching the filter.</p>
-                        <p className="text-slate-400 text-xs">Select "All Grades" or verify registered learners in `school_learners_v1`.</p>
+                        <p className="text-slate-400 text-xs">Select "All Grades" and "All Streams" to view all registered learners.</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   filteredLearners.map((learner, idx) => {
                     const id = learner.id || learner.admissionNo || learner.admissionNumber || `learner_${idx}`;
-                    const adm = learner.admissionNo || learner.admissionNumber || 'N/A';
+                    const adm = cleanAdmissionNo(learner.admissionNo || learner.admissionNumber);
                     const name = learner.name || learner.fullName || learner.learnerName || 'Unnamed Learner';
                     const grade = learner.grade || learner.classLevel || '-';
                     const stream = learner.stream || '-';
