@@ -107,8 +107,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
     { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
-        { icon: FileText, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
-        { icon: UserCheck, label: 'Staff Access Master', path: '/staff/access', roles: ['admin'] },
+    { icon: Database, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
+    { icon: FileText, label: 'Export Class Package', path: '/teacher/export', roles: ['teacher', 'class_teacher', 'subject_teacher', 'head_teacher'] },
+    { icon: UserCheck, label: 'Staff Access Master', path: '/staff/access', roles: ['admin'] },
     { icon: Archive, label: 'Transferred Archive', path: '/transferred-archive', roles: ['admin'] },
     { icon: ArrowUpCircle, label: 'Promote Students', path: '/promote-students', roles: ['admin'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
@@ -134,7 +135,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
         '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
         '/inventory', '/fees', '/reports', '/games', '/science-lab', '/lan-config', '/settings', '/settings/profile',
-        '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list'
+        '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list',
+        '/teacher/export'
       ];
       // Ensure '/teacher-communication' is explicitly present in the teacher menu items
       const hasTeacherComm = teacherPaths.includes('/teacher-communication');
