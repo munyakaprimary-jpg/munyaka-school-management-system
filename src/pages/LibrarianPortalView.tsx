@@ -25,17 +25,16 @@ import {
   ArrowRight,
   Trash2
 } from 'lucide-react';
-import { Share } from '@capacitor/share';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { useToast } from '@/components/ui/use-toast';
 import { Book, BorrowLog, getLogStatusInfo } from '@/types/library';
+import { exportLibrarianData } from '../services/departmentExportService';
 
 export const LibrarianPortalView: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const librarianName = user?.name || 'JANET GATHONI KUNGU';
-  const librarianId = user?.id || 'LIB-001';
+  const librarianName = (user && (user.name || user.fullName)) || 'JANET GATHONI KUNGU';
+  const librarianId = (user && (user.id || user.staffId)) || 'LIB-001';
 
   // State loaded from localStorage
   const [books, setBooks] = useState<Book[]>(() => {
@@ -87,37 +86,34 @@ export const LibrarianPortalView: React.FC = () => {
   const handleExportLibraryBatch = async () => {
     setIsExporting(true);
     try {
-      const payload = {
-        metadata: {
-          staffId: librarianId,
-          role: "librarian",
-          timestamp: new Date().toISOString(),
-          packageType: "LIBRARIAN_INVENTORY_DELTA"
-        },
-        meta: {
-          exportType: 'LIBRARIAN_INVENTORY_DELTA',
-          librarianId,
-          librarianName,
-          timestamp: new Date().toISOString(),
-          recordCounts: {
-            totalBooks: totalBooksCount,
-            activeCirculation,
-            historyLogs: historyLogs.length
-          }
-        },
+      const payload = exportLibrarianData({
         books,
         historyLogs
-      };
+      });
 
-      const jsonStr = JSON.stringify(payload, null, 2);
+      const nowStr = new Date().toLocaleString();
       const fileName = `Librarian_Inventory_Delta_${librarianId}_${new Date().toISOString().slice(0, 10)}.json`;
+      
+      setLastExport({
+        fileName,
+        timestamp: nowStr,
+        size: JSON.stringify(payload).length
+      });
 
-      // 1. Try Capacitor Native Share & Filesystem first
-      try {
-        const writeFileResult = await Filesystem.writeFile({
-          path: fileName,
-          data: jsonStr,
-          directory: Directory.Cache,
+      toast({
+        title: "Library Batch Exported Successfully",
+        description: `Saved Librarian export package with verified sender metadata.`
+      });
+    } catch (err: any) {
+      toast({
+        title: "Export Failed",
+        description: err.message || "Could not generate library batch package.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
           encoding: Encoding.UTF8
         });
 
