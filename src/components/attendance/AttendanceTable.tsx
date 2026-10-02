@@ -44,7 +44,7 @@ export default function AttendanceTable({
             <TableRow className="border-b border-slate-100 bg-slate-50/70 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
               <TableHead className="py-4 px-6">#</TableHead>
               <TableHead className="py-4 px-6">Admission No.</TableHead>
-              <TableHead className="py-4 px-6">Learner Name</Grade>
+              <TableHead className="py-4 px-6">Learner Name</TableHead>
               <TableHead className="py-4 px-6 text-center">Status</TableHead>
               <TableHead className="py-4 px-6">Remarks / Notes</TableHead>
             </TableRow>
