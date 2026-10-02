@@ -5,24 +5,25 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { 
-  Library, 
-  BookOpen, 
-  History, 
-  Download, 
-  Users, 
-  CheckCircle2, 
-  Search, 
-  Plus, 
-  FileText, 
-  Share2, 
-  Copy, 
-  Check, 
+import {
+  Library,
+  BookOpen,
+  History,
+  Download,
+  Users,
+  CheckCircle2,
+  Search,
+  Plus,
+  FileText,
+  Share2,
+  Copy,
+  Check,
   BookMarked,
   BookPlus,
   AlertCircle,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Trash2
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Book, BorrowLog, getLogStatusInfo } from '@/types/library';
@@ -212,6 +213,17 @@ export const LibrarianPortalView: React.FC = () => {
     });
   };
 
+  const handleDeleteLog = (id: string, bookTitle: string) => {
+    if (!confirm(`Are you sure you want to remove the circulation record for "${bookTitle}"?`)) return;
+    const updated = historyLogs.filter(log => log.id !== id);
+    setHistoryLogs(updated);
+    localStorage.setItem('munyaka_library_history', JSON.stringify(updated));
+    toast({
+      title: "Circulation Log Removed",
+      description: `Successfully deleted record for "${bookTitle}".`
+    });
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
       {/* Header Banner */}
@@ -385,10 +397,19 @@ export const LibrarianPortalView: React.FC = () => {
                           </p>
                           <p className="text-[11px] text-slate-400">Issued: {log.issuedDate} | Due: {log.dueDate}</p>
                         </div>
-                        <div>
+                        <div className="flex items-center gap-3">
                           <Badge className={cn("font-bold text-xs border-0 px-3 py-1", statusInfo.color)}>
                             {statusInfo.label}
                           </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteLog(log.id, log.bookTitle)}
+                            className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl h-8 w-8 p-0"
+                            title="Delete record"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
                         </div>
                       </div>
                     );
