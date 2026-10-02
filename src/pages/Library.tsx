@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import BackButton from '@/components/ui/BackButton';
-import { Book as BookIcon, Search, BookOpen, History, AlertCircle, ShieldCheck, Database, FileText } from 'lucide-react';
+import { Book as BookIcon, Search, BookOpen, History, AlertCircle, ShieldCheck, Database, FileText, CheckCircle2 } from 'lucide-react';
 import { Book, BorrowLog } from '@/types/library';
 import { BookHistoryModal } from '@/components/library/BookHistoryModal';
 import { showSuccess, showError } from '@/utils/toast';
