@@ -3,34 +3,33 @@ import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Laptop,
-  Wifi,
-  Database,
-  ShieldCheck,
-  Download,
-  Terminal,
-  Activity,
-  HardDrive,
-  Server,
-  CheckCircle2,
-  AlertCircle,
-  Share2,
-  Copy,
-  Check,
+import { 
+  Laptop, 
+  Wifi, 
+  Database, 
+  ShieldCheck, 
+  Download, 
+  Terminal, 
+  Activity, 
+  HardDrive, 
+  Server, 
+  CheckCircle2, 
+  AlertCircle, 
+  Share2, 
+  Copy, 
+  Check, 
   Cpu,
   RefreshCw,
   FileText
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { exportICTData } from '../services/departmentExportService';
 
 export const ICTTechnicalPortalView: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const ictName = (user && (user.name || user.fullName)) || 'ICT Staff';
-  const ictId = (user && (user.id || user.staffId)) || 'ICT-001';
+  const ictName = user?.name || 'ICT Staff';
+  const ictId = user?.id || 'ICT-001';
 
   const [isExporting, setIsExporting] = useState(false);
   const [lastExport, setLastExport] = useState<{ fileName: string; timestamp: string; size: number } | null>(null);
@@ -54,7 +53,21 @@ export const ICTTechnicalPortalView: React.FC = () => {
   const handleGenerateDiagnosticExport = () => {
     setIsExporting(true);
     try {
-      const payload = exportICTData({
+      const diagnosticPayload = {
+        metadata: {
+          staffId: ictId,
+          role: "ict",
+          timestamp: new Date().toISOString(),
+          packageType: "ICT_SYSTEM_DIAGNOSTIC_EXPORT"
+        },
+        meta: {
+          exportType: 'ICT_SYSTEM_DIAGNOSTIC_EXPORT',
+          ictStaffId: ictId,
+          ictStaffName: ictName,
+          timestamp: new Date().toISOString(),
+          appVersion: 'v3.5.0-munyaka-offline',
+          environment: 'Local LAN Node'
+        },
         systemStatus: {
           wifiServerStatus: 'Online',
           databaseSync: 'Synchronized',
@@ -67,19 +80,29 @@ export const ICTTechnicalPortalView: React.FC = () => {
           { time: new Date(Date.now() - 1800000).toISOString(), level: 'INFO', message: 'Database backup checkpoint generated.' },
           { time: new Date().toISOString(), level: 'SUCCESS', message: 'Diagnostic audit initiated by ICT staff.' }
         ]
-      });
+      };
+
+      const jsonStr = JSON.stringify(diagnosticPayload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ICT_Diagnostic_Audit_${ictId}_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
       const nowStr = new Date().toLocaleString();
-      const fileName = `ICT_Diagnostic_Audit_${ictId}_${new Date().toISOString().slice(0, 10)}.json`;
       setLastExport({
-        fileName,
+        fileName: link.download,
         timestamp: nowStr,
-        size: JSON.stringify(payload).length
+        size: blob.size
       });
 
       toast({
         title: "Diagnostic Export Generated Successfully",
-        description: `Saved ICT diagnostic package with verified sender metadata.`
+        description: `Saved ${link.download} (${Math.round(blob.size / 1024)} KB) for administrative audit and archive.`
       });
     } catch (err: any) {
       toast({
