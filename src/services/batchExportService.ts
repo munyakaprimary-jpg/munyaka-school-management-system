@@ -118,30 +118,30 @@ export const batchExportService = {
     const safeGrade = (packageData.header.assignedGrade || 'Grade').replace(/[^a-zA-Z0-9]/g, '_');
     const fileName = `Munyaka_MasterPackage_${safeName}_${safeGrade}_${Date.now()}.json`;
 
-    // Try Capacitor Filesystem first if available
+    // Web Blob Download (Guaranteed trigger for browser save dialog)
     try {
-      await Filesystem.writeFile({
-        path: fileName,
-        data: jsonString,
-        directory: Directory.Documents,
-        encoding: Encoding.UTF8
-      });
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       return { success: true, fileName, size: jsonString.length };
-    } catch (capacitorErr) {
-      // Web Blob Fallback
+    } catch (webErr) {
+      // Capacitor Filesystem fallback
       try {
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        await Filesystem.writeFile({
+          path: fileName,
+          data: jsonString,
+          directory: Directory.Documents,
+          encoding: Encoding.UTF8
+        });
         return { success: true, fileName, size: jsonString.length };
-      } catch (webErr) {
-        throw new Error('Failed to save export file via Capacitor or browser download.');
+      } catch (capacitorErr) {
+        throw new Error('Failed to save export file via browser download or Capacitor.');
       }
     }
   }
