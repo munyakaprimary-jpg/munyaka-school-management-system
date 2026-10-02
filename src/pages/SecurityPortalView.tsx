@@ -16,6 +16,8 @@ import {
   Search
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
+import { CheckCircle2 } from 'lucide-react';
 
 export const SecurityPortalView: React.FC = () => {
   const { user } = useAuth();

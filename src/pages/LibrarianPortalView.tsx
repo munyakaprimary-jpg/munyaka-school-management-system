@@ -23,6 +23,7 @@ import {
   Layers
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
 import { Book, BorrowLog } from '@/types/library';
 
 export const LibrarianPortalView: React.FC = () => {

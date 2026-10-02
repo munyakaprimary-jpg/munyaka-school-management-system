@@ -18,7 +18,8 @@ import {
   Wifi,
   Database,
   GraduationCap,
-  CheckSquare
+  CheckSquare,
+  Download
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -99,7 +100,7 @@ const TeacherDashboard: React.FC = () => {
                     }}
                     className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 shrink-0"
                   >
-                    <Download size={18} />
+import { Download, ... } from 'lucide-react'; // Wait, let's check imports in TeacherDashboard.tsx
                     Export Data Now
                   </Button>
                 </div>

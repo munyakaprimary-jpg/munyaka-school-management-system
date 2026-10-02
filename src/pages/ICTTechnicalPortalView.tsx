@@ -18,8 +18,9 @@ import {
   Share2, 
   Copy, 
   Check, 
-  Cpu, 
-  RefreshCw 
+  Cpu,
+  RefreshCw,
+  FileText
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
