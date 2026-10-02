@@ -101,13 +101,11 @@ export const AdminHarmonizationHub: React.FC = () => {
         const newActivities = auditItems.map(item => ({
           id: 'act-' + Math.random().toString(36).substring(2, 9),
           staffId: item.metadata.staffId,
-          role: item.metadata.role || item.metadata.department || 'staff',
+          role: item.metadata.role,
           packageType: item.metadata.packageType,
           fileName: item.fileName,
           timestamp: new Date().toISOString(),
-          details: item.metadata.department
-            ? `Harmonized department package for ${item.metadata.department} by ${item.metadata.staffName || item.metadata.staffId}.`
-            : `Harmonized ${item.attendanceCount} attendance, ${item.assessmentCount} assessment & ${item.inventoryCount} inventory records.`
+          details: `Harmonized ${item.attendanceCount} attendance, ${item.assessmentCount} assessment & ${item.inventoryCount} inventory records.`
         }));
         localStorage.setItem('munyaka_admin_activities', JSON.stringify([...newActivities, ...storedActivities]));
       } catch {}
