@@ -38,7 +38,7 @@ export const LibrarianPortalView: React.FC = () => {
   // State loaded from localStorage
   const [books, setBooks] = useState<Book[]>(() => {
     try {
-      const saved = localStorage.getItem('munyaka_library_books');
+      const saved = localStorage.getItem('school_library_inventory_v1');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -47,12 +47,21 @@ export const LibrarianPortalView: React.FC = () => {
 
   const [historyLogs, setHistoryLogs] = useState<BorrowLog[]>(() => {
     try {
-      const saved = localStorage.getItem('munyaka_library_history');
+      const saved = localStorage.getItem('school_library_logs_v1');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
   });
+
+  // Sync to shared storage keys
+  React.useEffect(() => {
+    localStorage.setItem('school_library_inventory_v1', JSON.stringify(books));
+  }, [books]);
+
+  React.useEffect(() => {
+    localStorage.setItem('school_library_logs_v1', JSON.stringify(historyLogs));
+  }, [historyLogs]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isExporting, setIsExporting] = useState(false);
@@ -176,7 +185,7 @@ export const LibrarianPortalView: React.FC = () => {
 
     const updated = [newBook, ...books];
     setBooks(updated);
-    localStorage.setItem('munyaka_library_books', JSON.stringify(updated));
+    localStorage.setItem('school_library_inventory_v1', JSON.stringify(updated));
     toast({
       title: "Book Cataloged Successfully",
       description: `Added "${title}" with ${totalCopies} copies.`
@@ -206,7 +215,7 @@ export const LibrarianPortalView: React.FC = () => {
 
     const updatedLogs = [newLog, ...historyLogs];
     setHistoryLogs(updatedLogs);
-    localStorage.setItem('munyaka_library_history', JSON.stringify(updatedLogs));
+    localStorage.setItem('school_library_logs_v1', JSON.stringify(updatedLogs));
     toast({
       title: "Book Issued Successfully",
       description: `Checked out "${title}" to ${borrowerName} [${admissionNo}].`
@@ -229,7 +238,7 @@ export const LibrarianPortalView: React.FC = () => {
 
     const updated = historyLogs.filter(log => log.id !== id);
     setHistoryLogs(updated);
-    localStorage.setItem('munyaka_library_history', JSON.stringify(updated));
+    localStorage.setItem('school_library_logs_v1', JSON.stringify(updated));
     toast({
       title: "Circulation Log Removed",
       description: `Successfully deleted record for "${bookTitle}" with admin authorization.`
