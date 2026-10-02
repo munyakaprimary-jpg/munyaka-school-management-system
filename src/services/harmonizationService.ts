@@ -37,18 +37,18 @@ export const harmonizationService = {
       reader.onload = (e) => {
         try {
           const content = e.target?.result as string;
-          const data = JSON.parse(content);
+          const jsonData = JSON.parse(content);
           
-          if (!data || !data.metadata || typeof data.metadata !== 'object') {
+          if (!jsonData || typeof jsonData !== 'object' || !jsonData.metadata) {
             throw new Error('Invalid package format: missing root metadata property.');
           }
 
-          const header = data.header || {
-            teacherName: data.metadata.staffId || 'Staff Member',
-            teacherId: data.metadata.staffId || 'UNKNOWN',
-            assignedGrade: data.metadata.packageType || 'General',
-            assignedStream: data.metadata.role || 'Staff',
-            timestamp: data.metadata.timestamp || new Date().toISOString(),
+          const header = jsonData.header || {
+            teacherName: jsonData.metadata.staffId || 'Staff Member',
+            teacherId: jsonData.metadata.staffId || 'UNKNOWN',
+            assignedGrade: jsonData.metadata.packageType || 'General',
+            assignedStream: jsonData.metadata.role || 'Staff',
+            timestamp: jsonData.metadata.timestamp || new Date().toISOString(),
             exportVersion: '1.0.0',
             deviceId: 'DEV-OFFLINE'
           };
@@ -56,14 +56,14 @@ export const harmonizationService = {
           const auditItem: HarmonizationAuditItem = {
             id: 'audit-' + Math.random().toString(36).substring(2, 9),
             fileName: file.name,
-            metadata: data.metadata,
+            metadata: jsonData.metadata,
             header,
-            attendanceCount: Array.isArray(data.attendanceRecords) ? data.attendanceRecords.length : 0,
-            checkInCount: Array.isArray(data.teacherCheckInLogs) ? data.teacherCheckInLogs.length : 0,
-            assessmentCount: Array.isArray(data.cbcAssessments) ? data.cbcAssessments.length : 0,
-            inventoryCount: Array.isArray(data.classInventory) ? data.classInventory.length : 0,
-            learnerCount: Array.isArray(data.learners) ? data.learners.length : 0,
-            rawPackage: data,
+            attendanceCount: Array.isArray(jsonData.attendanceRecords) ? jsonData.attendanceRecords.length : 0,
+            checkInCount: Array.isArray(jsonData.teacherCheckInLogs) ? jsonData.teacherCheckInLogs.length : 0,
+            assessmentCount: Array.isArray(jsonData.cbcAssessments) ? jsonData.cbcAssessments.length : 0,
+            inventoryCount: Array.isArray(jsonData.classInventory) ? jsonData.classInventory.length : 0,
+            learnerCount: Array.isArray(jsonData.learners) ? jsonData.learners.length : 0,
+            rawPackage: jsonData,
             status: 'pending'
           };
 
