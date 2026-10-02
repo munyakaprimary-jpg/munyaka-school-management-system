@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Upload, FileText, CheckCircle2, AlertCircle, ShieldCheck, Database, RefreshCw, Trash2, ArrowRight } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, AlertCircle, ShieldCheck, Database, RefreshCw, Trash2, ArrowRight, PackageOpen } from 'lucide-react';
 import { harmonizationService, HarmonizationAuditItem } from '@/services/harmonizationService';
+import { exportMasterDatabase } from '@/utils/exportMasterDatabase';
 import { useToast } from '@/components/ui/use-toast';
 
 export const AdminHarmonizationHub: React.FC = () => {
@@ -142,16 +143,24 @@ export const AdminHarmonizationHub: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="cursor-pointer bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2">
-              <Upload size={18} className="text-emerald-600" />
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button
+              onClick={() => exportMasterDatabase()}
+              className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
+            >
+              <PackageOpen size={18} className="text-emerald-600" />
+              <span>Export Master JSON Package</span>
+            </Button>
+
+            <label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 backdrop-blur-md">
+              <Upload size={18} className="text-emerald-200" />
               <span>{isUploading ? 'Parsing Files...' : 'Upload Teacher Export(s)'}</span>
-              <input 
-                type="file" 
-                accept=".json,application/json" 
-                multiple 
-                onChange={handleFileUpload} 
-                className="hidden" 
+              <input
+                type="file"
+                accept=".json,application/json"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
               />
             </label>
           </div>
