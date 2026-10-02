@@ -219,19 +219,3 @@ export async function exportStorePackage(staffInfo?: { id?: string; name?: strin
 export async function exportScienceLabPackage(staffInfo?: { id?: string; name?: string }) {
   return exportDepartmentPackage('SCIENCE_LAB', staffInfo);
 }
-
-// Alias for Librarian portal compatibility
-export async function exportLibraryPackage(staffInfo?: { id?: string; name?: string }) {
-  return exportDepartmentPackage('STOREKEEPER', staffInfo);
-}
-
-const departmentExportService = {
-  exportDepartmentPackage,
-  exportBursarPackage,
-  exportICTPackage,
-  exportStorePackage,
-  exportScienceLabPackage,
-  exportLibraryPackage,
-};
-
-export default departmentExportService;
