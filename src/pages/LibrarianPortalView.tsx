@@ -38,12 +38,7 @@ export const LibrarianPortalView: React.FC = () => {
   const [books, setBooks] = useState<Book[]>(() => {
     try {
       const saved = localStorage.getItem('munyaka_library_books');
-      return saved ? JSON.parse(saved) : [
-        { id: '1', title: 'Spark: English Grade 4', author: 'KLB Publisher', isbn: '978-9966-56-001', category: 'Textbooks', totalCopies: 45, availableCopies: 32, borrowed: 13, subject: 'English', grade: 'Grade 4', publisher: 'KLB', stock: 45 },
-        { id: '2', title: 'KLB Mathematics Grade 5', author: 'KLB', isbn: '978-9966-56-002', category: 'Textbooks', totalCopies: 50, availableCopies: 41, borrowed: 9, subject: 'Mathematics', grade: 'Grade 5', publisher: 'KLB', stock: 50 },
-        { id: '3', title: 'Junior Secondary Integrated Science', author: 'Longhorn', isbn: '978-9966-56-003', category: 'Science', totalCopies: 30, availableCopies: 18, borrowed: 12, subject: 'Science', grade: 'Grade 7', publisher: 'Longhorn', stock: 30 },
-        { id: '4', title: 'Kiswahili Mufti G7', author: 'Moran', isbn: '978-9966-56-004', category: 'Languages', totalCopies: 40, availableCopies: 35, borrowed: 5, subject: 'Kiswahili', grade: 'Grade 7', publisher: 'Moran', stock: 40 }
-      ];
+      return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
@@ -52,11 +47,7 @@ export const LibrarianPortalView: React.FC = () => {
   const [historyLogs, setHistoryLogs] = useState<BorrowLog[]>(() => {
     try {
       const saved = localStorage.getItem('munyaka_library_history');
-      return saved ? JSON.parse(saved) : [
-        { id: 'log-1', bookId: '1', bookTitle: 'Spark: English Grade 4', borrowerName: 'Brian Kiptoo', borrowerType: 'Student', accession_no: 'ADM-2024-001', grade: 'Grade 4', stream: 'Blue', issuedDate: '2025-02-10', dueDate: '2025-02-24', status: 'Active', qty_issued: 1, qty_returned: 0, qty_lost: 0 },
-        { id: 'log-2', bookId: '2', bookTitle: 'KLB Mathematics Grade 5', borrowerName: 'Mary Atieno', borrowerType: 'Student', accession_no: 'ADM-2024-045', grade: 'Grade 5', stream: 'Red', issuedDate: '2025-02-01', dueDate: '2025-02-15', returnedDate: '2025-02-14', status: 'Returned', qty_issued: 1, qty_returned: 1, qty_lost: 0 },
-        { id: 'log-3', bookId: '3', bookTitle: 'Junior Secondary Integrated Science', borrowerName: 'John Kamau', borrowerType: 'Staff', accession_no: 'EMP-012', issuedDate: '2025-01-20', dueDate: '2025-02-05', status: 'Lost', qty_issued: 1, qty_returned: 0, qty_lost: 1 }
-      ];
+      return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
@@ -315,29 +306,47 @@ export const LibrarianPortalView: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="space-y-3">
-                {filteredBooks.map((book) => {
-                  const total = book.totalCopies ?? book.stock ?? 0;
-                  const available = book.availableCopies ?? (total - (book.borrowed || 0));
-                  return (
-                    <div key={book.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-900 text-sm">{book.title}</span>
-                          <Badge className="bg-amber-100 text-amber-800 text-[10px] font-bold border-0">{book.category}</Badge>
+              {filteredBooks.length === 0 ? (
+                <div className="text-center py-12 space-y-3">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+                    <BookMarked size={28} />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-sm">No Books Cataloged Yet</h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    Click "Catalog New Book" above to add textbooks and library assets to the inventory database.
+                  </p>
+                  <Button
+                    onClick={handleCatalogNewBook}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs"
+                  >
+                    <Plus size={14} /> Add First Book
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredBooks.map((book) => {
+                    const total = book.totalCopies ?? book.stock ?? 0;
+                    const available = book.availableCopies ?? (total - (book.borrowed || 0));
+                    return (
+                      <div key={book.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 gap-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 text-sm">{book.title}</span>
+                            <Badge className="bg-amber-100 text-amber-800 text-[10px] font-bold border-0">{book.category}</Badge>
+                          </div>
+                          <p className="text-xs text-slate-500">Author: {book.author || 'N/A'} | ISBN: <span className="font-mono">{book.isbn}</span></p>
                         </div>
-                        <p className="text-xs text-slate-500">Author: {book.author || 'N/A'} | ISBN: <span className="font-mono">{book.isbn}</span></p>
-                      </div>
-                      <div className="flex items-center gap-4 text-xs font-medium">
-                        <div className="text-right">
-                          <p className="text-slate-900 font-bold">{available} / {total} Available</p>
-                          <p className="text-amber-700">{book.borrowed || (total - available)} Checked out</p>
+                        <div className="flex items-center gap-4 text-xs font-medium">
+                          <div className="text-right">
+                            <p className="text-slate-900 font-bold">{available} / {total} Available</p>
+                            <p className="text-amber-700">{book.borrowed || (total - available)} Checked out</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -352,27 +361,40 @@ export const LibrarianPortalView: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="space-y-3">
-                {historyLogs.map((log) => {
-                  const statusInfo = getLogStatusInfo(log);
-                  return (
-                    <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 gap-3">
-                      <div className="space-y-0.5">
-                        <p className="font-bold text-slate-900 text-sm">{log.bookTitle}</p>
-                        <p className="text-xs text-slate-500">
-                          Borrower: <span className="font-semibold text-slate-800">{log.borrowerName}</span> ({log.borrowerType}) {log.accession_no && <span className="font-mono text-indigo-600">[{log.accession_no}]</span>}
-                        </p>
-                        <p className="text-[11px] text-slate-400">Issued: {log.issuedDate} | Due: {log.dueDate}</p>
+              {historyLogs.length === 0 ? (
+                <div className="text-center py-10 space-y-2">
+                  <p className="text-xs text-slate-500">No circulation logs recorded yet.</p>
+                  <Button
+                    onClick={handleIssueBook}
+                    variant="outline"
+                    className="border-slate-200 text-xs font-bold rounded-xl"
+                  >
+                    <BookOpen size={14} /> Issue First Book
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {historyLogs.map((log) => {
+                    const statusInfo = getLogStatusInfo(log);
+                    return (
+                      <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 gap-3">
+                        <div className="space-y-0.5">
+                          <p className="font-bold text-slate-900 text-sm">{log.bookTitle}</p>
+                          <p className="text-xs text-slate-500">
+                            Borrower: <span className="font-semibold text-slate-800">{log.borrowerName}</span> ({log.borrowerType}) {log.accession_no && <span className="font-mono text-indigo-600">[{log.accession_no}]</span>}
+                          </p>
+                          <p className="text-[11px] text-slate-400">Issued: {log.issuedDate} | Due: {log.dueDate}</p>
+                        </div>
+                        <div>
+                          <Badge className={cn("font-bold text-xs border-0 px-3 py-1", statusInfo.color)}>
+                            {statusInfo.label}
+                          </Badge>
+                        </div>
                       </div>
-                      <div>
-                        <Badge className={cn("font-bold text-xs border-0 px-3 py-1", statusInfo.color)}>
-                          {statusInfo.label}
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
