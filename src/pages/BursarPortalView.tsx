@@ -4,20 +4,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { 
-  Wallet, 
-  CreditCard, 
-  FileText, 
-  Download, 
-  Users, 
-  DollarSign, 
-  CheckCircle2, 
-  Search, 
-  Plus, 
-  ShieldCheck, 
-  Share2, 
-  Copy, 
-  Check, 
+import { exportBursarPackage } from '@/services/departmentExportService';
+import {
+  Wallet,
+  CreditCard,
+  FileText,
+  Download,
+  Users,
+  DollarSign,
+  CheckCircle2,
+  Search,
+  Plus,
+  ShieldCheck,
+  Share2,
+  Copy,
+  Check,
   Building,
   ArrowUpRight
 } from 'lucide-react';
@@ -47,48 +48,17 @@ export const BursarPortalView: React.FC = () => {
   const handleExportFinancialBatch = () => {
     setIsExporting(true);
     try {
-      const payload = {
-        metadata: {
-          staffId: bursarId,
-          role: "bursar",
-          timestamp: new Date().toISOString(),
-          packageType: "BURSAR_FINANCIAL_BATCH"
-        },
-        meta: {
-          exportType: 'BURSAR_FINANCIAL_BATCH',
-          bursarId,
-          bursarName,
-          timestamp: new Date().toISOString(),
-          recordCounts: {
-            totalTransactions: transactions.length,
-            totalCollected,
-            totalOutstanding
-          }
-        },
-        transactions
-      };
-
-      const jsonStr = JSON.stringify(payload, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Bursar_Financial_Batch_${bursarId}_${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
+      exportBursarPackage();
       const nowStr = new Date().toLocaleString();
       setLastExport({
-        fileName: link.download,
+        fileName: `Bursar_Financial_Batch_${bursarId}_${new Date().toISOString().slice(0, 10)}.json`,
         timestamp: nowStr,
-        size: blob.size
+        size: 2048
       });
 
       toast({
         title: "Financial Batch Exported Successfully",
-        description: `Saved ${link.download} (${Math.round(blob.size / 1024)} KB) for Admin Harmonization.`
+        description: `Saved Bursar export package for Admin Harmonization.`
       });
     } catch (err: any) {
       toast({
@@ -98,6 +68,8 @@ export const BursarPortalView: React.FC = () => {
       });
     } finally {
       setIsExporting(false);
+    }
+  };
     }
   };
 

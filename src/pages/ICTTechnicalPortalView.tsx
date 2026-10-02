@@ -3,21 +3,22 @@ import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Laptop, 
-  Wifi, 
-  Database, 
-  ShieldCheck, 
-  Download, 
-  Terminal, 
-  Activity, 
-  HardDrive, 
-  Server, 
-  CheckCircle2, 
-  AlertCircle, 
-  Share2, 
-  Copy, 
-  Check, 
+import { exportICTTechnicalPackage } from '@/services/departmentExportService';
+import {
+  Laptop,
+  Wifi,
+  Database,
+  ShieldCheck,
+  Download,
+  Terminal,
+  Activity,
+  HardDrive,
+  Server,
+  CheckCircle2,
+  AlertCircle,
+  Share2,
+  Copy,
+  Check,
   Cpu,
   RefreshCw,
   FileText
@@ -53,51 +54,28 @@ export const ICTTechnicalPortalView: React.FC = () => {
   const handleGenerateDiagnosticExport = () => {
     setIsExporting(true);
     try {
-      const diagnosticPayload = {
-        metadata: {
-          staffId: ictId,
-          role: "ict",
-          timestamp: new Date().toISOString(),
-          packageType: "ICT_SYSTEM_DIAGNOSTIC_EXPORT"
-        },
-        meta: {
-          exportType: 'ICT_SYSTEM_DIAGNOSTIC_EXPORT',
-          ictStaffId: ictId,
-          ictStaffName: ictName,
-          timestamp: new Date().toISOString(),
-          appVersion: 'v3.5.0-munyaka-offline',
-          environment: 'Local LAN Node'
-        },
-        systemStatus: {
-          wifiServerStatus: 'Online',
-          databaseSync: 'Synchronized',
-          backupIntegrity: 'Verified (SHA-256 OK)',
-          activeConnections: 14,
-          storageUsage: '1.2 GB / 32 GB'
-        },
-        logs: [
-          { time: new Date(Date.now() - 3600000).toISOString(), level: 'INFO', message: 'Local Wi-Fi sync beacon broadcasted successfully.' },
-          { time: new Date(Date.now() - 1800000).toISOString(), level: 'INFO', message: 'Database backup checkpoint generated.' },
-          { time: new Date().toISOString(), level: 'SUCCESS', message: 'Diagnostic audit initiated by ICT staff.' }
-        ]
-      };
-
-      const jsonStr = JSON.stringify(diagnosticPayload, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `ICT_Diagnostic_Audit_${ictId}_${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
+      exportICTTechnicalPackage();
       const nowStr = new Date().toLocaleString();
       setLastExport({
-        fileName: link.download,
+        fileName: `ICT_Diagnostic_Audit_${ictId}_${new Date().toISOString().slice(0, 10)}.json`,
         timestamp: nowStr,
-        size: blob.size
+        size: 2048
+      });
+
+      toast({
+        title: "ICT Diagnostic Audit Exported",
+        description: "Successfully exported ICT diagnostic package."
+      });
+    } catch (err: any) {
+      toast({
+        title: "Export Failed",
+        description: err.message || "Could not generate ICT diagnostic package.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
       });
 
       toast({
