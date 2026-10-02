@@ -99,14 +99,18 @@ export default function Attendance() {
 
       setLearners(list);
 
-      // Extract unique grades & streams with case-insensitivity
+      // Extract unique grades & streams with case-insensitivity & normalization
       const gradeSet = new Set<string>();
       const streamSet = new Set<string>();
 
       list.forEach((l) => {
         const g = l.grade || l.classLevel;
         const s = l.stream;
-        if (g && String(g).trim()) gradeSet.add(String(g).trim());
+        if (g && String(g).trim()) {
+          // Normalize: uppercase and trimmed
+          const normG = String(g).trim().toUpperCase();
+          gradeSet.add(normG);
+        }
         if (s && String(s).trim()) streamSet.add(String(s).trim());
       });
 
@@ -164,13 +168,13 @@ export default function Attendance() {
     if (!learners || learners.length === 0) return [];
 
     const filtered = learners.filter(l => {
-      const g = String(l.grade || l.classLevel || '').trim().toLowerCase();
+      const g = String(l.grade || l.classLevel || '').trim().toUpperCase();
       const s = String(l.stream || '').trim().toLowerCase();
       
-      const targetGrade = String(selectedGrade).trim().toLowerCase();
+      const targetGrade = String(selectedGrade).trim().toUpperCase();
       const targetStream = String(selectedStream).trim().toLowerCase();
 
-      const matchesGrade = targetGrade === 'all' || g === targetGrade;
+      const matchesGrade = targetGrade === 'ALL' || g === targetGrade;
       const matchesStream = targetStream === 'all' || s === targetStream;
 
       return matchesGrade && matchesStream;
