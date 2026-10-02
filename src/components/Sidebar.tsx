@@ -71,8 +71,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'owner', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'] },
     { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
-    { icon: Upload, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'owner', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
+    { icon: Upload, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'owner', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'] },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin'] },
@@ -313,20 +313,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
-          <NavLink
-            to="/admin/harmonization"
-            className={cn(
-              "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
-              activePath === '/admin/harmonization' || activePath.startsWith('/admin/harmonization')
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
-                : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
-            )}
-            title={isCollapsed ? "Data Harmonization Hub" : undefined}
-          >
-            <Upload className={cn("transition-transform group-hover:scale-110 shrink-0 w-5 h-5", activePath === '/admin/harmonization' ? "text-white" : "text-slate-400 group-hover:text-slate-200")} />
-            {!isCollapsed && <span className="truncate flex-1">Data Harmonization Hub</span>}
-          </NavLink>
-
           {filteredMenu.map((item, idx) => {
             const Icon = item.icon;
             const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
