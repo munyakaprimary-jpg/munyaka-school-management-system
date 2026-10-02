@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,26 +11,27 @@ import {
   History, 
   Download, 
   Users, 
-  AlertCircle, 
   CheckCircle2, 
   Search, 
   Plus, 
   FileText, 
-  ShieldCheck, 
   Share2, 
   Copy, 
   Check, 
   BookMarked,
-  Layers
+  BookPlus,
+  AlertCircle,
+  Clock,
+  ArrowRight
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { Book, BorrowLog } from '@/types/library';
+import { Book, BorrowLog, getLogStatusInfo } from '@/types/library';
 
 export const LibrarianPortalView: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const librarianName = user?.name || 'Librarian';
+  const librarianName = user?.name || 'JANET GATHONI KUNGU';
   const librarianId = user?.id || 'LIB-001';
 
   // State loaded from localStorage
@@ -38,10 +39,10 @@ export const LibrarianPortalView: React.FC = () => {
     try {
       const saved = localStorage.getItem('munyaka_library_books');
       return saved ? JSON.parse(saved) : [
-        { id: '1', title: 'Spark: English Grade 4', author: 'KLB Publisher', isbn: '978-9966-56-001', category: 'Textbooks', totalCopies: 45, availableCopies: 32, borrowed: 13, subject: 'English', grade: 'Grade 4', publisher: 'KLB' },
-        { id: '2', title: 'KLB Mathematics Grade 5', author: 'KLB', isbn: '978-9966-56-002', category: 'Textbooks', totalCopies: 50, availableCopies: 41, borrowed: 9, subject: 'Mathematics', grade: 'Grade 5', publisher: 'KLB' },
-        { id: '3', title: 'Junior Secondary Integrated Science', author: 'Longhorn', isbn: '978-9966-56-003', category: 'Science', totalCopies: 30, availableCopies: 18, borrowed: 12, subject: 'Science', grade: 'Grade 7', publisher: 'Longhorn' },
-        { id: '4', title: 'Kiswahili Mufti G7', author: 'Moran', isbn: '978-9966-56-004', category: 'Languages', totalCopies: 40, availableCopies: 35, borrowed: 5, subject: 'Kiswahili', grade: 'Grade 7', publisher: 'Moran' }
+        { id: '1', title: 'Spark: English Grade 4', author: 'KLB Publisher', isbn: '978-9966-56-001', category: 'Textbooks', totalCopies: 45, availableCopies: 32, borrowed: 13, subject: 'English', grade: 'Grade 4', publisher: 'KLB', stock: 45 },
+        { id: '2', title: 'KLB Mathematics Grade 5', author: 'KLB', isbn: '978-9966-56-002', category: 'Textbooks', totalCopies: 50, availableCopies: 41, borrowed: 9, subject: 'Mathematics', grade: 'Grade 5', publisher: 'KLB', stock: 50 },
+        { id: '3', title: 'Junior Secondary Integrated Science', author: 'Longhorn', isbn: '978-9966-56-003', category: 'Science', totalCopies: 30, availableCopies: 18, borrowed: 12, subject: 'Science', grade: 'Grade 7', publisher: 'Longhorn', stock: 30 },
+        { id: '4', title: 'Kiswahili Mufti G7', author: 'Moran', isbn: '978-9966-56-004', category: 'Languages', totalCopies: 40, availableCopies: 35, borrowed: 5, subject: 'Kiswahili', grade: 'Grade 7', publisher: 'Moran', stock: 40 }
       ];
     } catch {
       return [];
@@ -52,9 +53,9 @@ export const LibrarianPortalView: React.FC = () => {
     try {
       const saved = localStorage.getItem('munyaka_library_history');
       return saved ? JSON.parse(saved) : [
-        { id: 'log-1', bookId: '1', bookTitle: 'Spark: English Grade 4', borrowerName: 'Brian Kiptoo', borrowerType: 'Student', studentAdmissionNumber: 'ADM-2024-001', grade: 'Grade 4', stream: 'Blue', issuedDate: '2025-02-10', dueDate: '2025-02-24', status: 'Active', conditionAtIssue: 'Good' },
-        { id: 'log-2', bookId: '2', bookTitle: 'KLB Mathematics Grade 5', borrowerName: 'Mary Atieno', borrowerType: 'Student', studentAdmissionNumber: 'ADM-2024-045', grade: 'Grade 5', stream: 'Red', issuedDate: '2025-02-01', dueDate: '2025-02-15', returnedDate: '2025-02-14', status: 'Returned', conditionAtIssue: 'Good', conditionAtReturn: 'Good' },
-        { id: 'log-3', bookId: '3', bookTitle: 'Junior Secondary Integrated Science', borrowerName: 'John Kamau', borrowerType: 'Staff', studentAdmissionNumber: 'EMP-012', issuedDate: '2025-01-20', dueDate: '2025-02-05', status: 'Lost', conditionAtIssue: 'Good' }
+        { id: 'log-1', bookId: '1', bookTitle: 'Spark: English Grade 4', borrowerName: 'Brian Kiptoo', borrowerType: 'Student', accession_no: 'ADM-2024-001', grade: 'Grade 4', stream: 'Blue', issuedDate: '2025-02-10', dueDate: '2025-02-24', status: 'Active', qty_issued: 1, qty_returned: 0, qty_lost: 0 },
+        { id: 'log-2', bookId: '2', bookTitle: 'KLB Mathematics Grade 5', borrowerName: 'Mary Atieno', borrowerType: 'Student', accession_no: 'ADM-2024-045', grade: 'Grade 5', stream: 'Red', issuedDate: '2025-02-01', dueDate: '2025-02-15', returnedDate: '2025-02-14', status: 'Returned', qty_issued: 1, qty_returned: 1, qty_lost: 0 },
+        { id: 'log-3', bookId: '3', bookTitle: 'Junior Secondary Integrated Science', borrowerName: 'John Kamau', borrowerType: 'Staff', accession_no: 'EMP-012', issuedDate: '2025-01-20', dueDate: '2025-02-05', status: 'Lost', qty_issued: 1, qty_returned: 0, qty_lost: 1 }
       ];
     } catch {
       return [];
@@ -67,20 +68,20 @@ export const LibrarianPortalView: React.FC = () => {
   const [copiedShare, setCopiedShare] = useState(false);
 
   // Quick statistics
-  const totalBooksCount = books.reduce((acc, b) => acc + (b.totalCopies || 0), 0);
-  const availableBooksCount = books.reduce((acc, b) => acc + (b.availableCopies || 0), 0);
+  const totalBooksCount = books.reduce((acc, b) => acc + (b.totalCopies || b.stock || 0), 0);
+  const availableBooksCount = books.reduce((acc, b) => acc + (b.availableCopies || (b.totalCopies || b.stock || 0) - (b.borrowed || 0)), 0);
   const activeCirculation = historyLogs.filter(l => l.status === 'Active' || l.status === 'Issued').length;
-  const lostDamagedCount = historyLogs.filter(l => l.status === 'Lost' || l.status === 'Damaged').length;
+  const lostDamagedCount = historyLogs.filter(l => l.status === 'Lost' || l.status === 'Damaged' || (l.qty_lost && l.qty_lost > 0)).length;
 
   const filteredBooks = useMemo(() => {
     return books.filter(b => 
       b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.author?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.isbn.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [books, searchQuery]);
 
-  const handleExportInventoryDelta = () => {
+  const handleExportLibraryBatch = () => {
     setIsExporting(true);
     try {
       const payload = {
@@ -118,13 +119,13 @@ export const LibrarianPortalView: React.FC = () => {
       });
 
       toast({
-        title: "Library Delta Package Exported Successfully",
+        title: "Library Batch Delta Exported Successfully",
         description: `Saved ${link.download} (${Math.round(blob.size / 1024)} KB) with circulation logs ready for Admin Harmonization.`
       });
     } catch (err: any) {
       toast({
         title: "Export Failed",
-        description: err.message || "Could not generate inventory delta package.",
+        description: err.message || "Could not generate library batch package.",
         variant: "destructive"
       });
     } finally {
@@ -133,7 +134,7 @@ export const LibrarianPortalView: React.FC = () => {
   };
 
   const getShareText = () => {
-    return `📚 *Munyaka Library & E-Resources Delta Package*
+    return `📚 *Munyaka Library & E-Resources Batch Delta*
 👤 Librarian: ${librarianName} (ID: ${librarianId})
 📖 Total Catalog Titles: ${books.length} (${totalBooksCount} physical copies)
 🔄 Active Circulation: ${activeCirculation} books out
@@ -152,8 +153,70 @@ export const LibrarianPortalView: React.FC = () => {
     setTimeout(() => setCopiedShare(false), 3000);
   };
 
+  const handleCatalogNewBook = () => {
+    const title = prompt("Enter book title:");
+    if (!title) return;
+    const author = prompt("Enter author / publisher:") || 'KLB';
+    const isbn = prompt("Enter ISBN or barcode:") || `ISBN-${Math.floor(100000 + Math.random() * 900000)}`;
+    const category = prompt("Enter category (Textbooks / Science / Languages):") || 'Textbooks';
+    const totalCopies = parseInt(prompt("Enter total copies:") || '30', 10);
+
+    const newBook: Book = {
+      id: `book-${Date.now()}`,
+      title,
+      author,
+      isbn,
+      category,
+      totalCopies,
+      availableCopies: totalCopies,
+      borrowed: 0,
+      stock: totalCopies,
+      subject: category,
+      grade: 'All Grades',
+      publisher: author
+    };
+
+    const updated = [newBook, ...books];
+    setBooks(updated);
+    localStorage.setItem('munyaka_library_books', JSON.stringify(updated));
+    toast({
+      title: "Book Cataloged Successfully",
+      description: `Added "${title}" with ${totalCopies} copies.`
+    });
+  };
+
+  const handleIssueBook = () => {
+    const title = prompt("Enter book title being checked out:");
+    if (!title) return;
+    const borrowerName = prompt("Enter borrower name (Student / Staff):") || 'Student';
+    const admissionNo = prompt("Enter student admission number / staff ID (e.g. ADM-2024-001):") || 'ADM-2024-999';
+
+    const newLog: BorrowLog = {
+      id: `log-${Date.now()}`,
+      bookId: 'custom',
+      bookTitle: title,
+      borrowerName,
+      borrowerType: 'Student',
+      accession_no: admissionNo,
+      issuedDate: new Date().toISOString().slice(0, 10),
+      dueDate: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+      status: 'Active',
+      qty_issued: 1,
+      qty_returned: 0,
+      qty_lost: 0
+    };
+
+    const updatedLogs = [newLog, ...historyLogs];
+    setHistoryLogs(updatedLogs);
+    localStorage.setItem('munyaka_library_history', JSON.stringify(updatedLogs));
+    toast({
+      title: "Book Issued Successfully",
+      description: `Checked out "${title}" to ${borrowerName} [${admissionNo}].`
+    });
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-amber-700 via-orange-800 to-slate-900 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-96 bg-white/5 backdrop-blur-3xl rounded-l-full pointer-events-none hidden lg:block" />
@@ -162,19 +225,31 @@ export const LibrarianPortalView: React.FC = () => {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold uppercase tracking-wider text-amber-200">
               <BookMarked size={14} /> Librarian & Asset Portal
             </div>
-            <h1 className="text-3xl font-black tracking-tight">Library & E-Resources Circulation Hub</h1>
+            <h1 className="text-3xl font-black tracking-tight">Welcome back, {librarianName}!</h1>
             <p className="text-amber-100 text-sm max-w-2xl font-medium">
-              Manage asset circulation, textbook allocations, student borrowing logs, and generate offline inventory delta packages for admin synchronization.
+              You are signed in as librarian. Ready to manage textbook inventory, circulation logs, and library asset reports.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
-              onClick={handleExportInventoryDelta}
-              disabled={isExporting}
-              className="bg-white text-amber-950 hover:bg-amber-50 font-bold px-6 py-4 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center gap-2 text-sm"
+              onClick={handleCatalogNewBook}
+              className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-2 text-xs"
             >
-              <Download size={18} className="text-amber-600" />
-              {isExporting ? 'Packaging Delta...' : 'Export Inventory Delta (.JSON)'}
+              <BookPlus size={16} /> Catalog New Book
+            </Button>
+            <Button
+              onClick={handleIssueBook}
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-2 text-xs"
+            >
+              <BookOpen size={16} /> Issue Book / Check-out
+            </Button>
+            <Button
+              onClick={handleExportLibraryBatch}
+              disabled={isExporting}
+              className="bg-white text-amber-950 hover:bg-amber-50 font-bold px-5 py-3.5 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center gap-2 text-xs"
+            >
+              <Download size={16} className="text-amber-600" />
+              {isExporting ? 'Packaging Delta...' : 'Export Library Batch Delta'}
             </Button>
           </div>
         </div>
@@ -235,23 +310,27 @@ export const LibrarianPortalView: React.FC = () => {
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-3">
-                {filteredBooks.map((book) => (
-                  <div key={book.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 text-sm">{book.title}</span>
-                        <Badge className="bg-amber-100 text-amber-800 text-[10px] font-bold border-0">{book.category}</Badge>
+                {filteredBooks.map((book) => {
+                  const total = book.totalCopies ?? book.stock ?? 0;
+                  const available = book.availableCopies ?? (total - (book.borrowed || 0));
+                  return (
+                    <div key={book.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900 text-sm">{book.title}</span>
+                          <Badge className="bg-amber-100 text-amber-800 text-[10px] font-bold border-0">{book.category}</Badge>
+                        </div>
+                        <p className="text-xs text-slate-500">Author: {book.author || 'N/A'} | ISBN: <span className="font-mono">{book.isbn}</span></p>
                       </div>
-                      <p className="text-xs text-slate-500">Author: {book.author} | ISBN: <span className="font-mono">{book.isbn}</span></p>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs font-medium">
-                      <div className="text-right">
-                        <p className="text-slate-900 font-bold">{book.availableCopies} / {book.totalCopies} Available</p>
-                        <p className="text-amber-700">Checked out</p>
+                      <div className="flex items-center gap-4 text-xs font-medium">
+                        <div className="text-right">
+                          <p className="text-slate-900 font-bold">{available} / {total} Available</p>
+                          <p className="text-amber-700">{book.borrowed || (total - available)} Checked out</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -268,27 +347,25 @@ export const LibrarianPortalView: React.FC = () => {
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-3">
-                {historyLogs.map((log) => (
-                  <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 gap-3">
-                    <div className="space-y-0.5">
-                      <p className="font-bold text-slate-900 text-sm">{log.bookTitle}</p>
-                      <p className="text-xs text-slate-500">
-                        Borrower: <span className="font-semibold text-slate-800">{log.borrowerName}</span> ({log.borrowerType}) {log.accession_no && <span className="font-mono text-indigo-600">[{log.accession_no}]</span>}
-                      </p>
-                      <p className="text-[11px] text-slate-400">Issued: {log.issuedDate} | Due: {log.dueDate}</p>
+                {historyLogs.map((log) => {
+                  const statusInfo = getLogStatusInfo(log);
+                  return (
+                    <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 gap-3">
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-slate-900 text-sm">{log.bookTitle}</p>
+                        <p className="text-xs text-slate-500">
+                          Borrower: <span className="font-semibold text-slate-800">{log.borrowerName}</span> ({log.borrowerType}) {log.accession_no && <span className="font-mono text-indigo-600">[{log.accession_no}]</span>}
+                        </p>
+                        <p className="text-[11px] text-slate-400">Issued: {log.issuedDate} | Due: {log.dueDate}</p>
+                      </div>
+                      <div>
+                        <Badge className={cn("font-bold text-xs border-0 px-3 py-1", statusInfo.color)}>
+                          {statusInfo.label}
+                        </Badge>
+                      </div>
                     </div>
-                    <div>
-                      <Badge className={cn(
-                        "font-bold text-xs border-0 px-3 py-1",
-                        log.status === 'Active' || log.status === 'Issued' ? 'bg-blue-100 text-blue-700' :
-                        log.status === 'Returned' ? 'bg-emerald-100 text-emerald-700' :
-                        'bg-rose-100 text-rose-700'
-                      )}>
-                        {log.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -299,7 +376,7 @@ export const LibrarianPortalView: React.FC = () => {
           <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden">
             <CardHeader className="border-b border-slate-100 bg-slate-50/50 p-6">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <FileText size={18} className="text-amber-700" /> Delta Package Generator
+                <FileText size={18} className="text-amber-700" /> Batch Delta Generator
               </CardTitle>
               <CardDescription className="text-xs mt-0.5">
                 Bundle library inventory changes for offline admin synchronization.
@@ -320,7 +397,7 @@ export const LibrarianPortalView: React.FC = () => {
               {lastExport && (
                 <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1">
                   <div className="flex items-center gap-2 font-bold text-xs">
-                    <CheckCircle2 size={16} className="text-emerald-600" /> Delta Package Downloaded
+                    <CheckCircle2 size={16} className="text-emerald-600" /> Batch Delta Downloaded
                   </div>
                   <p className="font-mono text-[11px] text-emerald-700">{lastExport.fileName} ({Math.round(lastExport.size / 1024)} KB)</p>
                   <p className="text-[10px] text-slate-500">{lastExport.timestamp}</p>
@@ -328,12 +405,12 @@ export const LibrarianPortalView: React.FC = () => {
               )}
 
               <Button
-                onClick={handleExportInventoryDelta}
+                onClick={handleExportLibraryBatch}
                 disabled={isExporting}
                 className="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-4 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 text-sm"
               >
                 <Download size={18} />
-                {isExporting ? 'Generating Delta...' : 'Export Inventory Delta Package'}
+                {isExporting ? 'Generating Delta...' : 'Export Library Batch Delta'}
               </Button>
             </CardContent>
           </Card>
