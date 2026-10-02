@@ -25,6 +25,8 @@ import {
   ArrowRight,
   Trash2
 } from 'lucide-react';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { useToast } from '@/components/ui/use-toast';
 import { Book, BorrowLog, getLogStatusInfo } from '@/types/library';
 
@@ -82,7 +84,7 @@ export const LibrarianPortalView: React.FC = () => {
     );
   }, [books, searchQuery]);
 
-  const handleExportLibraryBatch = () => {
+  const handleExportLibraryBatch = async () => {
     setIsExporting(true);
     try {
       const payload = {
@@ -108,11 +110,49 @@ export const LibrarianPortalView: React.FC = () => {
       };
 
       const jsonStr = JSON.stringify(payload, null, 2);
+      const fileName = `Librarian_Inventory_Delta_${librarianId}_${new Date().toISOString().slice(0, 10)}.json`;
+
+      // 1. Try Capacitor Native Share & Filesystem first
+      try {
+        const writeFileResult = await Filesystem.writeFile({
+          path: fileName,
+          data: jsonStr,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8
+        });
+
+        if (writeFileResult && writeFileResult.uri) {
+          await Share.share({
+            title: 'Librarian Inventory Delta Export',
+            text: `Library Delta Export for ${librarianName} (ID: ${librarianId})`,
+            url: writeFileResult.uri,
+            dialogTitle: 'Share Library Delta Package'
+          });
+
+          const nowStr = new Date().toLocaleString();
+          setLastExport({
+            fileName,
+            timestamp: nowStr,
+            size: jsonStr.length
+          });
+
+          toast({
+            title: "Library Batch Delta Shared Successfully",
+            description: `Sent ${fileName} with circulation logs via Capacitor Share.`
+          });
+          setIsExporting(false);
+          return;
+        }
+      } catch (nativeErr) {
+        // Fall through to web blob download
+      }
+
+      // 2. Web Blob Download Fallback
       const blob = new Blob([jsonStr], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Librarian_Inventory_Delta_${librarianId}_${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

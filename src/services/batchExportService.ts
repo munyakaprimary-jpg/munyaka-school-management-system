@@ -1,4 +1,5 @@
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { CentralDataService } from '@/services/centralDataService';
 
 export interface ClassPackageHeader {
@@ -118,7 +119,29 @@ export const batchExportService = {
     const safeGrade = (packageData.header.assignedGrade || 'Grade').replace(/[^a-zA-Z0-9]/g, '_');
     const fileName = `Munyaka_MasterPackage_${safeName}_${safeGrade}_${Date.now()}.json`;
 
-    // Web Blob Download (Guaranteed trigger for browser save dialog)
+    // 1. Try Capacitor Native Share & Filesystem first
+    try {
+      const writeFileResult = await Filesystem.writeFile({
+        path: fileName,
+        data: jsonString,
+        directory: Directory.Cache,
+        encoding: Encoding.UTF8
+      });
+
+      if (writeFileResult && writeFileResult.uri) {
+        await Share.share({
+          title: 'Master Class Package Export',
+          text: `Munyaka Master Package for ${packageData.header.teacherName} (${packageData.header.assignedGrade})`,
+          url: writeFileResult.uri,
+          dialogTitle: 'Share Master Class Package'
+        });
+        return { success: true, fileName, size: jsonString.length };
+      }
+    } catch (nativeErr) {
+      // Fall through to web blob download
+    }
+
+    // 2. Web Blob Download Fallback
     try {
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -131,18 +154,7 @@ export const batchExportService = {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       return { success: true, fileName, size: jsonString.length };
     } catch (webErr) {
-      // Capacitor Filesystem fallback
-      try {
-        await Filesystem.writeFile({
-          path: fileName,
-          data: jsonString,
-          directory: Directory.Documents,
-          encoding: Encoding.UTF8
-        });
-        return { success: true, fileName, size: jsonString.length };
-      } catch (capacitorErr) {
-        throw new Error('Failed to save export file via browser download or Capacitor.');
-      }
+      throw new Error('Failed to save export file via Capacitor Share or browser download.');
     }
   }
 };
