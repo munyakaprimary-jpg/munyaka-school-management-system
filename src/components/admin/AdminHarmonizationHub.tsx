@@ -14,7 +14,24 @@ export const AdminHarmonizationHub: React.FC = () => {
   const [harmonizationResult, setHarmonizationResult] = useState<{ successCount: number; errors: string[] } | null>(null);
   const [recentActivities, setRecentActivities] = useState<any[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('munyaka_admin_activities') || '[]');
+      const explicitActivities = JSON.parse(localStorage.getItem('munyaka_admin_activities') || '[]');
+      const libraryHistory = JSON.parse(localStorage.getItem('munyaka_library_history') || '[]');
+      const libraryBooks = JSON.parse(localStorage.getItem('munyaka_library_books') || '[]');
+      
+      const libraryLogsAsActivities = libraryHistory.map((l: any) => ({
+        id: 'lib-act-' + l.id,
+        staffId: 'LIBRARIAN',
+        role: 'librarian',
+        packageType: 'CIRCULATION_LOG',
+        fileName: 'library_circulation.json',
+        timestamp: l.issuedDate || new Date().toISOString(),
+        details: `Library circulation: Checked out "${l.bookTitle}" to ${l.borrowerName} (${l.borrowerType}) [Status: ${l.status}]`
+      }));
+
+      const combined = [...explicitActivities, ...libraryLogsAsActivities];
+      // Sort by timestamp descending
+      combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return combined;
     } catch {
       return [];
     }
