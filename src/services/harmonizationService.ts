@@ -3,7 +3,13 @@ import { CentralDataService } from '@/services/centralDataService';
 export interface HarmonizationAuditItem {
   id: string;
   fileName: string;
-  header: {
+  metadata: {
+    staffId: string;
+    role: string;
+    timestamp: string;
+    packageType: string;
+  };
+  header?: {
     teacherName: string;
     teacherId: string;
     assignedGrade: string;
@@ -33,14 +39,25 @@ export const harmonizationService = {
           const content = e.target?.result as string;
           const data = JSON.parse(content);
           
-          if (!data || !data.header) {
-            throw new Error('Invalid package format: missing metadata header.');
+          if (!data || !data.metadata || typeof data.metadata !== 'object') {
+            throw new Error('Invalid package format: missing root metadata property.');
           }
+
+          const header = data.header || {
+            teacherName: data.metadata.staffId || 'Staff Member',
+            teacherId: data.metadata.staffId || 'UNKNOWN',
+            assignedGrade: data.metadata.packageType || 'General',
+            assignedStream: data.metadata.role || 'Staff',
+            timestamp: data.metadata.timestamp || new Date().toISOString(),
+            exportVersion: '1.0.0',
+            deviceId: 'DEV-OFFLINE'
+          };
 
           const auditItem: HarmonizationAuditItem = {
             id: 'audit-' + Math.random().toString(36).substring(2, 9),
             fileName: file.name,
-            header: data.header,
+            metadata: data.metadata,
+            header,
             attendanceCount: Array.isArray(data.attendanceRecords) ? data.attendanceRecords.length : 0,
             checkInCount: Array.isArray(data.teacherCheckInLogs) ? data.teacherCheckInLogs.length : 0,
             assessmentCount: Array.isArray(data.cbcAssessments) ? data.cbcAssessments.length : 0,

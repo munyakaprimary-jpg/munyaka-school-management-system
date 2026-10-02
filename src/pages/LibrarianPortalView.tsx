@@ -85,6 +85,12 @@ export const LibrarianPortalView: React.FC = () => {
     setIsExporting(true);
     try {
       const payload = {
+        metadata: {
+          staffId: librarianId,
+          role: "librarian",
+          timestamp: new Date().toISOString(),
+          packageType: "LIBRARIAN_INVENTORY_DELTA"
+        },
         meta: {
           exportType: 'LIBRARIAN_INVENTORY_DELTA',
           librarianId,

@@ -54,6 +54,12 @@ export const ICTTechnicalPortalView: React.FC = () => {
     setIsExporting(true);
     try {
       const diagnosticPayload = {
+        metadata: {
+          staffId: ictId,
+          role: "ict",
+          timestamp: new Date().toISOString(),
+          packageType: "ICT_SYSTEM_DIAGNOSTIC_EXPORT"
+        },
         meta: {
           exportType: 'ICT_SYSTEM_DIAGNOSTIC_EXPORT',
           ictStaffId: ictId,

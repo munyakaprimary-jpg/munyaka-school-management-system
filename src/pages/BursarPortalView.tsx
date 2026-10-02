@@ -48,6 +48,12 @@ export const BursarPortalView: React.FC = () => {
     setIsExporting(true);
     try {
       const payload = {
+        metadata: {
+          staffId: bursarId,
+          role: "bursar",
+          timestamp: new Date().toISOString(),
+          packageType: "BURSAR_FINANCIAL_BATCH"
+        },
         meta: {
           exportType: 'BURSAR_FINANCIAL_BATCH',
           bursarId,

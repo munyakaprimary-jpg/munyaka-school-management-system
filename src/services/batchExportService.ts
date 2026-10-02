@@ -90,7 +90,15 @@ export const batchExportService = {
       deviceId: 'DEV-' + Math.random().toString(36).substring(2, 8).toUpperCase()
     };
 
+    const metadata = {
+      staffId: teacherId,
+      role: 'teacher',
+      timestamp,
+      packageType: 'TEACHER_MASTER_PACKAGE'
+    };
+
     return {
+      metadata,
       header,
       attendanceRecords,
       teacherCheckInLogs,

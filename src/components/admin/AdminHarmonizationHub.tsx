@@ -232,21 +232,21 @@ export const AdminHarmonizationHub: React.FC = () => {
                     {auditItems.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-4 px-4 font-bold text-slate-900">
-                          <div>{item.header.teacherName}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{item.header.teacherId}</div>
+                          <div>{item.header?.teacherName || item.metadata.staffId}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{item.metadata.staffId} · <span className="uppercase text-emerald-600">{item.metadata.role}</span></div>
                         </td>
                         <td className="py-4 px-4">
                           <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50 font-bold text-xs">
-                            {item.header.assignedGrade} · {item.header.assignedStream}
+                            {item.header?.assignedGrade || item.metadata.packageType} {item.header?.assignedStream ? `· ${item.header.assignedStream}` : ''}
                           </Badge>
                         </td>
                         <td className="py-4 px-4 text-slate-600 font-medium">
-                          {new Date(item.header.timestamp).toLocaleString()}
+                          {new Date(item.metadata.timestamp || item.header?.timestamp || Date.now()).toLocaleString()}
                         </td>
                         <td className="py-4 px-4 text-slate-600 font-medium space-x-2">
-                          <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md">Att: {item.attendanceCount}</span>
-                          <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md">Marks: {item.assessmentCount}</span>
-                          <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md">Check-in: {item.checkInCount}</span>
+                          <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md">Type: {item.metadata.packageType}</span>
+                          {item.attendanceCount > 0 && <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md">Att: {item.attendanceCount}</span>}
+                          {item.assessmentCount > 0 && <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md">Marks: {item.assessmentCount}</span>}
                         </td>
                         <td className="py-4 px-4">
                           {item.status === 'harmonized' ? (
