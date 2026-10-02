@@ -44,11 +44,11 @@ export const harmonizationService = {
           }
 
           const header = jsonData.header || {
-            teacherName: jsonData.metadata.staffId || 'Staff Member',
-            teacherId: jsonData.metadata.staffId || 'UNKNOWN',
-            assignedGrade: jsonData.metadata.packageType || 'General',
-            assignedStream: jsonData.metadata.role || 'Staff',
-            timestamp: jsonData.metadata.timestamp || new Date().toISOString(),
+            teacherName: jsonData.metadata?.staffName || jsonData.metadata?.staffId || 'Staff Member',
+            teacherId: jsonData.metadata?.staffId || 'UNKNOWN',
+            assignedGrade: jsonData.metadata?.department || jsonData.metadata?.packageType || 'General',
+            assignedStream: jsonData.metadata?.role || 'Staff',
+            timestamp: jsonData.metadata?.timestamp || new Date().toISOString(),
             exportVersion: '1.0.0',
             deviceId: 'DEV-OFFLINE'
           };
@@ -58,7 +58,7 @@ export const harmonizationService = {
             fileName: file.name,
             metadata: jsonData.metadata,
             header,
-            attendanceCount: Array.isArray(jsonData.attendanceRecords) ? jsonData.attendanceRecords.length : 0,
+            attendanceCount: Array.isArray(jsonData.attendanceRecords) ? jsonData.attendanceRecords.length : (Array.isArray(jsonData.records) ? jsonData.records.length : 0),
             checkInCount: Array.isArray(jsonData.teacherCheckInLogs) ? jsonData.teacherCheckInLogs.length : 0,
             assessmentCount: Array.isArray(jsonData.cbcAssessments) ? jsonData.cbcAssessments.length : 0,
             inventoryCount: Array.isArray(jsonData.classInventory) ? jsonData.classInventory.length : 0,
@@ -87,6 +87,17 @@ export const harmonizationService = {
 
     for (const item of items) {
       try {
+        const metadata = item.metadata;
+        const raw = item.rawPackage || item.rawContent;
+
+        // Handle Departmental Exports (Bursar, ICT, Storekeeper, Science Lab)
+        if (metadata?.department || metadata?.packageType?.includes('BURSAR') || metadata?.packageType?.includes('ICT') || metadata?.packageType?.includes('STORE') || metadata?.packageType?.includes('SCIENCE')) {
+          const deptKey = `munyaka_dept_import_${metadata.department || metadata.packageType}_${Date.now()}`;
+          localStorage.setItem(deptKey, JSON.stringify(raw));
+          successCount++;
+          continue;
+        }
+
         const { header, attendanceRecords, teacherCheckInLogs, cbcAssessments, classInventory, learners } = item.rawPackage;
         const gradeStreamKey = `${header.assignedGrade || 'Grade'}_${header.assignedStream || 'Green'}`;
 
