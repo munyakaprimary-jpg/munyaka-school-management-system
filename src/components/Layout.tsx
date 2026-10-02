@@ -48,6 +48,8 @@ import {
   Gamepad2,
   Server,
   Wifi,
+  Upload
+} from 'lucide-react';
   Home,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
