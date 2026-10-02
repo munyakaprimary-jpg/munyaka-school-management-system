@@ -38,13 +38,16 @@ export interface DepartmentExportResult {
 }
 
 /**
- * Scopes and aggregates department-specific records from localStorage,
+ * Scopes and aggregates department-specific records from localStorage with safe error handling,
  * wrapping them with metadata headers for the Admin Harmonization Hub.
  */
 export async function exportDepartmentPackage(
   department: DepartmentType,
-  staffInfo: { id: string; name: string }
+  staffInfo?: { id?: string; name?: string }
 ): Promise<DepartmentExportResult> {
+  const safeStaffId = String(staffInfo?.id || localStorage.getItem('current_user_id') || 'STAFF-001');
+  const safeStaffName = String(staffInfo?.name || localStorage.getItem('current_user_name') || 'Staff Member');
+
   try {
     let records: any[] = [];
     let packageType = 'DEPARTMENT_EXPORT';
@@ -55,13 +58,14 @@ export async function exportDepartmentPackage(
         packageType = 'BURSAR_FINANCES';
         filePrefix = 'bursar_finances';
         try {
-          const fees = JSON.parse(localStorage.getItem('fees_data') || localStorage.getItem('munyaka_fees') || '[]');
-          const payments = JSON.parse(localStorage.getItem('munyaka_payments') || localStorage.getItem('fee_payments') || '[]');
-          const transactions = JSON.parse(localStorage.getItem('munyaka_transactions') || '[]');
+          const feesRaw = localStorage.getItem('fees_data') || localStorage.getItem('munyaka_fees') || '[]';
+          const paymentsRaw = localStorage.getItem('munyaka_payments') || localStorage.getItem('fee_payments') || '[]';
+          const transRaw = localStorage.getItem('munyaka_transactions') || '[]';
+          
           records = [
-            { domain: 'fees', items: fees },
-            { domain: 'payments', items: payments },
-            { domain: 'transactions', items: transactions },
+            { domain: 'fees', items: JSON.parse(feesRaw) },
+            { domain: 'payments', items: JSON.parse(paymentsRaw) },
+            { domain: 'transactions', items: JSON.parse(transRaw) },
           ];
         } catch {
           records = [];
@@ -73,11 +77,12 @@ export async function exportDepartmentPackage(
         packageType = 'ICT_INVENTORY';
         filePrefix = 'ict_devices';
         try {
-          const devices = JSON.parse(localStorage.getItem('ict_devices_v1') || localStorage.getItem('munyaka_ict_assets') || '[]');
-          const issues = JSON.parse(localStorage.getItem('ict_issues_v1') || '[]');
+          const devRaw = localStorage.getItem('ict_devices_v1') || localStorage.getItem('munyaka_ict_assets') || '[]';
+          const issuesRaw = localStorage.getItem('ict_issues_v1') || '[]';
+          
           records = [
-            { domain: 'devices', items: devices },
-            { domain: 'issues', items: issues },
+            { domain: 'devices', items: JSON.parse(devRaw) },
+            { domain: 'issues', items: JSON.parse(issuesRaw) },
           ];
         } catch {
           records = [];
@@ -89,11 +94,12 @@ export async function exportDepartmentPackage(
         packageType = 'STORE_SUPPLIES';
         filePrefix = 'store_inventory';
         try {
-          const inventory = JSON.parse(localStorage.getItem('store_inventory_v1') || localStorage.getItem('munyaka_store_items') || '[]');
-          const logs = JSON.parse(localStorage.getItem('store_issue_logs_v1') || '[]');
+          const invRaw = localStorage.getItem('store_inventory_v1') || localStorage.getItem('munyaka_store_items') || '[]';
+          const logsRaw = localStorage.getItem('store_issue_logs_v1') || '[]';
+          
           records = [
-            { domain: 'inventory', items: inventory },
-            { domain: 'issueLogs', items: logs },
+            { domain: 'inventory', items: JSON.parse(invRaw) },
+            { domain: 'issueLogs', items: JSON.parse(logsRaw) },
           ];
         } catch {
           records = [];
@@ -105,11 +111,12 @@ export async function exportDepartmentPackage(
         packageType = 'SCIENCE_LAB_RECORDS';
         filePrefix = 'science_lab';
         try {
-          const apparatus = JSON.parse(localStorage.getItem('science_lab_v1') || localStorage.getItem('munyaka_science_apparatus') || '[]');
-          const checkouts = JSON.parse(localStorage.getItem('science_lab_checkouts_v1') || '[]');
+          const appRaw = localStorage.getItem('science_lab_v1') || localStorage.getItem('munyaka_science_apparatus') || '[]';
+          const checkRaw = localStorage.getItem('science_lab_checkouts_v1') || '[]';
+          
           records = [
-            { domain: 'apparatus', items: apparatus },
-            { domain: 'checkouts', items: checkouts },
+            { domain: 'apparatus', items: JSON.parse(appRaw) },
+            { domain: 'checkouts', items: JSON.parse(checkRaw) },
           ];
         } catch {
           records = [];
@@ -121,8 +128,8 @@ export async function exportDepartmentPackage(
     const payload: DepartmentExportPackage = {
       metadata: {
         department,
-        staffId: staffInfo.id,
-        staffName: staffInfo.name,
+        staffId: safeStaffId,
+        staffName: safeStaffName,
         packageType,
         timestamp: new Date().toISOString(),
         schoolName: 'Munyaka Primary School',
@@ -136,7 +143,7 @@ export async function exportDepartmentPackage(
 
     const jsonString = JSON.stringify(payload, null, 2);
     const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const fileName = `munyaka_${filePrefix}_${staffInfo.id}_${dateStr}.json`;
+    const fileName = `munyaka_${filePrefix}_${safeStaffId}_${dateStr}.json`;
 
     if (Capacitor.isNativePlatform()) {
       const writeResult = await Filesystem.writeFile({
@@ -150,7 +157,7 @@ export async function exportDepartmentPackage(
       try {
         await Share.share({
           title: `Munyaka ${department} Export`,
-          text: `Departmental export package for ${department} generated by ${staffInfo.name}`,
+          text: `Departmental export package for ${department} generated by ${safeStaffName}`,
           url: fileUri,
           dialogTitle: `Share ${department} Package`,
         });
