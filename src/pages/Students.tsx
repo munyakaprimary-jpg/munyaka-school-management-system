@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,6 +109,10 @@ const ensureProperAdmissionNumbers = (list: any[]) => {
 
 export default function Students() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const roleLower = String(user?.role || (typeof window !== 'undefined' ? localStorage.getItem('current_user_role') : '') || '').toLowerCase();
+  const isAdmin = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin') || roleLower === 'administrator';
+
   const [students, setStudents] = useState<any[]>(() => {
     let rawList: any[] = [];
     try {
@@ -551,7 +556,7 @@ export default function Students() {
             onClick={handleOpenTransferModal}
             variant="outline"
             className="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 font-bold text-xs sm:text-sm"
-            style={{ display: (user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'owner' || String(user?.role || '').toLowerCase().includes('admin')) ? 'inline-flex' : 'none' }}
+            style={{ display: isAdmin ? 'inline-flex' : 'none' }}
           >
             <ArrowRightLeft size={18} /> Transfer In Learner
           </Button>
