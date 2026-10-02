@@ -71,7 +71,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'owner', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'] },
     { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
-    { icon: Database, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
+    { icon: Upload, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'owner', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'] },
@@ -244,22 +244,20 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           item.label.includes("Timetable") ||
           item.label.includes("Learning Areas") ||
           item.label.includes("Exam Types") ||
-          item.label.includes("Data Harmonization Hub") ||
           item.path === '/central-data' ||
           item.path === '/grades' ||
           item.path === '/staff' ||
           item.path === '/timetable' ||
           item.path === '/learning-areas' ||
-          item.path === '/exam-types' ||
-          item.path === '/admin/harmonization'
+          item.path === '/exam-types'
         ) {
           return false;
         }
       }
 
-      if (isAdminOrOwner) {
-        return !['/payment-management', '/dev/tenants'].includes(item.path);
-      }
+    if (isAdminOrOwner) {
+      return menuItems;
+    }
       
       const rolesList = (item.roles || []).map(r => String(r).toLowerCase());
       if (rolesList.includes(roleLower) || (resolvedR && rolesList.includes(resolvedR))) {
