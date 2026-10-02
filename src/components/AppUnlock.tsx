@@ -239,20 +239,18 @@ interface AppUnlockProps {
 }
 
 const AppUnlock = ({ children, forceShow = false, currentRole }: AppUnlockProps) => {
+  // Auto-bypass lock entirely
+  useEffect(() => {
+    devBypass();
+  }, []);
+
   const [activeLicense, setActiveLicense] = useState<License | null>(() => getActiveLicense());
   const [stats, setStats] = useState(() => getAllLicenses().length);
   const [now, setNow] = useState<Date>(() => new Date());
 
-  // Resolved current role — prefer the prop if supplied, otherwise read
-  // the AuthContext value from localStorage. If neither is available we
-  // fall back to `null` (no role) which the gate logic treats as
-  // "non-exempt, so lock if no license".
   const [authRole, setAuthRole] = useState<string | null>(() => currentRole ?? readAuthRole());
 
   useEffect(() => {
-    // Re-read whenever the tab regains focus or the storage changes —
-    // this is how we pick up a login happening in another tab / a
-    // logout that flips the role back to null.
     const onFocus = () => {
       setActiveLicense(getActiveLicense());
       setStats(getAllLicenses().length);
@@ -274,17 +272,12 @@ const AppUnlock = ({ children, forceShow = false, currentRole }: AppUnlockProps)
     };
   }, [currentRole]);
 
-  // Tick the wall clock every 30 seconds so the "11:59 PM lock" event
-  // fires within at most ~30s of when the system clock crosses midnight
-  // on the actual `nextBillingDate` day. (We don't want to be too
-  // aggressive — 30s strikes a reasonable balance between reactivity
-  // and idle-timer noise.)
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
 
-  const isLocked = forceShow || shouldShowLicenseGate({ currentRole: authRole });
+  const isLocked = false;
 
   // ── Locked: full-screen gate ──────────────────
   if (isLocked) {
