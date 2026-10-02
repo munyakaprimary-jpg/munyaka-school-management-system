@@ -214,13 +214,25 @@ export const LibrarianPortalView: React.FC = () => {
   };
 
   const handleDeleteLog = (id: string, bookTitle: string) => {
-    if (!confirm(`Are you sure you want to remove the circulation record for "${bookTitle}"?`)) return;
+    const adminPassword = prompt("🔒 Enter Admin Password to authorize circulation record deletion:");
+    if (adminPassword === null) return; // Cancelled
+
+    // Verify admin password against standard system credentials or fallback admin key
+    if (adminPassword !== 'admin123' && adminPassword !== 'Munyaka2025!' && adminPassword !== 'admin') {
+      toast({
+        title: "Unauthorized",
+        description: "Incorrect admin password. Deletion unauthorized.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const updated = historyLogs.filter(log => log.id !== id);
     setHistoryLogs(updated);
     localStorage.setItem('munyaka_library_history', JSON.stringify(updated));
     toast({
       title: "Circulation Log Removed",
-      description: `Successfully deleted record for "${bookTitle}".`
+      description: `Successfully deleted record for "${bookTitle}" with admin authorization.`
     });
   };
 
