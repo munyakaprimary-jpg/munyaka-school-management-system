@@ -31,6 +31,7 @@ import {
   Box,
   Wallet,
   Shield,
+  ShieldCheck,
   UserCheck,
   Archive,
   ArrowUpCircle,
