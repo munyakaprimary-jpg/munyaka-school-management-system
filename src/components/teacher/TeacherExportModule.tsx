@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download, Sparkles, CheckCircle2, ShieldCheck, Database, FileText, HardDrive, AlertCircle, PackageOpen } from 'lucide-react';
 import { batchExportService } from '@/services/batchExportService';
-import { exportMasterDatabase } from '@/utils/exportMasterDatabase';
 import { useToast } from '@/components/ui/use-toast';
 
 export const TeacherExportModule: React.FC = () => {
@@ -102,18 +101,10 @@ export const TeacherExportModule: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 flex-wrap">
           <div className="text-xs text-slate-500 flex items-center gap-2">
             <Database size={14} className="text-blue-600" />
-            <span>Primary offline workflow for carrying records to Admin Harmonization Hub.</span>
+            <span>Primary offline workflow for carrying stream-isolated records to Admin Harmonization Hub.</span>
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
-            <Button
-              onClick={() => exportMasterDatabase()}
-              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"
-            >
-              <PackageOpen size={18} />
-              <span>Export Master JSON Package</span>
-            </Button>
-
             <Button
               onClick={handleExportPackage}
               disabled={isExporting}

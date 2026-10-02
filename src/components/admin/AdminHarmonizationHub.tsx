@@ -5,10 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Upload, FileText, CheckCircle2, AlertCircle, ShieldCheck, Database, RefreshCw, Trash2, ArrowRight, PackageOpen } from 'lucide-react';
 import { harmonizationService, HarmonizationAuditItem } from '@/services/harmonizationService';
 import { exportMasterDatabase } from '@/utils/exportMasterDatabase';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
 export const AdminHarmonizationHub: React.FC = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const isAdmin = user?.role === 'admin' || user?.role === 'head_teacher' || user?.role === 'owner';
   const [auditItems, setAuditItems] = useState<HarmonizationAuditItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isHarmonizing, setIsHarmonizing] = useState(false);
@@ -144,13 +147,15 @@ export const AdminHarmonizationHub: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <Button
-              onClick={() => exportMasterDatabase()}
-              className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
-            >
-              <PackageOpen size={18} className="text-emerald-600" />
-              <span>Export Master JSON Package</span>
-            </Button>
+            {isAdmin && (
+              <Button
+                onClick={() => exportMasterDatabase()}
+                className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
+              >
+                <PackageOpen size={18} className="text-emerald-600" />
+                <span>Export Master JSON Package</span>
+              </Button>
+            )}
 
             <label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 backdrop-blur-md">
               <Upload size={18} className="text-emerald-200" />
