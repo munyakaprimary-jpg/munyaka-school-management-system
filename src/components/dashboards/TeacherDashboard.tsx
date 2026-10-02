@@ -1,19 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  Users, 
-  ClipboardCheck, 
-  BookOpen, 
-  Calendar, 
-  Award, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle, 
-  Sparkles, 
-  ArrowRight, 
-  FileSpreadsheet, 
-  MessageSquare, 
+import {
+  Users,
+  ClipboardCheck,
+  BookOpen,
+  Calendar,
+  Award,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Sparkles,
+  ArrowRight,
+  FileSpreadsheet,
+  MessageSquare,
   Megaphone,
   Wifi,
   Database,
@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCentralData } from '@/hooks/useCentralData';
+import TeacherExportModule from '@/components/teacher/TeacherExportModule';
 
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -74,6 +75,9 @@ const TeacherDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Teacher Batch Export Module */}
+      <TeacherExportModule />
 
       {/* Summary Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
