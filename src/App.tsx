@@ -62,6 +62,8 @@ import MobileSettings from "./pages/MobileSettings";
 import LANServerConfig from "./pages/LANServerConfig";
 import AdminHarmonizationHub from "./components/admin/AdminHarmonizationHub";
 import TeacherExportView from "./pages/TeacherExportView";
+import LibrarianPortalView from "./pages/LibrarianPortalView";
+import ICTTechnicalPortalView from "./pages/ICTTechnicalPortalView";
 import AssessmentSettings from "./pages/AssessmentSettings";
 import QuestionCreator from "./pages/QuestionCreator";
 import StudentAssessment from "./pages/StudentAssessment";
@@ -458,6 +460,8 @@ const App = () => {
                                             <Route path="/admin-harmonization-hub" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminHarmonizationHub /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/teacher/export" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'admin']}><AppUnlock><Layout><TeacherExportView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/teacher-export" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'admin']}><AppUnlock><Layout><TeacherExportView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/librarian/portal" element={<ProtectedRoute allowedRoles={['librarian', 'library_teacher', 'admin']}><AppUnlock><Layout><LibrarianPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/ict/portal" element={<ProtectedRoute allowedRoles={['ict_teacher', 'ict_technician', 'admin']}><AppUnlock><Layout><ICTTechnicalPortalView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/question-creator" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><QuestionCreator /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/student-assessment" element={<ProtectedRoute><AppUnlock><Layout><StudentAssessment /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/grading" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><GradingReview /></Layout></AppUnlock></ProtectedRoute>} />
