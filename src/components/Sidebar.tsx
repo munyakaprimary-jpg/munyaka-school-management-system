@@ -42,7 +42,8 @@ import {
   ChevronDown,
   Database,
   Server,
-  Wifi
+  Wifi,
+  Upload
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -108,7 +109,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
     { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
     { icon: Database, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
-    { icon: FileText, label: 'Export Class Package', path: '/teacher/export', roles: ['teacher', 'class_teacher', 'subject_teacher', 'head_teacher'] },
+    { icon: Upload, label: 'Export Class Package', path: '/teacher/export', roles: ['teacher', 'class_teacher', 'subject_teacher', 'head_teacher'] },
     { icon: UserCheck, label: 'Staff Access Master', path: '/staff/access', roles: ['admin'] },
     { icon: Archive, label: 'Transferred Archive', path: '/transferred-archive', roles: ['admin'] },
     { icon: ArrowUpCircle, label: 'Promote Students', path: '/promote-students', roles: ['admin'] },
