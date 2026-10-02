@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { exportLibrarianPackage } from '@/services/departmentExportService';
 import {
   Library,
   BookOpen,
@@ -88,28 +87,86 @@ export const LibrarianPortalView: React.FC = () => {
   const handleExportLibraryBatch = async () => {
     setIsExporting(true);
     try {
-      exportLibrarianPackage();
+      const payload = {
+        metadata: {
+          staffId: librarianId,
+          role: "librarian",
+          timestamp: new Date().toISOString(),
+          packageType: "LIBRARIAN_INVENTORY_DELTA"
+        },
+        meta: {
+          exportType: 'LIBRARIAN_INVENTORY_DELTA',
+          librarianId,
+          librarianName,
+          timestamp: new Date().toISOString(),
+          recordCounts: {
+            totalBooks: totalBooksCount,
+            activeCirculation,
+            historyLogs: historyLogs.length
+          }
+        },
+        books,
+        historyLogs
+      };
+
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const fileName = `Librarian_Inventory_Delta_${librarianId}_${new Date().toISOString().slice(0, 10)}.json`;
+
+      // 1. Try Capacitor Native Share & Filesystem first
+      try {
+        const writeFileResult = await Filesystem.writeFile({
+          path: fileName,
+          data: jsonStr,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8
+        });
+
+        if (writeFileResult && writeFileResult.uri) {
+          await Share.share({
+            title: 'Librarian Inventory Delta Export',
+            text: `Library Delta Export for ${librarianName} (ID: ${librarianId})`,
+            url: writeFileResult.uri,
+            dialogTitle: 'Share Library Delta Package'
+          });
+
+          const nowStr = new Date().toLocaleString();
+          setLastExport({
+            fileName,
+            timestamp: nowStr,
+            size: jsonStr.length
+          });
+
+          toast({
+            title: "Library Batch Delta Shared Successfully",
+            description: `Sent ${fileName} with circulation logs via Capacitor Share.`
+          });
+          setIsExporting(false);
+          return;
+        }
+      } catch (nativeErr) {
+        // Fall through to web blob download
+      }
+
+      // 2. Web Blob Download Fallback
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
       const nowStr = new Date().toLocaleString();
       setLastExport({
-        fileName: `Librarian_Inventory_Delta_${librarianId}_${new Date().toISOString().slice(0, 10)}.json`,
+        fileName: link.download,
         timestamp: nowStr,
-        size: 2048
+        size: blob.size
       });
 
       toast({
         title: "Library Batch Delta Exported Successfully",
-        description: "Successfully exported library package."
-      });
-    } catch (err: any) {
-      toast({
-        title: "Export Failed",
-        description: err.message || "Could not generate library inventory package.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsExporting(false);
-    }
-  };
         description: `Saved ${link.download} (${Math.round(blob.size / 1024)} KB) with circulation logs ready for Admin Harmonization.`
       });
     } catch (err: any) {
