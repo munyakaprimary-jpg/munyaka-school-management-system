@@ -273,7 +273,7 @@ export const LibrarianPortalView: React.FC = () => {
                     <div className="space-y-0.5">
                       <p className="font-bold text-slate-900 text-sm">{log.bookTitle}</p>
                       <p className="text-xs text-slate-500">
-                        Borrower: <span className="font-semibold text-slate-800">{log.borrowerName}</span> ({log.borrowerType}) {log.studentAdmissionNumber && <span className="font-mono text-indigo-600">[{log.studentAdmissionNumber}]</span>}
+                        Borrower: <span className="font-semibold text-slate-800">{log.borrowerName}</span> ({log.borrowerType}) {log.accession_no && <span className="font-mono text-indigo-600">[{log.accession_no}]</span>}
                       </p>
                       <p className="text-[11px] text-slate-400">Issued: {log.issuedDate} | Due: {log.dueDate}</p>
                     </div>
