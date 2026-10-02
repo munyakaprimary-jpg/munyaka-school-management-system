@@ -4,10 +4,14 @@ export interface HarmonizationAuditItem {
   id: string;
   fileName: string;
   metadata: {
+    senderName?: string;
     staffId: string;
-    role: string;
-    timestamp: string;
-    packageType: string;
+    role?: string;
+    departmentOrStream?: string;
+    timestamp?: string;
+    exportedAt?: string;
+    packageType?: string;
+    appVersion?: string;
   };
   header?: {
     teacherName: string;
@@ -44,12 +48,12 @@ export const harmonizationService = {
           }
 
           const header = jsonData.header || {
-            teacherName: jsonData.metadata.staffId || 'Staff Member',
+            teacherName: jsonData.metadata.senderName || jsonData.metadata.staffId || 'Staff Member',
             teacherId: jsonData.metadata.staffId || 'UNKNOWN',
-            assignedGrade: jsonData.metadata.packageType || 'General',
+            assignedGrade: jsonData.metadata.departmentOrStream || jsonData.metadata.packageType || 'General',
             assignedStream: jsonData.metadata.role || 'Staff',
-            timestamp: jsonData.metadata.timestamp || new Date().toISOString(),
-            exportVersion: '1.0.0',
+            timestamp: jsonData.metadata.exportedAt || jsonData.metadata.timestamp || new Date().toISOString(),
+            exportVersion: jsonData.metadata.appVersion || '1.0.0',
             deviceId: 'DEV-OFFLINE'
           };
 

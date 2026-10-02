@@ -273,10 +273,10 @@ export const AdminHarmonizationHub: React.FC = () => {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-                      <th className="py-3 px-4">Teacher & ID</th>
-                      <th className="py-3 px-4">Grade & Stream</th>
-                      <th className="py-3 px-4">Last Updated Timestamp</th>
-                      <th className="py-3 px-4">Records Breakdown</th>
+                      <th className="py-3 px-4">Sender & Staff ID</th>
+                      <th className="py-3 px-4">Department / Stream</th>
+                      <th className="py-3 px-4">Export Timestamp</th>
+                      <th className="py-3 px-4">Package Type & Details</th>
                       <th className="py-3 px-4">Status</th>
                       <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
@@ -285,21 +285,22 @@ export const AdminHarmonizationHub: React.FC = () => {
                     {auditItems.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-4 px-4 font-bold text-slate-900">
-                          <div>{item.header?.teacherName || item.metadata.staffId}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{item.metadata.staffId} · <span className="uppercase text-emerald-600">{item.metadata.role}</span></div>
+                          <div>{item.metadata.senderName || item.header?.teacherName || item.metadata.staffId || 'Unknown Staff'}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">ID: {item.metadata.staffId || item.header?.teacherId || 'N/A'} · <span className="uppercase text-emerald-600">{item.metadata.role || 'Staff'}</span></div>
                         </td>
                         <td className="py-4 px-4">
                           <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50 font-bold text-xs">
-                            {item.header?.assignedGrade || item.metadata.packageType} {item.header?.assignedStream ? `· ${item.header.assignedStream}` : ''}
+                            {item.metadata.departmentOrStream || item.header?.assignedGrade || 'General'} {item.header?.assignedStream ? `· ${item.header.assignedStream}` : ''}
                           </Badge>
                         </td>
                         <td className="py-4 px-4 text-slate-600 font-medium">
-                          {new Date(item.metadata.timestamp || item.header?.timestamp || Date.now()).toLocaleString()}
+                          {new Date(item.metadata.exportedAt || item.metadata.timestamp || item.header?.timestamp || Date.now()).toLocaleString()}
                         </td>
                         <td className="py-4 px-4 text-slate-600 font-medium space-x-2">
-                          <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md">Type: {item.metadata.packageType}</span>
+                          <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md text-[11px] font-mono text-slate-700">{item.metadata.packageType || 'PACKAGE'}</span>
                           {item.attendanceCount > 0 && <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md">Att: {item.attendanceCount}</span>}
                           {item.assessmentCount > 0 && <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md">Marks: {item.assessmentCount}</span>}
+                          {item.inventoryCount > 0 && <span className="inline-block bg-slate-100 px-2 py-0.5 rounded-md">Items: {item.inventoryCount}</span>}
                         </td>
                         <td className="py-4 px-4">
                           {item.status === 'harmonized' ? (
