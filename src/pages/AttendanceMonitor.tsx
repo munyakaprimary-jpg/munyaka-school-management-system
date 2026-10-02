@@ -317,6 +317,25 @@ const getInitials = (name: string): string => {
 };
 
 export default function AttendanceMonitor() {
+  const [attendanceData, setAttendanceData] = useState<Record<string, any>>(() => {
+    try {
+      const saved = localStorage.getItem('school_attendance_v1') || localStorage.getItem('roll_call_records') || localStorage.getItem('munyaka_attendance');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const saved = localStorage.getItem('school_attendance_v1') || localStorage.getItem('roll_call_records') || localStorage.getItem('munyaka_attendance');
+        if (saved) setAttendanceData(JSON.parse(saved));
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
   const [isLive, setIsLive] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
