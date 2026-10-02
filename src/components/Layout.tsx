@@ -128,6 +128,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
     // based on the user's session role.  Only one Dashboard entry exists.
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'owner'] },
+    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
