@@ -484,9 +484,8 @@ const Attendance = () => {
   };
 
   const loadLiveStudents = useCallback(() => {
-    // Adopt Admin Roll Call Master Storage Keys: 'school_learners_v1'
+    // Define possible storage keys for offline/local storage fallback
     const storageKeys = [
-      'school_learners_v1',
       'school_learners_data',
       'students',
       'learners',
