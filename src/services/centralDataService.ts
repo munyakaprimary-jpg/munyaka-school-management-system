@@ -56,7 +56,21 @@ export const UnifiedDataStorage = {
   },
 
   exportFullDatabase: (): any => {
-    // Guaranteed full-app aggregator: merges all active store modules and localStorage keys
+    // Guaranteed full-app aggregator: scans all localStorage keys or merges active store modules
+    const allKeys: Record<string, any> = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('munyaka_') || key.startsWith('school_') || key.startsWith('exam_') || key.startsWith('fee'))) {
+          try {
+            allKeys[key] = JSON.parse(localStorage.getItem(key) || 'null');
+          } catch {
+            allKeys[key] = localStorage.getItem(key);
+          }
+        }
+      }
+    } catch {}
+
     const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
     const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
     const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
@@ -69,15 +83,14 @@ export const UnifiedDataStorage = {
     const masterStudents = [l1, l2, l3, (initialSeedData as any).students || (initialSeedData as any).learners || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
 
     const f1 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
-        const f2 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
-        const f3 = JSON.parse(localStorage.getItem('munyaka_student_fees') || '[]');
-        const masterFees = [f1, f2, f3, (initialSeedData as any).fees || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
+    const f2 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
+    const f3 = JSON.parse(localStorage.getItem('munyaka_student_fees') || '[]');
+    const masterFees = [f1, f2, f3, (initialSeedData as any).fees || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
     
-        // Also capture fee payments from dedicated payment DB
-        const p1 = JSON.parse(localStorage.getItem('munyaka_fee_payments_db') || '[]');
-        const p2 = JSON.parse(localStorage.getItem('munyaka_payments') || '[]');
-        const p3 = JSON.parse(localStorage.getItem('munyaka_transactions') || '[]');
-        const masterPayments = [p1, p2, p3, (initialSeedData as any).payments || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
+    const p1 = JSON.parse(localStorage.getItem('munyaka_fee_payments_db') || '[]');
+    const p2 = JSON.parse(localStorage.getItem('munyaka_payments') || '[]');
+    const p3 = JSON.parse(localStorage.getItem('munyaka_transactions') || '[]');
+    const masterPayments = [p1, p2, p3, (initialSeedData as any).payments || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
 
     const n1 = JSON.parse(localStorage.getItem('munyaka_notices_v2') || '[]');
     const n2 = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
@@ -98,9 +111,13 @@ export const UnifiedDataStorage = {
     const e1 = JSON.parse(localStorage.getItem('all_set_exams') || '[]');
     const masterExams = Array.isArray(e1) && e1.length > 0 ? e1 : ((initialSeedData as any).exams || []);
 
+    const libBooks = JSON.parse(localStorage.getItem('school_library_inventory_v1') || localStorage.getItem('munyaka_library_books') || '[]');
+    const libLogs = JSON.parse(localStorage.getItem('school_library_logs_v1') || localStorage.getItem('munyaka_library_history') || '[]');
+
     const settingsVal = JSON.parse(localStorage.getItem('munyaka_system_settings_v3') || JSON.stringify((initialSeedData as any).settings || {}));
 
     return {
+          ...allKeys,
           students: masterStudents.length > 0 ? masterStudents : ((initialSeedData as any).students || (initialSeedData as any).learners || []),
           staff: masterStaff.length > 0 ? masterStaff : (initialSeedData.staff || []),
           attendance: masterAttendance,
@@ -114,7 +131,8 @@ export const UnifiedDataStorage = {
           classAssignments: JSON.parse(localStorage.getItem('munyaka_class_assignments') || JSON.stringify((initialSeedData as any).classAssignments || [])),
           learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || JSON.stringify((initialSeedData as any).learningAreas || [])),
           examTypes: JSON.parse(localStorage.getItem('munyaka_exam_types') || JSON.stringify((initialSeedData as any).examTypes || [])),
-          libraryBooks: JSON.parse(localStorage.getItem('munyaka_library_books') || JSON.stringify((initialSeedData as any).libraryBooks || [])),
+          libraryBooks: libBooks,
+          libraryHistory: libLogs,
           feeStructures: JSON.parse(localStorage.getItem('munyaka_fee_structures') || JSON.stringify((initialSeedData as any).feeStructures || [])),
           notices: masterNotices,
           events: masterEvents,
