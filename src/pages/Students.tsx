@@ -273,6 +273,13 @@ export default function Students() {
   };
 
   const handleOpenTransferModal = () => {
+    const roleLower = String(user?.role || '').toLowerCase();
+    const isAdminUser = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin');
+    if (!isAdminUser) {
+      showError("Access Denied: Only school administrators can transfer in learners.");
+      return;
+    }
+
     setTransferFullName('');
     const currentYr = String(new Date().getFullYear());
     setTransferYear(currentYr);
@@ -305,6 +312,13 @@ export default function Students() {
 
   const handleTransferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const roleLower = String(user?.role || '').toLowerCase();
+    const isAdminUser = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin');
+    if (!isAdminUser) {
+      showError("Unauthorized: Only authorized school administrators may enroll transferred learners into the master database.");
+      return;
+    }
+
     if (!transferFullName.trim()) {
       showError("Please enter full name.");
       return;
@@ -537,6 +551,7 @@ export default function Students() {
             onClick={handleOpenTransferModal}
             variant="outline"
             className="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 font-bold text-xs sm:text-sm"
+            style={{ display: (user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'owner' || String(user?.role || '').toLowerCase().includes('admin')) ? 'inline-flex' : 'none' }}
           >
             <ArrowRightLeft size={18} /> Transfer In Learner
           </Button>
