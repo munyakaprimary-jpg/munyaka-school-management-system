@@ -12,18 +12,22 @@ export function useStudentAttendance(selectedGrade: string, selectedStream: stri
 
   useEffect(() => {
     try {
-      // Check multiple master student keys to ensure 100% sync across modules (Fees, Students, Attendance)
+      // Pull learners dynamically from the master learners directory and storage keys
+      const allLearnersFromCentral = CentralDataService.getLearners() || [];
       const k1 = localStorage.getItem('school_learners_v1');
       const k2 = localStorage.getItem('school_learners_data');
       const k3 = localStorage.getItem('munyaka_master_learner_list');
       const k4 = localStorage.getItem('munyaka_students');
+      const k5 = localStorage.getItem('students');
 
       let parsed = [];
-      if (k1) parsed = JSON.parse(k1);
+      if (Array.isArray(allLearnersFromCentral) && allLearnersFromCentral.length > 0) {
+        parsed = allLearnersFromCentral;
+      } else if (k1) parsed = JSON.parse(k1);
       else if (k2) parsed = JSON.parse(k2);
       else if (k3) parsed = JSON.parse(k3);
       else if (k4) parsed = JSON.parse(k4);
-      else parsed = CentralDataService.getLearners() || [];
+      else if (k5) parsed = JSON.parse(k5);
 
       if (Array.isArray(parsed) && parsed.length > 0) {
         setStudents(parsed);
