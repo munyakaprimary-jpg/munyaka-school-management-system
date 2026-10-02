@@ -203,3 +203,19 @@ export async function exportDepartmentPackage(
     };
   }
 }
+
+export async function exportBursarPackage(staffInfo?: { id?: string; name?: string }) {
+  return exportDepartmentPackage('BURSAR', staffInfo);
+}
+
+export async function exportICTPackage(staffInfo?: { id?: string; name?: string }) {
+  return exportDepartmentPackage('ICT', staffInfo);
+}
+
+export async function exportStorePackage(staffInfo?: { id?: string; name?: string }) {
+  return exportDepartmentPackage('STOREKEEPER', staffInfo);
+}
+
+export async function exportScienceLabPackage(staffInfo?: { id?: string; name?: string }) {
+  return exportDepartmentPackage('SCIENCE_LAB', staffInfo);
+}
