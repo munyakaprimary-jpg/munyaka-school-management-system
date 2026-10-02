@@ -73,7 +73,6 @@ import SetExamsListPage from "./pages/SetExamsListPage";
 import MarkedScriptsPage from "./pages/MarkedScriptsPage";
 import Communication from "./pages/Communication";
 import TeacherCommunication from "./pages/TeacherCommunication";
-import TeacherExportPage from "./pages/TeacherExportPage";
 import Library from "./pages/Library";
 import Inventory from "./pages/Inventory";
 import { LearnerProvider } from './context/LearnerContext';
@@ -454,8 +453,7 @@ const App = () => {
                       <Route path="/attendance" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><Attendance /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/assessments" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><Assessments /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/assessment-settings" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><AssessmentSettings /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/admin/harmonization" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminHarmonizationHub /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/teacher/export" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher']}><AppUnlock><Layout><TeacherExportPage /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/admin-harmonization-hub" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminHarmonizationHub /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/question-creator" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><QuestionCreator /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/student-assessment" element={<ProtectedRoute><AppUnlock><Layout><StudentAssessment /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/grading" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><GradingReview /></Layout></AppUnlock></ProtectedRoute>} />
