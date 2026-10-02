@@ -12,6 +12,13 @@ export const AdminHarmonizationHub: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isHarmonizing, setIsHarmonizing] = useState(false);
   const [harmonizationResult, setHarmonizationResult] = useState<{ successCount: number; errors: string[] } | null>(null);
+  const [recentActivities, setRecentActivities] = useState<any[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('munyaka_admin_activities') || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -66,6 +73,21 @@ export const AdminHarmonizationHub: React.FC = () => {
     try {
       const result = harmonizationService.harmonizeAndMerge(auditItems);
       setHarmonizationResult(result);
+
+      // Save activity log to localStorage for recent activities feed
+      try {
+        const storedActivities = JSON.parse(localStorage.getItem('munyaka_admin_activities') || '[]');
+        const newActivities = auditItems.map(item => ({
+          id: 'act-' + Math.random().toString(36).substring(2, 9),
+          staffId: item.metadata.staffId,
+          role: item.metadata.role,
+          packageType: item.metadata.packageType,
+          fileName: item.fileName,
+          timestamp: new Date().toISOString(),
+          details: `Harmonized ${item.attendanceCount} attendance, ${item.assessmentCount} assessment & ${item.inventoryCount} inventory records.`
+        }));
+        localStorage.setItem('munyaka_admin_activities', JSON.stringify([...newActivities, ...storedActivities]));
+      } catch {}
 
       // Mark items as harmonized
       setAuditItems(prev => prev.map(item => ({ ...item, status: 'harmonized' })));
@@ -205,12 +227,12 @@ export const AdminHarmonizationHub: React.FC = () => {
               </div>
               <label className="inline-cursor cursor-pointer inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-5 py-3 rounded-2xl shadow-md text-xs transition-transform active:scale-95">
                 <Upload size={16} /> Select Export Files (.json)
-                <input 
-                  type="file" 
-                  accept=".json,application/json" 
-                  multiple 
-                  onChange={handleFileUpload} 
-                  className="hidden" 
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
                 />
               </label>
             </div>
@@ -282,6 +304,50 @@ export const AdminHarmonizationHub: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Staff Activities & Imported Batches Feed */}
+      <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden">
+        <CardHeader className="p-6 border-b border-slate-100">
+          <CardTitle className="text-lg font-black text-slate-900">Recent Staff Activities & Imported Batches</CardTitle>
+          <CardDescription className="text-xs">Chronological feed of staff batch packages harmonized into the master database</CardDescription>
+        </CardHeader>
+
+        <CardContent className="p-6">
+          {recentActivities.length === 0 ? (
+            <div className="text-center py-12 space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto shadow-inner">
+                <FileText size={28} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-slate-800 text-sm">No Recent Activity Logged</h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Import staff batch packages to harmonize records. Harmonized imports will appear here in chronological order with staff and timestamp metadata.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentActivities.map((act, idx) => (
+                <div key={act.id || idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-xs font-mono">{act.packageType}</span>
+                      <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 text-[10px] font-bold uppercase">
+                        {act.role || 'staff'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium">{act.details}</p>
+                    <p className="text-[10px] text-slate-400 font-mono">File: {act.fileName} · Staff ID: {act.staffId}</p>
+                  </div>
+                  <div className="text-right text-xs text-slate-500 font-medium shrink-0">
+                    {new Date(act.timestamp).toLocaleString()}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
