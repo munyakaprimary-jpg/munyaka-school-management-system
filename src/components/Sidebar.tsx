@@ -244,12 +244,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           item.label.includes("Timetable") ||
           item.label.includes("Learning Areas") ||
           item.label.includes("Exam Types") ||
+          item.label.includes("Data Harmonization Hub") ||
           item.path === '/central-data' ||
           item.path === '/grades' ||
           item.path === '/staff' ||
           item.path === '/timetable' ||
           item.path === '/learning-areas' ||
-          item.path === '/exam-types'
+          item.path === '/exam-types' ||
+          item.path === '/admin/harmonization'
         ) {
           return false;
         }
