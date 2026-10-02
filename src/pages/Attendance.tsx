@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
@@ -24,18 +23,7 @@ interface Learner {
   stream?: string;
 }
 
-interface AttendanceRecord {
-  learnerId: string;
-  admissionNo: string;
-  name: string;
-  status: 'Present' | 'Absent' | 'Late' | 'Excused';
-  remarks?: string;
-  morning?: 'Present' | 'Absent' | 'Late' | 'Excused';
-  afternoon?: 'Present' | 'Absent' | 'Late' | 'Excused';
-}
-
 export default function Attendance() {
-  const [activeTab, setActiveTab] = useState<'register' | 'history' | 'stats'>('register');
   const [learners, setLearners] = useState<Learner[]>([]);
   const [grades, setGrades] = useState<string[]>([]);
   const [streams, setStreams] = useState<string[]>([]);
@@ -54,15 +42,13 @@ export default function Attendance() {
   // 1. Direct Master Directory Fetch on mount
   useEffect(() => {
     loadMasterLearners();
-    loadRollCallRecords();
   }, []);
 
-  // Reload records when date/grade/stream changes
   useEffect(() => {
     if (learners.length > 0) {
       loadRollCallRecords();
     }
-  }, [selectedDate, selectedGrade, selectedStream]);
+  }, [selectedDate, selectedGrade, selectedStream, learners]);
 
   const loadMasterLearners = () => {
     try {
@@ -79,8 +65,8 @@ export default function Attendance() {
       list.forEach((l) => {
         const g = l.grade || l.classLevel;
         const s = l.stream;
-        if (g) gradeSet.add(g);
-        if (s) streamSet.add(s);
+        if (g) gradeSet.add(g.trim());
+        if (s) streamSet.add(s.trim());
       });
 
       const sortedGrades = Array.from(gradeSet).sort();
@@ -88,20 +74,12 @@ export default function Attendance() {
 
       setGrades(sortedGrades);
       setStreams(sortedStreams);
-
-      if (sortedGrades.length > 0 && selectedGrade === 'all') {
-        setSelectedGrade(sortedGrades[0]);
-      }
-      if (sortedStreams.length > 0 && selectedStream === 'all') {
-        setSelectedStream(sortedStreams[0]);
-      }
     } catch (err) {
       console.error('Failed to load school_learners_v1:', err);
       toast.error('Failed to load registered learners from master directory.');
     }
   };
 
-  // 2. Mirror Admin Roll Call Structure (`roll_call_records`)
   const loadRollCallRecords = () => {
     try {
       const rawRollCalls = localStorage.getItem('roll_call_records') || localStorage.getItem('munyaka_attendance_records') || '{}';
@@ -110,7 +88,6 @@ export default function Attendance() {
       if (Array.isArray(parsedRollCalls)) {
         setHistoricalRecords(parsedRollCalls);
       } else if (typeof parsedRollCalls === 'object' && parsedRollCalls !== null) {
-        // Convert map to list if needed
         const list = Object.entries(parsedRollCalls).map(([key, val]: [string, any]) => ({
           key,
           ...val
@@ -118,19 +95,14 @@ export default function Attendance() {
         setHistoricalRecords(list);
       }
 
-      // Load for current session & date
       const activeKey = `${selectedDate}_${selectedGrade}_${selectedStream}`;
       const existingRecord = parsedRollCalls[activeKey] || parsedRollCalls[`${selectedGrade}_${selectedStream}_${selectedDate}`];
 
       const initialMap: Record<string, { morning: string; afternoon: string; remarks: string }> = {};
-
-      // Filter learners based on selected grade/stream with Robust Fallback (Rule 3)
       const targetLearners = getFilteredLearners();
 
       targetLearners.forEach((learner) => {
         const id = learner.id || learner.admissionNo || learner.admissionNumber || Math.random().toString();
-        
-        // Check if saved record exists in roll_call_records
         const studentRecord = existingRecord?.students?.[id] || existingRecord?.learners?.[id];
         
         initialMap[id] = {
@@ -146,14 +118,13 @@ export default function Attendance() {
     }
   };
 
-  // 3. Robust Fallback & Dynamic Population (Grade & Stream)
+  // 1 & 2. Strict Filtering & Fallback
   const getFilteredLearners = () => {
     if (!learners || learners.length === 0) return [];
 
-    // Filter by grade if not 'all'
-    let filtered = learners.filter(l => {
-      const g = l.grade || l.classLevel || '';
-      const s = l.stream || '';
+    const filtered = learners.filter(l => {
+      const g = (l.grade || l.classLevel || '').trim();
+      const s = (l.stream || '').trim();
       
       const matchesGrade = selectedGrade === 'all' || g.toLowerCase() === selectedGrade.toLowerCase();
       const matchesStream = selectedStream === 'all' || s.toLowerCase() === selectedStream.toLowerCase();
@@ -161,8 +132,8 @@ export default function Attendance() {
       return matchesGrade && matchesStream;
     });
 
-    // Fallback: If filtered list is empty, return all registered learners so table is never blank (Rule 3)
-    if (filtered.length === 0 && learners.length > 0) {
+    // Fallback: If strict grade/stream filter returns 0 students, return all learners so the table is never blank
+    if (filtered.length === 0 && learners.length > 0 && selectedGrade !== 'all') {
       return learners;
     }
 
@@ -204,10 +175,9 @@ export default function Attendance() {
       });
       return next;
     });
-    toast.success(`Marked all learners as ${status} for ${session}`);
+    toast.success(`Marked all filtered learners as ${status} for ${session}`);
   };
 
-  // 2 & 4. Save mirroring Admin Roll Call Structure & supporting bypass
   const handleSaveAttendance = () => {
     setIsSaving(true);
     try {
@@ -231,14 +201,13 @@ export default function Attendance() {
               name: l.name || l.fullName || l.learnerName || 'Unknown Learner',
               morning: data.morning,
               afternoon: data.afternoon,
-              status: data.morning, // Compatibility with admin roll call
+              status: data.morning,
               remarks: data.remarks
             }];
           })
         )
       };
 
-      // 1. Save to `roll_call_records` (Admin Roll Call master key)
       const rawMaster = localStorage.getItem('roll_call_records') || '{}';
       let masterParsed: any = {};
       try {
@@ -259,7 +228,6 @@ export default function Attendance() {
 
       localStorage.setItem('roll_call_records', JSON.stringify(masterParsed));
 
-      // 2. Also save to munyaka_attendance and school_attendance_v1 for complete cross-module sync
       const munyakaRaw = localStorage.getItem('munyaka_attendance_records') || '[]';
       let munyakaList = [];
       try { munyakaList = JSON.parse(munyakaRaw); } catch(e) {}
@@ -290,6 +258,7 @@ export default function Attendance() {
   });
 
   const totalLearnersCount = filteredLearners.length;
+  const masterTotalCount = learners.length;
   const presentMorningCount = filteredLearners.filter(l => {
     const id = l.id || l.admissionNo || l.admissionNumber || '';
     return attendanceMap[id]?.morning === 'Present';
@@ -319,7 +288,6 @@ export default function Attendance() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Rule 4: Bypass Time Cutoffs Toggle */}
           <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
               {bypassCutoff ? <Unlock className="w-4 h-4 text-emerald-300" /> : <Lock className="w-4 h-4 text-amber-300" />}
@@ -359,7 +327,7 @@ export default function Attendance() {
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Learners</p>
               <h3 className="text-2xl font-bold text-slate-800 mt-1">{totalLearnersCount}</h3>
-              <p className="text-xs text-emerald-600 font-medium mt-1">Filtered Grade & Stream</p>
+              <p className="text-xs text-emerald-600 font-medium mt-1">Master Total: {masterTotalCount}</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
               <Users className="w-6 h-6" />
@@ -435,7 +403,7 @@ export default function Attendance() {
             </div>
           </div>
 
-          {/* Filter Bar */}
+          {/* Filter Bar with All Grades & All Streams */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-200/60">
             <div>
               <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Grade / Class</label>
@@ -444,7 +412,7 @@ export default function Attendance() {
                   <SelectValue placeholder="Select Grade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Grades (Fallback)</SelectItem>
+                  <SelectItem value="all">All Grades</SelectItem>
                   {grades.map(g => (
                     <SelectItem key={g} value={g}>{g}</SelectItem>
                   ))}
@@ -496,11 +464,11 @@ export default function Attendance() {
         </CardHeader>
 
         <CardContent className="p-0">
-          {/* Quick Actions Bar */}
+          {/* Updated Count Banner */}
           <div className="bg-emerald-50/50 px-6 py-3 border-b border-emerald-100 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-emerald-800 font-medium">
               <AlertCircle className="w-4 h-4 text-emerald-600" />
-              <span>Showing {filteredLearners.length} learners for Grade: <strong>{selectedGrade}</strong>, Stream: <strong>{selectedStream}</strong></span>
+              <span>Showing <strong>{totalLearnersCount}</strong> learners (Total: <strong>{masterTotalCount}</strong>) {selectedGrade !== 'all' ? `• Grade: ${selectedGrade}` : ''} {selectedStream !== 'all' ? `• Stream: ${selectedStream}` : ''}</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -534,8 +502,8 @@ export default function Attendance() {
                     <td colSpan={7} className="text-center py-12 text-slate-400">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <Users className="w-10 h-10 text-slate-300" />
-                        <p className="font-medium text-slate-600">No learners found in master directory.</p>
-                        <p className="text-slate-400 text-xs">Please verify `school_learners_v1` in storage or add learners in the admin portal.</p>
+                        <p className="font-medium text-slate-600">No learners found matching the filter.</p>
+                        <p className="text-slate-400 text-xs">Select "All Grades" or verify registered learners in `school_learners_v1`.</p>
                       </div>
                     </td>
                   </tr>
@@ -544,8 +512,8 @@ export default function Attendance() {
                     const id = learner.id || learner.admissionNo || learner.admissionNumber || `learner_${idx}`;
                     const adm = learner.admissionNo || learner.admissionNumber || 'N/A';
                     const name = learner.name || learner.fullName || learner.learnerName || 'Unnamed Learner';
-                    const grade = learner.grade || learner.classLevel || selectedGrade;
-                    const stream = learner.stream || selectedStream;
+                    const grade = learner.grade || learner.classLevel || '-';
+                    const stream = learner.stream || '-';
                     
                     const currentData = attendanceMap[id] || { morning: 'Present', afternoon: 'Present', remarks: '' };
 
@@ -556,7 +524,7 @@ export default function Attendance() {
                         <td className="py-3 px-4 font-semibold text-slate-900">{name}</td>
                         <td className="py-3 px-4 text-slate-600">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-700">
-                            {grade} {stream ? `• ${stream}` : ''}
+                            {grade} {stream && stream !== '-' ? `• ${stream}` : ''}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-center">
