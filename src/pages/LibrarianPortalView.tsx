@@ -413,15 +413,18 @@ export const LibrarianPortalView: React.FC = () => {
                           <Badge className={cn("font-bold text-xs border-0 px-3 py-1", statusInfo.color)}>
                             {statusInfo.label}
                           </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteLog(log.id, log.bookTitle)}
-                            className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl h-8 w-8 p-0"
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteLog(log.id, log.bookTitle);
+                            }}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
                             title="Delete record"
                           >
                             <Trash2 size={16} />
-                          </Button>
+                          </button>
                         </div>
                       </div>
                     );
