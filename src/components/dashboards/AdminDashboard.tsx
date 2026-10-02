@@ -221,43 +221,6 @@ export const AdminDashboardComponent: React.FC = () => {
             <p className="text-xs text-gray-500 mt-1">Central database synchronized</p>
           </CardContent>
         </Card>
-
-        {/* Admin Harmonization Hub Card */}
-        <Card className="border shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate('/admin-harmonization-hub')}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">DATA IMPORT & HARMONIZATION</CardTitle>
-            <Upload className="w-5 h-5 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-black text-indigo-700 group-hover:text-indigo-900 transition-colors">Admin Hub</div>
-            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-              <ArrowRight size={12} className="text-indigo-500" /> Upload teacher exports & merge records
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Data Import & Harmonization Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-800 p-6 md:p-8 text-white shadow-2xl mb-8">
-        <div className="absolute right-0 top-0 -mt-8 -mr-8 w-80 h-80 rounded-full bg-indigo-500/30 blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold uppercase tracking-wider text-indigo-100">
-              <FileText size={14} /> Admin Data Operations
-            </div>
-            <h3 className="text-xl md:text-2xl font-black tracking-tight">Import & Harmonize Teacher Data</h3>
-            <p className="text-indigo-100 text-sm md:text-base max-w-xl font-medium">
-              Upload teacher export packages to audit metadata and safely merge attendance, check-ins, CBC assessments, and inventory records into the master database with stream isolation.
-            </p>
-          </div>
-          <Button
-            onClick={() => navigate('/admin-harmonization-hub')}
-            className="bg-white text-indigo-900 hover:bg-indigo-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 shrink-0"
-          >
-            <Upload size={18} />
-            Open Harmonization Hub
-          </Button>
-        </div>
       </div>
 
       {/* SCHOOL ENROLMENT TABLE SECTION */}
