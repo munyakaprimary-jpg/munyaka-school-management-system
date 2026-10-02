@@ -261,9 +261,24 @@ export const UnifiedDataStorage = {
     const primary = readStorage<any[]>('school_learners_data', []);
     const master = readStorage<any[]>('munyaka_master_learner_list', []);
     const legacy = readStorage<any[]>('munyaka_students', []);
+    const schoolV1 = readStorage<any[]>('school_learners_v1', []);
+    const studentsKey = readStorage<any[]>('students', []);
+
+    const combined = [...master, ...primary, ...legacy, ...schoolV1, ...studentsKey];
+    if (combined.length === 0) {
+      return (initialSeedData as any).students || (initialSeedData as any).learners || [
+        { id: 'st-1', name: 'Mary Wanjiku', admissionNumber: 'ADM-2024-001', grade: 'Grade 6', stream: 'Mercury', gender: 'Female' },
+        { id: 'st-2', name: 'John Adiema', admissionNumber: 'ADM-2024-002', grade: 'Grade 6', stream: 'Mercury', gender: 'Male' },
+        { id: 'st-3', name: 'Adrian Jones', admissionNumber: 'ADM-2024-003', grade: 'Grade 6', stream: 'Green', gender: 'Male' },
+        { id: 'st-4', name: 'Amina Mohamed', admissionNumber: 'ADM-2024-004', grade: 'Grade 5', stream: 'Blue', gender: 'Female' },
+        { id: 'st-5', name: 'Brian Kiptoo', admissionNumber: 'ADM-2024-005', grade: 'Grade 5', stream: 'Red', gender: 'Male' },
+        { id: 'st-6', name: 'Grace Akinyi', admissionNumber: 'ADM-2024-006', grade: 'Grade 4', stream: 'East', gender: 'Female' },
+        { id: 'st-7', name: 'David Odhiambo', admissionNumber: 'ADM-2024-007', grade: 'Grade 4', stream: 'West', gender: 'Male' }
+      ];
+    }
 
     const map = new Map<string, any>();
-    [...master, ...primary, ...legacy].forEach(s => {
+    combined.forEach(s => {
       if (s && (s.id || s.admissionNumber || s.admNo || s.name)) {
         const key = String(s.id || s.admissionNumber || s.admNo || s.name).trim().toLowerCase();
         map.set(key, s);
