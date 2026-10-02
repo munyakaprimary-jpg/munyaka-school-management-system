@@ -38,10 +38,10 @@ export const LibrarianPortalView: React.FC = () => {
     try {
       const saved = localStorage.getItem('munyaka_library_books');
       return saved ? JSON.parse(saved) : [
-        { id: '1', title: 'Spark: English Grade 4', author: 'KLB Publisher', isbn: '978-9966-56-001', category: 'Textbooks', total: 45, available: 32, borrowed: 13 },
-        { id: '2', title: 'KLB Mathematics Grade 5', author: 'KLB', isbn: '978-9966-56-002', category: 'Textbooks', total: 50, available: 41, borrowed: 9 },
-        { id: '3', title: 'Junior Secondary Integrated Science', author: 'Longhorn', isbn: '978-9966-56-003', category: 'Science', total: 30, available: 18, borrowed: 12 },
-        { id: '4', title: 'Kiswahili Mufti G7', author: ' Moran', isbn: '978-9966-56-004', category: 'Languages', total: 40, available: 35, borrowed: 5 }
+        { id: '1', title: 'Spark: English Grade 4', author: 'KLB Publisher', isbn: '978-9966-56-001', category: 'Textbooks', totalCopies: 45, availableCopies: 32, borrowed: 13, subject: 'English', grade: 'Grade 4', publisher: 'KLB' },
+        { id: '2', title: 'KLB Mathematics Grade 5', author: 'KLB', isbn: '978-9966-56-002', category: 'Textbooks', totalCopies: 50, availableCopies: 41, borrowed: 9, subject: 'Mathematics', grade: 'Grade 5', publisher: 'KLB' },
+        { id: '3', title: 'Junior Secondary Integrated Science', author: 'Longhorn', isbn: '978-9966-56-003', category: 'Science', totalCopies: 30, availableCopies: 18, borrowed: 12, subject: 'Science', grade: 'Grade 7', publisher: 'Longhorn' },
+        { id: '4', title: 'Kiswahili Mufti G7', author: 'Moran', isbn: '978-9966-56-004', category: 'Languages', totalCopies: 40, availableCopies: 35, borrowed: 5, subject: 'Kiswahili', grade: 'Grade 7', publisher: 'Moran' }
       ];
     } catch {
       return [];
@@ -52,9 +52,9 @@ export const LibrarianPortalView: React.FC = () => {
     try {
       const saved = localStorage.getItem('munyaka_library_history');
       return saved ? JSON.parse(saved) : [
-        { id: 'log-1', bookId: '1', bookTitle: 'Spark: English Grade 4', borrowerName: 'Brian Kiptoo', borrowerType: 'Student', admissionNumber: 'ADM-2024-001', grade: 'Grade 4', stream: 'Blue', issuedDate: '2025-02-10', dueDate: '2025-02-24', status: 'Issued', qty_issued: 1, qty_returned: 0, qty_lost: 0 },
-        { id: 'log-2', bookId: '2', bookTitle: 'KLB Mathematics Grade 5', borrowerName: 'Mary Atieno', borrowerType: 'Student', admissionNumber: 'ADM-2024-045', grade: 'Grade 5', stream: 'Red', issuedDate: '2025-02-01', dueDate: '2025-02-15', returnedDate: '2025-02-14', status: 'Returned', qty_issued: 1, qty_returned: 1, qty_lost: 0 },
-        { id: 'log-3', bookId: '3', bookTitle: 'Junior Secondary Integrated Science', borrowerName: 'John Kamau', borrowerType: 'Staff', admissionNumber: 'EMP-012', issuedDate: '2025-01-20', dueDate: '2025-02-05', status: 'Damaged', qty_issued: 1, qty_returned: 1, qty_lost: 0 }
+        { id: 'log-1', bookId: '1', bookTitle: 'Spark: English Grade 4', borrowerName: 'Brian Kiptoo', borrowerType: 'Student', studentAdmissionNumber: 'ADM-2024-001', grade: 'Grade 4', stream: 'Blue', issuedDate: '2025-02-10', dueDate: '2025-02-24', status: 'Active', conditionAtIssue: 'Good' },
+        { id: 'log-2', bookId: '2', bookTitle: 'KLB Mathematics Grade 5', borrowerName: 'Mary Atieno', borrowerType: 'Student', studentAdmissionNumber: 'ADM-2024-045', grade: 'Grade 5', stream: 'Red', issuedDate: '2025-02-01', dueDate: '2025-02-15', returnedDate: '2025-02-14', status: 'Returned', conditionAtIssue: 'Good', conditionAtReturn: 'Good' },
+        { id: 'log-3', bookId: '3', bookTitle: 'Junior Secondary Integrated Science', borrowerName: 'John Kamau', borrowerType: 'Staff', studentAdmissionNumber: 'EMP-012', issuedDate: '2025-01-20', dueDate: '2025-02-05', status: 'Lost', conditionAtIssue: 'Good' }
       ];
     } catch {
       return [];
@@ -67,9 +67,9 @@ export const LibrarianPortalView: React.FC = () => {
   const [copiedShare, setCopiedShare] = useState(false);
 
   // Quick statistics
-  const totalBooksCount = books.reduce((acc, b) => acc + (b.total || 0), 0);
-  const availableBooksCount = books.reduce((acc, b) => acc + (b.available || 0), 0);
-  const activeCirculation = historyLogs.filter(l => l.status === 'Issued').length;
+  const totalBooksCount = books.reduce((acc, b) => acc + (b.totalCopies || 0), 0);
+  const availableBooksCount = books.reduce((acc, b) => acc + (b.availableCopies || 0), 0);
+  const activeCirculation = historyLogs.filter(l => l.status === 'Active' || l.status === 'Issued').length;
   const lostDamagedCount = historyLogs.filter(l => l.status === 'Lost' || l.status === 'Damaged').length;
 
   const filteredBooks = useMemo(() => {
@@ -273,7 +273,7 @@ export const LibrarianPortalView: React.FC = () => {
                     <div className="space-y-0.5">
                       <p className="font-bold text-slate-900 text-sm">{log.bookTitle}</p>
                       <p className="text-xs text-slate-500">
-                        Borrower: <span className="font-semibold text-slate-800">{log.borrowerName}</span> ({log.borrowerType}) {log.admissionNumber && <span className="font-mono text-indigo-600">[{log.admissionNumber}]</span>}
+                        Borrower: <span className="font-semibold text-slate-800">{log.borrowerName}</span> ({log.borrowerType}) {log.studentAdmissionNumber && <span className="font-mono text-indigo-600">[{log.studentAdmissionNumber}]</span>}
                       </p>
                       <p className="text-[11px] text-slate-400">Issued: {log.issuedDate} | Due: {log.dueDate}</p>
                     </div>
