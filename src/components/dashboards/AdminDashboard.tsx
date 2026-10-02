@@ -223,7 +223,7 @@ export const AdminDashboardComponent: React.FC = () => {
         </Card>
 
         {/* Admin Harmonization Hub Card */}
-        <Card className="border shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate('/admin-harmonization-hub')}>
+        <Card className="border shadow-sm hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate('/admin/harmonization')}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">DATA IMPORT & HARMONIZATION</CardTitle>
             <Upload className="w-5 h-5 text-indigo-600" />
@@ -251,7 +251,7 @@ export const AdminDashboardComponent: React.FC = () => {
             </p>
           </div>
           <Button
-            onClick={() => navigate('/admin-harmonization-hub')}
+            onClick={() => navigate('/admin/harmonization')}
             className="bg-white text-indigo-900 hover:bg-indigo-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 shrink-0"
           >
             <Upload size={18} />
