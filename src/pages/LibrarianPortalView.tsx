@@ -214,7 +214,8 @@ export const LibrarianPortalView: React.FC = () => {
   };
 
   const handleDeleteLog = (id: string, bookTitle: string) => {
-    const adminPassword = prompt("🔒 Enter Admin Password to authorize circulation record deletion:");
+    window.alert("Delete button clicked for: " + bookTitle);
+    const adminPassword = window.prompt("🔒 Enter Admin Password to authorize circulation record deletion:");
     if (adminPassword === null) return; // Cancelled
 
     // Verify admin password against standard system credentials or fallback admin key
