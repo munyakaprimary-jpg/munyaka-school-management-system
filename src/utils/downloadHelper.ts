@@ -147,12 +147,12 @@ async function downloadNative(
 }
 
 async function downloadWeb(
-  fileData: string | Uint8Array, 
-  filename: string, 
+  fileData: string | Uint8Array,
+  filename: string,
   contentType: string
 ): Promise<DownloadResult> {
   try {
-    const blob = new Blob([fileData], { type: contentType });
+    const blob = new Blob([fileData], { type: contentType || 'application/json' });
     const url = window.URL.createObjectURL(blob);
     
     const link = document.createElement('a');
@@ -161,12 +161,19 @@ async function downloadWeb(
     link.style.display = 'none';
     
     document.body.appendChild(link);
-    link.click();
+    
+    try {
+      link.click();
+    } catch (clickErr) {
+      console.warn('Programmatic click blocked or failed, attempting direct window.open fallback', clickErr);
+      window.open(url, '_blank');
+    }
+    
     document.body.removeChild(link);
     
     setTimeout(() => {
       window.URL.revokeObjectURL(url);
-    }, 100);
+    }, 1000);
     
     showSuccess(`Downloaded ${filename} successfully!`);
     
