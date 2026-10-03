@@ -41,25 +41,21 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!String(title || '').trim()) {
-          setErrorMsg("Book title is required.");
-          return;
-        }
-        if (!String(author || '').trim()) {
-          setErrorMsg("Author name is required.");
-          return;
-        }
-        const numStock = parseInt(stock, 10);
-        if (isNaN(numStock) || numStock <= 0) {
-          setErrorMsg("Please enter a valid stock quantity.");
-          return;
-        }
-    
-        const generatedIsbn = String(isbn || '').trim() || `978-${Math.floor(1000 + Math.random() * 9000)}`;
-    
-        onRegisterBook({
-          title: String(title || '').trim(),
-          author: String(author || '').trim(),
-          isbn: generatedIsbn,
+      setErrorMsg("Item title / book name is required.");
+      return;
+    }
+    const numStock = parseInt(stock, 10);
+    if (isNaN(numStock) || numStock <= 0) {
+      setErrorMsg("Please enter a valid stock quantity.");
+      return;
+    }
+
+    const generatedIsbn = String(isbn || '').trim() || `978-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    onRegisterBook({
+      title: String(title || '').trim(),
+      author: String(author || '').trim() || 'General Inventory / School Stock',
+      isbn: generatedIsbn,
       category,
       stock: numStock,
     });
@@ -108,11 +104,11 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Author / Supplier / Publisher</Label>
-          <Input
-            value={author}
-            onChange={(e) => { setAuthor(e.target.value); setErrorMsg(""); }}
-            placeholder="e.g. KLB / Oxford / Stationers Ltd"
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Author / Supplier (Optional)</Label>
+            <Input
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              placeholder="e.g. KLB / Oxford / Stationers Ltd"
               className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900"
             />
           </div>
