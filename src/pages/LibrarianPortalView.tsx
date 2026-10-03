@@ -66,6 +66,7 @@ export const LibrarianPortalView: React.FC = () => {
   }, [historyLogs]);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRegisterBookModalOpen, setIsRegisterBookModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [lastExport, setLastExport] = useState<{ fileName: string; timestamp: string; size: number } | null>(null);
   const [copiedShare, setCopiedShare] = useState(false);
@@ -131,35 +132,7 @@ export const LibrarianPortalView: React.FC = () => {
   };
 
   const handleCatalogNewBook = () => {
-    const title = prompt("Enter book title:");
-    if (!title) return;
-    const author = prompt("Enter author / publisher:") || 'KLB';
-    const isbn = prompt("Enter ISBN or barcode:") || `ISBN-${Math.floor(100000 + Math.random() * 900000)}`;
-    const category = prompt("Enter category (Textbooks / Science / Languages):") || 'Textbooks';
-    const totalCopies = parseInt(prompt("Enter total copies:") || '30', 10);
-
-    const newBook: Book = {
-      id: `book-${Date.now()}`,
-      title,
-      author,
-      isbn,
-      category,
-      totalCopies,
-      availableCopies: totalCopies,
-      borrowed: 0,
-      stock: totalCopies,
-      subject: category,
-      grade: 'All Grades',
-      publisher: author
-    };
-
-    const updated = [newBook, ...books];
-    setBooks(updated);
-    localStorage.setItem('school_library_inventory_v1', JSON.stringify(updated));
-    toast({
-      title: "Book Cataloged Successfully",
-      description: `Added "${title}" with ${totalCopies} copies.`
-    });
+    setIsRegisterBookModalOpen(true);
   };
 
   const handleIssueBook = () => {
@@ -485,6 +458,21 @@ export const LibrarianPortalView: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      <RegisterBookModal
+        isOpen={isRegisterBookModalOpen}
+        onClose={() => setIsRegisterBookModalOpen(false)}
+        onBookRegistered={(newBook) => {
+          const updated = [newBook, ...books];
+          setBooks(updated);
+          localStorage.setItem('school_library_inventory_v1', JSON.stringify(updated));
+          localStorage.setItem('textbook_inventory', JSON.stringify(updated));
+          toast({
+            title: "Book Cataloged Successfully",
+            description: `Added "${newBook.title}" with ${newBook.totalCopies || newBook.stock || 30} copies.`
+          });
+        }}
+      />
     </div>
   );
 };
