@@ -18,7 +18,8 @@ import {
   HardDrive,
   Users,
   Activity,
-  Bell
+  Bell,
+  Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import { importMasterSyncPackage, MasterImportResult } from '@/utils/importMasterSyncPackage';
 
 const SERVER_URL_KEY = 'lan_server_url';
 const DEVICE_ID_KEY = 'munyaka_device_id';
@@ -74,6 +76,8 @@ export default function MobileSettings() {
   const [syncQueue, setSyncQueue] = useState<SyncQueueItem[]>([]);
   const [lastSync, setLastSync] = useState<string | null>(localStorage.getItem(LAST_SYNC_KEY));
   const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<MasterImportResult | null>(null);
 
   // Monitor online/offline status
   useEffect(() => {
@@ -319,6 +323,35 @@ export default function MobileSettings() {
     setSyncQueue([]);
     setPendingSyncCount(0);
     showSuccess('Sync queue cleared');
+  };
+
+  const handleMasterImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    setImportResult(null);
+
+    try {
+      const result = await importMasterSyncPackage(file);
+      setImportResult(result);
+
+      if (result.success) {
+        showSuccess(result.message);
+        // Refresh the page to reflect updated data
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showError(result.message);
+      }
+    } catch (error: any) {
+      showError('Failed to import master sync package: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsImporting(false);
+      // Reset input
+      e.target.value = '';
+    }
   };
 
   return (
@@ -573,6 +606,81 @@ export default function MobileSettings() {
                 {user?.role?.replace('_', ' ') || 'Unknown'}
               </Badge>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Master Sync Import */}
+      <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white pb-4">
+          <CardTitle className="flex items-center gap-2">
+            <Database className="w-5 h-5" />
+            Master Data Sync
+          </CardTitle>
+          <CardDescription className="text-indigo-100">
+            Import a master sync package to align with the school's central database
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          {importResult ? (
+            <div className={`p-4 rounded-xl text-center space-y-2 ${importResult.success ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+              <div className={`flex items-center justify-center mb-2 ${importResult.success ? 'text-emerald-600' : 'text-red-600'}`}>
+                {importResult.success ? <CheckCircle2 className="w-8 h-8" /> : <AlertCircle className="w-8 h-8" />}
+              </div>
+              <p className="font-bold text-sm">
+                {importResult.success ? 'Import Successful' : 'Import Failed'}
+              </p>
+              <p className="text-xs text-slate-600">
+                {importResult.message}
+              </p>
+              {importResult.updatedKeys && importResult.updatedKeys.length > 0 && (
+                <div className="mt-2 text-xs font-medium">
+                  Updated {importResult.updatedKeys.length} data categories:
+                  <br />
+                  {importResult.updatedKeys.slice(0, 5).map((key, idx) => (
+                    <span key={idx} className="block truncate max-w-full">{key}</span>
+                  ))}
+                  {importResult.updatedKeys.length > 5 && (
+                    <span className="block mt-1 text-xs">and {importResult.updatedKeys.length - 5} more...</span>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : null}
+          
+          <div className="space-y-3">
+            <Label htmlFor="master-import" className="text-xs font-black uppercase tracking-widest text-slate-500">
+              Import Master Sync Package
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="master-import"
+                accept=".json,application/json"
+                type="file"
+                onChange={handleMasterImport}
+                className="hidden"
+              />
+              <label
+                htmlFor="master-import"
+                className={`flex-1 h-12 rounded-xl border-2 border-dashed ${isImporting ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-slate-50 hover:border-slate-400'} flex items-center justify-center text-sm font-medium cursor-pointer transition-all duration-200`}
+              >
+                {isImporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Select Master Sync Package (.json)
+                  </>
+                )}
+              </label>
+            </div>
+            <p className="text-xs text-slate-500">
+              This will replace your local data with the synchronized master database from the admin.
+              Use only when directed by the school administrator.
+            </p>
           </div>
         </CardContent>
       </Card>
