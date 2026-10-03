@@ -688,12 +688,12 @@ const Staff = () => {
                       <SelectValue placeholder="Select stream" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Green">Green Stream</SelectItem>
-                      <SelectItem value="Blue">Blue Stream</SelectItem>
-                      <SelectItem value="Red">Red Stream</SelectItem>
-                      <SelectItem value="Yellow">Yellow Stream</SelectItem>
-                      <SelectItem value="Alpha">Alpha Stream</SelectItem>
-                      <SelectItem value="Beta">Beta Stream</SelectItem>
+                      <SelectItem value="Green">Grade 4 - Green Stream</SelectItem>
+                      <SelectItem value="Blue">Grade 4 - Blue Stream</SelectItem>
+                      <SelectItem value="Red">Grade 4 - Red Stream</SelectItem>
+                      <SelectItem value="Yellow">Grade 4 - Yellow Stream</SelectItem>
+                      <SelectItem value="Alpha">Grade 4 - Alpha Stream</SelectItem>
+                      <SelectItem value="Beta">Grade 4 - Beta Stream</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
