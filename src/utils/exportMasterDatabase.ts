@@ -277,7 +277,6 @@ export function generateMasterSyncPackage(senderInfo?: {
       storeInventory,
       timetable,
       settings,
-      allStorageSnapshot: allKeys // Full snapshot to guarantee 100% mirror match on import
     },
   };
 }
