@@ -461,7 +461,7 @@ export default function CentralDataServicePage() {
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight">Central Data & APK Master Export</h1>
             <p className="text-indigo-200 text-sm max-w-2xl leading-relaxed">
-              Connected directly to live school data state. Export your active live store directly for offline APK builds or perform full JSON backups and restores.
+              Connected directly to live <code className="bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">useSchoolStore</code> state. Export your active live store directly into <code className="bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">initialSeedData.ts</code> for offline APK builds or perform full JSON backups and restores.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -568,7 +568,7 @@ export default function CentralDataServicePage() {
               <CardTitle>Generate JSON Backup</CardTitle>
             </div>
             <CardDescription>
-              Create a structured JSON dump of all core learners, staff, attendance, and financial data from the active system state.
+              Create a structured JSON dump of all core learners, staff, attendance, and financial data from <code className="text-xs font-mono">useSchoolStore</code>.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -604,7 +604,7 @@ export default function CentralDataServicePage() {
               <CardTitle>Upload Backup File (.json)</CardTitle>
             </div>
             <CardDescription>
-              Upload a previously exported JSON backup file to instantly hydrate system memory and local storage.
+              Upload a previously exported JSON backup file to instantly hydrate <code className="text-xs font-mono">useSchoolStore</code> and localStorage.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
