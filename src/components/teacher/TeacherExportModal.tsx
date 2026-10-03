@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, ShieldCheck } from 'lucide-react';
-import { downloadFile } from '@/services/downloadService';
+import { exportClassPackage } from '@/services/departmentExportService';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
 
 interface TeacherExportModalProps {
@@ -50,22 +50,9 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
         assignedStream: selectedStream
       }));
 
-      const packageData = {
-        meta: {
-          exportId: 'EXP-' + Date.now(),
-          timestamp: new Date().toISOString(),
-          assignedClass: selectedGrade,
-          assignedStream: selectedStream
-        },
-        learners: JSON.parse(localStorage.getItem('school_learners_master') || localStorage.getItem('school_learners_data') || '[]'),
-        assessments: JSON.parse(localStorage.getItem('munyaka_assessments') || '[]')
-      };
-
-      await downloadFile({
-        filename: `Class_Package_${selectedGrade}_${selectedStream}_${Date.now()}.json`,
-        data: JSON.stringify(packageData, null, 2),
-        mimeType: 'application/json',
-        successMessage: `Class package for ${selectedGrade} ${selectedStream} downloaded successfully to Downloads folder!`
+      exportClassPackage(selectedStream, {
+        assignedClass: selectedGrade,
+        assignedStream: selectedStream
       });
 
       onClose();

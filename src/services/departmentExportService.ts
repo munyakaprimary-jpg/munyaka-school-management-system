@@ -6,7 +6,7 @@
  * Enforces mandatory sender metadata headers & class/stream assignments.
  */
 
-import { downloadFile } from './downloadService';
+import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { showSuccess, showError } from '@/utils/toast';
@@ -59,12 +59,45 @@ export function createStandardizedExportHeader(
  */
 async function exportJsonFile(filename: string, payload: any, successTitle: string): Promise<void> {
   const jsonString = JSON.stringify(payload, null, 2);
-  await downloadFile({
-    filename,
-    data: jsonString,
-    mimeType: 'application/json',
-    successMessage: `${successTitle} downloaded successfully to Downloads folder!`
-  });
+
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const writeResult = await Filesystem.writeFile({
+        path: filename,
+        data: jsonString,
+        directory: Directory.Cache,
+        encoding: undefined as any
+      });
+
+      try {
+        await Share.share({
+          title: successTitle,
+          text: `Export package generated at ${new Date().toLocaleString()}`,
+          url: writeResult.uri,
+          dialogTitle: successTitle,
+        });
+      } catch (shareErr: any) {
+        console.warn('Share dismissed:', shareErr);
+      }
+
+      showSuccess(`${successTitle} cached & shared successfully!`);
+    } else {
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showSuccess(`${successTitle} downloaded successfully!`);
+    }
+  } catch (err: any) {
+    console.error('Export failed:', err);
+    showError(err?.message || 'Failed to export file');
+  }
 }
 
 /**
