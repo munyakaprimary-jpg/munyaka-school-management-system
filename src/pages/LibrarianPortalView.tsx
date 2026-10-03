@@ -89,7 +89,7 @@ export const LibrarianPortalView: React.FC = () => {
     );
   }, [books, searchQuery]);
 
-  const exportLibrarianPackage = () => {
+  const exportLibrarianPackage = async () => {
     const inventoryData = JSON.parse(localStorage.getItem('school_library_inventory_v1') || localStorage.getItem('textbook_inventory') || '[]');
     const logsData = JSON.parse(localStorage.getItem('school_library_logs_v1') || localStorage.getItem('munyaka_library_borrowings') || '[]');
     const receiptsData = JSON.parse(localStorage.getItem('library_receipts') || '[]');
@@ -112,26 +112,62 @@ export const LibrarianPortalView: React.FC = () => {
     const staffSlug = (librarianName || 'librarian').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
     const dateStr = new Date().toISOString().slice(0, 10);
     const fileName = `limi_library_delta_${staffSlug}_${dateStr}.json`;
+    const jsonString = JSON.stringify(payload, null, 2);
 
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", fileName);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    try {
+      // Check if running inside Capacitor native environment
+      // @ts-ignore
+      const isNative = typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform();
 
-    setLastExport({
-      fileName,
-      timestamp: new Date().toLocaleString(),
-      size: Math.round(JSON.stringify(payload).length)
-    });
+      if (isNative) {
+        // Write to cache directory first
+        const savedFile = await Filesystem.writeFile({
+          path: fileName,
+          data: jsonString,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8,
+        });
+
+        if (savedFile && savedFile.uri) {
+          // Attempt native share sheet
+          try {
+            await Share.share({
+              title: 'Librarian Batch Delta',
+              text: `Library Inventory & Circulation Delta for ${librarianName}`,
+              url: savedFile.uri,
+              dialogTitle: 'Export Library Delta'
+            });
+          } catch (shareErr) {
+            // Fallback if direct share uri fails
+            console.warn("Share plugin fallback:", shareErr);
+          }
+        }
+      } else {
+        // Web browser download
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonString);
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", fileName);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+      }
+
+      setLastExport({
+        fileName,
+        timestamp: new Date().toLocaleString(),
+        size: Math.round(jsonString.length)
+      });
+    } catch (err: any) {
+      console.error("Export error:", err);
+      throw new Error(err.message || "Failed to save or share export file.");
+    }
   };
 
   const handleExportLibraryBatch = async () => {
     setIsExporting(true);
     try {
-      exportLibrarianPackage();
+      await exportLibrarianPackage();
       toast({
         title: "Library Batch Delta Exported Successfully",
         description: `Saved Librarian package ready for Admin Harmonization.`
