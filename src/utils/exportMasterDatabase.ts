@@ -306,7 +306,7 @@ export async function exportMasterSyncPackage(senderInfo?: {
         path: fileName,
         data: jsonString,
         directory: Directory.Cache,
-        encoding: undefined as any
+        encoding: Encoding.UTF8
       });
 
       const fileUri = writeResult.uri;
@@ -315,6 +315,7 @@ export async function exportMasterSyncPackage(senderInfo?: {
         await Share.share({
           title: 'Munyaka Master Sync Package',
           text: `Master Sync Package generated at ${new Date().toLocaleString()}`,
+          files: [fileUri],
           url: fileUri,
           dialogTitle: 'Share Master Sync Package',
         });
@@ -501,7 +502,7 @@ export async function exportMasterDatabase(): Promise<MasterExportResult> {
         path: fileName,
         data: jsonString,
         directory: Directory.Cache,
-        encoding: undefined as any // binary or string
+        encoding: Encoding.UTF8
       });
 
       const fileUri = writeResult.uri;
@@ -511,6 +512,7 @@ export async function exportMasterDatabase(): Promise<MasterExportResult> {
         await Share.share({
           title: 'Munyaka Master Data Export',
           text: `Master Database Export package generated at ${new Date().toLocaleString()}`,
+          files: [fileUri],
           url: fileUri,
           dialogTitle: 'Share Master Data Package',
         });

@@ -7,7 +7,7 @@
  */
 
 import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -66,13 +66,14 @@ async function exportJsonFile(filename: string, payload: any, successTitle: stri
         path: filename,
         data: jsonString,
         directory: Directory.Cache,
-        encoding: undefined as any
+        encoding: Encoding.UTF8
       });
 
       try {
         await Share.share({
           title: successTitle,
           text: `Export package generated at ${new Date().toLocaleString()}`,
+          files: [writeResult.uri],
           url: writeResult.uri,
           dialogTitle: successTitle,
         });

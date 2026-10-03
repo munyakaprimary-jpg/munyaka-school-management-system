@@ -494,6 +494,7 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
             await Share.share({
               title: filename,
               text: `Download ${filename}`,
+              files: [nativeUri],
               url: nativeUri,
               dialogTitle: `Save or Share ${filename}`,
             });

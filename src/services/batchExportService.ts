@@ -132,6 +132,7 @@ export const batchExportService = {
         await Share.share({
           title: 'Master Class Package Export',
           text: `Munyaka Master Package for ${packageData.header.teacherName} (${packageData.header.assignedGrade})`,
+          files: [writeFileResult.uri],
           url: writeFileResult.uri,
           dialogTitle: 'Share Master Class Package'
         });
