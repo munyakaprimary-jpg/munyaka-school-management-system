@@ -672,6 +672,26 @@ const Staff = () => {
                   </p>
                 )}
               </div>
+
+              {(formData.role.toLowerCase().includes('class') || formData.role === 'class_teacher' || formData.systemRole === 'class_teacher' || String(formData.systemRole).toLowerCase().includes('class')) && (
+                <div className="space-y-2 min-h-[90px] pt-1">
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assign Stream / Class *</Label>
+                  <Select value={formData.assignedStream || 'Green'} onValueChange={val => setFormData({ ...formData, assignedStream: val })}>
+                    <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                      <SelectValue placeholder="Select stream" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Green">Green Stream</SelectItem>
+                      <SelectItem value="Blue">Blue Stream</SelectItem>
+                      <SelectItem value="Red">Red Stream</SelectItem>
+                      <SelectItem value="Yellow">Yellow Stream</SelectItem>
+                      <SelectItem value="Alpha">Alpha Stream</SelectItem>
+                      <SelectItem value="Beta">Beta Stream</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone</Label>

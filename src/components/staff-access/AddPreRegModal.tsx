@@ -283,9 +283,9 @@ const AddPreRegModal = ({
 
         {/* Conditional Stream & Grade Selector for Class Teachers */}
         {(formData.systemRole === 'Class Teacher' || formData.systemRole === 'class_teacher' || String(formData.systemRole).toLowerCase().includes('class')) && (
-          <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-4">
+          <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-4 min-h-[110px]">
             <h4 className="text-xs font-black uppercase text-indigo-900 tracking-wider flex items-center gap-1.5">
-              <span>🏫 Class &amp; Stream Assignment</span>
+              <span>🏫 Assign Stream / Class *</span>
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -305,7 +305,7 @@ const AddPreRegModal = ({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700">Assigned Stream</Label>
+                <Label className="text-xs font-bold text-slate-700">Assign Stream / Class *</Label>
                 <Select value={formData.assignedStream} onValueChange={val => setFormData({ ...formData, assignedStream: val })}>
                   <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
                   <SelectContent className="rounded-2xl">
