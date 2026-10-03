@@ -76,13 +76,13 @@ export function StaffAttendanceRegister() {
 
       setLearners(filteredRoster);
 
-      // Initialize attendance records (default to 'present')
+      // Initialize attendance records as blank/unmarked (require explicit teacher input)
       const initialMap: Record<string, AttendanceRecord> = {};
       filteredRoster.forEach((l) => {
         initialMap[l.id] = {
           learnerId: l.id,
-          morningStatus: "present",
-          afternoonStatus: "present",
+          morningStatus: undefined as any,
+          afternoonStatus: undefined as any,
         };
       });
 
@@ -130,6 +130,18 @@ export function StaffAttendanceRegister() {
   };
 
   const handleSaveAttendance = () => {
+    // Validate that all learners have explicit attendance marked (no default silent assumptions)
+    const unmarkedCount = learners.filter(l => {
+      const rec = attendance[l.id];
+      return !rec || (!rec.morningStatus && !rec.afternoonStatus);
+    }).length;
+
+    if (unmarkedCount > 0) {
+      if (!window.confirm(`Warning: ${unmarkedCount} learner(s) have not been explicitly marked. Do you want to proceed with saving?`)) {
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       const centralRaw = localStorage.getItem(CENTRAL_DB_KEY);
@@ -338,7 +350,7 @@ export function StaffAttendanceRegister() {
                 </tr>
               ) : (
                 filteredLearners.map((learner, index) => {
-                  const rec = attendance[learner.id] || { learnerId: learner.id, morningStatus: "present", afternoonStatus: "present" };
+                  const rec = attendance[learner.id] || { learnerId: learner.id, morningStatus: undefined as any, afternoonStatus: undefined as any };
                   return (
                     <tr key={learner.id} className="hover:bg-blue-50/30 transition-colors">
                       <td className="py-3.5 px-4 font-medium text-gray-400">{index + 1}</td>
