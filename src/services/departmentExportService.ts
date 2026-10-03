@@ -230,14 +230,7 @@ export function exportClassPackage(streamName: string = "General", classData: an
     }
   } catch {}
 
-  const header = createStandardizedExportHeader({
-    senderName,
-    staffId,
-    departmentOrStream: activeStream,
-    role: 'CLASS_PACKAGE',
-    grade: activeGrade,
-    stream: activeStream
-  });
+  const header = createStandardizedExportHeader(senderName, staffId, activeStream, 'CLASS_PACKAGE', activeGrade, activeStream);
   
   const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
   const marks = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');

@@ -260,7 +260,6 @@ export function generateMasterSyncPackage(senderInfo?: {
     data: {
       learners,
       staff,
-      staff_members: staff,
       attendance,
       fees,
       studentPayments,
