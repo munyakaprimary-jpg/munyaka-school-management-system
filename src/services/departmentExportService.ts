@@ -25,11 +25,18 @@ export function createStandardizedExportHeader(
   let assignedStream = departmentOrStream || 'North';
 
   try {
-    const authRaw = localStorage.getItem('munyaka_auth');
-    if (authRaw) {
-      const user = JSON.parse(authRaw);
-      assignedClass = user.assignedClass || user.class || user.grade || 'Grade 1';
-      assignedStream = user.assignedStream || user.stream || departmentOrStream || 'North';
+    const overrideRaw = localStorage.getItem('munyaka_temp_export_override');
+    if (overrideRaw) {
+      const override = JSON.parse(overrideRaw);
+      if (override.assignedClass) assignedClass = override.assignedClass;
+      if (override.assignedStream) assignedStream = override.assignedStream;
+    } else {
+      const authRaw = localStorage.getItem('munyaka_auth');
+      if (authRaw) {
+        const user = JSON.parse(authRaw);
+        assignedClass = user.assignedClass || user.class || user.grade || 'Grade 1';
+        assignedStream = user.assignedStream || user.stream || departmentOrStream || 'North';
+      }
     }
   } catch {}
 
