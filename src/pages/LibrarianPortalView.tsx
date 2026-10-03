@@ -28,6 +28,7 @@ import {
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { useToast } from '@/components/ui/use-toast';
+import { RegisterBookModal } from '@/components/library/RegisterBookModal';
 import { Book, BorrowLog, getLogStatusInfo } from '@/types/library';
 
 export const LibrarianPortalView: React.FC = () => {
