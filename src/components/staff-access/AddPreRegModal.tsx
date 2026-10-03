@@ -65,7 +65,9 @@ const AddPreRegModal = ({
     tscNumber: "",
     email: "",
     phone: "",
-    systemRole: "subject_teacher" as SystemRole,
+    systemRole: "Class Teacher" as SystemRole,
+    assignedGrade: "Grade 4",
+    assignedStream: "Green",
     assignedSubjects: ["Mathematics", "Science & Tech"],
     tempAccessCode: "",
     staffId: ""
@@ -263,7 +265,7 @@ const AddPreRegModal = ({
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900"><SelectValue /></SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="subject_teacher">Subject Teacher</SelectItem>
-                <SelectItem value="class_teacher">Class Teacher</SelectItem>
+                <SelectItem value="Class Teacher">Class Teacher</SelectItem>
                 <SelectItem value="senior_teacher">Senior Teacher</SelectItem>
                 <SelectItem value="head_teacher">Head Teacher</SelectItem>
                 <SelectItem value="bursar">Bursar / Accounts</SelectItem>
@@ -272,6 +274,46 @@ const AddPreRegModal = ({
             </Select>
           </div>
         </div>
+
+        {(formData.systemRole === 'Class Teacher' || formData.systemRole === 'class_teacher') && (
+          <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-4">
+            <h4 className="text-xs font-black uppercase text-indigo-900 tracking-wider flex items-center gap-1.5">
+              <span>🏫 Class &amp; Stream Assignment</span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Assigned Grade</Label>
+                <Select value={formData.assignedGrade} onValueChange={val => setFormData({ ...formData, assignedGrade: val })}>
+                  <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    <SelectItem value="Grade 1">Grade 1</SelectItem>
+                    <SelectItem value="Grade 2">Grade 2</SelectItem>
+                    <SelectItem value="Grade 3">Grade 3</SelectItem>
+                    <SelectItem value="Grade 4">Grade 4</SelectItem>
+                    <SelectItem value="Grade 5">Grade 5</SelectItem>
+                    <SelectItem value="Grade 6">Grade 6</SelectItem>
+                    <SelectItem value="Grade 7">Grade 7</SelectItem>
+                    <SelectItem value="Grade 8">Grade 8</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Assigned Stream</Label>
+                <Select value={formData.assignedStream} onValueChange={val => setFormData({ ...formData, assignedStream: val })}>
+                  <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    <SelectItem value="Green">Green</SelectItem>
+                    <SelectItem value="Blue">Blue</SelectItem>
+                    <SelectItem value="Gold">Gold</SelectItem>
+                    <SelectItem value="Red">Red</SelectItem>
+                    <SelectItem value="North">North</SelectItem>
+                    <SelectItem value="East">East</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
