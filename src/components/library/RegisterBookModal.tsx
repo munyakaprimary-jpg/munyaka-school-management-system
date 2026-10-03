@@ -24,6 +24,7 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
   const [author, setAuthor] = useState("");
   const [isbn, setIsbn] = useState("");
   const [category, setCategory] = useState("Textbooks");
+  const [unit, setUnit] = useState("Pieces");
   const [stock, setStock] = useState("30");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -32,7 +33,8 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
       setTitle("");
       setAuthor("");
       setIsbn("");
-      setCategory("Core Text");
+      setCategory("Textbooks");
+      setUnit("Pieces");
       setStock("30");
       setErrorMsg("");
     }
@@ -57,6 +59,7 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
       author: String(author || '').trim() || 'General Inventory / School Stock',
       isbn: generatedIsbn,
       category,
+      unit,
       stock: numStock,
     });
 
@@ -124,7 +127,7 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Category</Label>
             <Select value={category} onValueChange={setCategory}>
@@ -142,7 +145,24 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Initial Stock Quantity</Label>
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Unit</Label>
+            <Select value={unit} onValueChange={setUnit}>
+              <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="Pieces">Pieces</SelectItem>
+                <SelectItem value="Reams">Reams</SelectItem>
+                <SelectItem value="Packets">Packets</SelectItem>
+                <SelectItem value="Boxes">Boxes</SelectItem>
+                <SelectItem value="Sets">Sets</SelectItem>
+                <SelectItem value="Rolls">Rolls</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Initial Stock Qty</Label>
             <Input
               type="number"
               min="1"

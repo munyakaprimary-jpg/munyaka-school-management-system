@@ -17,6 +17,7 @@ export interface Book {
   totalCopies: number;
   availableCopies: number;
   category: string;
+  unit?: string;
 }
 
 export interface BorrowLog {

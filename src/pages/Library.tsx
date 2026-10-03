@@ -280,10 +280,10 @@ const Library = () => {
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                    <span className="text-xs font-medium text-slate-500">Total Stock: {total} volumes</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <span className="text-xs font-medium text-slate-500">Total Stock: {total} {book.unit || 'Volumes'}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setSelectedBookForHistory(book)}
                       className="rounded-xl h-9 text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-indigo-600 transition-colors gap-1.5 cursor-pointer"
                     >

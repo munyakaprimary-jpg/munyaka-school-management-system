@@ -315,7 +315,7 @@ export const LibrarianPortalView: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-4 text-xs font-medium">
                           <div className="text-right">
-                            <p className="text-slate-900 font-bold">{available} / {total} Available</p>
+                            <p className="text-slate-900 font-bold">{available} / {total} {book.unit || 'Copies'} Available</p>
                             <p className="text-amber-700">{book.borrowed || (total - available)} Checked out</p>
                           </div>
                         </div>
@@ -475,6 +475,7 @@ export const LibrarianPortalView: React.FC = () => {
             borrowed: 0,
             stock: bookData.stock || 30,
             subject: bookData.category || 'Textbooks',
+            unit: bookData.unit || 'Pieces',
             grade: 'All Grades',
             publisher: bookData.author || 'KLB'
           };
@@ -483,8 +484,8 @@ export const LibrarianPortalView: React.FC = () => {
           localStorage.setItem('school_library_inventory_v1', JSON.stringify(updated));
           localStorage.setItem('textbook_inventory', JSON.stringify(updated));
           toast({
-            title: "Book Cataloged Successfully",
-            description: `Added "${newBook.title}" with ${newBook.totalCopies} copies.`
+            title: "Item Cataloged Successfully",
+            description: `Added "${newBook.title}" with ${newBook.totalCopies} ${newBook.unit || 'Pieces'}.`
           });
         }}
       />
