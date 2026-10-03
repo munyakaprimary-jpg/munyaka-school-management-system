@@ -23,7 +23,7 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [isbn, setIsbn] = useState("");
-  const [category, setCategory] = useState("Core Text");
+  const [category, setCategory] = useState("Textbooks");
   const [stock, setStock] = useState("30");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -71,8 +71,8 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Register New Library Book"
-      description="Add a new textbook or reference material to the school catalog."
+      title="Register Library Material / Textbook"
+      description="Add a new textbook, story book, exercise book, stationery, or teaching aid to the inventory."
       maxWidth="max-w-xl"
       footer={
         <div className="flex justify-end gap-2 w-full">
@@ -96,11 +96,11 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
         )}
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Book Title</Label>
-          <Input
-            value={title}
-            onChange={(e) => { setTitle(e.target.value); setErrorMsg(""); }}
-            placeholder="e.g. Spark: English Grade 4"
+          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Item Title / Book Name</Label>
+        <Input
+          value={title}
+          onChange={(e) => { setTitle(e.target.value); setErrorMsg(""); }}
+          placeholder="e.g. Spark: English Grade 4 or Exercise Books 120pg"
             className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900"
             autoFocus
           />
@@ -108,11 +108,11 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Author / Publisher</Label>
-            <Input
-              value={author}
-              onChange={(e) => { setAuthor(e.target.value); setErrorMsg(""); }}
-              placeholder="e.g. Oxford / KLB"
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Author / Supplier / Publisher</Label>
+          <Input
+            value={author}
+            onChange={(e) => { setAuthor(e.target.value); setErrorMsg(""); }}
+            placeholder="e.g. KLB / Oxford / Stationers Ltd"
               className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900"
             />
           </div>
@@ -136,10 +136,11 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
-                <SelectItem value="Core Text">Core Text</SelectItem>
-                <SelectItem value="Reference">Reference</SelectItem>
-                <SelectItem value="Supplementary">Supplementary</SelectItem>
-                <SelectItem value="General Reading">General Reading</SelectItem>
+                <SelectItem value="Textbooks">Textbooks</SelectItem>
+                <SelectItem value="Story Books">Story Books</SelectItem>
+                <SelectItem value="Exercise Books">Exercise Books</SelectItem>
+                <SelectItem value="Stationery">Stationery</SelectItem>
+                <SelectItem value="Teaching Aids">Teaching Aids</SelectItem>
               </SelectContent>
             </Select>
           </div>
