@@ -89,6 +89,35 @@ export const LibrarianPortalView: React.FC = () => {
     );
   }, [books, searchQuery]);
 
+  const exportLibrarianPackage = () => {
+    const inventoryData = JSON.parse(localStorage.getItem('school_library_inventory_v1') || localStorage.getItem('textbook_inventory') || '[]');
+    const logsData = JSON.parse(localStorage.getItem('school_library_logs_v1') || localStorage.getItem('munyaka_library_borrowings') || '[]');
+    const receiptsData = JSON.parse(localStorage.getItem('library_receipts') || '[]');
+
+    const payload = {
+      exportType: 'LIBRARIAN_BATCH_DELTA',
+      timestamp: new Date().toISOString(),
+      librarianId,
+      librarianName,
+      metrics: {
+        totalTitles: inventoryData.length,
+        activeCirculation: logsData.filter((l: any) => l.status === 'Active' || l.status === 'Issued').length,
+        incidents: logsData.filter((l: any) => l.status === 'Lost' || l.status === 'Damaged').length
+      },
+      inventory: inventoryData,
+      circulationLogs: logsData,
+      receipts: receiptsData
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `limi-library-delta-${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   const handleExportLibraryBatch = async () => {
     setIsExporting(true);
     try {
