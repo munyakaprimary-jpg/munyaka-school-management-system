@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CentralDataService } from '../services/centralDataService';
+import { useAuth } from './AuthContext';
 
 interface LearnerContextType {
   learners: any[];
@@ -11,13 +12,33 @@ interface LearnerContextType {
 const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [learners, setLearners] = useState<any[]>(() => CentralDataService.getLearners());
+  const { user } = useAuth();
+  const allLearners = CentralDataService.getLearners();
+
+  // If user is a teacher, filter learners strictly to their assigned grade and stream
+  const filteredLearners = React.useMemo(() => {
+    if (!user || user.role === 'admin' || user.role === 'owner' || user.role === 'bursar' || user.role === 'librarian' || user.role === 'storekeeper' || user.role === 'head_teacher') {
+      return allLearners;
+    }
+    const assignedGrade = (user as any).assignedClass || (user as any).grade || '';
+    const assignedStream = (user as any).assignedStream || (user as any).stream || '';
+    if (!assignedGrade && !assignedStream) return allLearners;
+
+    return allLearners.filter((l: any) => {
+      const lGrade = l.grade || l.class || l.assignedClass || '';
+      const lStream = l.stream || l.assignedStream || '';
+      const gradeMatch = !assignedGrade || lGrade.toLowerCase().includes(assignedGrade.toLowerCase()) || assignedGrade.toLowerCase().includes(lGrade.toLowerCase());
+      const streamMatch = !assignedStream || lStream.toLowerCase() === assignedStream.toLowerCase();
+      return gradeMatch && streamMatch;
+    });
+  }, [allLearners, user]);
+
+  const [learners, setLearners] = useState<any[]>(filteredLearners);
 
   useEffect(() => {
-    if (learners.length > 0) {
-      CentralDataService.saveLearners(learners);
-    }
-  }, [learners]);
+    // Keep local state in sync when user changes or underlying storage updates
+    setLearners(filteredLearners);
+  }, [filteredLearners]);
 
   const addLearner = (newLearner: any) => {
     setLearners((prev) => {

@@ -35,7 +35,9 @@ const TeacherDashboard: React.FC = () => {
 
   const teacherName = user?.name || 'Teacher';
   const teacherRole = user?.role || 'Class Teacher';
-  const assignedClass = (user as any)?.assignedClass || 'Grade 4 Green';
+  const assignedClass = (user as any)?.assignedClass || (user as any)?.grade || 'Grade 4';
+  const assignedStream = (user as any)?.assignedStream || (user as any)?.stream || 'Green';
+  const fullClassTitle = `${assignedClass} ${assignedStream}`;
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full font-sans">
@@ -47,7 +49,7 @@ const TeacherDashboard: React.FC = () => {
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold uppercase tracking-wider text-blue-200">
-              <Sparkles size={14} /> CBC Portal · {assignedClass}
+              <Sparkles size={14} /> CBC Portal · {fullClassTitle}
             </div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight">
               Welcome back, {teacherName}!
@@ -90,7 +92,7 @@ const TeacherDashboard: React.FC = () => {
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Assigned Learners</p>
               <h3 className="text-3xl font-black text-slate-900">{totalStudents > 0 ? totalStudents : '42'}</h3>
               <p className="text-xs font-medium text-emerald-600 flex items-center gap-1 mt-1">
-                <CheckCircle2 size={12} /> Active in {assignedClass}
+                <CheckCircle2 size={12} /> Active in {fullClassTitle}
               </p>
             </div>
             <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
@@ -204,7 +206,7 @@ const TeacherDashboard: React.FC = () => {
               </div>
               <h3 className="font-bold text-slate-900 text-lg">Class Nominal Roll</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Browse student profiles, assessment portfolios, and parent contacts in {assignedClass}.
+                Browse student profiles, assessment portfolios, and parent contacts in {fullClassTitle}.
               </p>
             </div>
             <div className="mt-6 flex items-center gap-2 text-xs font-bold text-emerald-600 group-hover:gap-3 transition-all">
@@ -275,7 +277,7 @@ const TeacherDashboard: React.FC = () => {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-slate-900 truncate">{teacherName}</p>
-                  <p className="text-xs text-slate-500">{assignedClass}</p>
+                  <p className="text-xs text-slate-500">{fullClassTitle}</p>
                 </div>
               </div>
 

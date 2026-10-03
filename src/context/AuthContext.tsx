@@ -118,7 +118,12 @@ const DEFAULT_TEACHER = {
     email: 'jane.mwangi@munyaka.sc.ke',
     phone: '+254 712 345 678',
     role: 'teacher' as UserRole,
-    avatar: 'JM'
+    avatar: 'JM',
+    assignedClass: 'Grade 4',
+    assignedStream: 'Green',
+    grade: 'Grade 4',
+    stream: 'Green',
+    department: 'Academics'
   }
 };
 
@@ -253,7 +258,12 @@ const initializeUsersStorage = () => {
       alternativePasswords: [staff.nationalId, 'munyaka5239'],
       isActive: staff.status !== 'Suspended', // Explicit activation flag
       emailConfirmed: true, // Explicit verification flag
-      staffId: staff.staffId // preserve the staffId on the stored record
+      staffId: staff.staffId, // preserve the staffId on the stored record
+      assignedClass: staff.assignedGrade || 'Grade 4',
+      assignedStream: staff.assignedStream || 'Green',
+      grade: staff.assignedGrade || 'Grade 4',
+      stream: staff.assignedStream || 'Green',
+      department: staff.department || 'Academics'
     };
 
     // Also make the staffId (e.g. "T001") a valid login key
