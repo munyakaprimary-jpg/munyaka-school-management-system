@@ -1,5 +1,3 @@
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 
 export interface DownloadOptions {
@@ -11,7 +9,7 @@ export interface DownloadOptions {
 
 /**
  * Universal Native Download & Notification Service.
- * Handles file saving on Capacitor (Android/iOS) and web browsers with automatic success notifications.
+ * Safely guarded for browser and Capacitor environments.
  */
 export async function downloadFile({
   filename,
@@ -31,15 +29,15 @@ export async function downloadFile({
 
     if (isNative) {
       try {
-        // Write to Documents or Cache directory first, then share or save
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const { Share } = await import('@capacitor/share');
+
         const savedFile = await Filesystem.writeFile({
           path: filename,
           data: contentStr,
-          directory: Directory.Documents,
-          encoding: undefined
+          directory: Directory.Documents
         });
 
-        // Try to trigger share sheet so user can save to Downloads or share directly
         await Share.share({
           title: filename,
           text: 'Exported file from School Management System',
@@ -76,10 +74,8 @@ export async function downloadFile({
 export function triggerToast(message: string, type: 'success' | 'error' = 'success') {
   if (typeof window === 'undefined') return;
 
-  // Dispatch custom toast event for UI listeners
   window.dispatchEvent(new CustomEvent('munyaka:toast', { detail: { message, type } }));
 
-  // Create floating banner element if no toast system catches it
   try {
     const existing = document.getElementById('munyaka-global-toast');
     if (existing) existing.remove();
