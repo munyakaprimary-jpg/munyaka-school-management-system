@@ -947,6 +947,11 @@ export function importAllData(backup: DatabaseBackup): ImportResult {
   const result: ImportResult = { success: true, keysRestored: [], errors: [] };
   const ls = getLocalStorage();
 
+  // Preserve active session user / auth credentials before importing bulk backup to prevent role escalation
+  const currentAuthUser = ls ? ls.getItem('munyaka_auth_user') : null;
+  const currentSessionRole = ls ? ls.getItem('munyaka_session_role') : null;
+  const currentActiveRole = ls ? ls.getItem('munyaka_active_role') : null;
+
   const safeWrite = (key: string, value: unknown, label: string): void => {
     if (value === undefined) return;
     try {
@@ -978,6 +983,13 @@ export function importAllData(backup: DatabaseBackup): ImportResult {
   if (backup.userSettings)    safeWrite(STORAGE_KEYS.USER_SETTINGS,     backup.userSettings,     'System Settings');
   if (backup.subscriptions)    safeWrite(STORAGE_KEYS.SUBSCRIPTIONS,    backup.subscriptions,    'Subscriptions');
   if (backup.billingSettings) safeWrite(STORAGE_KEYS.BILLING_SETTINGS,  backup.billingSettings, 'Billing Settings');
+
+  // Restore active session user keys to guarantee session/role persistence
+  if (ls) {
+    if (currentAuthUser) ls.setItem('munyaka_auth_user', currentAuthUser);
+    if (currentSessionRole) ls.setItem('munyaka_session_role', currentSessionRole);
+    if (currentActiveRole) ls.setItem('munyaka_active_role', currentActiveRole);
+  }
 
   if (result.keysRestored.length > 0) {
     notifyDataChanged();
