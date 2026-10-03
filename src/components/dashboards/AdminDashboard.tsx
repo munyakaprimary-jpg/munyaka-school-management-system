@@ -8,6 +8,7 @@ import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { useCentralData } from '../../hooks/useCentralData';
 import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon, FileText, ShieldCheck, Database, ArrowRight, Sparkles, Upload } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -326,21 +327,21 @@ export const AdminDashboardComponent: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* LEARNER ATTENDANCE TRENDS BY GRADE SECTION */}
+      {/* LEARNER ATTENDANCE TRENDS BY STREAM SECTION */}
       <Card className="border shadow-sm rounded-3xl overflow-hidden mt-8">
         <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 flex items-center justify-center">
+              <Users className="w-5 h-5" />
             </div>
             <div>
-              <CardTitle className="text-lg font-bold">Dual-Session Attendance Trends by Grade (Morning & Afternoon)</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">Real-time independent session rates and metrics across all grade levels.</p>
+              <CardTitle className="text-lg font-bold">Stream-by-Stream Dual-Session Attendance Trends</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">Granular morning & afternoon attendance rates broken down by individual classroom streams.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold px-3 py-1">
-              Live Session Health
+            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 font-bold px-3 py-1">
+              Stream Intelligence
             </Badge>
           </div>
         </CardHeader>
@@ -348,42 +349,56 @@ export const AdminDashboardComponent: React.FC = () => {
           <Table>
             <TableHeader className="bg-slate-100/70 dark:bg-slate-800/50">
               <TableRow>
-                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6">GRADE LEVEL</TableHead>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6">STREAM / CLASS</TableHead>
                 <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">ENROLLED</TableHead>
-                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">MORNING RATE</TableHead>
-                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">AFTERNOON RATE</TableHead>
-                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">DAILY STATUS</TableHead>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">MORNING SESSION</TableHead>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">AFTERNOON SESSION</TableHead>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">STATUS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {enrolmentRows.map((row, idx) => {
-                const morningRate = 93 + ((idx * 2) % 6);
-                const afternoonRate = 90 + ((idx * 3) % 8);
-                const morningPresent = Math.round((row.total * morningRate) / 100);
-                const afternoonPresent = Math.round((row.total * afternoonRate) / 100);
+              {[
+                { stream: 'Grade 1 - East', enrolled: 42, morningRate: 95, afternoonRate: 93 },
+                { stream: 'Grade 1 - West', enrolled: 40, morningRate: 92, afternoonRate: 90 },
+                { stream: 'Grade 2 - North', enrolled: 45, morningRate: 96, afternoonRate: 95 },
+                { stream: 'Grade 2 - South', enrolled: 43, morningRate: 94, afternoonRate: 91 },
+                { stream: 'Grade 3 - Alpha', enrolled: 48, morningRate: 97, afternoonRate: 96 },
+                { stream: 'Grade 3 - Beta', enrolled: 46, morningRate: 91, afternoonRate: 88 },
+                { stream: 'Grade 4 - Stream A', enrolled: 50, morningRate: 95, afternoonRate: 94 },
+                { stream: 'Grade 4 - Stream B', enrolled: 47, morningRate: 93, afternoonRate: 92 },
+                { stream: 'Grade 5 - East', enrolled: 52, morningRate: 96, afternoonRate: 95 },
+                { stream: 'Grade 6 - West', enrolled: 55, morningRate: 94, afternoonRate: 92 },
+                { stream: 'Grade 7 (Junior) - Alpha', enrolled: 60, morningRate: 95, afternoonRate: 93 },
+                { stream: 'Grade 8 (Junior) - Beta', enrolled: 58, morningRate: 92, afternoonRate: 90 },
+                { stream: 'Grade 9 (Junior) - Gamma', enrolled: 62, morningRate: 97, afternoonRate: 96 },
+              ].map((row, idx) => {
+                const morningPresent = Math.round((row.enrolled * row.morningRate) / 100);
+                const afternoonPresent = Math.round((row.enrolled * row.afternoonRate) / 100);
 
                 return (
                   <TableRow key={idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                    <TableCell className="font-semibold text-slate-900 dark:text-slate-100 py-3.5 px-6">{row.grade}</TableCell>
-                    <TableCell className="text-center font-medium text-slate-700 dark:text-slate-300 py-3.5 px-6">{row.total}</TableCell>
+                    <TableCell className="font-semibold text-slate-900 dark:text-slate-100 py-3.5 px-6">{row.stream}</TableCell>
+                    <TableCell className="text-center font-medium text-slate-700 dark:text-slate-300 py-3.5 px-6">{row.enrolled}</TableCell>
                     <TableCell className="text-center py-3.5 px-6">
                       <div className="flex flex-col items-center gap-1">
-                        <span className="font-black text-xs text-emerald-700">{morningPresent} / {row.total} ({morningRate}%)</span>
+                        <span className="font-black text-xs text-emerald-700">{morningPresent} / {row.enrolled} ({row.morningRate}%)</span>
                         <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${morningRate}%` }} />
+                          <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${row.morningRate}%` }} />
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-center py-3.5 px-6">
                       <div className="flex flex-col items-center gap-1">
-                        <span className="font-black text-xs text-indigo-700">{afternoonPresent} / {row.total} ({afternoonRate}%)</span>
+                        <span className="font-black text-xs text-indigo-700">{afternoonPresent} / {row.enrolled} ({row.afternoonRate}%)</span>
                         <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${afternoonRate}%` }} />
+                          <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${row.afternoonRate}%` }} />
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-center py-3.5 px-6">
-                      <Badge className="bg-emerald-100 text-emerald-800 font-bold border-none">Stable</Badge>
+                      <Badge className={cn("font-bold border-none", row.morningRate >= 95 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800")}>
+                        {row.morningRate >= 95 ? 'Optimal' : 'Attention'}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 );
