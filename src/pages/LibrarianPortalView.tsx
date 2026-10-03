@@ -29,6 +29,7 @@ import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { useToast } from '@/components/ui/use-toast';
 import { RegisterBookModal } from '@/components/library/RegisterBookModal';
+import { IssueBookModal } from '@/components/library/IssueBookModal';
 import { Book, BorrowLog, getLogStatusInfo } from '@/types/library';
 
 export const LibrarianPortalView: React.FC = () => {
@@ -68,6 +69,8 @@ export const LibrarianPortalView: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isRegisterBookModalOpen, setIsRegisterBookModalOpen] = useState(false);
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [selectedBookForIssue, setSelectedBookForIssue] = useState<Book | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [lastExport, setLastExport] = useState<{ fileName: string; timestamp: string; size: number } | null>(null);
   const [copiedShare, setCopiedShare] = useState(false);
@@ -137,33 +140,17 @@ export const LibrarianPortalView: React.FC = () => {
   };
 
   const handleIssueBook = () => {
-    const title = prompt("Enter book title being checked out:");
-    if (!title) return;
-    const borrowerName = prompt("Enter borrower name (Student / Staff):") || 'Student';
-    const admissionNo = prompt("Enter student admission number / staff ID (e.g. ADM-2024-001):") || 'ADM-2024-999';
-
-    const newLog: BorrowLog = {
-      id: `log-${Date.now()}`,
-      bookId: 'custom',
-      bookTitle: title,
-      borrowerName,
-      borrowerType: 'Student',
-      accession_no: admissionNo,
-      issuedDate: new Date().toISOString().slice(0, 10),
-      dueDate: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
-      status: 'Active',
-      qty_issued: 1,
-      qty_returned: 0,
-      qty_lost: 0
-    };
-
-    const updatedLogs = [newLog, ...historyLogs];
-    setHistoryLogs(updatedLogs);
-    localStorage.setItem('school_library_logs_v1', JSON.stringify(updatedLogs));
-    toast({
-      title: "Book Issued Successfully",
-      description: `Checked out "${title}" to ${borrowerName} [${admissionNo}].`
-    });
+    if (books.length === 0) {
+      toast({
+        title: "No Items in Catalog",
+        description: "Please catalog an item before issuing.",
+        variant: "destructive"
+      });
+      return;
+    }
+    // Select the first book by default or prompt if multiple
+    setSelectedBookForIssue(books[0]);
+    setIsIssueModalOpen(true);
   };
 
   const handleDeleteLog = (id: string, bookTitle: string) => {
@@ -479,6 +466,61 @@ export const LibrarianPortalView: React.FC = () => {
           toast({
             title: "Item Cataloged Successfully",
             description: `Added "${newBook.title}" with ${newBook.totalCopies} ${newBook.unit || 'Pieces'}.`
+          });
+        }}
+      />
+
+      <IssueBookModal
+        isOpen={isIssueModalOpen}
+        onClose={() => {
+          setIsIssueModalOpen(false);
+          setSelectedBookForIssue(null);
+        }}
+        book={selectedBookForIssue}
+        onIssueBook={async (bookId, borrowerName, borrowerType, dueDate, quantity, grade, stream) => {
+          const targetBook = books.find(b => b.id === bookId);
+          if (!targetBook) return;
+
+          const newLog: BorrowLog = {
+            id: `log-${Date.now()}`,
+            bookId: targetBook.id,
+            bookTitle: targetBook.title,
+            borrowerName,
+            borrowerType,
+            accession_no: grade && stream ? `${grade} - ${stream}` : 'General',
+            issuedDate: new Date().toISOString().slice(0, 10),
+            dueDate,
+            status: 'Active',
+            qty_issued: quantity,
+            qty_returned: 0,
+            qty_lost: 0
+          };
+
+          const updatedLogs = [newLog, ...historyLogs];
+          setHistoryLogs(updatedLogs);
+          localStorage.setItem('school_library_logs_v1', JSON.stringify(updatedLogs));
+
+          // Update book borrowed / available copies
+          const updatedBooks = books.map(b => {
+            if (b.id === bookId) {
+              const currentBorrowed = b.borrowed || 0;
+              const newBorrowed = currentBorrowed + quantity;
+              const total = b.totalCopies ?? b.stock ?? 30;
+              return {
+                ...b,
+                borrowed: newBorrowed,
+                availableCopies: Math.max(0, total - newBorrowed)
+              };
+            }
+            return b;
+          });
+          setBooks(updatedBooks);
+          localStorage.setItem('school_library_inventory_v1', JSON.stringify(updatedBooks));
+          localStorage.setItem('textbook_inventory', JSON.stringify(updatedBooks));
+
+          toast({
+            title: "Material Issued Successfully",
+            description: `Checked out ${quantity} of "${targetBook.title}" to ${borrowerName} (${borrowerType}).`
           });
         }}
       />
