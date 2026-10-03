@@ -318,6 +318,9 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
     }
 
     const now = new Date().toISOString();
+    const gradeVal = String(form.grade || 'Grade 1').trim();
+    const streamVal = String(form.stream || 'BLUE').trim().toUpperCase();
+
     const learner: Learner = {
       id: `txfr-in-${Date.now().toString()}-${Math.floor(
         Math.random() * 1000,
@@ -326,8 +329,8 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
       birthCertificateNo: birthCertNo || undefined,
       assessment: assessmentNo || undefined,
       name: String(form.fullName || '').trim(),
-      grade: form.grade,
-      stream: form.stream,
+      grade: gradeVal,
+      stream: streamVal,
       gender: form.gender,
       guardian: '',
       phone: '',
