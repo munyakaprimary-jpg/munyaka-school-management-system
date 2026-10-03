@@ -200,7 +200,7 @@ const GRADE_OPTIONS = [
   "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"
 ];
 
-const STREAM_OPTIONS = ["Blue", "Green", "Yellow", "Alpha", "Beta", "North", "South", "East", "West"];
+const STREAM_OPTIONS = ["Green", "Blue", "Red", "Yellow", "Stream A", "Stream B", "Stream C"];
 
 const SUBJECT_OPTIONS = [
   "Creative Arts & Digital Literacy",

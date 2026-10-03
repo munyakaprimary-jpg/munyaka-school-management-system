@@ -231,8 +231,8 @@ export function StaffAttendanceRegister() {
             >
               <option value="East">East</option>
               <option value="West">West</option>
-              <option value="North">North</option>
-              <option value="South">South</option>
+              <option value="Green">Green</option>
+              <option value="Blue">Blue</option>
             </select>
           </div>
 

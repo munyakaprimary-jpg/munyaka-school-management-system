@@ -18,7 +18,7 @@ export const TeacherExportModule: React.FC = () => {
   ];
 
   const streams = [
-    'North', 'South', 'East', 'West', 'Mercury', 'Venus', 'Green', 'Blue', 'Red', 'Yellow'
+    'Green', 'Blue', 'Red', 'Yellow', 'Stream A', 'Stream B', 'Stream C'
   ];
 
   // Initialize with teacher profile or default
@@ -27,7 +27,7 @@ export const TeacherExportModule: React.FC = () => {
   });
 
   const [selectedStream, setSelectedStream] = useState<string>(() => {
-    return user?.assignedStream || user?.stream || 'North';
+    return user?.assignedStream || user?.stream || 'Green';
   });
 
   const [isExporting, setIsExporting] = useState(false);

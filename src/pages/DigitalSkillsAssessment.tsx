@@ -1059,8 +1059,8 @@ const DigitalSkillsAssessment = () => {
                   <SelectItem value="All Streams">All Streams</SelectItem>
                   <SelectItem value="East">East</SelectItem>
                   <SelectItem value="West">West</SelectItem>
-                  <SelectItem value="North">North</SelectItem>
-                  <SelectItem value="South">South</SelectItem>
+                  <SelectItem value="Green">Green</SelectItem>
+                  <SelectItem value="Blue">Blue</SelectItem>
                   <SelectItem value="Blue">Blue</SelectItem>
                   <SelectItem value="Red">Red</SelectItem>
                 </SelectContent>

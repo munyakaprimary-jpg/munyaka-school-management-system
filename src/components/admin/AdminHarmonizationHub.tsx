@@ -291,7 +291,7 @@ export const AdminHarmonizationHub: React.FC = () => {
                         <td className="py-4 px-4">
                           <div className="flex flex-col gap-1">
                             <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50 font-bold text-xs w-fit">
-                              {item.metadata.assignedClass || item.metadata.departmentOrStream || item.header?.assignedGrade || 'General'} · {item.metadata.assignedStream || item.header?.assignedStream || 'North'}
+                              {item.metadata.assignedClass || item.metadata.departmentOrStream || item.header?.assignedGrade || 'General'} · {item.metadata.assignedStream || item.header?.assignedStream || 'Green'}
                             </Badge>
                             {item.hasStreamMismatch && (
                               <Badge className="bg-red-100 text-red-700 hover:bg-red-100 font-bold text-[10px] w-fit flex items-center gap-1" title={item.streamMismatchReason}>

@@ -17,7 +17,7 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
   isOpen,
   onClose,
   defaultGrade = 'Grade 1',
-  defaultStream = 'North'
+  defaultStream = 'Green'
 }) => {
   const [selectedGrade, setSelectedGrade] = useState(defaultGrade);
   const [selectedStream, setSelectedStream] = useState(defaultStream);
@@ -28,7 +28,7 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
     'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'
   ];
 
-  const streams = ['North', 'South', 'East', 'West', 'Mercury', 'Venus', 'Green', 'Blue', 'Red'];
+  const streams = ['Green', 'Blue', 'Red', 'Yellow', 'Stream A', 'Stream B', 'Stream C'];
 
   const handleExport = () => {
     setIsExporting(true);
