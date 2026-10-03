@@ -461,7 +461,7 @@ export default function CentralDataServicePage() {
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight">Central Data & APK Master Export</h1>
             <p className="text-indigo-200 text-sm max-w-2xl leading-relaxed">
-              Connected directly to the school database. Export master records for offline APK deployment or perform full system backups and restores.
+              Connected directly to live school data state. Export your active live store directly for offline APK builds or perform full JSON backups and restores.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -478,7 +478,7 @@ export default function CentralDataServicePage() {
               className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/30 font-semibold"
             >
               <Download className="w-4 h-4 mr-2" />
-              Export Master JSON Backup
+              Export initialSeedData.ts
             </Button>
           </div>
         </div>
