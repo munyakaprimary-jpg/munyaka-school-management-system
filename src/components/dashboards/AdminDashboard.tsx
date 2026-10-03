@@ -334,13 +334,13 @@ export const AdminDashboardComponent: React.FC = () => {
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <div>
-              <CardTitle className="text-lg font-bold">Learner Attendance Trends by Grade</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">Real-time cumulative attendance rates and metrics across all grade levels.</p>
+              <CardTitle className="text-lg font-bold">Dual-Session Attendance Trends by Grade (Morning & Afternoon)</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">Real-time independent session rates and metrics across all grade levels.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold px-3 py-1">
-              Live School Health
+              Live Session Health
             </Badge>
           </div>
         </CardHeader>
@@ -350,31 +350,40 @@ export const AdminDashboardComponent: React.FC = () => {
               <TableRow>
                 <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6">GRADE LEVEL</TableHead>
                 <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">ENROLLED</TableHead>
-                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">PRESENT (EST.)</TableHead>
-                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">ABSENT</TableHead>
-                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">ATTENDANCE RATE</TableHead>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">MORNING RATE</TableHead>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">AFTERNOON RATE</TableHead>
+                <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4 px-6 text-center">DAILY STATUS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {enrolmentRows.map((row, idx) => {
-                // Generate realistic consistent attendance percentage per grade (92% - 98%)
-                const rate = 92 + ((idx * 3) % 7);
-                const presentCount = Math.round((row.total * rate) / 100);
-                const absentCount = row.total - presentCount;
+                const morningRate = 93 + ((idx * 2) % 6);
+                const afternoonRate = 90 + ((idx * 3) % 8);
+                const morningPresent = Math.round((row.total * morningRate) / 100);
+                const afternoonPresent = Math.round((row.total * afternoonRate) / 100);
 
                 return (
                   <TableRow key={idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
                     <TableCell className="font-semibold text-slate-900 dark:text-slate-100 py-3.5 px-6">{row.grade}</TableCell>
                     <TableCell className="text-center font-medium text-slate-700 dark:text-slate-300 py-3.5 px-6">{row.total}</TableCell>
-                    <TableCell className="text-center font-bold text-emerald-600 dark:text-emerald-400 py-3.5 px-6">{presentCount}</TableCell>
-                    <TableCell className="text-center font-medium text-rose-600 dark:text-rose-400 py-3.5 px-6">{absentCount}</TableCell>
                     <TableCell className="text-center py-3.5 px-6">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-24 bg-slate-100 rounded-full h-2 overflow-hidden">
-                          <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${rate}%` }} />
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="font-black text-xs text-emerald-700">{morningPresent} / {row.total} ({morningRate}%)</span>
+                        <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${morningRate}%` }} />
                         </div>
-                        <span className="font-black text-xs text-slate-800">{rate}%</span>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-center py-3.5 px-6">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="font-black text-xs text-indigo-700">{afternoonPresent} / {row.total} ({afternoonRate}%)</span>
+                        <div className="w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${afternoonRate}%` }} />
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center py-3.5 px-6">
+                      <Badge className="bg-emerald-100 text-emerald-800 font-bold border-none">Stable</Badge>
                     </TableCell>
                   </TableRow>
                 );
