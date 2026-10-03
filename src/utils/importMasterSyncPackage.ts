@@ -33,16 +33,33 @@ export async function importMasterSyncPackage(file: File): Promise<MasterImportR
     const data = pkg.data || pkg;
     const updatedKeys: string[] = [];
 
-    // 1. If allStorageSnapshot is present, unpack every harvested key directly into localStorage for 100% mirror match
+    // 1. If allStorageSnapshot is present, unpack every harvested key directly into localStorage with quota protection
     if (data.allStorageSnapshot && typeof data.allStorageSnapshot === 'object') {
+      // Remove obsolete or redundant temporary keys first to reclaim space
+      try {
+        localStorage.removeItem('munyaka_temp_export_override');
+      } catch {}
+
       for (const [key, val] of Object.entries(data.allStorageSnapshot)) {
         if (key && val !== undefined) {
           try {
             const stringVal = typeof val === 'string' ? val : JSON.stringify(val);
             localStorage.setItem(key, stringVal);
-            updatedKeys.push(key);
-          } catch (err) {
-            console.error(`Failed to set snapshot key ${key}:`, err);
+            if (!updatedKeys.includes(key)) updatedKeys.push(key);
+          } catch (err: any) {
+            console.warn(`[importMasterSyncPackage] Quota check triggered for snapshot key ${key}:`, err);
+            // If quota exceeded, clear non-critical caches and retry once
+            if (err?.name === 'QuotaExceededError' || err?.code === 22) {
+              try {
+                localStorage.removeItem('munyaka_attendance_cache');
+                localStorage.removeItem('munyaka_temp_export_override');
+                const stringVal = typeof val === 'string' ? val : JSON.stringify(val);
+                localStorage.setItem(key, stringVal);
+                if (!updatedKeys.includes(key)) updatedKeys.push(key);
+              } catch (retryErr) {
+                console.error(`[importMasterSyncPackage] Failed to set ${key} even after quota reclaim:`, retryErr);
+              }
+            }
           }
         }
       }

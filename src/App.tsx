@@ -171,25 +171,42 @@ if (typeof window !== 'undefined') {
 // ── Critical Central Database Initialization ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // Initialize and hydrate state from remote central DB on boot
 
-// ── Legacy Key Auto-Migration ─────────────────────────────────────────────
+// ── Legacy Key Auto-Migration (One-time safe migration) ──────────────────
+const MIGRATION_DONE_FLAG = 'munyaka_legacy_migration_v2_done';
+
 const migrateStorageKey = (oldKey: string, newKey: string) => {
   if (typeof window === 'undefined' || !window.localStorage) return;
-  const oldData = localStorage.getItem(oldKey);
-  const newData = localStorage.getItem(newKey);
-  
-  // If new key is empty but old key has valid data, preserve and copy over
-  if ((!newData || newData === '[]') && oldData && oldData !== '[]') {
-    localStorage.setItem(newKey, oldData);
+  try {
+    const oldData = localStorage.getItem(oldKey);
+    const newData = localStorage.getItem(newKey);
+    
+    // If new key is empty but old key has valid data, preserve and copy over
+    if ((!newData || newData === '[]') && oldData && oldData !== '[]') {
+      localStorage.setItem(newKey, oldData);
+      // Remove old redundant key to reclaim localStorage quota
+      localStorage.removeItem(oldKey);
+    }
+  } catch (err) {
+    console.warn(`[migrateStorageKey] Skipped migrating ${oldKey} to ${newKey} to protect quota:`, err);
   }
 };
 
-// Run migrations for all modules on boot
+// Run migrations for all modules on boot exactly once
 export function runLegacyKeyMigrations() {
-  migrateStorageKey('learners', 'munyaka_learners');
-  migrateStorageKey('students', 'munyaka_learners');
-  migrateStorageKey('staff', 'munyaka_staff');
-  migrateStorageKey('assessments', 'munyaka_assessments');
-  migrateStorageKey('marks', 'munyaka_assessments');
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    if (localStorage.getItem(MIGRATION_DONE_FLAG)) return;
+    
+    migrateStorageKey('learners', 'munyaka_learners');
+    migrateStorageKey('students', 'munyaka_learners');
+    migrateStorageKey('staff', 'munyaka_staff');
+    migrateStorageKey('assessments', 'munyaka_assessments');
+    migrateStorageKey('marks', 'munyaka_assessments');
+
+    localStorage.setItem(MIGRATION_DONE_FLAG, 'true');
+  } catch (err) {
+    console.warn('[runLegacyKeyMigrations] Protected from storage quota error:', err);
+  }
 }
 
 // Run immediately on module evaluation / boot
