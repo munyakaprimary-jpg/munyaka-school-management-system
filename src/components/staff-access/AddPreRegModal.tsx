@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RefreshCw, Sparkles, Check, ChevronsUpDown, User, Info, CheckCircle2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import { SystemRole, PreRegisteredStaff } from '@/types/staff-access';
-import { getStaffMaster } from "@/services/staffMasterService";
+import { readGradesAndStreams, getStreamsForGrade } from "@/services/gradesStreamsConfig";
 import { generateAccessKey } from "@/services/staffAccessService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -317,26 +317,36 @@ const AddPreRegModal = ({
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">Stream</Label>
-                <Select
-                  value={formData.assignedStream}
-                  onValueChange={val => {
-                    setFormData(prev => ({
-                      ...prev,
-                      assignedStream: val,
-                      assignedStreamId: val.toLowerCase()
-                    }));
-                  }}
-                >
-                  <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
-                  <SelectContent className="rounded-2xl">
-                    <SelectItem value="Green">Green Stream</SelectItem>
-                    <SelectItem value="Blue">Blue Stream</SelectItem>
-                    <SelectItem value="Gold">Gold Stream</SelectItem>
-                    <SelectItem value="Red">Red Stream</SelectItem>
-                    <SelectItem value="North">North Stream</SelectItem>
-                    <SelectItem value="East">East Stream</SelectItem>
-                  </SelectContent>
-                </Select>
+                {(() => {
+                  const config = readGradesAndStreams();
+                  const rawStreams = getStreamsForGrade(formData.assignedGrade, config);
+                  const availableStreams = rawStreams.length > 0 ? rawStreams : (config.streams.length > 0 ? config.streams : ["Green", "Blue", "Gold", "Red", "North", "East"]);
+                  return (
+                    <Select
+                      value={formData.assignedStream}
+                      onValueChange={val => {
+                        setFormData(prev => ({
+                          ...prev,
+                          assignedStream: val,
+                          assignedStreamId: val.toLowerCase()
+                        }));
+                      }}
+                    >
+                      <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-2xl">
+                        {availableStreams.map((streamName: string) => {
+                          const cleanName = streamName.replace(/(\bstream\b)/gi, '').trim() || streamName;
+                          const displayLabel = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+                          return (
+                            <SelectItem key={streamName} value={cleanName}>
+                              {displayLabel}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  );
+                })()}
               </div>
             </div>
           </div>
