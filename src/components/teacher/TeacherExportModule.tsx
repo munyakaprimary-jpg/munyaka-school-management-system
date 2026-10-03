@@ -25,7 +25,7 @@ export const TeacherExportModule: React.FC = () => {
 
   // Initialize with teacher profile or default
   const [selectedGrade, setSelectedGrade] = useState<string>(() => {
-    return user?.assignedClass || user?.grade || user?.class || grades[0] || 'Grade 1';
+    return grades[0] || 'Grade 1';
   });
 
   const availableStreams = useMemo(() => {
@@ -34,7 +34,7 @@ export const TeacherExportModule: React.FC = () => {
   }, [selectedGrade, config]);
 
   const [selectedStream, setSelectedStream] = useState<string>(() => {
-    return user?.assignedStream || user?.stream || availableStreams[0] || 'Green';
+    return availableStreams[0] || 'Green';
   });
 
   const [isExporting, setIsExporting] = useState(false);

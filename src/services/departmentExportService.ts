@@ -191,10 +191,11 @@ export function exportScienceLabInventory(): void {
  * 6. Teacher Class Package Export
  */
 export function exportClassPackage(streamName: string = "General", classData: any = {}): void {
+  const activeGrade = classData?.assignedClass || JSON.parse(localStorage.getItem('munyaka_temp_export_override') || '{}')?.assignedClass || 'Grade 1';
+  const activeStream = classData?.assignedStream || streamName || 'Green';
+
   let senderName = 'Class Teacher';
   let staffId = 'TCH-001';
-  let assignedClass = 'Grade 1';
-  let assignedStream = streamName;
 
   try {
     const authRaw = localStorage.getItem('munyaka_auth');
@@ -202,12 +203,10 @@ export function exportClassPackage(streamName: string = "General", classData: an
       const user = JSON.parse(authRaw);
       senderName = user.name || senderName;
       staffId = user.staffId || user.id || staffId;
-      assignedClass = user.assignedClass || user.class || user.grade || 'Grade 1';
-      assignedStream = user.assignedStream || user.stream || streamName;
     }
   } catch {}
 
-  const header = createStandardizedExportHeader(senderName, staffId, assignedStream, 'CLASS_PACKAGE', assignedClass, assignedStream);
+  const header = createStandardizedExportHeader(senderName, staffId, activeStream, 'CLASS_PACKAGE', activeGrade, activeStream);
   
   const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
   const marks = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
@@ -223,5 +222,5 @@ export function exportClassPackage(streamName: string = "General", classData: an
     }
   };
 
-  exportJsonFile(`class_package_${assignedClass.replace(/\s+/g, '_')}_${assignedStream}_${Date.now()}.json`, payload, `Class Package Export (${assignedClass} - ${assignedStream})`);
+  exportJsonFile(`class_package_${activeGrade.replace(/\s+/g, '_')}_${activeStream}_${Date.now()}.json`, payload, `Class Package Export (${activeGrade} - ${activeStream})`);
 }
