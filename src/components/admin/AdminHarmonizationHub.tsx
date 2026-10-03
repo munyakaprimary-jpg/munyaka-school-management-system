@@ -148,36 +148,27 @@ export const AdminHarmonizationHub: React.FC = () => {
 
           <div className="flex items-center gap-3 flex-wrap">
             {isAdmin && (
-                          <>
-                            <Button
-                              onClick={() => exportMasterDatabase()}
-                              className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
-                            >
-                              <PackageOpen size={18} className="text-emerald-600" />
-                              <span>Export Master JSON Package</span>
-                            </Button>
-                            <Button
-                              onClick={() => exportMasterSyncPackage()}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
-                            >
-                              <Database size={18} className="text-white" />
-                              <span>Generate Master Sync Package</span>
-                            </Button>
-                          </>
-                        )}
-            
-                        <label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 backdrop-blur-md">
-                          <Upload size={18} className="text-emerald-200" />
-                          <span>{isUploading ? 'Parsing Files...' : 'Upload Teacher Export(s)'}</span>
-                          <input
-                            type="file"
-                            accept=".json,application/json"
-                            multiple
-                            onChange={handleFileUpload}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
+              <Button
+                onClick={() => exportMasterSyncPackage()}
+                className="bg-white text-emerald-950 hover:bg-emerald-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2.5 border border-white/30"
+              >
+                <PackageOpen size={18} className="text-emerald-600" />
+                <span>Export Master Sync Package</span>
+              </Button>
+            )}
+
+            <label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 backdrop-blur-md">
+              <Upload size={18} className="text-emerald-200" />
+              <span>{isUploading ? 'Parsing Files...' : 'Upload Teacher Export(s)'}</span>
+              <input
+                type="file"
+                accept=".json,application/json"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+          </div>
                     </div>
                   </div>
             
