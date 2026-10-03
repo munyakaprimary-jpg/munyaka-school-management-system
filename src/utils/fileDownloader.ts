@@ -330,16 +330,35 @@ async function saveToDevice(opts: {
 }
 
 export async function downloadAppFile(filename: string, jsonData: any, mimeType = 'application/json'): Promise<string> {
-  const fileContent = typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData, null, 2);
-  const fileType: FileType = mimeType.includes('csv') ? 'csv' : mimeType.includes('pdf') ? 'pdf' : mimeType.includes('json') ? 'json' : 'txt';
+  try {
+    const fileContent = typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData, null, 2);
+    const fileType: FileType = mimeType.includes('csv') ? 'csv' : mimeType.includes('pdf') ? 'pdf' : mimeType.includes('json') ? 'json' : 'txt';
 
-  const res = await saveToDevice({
-    filename,
-    data: fileContent,
-    mimeType,
-    fileType
-  });
-  return res;
+    const res = await saveToDevice({
+      filename,
+      data: fileContent,
+      mimeType,
+      fileType
+    });
+    return res;
+  } catch (err: any) {
+    console.warn('[downloadAppFile] Native save failed, using browser download fallback:', err);
+    try {
+      const blob = new Blob([typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData, null, 2)], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return url;
+    } catch (blobErr) {
+      console.error('[downloadAppFile] Fallback download failed:', blobErr);
+      throw blobErr;
+    }
+  }
 }
 
 // ============================================
