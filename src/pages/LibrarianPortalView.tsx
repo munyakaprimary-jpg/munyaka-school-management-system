@@ -28,11 +28,11 @@ import {
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { downloadAppFile } from '@/utils/fileDownloader';
+import { showSuccess, showError } from '@/utils/toast';
 import { Book, BorrowLog, getLogStatusInfo } from '@/types/library';
 
 export const LibrarianPortalView: React.FC = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
 
   const librarianName = user?.name || 'JANET GATHONI KUNGU';
   const librarianId = user?.id || 'LIB-001';
@@ -124,16 +124,9 @@ export const LibrarianPortalView: React.FC = () => {
     setIsExporting(true);
     try {
       await exportLibrarianPackage();
-      toast({
-        title: "Library Batch Delta Exported Successfully",
-        description: `Saved Librarian package ready for Admin Harmonization.`
-      });
+      showSuccess("Library Batch Delta Exported Successfully: Saved Librarian package ready for Admin Harmonization.");
     } catch (err: any) {
-      toast({
-        title: "Export Failed",
-        description: err.message || "Could not generate library batch package.",
-        variant: "destructive"
-      });
+      showError(err.message || "Could not generate library batch package.");
     } finally {
       setIsExporting(false);
     }
@@ -152,10 +145,7 @@ export const LibrarianPortalView: React.FC = () => {
   const handleCopyShare = () => {
     navigator.clipboard.writeText(getShareText());
     setCopiedShare(true);
-    toast({
-      title: "Summary Copied to Clipboard",
-      description: "Paste this library status into WhatsApp or local chat channels."
-    });
+    showSuccess("Summary Copied to Clipboard: Paste this library status into WhatsApp or local chat channels.");
     setTimeout(() => setCopiedShare(false), 3000);
   };
 
@@ -165,11 +155,7 @@ export const LibrarianPortalView: React.FC = () => {
 
   const handleIssueBook = () => {
     if (books.length === 0) {
-      toast({
-        title: "No Items in Catalog",
-        description: "Please catalog an item before issuing.",
-        variant: "destructive"
-      });
+      showError("Please catalog an item before issuing.");
       return;
     }
     // Select the first book by default or prompt if multiple
@@ -183,21 +169,14 @@ export const LibrarianPortalView: React.FC = () => {
 
     // Verify admin password against standard system credentials or fallback admin key
     if (adminPassword !== 'admin123' && adminPassword !== 'Munyaka2025!' && adminPassword !== 'admin') {
-      toast({
-        title: "Unauthorized",
-        description: "Incorrect admin password. Deletion unauthorized.",
-        variant: "destructive"
-      });
+      showError("Incorrect admin password. Deletion unauthorized.");
       return;
     }
 
     const updated = historyLogs.filter(log => log.id !== id);
     setHistoryLogs(updated);
     localStorage.setItem('school_library_logs_v1', JSON.stringify(updated));
-    toast({
-      title: "Circulation Log Removed",
-      description: `Successfully deleted record for "${bookTitle}" with admin authorization.`
-    });
+    showSuccess(`Circulation Log Removed: Successfully deleted record for "${bookTitle}" with admin authorization.`);
   };
 
   return (
@@ -487,10 +466,7 @@ export const LibrarianPortalView: React.FC = () => {
           setBooks(updated);
           localStorage.setItem('school_library_inventory_v1', JSON.stringify(updated));
           localStorage.setItem('textbook_inventory', JSON.stringify(updated));
-          toast({
-            title: "Item Cataloged Successfully",
-            description: `Added "${newBook.title}" with ${newBook.totalCopies} ${newBook.unit || 'Pieces'}.`
-          });
+          showSuccess("Item Cataloged Successfully");
         }}
       />
 
@@ -542,10 +518,7 @@ export const LibrarianPortalView: React.FC = () => {
           localStorage.setItem('school_library_inventory_v1', JSON.stringify(updatedBooks));
           localStorage.setItem('textbook_inventory', JSON.stringify(updatedBooks));
 
-          toast({
-            title: "Material Issued Successfully",
-            description: `Checked out ${quantity} of "${targetBook.title}" to ${borrowerName} (${borrowerType}).`
-          });
+          showSuccess(`Material Issued Successfully: Checked out ${quantity} of "${targetBook.title}" to ${borrowerName} (${borrowerType}).`);
         }}
       />
     </div>
