@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RefreshCw, Sparkles, Check, ChevronsUpDown, User, Info, CheckCircle2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import { getStaffMaster } from "@/services/staffMasterService";
+import { SystemRole, PreRegisteredStaff } from '@/types/staff-access';
 import { readGradesAndStreams, getStreamsForGrade } from "@/services/gradesStreamsConfig";
 import { generateAccessKey } from "@/services/staffAccessService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
