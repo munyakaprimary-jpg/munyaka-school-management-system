@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Upload, FileText, CheckCircle2, AlertCircle, ShieldCheck, Database, RefreshCw, Trash2, ArrowRight, PackageOpen } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, AlertCircle, ShieldCheck, Database, RefreshCw, Trash2, ArrowRight, PackageOpen, Download } from 'lucide-react';
 import { harmonizationService, HarmonizationAuditItem } from '@/services/harmonizationService';
-import { exportMasterDatabase } from '@/utils/exportMasterDatabase';
+import { exportMasterDatabase, exportMasterSyncPackage } from '@/utils/exportMasterDatabase';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
