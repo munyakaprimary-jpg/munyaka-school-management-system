@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import CentralDataService from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
+import { getStoredLearners } from '../../utils/learnersStore';
+import { useCentralData } from '../../hooks/useCentralData';
 import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon, FileText, ShieldCheck, Database, ArrowRight, Sparkles, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,8 +25,10 @@ export const AdminDashboardComponent: React.FC = () => {
     } catch {}
   }, []);
 
-  const learners = storeLearners && storeLearners.length > 0 ? storeLearners : CentralDataService.getLearners();
-  const staff = storeStaff && storeStaff.length > 0 ? storeStaff : CentralDataService.getStaff();
+  // Use unified central data source for consistent student counts across Admin & Teacher dashboards
+  const { totalStudents: centralTotalStudents } = useCentralData();
+  const learners = getStoredLearners();
+  const staff = useSchoolStore(state => state.staff) || CentralDataService.getStaff();
 
   const teaching = staff.filter((s: any) => {
     const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
@@ -46,13 +50,13 @@ export const AdminDashboardComponent: React.FC = () => {
   });
 
   const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
-  const junior = learners.length - primary.length;
-
-  const totalStudents = learners.length;
-  const teachingStaffCount = teaching.length;
-  const nonTeachingStaffCount = nonTeaching.length;
-  const primaryCount = primary.length;
-  const juniorCount = junior;
+    const junior = learners.length - primary.length;
+  
+    const totalStudents = centralTotalStudents;
+    const teachingStaffCount = teaching.length;
+    const nonTeachingStaffCount = nonTeaching.length;
+    const primaryCount = primary.length;
+    const juniorCount = junior;
 
   const [selectedYear, setSelectedYear] = useState('2026');
 
