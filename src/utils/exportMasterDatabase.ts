@@ -262,7 +262,6 @@ export function generateMasterSyncPackage(senderInfo?: {
       staff,
       attendance,
       fees,
-      studentPayments,
       feeLedgers: fees,
       library,
       marks,
