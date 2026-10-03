@@ -96,17 +96,10 @@ export function generateMasterSyncPackage(senderInfo?: {
     console.error('Error crawling localStorage for master sync:', err);
   }
 
-  // 2. Extract live runtime data with zero fallback to hardcoded initial seed arrays and zero class-level filtering
+  // 2. Extract live runtime data with absolute exhaustive harvesting across all keys
   const learners = (() => {
-    // Force direct aggregation across all school-wide master keys first
-    const schoolMaster = localStorage.getItem('school_learners_master');
-    if (schoolMaster) {
-      try {
-        const parsed = JSON.parse(schoolMaster);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch {}
-    }
-
+    // Collect all unique learner records from every possible key to guarantee 100% capture of all 21 learners
+    const map = new Map();
     const candidateKeys = [
       'school_learners_master',
       'munyaka_learners',
@@ -117,15 +110,31 @@ export function generateMasterSyncPackage(senderInfo?: {
     ];
     for (const key of candidateKeys) {
       const val = allKeys[key];
-      if (Array.isArray(val) && val.length > 0) return val;
-      if (val && typeof val === 'object' && Array.isArray(val.students) && val.students.length > 0) return val.students;
+      if (Array.isArray(val)) {
+        val.forEach((l: any) => {
+          const id = l.id || l.admissionNumber || l.upi || JSON.stringify(l);
+          map.set(id, l);
+        });
+      } else if (val && typeof val === 'object' && Array.isArray(val.students)) {
+        val.students.forEach((l: any) => {
+          const id = l.id || l.admissionNumber || l.upi || JSON.stringify(l);
+          map.set(id, l);
+        });
+      }
     }
     const storeLearners = getStoredLearners();
-    if (Array.isArray(storeLearners) && storeLearners.length > 0) return storeLearners;
-    return [];
+    if (Array.isArray(storeLearners)) {
+      storeLearners.forEach((l: any) => {
+        const id = l.id || l.admissionNumber || l.upi || JSON.stringify(l);
+        map.set(id, l);
+      });
+    }
+    return Array.from(map.values());
   })();
 
   const staff = (() => {
+    // Collect all unique staff members from every possible key to guarantee 100% capture of all 5 staff
+    const map = new Map();
     const candidateKeys = [
       'staff_members',
       'munyaka_staff_directory',
@@ -136,9 +145,14 @@ export function generateMasterSyncPackage(senderInfo?: {
     ];
     for (const key of candidateKeys) {
       const val = allKeys[key];
-      if (Array.isArray(val) && val.length > 0) return val;
+      if (Array.isArray(val)) {
+        val.forEach((s: any) => {
+          const id = s.id || s.staffId || s.email || JSON.stringify(s);
+          map.set(id, s);
+        });
+      }
     }
-    return [];
+    return Array.from(map.values());
   })();
 
   const attendance = (() => {
@@ -245,6 +259,9 @@ export function generateMasterSyncPackage(senderInfo?: {
     appVersion: '2.0.0',
     data: {
       learners,
+      school_learners_master: learners,
+      staff,
+      staff_members: staff,
       attendance,
       fees,
       studentPayments,
@@ -264,7 +281,6 @@ export function generateMasterSyncPackage(senderInfo?: {
       storeInventory,
       timetable,
       settings,
-      staff,
       allStorageSnapshot: allKeys // Full snapshot to guarantee 100% mirror match on import
     },
   };
