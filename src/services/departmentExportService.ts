@@ -1,182 +1,210 @@
 /**
- * Standard department export service
- * Provides robust export helper functions for Bursar, ICT, Librarian, Storekeeper, and Science Lab
- * with standardized sender metadata headers.
+ * Departmental & Staff Export Service (`departmentExportService.ts`)
+ * Standardized data export utilities for Bursar, ICT, Librarian, Storekeeper,
+ * Science Lab, and Teacher Class Packages.
+ * 
+ * Enforces mandatory sender metadata headers & class/stream assignments.
  */
 
-export interface ExportMetadata {
-  senderName: string;
-  staffId: string;
-  departmentOrStream: string;
-  exportedAt: string;
-  appVersion: string;
-  [key: string]: any;
-}
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { showSuccess, showError } from '@/utils/toast';
 
-export function createStandardExportHeader(departmentFallback: string = "General"): ExportMetadata {
-  if (typeof window === "undefined") {
-    return {
-      senderName: "Unknown Staff",
-      staffId: "N/A",
-      departmentOrStream: departmentFallback,
-      exportedAt: new Date().toISOString(),
-      appVersion: "1.0"
-    };
-  }
+/**
+ * Standardized Export Metadata Header Creator
+ * Injects senderName, staffId, departmentOrStream, assignedClass, assignedStream, exportedAt, and appVersion.
+ */
+export function createStandardizedExportHeader(
+  senderName: string = 'Staff Member',
+  staffId: string = 'STF-001',
+  departmentOrStream: string = 'General',
+  packageType: string = 'CLASS_PACKAGE'
+): Record<string, any> {
+  let assignedClass = 'Grade 1';
+  let assignedStream = departmentOrStream || 'North';
 
-  // Check possible keys used across the app
-  const senderName =
-    localStorage.getItem("current_user_name") ||
-    localStorage.getItem("munyaka_current_user_name") ||
-    localStorage.getItem("current_user_display_name") ||
-    localStorage.getItem("staff_name") ||
-    "Unknown Staff";
-
-  const staffId =
-    localStorage.getItem("current_user_id") ||
-    localStorage.getItem("munyaka_current_user_id") ||
-    localStorage.getItem("staff_id") ||
-    "N/A";
-
-  const departmentOrStream =
-    localStorage.getItem("current_department_or_stream") ||
-    localStorage.getItem("current_stream") ||
-    localStorage.getItem("current_department") ||
-    departmentFallback;
+  try {
+    const authRaw = localStorage.getItem('munyaka_auth');
+    if (authRaw) {
+      const user = JSON.parse(authRaw);
+      assignedClass = user.assignedClass || user.class || user.grade || 'Grade 1';
+      assignedStream = user.assignedStream || user.stream || departmentOrStream || 'North';
+    }
+  } catch {}
 
   return {
-    senderName,
-    staffId,
-    departmentOrStream,
-    exportedAt: new Date().toISOString(),
-    appVersion: "1.0"
+    metadata: {
+      senderName,
+      staffId,
+      departmentOrStream,
+      packageType,
+      assignedClass,
+      assignedStream,
+      exportedAt: new Date().toISOString(),
+      appVersion: '2.0.0'
+    }
   };
 }
 
-function triggerDownload(payload: object, defaultFilename: string) {
-  if (typeof document === "undefined") return;
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = defaultFilename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
+/**
+ * Helper to write and share or download JSON exports
+ */
+async function exportJsonFile(filename: string, payload: any, successTitle: string): Promise<void> {
+  const jsonString = JSON.stringify(payload, null, 2);
 
-export function exportBursarPackage(): void {
   try {
-    const metadata = createStandardExportHeader("Bursar");
-    const payload = {
-      metadata,
-      data: {
-        fees: typeof window !== "undefined" ? localStorage.getItem("munyaka_fees") || "[]" : "[]",
-        transactions: typeof window !== "undefined" ? localStorage.getItem("munyaka_transactions") || "[]" : "[]",
-        invoices: typeof window !== "undefined" ? localStorage.getItem("munyaka_invoices") || "[]" : "[]"
+    if (Capacitor.isNativePlatform()) {
+      const writeResult = await Filesystem.writeFile({
+        path: filename,
+        data: jsonString,
+        directory: Directory.Cache,
+        encoding: undefined as any
+      });
+
+      try {
+        await Share.share({
+          title: successTitle,
+          text: `Export package generated at ${new Date().toLocaleString()}`,
+          url: writeResult.uri,
+          dialogTitle: successTitle,
+        });
+      } catch (shareErr: any) {
+        console.warn('Share dismissed:', shareErr);
       }
-    };
-    triggerDownload(payload, `bursar-export-${new Date().toISOString().slice(0, 10)}.json`);
-  } catch (err) {
-    console.error("Failed to export bursar package:", err);
-    throw err;
+
+      showSuccess(`${successTitle} cached & shared successfully!`);
+    } else {
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showSuccess(`${successTitle} downloaded successfully!`);
+    }
+  } catch (err: any) {
+    console.error('Export failed:', err);
+    showError(err?.message || 'Failed to export file');
   }
 }
 
-export function exportICTTechnicalPackage(): void {
-  try {
-    const metadata = createStandardExportHeader("ICT Lab");
-    const payload = {
-      metadata,
-      data: {
-        assets: typeof window !== "undefined" ? localStorage.getItem("munyaka_ict_assets") || "[]" : "[]",
-        devices: typeof window !== "undefined" ? localStorage.getItem("munyaka_connected_devices") || "[]" : "[]",
-        maintenance: typeof window !== "undefined" ? localStorage.getItem("munyaka_maintenance_logs") || "[]" : "[]"
-      }
-    };
-    triggerDownload(payload, `ict-technical-export-${new Date().toISOString().slice(0, 10)}.json`);
-  } catch (err) {
-    console.error("Failed to export ICT technical package:", err);
-    throw err;
-  }
+/**
+ * 1. Bursar Financial Export
+ */
+export function exportBursarLedger(): void {
+  const header = createStandardizedExportHeader('Bursar Department', 'BUR-001', 'Finance', 'BURSAR_LEDGER');
+  const fees = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
+  const payments = JSON.parse(localStorage.getItem('munyaka_payment_records') || '[]');
+  
+  const payload = {
+    ...header,
+    data: { fees, payments }
+  };
+  
+  exportJsonFile(`bursar_ledger_export_${Date.now()}.json`, payload, 'Bursar Financial Ledger Export');
 }
 
-export function exportLibrarianPackage(): void {
-  try {
-    const metadata = createStandardExportHeader("Library");
-    const payload = {
-      metadata,
-      data: {
-        books: typeof window !== "undefined" ? localStorage.getItem("munyaka_library_books") || "[]" : "[]",
-        allocations: typeof window !== "undefined" ? localStorage.getItem("munyaka_book_allocations") || "[]" : "[]",
-        history: typeof window !== "undefined" ? localStorage.getItem("munyaka_library_history") || "[]" : "[]"
-      }
-    };
-    triggerDownload(payload, `librarian-export-${new Date().toISOString().slice(0, 10)}.json`);
-  } catch (err) {
-    console.error("Failed to export librarian package:", err);
-    throw err;
-  }
+/**
+ * 2. ICT Equipment Export
+ */
+export function exportICTInventory(): void {
+  const header = createStandardizedExportHeader('ICT Department', 'ICT-001', 'ICT Lab', 'ICT_INVENTORY');
+  const equipment = JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]');
+  
+  const payload = {
+    ...header,
+    data: { equipment }
+  };
+  
+  exportJsonFile(`ict_inventory_export_${Date.now()}.json`, payload, 'ICT Equipment Inventory Export');
 }
 
-export function exportStorekeeperPackage(): void {
-  try {
-    const metadata = createStandardExportHeader("Storekeeper");
-    const payload = {
-      metadata,
-      data: {
-        inventory: typeof window !== "undefined" ? localStorage.getItem("munyaka_store_inventory") || "[]" : "[]",
-        requisitions: typeof window !== "undefined" ? localStorage.getItem("munyaka_store_requisitions") || "[]" : "[]"
-      }
-    };
-    triggerDownload(payload, `storekeeper-export-${new Date().toISOString().slice(0, 10)}.json`);
-  } catch (err) {
-    console.error("Failed to export storekeeper package:", err);
-    throw err;
-  }
+/**
+ * 3. Librarian Circulation Export
+ */
+export function exportLibraryCirculation(): void {
+  const header = createStandardizedExportHeader('School Librarian', 'LIB-001', 'Library', 'LIBRARY_CIRCULATION');
+  const books = JSON.parse(localStorage.getItem('munyaka_library_books') || '[]');
+  const history = JSON.parse(localStorage.getItem('munyaka_library_history') || '[]');
+  
+  const payload = {
+    ...header,
+    data: { books, history }
+  };
+  
+  exportJsonFile(`library_circulation_export_${Date.now()}.json`, payload, 'Library Circulation Export');
 }
 
-export function exportScienceLabPackage(): void {
-  try {
-    const metadata = createStandardExportHeader("Science Lab");
-    const payload = {
-      metadata,
-      data: {
-        equipment: typeof window !== "undefined" ? localStorage.getItem("munyaka_science_equipment") || "[]" : "[]",
-        chemicals: typeof window !== "undefined" ? localStorage.getItem("munyaka_science_chemicals") || "[]" : "[]",
-        experiments: typeof window !== "undefined" ? localStorage.getItem("munyaka_science_experiments") || "[]" : "[]"
-      }
-    };
-    triggerDownload(payload, `science-lab-export-${new Date().toISOString().slice(0, 10)}.json`);
-  } catch (err) {
-    console.error("Failed to export science lab package:", err);
-    throw err;
-  }
+/**
+ * 4. Storekeeper Inventory Export
+ */
+export function exportStoreInventory(): void {
+  const header = createStandardizedExportHeader('Storekeeper', 'STR-001', 'General Store', 'STORE_INVENTORY');
+  const items = JSON.parse(localStorage.getItem('munyaka_store_items') || '[]');
+  
+  const payload = {
+    ...header,
+    data: { items }
+  };
+  
+  exportJsonFile(`store_inventory_export_${Date.now()}.json`, payload, 'Store Inventory Export');
 }
 
+/**
+ * 5. Science Lab Inventory Export
+ */
+export function exportScienceLabInventory(): void {
+  const header = createStandardizedExportHeader('Science Lab Technician', 'SCI-001', 'Science Laboratory', 'SCIENCE_LAB_INVENTORY');
+  const chemicals = JSON.parse(localStorage.getItem('munyaka_science_lab') || '[]');
+  
+  const payload = {
+    ...header,
+    data: { chemicals }
+  };
+  
+  exportJsonFile(`science_lab_export_${Date.now()}.json`, payload, 'Science Lab Inventory Export');
+}
+
+/**
+ * 6. Teacher Class Package Export
+ */
 export function exportClassPackage(streamName: string = "General", classData: any = {}): void {
+  let senderName = 'Class Teacher';
+  let staffId = 'TCH-001';
+  let assignedClass = 'Grade 1';
+  let assignedStream = streamName;
+
   try {
-    const metadata = createStandardExportHeader(streamName);
-    const payload = {
-      metadata,
-      data: classData
-    };
-    triggerDownload(payload, `class-package-${streamName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.json`);
-  } catch (err) {
-    console.error("Failed to export class package:", err);
-    throw err;
-  }
+    const authRaw = localStorage.getItem('munyaka_auth');
+    if (authRaw) {
+      const user = JSON.parse(authRaw);
+      senderName = user.name || senderName;
+      staffId = user.staffId || user.id || staffId;
+      assignedClass = user.assignedClass || user.class || user.grade || 'Grade 1';
+      assignedStream = user.assignedStream || user.stream || streamName;
+    }
+  } catch {}
+
+  const header = createStandardizedExportHeader(senderName, staffId, assignedStream, 'CLASS_PACKAGE', assignedClass, assignedStream);
+  
+  const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
+  const marks = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
+  const checkIns = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || '[]');
+
+  const payload = {
+    ...header,
+    data: {
+      attendance,
+      marks,
+      checkIns,
+      ...classData
+    }
+  };
+
+  exportJsonFile(`class_package_${assignedClass.replace(/\s+/g, '_')}_${assignedStream}_${Date.now()}.json`, payload, `Class Package Export (${assignedClass} - ${assignedStream})`);
 }
-
-const departmentExportService = {
-  createStandardExportHeader,
-  exportBursarPackage,
-  exportICTTechnicalPackage,
-  exportLibrarianPackage,
-  exportStorekeeperPackage,
-  exportScienceLabPackage,
-  exportClassPackage,
-};
-
-export default departmentExportService;

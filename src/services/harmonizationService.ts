@@ -8,6 +8,8 @@ export interface HarmonizationAuditItem {
     staffId: string;
     role?: string;
     departmentOrStream?: string;
+    assignedClass?: string;
+    assignedStream?: string;
     timestamp?: string;
     exportedAt?: string;
     packageType?: string;
@@ -27,8 +29,10 @@ export interface HarmonizationAuditItem {
   assessmentCount: number;
   inventoryCount: number;
   learnerCount: number;
+  hasStreamMismatch?: boolean;
+  streamMismatchReason?: string;
   rawPackage: any;
-  status: 'pending' | 'harmonized' | 'error';
+  status: 'pending' | 'harmonized' | 'error' | 'mismatch';
 }
 
 export const harmonizationService = {
@@ -47,28 +51,64 @@ export const harmonizationService = {
             throw new Error('Invalid package format: missing root metadata property.');
           }
 
+          const metadata = jsonData.metadata;
+          const assignedClass = metadata.assignedClass || metadata.departmentOrStream || 'Grade 1';
+          const assignedStream = metadata.assignedStream || metadata.departmentOrStream || 'North';
+
+          // Validate stream mismatch against authorized admin slots or system records
+          let hasStreamMismatch = false;
+          let streamMismatchReason = '';
+
+          // Check if admin has defined authorized teacher slots in localStorage
+          try {
+            const authorizedSlotsRaw = localStorage.getItem('munyaka_teacher_slots') || localStorage.getItem('munyaka_class_assignments');
+            if (authorizedSlotsRaw) {
+              const slots = JSON.parse(authorizedSlotsRaw);
+              if (Array.isArray(slots) && slots.length > 0) {
+                const staffId = metadata.staffId;
+                const match = slots.find((s: any) => 
+                  String(s.staffId || s.teacherId || s.id) === String(staffId) ||
+                  String(s.teacherName || s.name || '').toLowerCase() === String(metadata.senderName || '').toLowerCase()
+                );
+                if (match) {
+                  const allowedClass = match.grade || match.class || match.assignedClass;
+                  const allowedStream = match.stream || match.assignedStream;
+                  if (allowedClass && allowedClass.toLowerCase() !== assignedClass.toLowerCase()) {
+                    hasStreamMismatch = true;
+                    streamMismatchReason = `Assigned class "${assignedClass}" differs from authorized slot "${allowedClass}".`;
+                  } else if (allowedStream && allowedStream.toLowerCase() !== assignedStream.toLowerCase()) {
+                    hasStreamMismatch = true;
+                    streamMismatchReason = `Assigned stream "${assignedStream}" differs from authorized slot "${allowedStream}".`;
+                  }
+                }
+              }
+            }
+          } catch {}
+
           const header = jsonData.header || {
-            teacherName: jsonData.metadata.senderName || jsonData.metadata.staffId || 'Staff Member',
-            teacherId: jsonData.metadata.staffId || 'UNKNOWN',
-            assignedGrade: jsonData.metadata.departmentOrStream || jsonData.metadata.packageType || 'General',
-            assignedStream: jsonData.metadata.role || 'Staff',
-            timestamp: jsonData.metadata.exportedAt || jsonData.metadata.timestamp || new Date().toISOString(),
-            exportVersion: jsonData.metadata.appVersion || '1.0.0',
+            teacherName: metadata.senderName || metadata.staffId || 'Staff Member',
+            teacherId: metadata.staffId || 'UNKNOWN',
+            assignedGrade: assignedClass,
+            assignedStream: assignedStream,
+            timestamp: metadata.exportedAt || metadata.timestamp || new Date().toISOString(),
+            exportVersion: metadata.appVersion || '1.0.0',
             deviceId: 'DEV-OFFLINE'
           };
 
           const auditItem: HarmonizationAuditItem = {
             id: 'audit-' + Math.random().toString(36).substring(2, 9),
             fileName: file.name,
-            metadata: jsonData.metadata,
+            metadata,
             header,
-            attendanceCount: Array.isArray(jsonData.attendanceRecords) ? jsonData.attendanceRecords.length : 0,
-            checkInCount: Array.isArray(jsonData.teacherCheckInLogs) ? jsonData.teacherCheckInLogs.length : 0,
-            assessmentCount: Array.isArray(jsonData.cbcAssessments) ? jsonData.cbcAssessments.length : 0,
-            inventoryCount: Array.isArray(jsonData.classInventory) ? jsonData.classInventory.length : 0,
-            learnerCount: Array.isArray(jsonData.learners) ? jsonData.learners.length : 0,
+            attendanceCount: Array.isArray(jsonData.data?.attendance) ? jsonData.data.attendance.length : (Array.isArray(jsonData.attendanceRecords) ? jsonData.attendanceRecords.length : 0),
+            checkInCount: Array.isArray(jsonData.data?.checkIns) ? jsonData.data.checkIns.length : (Array.isArray(jsonData.teacherCheckInLogs) ? jsonData.teacherCheckInLogs.length : 0),
+            assessmentCount: Array.isArray(jsonData.data?.marks) ? jsonData.data.marks.length : (Array.isArray(jsonData.cbcAssessments) ? jsonData.cbcAssessments.length : 0),
+            inventoryCount: Array.isArray(jsonData.data?.inventory) ? jsonData.data.inventory.length : (Array.isArray(jsonData.classInventory) ? jsonData.classInventory.length : 0),
+            learnerCount: Array.isArray(jsonData.data?.learners) ? jsonData.data.learners.length : (Array.isArray(jsonData.learners) ? jsonData.learners.length : 0),
+            hasStreamMismatch,
+            streamMismatchReason,
             rawPackage: jsonData,
-            status: 'pending'
+            status: hasStreamMismatch ? 'mismatch' : 'pending'
           };
 
           resolve(auditItem);
@@ -90,102 +130,75 @@ export const harmonizationService = {
     const errors: string[] = [];
 
     for (const item of items) {
+      if (item.hasStreamMismatch && item.status !== 'harmonized') {
+        errors.push(`File ${item.fileName} has unverified stream mismatch: ${item.streamMismatchReason}`);
+        continue;
+      }
+
       try {
-        const { header, attendanceRecords, teacherCheckInLogs, cbcAssessments, classInventory, learners } = item.rawPackage;
-        const gradeStreamKey = `${header.assignedGrade || 'Grade'}_${header.assignedStream || 'Green'}`;
+        const raw = item.rawPackage;
+        const data = raw.data || raw;
+        const meta = item.metadata;
+        const assignedClass = meta.assignedClass || item.header?.assignedGrade || 'Grade 1';
+        const assignedStream = meta.assignedStream || item.header?.assignedStream || 'North';
 
         // 1. Harmonize Learners / Roster
+        const learners = data.learners || raw.learners;
         if (Array.isArray(learners) && learners.length > 0) {
           const existingLearners = CentralDataService.getLearners();
           const mergedLearners = [...existingLearners];
           for (const incoming of learners) {
-            const idx = mergedLearners.findIndex((l: any) => l.id === incoming.id || (l.admissionNumber && l.admissionNumber === incoming.admissionNumber));
+            const idx = mergedLearners.findIndex((l: any) => l.id === incoming.id || (l.admissionNumber && l.admissionNumber === incoming.admissionNumber) || (l.admNo && l.admNo === incoming.admNo));
             if (idx >= 0) {
-              // update matching stream/grade safely
-              mergedLearners[idx] = { ...mergedLearners[idx], ...incoming, grade: header.assignedGrade, stream: header.assignedStream };
+              mergedLearners[idx] = { ...mergedLearners[idx], ...incoming, grade: assignedClass, stream: assignedStream };
             } else {
-              mergedLearners.push({ ...incoming, grade: header.assignedGrade, stream: header.assignedStream });
+              mergedLearners.push({ ...incoming, grade: assignedClass, stream: assignedStream });
             }
           }
           CentralDataService.saveLearners(mergedLearners);
         }
 
         // 2. Harmonize Attendance Records
-        if (Array.isArray(attendanceRecords) && attendanceRecords.length > 0) {
+        const attendance = data.attendance || raw.attendanceRecords;
+        if (Array.isArray(attendance) && attendance.length > 0) {
           try {
             const stored = localStorage.getItem('munyaka_attendance_records');
             const allAtt = stored ? JSON.parse(stored) : [];
             const mergedAtt = [...allAtt];
-            for (const att of attendanceRecords) {
+            for (const att of attendance) {
               const idx = mergedAtt.findIndex((r: any) => r.id === att.id || (r.studentId === att.studentId && r.date === att.date));
               if (idx >= 0) {
-                mergedAtt[idx] = { ...mergedAtt[idx], ...att };
+                mergedAtt[idx] = { ...mergedAtt[idx], ...att, assignedClass, assignedStream };
               } else {
-                mergedAtt.push(att);
+                mergedAtt.push({ ...att, assignedClass, assignedStream });
               }
             }
             localStorage.setItem('munyaka_attendance_records', JSON.stringify(mergedAtt));
           } catch {}
         }
 
-        // 3. Harmonize Teacher Check-In Logs
-        if (Array.isArray(teacherCheckInLogs) && teacherCheckInLogs.length > 0) {
+        // 3. Harmonize Marks / Assessments
+        const marks = data.marks || raw.cbcAssessments;
+        if (Array.isArray(marks) && marks.length > 0) {
           try {
-            const stored = localStorage.getItem('munyaka_teacher_attendance');
-            const allTAtt = stored ? JSON.parse(stored) : [];
-            const mergedTAtt = [...allTAtt];
-            for (const tAtt of teacherCheckInLogs) {
-              const idx = mergedTAtt.findIndex((r: any) => r.id === tAtt.id || (r.teacherId === tAtt.teacherId && r.date === tAtt.date));
-              if (idx >= 0) {
-                mergedTAtt[idx] = { ...mergedTAtt[idx], ...tAtt };
-              } else {
-                mergedTAtt.push(tAtt);
-              }
-            }
-            localStorage.setItem('munyaka_teacher_attendance', JSON.stringify(mergedTAtt));
-          } catch {}
-        }
-
-        // 4. Harmonize CBC Assessments / Marks
-        if (Array.isArray(cbcAssessments) && cbcAssessments.length > 0) {
-          try {
-            const key = localStorage.getItem('munyaka_marks') ? 'munyaka_marks' : 'munyaka_assessments';
-            const stored = localStorage.getItem(key) || '[]';
-            const allMarks = JSON.parse(stored);
+            const stored = localStorage.getItem('marked_student_submissions');
+            const allMarks = stored ? JSON.parse(stored) : [];
             const mergedMarks = [...allMarks];
-            for (const mark of cbcAssessments) {
-              const idx = mergedMarks.findIndex((m: any) => m.id === mark.id || (m.studentId === mark.studentId && m.strandId === mark.strandId));
+            for (const m of marks) {
+              const idx = mergedMarks.findIndex((r: any) => r.id === m.id || (r.studentId === m.studentId && r.assessmentId === m.assessmentId));
               if (idx >= 0) {
-                mergedMarks[idx] = { ...mergedMarks[idx], ...mark };
+                mergedMarks[idx] = { ...mergedMarks[idx], ...m, assignedClass, assignedStream };
               } else {
-                mergedMarks.push(mark);
+                mergedMarks.push({ ...m, assignedClass, assignedStream });
               }
             }
-            localStorage.setItem(key, JSON.stringify(mergedMarks));
-          } catch {}
-        }
-
-        // 5. Harmonize Class Inventory / Assets
-        if (Array.isArray(classInventory) && classInventory.length > 0) {
-          try {
-            const stored = localStorage.getItem('munyaka_ict_assets');
-            const allInv = stored ? JSON.parse(stored) : [];
-            const mergedInv = [...allInv];
-            for (const inv of classInventory) {
-              const idx = mergedInv.findIndex((i: any) => i.id === inv.id || i.assetTag === inv.assetTag);
-              if (idx >= 0) {
-                mergedInv[idx] = { ...mergedInv[idx], ...inv };
-              } else {
-                mergedInv.push(inv);
-              }
-            }
-            localStorage.setItem('munyaka_ict_assets', JSON.stringify(mergedInv));
+            localStorage.setItem('marked_student_submissions', JSON.stringify(mergedMarks));
           } catch {}
         }
 
         successCount++;
       } catch (err: any) {
-        errors.push(`Failed to harmonize ${item.fileName}: ${err.message}`);
+        errors.push(`Failed to merge ${item.fileName}: ${err.message}`);
       }
     }
 

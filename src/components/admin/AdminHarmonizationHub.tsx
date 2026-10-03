@@ -298,9 +298,16 @@ export const AdminHarmonizationHub: React.FC = () => {
                           <div className="text-[10px] text-slate-400 font-mono">ID: {item.metadata.staffId || item.header?.teacherId || 'N/A'} · <span className="uppercase text-emerald-600">{item.metadata.role || 'Staff'}</span></div>
                         </td>
                         <td className="py-4 px-4">
-                          <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50 font-bold text-xs">
-                            {item.metadata.departmentOrStream || item.header?.assignedGrade || 'General'} {item.header?.assignedStream ? `· ${item.header.assignedStream}` : ''}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50 font-bold text-xs w-fit">
+                              {item.metadata.assignedClass || item.metadata.departmentOrStream || item.header?.assignedGrade || 'General'} · {item.metadata.assignedStream || item.header?.assignedStream || 'North'}
+                            </Badge>
+                            {item.hasStreamMismatch && (
+                              <Badge className="bg-red-100 text-red-700 hover:bg-red-100 font-bold text-[10px] w-fit flex items-center gap-1" title={item.streamMismatchReason}>
+                                <AlertCircle size={10} /> Stream Mismatch Warning
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="py-4 px-4 text-slate-600 font-medium">
                           {new Date(item.metadata.exportedAt || item.metadata.timestamp || item.header?.timestamp || Date.now()).toLocaleString()}
@@ -314,6 +321,8 @@ export const AdminHarmonizationHub: React.FC = () => {
                         <td className="py-4 px-4">
                           {item.status === 'harmonized' ? (
                             <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 font-bold">Harmonized</Badge>
+                          ) : item.hasStreamMismatch ? (
+                            <Badge className="bg-red-100 text-red-800 hover:bg-red-100 font-bold animate-pulse">Mismatch Lock</Badge>
                           ) : (
                             <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 font-bold">Pending Review</Badge>
                           )}
