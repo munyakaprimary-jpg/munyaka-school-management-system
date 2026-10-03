@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, CheckCircle2, ShieldCheck, Database, FileText, ArrowRight, School } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { exportClassPackage } from '@/services/departmentExportService';
+import { downloadFile } from '@/services/downloadService';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
 
 export const TeacherExportModule: React.FC = () => {
@@ -73,9 +73,25 @@ export const TeacherExportModule: React.FC = () => {
       }));
 
       // Trigger standard class export stamped with the exact grade and stream
-      exportClassPackage(selectedStream, {
-        assignedClass: selectedGrade,
-        assignedStream: selectedStream
+      // Generate package using downloadFile
+      const packageData = {
+        meta: {
+          exportId: 'EXP-' + Date.now(),
+          timestamp: new Date().toISOString(),
+          assignedClass: selectedGrade,
+          assignedStream: selectedStream,
+          exportedBy: user?.name || user?.username || 'Teacher'
+        },
+        learners: JSON.parse(localStorage.getItem('school_learners_master') || localStorage.getItem('school_learners_data') || '[]'),
+        assessments: JSON.parse(localStorage.getItem('munyaka_assessments') || '[]'),
+        attendance: JSON.parse(localStorage.getItem('munyaka_attendance') || '[]')
+      };
+
+      await downloadFile({
+        filename: `Class_Package_${selectedGrade}_${selectedStream}_${Date.now()}.json`,
+        data: JSON.stringify(packageData, null, 2),
+        mimeType: 'application/json',
+        successMessage: `Class package for ${selectedGrade} ${selectedStream} downloaded successfully to Downloads folder!`
       });
     } finally {
       setIsExporting(false);
