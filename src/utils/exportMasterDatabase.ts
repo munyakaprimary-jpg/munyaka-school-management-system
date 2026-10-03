@@ -79,126 +79,116 @@ export function generateMasterSyncPackage(senderInfo?: {
   departmentOrStream?: string;
   role?: string;
 }): MasterSyncPackage {
-  // Get all data from localStorage
-  const getAllKeys = (): Record<string, any> => {
-    const result: Record<string, any> = {};
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!key) continue;
-        const rawVal = localStorage.getItem(key);
-        let parsedVal: any = rawVal;
-        try {
-          if (rawVal) parsedVal = JSON.parse(rawVal);
-        } catch {}
-        result[key] = parsedVal;
+  // 1. Crawl all active localStorage keys dynamically
+  const allKeys: Record<string, any> = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      const rawVal = localStorage.getItem(key);
+      try {
+        allKeys[key] = rawVal ? JSON.parse(rawVal) : null;
+      } catch {
+        allKeys[key] = rawVal;
       }
-    } catch (err) {
-      console.error('Error reading localStorage for master sync:', err);
     }
-    return result;
-  };
+  } catch (err) {
+    console.error('Error crawling localStorage for master sync:', err);
+  }
 
-  const allKeys = getAllKeys();
-
-  // Extract specific categories with fallbacks
+  // 2. Extract live runtime data with zero fallback to hardcoded initial seed arrays
   const learners = (() => {
-    const fromStore = getStoredLearners();
-    if (fromStore && fromStore.length > 0) return fromStore;
-    const directKeys = [
-      allKeys['school_learners_master'],
-      allKeys['munyaka_learners'],
-      allKeys['learners'],
-      allKeys['students']
+    const candidateKeys = [
+      'school_learners_master',
+      'munyaka_learners',
+      'learners',
+      'students',
+      'school_learners_v1'
     ];
-    for (const k of directKeys) {
-      if (Array.isArray(k) && k.length > 0) return k;
+    for (const key of candidateKeys) {
+      const val = allKeys[key];
+      if (Array.isArray(val) && val.length > 0) return val;
     }
+    const storeLearners = getStoredLearners();
+    if (Array.isArray(storeLearners) && storeLearners.length > 0) return storeLearners;
     return [];
   })();
-
-  const attendance = allKeys['munyaka_attendance_records'] ||
-                     allKeys['munyaka_attendance'] ||
-                     allKeys['roll_call_records'] ||
-                     allKeys['attendance'] || [];
-
-  const fees = allKeys['munyaka_fees_records'] ||
-               allKeys['munyaka_fees'] ||
-               allKeys['fees_data'] ||
-               allKeys['fees'] || [];
-
-  const library = allKeys['munyaka_library_books'] ||
-                  allKeys['school_library_inventory_v1'] ||
-                  allKeys['library_data'] ||
-                  allKeys['library'] || [];
-
-  const marks = allKeys['munyaka_marks_records'] ||
-                allKeys['marked_student_submissions'] ||
-                allKeys['marks'] || [];
-
-  const exams = allKeys['all_set_exams'] ||
-                allKeys['munyaka_exams'] ||
-                allKeys['exams'] || [];
-
-  const streams = allKeys['munyaka_streams'] ||
-                  allKeys['streams'] || [];
-
-  const classAssignments = allKeys['munyaka_class_assignments'] ||
-                           allKeys['classAssignments'] ||
-                           allKeys['class_assignments'] || [];
-
-  const learningAreas = allKeys['munyaka_learning_areas'] ||
-                        allKeys['learningAreas'] ||
-                        allKeys['learning_areas'] || [];
-
-  const examTypes = allKeys['munyaka_exam_types'] ||
-                    allKeys['examTypes'] ||
-                    allKeys['exam_types'] || [];
-
-  const feeStructures = allKeys['munyaka_fee_structures'] ||
-                        allKeys['feeStructures'] ||
-                        allKeys['fee_structures'] || [];
-
-  const notices = allKeys['munyaka_notices_board'] ||
-                  allKeys['munyaka_notices'] ||
-                  allKeys['notices'] || [];
-
-  const events = allKeys['munyaka_events'] ||
-                 allKeys['events'] || [];
-
-  const ictEquipment = allKeys['munyaka_ict_assets'] ||
-                       allKeys['ictEquipment'] ||
-                       allKeys['ict_equipment'] || [];
-
-  const scienceInventory = allKeys['munyaka_science_lab'] ||
-                           allKeys['scienceInventory'] ||
-                           allKeys['science_inventory'] || [];
-
-  const storeInventory = allKeys['munyaka_store_items'] ||
-                         allKeys['storeInventory'] ||
-                         allKeys['store_inventory'] || [];
-
-  const timetable = allKeys['munyaka_timetable'] ||
-                    allKeys['school-timetable-data'] ||
-                    allKeys['timetable'] || [];
-
-  const settings = allKeys['munyaka_system_settings_v3'] ||
-                   allKeys['munyaka_system_settings'] ||
-                   allKeys['settings'] || {};
 
   const staff = (() => {
-    const directKeys = [
-      allKeys['munyaka_staff_directory'],
-      allKeys['munyaka_master_staff_list'],
-      allKeys['munyaka_staff'],
-      allKeys['staff'],
-      allKeys['school_staff_master']
+    const candidateKeys = [
+      'munyaka_staff_directory',
+      'munyaka_master_staff_list',
+      'munyaka_staff',
+      'staff',
+      'school_staff_master',
+      'staff_members'
     ];
-    for (const k of directKeys) {
-      if (Array.isArray(k) && k.length > 0) return k;
+    for (const key of candidateKeys) {
+      const val = allKeys[key];
+      if (Array.isArray(val) && val.length > 0) return val;
     }
     return [];
   })();
+
+  const attendance = (() => {
+    const keys = ['munyaka_attendance_records', 'munyaka_attendance', 'roll_call_records', 'attendance', 'attendance_logs'];
+    for (const k of keys) {
+      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
+    }
+    return [];
+  })();
+
+  const fees = (() => {
+    const keys = ['munyaka_fees_records', 'munyaka_fees', 'fees_data', 'fees', 'fee_records'];
+    for (const k of keys) {
+      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
+    }
+    return [];
+  })();
+
+  const library = (() => {
+    const keys = ['munyaka_library_books', 'school_library_inventory_v1', 'library_data', 'library'];
+    for (const k of keys) {
+      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
+    }
+    return [];
+  })();
+
+  const marks = (() => {
+    const keys = ['munyaka_marks_records', 'marked_student_submissions', 'marks'];
+    for (const k of keys) {
+      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
+    }
+    return [];
+  })();
+
+  const exams = (() => {
+    const keys = ['all_set_exams', 'munyaka_exams', 'exams'];
+    for (const k of keys) {
+      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
+    }
+    return [];
+  })();
+
+  const streams = (() => {
+    const keys = ['munyaka_streams', 'streams', 'grades_and_streams_config'];
+    for (const k of keys) {
+      if (allKeys[k]) return allKeys[k];
+    }
+    return [];
+  })();
+
+  const classAssignments = allKeys['munyaka_class_assignments'] || allKeys['classAssignments'] || [];
+  const learningAreas = allKeys['munyaka_learning_areas'] || allKeys['learningAreas'] || [];
+  const examTypes = allKeys['munyaka_exam_types'] || allKeys['examTypes'] || [];
+  const feeStructures = allKeys['munyaka_fee_structures'] || allKeys['feeStructures'] || [];
+  const notices = allKeys['munyaka_notices_board'] || allKeys['munyaka_notices'] || [];
+  const events = allKeys['munyaka_events'] || [];
+  const ictEquipment = allKeys['munyaka_ict_assets'] || allKeys['ictEquipment'] || [];
+  const scienceInventory = allKeys['munyaka_science_lab'] || allKeys['scienceInventory'] || [];
+  const storeInventory = allKeys['munyaka_store_items'] || allKeys['storeInventory'] || [];
+  const timetable = allKeys['munyaka_timetable'] || allKeys['school-timetable-data'] || [];
+  const settings = allKeys['munyaka_system_settings_v3'] || allKeys['munyaka_system_settings'] || {};
 
   // Get current user info for metadata
   const currentUser = (() => {
@@ -240,6 +230,7 @@ export function generateMasterSyncPackage(senderInfo?: {
       timetable,
       settings,
       staff,
+      allStorageSnapshot: allKeys // Full snapshot to guarantee 100% mirror match on import
     },
   };
 }
