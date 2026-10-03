@@ -339,15 +339,8 @@ export const LibrarianPortalView: React.FC = () => {
             </CardHeader>
             <CardContent className="p-6">
               {historyLogs.length === 0 ? (
-                <div className="text-center py-10 space-y-2">
-                  <p className="text-xs text-slate-500">No circulation logs recorded yet.</p>
-                  <Button
-                    onClick={handleIssueBook}
-                    variant="outline"
-                    className="border-slate-200 text-xs font-bold rounded-xl"
-                  >
-                    <BookOpen size={14} /> Issue First Book
-                  </Button>
+                <div className="text-center py-10">
+                  <p className="text-xs text-slate-500 font-medium">No circulation logs recorded yet.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
