@@ -60,7 +60,6 @@ function validateMasterPackage(pkg: any): pkg is {
  */
 export async function importMasterSyncPackage(file: File): Promise<MasterImportResult> {
   try {
-    // Read file content
     const text = await file.text();
     let pkg: any;
     
@@ -74,89 +73,157 @@ export async function importMasterSyncPackage(file: File): Promise<MasterImportR
       };
     }
     
-    // Validate package structure
-    if (!validateMasterPackage(pkg)) {
-      return {
-        success: false,
-        message: 'Invalid master sync package format. The file does not match the expected Munyaka Master Sync Package structure.',
-        updatedKeys: []
-      };
-    }
-    
-    const { data } = pkg;
+    const data = pkg.data || pkg;
     const updatedKeys: string[] = [];
-    
-    // Update known data categories
+
+    // Deep merge / replace learners
+    const incomingLearners = data.learners || data.students;
+    if (Array.isArray(incomingLearners) && incomingLearners.length > 0) {
+      try {
+        const existingRaw = localStorage.getItem('school_learners_master') || localStorage.getItem('munyaka_learners') || '[]';
+        const existing = JSON.parse(existingRaw);
+        const map = new Map();
+        if (Array.isArray(existing)) {
+          existing.forEach((l: any) => {
+            const id = l.id || l.admissionNumber || l.upi;
+            if (id) map.set(id, l);
+          });
+        }
+        incomingLearners.forEach((l: any) => {
+          const id = l.id || l.admissionNumber || l.upi;
+          if (id) {
+            map.set(id, { ...(map.get(id) || {}), ...l });
+          } else {
+            map.set(Math.random().toString(), l);
+          }
+        });
+        const mergedLearners = Array.from(map.values());
+        localStorage.setItem('school_learners_master', JSON.stringify(mergedLearners));
+        localStorage.setItem('munyaka_learners', JSON.stringify(mergedLearners));
+        updatedKeys.push('school_learners_master', 'munyaka_learners');
+      } catch (err) {
+        console.error('Failed to merge learners:', err);
+      }
+    }
+
+    // Deep merge / replace staff
+    const incomingStaff = data.staff || data.teachers;
+    if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
+      try {
+        const existingRaw = localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff') || '[]';
+        const existing = JSON.parse(existingRaw);
+        const map = new Map();
+        if (Array.isArray(existing)) {
+          existing.forEach((s: any) => {
+            const id = s.id || s.staffId || s.email;
+            if (id) map.set(id, s);
+          });
+        }
+        incomingStaff.forEach((s: any) => {
+          const id = s.id || s.staffId || s.email;
+          if (id) {
+            map.set(id, { ...(map.get(id) || {}), ...s });
+          } else {
+            map.set(Math.random().toString(), s);
+          }
+        });
+        const mergedStaff = Array.from(map.values());
+        localStorage.setItem('munyaka_staff_directory', JSON.stringify(mergedStaff));
+        localStorage.setItem('munyaka_staff', JSON.stringify(mergedStaff));
+        updatedKeys.push('munyaka_staff_directory', 'munyaka_staff');
+      } catch (err) {
+        console.error('Failed to merge staff:', err);
+      }
+    }
+
+    // Map and deep merge other top-level data categories
     const categoryMap: Record<string, string> = {
-      learners: 'munyaka_learners',
-      attendance: 'munyaka_attendance',
-      fees: 'munyaka_fees',
-      library: 'munyaka_library_books'
+      attendance: 'munyaka_attendance_records',
+      fees: 'munyaka_fees_records',
+      library: 'munyaka_library_books',
+      marks: 'marked_student_submissions',
+      exams: 'all_set_exams',
+      streams: 'munyaka_streams',
+      classAssignments: 'munyaka_class_assignments',
+      learningAreas: 'munyaka_learning_areas',
+      examTypes: 'munyaka_exam_types',
+      feeStructures: 'munyaka_fee_structures',
+      notices: 'munyaka_notices',
+      events: 'munyaka_events',
+      ictEquipment: 'munyaka_ict_assets',
+      scienceInventory: 'munyaka_science_lab',
+      storeInventory: 'munyaka_store_items',
+      timetable: 'munyaka_timetable',
     };
-    
-    // Update each known category if data exists
+
     for (const [category, storageKey] of Object.entries(categoryMap)) {
       if (data[category] && Array.isArray(data[category])) {
         try {
-          localStorage.setItem(storageKey, JSON.stringify(data[category]));
+          const existingRaw = localStorage.getItem(storageKey) || '[]';
+          let existing: any[] = [];
+          try { existing = JSON.parse(existingRaw); } catch {}
+          
+          if (Array.isArray(existing) && existing.length > 0) {
+            // Merge or replace
+            const map = new Map();
+            existing.forEach((item: any) => {
+              const id = item.id || item.code || item.admissionNumber || JSON.stringify(item);
+              map.set(id, item);
+            });
+            data[category].forEach((item: any) => {
+              const id = item.id || item.code || item.admissionNumber || JSON.stringify(item);
+              map.set(id, { ...(map.get(id) || {}), ...item });
+            });
+            const merged = Array.from(map.values());
+            localStorage.setItem(storageKey, JSON.stringify(merged));
+          } else {
+            localStorage.setItem(storageKey, JSON.stringify(data[category]));
+          }
           updatedKeys.push(storageKey);
         } catch (storageError) {
           console.error(`Failed to update ${storageKey}:`, storageError);
         }
       }
     }
-    
-    // Update otherKeys from the package
-    if (data.otherKeys && typeof data.otherKeys === 'object') {
-      for (const [key, value] of Object.entries(data.otherKeys)) {
-        if (key !== null && key !== undefined) {
-          try {
-            // Skip internal Munyaka keys that we manage separately to avoid conflicts
-            if (!key.startsWith('munyaka_') && !key.startsWith('school_')) {
-              localStorage.setItem(key, JSON.stringify(value));
-              updatedKeys.push(key);
-            }
-          } catch (storageError) {
-            console.error(`Failed to update custom key ${key}:`, storageError);
-          }
-        }
-      }
-    }
-    
-    // Also update the unified learners store for consistency
-    if (data.learners && Array.isArray(data.learners)) {
+
+    if (data.settings && typeof data.settings === 'object') {
       try {
-        localStorage.setItem('munyaka_central_db', JSON.stringify({ 
-          students: data.learners,
-          ...(JSON.parse(localStorage.getItem('munyaka_central_db') || '{}'))
-        }));
-        updatedKeys.push('munyaka_central_db');
-      } catch (storageError) {
-        console.error('Failed to update unified learners store:', storageError);
-      }
+        localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(data.settings));
+        updatedKeys.push('munyaka_system_settings_v3');
+      } catch {}
     }
-    
-    // Trigger store refresh events to notify subscribers
+
+    // Update central database store
+    if (incomingLearners && Array.isArray(incomingLearners)) {
+      try {
+        const central = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+        central.students = incomingLearners;
+        localStorage.setItem('munyaka_central_db', JSON.stringify(central));
+        updatedKeys.push('munyaka_central_db');
+      } catch {}
+    }
+
+    // Trigger refresh events
     try {
       window.dispatchEvent(new Event('students-updated'));
       window.dispatchEvent(new Event('munyaka:data-changed'));
-      window.dispatchEvent(new CustomEvent('munyaka:master-sync-imported', { 
-        detail: { 
-          schoolName: pkg.schoolName,
-          generatedAt: pkg.generatedAt,
-          updatedKeys 
-        } 
+      window.dispatchEvent(new CustomEvent('munyaka:master-sync-imported', {
+        detail: {
+          schoolName: pkg.schoolName || pkg.generatedBy?.senderName || 'School Hub',
+          generatedAt: pkg.generatedAt || new Date().toISOString(),
+          updatedKeys
+        }
       }));
     } catch (dispatchError) {
       console.warn('Failed to dispatch refresh events:', dispatchError);
     }
-    
+
     return {
       success: true,
-      message: `Master sync package from ${pkg.schoolName} imported successfully. Updated ${updatedKeys.length} data categories.`,
+      message: `Master sync package imported successfully! Merged ${updatedKeys.length} categories across learners, staff, and records.`,
       updatedKeys
     };
-    
+
   } catch (error: any) {
     console.error('Master sync package import failed:', error);
     return {

@@ -102,8 +102,21 @@ export function generateMasterSyncPackage(senderInfo?: {
   const allKeys = getAllKeys();
 
   // Extract specific categories with fallbacks
-  const learners = getStoredLearners();
-  
+  const learners = (() => {
+    const fromStore = getStoredLearners();
+    if (fromStore && fromStore.length > 0) return fromStore;
+    const directKeys = [
+      allKeys['school_learners_master'],
+      allKeys['munyaka_learners'],
+      allKeys['learners'],
+      allKeys['students']
+    ];
+    for (const k of directKeys) {
+      if (Array.isArray(k) && k.length > 0) return k;
+    }
+    return [];
+  })();
+
   const attendance = allKeys['munyaka_attendance_records'] ||
                      allKeys['munyaka_attendance'] ||
                      allKeys['roll_call_records'] ||
@@ -173,10 +186,19 @@ export function generateMasterSyncPackage(senderInfo?: {
                    allKeys['munyaka_system_settings'] ||
                    allKeys['settings'] || {};
 
-  const staff = allKeys['munyaka_staff_directory'] ||
-                allKeys['munyaka_master_staff_list'] ||
-                allKeys['munyaka_staff'] ||
-                allKeys['staff'] || [];
+  const staff = (() => {
+    const directKeys = [
+      allKeys['munyaka_staff_directory'],
+      allKeys['munyaka_master_staff_list'],
+      allKeys['munyaka_staff'],
+      allKeys['staff'],
+      allKeys['school_staff_master']
+    ];
+    for (const k of directKeys) {
+      if (Array.isArray(k) && k.length > 0) return k;
+    }
+    return [];
+  })();
 
   // Get current user info for metadata
   const currentUser = (() => {
@@ -456,6 +478,9 @@ export async function exportMasterDatabase(): Promise<MasterExportResult> {
       }
 
       showSuccess(`Master export cached & shared: ${fileName}`);
+      window.dispatchEvent(new CustomEvent('munyaka_file_exported', {
+        detail: { filename: fileName, data: jsonString, mimeType: 'application/json', nativeUri: fileUri, title: 'Master Database Export' }
+      }));
       return {
         success: true,
         filePath: fileUri,
@@ -476,6 +501,9 @@ export async function exportMasterDatabase(): Promise<MasterExportResult> {
       window.URL.revokeObjectURL(url);
 
       showSuccess(`Master Database Export downloaded: ${fileName}`);
+      window.dispatchEvent(new CustomEvent('munyaka_file_exported', {
+        detail: { filename: fileName, data: jsonString, mimeType: 'application/json', title: 'Master Database Export' }
+      }));
       return {
         success: true,
         fileName,
