@@ -109,26 +109,29 @@ export const LibrarianPortalView: React.FC = () => {
       receipts: receiptsData
     };
 
+    const staffSlug = (librarianName || 'librarian').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const fileName = `limi_library_delta_${staffSlug}_${dateStr}.json`;
+
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `limi-library-delta-${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute("download", fileName);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+
+    setLastExport({
+      fileName,
+      timestamp: new Date().toLocaleString(),
+      size: Math.round(JSON.stringify(payload).length)
+    });
   };
 
   const handleExportLibraryBatch = async () => {
     setIsExporting(true);
     try {
       exportLibrarianPackage();
-      const nowStr = new Date().toLocaleString();
-      setLastExport({
-        fileName: `Librarian_Inventory_Delta_${librarianId}_${new Date().toISOString().slice(0, 10)}.json`,
-        timestamp: nowStr,
-        size: 2048
-      });
-
       toast({
         title: "Library Batch Delta Exported Successfully",
         description: `Saved Librarian package ready for Admin Harmonization.`
