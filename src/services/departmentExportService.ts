@@ -62,21 +62,44 @@ async function exportJsonFile(filename: string, payload: any, successTitle: stri
 
   try {
     if (Capacitor.isNativePlatform()) {
-      const writeResult = await Filesystem.writeFile({
-        path: filename,
-        data: jsonString,
-        directory: Directory.Cache,
-        encoding: Encoding.UTF8
-      });
+      let targetDir = Directory.ExternalStorage;
+      let writeResult;
+      try {
+        writeResult = await Filesystem.writeFile({
+          path: filename,
+          data: jsonString,
+          directory: targetDir,
+          encoding: Encoding.UTF8
+        });
+      } catch (err) {
+        targetDir = Directory.Documents;
+        writeResult = await Filesystem.writeFile({
+          path: filename,
+          data: jsonString,
+          directory: targetDir,
+          encoding: Encoding.UTF8
+        });
+      }
+
+      let fileUri = writeResult?.uri;
+      if (!fileUri && writeResult) {
+        const uriResult = await Filesystem.getUri({
+          directory: targetDir,
+          path: filename,
+        });
+        fileUri = uriResult.uri;
+      }
 
       try {
-        await Share.share({
-          title: successTitle,
-          text: `Export package generated at ${new Date().toLocaleString()}`,
-          files: [writeResult.uri],
-          url: writeResult.uri,
-          dialogTitle: successTitle,
-        });
+        if (fileUri) {
+          await Share.share({
+            title: successTitle,
+            text: `Export package generated at ${new Date().toLocaleString()}`,
+            files: [fileUri],
+            url: fileUri,
+            dialogTitle: successTitle,
+          });
+        }
       } catch (shareErr: any) {
         console.warn('Share dismissed:', shareErr);
       }

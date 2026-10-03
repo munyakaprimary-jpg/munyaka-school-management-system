@@ -119,21 +119,42 @@ export const batchExportService = {
     const safeGrade = (packageData.header.assignedGrade || 'Grade').replace(/[^a-zA-Z0-9]/g, '_');
     const fileName = `Munyaka_MasterPackage_${safeName}_${safeGrade}_${Date.now()}.json`;
 
-    // 1. Try Capacitor Native Share & Filesystem first
+    // 1. Try Capacitor Native Share & Filesystem first (ExternalStorage / Documents)
     try {
-      const writeFileResult = await Filesystem.writeFile({
-        path: fileName,
-        data: jsonString,
-        directory: Directory.Cache,
-        encoding: Encoding.UTF8
-      });
+      let targetDir = Directory.ExternalStorage;
+      let writeFileResult;
+      try {
+        writeFileResult = await Filesystem.writeFile({
+          path: fileName,
+          data: jsonString,
+          directory: targetDir,
+          encoding: Encoding.UTF8
+        });
+      } catch (err) {
+        targetDir = Directory.Documents;
+        writeFileResult = await Filesystem.writeFile({
+          path: fileName,
+          data: jsonString,
+          directory: targetDir,
+          encoding: Encoding.UTF8
+        });
+      }
 
-      if (writeFileResult && writeFileResult.uri) {
+      let fileUri = writeFileResult?.uri;
+      if (!fileUri && writeFileResult) {
+        const uriResult = await Filesystem.getUri({
+          directory: targetDir,
+          path: fileName,
+        });
+        fileUri = uriResult.uri;
+      }
+
+      if (fileUri) {
         await Share.share({
           title: 'Master Class Package Export',
           text: `Munyaka Master Package for ${packageData.header.teacherName} (${packageData.header.assignedGrade})`,
-          files: [writeFileResult.uri],
-          url: writeFileResult.uri,
+          files: [fileUri],
+          url: fileUri,
           dialogTitle: 'Share Master Class Package'
         });
         return { success: true, fileName, size: jsonString.length };

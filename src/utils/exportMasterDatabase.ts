@@ -302,23 +302,44 @@ export async function exportMasterSyncPackage(senderInfo?: {
     const fileName = `munyaka_master_sync_v1_${dateStr}.json`;
 
     if (Capacitor.isNativePlatform()) {
-      const writeResult = await Filesystem.writeFile({
-        path: fileName,
-        data: jsonString,
-        directory: Directory.Cache,
-        encoding: Encoding.UTF8
-      });
+      let targetDir = Directory.ExternalStorage;
+      let writeResult;
+      try {
+        writeResult = await Filesystem.writeFile({
+          path: fileName,
+          data: jsonString,
+          directory: targetDir,
+          encoding: Encoding.UTF8
+        });
+      } catch (err) {
+        targetDir = Directory.Documents;
+        writeResult = await Filesystem.writeFile({
+          path: fileName,
+          data: jsonString,
+          directory: targetDir,
+          encoding: Encoding.UTF8
+        });
+      }
 
-      const fileUri = writeResult.uri;
+      let fileUri = writeResult?.uri;
+      if (!fileUri && writeResult) {
+        const uriResult = await Filesystem.getUri({
+          directory: targetDir,
+          path: fileName,
+        });
+        fileUri = uriResult.uri;
+      }
 
       try {
-        await Share.share({
-          title: 'Munyaka Master Sync Package',
-          text: `Master Sync Package generated at ${new Date().toLocaleString()}`,
-          files: [fileUri],
-          url: fileUri,
-          dialogTitle: 'Share Master Sync Package',
-        });
+        if (fileUri) {
+          await Share.share({
+            title: 'Munyaka Master Sync Package',
+            text: `Master Sync Package generated at ${new Date().toLocaleString()}`,
+            files: [fileUri],
+            url: fileUri,
+            dialogTitle: 'Share Master Sync Package',
+          });
+        }
       } catch (shareErr: any) {
         console.warn('Share dialog dismissed or failed:', shareErr);
       }
@@ -497,25 +518,45 @@ export async function exportMasterDatabase(): Promise<MasterExportResult> {
     const fileName = `munyaka_master_export_${dateStr}.json`;
 
     if (Capacitor.isNativePlatform()) {
-      // Write to cache directory first
-      const writeResult = await Filesystem.writeFile({
-        path: fileName,
-        data: jsonString,
-        directory: Directory.Cache,
-        encoding: Encoding.UTF8
-      });
+      let targetDir = Directory.ExternalStorage;
+      let writeResult;
+      try {
+        writeResult = await Filesystem.writeFile({
+          path: fileName,
+          data: jsonString,
+          directory: targetDir,
+          encoding: Encoding.UTF8
+        });
+      } catch (err) {
+        targetDir = Directory.Documents;
+        writeResult = await Filesystem.writeFile({
+          path: fileName,
+          data: jsonString,
+          directory: targetDir,
+          encoding: Encoding.UTF8
+        });
+      }
 
-      const fileUri = writeResult.uri;
+      let fileUri = writeResult?.uri;
+      if (!fileUri && writeResult) {
+        const uriResult = await Filesystem.getUri({
+          directory: targetDir,
+          path: fileName,
+        });
+        fileUri = uriResult.uri;
+      }
 
       // Trigger native Share
       try {
-        await Share.share({
-          title: 'Munyaka Master Data Export',
-          text: `Master Database Export package generated at ${new Date().toLocaleString()}`,
-          files: [fileUri],
-          url: fileUri,
-          dialogTitle: 'Share Master Data Package',
-        });
+        if (fileUri) {
+          await Share.share({
+            title: 'Munyaka Master Data Export',
+            text: `Master Database Export package generated at ${new Date().toLocaleString()}`,
+            files: [fileUri],
+            url: fileUri,
+            dialogTitle: 'Share Master Data Package',
+          });
+        }
       } catch (shareErr: any) {
         // If user canceled share dialog, that's fine, but log it
         console.warn('Share dialog dismissed or failed:', shareErr);
