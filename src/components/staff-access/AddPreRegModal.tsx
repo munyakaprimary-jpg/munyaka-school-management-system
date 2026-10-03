@@ -65,7 +65,7 @@ const AddPreRegModal = ({
     tscNumber: "",
     email: "",
     phone: "",
-    systemRole: "Class Teacher" as SystemRole,
+    systemRole: "Class Teacher" as string,
     assignedGrade: "Grade 4",
     assignedStream: "Green",
     assignedSubjects: ["Mathematics", "Science & Tech"],
@@ -122,6 +122,8 @@ const AddPreRegModal = ({
       email: "",
       phone: "",
       systemRole: "subject_teacher",
+      assignedGrade: "Grade 4",
+      assignedStream: "Green",
       assignedSubjects: ["Mathematics", "Science & Tech"],
       tempAccessCode: generateAccessKey(),
       staffId: generateStaffId()
@@ -147,7 +149,10 @@ const AddPreRegModal = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!String(formData.fullName || '').trim() || !String(formData.email || '').trim()) return;
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      systemRole: (formData.systemRole === 'Class Teacher' ? 'class_teacher' : formData.systemRole) as SystemRole
+    });
   };
 
   return (
@@ -261,11 +266,12 @@ const AddPreRegModal = ({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">System Access Role *</Label>
-            <Select value={formData.systemRole} onValueChange={(val: SystemRole) => setFormData({ ...formData, systemRole: val })}>
+            <Select value={formData.systemRole} onValueChange={(val: string) => setFormData({ ...formData, systemRole: val })}>
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900"><SelectValue /></SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="subject_teacher">Subject Teacher</SelectItem>
-                <SelectItem value="Class Teacher">Class Teacher</SelectItem>
+                <SelectItem value="class_teacher">Class Teacher</SelectItem>
+                <SelectItem value="Class Teacher">Class Teacher (Display)</SelectItem>
                 <SelectItem value="senior_teacher">Senior Teacher</SelectItem>
                 <SelectItem value="head_teacher">Head Teacher</SelectItem>
                 <SelectItem value="bursar">Bursar / Accounts</SelectItem>
@@ -275,8 +281,9 @@ const AddPreRegModal = ({
           </div>
         </div>
 
-        {(formData.systemRole === 'Class Teacher' || formData.systemRole === 'class_teacher') && (
-          <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-4">
+        {/* Conditional Stream & Grade Selector for Class Teachers */}
+        {(formData.systemRole === 'Class Teacher' || formData.systemRole === 'class_teacher' || String(formData.systemRole).toLowerCase().includes('class')) && (
+          <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-4">
             <h4 className="text-xs font-black uppercase text-indigo-900 tracking-wider flex items-center gap-1.5">
               <span>🏫 Class &amp; Stream Assignment</span>
             </h4>
