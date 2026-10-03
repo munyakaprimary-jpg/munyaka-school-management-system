@@ -463,14 +463,28 @@ export const LibrarianPortalView: React.FC = () => {
       <RegisterBookModal
         isOpen={isRegisterBookModalOpen}
         onClose={() => setIsRegisterBookModalOpen(false)}
-        onBookRegistered={(newBook) => {
+        onRegisterBook={(bookData) => {
+          const newBook: Book = {
+            id: `book-${Date.now()}`,
+            title: bookData.title || 'Untitled Book',
+            author: bookData.author || 'KLB',
+            isbn: bookData.isbn || `ISBN-${Math.floor(100000 + Math.random() * 900000)}`,
+            category: bookData.category || 'Textbooks',
+            totalCopies: bookData.stock || 30,
+            availableCopies: bookData.stock || 30,
+            borrowed: 0,
+            stock: bookData.stock || 30,
+            subject: bookData.category || 'Textbooks',
+            grade: 'All Grades',
+            publisher: bookData.author || 'KLB'
+          };
           const updated = [newBook, ...books];
           setBooks(updated);
           localStorage.setItem('school_library_inventory_v1', JSON.stringify(updated));
           localStorage.setItem('textbook_inventory', JSON.stringify(updated));
           toast({
             title: "Book Cataloged Successfully",
-            description: `Added "${newBook.title}" with ${newBook.totalCopies || newBook.stock || 30} copies.`
+            description: `Added "${newBook.title}" with ${newBook.totalCopies} copies.`
           });
         }}
       />
