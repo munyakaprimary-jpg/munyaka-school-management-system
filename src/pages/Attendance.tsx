@@ -151,8 +151,8 @@ export default function Attendance() {
         const studentRecord = existingRecord?.students?.[id] || existingRecord?.learners?.[id];
         
         initialMap[id] = {
-          morning: studentRecord?.morning || studentRecord?.status || 'Present',
-          afternoon: studentRecord?.afternoon || studentRecord?.status || 'Present',
+          morning: studentRecord?.morning || studentRecord?.status || '',
+          afternoon: studentRecord?.afternoon || studentRecord?.status || '',
           remarks: studentRecord?.remarks || ''
         };
       });
