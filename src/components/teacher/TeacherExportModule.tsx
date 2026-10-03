@@ -99,3 +99,5 @@ export const TeacherExportModule: React.FC = () => {
     </>
   );
 };
+
+export default TeacherExportModule;
