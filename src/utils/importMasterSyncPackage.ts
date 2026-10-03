@@ -114,6 +114,8 @@ export async function importMasterSyncPackage(file: File): Promise<MasterImportR
     const categoryMap: Record<string, string> = {
       attendance: 'munyaka_attendance_records',
       fees: 'munyaka_fees_records',
+      studentPayments: 'student_payments',
+      feeLedgers: 'fee_ledgers',
       library: 'munyaka_library_books',
       marks: 'marked_student_submissions',
       exams: 'all_set_exams',

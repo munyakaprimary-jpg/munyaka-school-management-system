@@ -139,9 +139,31 @@ export function generateMasterSyncPackage(senderInfo?: {
   })();
 
   const fees = (() => {
-    const keys = ['munyaka_fees_records', 'munyaka_fees', 'fees_data', 'fees', 'fee_records'];
+    const keys = [
+      'munyaka_fees_records',
+      'munyaka_fees',
+      'fees_data',
+      'fees',
+      'fee_records',
+      'student_payments',
+      'fee_ledgers',
+      'transactions',
+      'munyaka_fee_ledgers',
+      'munyaka_student_payments'
+    ];
     for (const k of keys) {
-      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
+      const val = allKeys[k];
+      if (Array.isArray(val) && val.length > 0) return val;
+      if (val && typeof val === 'object' && Object.keys(val).length > 0) return val;
+    }
+    return [];
+  })();
+
+  const studentPayments = (() => {
+    const keys = ['student_payments', 'munyaka_student_payments', 'fee_ledgers', 'transactions', 'fee_records'];
+    for (const k of keys) {
+      const val = allKeys[k];
+      if (Array.isArray(val) && val.length > 0) return val;
     }
     return [];
   })();
@@ -214,6 +236,8 @@ export function generateMasterSyncPackage(senderInfo?: {
       learners,
       attendance,
       fees,
+      studentPayments,
+      feeLedgers: fees,
       library,
       marks,
       exams,
