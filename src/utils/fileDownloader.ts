@@ -329,6 +329,19 @@ async function saveToDevice(opts: {
   }
 }
 
+export async function downloadAppFile(filename: string, jsonData: any, mimeType = 'application/json'): Promise<string> {
+  const fileContent = typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData, null, 2);
+  const fileType: FileType = mimeType.includes('csv') ? 'csv' : mimeType.includes('pdf') ? 'pdf' : mimeType.includes('json') ? 'json' : 'txt';
+
+  const res = await saveToDevice({
+    filename,
+    data: fileContent,
+    mimeType,
+    fileType
+  });
+  return res;
+}
+
 // ============================================
 // Toast helpers (Sonner-backed, no direct imports
 // in this file to avoid circular dependencies)
