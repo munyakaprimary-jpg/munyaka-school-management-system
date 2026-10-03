@@ -77,35 +77,6 @@ const TeacherDashboard: React.FC = () => {
         </div>
               </div>
         
-              {/* Prominent Offline Export CTA */}
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-800 p-6 md:p-8 text-white shadow-2xl">
-                <div className="absolute right-0 top-0 -mt-8 -mr-8 w-80 h-80 rounded-full bg-emerald-500/30 blur-3xl pointer-events-none" />
-                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-                  <div className="space-y-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold uppercase tracking-wider text-emerald-100">
-                      <Sparkles size={14} /> Offline Data Backup & Sync
-                    </div>
-                    <h3 className="text-xl md:text-2xl font-black tracking-tight">Export Your Master Class Package</h3>
-                    <p className="text-emerald-100 text-sm md:text-base max-w-xl font-medium">
-                      Bundle all your stream's attendance, check-ins, CBC marks, and inventory into a secure offline JSON file for admin harmonization — no internet required.
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      // Trigger the export module directly by scrolling to it
-                      const exportElement = document.getElementById('teacher-export-module');
-                      if (exportElement) {
-                        exportElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }
-                    }}
-                    className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 shrink-0"
-                  >
-                    <Download size={18} />
-                    Export Data Now
-                  </Button>
-                </div>
-              </div>
-        
               {/* Teacher Batch Export Module */}
               <div id="teacher-export-module">
                 <TeacherExportModule />
