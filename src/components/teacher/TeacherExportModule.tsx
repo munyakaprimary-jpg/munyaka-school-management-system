@@ -1,17 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, CheckCircle2, ShieldCheck, Database, FileText, ArrowRight, School } from 'lucide-react';
+import { Download, Upload, CheckCircle2, ShieldCheck, Database, FileText, ArrowRight, School, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { exportClassPackage } from '@/services/departmentExportService';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
 import { ExportSuccessShareModal } from './ExportSuccessShareModal';
+import { importMasterSyncPackage } from '@/utils/importMasterSyncPackage';
+import { showSuccess, showError } from '@/utils/toast';
 
 export const TeacherExportModule: React.FC = () => {
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Dynamically load grades and streams directly from Grades & Streams menu configuration
   const config = useMemo(() => readGradesAndStreams(), []);
@@ -35,6 +38,8 @@ export const TeacherExportModule: React.FC = () => {
   });
 
   const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
   const [successShareData, setSuccessShareData] = useState<{
     isOpen: boolean;
     filename: string;
@@ -80,7 +85,6 @@ export const TeacherExportModule: React.FC = () => {
   const handleExport = () => {
     setIsExporting(true);
     try {
-      // Store the active selection override for metadata stamping
       localStorage.setItem('munyaka_temp_export_override', JSON.stringify({
         assignedClass: selectedGrade,
         assignedStream: selectedStream
@@ -111,7 +115,6 @@ export const TeacherExportModule: React.FC = () => {
       const filename = `class_package_${selectedGrade.replace(/\s+/g, '_')}_${selectedStream}_${Date.now()}.json`;
       const jsonString = JSON.stringify(payload, null, 2);
 
-      // Trigger standard class export stamped with the exact grade and stream
       exportClassPackage(selectedStream, {
         assignedClass: selectedGrade,
         assignedStream: selectedStream
@@ -129,21 +132,46 @@ export const TeacherExportModule: React.FC = () => {
     }
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const result = await importMasterSyncPackage(file);
+      if (result.success) {
+        showSuccess('Master data synchronized successfully!');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      } else {
+        showError(result.message || 'Failed to import master sync package.');
+      }
+    } catch (err: any) {
+      showError(err?.message || 'Error importing file.');
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <>
       <Card className="rounded-3xl border-slate-200 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 shadow-sm overflow-hidden font-sans">
       <CardHeader className="p-6 pb-4">
         <div className="flex items-center justify-between">
           <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100 font-bold uppercase tracking-wider text-[10px]">
-            Offline Batch Export
+            Staff Export & Sync Portal
           </Badge>
           <ShieldCheck size={18} className="text-indigo-600" />
         </div>
         <CardTitle className="text-xl font-black text-slate-900 mt-2">
-          Export Class Master Package
+          Export Class Package & Import Master Sync
         </CardTitle>
         <CardDescription className="text-xs text-slate-600">
-          Export your roll call, lesson logs, and CBC marks with verified metadata headers for Admin Harmonization.
+          Export your class records with verified metadata headers, or ingest the Admin Master Sync package to update all learners and metrics instantly.
         </CardDescription>
       </CardHeader>
 
@@ -212,15 +240,35 @@ export const TeacherExportModule: React.FC = () => {
           </div>
         </div>
 
-        {/* Export Button */}
-        <Button
-          onClick={handleExport}
-          disabled={isExporting}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
-        >
-          <Download size={16} />
-          <span>{isExporting ? 'Packaging Records...' : `Export Class Package (${selectedGrade} · ${selectedStream})`}</span>
-        </Button>
+        {/* Action Buttons: Export & Import Master Sync */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <Button
+            onClick={handleExport}
+            disabled={isExporting}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
+          >
+            <Download size={16} />
+            <span>{isExporting ? 'Packaging...' : `Export Class Package`}</span>
+          </Button>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".json"
+            className="hidden"
+          />
+
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            variant="outline"
+            className="w-full border-emerald-300 hover:bg-emerald-50 text-emerald-700 font-bold h-12 rounded-2xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
+          >
+            {isImporting ? <RefreshCw size={16} className="animate-spin" /> : <Upload size={16} />}
+            <span>{isImporting ? 'Syncing Master Data...' : 'Import Master Sync Package'}</span>
+          </Button>
+        </div>
       </CardContent>
     </Card>
 
