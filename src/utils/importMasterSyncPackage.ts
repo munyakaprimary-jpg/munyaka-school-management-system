@@ -80,11 +80,11 @@ export async function importMasterSyncPackage(file: File): Promise<MasterImportR
       }
     }
 
-    // 3. Deep merge / replace staff
-    const incomingStaff = data.staff || data.teachers;
+    // 3. Deep merge / replace staff (ensuring staff_members and directory are updated 100%)
+    const incomingStaff = data.staff || data.teachers || data.staff_members;
     if (Array.isArray(incomingStaff) && incomingStaff.length > 0) {
       try {
-        const existingRaw = localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff') || '[]';
+        const existingRaw = localStorage.getItem('staff_members') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff') || '[]';
         const existing = JSON.parse(existingRaw);
         const map = new Map();
         if (Array.isArray(existing)) {
@@ -102,8 +102,10 @@ export async function importMasterSyncPackage(file: File): Promise<MasterImportR
           }
         });
         const mergedStaff = Array.from(map.values());
+        localStorage.setItem('staff_members', JSON.stringify(mergedStaff));
         localStorage.setItem('munyaka_staff_directory', JSON.stringify(mergedStaff));
         localStorage.setItem('munyaka_staff', JSON.stringify(mergedStaff));
+        if (!updatedKeys.includes('staff_members')) updatedKeys.push('staff_members');
         if (!updatedKeys.includes('munyaka_staff_directory')) updatedKeys.push('munyaka_staff_directory');
         if (!updatedKeys.includes('munyaka_staff')) updatedKeys.push('munyaka_staff');
       } catch (err) {

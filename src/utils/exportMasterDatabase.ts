@@ -127,12 +127,12 @@ export function generateMasterSyncPackage(senderInfo?: {
 
   const staff = (() => {
     const candidateKeys = [
+      'staff_members',
       'munyaka_staff_directory',
       'munyaka_master_staff_list',
       'munyaka_staff',
       'staff',
-      'school_staff_master',
-      'staff_members'
+      'school_staff_master'
     ];
     for (const key of candidateKeys) {
       const val = allKeys[key];

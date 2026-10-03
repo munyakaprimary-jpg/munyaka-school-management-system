@@ -28,7 +28,47 @@ export const AdminDashboardComponent: React.FC = () => {
   // Use unified central data source for consistent student counts across Admin & Teacher dashboards
   const { totalStudents: centralTotalStudents } = useCentralData();
   const learners = getStoredLearners();
-  const staff = useSchoolStore(state => state.staff) || CentralDataService.getStaff();
+
+  const [localStaff, setLocalStaff] = useState<any[]>(() => {
+    try {
+      const keys = ['munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const keys = ['munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+        for (const k of keys) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setLocalStaff(parsed);
+              return;
+            }
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('munyaka:data-changed', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('munyaka:data-changed', handleStorage);
+    };
+  }, []);
+
+  const rawStoreStaff = useSchoolStore(state => state.staff);
+  const staff = (rawStoreStaff && rawStoreStaff.length > 0) ? rawStoreStaff : (localStaff.length > 0 ? localStaff : (CentralDataService.getStaff() || []));
 
   const teaching = staff.filter((s: any) => {
     const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
