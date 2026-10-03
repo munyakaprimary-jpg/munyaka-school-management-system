@@ -22,7 +22,7 @@ export function createStandardizedExportHeader(
   packageType: string = 'CLASS_PACKAGE'
 ): Record<string, any> {
   let assignedClass = 'Grade 1';
-  let assignedStream = departmentOrStream || 'North';
+  let assignedStream = departmentOrStream || 'Green';
 
   try {
     const overrideRaw = localStorage.getItem('munyaka_temp_export_override');
@@ -35,7 +35,7 @@ export function createStandardizedExportHeader(
       if (authRaw) {
         const user = JSON.parse(authRaw);
         assignedClass = user.assignedClass || user.class || user.grade || 'Grade 1';
-        assignedStream = user.assignedStream || user.stream || departmentOrStream || 'North';
+        assignedStream = user.assignedStream || user.stream || departmentOrStream || 'Green';
       }
     }
   } catch {}

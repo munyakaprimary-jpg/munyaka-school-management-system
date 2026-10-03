@@ -113,7 +113,7 @@ export function saveStoredLearner(learner: Partial<PersistentLearner> & { id?: s
       admNo: String(learner.admNo ?? learner.admissionNo ?? `ADM-${Math.floor(1000 + Math.random() * 9000)}`),
       name: String(learner.name ?? 'Unnamed Learner'),
       grade: String(learner.grade ?? 'Grade 1'),
-      stream: String(learner.stream ?? 'North'),
+      stream: String(learner.stream ?? 'Green'),
       gender: (learner.gender ?? 'Female') as any,
       guardian: String(learner.guardian ?? 'Parent'),
       phone: String(learner.phone ?? ''),

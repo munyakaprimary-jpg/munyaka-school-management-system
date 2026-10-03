@@ -53,7 +53,7 @@ export const harmonizationService = {
 
           const metadata = jsonData.metadata;
           const assignedClass = metadata.assignedClass || metadata.departmentOrStream || 'Grade 1';
-          const assignedStream = metadata.assignedStream || metadata.departmentOrStream || 'North';
+          const assignedStream = metadata.assignedStream || metadata.departmentOrStream || 'Green';
 
           // Validate stream mismatch against authorized admin slots or system records
           let hasStreamMismatch = false;
@@ -140,7 +140,7 @@ export const harmonizationService = {
         const data = raw.data || raw;
         const meta = item.metadata;
         const assignedClass = meta.assignedClass || item.header?.assignedGrade || 'Grade 1';
-        const assignedStream = meta.assignedStream || item.header?.assignedStream || 'North';
+        const assignedStream = meta.assignedStream || item.header?.assignedStream || 'Green';
 
         // 1. Harmonize Learners / Roster
         const learners = data.learners || raw.learners;
