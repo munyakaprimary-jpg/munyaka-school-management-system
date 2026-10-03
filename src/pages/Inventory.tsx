@@ -233,7 +233,7 @@ const Inventory = () => {
           <BackButton parentPath="/" />
           <div className="min-w-0 flex-1">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Tools & Resources</h1>
-            <p className="text-muted-foreground break-words hyphens-auto">Comprehensive inventory and asset lifecycle management.</p>
+            <p className="text-muted-foreground break-words hyphens-auto">Connected directly to the live school database. Export master configuration records for offline APK builds or perform full system backups and restores.</p>
           </div>
         </div>
         <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
