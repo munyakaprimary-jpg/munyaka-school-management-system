@@ -97,7 +97,7 @@ export const TeacherExportModule: React.FC = () => {
       const payload = {
         metadata: {
           senderName: user?.name || 'Class Teacher',
-          staffId: user?.staffId || user?.id || 'TCH-001',
+          staffId: (user as any)?.staffId || user?.staff_id || user?.id || 'TCH-001',
           departmentOrStream: selectedStream,
           packageType: 'CLASS_PACKAGE',
           assignedClass: selectedGrade,
@@ -197,7 +197,7 @@ export const TeacherExportModule: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-700">Teacher: {user?.name || 'Class Teacher'}</span>
             <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] font-mono">
-              ID: {user?.staffId || user?.id || 'TCH-001'}
+              ID: {(user as any)?.staffId || user?.staff_id || user?.id || 'TCH-001'}
             </Badge>
           </div>
 

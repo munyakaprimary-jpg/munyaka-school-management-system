@@ -5,7 +5,7 @@
  */
 
 import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { showSuccess, showError } from '@/utils/toast';
 import { getStoredLearners } from './learnersStore';
@@ -259,7 +259,6 @@ export function generateMasterSyncPackage(senderInfo?: {
     appVersion: '2.0.0',
     data: {
       learners,
-      school_learners_master: learners,
       staff,
       staff_members: staff,
       attendance,

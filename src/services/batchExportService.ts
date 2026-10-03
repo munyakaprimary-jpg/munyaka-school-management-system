@@ -99,7 +99,6 @@ export const batchExportService = {
     };
 
     return {
-      metadata,
       header,
       attendanceRecords,
       teacherCheckInLogs,
