@@ -11,7 +11,7 @@ import { useToast } from '@/components/ui/use-toast';
 export const AdminHarmonizationHub: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const isAdmin = user?.role === 'admin' || user?.role === 'head_teacher' || user?.role === 'owner';
+  const isAdmin = (user?.role as string) === 'admin' || (user?.role as string) === 'head_teacher' || (user?.role as string) === 'owner';
   const [auditItems, setAuditItems] = useState<HarmonizationAuditItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isHarmonizing, setIsHarmonizing] = useState(false);
