@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,27 +7,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download, CheckCircle2, ShieldCheck, Database, FileText, ArrowRight, School } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { exportClassPackage } from '@/services/departmentExportService';
+import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
 
 export const TeacherExportModule: React.FC = () => {
   const { user } = useAuth();
   
-  // Available grade and stream lists from active system settings or sensible CBC defaults
-  const grades = [
-    'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4',
-    'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'
-  ];
-
-  const streams = [
-    'Green', 'Blue', 'Red', 'Yellow', 'Stream A', 'Stream B', 'Stream C'
-  ];
+  // Dynamically load grades and streams directly from Grades & Streams menu configuration
+  const config = useMemo(() => readGradesAndStreams(), []);
+  const grades = config.grades;
+  const streams = useMemo(() => {
+    return config.streams;
+  }, [config]);
 
   // Initialize with teacher profile or default
   const [selectedGrade, setSelectedGrade] = useState<string>(() => {
-    return user?.assignedClass || user?.grade || user?.class || 'Grade 1';
+    return user?.assignedClass || user?.grade || user?.class || grades[0] || 'Grade 1';
   });
 
+  const availableStreams = useMemo(() => {
+    const s = getStreamsForGrade(selectedGrade, config);
+    return s.length > 0 ? s : config.streams;
+  }, [selectedGrade, config]);
+
   const [selectedStream, setSelectedStream] = useState<string>(() => {
-    return user?.assignedStream || user?.stream || 'Green';
+    return user?.assignedStream || user?.stream || availableStreams[0] || 'Green';
   });
 
   const [isExporting, setIsExporting] = useState(false);
@@ -150,7 +153,7 @@ export const TeacherExportModule: React.FC = () => {
                   <SelectValue placeholder="Select Stream" />
                 </SelectTrigger>
                 <SelectContent>
-                  {streams.map((s) => (
+                  {availableStreams.map((s) => (
                     <SelectItem key={s} value={s} className="text-xs font-semibold">
                       {s}
                     </SelectItem>
