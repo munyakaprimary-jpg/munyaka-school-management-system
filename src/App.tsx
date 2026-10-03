@@ -34,6 +34,58 @@ import Timetable from "./pages/Timetable";
 import NoticeAndEvents from "./pages/NoticeAndEvents";
 import AdminProfile from "./pages/AdminProfile";
 import { ExportSuccessShareModal } from "@/components/teacher/ExportSuccessShareModal";
+
+function GlobalExportListener() {
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    filename: string;
+    data: string;
+    mimeType: string;
+    nativeUri?: string;
+    title: string;
+  }>({
+    isOpen: false,
+    filename: '',
+    data: '',
+    mimeType: 'application/json',
+    nativeUri: undefined,
+    title: ''
+  });
+
+  useEffect(() => {
+    const handleExportEvent = (e: any) => {
+      const { filename, data, mimeType, nativeUri, title } = e.detail || {};
+      if (filename) {
+        setModalState({
+          isOpen: true,
+          filename,
+          data: data || '',
+          mimeType: mimeType || 'application/json',
+          nativeUri,
+          title: title || 'File Successfully Generated & Downloaded'
+        });
+      }
+    };
+
+    window.addEventListener('munyaka_file_exported', handleExportEvent);
+    return () => {
+      window.removeEventListener('munyaka_file_exported', handleExportEvent);
+    };
+  }, []);
+
+  return (
+    <ExportSuccessShareModal
+      isOpen={modalState.isOpen}
+      onClose={() => setModalState(prev => ({ ...prev, isOpen: false }))}
+      filename={modalState.filename}
+      data={modalState.data}
+      mimeType={modalState.mimeType}
+      nativeUri={modalState.nativeUri}
+      title={modalState.title}
+      description="File generated & downloaded successfully! Instantly beam this file via Quick Share to the Admin Harmonization Hub or WhatsApp."
+    />
+  );
+}
 import GradesStreams from "./pages/GradesStreams";
 import LearningAreas from "./pages/LearningAreas";
 import ExamTypes from "./pages/ExamTypes";
