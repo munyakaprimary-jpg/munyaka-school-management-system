@@ -682,20 +682,41 @@ const Staff = () => {
 
               {(formData.role.toLowerCase().includes('class') || formData.role === 'class_teacher' || formData.systemRole === 'class_teacher' || String(formData.systemRole).toLowerCase().includes('class')) && (
                 <div className="space-y-2 min-h-[90px] pt-1">
-                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assign Stream / Class *</Label>
-                  <Select value={formData.assignedStream || 'Green'} onValueChange={val => setFormData({ ...formData, assignedStream: val })}>
-                    <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                      <SelectValue placeholder="Select stream" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Green">Grade 4 - Green Stream</SelectItem>
-                      <SelectItem value="Blue">Grade 4 - Blue Stream</SelectItem>
-                      <SelectItem value="Red">Grade 4 - Red Stream</SelectItem>
-                      <SelectItem value="Yellow">Grade 4 - Yellow Stream</SelectItem>
-                      <SelectItem value="Alpha">Grade 4 - Alpha Stream</SelectItem>
-                      <SelectItem value="Beta">Grade 4 - Beta Stream</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assign Class & Stream *</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Select value={formData.assignedGrade || 'Grade 4'} onValueChange={val => setFormData({ ...formData, assignedGrade: val, assignedClassId: val.toLowerCase().replace(/\s+/g, '-') })}>
+                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                          <SelectValue placeholder="Select Grade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Grade 1">Grade 1</SelectItem>
+                          <SelectItem value="Grade 2">Grade 2</SelectItem>
+                          <SelectItem value="Grade 3">Grade 3</SelectItem>
+                          <SelectItem value="Grade 4">Grade 4</SelectItem>
+                          <SelectItem value="Grade 5">Grade 5</SelectItem>
+                          <SelectItem value="Grade 6">Grade 6</SelectItem>
+                          <SelectItem value="Grade 7">Grade 7</SelectItem>
+                          <SelectItem value="Grade 8">Grade 8</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Select value={formData.assignedStream || 'Green'} onValueChange={val => setFormData({ ...formData, assignedStream: val, assignedStreamId: val.toLowerCase() })}>
+                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                          <SelectValue placeholder="Select stream" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Green">{formData.assignedGrade || 'Grade 4'} - Green Stream</SelectItem>
+                          <SelectItem value="Blue">{formData.assignedGrade || 'Grade 4'} - Blue Stream</SelectItem>
+                          <SelectItem value="Red">{formData.assignedGrade || 'Grade 4'} - Red Stream</SelectItem>
+                          <SelectItem value="Yellow">{formData.assignedGrade || 'Grade 4'} - Yellow Stream</SelectItem>
+                          <SelectItem value="Alpha">{formData.assignedGrade || 'Grade 4'} - Alpha Stream</SelectItem>
+                          <SelectItem value="Beta">{formData.assignedGrade || 'Grade 4'} - Beta Stream</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
               )}
 
