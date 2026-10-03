@@ -48,8 +48,8 @@ export async function importMasterSyncPackage(file: File): Promise<MasterImportR
       }
     }
 
-    // 2. Deep merge / replace learners
-    const incomingLearners = data.learners || data.students;
+    // 2. Deep merge / replace learners (ensuring school-wide master keys are updated 100%)
+    const incomingLearners = data.learners || data.students || data.school_learners_master;
     if (Array.isArray(incomingLearners) && incomingLearners.length > 0) {
       try {
         const existingRaw = localStorage.getItem('school_learners_master') || localStorage.getItem('munyaka_learners') || '[]';
@@ -72,6 +72,7 @@ export async function importMasterSyncPackage(file: File): Promise<MasterImportR
         const mergedLearners = Array.from(map.values());
         localStorage.setItem('school_learners_master', JSON.stringify(mergedLearners));
         localStorage.setItem('munyaka_learners', JSON.stringify(mergedLearners));
+        localStorage.setItem('school_learners_v1', JSON.stringify(mergedLearners));
         if (!updatedKeys.includes('school_learners_master')) updatedKeys.push('school_learners_master');
         if (!updatedKeys.includes('munyaka_learners')) updatedKeys.push('munyaka_learners');
       } catch (err) {

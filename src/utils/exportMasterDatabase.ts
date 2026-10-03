@@ -96,18 +96,29 @@ export function generateMasterSyncPackage(senderInfo?: {
     console.error('Error crawling localStorage for master sync:', err);
   }
 
-  // 2. Extract live runtime data with zero fallback to hardcoded initial seed arrays
+  // 2. Extract live runtime data with zero fallback to hardcoded initial seed arrays and zero class-level filtering
   const learners = (() => {
+    // Force direct aggregation across all school-wide master keys first
+    const schoolMaster = localStorage.getItem('school_learners_master');
+    if (schoolMaster) {
+      try {
+        const parsed = JSON.parse(schoolMaster);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+
     const candidateKeys = [
       'school_learners_master',
       'munyaka_learners',
       'learners',
       'students',
-      'school_learners_v1'
+      'school_learners_v1',
+      'munyaka_central_db'
     ];
     for (const key of candidateKeys) {
       const val = allKeys[key];
       if (Array.isArray(val) && val.length > 0) return val;
+      if (val && typeof val === 'object' && Array.isArray(val.students) && val.students.length > 0) return val.students;
     }
     const storeLearners = getStoredLearners();
     if (Array.isArray(storeLearners) && storeLearners.length > 0) return storeLearners;
