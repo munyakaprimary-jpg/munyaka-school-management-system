@@ -201,7 +201,7 @@ export const LibrarianPortalView: React.FC = () => {
             </div>
             <h1 className="text-3xl font-black tracking-tight">Welcome back, {librarianName}!</h1>
             <p className="text-amber-100 text-sm max-w-2xl font-medium">
-              You are signed in as librarian. Ready to manage textbook inventory, circulation logs, and library asset reports.
+              You are signed in as librarian. Ready to manage textbooks, stationery, exercise books, reams, circulation logs, and school instructional assets.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -209,13 +209,13 @@ export const LibrarianPortalView: React.FC = () => {
               onClick={handleCatalogNewBook}
               className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-2 text-xs"
             >
-              <BookPlus size={16} /> Catalog New Book
+              <BookPlus size={16} /> Catalog New Item
             </Button>
             <Button
               onClick={handleIssueBook}
               className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center gap-2 text-xs"
             >
-              <BookOpen size={16} /> Issue Book / Check-out
+              <BookOpen size={16} /> Issue Material / Check-out
             </Button>
             <Button
               onClick={handleExportLibraryBatch}
@@ -266,9 +266,9 @@ export const LibrarianPortalView: React.FC = () => {
             <CardHeader className="border-b border-slate-100 bg-slate-50/50 p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-lg font-bold">Textbook & Asset Inventory</CardTitle>
+                  <CardTitle className="text-lg font-bold">Instructional & Library Asset Inventory</CardTitle>
                   <CardDescription className="text-xs mt-0.5">
-                    Live catalog tracking and book availability status.
+                    Live catalog tracking, material units, and item availability status.
                   </CardDescription>
                 </div>
                 <div className="relative w-full sm:w-64">
@@ -288,15 +288,15 @@ export const LibrarianPortalView: React.FC = () => {
                   <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
                     <BookMarked size={28} />
                   </div>
-                  <h3 className="font-bold text-slate-800 text-sm">No Books Cataloged Yet</h3>
+                  <h3 className="font-bold text-slate-800 text-sm">No Materials Cataloged Yet</h3>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                    Click "Catalog New Book" above to add textbooks and library assets to the inventory database.
+                    Click "Catalog New Item" above to add textbooks, stationery, reams, and instructional assets to the inventory database.
                   </p>
                   <Button
                     onClick={handleCatalogNewBook}
                     className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs"
                   >
-                    <Plus size={14} /> Add First Book
+                    <Plus size={14} /> Add First Material / Book
                   </Button>
                 </div>
               ) : (

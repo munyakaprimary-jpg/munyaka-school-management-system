@@ -70,8 +70,8 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Register Library Material / Textbook"
-      description="Add a new textbook, story book, exercise book, stationery, or teaching aid to the inventory."
+      title="Register School Material / Asset"
+      description="Add a new textbook, story book, exercise book, reams, stationery, or teaching aid to the inventory."
       maxWidth="max-w-xl"
       footer={
         <div className="flex justify-end gap-2 w-full">
