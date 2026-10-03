@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, Sparkles, Check, ChevronsUpDown, User, Info, CheckCircle2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
-import { SystemRole, PreRegisteredStaff } from '@/types/staff-access';
+import { getStaffMaster } from "@/services/staffMasterService";
 import { readGradesAndStreams, getStreamsForGrade } from "@/services/gradesStreamsConfig";
 import { generateAccessKey } from "@/services/staffAccessService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -113,24 +113,26 @@ const AddPreRegModal = ({
   };
 
   useEffect(() => {
-    if (!isOpen) return;
-    generateRandomKey();
-    setSelectedStaffId("");
-    setSearchQuery("");
-    setFormData({
-      fullName: "",
-      nationalId: "",
-      tscNumber: "",
-      email: "",
-      phone: "",
-      systemRole: "subject_teacher",
-      assignedGrade: "Grade 4",
-      assignedStream: "Green",
-      assignedSubjects: ["Mathematics", "Science & Tech"],
-      tempAccessCode: generateAccessKey(),
-      staffId: generateStaffId()
-    });
-  }, [isOpen]);
+  if (!isOpen) return;
+  generateRandomKey();
+  setSelectedStaffId("");
+  setSearchQuery("");
+  setFormData({
+    fullName: "",
+    nationalId: "",
+    tscNumber: "",
+    email: "",
+    phone: "",
+    systemRole: "subject_teacher",
+    assignedGrade: "Grade 4",
+    assignedStream: "Green",
+    assignedClassId: "grade-4",
+    assignedStreamId: "green",
+    assignedSubjects: ["Mathematics", "Science & Tech"],
+    tempAccessCode: generateAccessKey(),
+    staffId: generateStaffId()
+  });
+}, [isOpen]);
 
   // Autofill from combobox selection
   const handleSelectStaff = (staff: DirectoryStaffItem) => {
@@ -335,10 +337,10 @@ const AddPreRegModal = ({
                       <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
                       <SelectContent className="rounded-2xl">
                         {availableStreams.map((streamName: string) => {
-                          const cleanName = streamName.replace(/(\bstream\b)/gi, '').trim() || streamName;
+                          const cleanName = streamName.replace(/stream/gi, '').trim() || streamName;
                           const displayLabel = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
                           return (
-                            <SelectItem key={streamName} value={cleanName}>
+                            <SelectItem key={streamName} value={streamName}>
                               {displayLabel}
                             </SelectItem>
                           );
