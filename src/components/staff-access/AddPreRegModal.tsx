@@ -329,12 +329,12 @@ const AddPreRegModal = ({
                 >
                   <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
                   <SelectContent className="rounded-2xl">
-                    <SelectItem value="Green">{formData.assignedGrade} - Green Stream</SelectItem>
-                    <SelectItem value="Blue">{formData.assignedGrade} - Blue Stream</SelectItem>
-                    <SelectItem value="Gold">{formData.assignedGrade} - Gold Stream</SelectItem>
-                    <SelectItem value="Red">{formData.assignedGrade} - Red Stream</SelectItem>
-                    <SelectItem value="North">{formData.assignedGrade} - North Stream</SelectItem>
-                    <SelectItem value="East">{formData.assignedGrade} - East Stream</SelectItem>
+                    <SelectItem value="Green">Green Stream</SelectItem>
+                    <SelectItem value="Blue">Blue Stream</SelectItem>
+                    <SelectItem value="Gold">Gold Stream</SelectItem>
+                    <SelectItem value="Red">Red Stream</SelectItem>
+                    <SelectItem value="North">North Stream</SelectItem>
+                    <SelectItem value="East">East Stream</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

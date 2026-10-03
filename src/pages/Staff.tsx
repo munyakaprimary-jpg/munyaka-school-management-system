@@ -707,12 +707,12 @@ const Staff = () => {
                           <SelectValue placeholder="Select stream" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Green">{formData.assignedGrade || 'Grade 4'} - Green Stream</SelectItem>
-                          <SelectItem value="Blue">{formData.assignedGrade || 'Grade 4'} - Blue Stream</SelectItem>
-                          <SelectItem value="Red">{formData.assignedGrade || 'Grade 4'} - Red Stream</SelectItem>
-                          <SelectItem value="Yellow">{formData.assignedGrade || 'Grade 4'} - Yellow Stream</SelectItem>
-                          <SelectItem value="Alpha">{formData.assignedGrade || 'Grade 4'} - Alpha Stream</SelectItem>
-                          <SelectItem value="Beta">{formData.assignedGrade || 'Grade 4'} - Beta Stream</SelectItem>
+                          <SelectItem value="Green">Green Stream</SelectItem>
+                          <SelectItem value="Blue">Blue Stream</SelectItem>
+                          <SelectItem value="Red">Red Stream</SelectItem>
+                          <SelectItem value="Yellow">Yellow Stream</SelectItem>
+                          <SelectItem value="Alpha">Alpha Stream</SelectItem>
+                          <SelectItem value="Beta">Beta Stream</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
