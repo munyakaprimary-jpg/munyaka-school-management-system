@@ -2,6 +2,43 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 
+export async function triggerQuickShare(filename: string, data: string, mimeType: string, nativeUri?: string) {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      if (nativeUri) {
+        await Share.share({
+          title: filename,
+          text: `Instant Quick Share: ${filename}`,
+          url: nativeUri,
+          dialogTitle: `Quick Share ${filename}`,
+        });
+        return true;
+      }
+    } else if (navigator.share) {
+      const blob = new Blob([data], { type: mimeType });
+      const file = new File([blob], filename, { type: mimeType });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: filename,
+          text: `Instant Quick Share: ${filename}`,
+          files: [file],
+        });
+        return true;
+      } else {
+        await navigator.share({
+          title: filename,
+          text: `Instant Quick Share: ${filename} (Generated from Munyaka Digital Hub)`,
+        });
+        return true;
+      }
+    }
+    return false;
+  } catch (err) {
+    console.warn('Quick Share cancelled or failed:', err);
+    return false;
+  }
+}
+
 export type FileType = 'csv' | 'pdf' | 'json' | 'txt';
 
 export type DownloadState = 'idle' | 'downloading' | 'success' | 'error';

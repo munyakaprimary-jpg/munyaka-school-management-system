@@ -8,6 +8,7 @@ import { Download, CheckCircle2, ShieldCheck, Database, FileText, ArrowRight, Sc
 import { useAuth } from '@/context/AuthContext';
 import { exportClassPackage } from '@/services/departmentExportService';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
+import { ExportSuccessShareModal } from './ExportSuccessShareModal';
 
 export const TeacherExportModule: React.FC = () => {
   const { user } = useAuth();
@@ -34,6 +35,19 @@ export const TeacherExportModule: React.FC = () => {
   });
 
   const [isExporting, setIsExporting] = useState(false);
+  const [successShareData, setSuccessShareData] = useState<{
+    isOpen: boolean;
+    filename: string;
+    data: string;
+    mimeType: string;
+    title: string;
+  }>({
+    isOpen: false,
+    filename: '',
+    data: '',
+    mimeType: 'application/json',
+    title: ''
+  });
 
   // Fetch counts of teacher records in offline local state
   const attendanceCount = (() => {
@@ -72,10 +86,43 @@ export const TeacherExportModule: React.FC = () => {
         assignedStream: selectedStream
       }));
 
+      const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
+      const marks = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
+      const checkIns = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || '[]');
+
+      const payload = {
+        metadata: {
+          senderName: user?.name || 'Class Teacher',
+          staffId: user?.staffId || user?.id || 'TCH-001',
+          departmentOrStream: selectedStream,
+          packageType: 'CLASS_PACKAGE',
+          assignedClass: selectedGrade,
+          assignedStream: selectedStream,
+          exportedAt: new Date().toISOString(),
+          appVersion: '2.0.0'
+        },
+        data: {
+          attendance,
+          marks,
+          checkIns
+        }
+      };
+
+      const filename = `class_package_${selectedGrade.replace(/\s+/g, '_')}_${selectedStream}_${Date.now()}.json`;
+      const jsonString = JSON.stringify(payload, null, 2);
+
       // Trigger standard class export stamped with the exact grade and stream
       exportClassPackage(selectedStream, {
         assignedClass: selectedGrade,
         assignedStream: selectedStream
+      });
+
+      setSuccessShareData({
+        isOpen: true,
+        filename,
+        data: jsonString,
+        mimeType: 'application/json',
+        title: `Class Package (${selectedGrade} - ${selectedStream}) Exported!`
       });
     } finally {
       setIsExporting(false);
@@ -83,7 +130,8 @@ export const TeacherExportModule: React.FC = () => {
   };
 
   return (
-    <Card className="rounded-3xl border-slate-200 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 shadow-sm overflow-hidden font-sans">
+    <>
+      <Card className="rounded-3xl border-slate-200 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 shadow-sm overflow-hidden font-sans">
       <CardHeader className="p-6 pb-4">
         <div className="flex items-center justify-between">
           <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100 font-bold uppercase tracking-wider text-[10px]">
@@ -175,6 +223,17 @@ export const TeacherExportModule: React.FC = () => {
         </Button>
       </CardContent>
     </Card>
+
+      <ExportSuccessShareModal
+        isOpen={successShareData.isOpen}
+        onClose={() => setSuccessShareData(prev => ({ ...prev, isOpen: false }))}
+        filename={successShareData.filename}
+        data={successShareData.data}
+        mimeType={successShareData.mimeType}
+        title={successShareData.title}
+        description="Class package generated & downloaded! Beam this package instantly to the Admin Harmonization Hub or WhatsApp."
+      />
+    </>
   );
 };
 

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download, ShieldCheck } from 'lucide-react';
 import { exportClassPackage } from '@/services/departmentExportService';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
+import { ExportSuccessShareModal } from './ExportSuccessShareModal';
 
 interface TeacherExportModalProps {
   isOpen: boolean;
@@ -41,6 +42,19 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
   }, [availableStreams, selectedStream]);
 
   const [isExporting, setIsExporting] = useState(false);
+  const [successShareData, setSuccessShareData] = useState<{
+    isOpen: boolean;
+    filename: string;
+    data: string;
+    mimeType: string;
+    title: string;
+  }>({
+    isOpen: false,
+    filename: '',
+    data: '',
+    mimeType: 'application/json',
+    title: ''
+  });
 
   const handleExport = () => {
     setIsExporting(true);
@@ -50,19 +64,55 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
         assignedStream: selectedStream
       }));
 
+      // Generate package payload to pass directly to share modal
+      const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
+      const marks = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
+      const checkIns = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || '[]');
+
+      const payload = {
+        metadata: {
+          senderName: 'Class Teacher',
+          staffId: 'TCH-001',
+          departmentOrStream: selectedStream,
+          packageType: 'CLASS_PACKAGE',
+          assignedClass: selectedGrade,
+          assignedStream: selectedStream,
+          exportedAt: new Date().toISOString(),
+          appVersion: '2.0.0'
+        },
+        data: {
+          attendance,
+          marks,
+          checkIns
+        }
+      };
+
+      const filename = `class_package_${selectedGrade.replace(/\s+/g, '_')}_${selectedStream}_${Date.now()}.json`;
+      const jsonString = JSON.stringify(payload, null, 2);
+
       exportClassPackage(selectedStream, {
         assignedClass: selectedGrade,
         assignedStream: selectedStream
       });
 
       onClose();
+
+      // Immediately trigger the Quick Share modal prompt
+      setSuccessShareData({
+        isOpen: true,
+        filename,
+        data: jsonString,
+        mimeType: 'application/json',
+        title: `Class Package (${selectedGrade} - ${selectedStream}) Exported!`
+      });
     } finally {
       setIsExporting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Select Grade & Stream for Export">
+    <>
+      <Modal isOpen={isOpen} onClose={onClose} title="Select Grade & Stream for Export">
       <div className="space-y-6 py-4">
         <div className="bg-indigo-50 dark:bg-indigo-950/40 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 flex items-start gap-3">
           <ShieldCheck className="w-5 h-5 text-indigo-600 mt-0.5 shrink-0" />
@@ -120,5 +170,16 @@ export const TeacherExportModal: React.FC<TeacherExportModalProps> = ({
         </div>
       </div>
     </Modal>
+
+      <ExportSuccessShareModal
+        isOpen={successShareData.isOpen}
+        onClose={() => setSuccessShareData(prev => ({ ...prev, isOpen: false }))}
+        filename={successShareData.filename}
+        data={successShareData.data}
+        mimeType={successShareData.mimeType}
+        title={successShareData.title}
+        description="File generated & downloaded successfully! Beam this package instantly to the Admin Harmonization Hub or WhatsApp."
+      />
+    </>
   );
 };

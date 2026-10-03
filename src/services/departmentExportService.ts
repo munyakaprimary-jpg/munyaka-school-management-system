@@ -80,7 +80,12 @@ async function exportJsonFile(filename: string, payload: any, successTitle: stri
         console.warn('Share dismissed:', shareErr);
       }
 
-      showSuccess(`${successTitle} cached & shared successfully!`);
+      showSuccess(`${successTitle} cached & saved successfully!`);
+      
+      // Dispatch custom event so the global Quick Share prompt modal can catch it
+      window.dispatchEvent(new CustomEvent('munyaka_file_exported', {
+        detail: { filename, data: jsonString, mimeType: 'application/json', nativeUri: writeResult.uri, title: successTitle }
+      }));
     } else {
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
@@ -93,6 +98,11 @@ async function exportJsonFile(filename: string, payload: any, successTitle: stri
       window.URL.revokeObjectURL(url);
 
       showSuccess(`${successTitle} downloaded successfully!`);
+
+      // Dispatch custom event so the global Quick Share prompt modal can catch it
+      window.dispatchEvent(new CustomEvent('munyaka_file_exported', {
+        detail: { filename, data: jsonString, mimeType: 'application/json', title: successTitle }
+      }));
     }
   } catch (err: any) {
     console.error('Export failed:', err);

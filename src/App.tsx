@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { initialSeedData } from "@/data/initialSeedData";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
@@ -33,6 +33,7 @@ import StaffPreRegistration from "./pages/StaffPreRegistration";
 import Timetable from "./pages/Timetable";
 import NoticeAndEvents from "./pages/NoticeAndEvents";
 import AdminProfile from "./pages/AdminProfile";
+import { ExportSuccessShareModal } from "@/components/teacher/ExportSuccessShareModal";
 import GradesStreams from "./pages/GradesStreams";
 import LearningAreas from "./pages/LearningAreas";
 import ExamTypes from "./pages/ExamTypes";
@@ -427,6 +428,7 @@ const App = () => {
                   <TooltipProvider>
                     <Toaster />
                     <Sonner />
+                    <GlobalExportListener />
                     <LearnerProvider>
                       <Routes>
                         {/* Public Routes */}
