@@ -292,33 +292,39 @@ const Inventory = () => {
 
           {filteredAssets.length > 0 ? (
             <div className="pb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredAssets.map((item) => (
-                  <Card key={item.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[1.75rem] sm:rounded-[2rem] bg-white group overflow-hidden">
-                    <CardContent className="p-4 sm:p-5 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        <div className={cn("w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0", item.color)}>
-                          <Box size={22} className="sm:w-6 sm:h-6" />
-                        </div>
-                        <div className="min-w-0 flex-1 pr-1">
-                          <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate leading-tight">{item.item}</h3>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 tracking-wider truncate">{item.category}</span>
-                            <span className="text-slate-300">•</span>
-                            <span className={cn("text-[9px] font-bold uppercase shrink-0",
-                              item.status === 'Available' ? "text-emerald-600" :
-                              item.status === 'Low Stock' ? "text-amber-600" : "text-blue-600")}>
-                              {item.status}
-                            </span>
+                  <Card key={item.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-2xl bg-white group overflow-hidden">
+                    <CardContent className="p-3.5 sm:p-4 flex flex-col justify-between gap-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <h3 className="text-sm font-bold text-slate-900 truncate leading-tight">{item.item}</h3>
+                            <span className="text-[10px] font-black uppercase text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full tracking-wider shrink-0">{item.category}</span>
                           </div>
                         </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 -mr-1 -mt-1 shrink-0" onClick={() => { setAssetToDelete(item.id); setIsDeleteOpen(true); }}><Trash2 size={14} /></Button>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="text-right">
-                          <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Stock</p>
-                          <p className="text-xl sm:text-2xl font-black text-slate-900 leading-none">{item.qty}</p>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                        <div className="flex items-center gap-2.5">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase mr-1">Stock:</span>
+                            <span className="font-black text-slate-900">{item.qty}</span>
+                          </div>
+                          <span className="text-slate-200">•</span>
+                          <span className={cn("font-bold uppercase text-[10px]",
+                            item.status === 'Available' ? "text-emerald-600" :
+                            item.status === 'Low Stock' ? "text-amber-600" : "text-blue-600")}>
+                            {item.status}
+                          </span>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 -mr-1" onClick={() => { setAssetToDelete(item.id); setIsDeleteOpen(true); }}><Trash2 size={16} /></Button>
+                        <button
+                          onClick={() => setActiveTab('logs')}
+                          className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline shrink-0"
+                        >
+                          View History →
+                        </button>
                       </div>
                     </CardContent>
                   </Card>
