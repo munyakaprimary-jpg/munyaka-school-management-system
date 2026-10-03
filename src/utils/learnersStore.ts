@@ -4,6 +4,8 @@
  */
 
 export const LEARNERS_DB_KEY = 'munyaka_central_db';
+export const SCHOOL_LEARNERS_MASTER = 'school_learners_master';
+export const SCHOOL_LEARNERS_DATA = 'school_learners_data';
 
 export interface PersistentLearner {
   id: string;
@@ -39,17 +41,18 @@ export interface PersistentLearner {
 export function getStoredLearners(): PersistentLearner[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(LEARNERS_DB_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+    for (const k of [SCHOOL_LEARNERS_MASTER, SCHOOL_LEARNERS_DATA, LEARNERS_DB_KEY]) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
     }
 
     // Fallback & self-heal from legacy keys if primary is empty
     const legacyKeys = [
-      'school_learners_data',
       'munyaka_students',
       'students',
       'learners',
@@ -75,6 +78,8 @@ export function getStoredLearners(): PersistentLearner[] {
     if (maxList.length > 0) {
       // Self-heal primary storage
       try {
+        localStorage.setItem(SCHOOL_LEARNERS_MASTER, JSON.stringify(maxList));
+        localStorage.setItem(SCHOOL_LEARNERS_DATA, JSON.stringify(maxList));
         localStorage.setItem(LEARNERS_DB_KEY, JSON.stringify(maxList));
       } catch {}
       return maxList;
@@ -82,7 +87,7 @@ export function getStoredLearners(): PersistentLearner[] {
 
     return [];
   } catch (err) {
-    console.error('[munyaka_learners_db] getStoredLearners error:', err);
+    console.error('[school_learners_master] getStoredLearners error:', err);
     return [];
   }
 }
@@ -132,13 +137,16 @@ export function saveStoredLearner(learner: Partial<PersistentLearner> & { id?: s
     const updated = [fullLearner, ...existing.filter(s => s.id !== learnerId && s.admNo !== fullLearner.admNo)];
     
     // Write directly to primary DB and sync legacy keys for full backwards compatibility
+    localStorage.setItem(SCHOOL_LEARNERS_MASTER, JSON.stringify(updated));
+    localStorage.setItem(SCHOOL_LEARNERS_DATA, JSON.stringify(updated));
     localStorage.setItem(LEARNERS_DB_KEY, JSON.stringify(updated));
-    localStorage.setItem('school_learners_data', JSON.stringify(updated));
     localStorage.setItem('munyaka_students', JSON.stringify(updated));
 
-    // Dispatch update events for reactive UI subscribers
+    // Dispatch update events for reactive UI subscribers instantly
+    window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('students-updated'));
-    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: LEARNERS_DB_KEY } }));
+    window.dispatchEvent(new CustomEvent('learnersUpdated', { detail: { updatedCount: updated.length } }));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: SCHOOL_LEARNERS_MASTER } }));
 
     return fullLearner;
   } catch (err) {
@@ -155,13 +163,16 @@ export function removeStoredLearner(id: string): void {
   try {
     const existing = getStoredLearners();
     const updated = existing.filter(s => s.id !== id && s.admNo !== id);
+    localStorage.setItem(SCHOOL_LEARNERS_MASTER, JSON.stringify(updated));
+    localStorage.setItem(SCHOOL_LEARNERS_DATA, JSON.stringify(updated));
     localStorage.setItem(LEARNERS_DB_KEY, JSON.stringify(updated));
-    localStorage.setItem('school_learners_data', JSON.stringify(updated));
     localStorage.setItem('munyaka_students', JSON.stringify(updated));
 
+    window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('students-updated'));
-    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: LEARNERS_DB_KEY } }));
+    window.dispatchEvent(new CustomEvent('learnersUpdated', { detail: { updatedCount: updated.length } }));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: SCHOOL_LEARNERS_MASTER } }));
   } catch (err) {
-    console.error('[munyaka_learners_db] removeStoredLearner error:', err);
+    console.error('[school_learners_master] removeStoredLearner error:', err);
   }
 }
