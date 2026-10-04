@@ -4,7 +4,7 @@ import { showSuccess } from '@/utils/toast';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem } from '@capacitor/filesystem';
 import { Browser } from '@capacitor/browser';
-import { Directory } from '@capacitor/filesystem';
+import { Directory, Encoding } from '@capacitor/filesystem';
 
 export const SCHOOL_HEADERS = [
   "MUNYAKA PRIMARY & JUNIOR SCHOOL",
@@ -99,14 +99,14 @@ export async function downloadDocument(options: DownloadOptions): Promise<Downlo
 }
 
 async function downloadNative(
-  fileData: string | Uint8Array, 
-  filename: string, 
+  fileData: string | Uint8Array,
+  filename: string,
   contentType: string
 ): Promise<DownloadResult> {
   try {
     const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = `${Directory.Documents}/${safeFilename}`;
-    
+
     // Convert to base64 if it's ArrayBuffer/Uint8Array
     let base64Data: string;
     if (fileData instanceof Uint8Array) {
@@ -124,20 +124,21 @@ async function downloadNative(
       path: filePath,
       data: base64Data,
       directory: Directory.Documents,
+      encoding: Encoding.UTF8,
       recursive: true
     });
-    
+
     try {
       await Browser.open({ url: `file://${filePath}` });
     } catch (openError) {
       console.warn('Could not open file with system app:', openError);
     }
-    
+
     showSuccess(`Downloaded ${safeFilename} successfully!`);
-    
+
     return {
       success: true,
-      message: `File saved to ${safeFilename}`, 
+      message: `File saved to ${safeFilename}`,
       path: filePath
     };
   } catch (error) {
@@ -199,9 +200,9 @@ export async function downloadFromBlob(
   return downloadDocument({ blob, filename });
 }
 
-export function downloadCSV(csvContent: string, filename: string) {
+export async function downloadCSV(csvContent: string, filename: string): Promise<DownloadResult> {
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  downloadFromBlob(blob, filename);
+  return await downloadFromBlob(blob, filename);
 }
 
 export function downloadFile(content: string, filename: string, mimeType: string = 'text/plain') {
