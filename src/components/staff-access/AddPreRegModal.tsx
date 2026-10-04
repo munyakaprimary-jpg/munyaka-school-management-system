@@ -298,7 +298,7 @@ const AddPreRegModal = ({
                 <Label className="text-xs font-bold text-slate-700">Grade / Class</Label>
                 {(() => {
                   const config = readGradesAndStreams();
-                  const gradesList = config.grades.length > 0 ? config.grades : ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8"];
+                  const gradesList = config.grades;
                   return (
                     <Select
                       value={formData.assignedGrade}
@@ -310,13 +310,17 @@ const AddPreRegModal = ({
                         }));
                       }}
                     >
-                      <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue placeholder="Select grade" /></SelectTrigger>
+                      <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue placeholder={gradesList.length === 0 ? "(No grades configured)" : "Select grade"} /></SelectTrigger>
                       <SelectContent className="rounded-2xl">
-                        {gradesList.map((g: string) => (
-                          <SelectItem key={g} value={g}>
-                            {g}
-                          </SelectItem>
-                        ))}
+                        {gradesList.length === 0 ? (
+                          <div className="py-2 px-3 text-xs text-slate-400 text-center font-medium">(No grades configured)</div>
+                        ) : (
+                          gradesList.map((g: string) => (
+                            <SelectItem key={g} value={g}>
+                              {g}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   );
@@ -327,7 +331,7 @@ const AddPreRegModal = ({
                 {(() => {
                   const config = readGradesAndStreams();
                   const rawStreams = getStreamsForGrade(formData.assignedGrade, config);
-                  const availableStreams = rawStreams.length > 0 ? rawStreams : (config.streams.length > 0 ? config.streams : ["Green", "Blue", "Gold", "Red", "North", "East"]);
+                  const availableStreams = rawStreams;
                   return (
                     <Select
                       value={formData.assignedStream}
