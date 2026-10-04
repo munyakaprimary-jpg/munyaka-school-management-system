@@ -1,12 +1,12 @@
 /**
- * Centralized hook for accessing grades and streams configuration.
+ * Centralized hook and Context for accessing grades and streams configuration.
  * 
- * This hook reads from the GradesStreamsConfig stored in localStorage
- * and provides reactive updates when the configuration changes.
+ * Provides dynamic `grades`, `streams`, `gradeStreamMap`, and helper getters 
+ * like `getStreamsForGrade(grade)` which strip any extra noise or prefixes.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { readGradesAndStreams, getStreamsForGrade, GradesStreamsConfig } from '@/services/gradesStreamsConfig';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { readGradesAndStreams, getStreamsForGrade as getStreamsForGradeService, GradesStreamsConfig } from '@/services/gradesStreamsConfig';
 
 const STORAGE_KEYS = [
   'configured_streams',
@@ -18,30 +18,44 @@ const STORAGE_KEYS = [
   'school_classes',
 ];
 
+export interface GradesAndStreamsContextType {
+  config: GradesStreamsConfig;
+  grades: string[];
+  streams: string[];
+  gradeStreamMap: Record<string, string[]>;
+  getStreamsForGrade: (gradeName: string) => string[];
+  getCleanStreamsForGrade: (gradeName: string) => string[];
+  refreshConfig: () => void;
+}
+
+const GradesAndStreamsContext = createContext<GradesAndStreamsContextType | null>(null);
+
+/** Clean helper to format stream names cleanly (e.g. "Green Stream" -> "Green") */
+export function cleanStreamLabel(streamName: string): string {
+  if (!streamName) return '';
+  const cleaned = streamName.replace(/\bstream\b/gi, '').trim();
+  return cleaned || streamName;
+}
+
 /**
- * Hook to access the grades/streams configuration with automatic refresh
- * when the configuration changes (cross-tab or same-tab updates).
+ * Hook to access normalized grades & streams configuration dynamically.
  */
-export function useGradesStreamsConfig() {
-  const [config, setConfig] = useState<GradesStreamsConfig>(() => readGradesAndStreams());
+export function useGradesAndStreams(): GradesAndStreamsContextType {
+  const context = useContext(GradesAndStreamsContext);
+  const [localConfig, setLocalConfig] = useState<GradesStreamsConfig>(() => readGradesAndStreams());
 
-  // Refresh config when storage changes
+  const refreshConfig = useCallback(() => {
+    setLocalConfig(readGradesAndStreams());
+  }, []);
+
   useEffect(() => {
-    const refreshConfig = () => {
-      setConfig(readGradesAndStreams());
-    };
-
-    // Listen for storage events (cross-tab updates)
     const handleStorage = (e: StorageEvent) => {
       if (!e.key || STORAGE_KEYS.includes(e.key)) {
         refreshConfig();
       }
     };
 
-    // Listen for custom event (same-tab updates from GradesStreams.tsx)
     const handleCustom = () => refreshConfig();
-    
-    // Listen for focus events (same-tab, e.g., returning from another page)
     const handleFocus = () => refreshConfig();
 
     window.addEventListener('storage', handleStorage);
@@ -53,66 +67,124 @@ export function useGradesStreamsConfig() {
       window.removeEventListener('munyaka_grades_updated', handleCustom);
       window.removeEventListener('focus', handleFocus);
     };
+  }, [refreshConfig]);
+
+  const activeConfig = context ? context.config : localConfig;
+
+  const getStreams = useCallback((gradeName: string) => {
+    return getStreamsForGradeService(gradeName, activeConfig);
+  }, [activeConfig]);
+
+  const getCleanStreams = useCallback((gradeName: string) => {
+    const raw = getStreamsForGradeService(gradeName, activeConfig);
+    return raw.map((s) => cleanStreamLabel(s));
+  }, [activeConfig]);
+
+  return {
+    config: activeConfig,
+    grades: activeConfig.grades,
+    streams: activeConfig.streams,
+    gradeStreamMap: activeConfig.gradeStreamMap,
+    getStreamsForGrade: getStreams,
+    getCleanStreamsForGrade: getCleanStreams,
+    refreshConfig: context ? context.refreshConfig : refreshConfig,
+  };
+}
+
+/** Alias for backward compatibility */
+export const useGradesStreamsConfig = useGradesAndStreams;
+
+/**
+ * Provider wrapper in case app prefers React Context root binding.
+ */
+export const GradesAndStreamsProvider = ({ children }: { children: React.ReactNode }) => {
+  const [config, setConfig] = useState<GradesStreamsConfig>(() => readGradesAndStreams());
+
+  const refreshConfig = useCallback(() => {
+    setConfig(readGradesAndStreams());
   }, []);
 
-  return config;
-}
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || STORAGE_KEYS.includes(e.key)) {
+        refreshConfig();
+      }
+    };
+
+    const handleCustom = () => refreshConfig();
+    const handleFocus = () => refreshConfig();
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('munyaka_grades_updated', handleCustom);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('munyaka_grades_updated', handleCustom);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refreshConfig]);
+
+  const getStreams = useCallback((gradeName: string) => {
+    return getStreamsForGradeService(gradeName, config);
+  }, [config]);
+
+  const getCleanStreams = useCallback((gradeName: string) => {
+    const raw = getStreamsForGradeService(gradeName, config);
+    return raw.map((s) => cleanStreamLabel(s));
+  }, [config]);
+
+  const value = useMemo(() => ({
+    config,
+    grades: config.grades,
+    streams: config.streams,
+    gradeStreamMap: config.gradeStreamMap,
+    getStreamsForGrade: getStreams,
+    getCleanStreamsForGrade: getCleanStreams,
+    refreshConfig,
+  }), [config, getStreams, getCleanStreams, refreshConfig]);
+
+  return React.createElement(GradesAndStreamsContext.Provider, { value }, children);
+};
 
 /**
  * Hook to get available streams for a given grade with automatic reset handling.
- * 
- * @param selectedGrade - The currently selected grade name
- * @param selectedStream - The currently selected stream value
- * @param onStreamChange - Callback to reset stream when grade changes
- * @returns Object containing available streams and a boolean indicating if grade is selected
  */
 export function useGradeStreams(
   selectedGrade: string,
   selectedStream: string,
   onStreamChange: (stream: string) => void
 ) {
-  const config = useGradesStreamsConfig();
+  const { config, getStreamsForGrade } = useGradesAndStreams();
   const [hasGrade, setHasGrade] = useState(false);
 
-  // Compute available streams based on selected grade
   const availableStreams = useMemo(() => {
     if (!selectedGrade || selectedGrade === 'all' || selectedGrade === 'All') {
       setHasGrade(false);
-      // When no specific grade is selected, return all unique streams
       return config.streams.slice().sort((a, b) => a.localeCompare(b));
     }
     
     setHasGrade(true);
-    // Get streams for the specific grade
-    const gradeStreams = getStreamsForGrade(selectedGrade, config);
-    
-    // If no streams configured for this grade, return empty array
-    // (let the UI show "No streams available" state)
-    return gradeStreams;
-  }, [selectedGrade, config]);
+    return getStreamsForGrade(selectedGrade);
+  }, [selectedGrade, config.streams, getStreamsForGrade]);
 
-  // Reset stream selection when grade changes
   useEffect(() => {
     if (!selectedGrade || selectedGrade === 'all') {
-      // When "All Grades" is selected, reset to "all" streams
       if (selectedStream !== 'all') {
         onStreamChange('all');
       }
       return;
     }
 
-    // Check if the current stream is still valid for the selected grade
     const normalizedCurrent = selectedStream?.toLowerCase().trim();
     const isValidStream = availableStreams.some(
-      s => s.toLowerCase() === normalizedCurrent
+      (s) => s.toLowerCase() === normalizedCurrent
     );
 
-    // Reset if stream doesn't exist in the new grade's streams
     if (selectedStream && !isValidStream && availableStreams.length > 0) {
       onStreamChange(availableStreams[0]);
     } else if (availableStreams.length === 0 && selectedStream && selectedStream !== 'all') {
-      // No streams for this grade, reset to "all"
-      onStreamChange('all');
+      onStreamChange('');
     }
   }, [selectedGrade, availableStreams, selectedStream, onStreamChange]);
 
@@ -125,22 +197,15 @@ export function useGradeStreams(
 
 /**
  * Hook to get grade-specific streams for dropdown display.
- * Returns streams for a specific grade, with "All Streams" as the first option.
- * 
- * @param selectedGrade - The currently selected grade (empty string means no grade selected)
- * @returns Array of stream names with "all" prepended, or empty array if no streams
  */
 export function useStreamsForGrade(selectedGrade: string): string[] {
-  const config = useGradesStreamsConfig();
+  const { config, getStreamsForGrade } = useGradesAndStreams();
 
   return useMemo(() => {
     if (!selectedGrade || selectedGrade === 'all' || selectedGrade === 'All') {
-      // No specific grade selected - return all unique streams
       return config.streams.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     }
 
-    // Get grade-specific streams
-    const gradeStreams = getStreamsForGrade(selectedGrade, config);
-    return gradeStreams;
-  }, [selectedGrade, config]);
+    return getStreamsForGrade(selectedGrade);
+  }, [selectedGrade, config.streams, getStreamsForGrade]);
 }
