@@ -115,6 +115,9 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     role: s.role || 'Teacher',
     systemRole: s.systemRole || 'subject_teacher',
     department: s.department || 'Administration',
+    assignedGrade: s.assignedGrade || s.assigned_grade,
+    assignedStream: s.assignedStream || s.assigned_stream,
+    assignedSubjects: s.assignedSubjects,
     status: s.status || 'Pre-Registered',
     staffId: s.staffId || s.staff_id,
     tempAccessCode: s.tempAccessCode || s.access_key || s.ref,
@@ -172,6 +175,9 @@ export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' 
     role: record.role,
     systemRole: record.systemRole,
     department: record.department,
+    assignedGrade: record.assignedGrade,
+    assignedStream: record.assignedStream,
+    assignedSubjects: record.assignedSubjects,
     status: record.status || 'Pre-Registered',
   });
   return {
@@ -184,6 +190,8 @@ export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' 
     role: created.role || '',
     systemRole: (created as any).systemRole || 'subject_teacher',
     department: created.department || '',
+    assignedGrade: (created as any).assignedGrade || record.assignedGrade,
+    assignedStream: (created as any).assignedStream || record.assignedStream,
     status: (created.status as any) || 'Pre-Registered',
     staffId: (created as any).staffId,
     tempAccessCode: (created as any).tempAccessCode,

@@ -288,9 +288,9 @@ const Staff = () => {
           role: designation,
           systemRole: resolvedSystemRole,
           department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
-          // Clear teaching-specific fields for non-teaching staff
-          assignedGrade: isNonTeaching ? undefined : undefined,
-          assignedStream: isNonTeaching ? undefined : undefined,
+          // Include selected Grade and Stream in form submission
+          assignedGrade: isNonTeaching ? undefined : ((formData as any).assignedGrade || undefined),
+          assignedStream: isNonTeaching ? undefined : ((formData as any).assignedStream || undefined),
           assignedSubjects: isNonTeaching ? [] : [],
           status: 'Pre-Registered',
         });
@@ -319,6 +319,8 @@ const Staff = () => {
           email: formData.email.trim(),
           tscNumber: formData.tsc_number.trim() || undefined,
           department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
+          assignedGrade: isNonTeaching ? undefined : ((formData as any).assignedGrade || undefined),
+          assignedStream: isNonTeaching ? undefined : ((formData as any).assignedStream || undefined),
         };
 
         // Clear teaching-specific fields for non-teaching staff
