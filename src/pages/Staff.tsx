@@ -600,24 +600,22 @@ const Staff = () => {
                                                   </span>
                                                 </td>
                         <td className="px-8 py-5 min-w-[180px]">
-                                                  <p className="font-bold text-slate-800 whitespace-nowrap">
-                                                    {(() => {
-                                                      const item = member as any;
-                                                      const r = String(item.role || item.systemRole || '').toLowerCase();
-                                                      if (r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream) {
-                                                        return 'Class Teacher';
-                                                      }
-                                                      return toTitleCase(item.role || 'Pending Assignment');
-                                                    })()}
-                                                  </p>
-                                                  <p className="text-xs text-slate-400 font-medium whitespace-nowrap">
-                                                    {(() => {
-                                                      const item = member as any;
-                                                      return item.assignedGrade && item.assignedStream
-                                                        ? `${item.assignedGrade} ${item.assignedStream}`
-                                                        : 'Unassigned Class';
-                                                    })()}
-                                                  </p>
+                                                  <div className="flex flex-col">
+                                                    <span className="font-semibold text-slate-900">{toTitleCase(member.role || 'Teacher')}</span>
+                                                    <span className="text-slate-500 text-sm">
+                                                      {(() => {
+                                                        const item = member as any;
+                                                        const r = String(item.role || item.systemRole || '').toLowerCase();
+                                                        const isClassTeacher = r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream;
+                                                        if (isClassTeacher) {
+                                                          return item.assignedGrade && item.assignedStream
+                                                            ? `${item.assignedGrade} ${item.assignedStream}`
+                                                            : 'Unassigned Class';
+                                                        }
+                                                        return item.department || item.specialization || 'School Administration';
+                                                      })()}
+                                                    </span>
+                                                  </div>
                                                 </td>
                         <td className="px-8 py-5 min-w-[220px]">
                           <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{member.email || 'No Email Provided'}</span>
