@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { initialSeedData } from "@/data/initialSeedData";
 import { ThemeProvider } from "next-themes";
-import { UnifiedGradesStreamsProvider } from "./hooks/useGradesAndStreams";
+import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -495,13 +495,12 @@ const App = () => {
               <NotificationProvider>
                 <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
                   <TooltipProvider>
-                    <UnifiedGradesStreamsProvider>
-                      <Toaster />
-                      <Sonner />
-                      <GlobalExportListener />
-                      <LearnerProvider>
-                        <Routes>
-                      {/* Public Routes */}
+                    <Toaster />
+                    <Sonner />
+                    <GlobalExportListener />
+                    <LearnerProvider>
+                      <Routes>
+                        {/* Public Routes */}
                       <Route path="/login" element={<Login />} />
                       <Route path="/portal" element={<ParentPortal />} />
 
@@ -582,7 +581,6 @@ const App = () => {
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                     </LearnerProvider>
-                  </UnifiedGradesStreamsProvider>
                   </TooltipProvider>
                 </ThemeProvider>
               </NotificationProvider>

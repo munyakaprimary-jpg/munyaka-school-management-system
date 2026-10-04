@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search, X } from "lucide-react";
-import { useGradesAndStreams } from "@/hooks/useGradesAndStreams";
+import { useGradesStreamsConfig } from "@/hooks/useGradesStreams";
 
 interface StudentFiltersProps {
   searchTerm: string;
@@ -28,7 +28,7 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
   setFilterStream,
   onClearFilters
 }) => {
-  const config = useGradesAndStreams();
+  const config = useGradesStreamsConfig();
   
   // Precompute the numeric string from the filterGrade for efficient comparison
   const filterGradeNumber = React.useMemo(() => {

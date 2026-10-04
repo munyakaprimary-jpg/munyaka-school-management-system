@@ -32,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
-import { useGradesAndStreams } from "@/hooks/useGradesAndStreams";
+import { readGradesAndStreams, getStreamsForGrade } from "@/services/gradesStreamsConfig";
 import { writeStorage, generateId } from "@/utils/storage";
 import { cn } from "@/lib/utils";
 import type { Assessment, Question, QuestionType } from "@/types/questions";
@@ -178,9 +178,11 @@ const ALL_STREAMS_VALUE = "all";
  * - When a grade is selected: returns only that grade's streams.
  * - When no grade is selected: returns all unique streams across all grades.
  */
-function loadConfiguredStreams(selectedGrade: string, gradesAndStreamsCtx: ReturnType<typeof useGradesAndStreams>): string[] {
-  if (!selectedGrade) return gradesAndStreamsCtx.streams;
-  return gradesAndStreamsCtx.getStreamsForGrade(selectedGrade);
+function loadConfiguredStreams(selectedGrade: string): string[] {
+  const config = readGradesAndStreams();
+  if (!selectedGrade) return config.streams;
+  const gradeStreams = getStreamsForGrade(selectedGrade, config);
+  return gradeStreams;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -309,12 +311,10 @@ const ExamCreator: React.FC = () => {
   const [isPublished, setIsPublished] = useState(false);
   const [publishedAssessmentId, setPublishedAssessmentId] = useState<string>("");
 
-  const gradesAndStreams = useGradesAndStreams();
-
   // ── Streams: derived dynamically from Grades & Streams menu ─────────────────
   const resolvedStreams = useMemo(() => {
-    return loadConfiguredStreams(selectedGrade, gradesAndStreams);
-  }, [selectedGrade, gradesAndStreams]);
+    return loadConfiguredStreams(selectedGrade);
+  }, [selectedGrade]);
 
   useEffect(() => {
     setAvailableStreams(resolvedStreams);
