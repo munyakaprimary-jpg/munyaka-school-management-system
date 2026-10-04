@@ -1031,16 +1031,16 @@ ${filteredStudents.length} learner(s) included.
 
       {/* 3. Dynamic Filter Bar & Controls (Responsive Grid Card Container) */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 w-full max-w-full overflow-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 my-3">
           
           {/* 1. Academic Year */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Academic Year</label>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Academic Year</label>
             <Select
               value={historyMode ? historyYear : academicYear}
               onValueChange={historyMode ? setHistoryYear : setAcademicYear}
             >
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+              <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent>
@@ -1052,13 +1052,13 @@ ${filteredStudents.length} learner(s) included.
           </div>
 
           {/* 2. Grade */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Grade</label>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Grade</label>
             <Select
               value={historyMode ? historyGrade : grade}
               onValueChange={historyMode ? setHistoryGrade : setGrade}
             >
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+              <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
                 <SelectValue placeholder="Grade" />
               </SelectTrigger>
               <SelectContent>
@@ -1070,10 +1070,10 @@ ${filteredStudents.length} learner(s) included.
           </div>
 
           {/* 3. Stream */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Stream</label>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Stream</label>
             <Select value={stream} onValueChange={setStream}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+              <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
                 <SelectValue placeholder="All Streams" />
               </SelectTrigger>
               <SelectContent>
@@ -1086,13 +1086,13 @@ ${filteredStudents.length} learner(s) included.
           </div>
 
           {/* 4. Exam Type */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Exam Type</label>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Exam Type</label>
             <Select
               value={historyMode ? historyExamType : examType}
               onValueChange={historyMode ? setHistoryExamType : setExamType}
             >
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+              <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
                 <SelectValue placeholder="Exam Type" />
               </SelectTrigger>
               <SelectContent>
@@ -1106,11 +1106,11 @@ ${filteredStudents.length} learner(s) included.
           </div>
 
           {/* 5. Term */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Term</label>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Term</label>
             {historyMode ? (
               <Select value={historyTerm} onValueChange={setHistoryTerm}>
-                <SelectTrigger className="rounded-xl h-11 bg-indigo-50/50 border border-indigo-200 font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500">
+                <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
                   <SelectValue placeholder="Term" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1124,7 +1124,7 @@ ${filteredStudents.length} learner(s) included.
                 <Select value={term} onValueChange={() => {}}>
                   <SelectTrigger
                     disabled={true}
-                    className="rounded-xl h-11 bg-gray-100 border-none font-bold text-slate-700 pointer-events-none opacity-90 focus:ring-0 focus:outline-none ring-0 outline-none select-none shadow-none [&>svg]:opacity-30 [&>svg]:pointer-events-none"
+                    className="w-full px-2.5 py-1.5 text-xs bg-gray-100 border border-gray-200 rounded-lg shadow-sm h-9 opacity-90 pointer-events-none focus:ring-0"
                     tabIndex={-1}
                   >
                     <SelectValue placeholder={term} />
@@ -1138,10 +1138,10 @@ ${filteredStudents.length} learner(s) included.
           </div>
 
           {/* 6. Subject */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Subject</label>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Subject</label>
             <Select value={subject} onValueChange={setSubject}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+              <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
                 <SelectValue placeholder="Subject" />
               </SelectTrigger>
               <SelectContent>
@@ -1154,25 +1154,25 @@ ${filteredStudents.length} learner(s) included.
           </div>
 
           {/* 7. Find Learner */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Find Learner</label>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Find Learner</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
               <Input
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 placeholder="Name/ID..."
-                className="pl-9 h-11 rounded-xl bg-slate-50 border-none font-bold text-sm"
+                className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9"
               />
             </div>
           </div>
 
           {/* 8. Class Average Card */}
-          <div className="space-y-1.5 flex flex-col justify-end">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Class Average</label>
-            <div className="h-11 rounded-xl bg-indigo-50 px-3 flex items-center justify-between">
-              <span className="font-black text-indigo-700 text-sm">{classStats.meanFormatted}</span>
-              <span className="text-[10px] font-bold text-indigo-500">{classStats.completionText}</span>
+          <div className="flex flex-col justify-end">
+            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Class Average</label>
+            <div className="w-full px-2.5 py-1.5 text-xs bg-indigo-50 border border-indigo-100 rounded-lg shadow-sm h-9 flex items-center justify-between">
+              <span className="font-bold text-indigo-700">{classStats.meanFormatted}</span>
+              <span className="text-[10px] font-semibold text-indigo-500">{classStats.completionText}</span>
             </div>
           </div>
 
