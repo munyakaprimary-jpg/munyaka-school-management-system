@@ -201,13 +201,11 @@ export const TeacherExportModule: React.FC = () => {
             </Badge>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div className="space-y-1">
-              <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Grade / Class
-              </Label>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div>
+              <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1 block">Grade / Class</label>
               <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                <SelectTrigger className="h-10 rounded-xl bg-white border-slate-200 font-bold text-xs text-slate-800">
+                <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9 font-bold text-slate-800">
                   <SelectValue placeholder="Select Grade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -219,13 +217,10 @@ export const TeacherExportModule: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-1">
-              <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Stream
-              </Label>
+            <div>
+              <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1 block">Stream</label>
               <Select value={selectedStream} onValueChange={setSelectedStream}>
-                <SelectTrigger className="h-10 rounded-xl bg-white border-slate-200 font-bold text-xs text-slate-800">
+                <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9 font-bold text-slate-800">
                   <SelectValue placeholder="Select Stream" />
                 </SelectTrigger>
                 <SelectContent>
@@ -241,13 +236,13 @@ export const TeacherExportModule: React.FC = () => {
         </div>
 
         {/* Action Buttons: Export & Import Master Sync */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+        <div className="grid grid-cols-2 gap-2 mt-3">
           <Button
             onClick={handleExport}
             disabled={isExporting}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-indigo-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-colors h-10"
           >
-            <Download size={16} />
+            <Download size={15} />
             <span>{isExporting ? 'Packaging...' : `Export Class Package`}</span>
           </Button>
 
@@ -263,11 +258,12 @@ export const TeacherExportModule: React.FC = () => {
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
             variant="outline"
-            className="w-full border-emerald-300 hover:bg-emerald-50 text-emerald-700 font-bold h-12 rounded-2xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-white border border-emerald-600 text-emerald-700 text-xs font-medium rounded-lg shadow-sm hover:bg-emerald-50 transition-colors h-10"
           >
-            {isImporting ? <RefreshCw size={16} className="animate-spin" /> : <Upload size={16} />}
-            <span>{isImporting ? 'Syncing Master Data...' : 'Import Master Sync Package'}</span>
+            {isImporting ? <RefreshCw size={15} className="animate-spin" /> : <Upload size={15} />}
+            <span>{isImporting ? 'Syncing...' : 'Import Master Sync Package'}</span>
           </Button>
+        </div>
         </div>
       </CardContent>
     </Card>
