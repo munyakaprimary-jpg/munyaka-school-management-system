@@ -38,7 +38,6 @@ import {
   activateStaffMaster,
   bulkActivateStaffMaster,
   initializeStaffMaster,
-  generateAccessKeyForStaff,
   TEACHING_SYSTEM_ROLES,
   mapDesignationToSystemRole,
   isNonTeachingDesignation,
@@ -46,6 +45,26 @@ import {
   type MasterStaffRecord,
   type MasterSystemRole,
 } from '@/services/staffMasterService';
+
+const generateAccessKeyForStaff = (id: string): string => {
+  const staff = getStaffMaster();
+  const target = staff.find(s => s.id === id);
+  if (!target) return '';
+  const newKey = `KEY-${Math.floor(100000 + Math.random() * 900000)}`;
+  target.tempAccessCode = newKey;
+  // Save back via custom event / localStorage or staffMasterService save
+  try {
+    const raw = localStorage.getItem('munyaka_staff_master_v1');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const updated = parsed.map((s: any) => s.id === id ? { ...s, tempAccessCode: newKey } : s);
+      localStorage.setItem('munyaka_staff_master_v1', JSON.stringify(updated));
+    }
+  } catch (e) {
+    console.error('Failed to save access key:', e);
+  }
+  return newKey;
+};
 import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 import { SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 
