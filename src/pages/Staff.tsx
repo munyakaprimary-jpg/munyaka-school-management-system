@@ -472,19 +472,36 @@ const Staff = () => {
       </div>
 
       {/* Metrics - responsive grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
-          <div className="p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl"><Briefcase size={22} /></div>
-          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Staff Records</p><p className="text-2xl font-black text-slate-900">{masterStaffList.length}</p></div>
-        </Card>
-        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
-          <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl"><UserCheck size={22} /></div>
-          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Accounts</p><p className="text-2xl font-black text-slate-900">{activeCount}</p></div>
-        </Card>
-        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
-          <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl"><Clock size={22} /></div>
-          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pre-Registered Keys</p><p className="text-2xl font-black text-slate-900">{preRegCount}</p></div>
-        </Card>
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Staff</p>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{masterStaffList.length}</h3>
+          </div>
+          <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+            <Briefcase size={18} />
+          </div>
+        </div>
+
+        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active</p>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{activeCount}</h3>
+          </div>
+          <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+            <UserCheck size={18} />
+          </div>
+        </div>
+
+        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Pre-Registered</p>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{preRegCount}</h3>
+          </div>
+          <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+            <Clock size={18} />
+          </div>
+        </div>
       </div>
 
       {/* Search & Status Filter - stacks on mobile */}
