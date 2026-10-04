@@ -296,28 +296,31 @@ const AddPreRegModal = ({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">Grade / Class</Label>
-                <Select
-                  value={formData.assignedGrade}
-                  onValueChange={val => {
-                    setFormData(prev => ({
-                      ...prev,
-                      assignedGrade: val,
-                      assignedClassId: val.toLowerCase().replace(/\s+/g, '-')
-                    }));
-                  }}
-                >
-                  <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
-                  <SelectContent className="rounded-2xl">
-                    <SelectItem value="Grade 1">Grade 1</SelectItem>
-                    <SelectItem value="Grade 2">Grade 2</SelectItem>
-                    <SelectItem value="Grade 3">Grade 3</SelectItem>
-                    <SelectItem value="Grade 4">Grade 4</SelectItem>
-                    <SelectItem value="Grade 5">Grade 5</SelectItem>
-                    <SelectItem value="Grade 6">Grade 6</SelectItem>
-                    <SelectItem value="Grade 7">Grade 7</SelectItem>
-                    <SelectItem value="Grade 8">Grade 8</SelectItem>
-                  </SelectContent>
-                </Select>
+                {(() => {
+                  const config = readGradesAndStreams();
+                  const gradesList = config.grades.length > 0 ? config.grades : ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8"];
+                  return (
+                    <Select
+                      value={formData.assignedGrade}
+                      onValueChange={val => {
+                        setFormData(prev => ({
+                          ...prev,
+                          assignedGrade: val,
+                          assignedClassId: val.toLowerCase().replace(/\s+/g, '-')
+                        }));
+                      }}
+                    >
+                      <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue placeholder="Select grade" /></SelectTrigger>
+                      <SelectContent className="rounded-2xl">
+                        {gradesList.map((g: string) => (
+                          <SelectItem key={g} value={g}>
+                            {g}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  );
+                })()}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">Stream</Label>
@@ -336,17 +339,23 @@ const AddPreRegModal = ({
                         }));
                       }}
                     >
-                      <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900">
+                        <SelectValue placeholder={!formData.assignedGrade ? "Select grade first..." : (availableStreams.length === 0 ? "(No streams configured)" : "Choose stream...")} />
+                      </SelectTrigger>
                       <SelectContent className="rounded-2xl">
-                        {availableStreams.map((streamName: string) => {
-                          const cleanName = streamName.replace(/stream/gi, '').trim() || streamName;
-                          const displayLabel = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
-                          return (
-                            <SelectItem key={streamName} value={streamName}>
-                              {displayLabel}
-                            </SelectItem>
-                          );
-                        })}
+                        {availableStreams.length === 0 ? (
+                          <div className="py-2 px-3 text-xs text-slate-400 text-center font-medium">(No streams configured)</div>
+                        ) : (
+                          availableStreams.map((streamName: string) => {
+                            const cleanName = streamName.replace(/stream/gi, '').trim() || streamName;
+                            const displayLabel = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+                            return (
+                              <SelectItem key={streamName} value={streamName}>
+                                {displayLabel}
+                              </SelectItem>
+                            );
+                          })
+                        )}
                       </SelectContent>
                     </Select>
                   );
