@@ -588,7 +588,19 @@ const Staff = () => {
                                                   </span>
                                                 </td>
                         <td className="px-8 py-5 min-w-[180px]">
-                                                  <p className="font-bold text-slate-800 whitespace-nowrap">{toTitleCase(member.role || 'Pending Assignment')}</p>
+                                                  <p className="font-bold text-slate-800 whitespace-nowrap">
+                                                    {(() => {
+                                                      const staff = member as any;
+                                                      const hasClass = staff.assignedGrade || staff.assignedStream || staff.grade || staff.stream;
+                                                      if (hasClass) {
+                                                        const g = staff.assignedGrade || staff.grade || '';
+                                                        const s = staff.assignedStream || staff.stream || '';
+                                                        const cleanS = s ? String(s).replace(/stream/gi, '').trim() : '';
+                                                        return `Class Teacher (${g}${cleanS ? ` ${cleanS}` : ''})`;
+                                                      }
+                                                      return toTitleCase(staff.role || 'Pending Assignment');
+                                                    })()}
+                                                  </p>
                                                   <p className="text-xs text-slate-400 font-medium whitespace-nowrap">
                                                     {(() => {
                                                       const staff = member as any;
