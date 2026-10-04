@@ -136,8 +136,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin'] },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
-    { icon: Users, label: 'Staff Directory', path: '/staff', roles: ['admin'] },
-    { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
+    { icon: Users, label: 'Staff Management', path: '/staff', roles: ['admin', 'head_teacher'] },
     { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
     { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
@@ -214,7 +213,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         if (isTeacherVariant) {
                   const forbiddenTeacherPaths = [
                     '/central-data', '/grades', '/staff', '/learning-areas', '/exam-types',
-                    '/staff/pre-registration', '/system-management', '/staff/access',
+                    '/system-management', '/staff/access',
                     '/transferred-archive', '/promote-students', '/admin/control-center',
                     '/dev/tenants', '/payment-management', '/staff/attendance-monitor',
                     '/timetable'
