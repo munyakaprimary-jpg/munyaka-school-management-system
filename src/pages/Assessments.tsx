@@ -970,22 +970,22 @@ ${filteredStudents.length} learner(s) included.
             {historyMode ? "Academic Archive & Marks History Review (Read-Only Mode)." : "Enter class marks for one subject or switch to All Subjects to fill a full matrix. Valid scores autosave to localStorage; use Save All for bulk commit."}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
+        <div className="grid grid-cols-2 gap-2 my-4 w-full sm:w-auto">
           <Button
             variant={historyMode ? "default" : "outline"}
             className={cn(
-              "rounded-xl h-11 px-5 font-bold gap-2 text-sm shadow-sm w-full sm:w-auto transition-all",
+              "flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors h-11",
               historyMode
-                ? "bg-slate-900 hover:bg-slate-800 text-white shadow-md"
-                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                ? "bg-slate-900 hover:bg-slate-800 text-white shadow-md border-transparent"
+                : ""
             )}
             onClick={() => setHistoryMode(!historyMode)}
           >
-            <ClipboardCheck size={16} /> {historyMode ? "Back to Live Marks Entry" : "View Marks History"}
+            <ClipboardCheck size={16} /> {historyMode ? "Back to Live" : "View Marks History"}
           </Button>
           <Button
             variant="outline"
-            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors h-11"
             onClick={handleDownloadCSV}
             disabled={csvExport.isDownloading}
           >
@@ -993,7 +993,7 @@ ${filteredStudents.length} learner(s) included.
           </Button>
           <Button
             variant="outline"
-            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors h-11"
             onClick={handleDownloadPDF}
             disabled={pdfExport.isDownloading}
           >
@@ -1001,7 +1001,7 @@ ${filteredStudents.length} learner(s) included.
           </Button>
           {!historyMode && (
             <Button
-              className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2 w-full sm:w-auto disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg shadow-sm transition-colors h-11 col-span-2 disabled:opacity-50"
               onClick={handleSaveAll}
               disabled={isSaving || isLocked}
             >
