@@ -279,7 +279,9 @@ const Staff = () => {
       const natId = `ID-${Date.now()}`;
       try {
         const resolvedSystemRole: MasterSystemRole = mappedSystemRole || 'subject_teacher';
+        const generatedId = `staff_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
         const staffPayload = {
+          id: generatedId,
           name: formData.full_name.trim(),
           nationalId: natId,
           email: formData.email.trim(),
@@ -296,12 +298,15 @@ const Staff = () => {
           status: 'Pre-Registered' as const,
         };
         const createdRecord = addStaffMaster(staffPayload);
+        const recordId = createdRecord?.id || generatedId;
         const overrides = JSON.parse(localStorage.getItem('munyaka_staff_class_overrides') || '{}');
-        const staffKey = createdRecord?.id || formData.email.trim();
-        overrides[staffKey] = {
-          assignedGrade: (formData as any).assignedGrade || '',
-          assignedStream: (formData as any).assignedStream || ''
+        overrides[recordId] = {
+          assignedGrade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
+          assignedStream: isNonTeaching ? '' : ((formData as any).assignedStream || '')
         };
+        if (formData.email.trim()) {
+          overrides[formData.email.trim()] = overrides[recordId];
+        }
         localStorage.setItem('munyaka_staff_class_overrides', JSON.stringify(overrides));
         
         // Notify other components & refresh state
