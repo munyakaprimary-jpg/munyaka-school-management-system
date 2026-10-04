@@ -76,8 +76,8 @@ export interface FileDownloadResult {
 // emits the same institutional block.)
 // ============================================
 export const MUNYAKA_HEADERS = {
-  schoolLine1: "MUNYAKA PRIMARY AND JUNIOR",
-  schoolLine2: "P.O. BOX 5239, ELDORET",
+  schoolLine1: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+  schoolLine2: "P.O. BOX 5239-30100, ELDORET",
   schoolLine3: "MOTTO: Knowledge Is Power",
 } as const;
 
