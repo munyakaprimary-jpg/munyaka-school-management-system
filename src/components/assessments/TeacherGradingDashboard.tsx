@@ -37,7 +37,7 @@ import { notifyDataChanged } from "@/utils/storage";
 import { useFileDownload, MUNYAKA_HEADERS } from "@/utils/fileDownloader";
 import { getAllAssessmentResults } from "@/utils/assessmentResults";
 import { CentralDataService } from "@/services/centralDataService";
-import { readGradesAndStreams, getStreamsForGrade } from "@/services/gradesStreamsConfig";
+import { useGradesAndStreams } from "@/hooks/useGradesAndStreams";
 import { saveMarkedSubmission } from "@/types/assessment";
 import type { StudentSubmission as MarkedSubmission } from "@/types/assessment";
 import type {
@@ -689,25 +689,13 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   // ── Stream options: three-tier lookup ────────────────────────────────────────
   // 1. Read from the Grades & Streams menu (canonical source — readGradesAndStreams).
   // 2. Falls back to extracting unique stream names from in-memory student rows.
-  const gradesConfig = readGradesAndStreams();
+  const gradesAndStreams = useGradesAndStreams();
+  const allRegistryStreams = [...gradesAndStreams.streams];
 
-  // All streams from the Grades & Streams menu registry.
-  const allRegistryStreams = [...gradesConfig.streams];
-
-  /**
-   * Streams available for display, filtered by the currently selected grade.
-   *
-   * Priority:
-   *  a) If `selectedGrade` is "all" — show every stream from the registry (or
-   *     the configured global list if set).
-   *  b) If a specific grade is selected — narrow to that grade's streams.
-   *  c) If both sources are empty — pull from in-memory student rows as last
-   *     resort so the dropdown is never blank.
-   */
   const availableStreams = useMemo(() => {
     // a) Narrow by grade using the canonical Grades & Streams menu config.
     if (selectedGrade !== ALL_GRADES_VALUE && selectedGrade) {
-      const gradeStreams = getStreamsForGrade(selectedGrade, gradesConfig);
+      const gradeStreams = gradesAndStreams.getStreamsForGrade(selectedGrade);
       if (gradeStreams.length > 0) return gradeStreams;
     }
 
