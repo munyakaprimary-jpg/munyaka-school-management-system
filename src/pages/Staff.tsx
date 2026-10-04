@@ -591,10 +591,9 @@ const Staff = () => {
                                                   <p className="font-bold text-slate-800 whitespace-nowrap">
                                                     {(() => {
                                                       const staff = member as any;
-                                                      const hasClass = staff.assignedGrade || staff.assignedStream || staff.grade || staff.stream;
-                                                      if (hasClass) {
-                                                        const g = staff.assignedGrade || staff.grade || '';
-                                                        const s = staff.assignedStream || staff.stream || '';
+                                                      const g = staff.assignedGrade || staff.assigned_grade || staff.grade || staff.assignedClass;
+                                                      const s = staff.assignedStream || staff.assigned_stream || staff.stream;
+                                                      if (g || s) {
                                                         const cleanS = s ? String(s).replace(/stream/gi, '').trim() : '';
                                                         return `Class Teacher (${g}${cleanS ? ` ${cleanS}` : ''})`;
                                                       }
@@ -604,7 +603,13 @@ const Staff = () => {
                                                   <p className="text-xs text-slate-400 font-medium whitespace-nowrap">
                                                     {(() => {
                                                       const staff = member as any;
-                                                      return staff.assignedGrade && staff.assignedStream ? `${staff.assignedGrade}${staff.assignedStream}` : (staff.grade || 'Unassigned Class');
+                                                      const g = staff.assignedGrade || staff.assigned_grade || staff.grade || staff.assignedClass;
+                                                      const s = staff.assignedStream || staff.assigned_stream || staff.stream;
+                                                      if (g && s) {
+                                                        const cleanS = String(s).replace(/stream/gi, '').trim();
+                                                        return `${g} ${cleanS}`;
+                                                      }
+                                                      return g || 'Unassigned Class';
                                                     })()}
                                                   </p>
                                                 </td>
