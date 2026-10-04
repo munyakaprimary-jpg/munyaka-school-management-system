@@ -38,7 +38,6 @@ import {
   activateStaffMaster,
   bulkActivateStaffMaster,
   initializeStaffMaster,
-  generateAccessKeyForStaff,
   TEACHING_SYSTEM_ROLES,
   mapDesignationToSystemRole,
   isNonTeachingDesignation,
@@ -157,8 +156,7 @@ const Staff = () => {
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('edit');
   const [isSaving, setIsSaving] = useState(false);
-  const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
-  const [selectedAccessStaff, setSelectedAccessStaff] = useState<StaffMember | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkActivating, setIsBulkActivating] = useState(false);
   const [formData, setFormData] = useState({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '' });
   const [formError, setFormError] = useState('');
@@ -612,10 +610,7 @@ const Staff = () => {
                                 </DropdownMenuItem>
                               )}
                               {!isPending(member) && (
-                                <DropdownMenuItem onClick={() => {
-                                  setSelectedAccessStaff(member);
-                                  setIsAccessModalOpen(true);
-                                }}
+                                <DropdownMenuItem onClick={() => navigate('/staff/pre-registration')}
                                   className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50">
                                   <Key size={15} /> Manage Access Keys
                                 </DropdownMenuItem>
@@ -641,58 +636,6 @@ const Staff = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
-
-      {/* Add/Edit Modal */}
-      {isAccessModalOpen && selectedAccessStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
-          <div className="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-6 space-y-6 animate-in zoom-in-95">
-            <div className="flex justify-between items-center border-b pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Key size={20} /></div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Manage Access Key</h3>
-                  <p className="text-xs text-slate-500">{selectedAccessStaff.full_name}</p>
-                </div>
-              </div>
-              <button onClick={() => { setIsAccessModalOpen(false); setSelectedAccessStaff(null); }} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded-2xl space-y-1">
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Current Access Code</p>
-                <p className="text-xl font-mono font-black text-indigo-600">
-                  {selectedAccessStaff.access_key || (selectedAccessStaff as any).ref || (selectedAccessStaff as any).accessCode || 'No Key Generated'}
-                </p>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Generating a new access key will replace the existing security code. The staff member will use this key for quick system access and portal login verification.
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1 rounded-xl h-12 font-bold" onClick={() => { setIsAccessModalOpen(false); setSelectedAccessStaff(null); }}>
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 rounded-xl h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 gap-2"
-                onClick={() => {
-                  const newKey = generateAccessKeyForStaff(selectedAccessStaff.id);
-                  if (newKey) {
-                    showSuccess(`New access key generated: ${newKey}`);
-                    setMasterRecords(getStaffMaster());
-                  } else {
-                    showError('Failed to generate access key.');
-                  }
-                  setIsAccessModalOpen(false);
-                  setSelectedAccessStaff(null);
-                }}
-              >
-                <Key size={16} /> Generate New Key
-              </Button>
-            </div>
-          </div>
         </div>
       )}
 

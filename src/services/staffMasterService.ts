@@ -217,15 +217,7 @@ export const bulkActivateStaffMaster = (ids: string[]): void => {
   }
 };
 
-export const generateAccessKeyForStaff = (id: string): string => {
-  const staff = CentralDataService.getStaff();
-  const target = staff.find((s: any) => s.id === id);
-  if (!target) return '';
-  const newKey = `KEY-${Math.floor(100000 + Math.random() * 900000)}`;
-  target.tempAccessCode = newKey;
-  CentralDataService.saveStaff(staff);
-  return newKey;
-};
+export const verifyStaffLogin = (identifier: string, pass: string): { success: boolean; user?: MasterStaffRecord; error?: string } => {
   const staffList = getStaffMaster();
   const trimmedId = (identifier || '').trim().toLowerCase();
   const trimmedPass = (pass || '').trim();
