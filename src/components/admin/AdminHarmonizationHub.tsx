@@ -173,57 +173,47 @@ export const AdminHarmonizationHub: React.FC = () => {
                   </div>
             
                   {/* Audit Dashboard Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Uploaded Packages</p>
-              <h3 className="text-3xl font-black text-slate-900">{auditItems.length}</h3>
-              <p className="text-xs font-medium text-emerald-600 flex items-center gap-1 mt-1">
-                <CheckCircle2 size={12} /> Ready for audit
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
-              <FileText size={28} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Records Queued</p>
-              <h3 className="text-3xl font-black text-slate-900">
-                {auditItems.reduce((acc, item) => acc + item.attendanceCount + item.checkInCount + item.assessmentCount + item.inventoryCount, 0)}
-              </h3>
-              <p className="text-xs font-medium text-blue-600 flex items-center gap-1 mt-1">
-                <Database size={12} /> Stream isolated
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
-              <Database size={28} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Harmonization Status</p>
-              <h3 className="text-xl font-black text-slate-900 flex items-center gap-2 mt-1">
-                <span className={`w-3 h-3 rounded-full ${auditItems.length > 0 ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`} />
-                {harmonizationResult ? 'Harmonized' : auditItems.length > 0 ? 'Pending Merge' : 'Awaiting Files'}
-              </h3>
-              <p className="text-xs font-medium text-slate-500 mt-1">
-                Zero cross-stream mix-ups
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-              <ShieldCheck size={28} />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                  <div className="grid grid-cols-3 gap-3 mb-4">
+                    {/* Uploaded Packages Card */}
+                    <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Uploaded Packages</p>
+                        <h3 className="text-xl font-bold text-gray-900 mt-0.5">{auditItems.length}</h3>
+                        <p className="text-[10px] text-green-600 font-medium">Ready for audit</p>
+                      </div>
+                      <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+                        <FileText size={20} />
+                      </div>
+                    </div>
+            
+                    {/* Total Records Queued Card */}
+                    <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Total Records Queued</p>
+                        <h3 className="text-xl font-bold text-gray-900 mt-0.5">
+                          {auditItems.reduce((acc, item) => acc + item.attendanceCount + item.checkInCount + item.assessmentCount + item.inventoryCount, 0)}
+                        </h3>
+                        <p className="text-[10px] text-blue-600 font-medium">Stream isolated</p>
+                      </div>
+                      <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                        <Database size={20} />
+                      </div>
+                    </div>
+            
+                    {/* Harmonization Status Card */}
+                    <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Harmonization Status</p>
+                        <h3 className="text-sm font-bold text-gray-900 mt-0.5">
+                          {harmonizationResult ? 'Harmonized' : auditItems.length > 0 ? 'Pending Merge' : 'Awaiting Files'}
+                        </h3>
+                        <p className="text-[10px] text-gray-500 font-medium">Zero cross-stream mix-ups</p>
+                      </div>
+                      <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                        <ShieldCheck size={20} />
+                      </div>
+                    </div>
+                  </div>
 
       {/* Audit Review Table */}
       <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden">
