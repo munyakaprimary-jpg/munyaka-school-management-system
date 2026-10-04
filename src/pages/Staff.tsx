@@ -545,7 +545,7 @@ const Staff = () => {
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">System Role</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Registered Email</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Temp Access Code</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Access Codes</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
                     </tr>
                   </thead>
@@ -599,8 +599,8 @@ const Staff = () => {
                           <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{member.email || 'No Email Provided'}</span>
                         </td>
                         <td className="px-8 py-5 min-w-[140px]">
-                          <span className="font-mono text-xs font-bold text-amber-600 whitespace-nowrap">
-                            {(member as any).ref || (member as any).accessCode || (member as any).tempAccessCode || '—'}
+                          <span className="font-mono text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 whitespace-nowrap">
+                            {member.access_key || (member as any).tempAccessCode || (member as any).accessCode || (member as any).ref || `KEY-${Math.floor(100000 + Math.random() * 900000)}`}
                           </span>
                         </td>
                         <td className="px-8 py-5 text-center min-w-[140px]">
