@@ -606,7 +606,7 @@ const Staff = () => {
                                                 </td>
                         <td className="px-8 py-5 min-w-[180px]">
                                                   <div className="flex flex-col">
-                                                    <span className="font-semibold text-slate-900">{toTitleCase(member.role || 'Teacher')}</span>
+                                                    <span className="font-semibold text-slate-900">{toTitleCase(member.role || member.systemRole || 'Teacher')}</span>
                                                     <span className="text-slate-500 text-sm">
                                                       {(() => {
                                                         const item = member as any;
@@ -617,7 +617,7 @@ const Staff = () => {
                                                             ? `${item.assignedGrade} ${item.assignedStream}`
                                                             : 'Unassigned Class';
                                                         }
-                                                        return item.department || item.specialization || 'School Administration';
+                                                        return item.department || 'School Administration';
                                                       })()}
                                                     </span>
                                                   </div>
