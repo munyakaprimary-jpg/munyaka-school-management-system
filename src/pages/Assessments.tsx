@@ -1035,7 +1035,7 @@ ${filteredStudents.length} learner(s) included.
           
           {/* 1. Academic Year */}
           <div className="flex flex-col">
-            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Academic Year</label>
+            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Academic Year</label>
             <Select
               value={historyMode ? historyYear : academicYear}
               onValueChange={historyMode ? setHistoryYear : setAcademicYear}
@@ -1053,7 +1053,7 @@ ${filteredStudents.length} learner(s) included.
 
           {/* 2. Grade */}
           <div className="flex flex-col">
-            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Grade</label>
+            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Grade</label>
             <Select
               value={historyMode ? historyGrade : grade}
               onValueChange={historyMode ? setHistoryGrade : setGrade}
@@ -1071,7 +1071,7 @@ ${filteredStudents.length} learner(s) included.
 
           {/* 3. Stream */}
           <div className="flex flex-col">
-            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Stream</label>
+            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Stream</label>
             <Select value={stream} onValueChange={setStream}>
               <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
                 <SelectValue placeholder="All Streams" />
@@ -1087,7 +1087,7 @@ ${filteredStudents.length} learner(s) included.
 
           {/* 4. Exam Type */}
           <div className="flex flex-col">
-            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Exam Type</label>
+            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Exam Type</label>
             <Select
               value={historyMode ? historyExamType : examType}
               onValueChange={historyMode ? setHistoryExamType : setExamType}
@@ -1107,7 +1107,7 @@ ${filteredStudents.length} learner(s) included.
 
           {/* 5. Term */}
           <div className="flex flex-col">
-            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Term</label>
+            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Term</label>
             {historyMode ? (
               <Select value={historyTerm} onValueChange={setHistoryTerm}>
                 <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
@@ -1139,7 +1139,7 @@ ${filteredStudents.length} learner(s) included.
 
           {/* 6. Subject */}
           <div className="flex flex-col">
-            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Subject</label>
+            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Subject</label>
             <Select value={subject} onValueChange={setSubject}>
               <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
                 <SelectValue placeholder="Subject" />
@@ -1155,7 +1155,7 @@ ${filteredStudents.length} learner(s) included.
 
           {/* 7. Find Learner */}
           <div className="flex flex-col">
-            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Find Learner</label>
+            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Find Learner</label>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
               <Input
@@ -1169,7 +1169,7 @@ ${filteredStudents.length} learner(s) included.
 
           {/* 8. Class Average Card */}
           <div className="flex flex-col justify-end">
-            <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Class Average</label>
+            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Class Average</label>
             <div className="w-full px-2.5 py-1.5 text-xs bg-indigo-50 border border-indigo-100 rounded-lg shadow-sm h-9 flex items-center justify-between">
               <span className="font-bold text-indigo-700">{classStats.meanFormatted}</span>
               <span className="text-[10px] font-semibold text-indigo-500">{classStats.completionText}</span>
