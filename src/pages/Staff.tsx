@@ -610,7 +610,9 @@ const Staff = () => {
                                 </DropdownMenuItem>
                               )}
                               {!isPending(member) && (
-                                <DropdownMenuItem onClick={() => navigate('/staff/pre-registration')}
+                                <DropdownMenuItem onClick={() => {
+                                  navigate(`/staff/${member.id}`);
+                                }}
                                   className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50">
                                   <Key size={15} /> Manage Access Keys
                                 </DropdownMenuItem>
