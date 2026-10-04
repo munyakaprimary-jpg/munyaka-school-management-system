@@ -133,6 +133,10 @@ function masterToStaffMember(r: MasterStaffRecord): StaffMember {
     status: (r.status === 'Active' ? 'Active' : r.status === 'Suspended' ? 'Suspended' : 'Pre-Registered') as StaffMember['status'],
     joined: r.joinedDate || '',
     department: r.department || 'School Administration',
+    assignedGrade: r.assignedGrade || (r as any).grade || '',
+    assignedStream: r.assignedStream || (r as any).stream || '',
+    grade: r.assignedGrade || (r as any).grade || '',
+    stream: r.assignedStream || (r as any).stream || '',
   };
 }
 
@@ -620,17 +624,13 @@ const Staff = () => {
                                                       {(() => {
                                                         const item = member as any;
                                                         const r = String(item.role || item.systemRole || '').toLowerCase();
-                                                        const isClassTeacher = r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream || item.grade || item.stream;
+                                                        const isClassTeacher = r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream || item.grade;
                                                         if (isClassTeacher) {
-                                                          const g = item.assignedGrade || item.grade || item.classGrade;
-                                                          const s = item.assignedStream || item.stream || item.classStream;
-                                                          if (g && s) {
-                                                            const cleanS = String(s).replace(/stream/gi, '').trim();
-                                                            return `${g} ${cleanS}`;
-                                                          }
-                                                          return item.assignedClass || item.className || (g ? `${g}` : 'Unassigned Class');
+                                                          return (item.assignedGrade || item.grade) && (item.assignedStream || item.stream)
+                                                            ? `${item.assignedGrade || item.grade} ${item.assignedStream || item.stream}`
+                                                            : 'Unassigned Class';
                                                         }
-                                                        return item.department || item.specialization || 'School Administration';
+                                                        return item.department || 'School Administration';
                                                       })()}
                                                     </span>
                                                   </div>
