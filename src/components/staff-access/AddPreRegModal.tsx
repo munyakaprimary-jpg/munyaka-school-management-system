@@ -59,8 +59,9 @@ const AddPreRegModal = ({
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
-
-  const [formData, setFormData] = useState({
+    const [gradesStreamsConfig, setGradesStreamsConfig] = useState<{ grades: string[]; streams: string[]; gradeStreamMap: Record<string, string[]> }>({ grades: [], streams: [], gradeStreamMap: {} });
+  
+    const [formData, setFormData] = useState({
     fullName: "",
     nationalId: "",
     tscNumber: "",
