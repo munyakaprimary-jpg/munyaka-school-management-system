@@ -999,15 +999,13 @@ ${filteredStudents.length} learner(s) included.
           >
             {pdfExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download PDF
           </Button>
-          {!historyMode && (
-            <Button
-              className="flex items-center justify-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg shadow-sm transition-colors h-11 col-span-2 disabled:opacity-50"
-              onClick={handleSaveAll}
-              disabled={isSaving || isLocked}
-            >
-              {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All Marks
-            </Button>
-          )}
+          <Button
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg shadow-sm transition-colors h-11 disabled:opacity-50"
+            onClick={handleSaveAll}
+            disabled={isSaving || isLocked}
+          >
+            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All Marks
+          </Button>
         </div>
       </div>
 
