@@ -295,7 +295,14 @@ const Staff = () => {
           assignedSubjects: isNonTeaching ? [] : [],
           status: 'Pre-Registered' as const,
         };
-        addStaffMaster(staffPayload);
+        const createdRecord = addStaffMaster(staffPayload);
+        const overrides = JSON.parse(localStorage.getItem('munyaka_staff_class_overrides') || '{}');
+        const staffKey = createdRecord?.id || formData.email.trim();
+        overrides[staffKey] = {
+          assignedGrade: (formData as any).assignedGrade || '',
+          assignedStream: (formData as any).assignedStream || ''
+        };
+        localStorage.setItem('munyaka_staff_class_overrides', JSON.stringify(overrides));
         
         // Notify other components & refresh state
         window.dispatchEvent(new Event('storage'));
@@ -337,6 +344,13 @@ const Staff = () => {
         }
 
         updateStaffMaster(editingStaff.id, staffPayload);
+        const overrides = JSON.parse(localStorage.getItem('munyaka_staff_class_overrides') || '{}');
+        const staffKey = editingStaff.id || formData.email.trim();
+        overrides[staffKey] = {
+          assignedGrade: (formData as any).assignedGrade || '',
+          assignedStream: (formData as any).assignedStream || ''
+        };
+        localStorage.setItem('munyaka_staff_class_overrides', JSON.stringify(overrides));
         
         // Notify other components & refresh state
         window.dispatchEvent(new Event('storage'));

@@ -104,25 +104,28 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
   if (localStorage.getItem('munyaka_staff_cleared_explicitly') === 'true') {
     return [];
   }
-  const staff = CentralDataService.getStaff();
-  return (staff || []).map((s: any) => ({
-    id: s.id,
-    name: s.name || s.full_name || 'Staff Member',
-    nationalId: s.nationalId || s.id_no || `ID-${s.id}`,
-    email: s.email || '',
-    phone: s.phone || '',
-    tscNumber: s.tscNumber || s.tsc_no,
-    role: s.role || 'Teacher',
-    systemRole: s.systemRole || 'subject_teacher',
-    department: s.department || 'Administration',
-    assignedGrade: s.assignedGrade || s.assigned_grade || s.grade || s.assignedClass,
-    assignedStream: s.assignedStream || s.assigned_stream || s.stream,
-    assignedSubjects: s.assignedSubjects,
-    status: s.status || 'Pre-Registered',
-    staffId: s.staffId || s.staff_id,
-    tempAccessCode: s.tempAccessCode || s.access_key || s.ref,
-    joinedDate: s.joinedDate || s.joined,
-  }));
+  const rawStaff = CentralDataService.getStaff() || [];
+  const localOverrides = JSON.parse(localStorage.getItem('munyaka_staff_class_overrides') || '{}');
+  
+  return rawStaff.map((s: any) => {
+    const override = localOverrides[s.id || s.email] || {};
+    return {
+      id: s.id,
+      name: s.name || s.full_name || 'Staff Member',
+      nationalId: s.nationalId || s.id_no || `ID-${s.id}`,
+      email: s.email || '',
+      phone: s.phone || '',
+      tscNumber: s.tscNumber || s.tsc_no,
+      role: s.role || 'Teacher',
+      systemRole: s.systemRole || 'subject_teacher',
+      department: s.department || 'Administration',
+      assignedGrade: override.assignedGrade || s.assignedGrade || s.assigned_grade || s.grade || '',
+      assignedStream: override.assignedStream || s.assignedStream || s.assigned_stream || s.stream || '',
+      status: s.status || 'Pre-Registered',
+      staffId: s.staffId || s.staff_id,
+      tempAccessCode: s.tempAccessCode || s.access_key || s.ref,
+    };
+  });
 };
 
 export const getStaffMasterCount = (): number => getStaffMaster().length;
