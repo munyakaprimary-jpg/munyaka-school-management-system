@@ -281,7 +281,6 @@ const Staff = () => {
         const resolvedSystemRole: MasterSystemRole = mappedSystemRole || 'subject_teacher';
         const generatedId = `staff_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
         const staffPayload = {
-          id: generatedId,
           name: formData.full_name.trim(),
           nationalId: natId,
           email: formData.email.trim(),
@@ -294,6 +293,8 @@ const Staff = () => {
           assignedStream: isNonTeaching ? '' : ((formData as any).assignedStream || ''),
           grade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
           stream: isNonTeaching ? '' : ((formData as any).assignedStream || ''),
+          classGrade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
+          classStream: isNonTeaching ? '' : ((formData as any).assignedStream || ''),
           assignedSubjects: isNonTeaching ? [] : [],
           status: 'Pre-Registered' as const,
         };
@@ -302,7 +303,9 @@ const Staff = () => {
         const overrides = JSON.parse(localStorage.getItem('munyaka_staff_class_overrides') || '{}');
         overrides[recordId] = {
           assignedGrade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
-          assignedStream: isNonTeaching ? '' : ((formData as any).assignedStream || '')
+          assignedStream: isNonTeaching ? '' : ((formData as any).assignedStream || ''),
+          grade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
+          stream: isNonTeaching ? '' : ((formData as any).assignedStream || '')
         };
         if (formData.email.trim()) {
           overrides[formData.email.trim()] = overrides[recordId];
@@ -337,6 +340,8 @@ const Staff = () => {
           assignedStream: isNonTeaching ? '' : ((formData as any).assignedStream || ''),
           grade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
           stream: isNonTeaching ? '' : ((formData as any).assignedStream || ''),
+          classGrade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
+          classStream: isNonTeaching ? '' : ((formData as any).assignedStream || ''),
         };
 
         // Clear teaching-specific fields for non-teaching staff
@@ -345,6 +350,8 @@ const Staff = () => {
           staffPayload.assignedStream = '';
           staffPayload.grade = '';
           staffPayload.stream = '';
+          staffPayload.classGrade = '';
+          staffPayload.classStream = '';
           (staffPayload as any).assignedSubjects = [];
         }
 
@@ -352,8 +359,10 @@ const Staff = () => {
         const overrides = JSON.parse(localStorage.getItem('munyaka_staff_class_overrides') || '{}');
         const staffKey = editingStaff.id || formData.email.trim();
         overrides[staffKey] = {
-          assignedGrade: (formData as any).assignedGrade || '',
-          assignedStream: (formData as any).assignedStream || ''
+          assignedGrade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
+          assignedStream: isNonTeaching ? '' : ((formData as any).assignedStream || ''),
+          grade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
+          stream: isNonTeaching ? '' : ((formData as any).assignedStream || '')
         };
         localStorage.setItem('munyaka_staff_class_overrides', JSON.stringify(overrides));
         
@@ -611,13 +620,17 @@ const Staff = () => {
                                                       {(() => {
                                                         const item = member as any;
                                                         const r = String(item.role || item.systemRole || '').toLowerCase();
-                                                        const isClassTeacher = r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream;
+                                                        const isClassTeacher = r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream || item.grade || item.stream;
                                                         if (isClassTeacher) {
-                                                          return item.assignedGrade && item.assignedStream
-                                                            ? `${item.assignedGrade} ${item.assignedStream}`
-                                                            : 'Unassigned Class';
+                                                          const g = item.assignedGrade || item.grade || item.classGrade;
+                                                          const s = item.assignedStream || item.stream || item.classStream;
+                                                          if (g && s) {
+                                                            const cleanS = String(s).replace(/stream/gi, '').trim();
+                                                            return `${g} ${cleanS}`;
+                                                          }
+                                                          return item.assignedClass || item.className || (g ? `${g}` : 'Unassigned Class');
                                                         }
-                                                        return item.department || 'School Administration';
+                                                        return item.department || item.specialization || 'School Administration';
                                                       })()}
                                                     </span>
                                                   </div>
