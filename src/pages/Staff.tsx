@@ -288,27 +288,12 @@ const Staff = () => {
           role: designation,
           systemRole: resolvedSystemRole,
           department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
-        // Clear teaching-specific fields for non-teaching staff
-        let assignedGradeVal = isNonTeaching ? undefined : ((formData as any).assignedGrade || undefined);
-        let assignedStreamVal = isNonTeaching ? undefined : ((formData as any).assignedStream || undefined);
-
-        addStaffMaster({
-          name: formData.full_name.trim(),
-          nationalId: natId,
-          email: formData.email.trim(),
-          phone: formData.phone.trim(),
-          tscNumber: formData.tsc_number.trim() || undefined,
-          role: designation,
-          systemRole: resolvedSystemRole,
-          department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
-          // Directly append assignedGrade and assignedStream to the saved object
-          assignedGrade: assignedGradeVal,
-          assignedStream: assignedStreamVal,
-          grade: assignedGradeVal,
-          stream: assignedStreamVal,
+          // Clear teaching-specific fields for non-teaching staff
+          assignedGrade: isNonTeaching ? undefined : undefined,
+          assignedStream: isNonTeaching ? undefined : undefined,
           assignedSubjects: isNonTeaching ? [] : [],
           status: 'Pre-Registered',
-        } as any);
+        });
         
         // Notify other components & refresh state
         window.dispatchEvent(new Event('storage'));
@@ -337,22 +322,13 @@ const Staff = () => {
         };
 
         // Clear teaching-specific fields for non-teaching staff
-        let assignedGradeVal = isNonTeaching ? undefined : ((formData as any).assignedGrade || undefined);
-        let assignedStreamVal = isNonTeaching ? undefined : ((formData as any).assignedStream || undefined);
+        if (isNonTeaching) {
+          updatePayload.assignedGrade = undefined;
+          updatePayload.assignedStream = undefined;
+          updatePayload.assignedSubjects = [];
+        }
 
-        const updatePayload: Partial<MasterStaffRecord> & { assignedGrade?: string; assignedStream?: string; grade?: string; stream?: string } = {
-          name: formData.full_name.trim(),
-          role: designation,
-          systemRole: resolvedSystemRole,
-          phone: formData.phone.trim(),
-          email: formData.email.trim(),
-          tscNumber: formData.tsc_number.trim() || undefined,
-          department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
-          assignedGrade: assignedGradeVal,
-          assignedStream: assignedStreamVal,
-          grade: assignedGradeVal,
-          stream: assignedStreamVal,
-        };
+        updateStaffMaster(editingStaff.id, updatePayload);
         
         // Notify other components & refresh state
         window.dispatchEvent(new Event('storage'));
@@ -613,7 +589,7 @@ const Staff = () => {
                                                           const cleanS = assignedS ? String(assignedS).replace(/stream/gi, '').trim() : '';
                                                           return `${assignedG}${cleanS ? ` - ${cleanS}` : ''}`;
                                                         }
-                                                        return (member as any).assignedGrade || (member as any).grade || 'Unassigned Class';
+                                                        return 'Unassigned Class';
                                                       }
                                                       return toTitleCase(member.department || 'School Administration');
                                                     })()}
