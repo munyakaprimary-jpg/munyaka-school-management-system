@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';
 import { showSuccess, showError, dismissToast } from '@/utils/toast';
 import { useCentralData } from '@/hooks/useCentralData';
 import {
@@ -685,36 +686,57 @@ const Staff = () => {
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assign Class & Stream *</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Select value={(formData as any).assignedGrade || 'Grade 4'} onValueChange={val => setFormData({ ...formData, assignedGrade: val, assignedClassId: val.toLowerCase().replace(/\s+/g, '-') } as any)}>
-                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                          <SelectValue placeholder="Select Grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Grade 1">Grade 1</SelectItem>
-                          <SelectItem value="Grade 2">Grade 2</SelectItem>
-                          <SelectItem value="Grade 3">Grade 3</SelectItem>
-                          <SelectItem value="Grade 4">Grade 4</SelectItem>
-                          <SelectItem value="Grade 5">Grade 5</SelectItem>
-                          <SelectItem value="Grade 6">Grade 6</SelectItem>
-                          <SelectItem value="Grade 7">Grade 7</SelectItem>
-                          <SelectItem value="Grade 8">Grade 8</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {(() => {
+                        const config = readGradesAndStreams();
+                        const gradesList = config.grades;
+                        return (
+                          <Select value={(formData as any).assignedGrade || ''} onValueChange={val => setFormData({ ...formData, assignedGrade: val, assignedClassId: val.toLowerCase().replace(/\s+/g, '-') } as any)}>
+                            <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                              <SelectValue placeholder={gradesList.length === 0 ? "(No grades configured)" : "Select Grade"} />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl">
+                              {gradesList.length === 0 ? (
+                                <div className="py-2 px-3 text-xs text-slate-400 text-center font-medium">(No grades configured)</div>
+                              ) : (
+                                gradesList.map((g: string) => (
+                                  <SelectItem key={g} value={g}>{g}</SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        );
+                      })()}
                     </div>
                     <div>
-                      <Select value={(formData as any).assignedStream || 'Green'} onValueChange={val => setFormData({ ...formData, assignedStream: val, assignedStreamId: val.toLowerCase() } as any)}>
-                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                          <SelectValue placeholder="Select stream" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Green">Green Stream</SelectItem>
-                          <SelectItem value="Blue">Blue Stream</SelectItem>
-                          <SelectItem value="Red">Red Stream</SelectItem>
-                          <SelectItem value="Yellow">Yellow Stream</SelectItem>
-                          <SelectItem value="Alpha">Alpha Stream</SelectItem>
-                          <SelectItem value="Beta">Beta Stream</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {(() => {
+                        const config = readGradesAndStreams();
+                        const rawStreams = getStreamsForGrade((formData as any).assignedGrade, config);
+                        const availableStreams = rawStreams;
+                        const hasNoStreams = (formData as any).assignedGrade && availableStreams.length === 0;
+                        return (
+                          <Select
+                            value={(formData as any).assignedStream || ''}
+                            onValueChange={val => setFormData({ ...formData, assignedStream: val, assignedStreamId: val.toLowerCase() } as any)}
+                            disabled={!(formData as any).assignedGrade || hasNoStreams}
+                          >
+                            <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                              <SelectValue placeholder={!(formData as any).assignedGrade ? "Select grade first..." : (hasNoStreams ? "(No streams configured)" : "Select stream")} />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl">
+                              {availableStreams.length === 0 ? (
+                                <div className="py-2 px-3 text-xs text-slate-400 text-center font-medium">(No streams configured)</div>
+                              ) : (
+                                availableStreams.map((s: string) => {
+                                  const cleanLabel = s.replace(/stream/gi, '').trim() || s;
+                                  return (
+                                    <SelectItem key={s} value={s}>{cleanLabel}</SelectItem>
+                                  );
+                                })
+                              )}
+                            </SelectContent>
+                          </Select>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
