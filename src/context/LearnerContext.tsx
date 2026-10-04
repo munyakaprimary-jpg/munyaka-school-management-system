@@ -17,7 +17,8 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // If user is a teacher, filter learners strictly to their assigned grade and stream
   const filteredLearners = React.useMemo(() => {
-    if (!user || user.role === 'admin' || user.role === 'owner' || user.role === 'bursar' || user.role === 'librarian' || user.role === 'storekeeper' || user.role === 'head_teacher') {
+    const userRole = user?.role as string;
+    if (!user || ['admin', 'owner', 'bursar', 'librarian', 'storekeeper', 'head_teacher', 'accountant', 'staff'].includes(userRole)) {
       return allLearners;
     }
     const assignedGrade = (user as any).assignedClass || (user as any).grade || '';

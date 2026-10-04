@@ -685,7 +685,7 @@ const Staff = () => {
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assign Class & Stream *</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Select value={formData.assignedGrade || 'Grade 4'} onValueChange={val => setFormData({ ...formData, assignedGrade: val, assignedClassId: val.toLowerCase().replace(/\s+/g, '-') })}>
+                      <Select value={(formData as any).assignedGrade || 'Grade 4'} onValueChange={val => setFormData({ ...formData, assignedGrade: val, assignedClassId: val.toLowerCase().replace(/\s+/g, '-') } as any)}>
                         <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                           <SelectValue placeholder="Select Grade" />
                         </SelectTrigger>
@@ -702,7 +702,7 @@ const Staff = () => {
                       </Select>
                     </div>
                     <div>
-                      <Select value={formData.assignedStream || 'Green'} onValueChange={val => setFormData({ ...formData, assignedStream: val, assignedStreamId: val.toLowerCase() })}>
+                      <Select value={(formData as any).assignedStream || 'Green'} onValueChange={val => setFormData({ ...formData, assignedStream: val, assignedStreamId: val.toLowerCase() } as any)}>
                         <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                           <SelectValue placeholder="Select stream" />
                         </SelectTrigger>
