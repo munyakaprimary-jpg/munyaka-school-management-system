@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, CheckCircle2, XCircle, Clock, AlertCircle, Save, Calendar, 
-  Filter, Search, RefreshCw, ShieldCheck, Unlock, Lock, CheckSquare, 
+import {
+  Users, CheckCircle2, XCircle, Clock, AlertCircle, Save, Calendar,
+  Filter, Search, RefreshCw, ShieldCheck, Unlock, Lock, CheckSquare,
   FileText, Download, Award, ChevronDown, Sparkles
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { getStoredLearners } from '@/utils/learnersStore';
 

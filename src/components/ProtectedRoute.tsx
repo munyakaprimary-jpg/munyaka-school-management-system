@@ -6,12 +6,17 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: string[];
   blockedRoles?: string[];
+  // Optional: restrict by assigned class/stream for teacher routes
+  assignedClass?: string;
+  assignedStream?: string;
 }
 
 const ProtectedRoute = ({
   children,
   allowedRoles,
   blockedRoles,
+  assignedClass,
+  assignedStream,
 }: ProtectedRouteProps) => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
@@ -48,6 +53,60 @@ const ProtectedRoute = ({
   if (isOwnerRoute && !isOwnerOrSuper && !isAdmin) {
     console.warn('[ProtectedRoute] Security Violation: Non-owner/non-admin staff tried to access Owner/Admin console:', { userRole: rawRole, path: location.pathname });
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // ============================================================
+  // TEACHER STREAM/CLASS GUARD: Restrict teachers to their assigned class/stream
+  // ============================================================
+  const userAssignedClass = user.assignedClass || user.grade || '';
+  const userAssignedStream = user.assignedStream || user.stream || '';
+
+  // Normalize for comparison
+  const normalizedUserClass = String(userAssignedClass).trim().toUpperCase();
+  const normalizedUserStream = String(userAssignedStream).trim().toUpperCase();
+  const normalizedAssignedClass = String(assignedClass || '').trim().toUpperCase();
+  const normalizedAssignedStream = String(assignedStream || '').trim().toUpperCase();
+
+  // If user is a teacher and route has class/stream restrictions, enforce them
+  const isTeacherWithRestrictions = isTeacher && (normalizedAssignedClass !== '' || normalizedAssignedStream !== '');
+
+  // Check if the current route is a teacher-restricted route that requires class/stream matching
+  const teacherRestrictedRoutes = [
+    '/attendance',
+    '/assessments',
+    '/grades',
+    '/staff/attendance',
+    '/staff/check-in',
+    '/staff-checkin',
+    '/staff/attendance-monitor',
+    '/reports',
+    '/fees',
+    '/profile',
+  ];
+
+  const isTeacherRestrictedRoute = teacherRestrictedRoutes.some(route =>
+    location.pathname === route || location.pathname.startsWith(route + '/')
+  );
+
+  // If teacher is restricted to a specific class/stream and trying to access a restricted route without matching
+  if (isTeacherWithRestrictions && isTeacherRestrictedRoute) {
+    // Get class/stream from route query params or state
+    const routeClass = normalizedAssignedClass || normalizedUserClass;
+    const routeStream = normalizedAssignedStream || normalizedUserStream;
+
+    // If route has explicit class/stream props and user doesn't match, block access
+    if ((routeClass !== '' && normalizedUserClass !== routeClass.toUpperCase()) ||
+        (routeStream !== '' && normalizedUserStream !== routeStream.toUpperCase())) {
+      console.warn('[ProtectedRoute] Teacher Stream/Class Guard: User attempted access to route outside assigned class/stream:', {
+        userRole: rawRole,
+        userClass: normalizedUserClass,
+        userStream: normalizedUserStream,
+        requiredClass: routeClass,
+        requiredStream: routeStream,
+        path: location.pathname
+      });
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   // Check explicit blockedRoles

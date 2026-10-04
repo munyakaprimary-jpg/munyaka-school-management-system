@@ -38,6 +38,13 @@ interface User {
   is_active?: number | boolean;
   /** ISO timestamp the record was created. */
   created_at?: string;
+  /** Assigned grade/class for teachers — enforces stream/class access */
+  assignedClass?: string;
+  assignedStream?: string;
+  /** Alias fields used by some components */
+  grade?: string;
+  stream?: string;
+  department?: string;
 }
 
 /**
