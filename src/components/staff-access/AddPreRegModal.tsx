@@ -14,7 +14,6 @@ import { generateAccessKey } from "@/services/staffAccessService";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { useGradesAndStreams } from "@/hooks/useGradesAndStreams";
 
 interface AddPreRegModalProps {
   isOpen: boolean;
@@ -60,9 +59,9 @@ const AddPreRegModal = ({
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
-  const gradesStreamsCtx = useGradesAndStreams();
+    const [gradesStreamsConfig, setGradesStreamsConfig] = useState<{ grades: string[]; streams: string[]; gradeStreamMap: Record<string, string[]> }>({ grades: [], streams: [], gradeStreamMap: {} });
   
-  const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState({
     fullName: "",
     nationalId: "",
     tscNumber: "",
@@ -116,32 +115,26 @@ const AddPreRegModal = ({
   };
 
   useEffect(() => {
-    if (!isOpen) return;
-    generateRandomKey();
-    setSelectedStaffId("");
-    setSearchQuery("");
-    
-    // Default to first grade from unified provider if available
-    const defaultGrade = gradesStreamsCtx.grades && gradesStreamsCtx.grades.length > 0 ? gradesStreamsCtx.grades[0] : "Grade 4";
-    const defaultStreams = gradesStreamsCtx.getStreamsForGrade(defaultGrade);
-    const defaultStream = defaultStreams.length > 0 ? defaultStreams[0] : "Green";
-
-    setFormData({
-      fullName: "",
-      nationalId: "",
-      tscNumber: "",
-      email: "",
-      phone: "",
-      systemRole: "subject_teacher",
-      assignedGrade: defaultGrade,
-      assignedStream: defaultStream,
-      assignedClassId: defaultGrade.toLowerCase().replace(/\s+/g, '-'),
-      assignedStreamId: defaultStream.toLowerCase().replace(/\s+/g, '-'),
-      assignedSubjects: ["Mathematics", "Science & Tech"],
-      tempAccessCode: generateAccessKey(),
-      staffId: generateStaffId()
-    });
-  }, [isOpen, gradesStreamsCtx]);
+  if (!isOpen) return;
+  generateRandomKey();
+  setSelectedStaffId("");
+  setSearchQuery("");
+  setFormData({
+    fullName: "",
+    nationalId: "",
+    tscNumber: "",
+    email: "",
+    phone: "",
+    systemRole: "subject_teacher",
+    assignedGrade: "Grade 4",
+    assignedStream: "Green",
+    assignedClassId: "grade-4",
+    assignedStreamId: "green",
+    assignedSubjects: ["Mathematics", "Science & Tech"],
+    tempAccessCode: generateAccessKey(),
+    staffId: generateStaffId()
+  });
+}, [isOpen]);
 
   // Autofill from combobox selection
   const handleSelectStaff = (staff: DirectoryStaffItem) => {
@@ -294,41 +287,44 @@ const AddPreRegModal = ({
           </div>
         </div>
 
-        {/* Dual-Column Grade & Stream Selector for Class Teachers */}
+        {/* Conditional Stream & Grade Selector for Class Teachers */}
         {(formData.systemRole === 'Class Teacher' || formData.systemRole === 'class_teacher' || String(formData.systemRole).toLowerCase().includes('class')) && (
-          <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-3">
+          <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-4 min-h-[110px]">
             <h4 className="text-xs font-black uppercase text-indigo-900 tracking-wider flex items-center gap-1.5">
-              <span>🏫 Assign Class Grade & Stream (Dual-Column) *</span>
+              <span>🏫 Assign Class & Stream *</span>
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700">Grade (Left)</Label>
+                <Label className="text-xs font-bold text-slate-700">Grade / Class</Label>
                 <Select
                   value={formData.assignedGrade}
                   onValueChange={val => {
-                    const streamsForNewGrade = gradesStreamsCtx.getStreamsForGrade(val);
-                    const firstStream = streamsForNewGrade.length > 0 ? streamsForNewGrade[0] : "Green";
                     setFormData(prev => ({
                       ...prev,
                       assignedGrade: val,
-                      assignedClassId: val.toLowerCase().replace(/\s+/g, '-'),
-                      assignedStream: firstStream,
-                      assignedStreamId: firstStream.toLowerCase().replace(/\s+/g, '-')
+                      assignedClassId: val.toLowerCase().replace(/\s+/g, '-')
                     }));
                   }}
                 >
-                  <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue placeholder="Select Grade" /></SelectTrigger>
+                  <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
                   <SelectContent className="rounded-2xl">
-                    {gradesStreamsCtx.grades.map(grade => (
-                      <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                    ))}
+                    <SelectItem value="Grade 1">Grade 1</SelectItem>
+                    <SelectItem value="Grade 2">Grade 2</SelectItem>
+                    <SelectItem value="Grade 3">Grade 3</SelectItem>
+                    <SelectItem value="Grade 4">Grade 4</SelectItem>
+                    <SelectItem value="Grade 5">Grade 5</SelectItem>
+                    <SelectItem value="Grade 6">Grade 6</SelectItem>
+                    <SelectItem value="Grade 7">Grade 7</SelectItem>
+                    <SelectItem value="Grade 8">Grade 8</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700">Stream (Right)</Label>
+                <Label className="text-xs font-bold text-slate-700">Stream</Label>
                 {(() => {
-                  const gradeStreams = gradesStreamsCtx.getStreamsForGrade(formData.assignedGrade);
+                  const config = readGradesAndStreams();
+                  const rawStreams = getStreamsForGrade(formData.assignedGrade, config);
+                  const availableStreams = rawStreams.length > 0 ? rawStreams : (config.streams.length > 0 ? config.streams : ["Green", "Blue", "Gold", "Red", "North", "East"]);
                   return (
                     <Select
                       value={formData.assignedStream}
@@ -336,24 +332,21 @@ const AddPreRegModal = ({
                         setFormData(prev => ({
                           ...prev,
                           assignedStream: val,
-                          assignedStreamId: val.toLowerCase().replace(/\s+/g, '-')
+                          assignedStreamId: val.toLowerCase()
                         }));
                       }}
                     >
-                      <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue placeholder="Select Stream" /></SelectTrigger>
+                      <SelectTrigger className="rounded-xl h-11 bg-white border-slate-200 font-bold text-slate-900"><SelectValue /></SelectTrigger>
                       <SelectContent className="rounded-2xl">
-                        {gradeStreams.length === 0 ? (
-                          <SelectItem value="no-streams" disabled>(No streams configured)</SelectItem>
-                        ) : (
-                          gradeStreams.map((streamName: string) => {
-                            const cleanedLabel = gradesStreamsCtx.cleanStreamLabel(streamName);
-                            return (
-                              <SelectItem key={streamName} value={streamName}>
-                                {cleanedLabel}
-                              </SelectItem>
-                            );
-                          })
-                        )}
+                        {availableStreams.map((streamName: string) => {
+                          const cleanName = streamName.replace(/stream/gi, '').trim() || streamName;
+                          const displayLabel = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+                          return (
+                            <SelectItem key={streamName} value={streamName}>
+                              {displayLabel}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   );
@@ -365,36 +358,28 @@ const AddPreRegModal = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Temporary Access Code *</Label>
-            <div className="flex gap-2">
-              <Input value={formData.tempAccessCode} onChange={e => setFormData({ ...formData, tempAccessCode: e.target.value })}
-                placeholder="e.g. MUN-8492" className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900 font-mono tracking-wider" required />
-              <Button type="button" variant="outline" onClick={generateRandomKey} title="Generate new key"
-                className="rounded-xl h-12 w-12 shrink-0 border-slate-200 bg-white hover:bg-slate-50">
-                <RefreshCw size={16} className="text-slate-600" />
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Staff Portal ID</Label>
-            <Input value={formData.staffId} readOnly
-              className="rounded-xl h-12 bg-slate-100 border-none font-bold text-slate-500 font-mono cursor-not-allowed" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Email Address *</Label>
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Official Email *</Label>
             <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
-              placeholder="e.g. jane.mwangi@munyaka.ac.ke" className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" required />
+              placeholder="e.g. jane@email.com" className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" required />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone Number</Label>
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone Number *</Label>
             <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="e.g. +254 712 345 678" className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" />
+              placeholder="+254…" className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" required />
           </div>
         </div>
 
+        {/* Access Key — always MUNYAKA-XXXX, generated via staffAccessService */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Access Key</Label>
+          <div className="flex gap-2">
+            <Input value={formData.tempAccessCode} readOnly
+              className="rounded-xl h-12 bg-slate-50 border-none font-black text-center text-indigo-700" />
+            <Button type="button" variant="outline" className="h-12 px-3 rounded-xl border-slate-200" onClick={generateRandomKey}>
+              <RefreshCw size={16} />
+            </Button>
+          </div>
+        </div>
       </form>
     </Modal>
   );
