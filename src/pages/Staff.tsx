@@ -592,12 +592,8 @@ const Staff = () => {
                                                     {(() => {
                                                       const item = member as any;
                                                       const r = String(item.role || item.systemRole || '').toLowerCase();
-                                                      const hasClass = r.includes('class') || item.assignedGrade || item.assignedStream || item.grade || item.stream || item.assignedClass || item.className;
-                                                      if (hasClass) {
-                                                        const g = item.assignedGrade || item.grade || item.assignedClass || '';
-                                                        const s = item.assignedStream || item.stream || item.className || '';
-                                                        const cleanS = s ? String(s).replace(/stream/gi, '').trim() : '';
-                                                        return `Class Teacher (${g}${cleanS ? ` ${cleanS}` : ''})`;
+                                                      if (r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream) {
+                                                        return 'Class Teacher';
                                                       }
                                                       return toTitleCase(item.role || 'Pending Assignment');
                                                     })()}
@@ -606,12 +602,10 @@ const Staff = () => {
                                                     {(() => {
                                                       const item = member as any;
                                                       const r = String(item.role || item.systemRole || '').toLowerCase();
-                                                      if (r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream || item.grade || item.stream) {
+                                                      if (r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream || item.grade) {
                                                         return item.assignedGrade && item.assignedStream
                                                           ? `${item.assignedGrade} ${item.assignedStream}`
-                                                          : item.grade && item.stream
-                                                          ? `${item.grade} ${item.stream}`
-                                                          : item.assignedGrade || item.grade || item.assignedClass || 'Unassigned Class';
+                                                          : 'Unassigned Class';
                                                       }
                                                       return item.department || item.specialization || 'School Administration';
                                                     })()}
