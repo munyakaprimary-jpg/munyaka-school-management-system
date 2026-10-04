@@ -454,6 +454,27 @@ const Staff = () => {
   const initialsOf = (name: string): string =>
     String(name || 'PR').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
+  const handleDownloadStaffList = () => {
+    const staffMembers = getStaffMaster();
+    const headers = ['Name', 'Staff ID / TSC No', 'Role / System Role', 'Class / Department', 'Email'];
+    const rows = staffMembers.map(s => [
+      `"${s.name || ''}"`,
+      `"${s.tscNumber || s.staffId || s.nationalId || ''}"`,
+      `"${s.role || s.systemRole || ''}"`,
+      `"${(s.role === 'Class Teacher' || s.systemRole === 'class_teacher' || s.assignedGrade || s.assignedStream) ? `${s.assignedGrade || ''} ${s.assignedStream || ''}`.trim() || 'Unassigned Class' : s.department || 'Administration'}"`,
+      `"${s.email || ''}"`
+    ]);
+    
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'munyaka_staff_directory.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -466,9 +487,20 @@ const Staff = () => {
             <p className="text-muted-foreground break-words hyphens-auto">Master directory of teachers, administrators, and support staff.</p>
           </div>
         </div>
-        <Button className="h-11 px-6 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 w-full sm:w-auto" onClick={handleOpenAdd}>
-          <UserPlus size={18} /> Add Staff
-        </Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={handleDownloadStaffList}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl shadow-sm hover:bg-blue-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Staff List
+          </button>
+          <Button className="h-11 px-6 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100" onClick={handleOpenAdd}>
+            <UserPlus size={18} /> Add Staff
+          </Button>
+        </div>
       </div>
 
       {/* Metrics - responsive grid */}
