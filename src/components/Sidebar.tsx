@@ -109,7 +109,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
     { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
     { icon: FileText, label: 'Admin Harmonization Hub', path: '/admin-harmonization-hub', roles: ['admin'] },
-        { icon: UserCheck, label: 'Staff Management', path: '/staff', roles: ['admin'] },
+    { icon: Contact2, label: 'Staff Management', path: '/staff', roles: ['admin', 'head_teacher'] },
     { icon: Archive, label: 'Transferred Archive', path: '/transferred-archive', roles: ['admin'] },
     { icon: ArrowUpCircle, label: 'Promote Students', path: '/promote-students', roles: ['admin'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
