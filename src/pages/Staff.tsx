@@ -581,17 +581,8 @@ const Staff = () => {
                                                   <p className="font-bold text-slate-800 whitespace-nowrap">{toTitleCase(member.role || 'Pending Assignment')}</p>
                                                   <p className="text-xs text-slate-400 font-medium whitespace-nowrap">
                                                     {(() => {
-                                                      const mRole = String(member.role || member.systemRole || '').toLowerCase();
-                                                      const assignedG = (member as any).assignedGrade || (member as any).assigned_grade;
-                                                      const assignedS = (member as any).assignedStream || (member as any).assigned_stream;
-                                                      if (mRole.includes('class') || assignedG) {
-                                                        if (assignedG) {
-                                                          const cleanS = assignedS ? String(assignedS).replace(/stream/gi, '').trim() : '';
-                                                          return `${assignedG}${cleanS ? ` - ${cleanS}` : ''}`;
-                                                        }
-                                                        return 'Unassigned Class';
-                                                      }
-                                                      return toTitleCase(member.department || 'School Administration');
+                                                      const staff = member as any;
+                                                      return staff.assignedGrade && staff.assignedStream ? `${staff.assignedGrade}${staff.assignedStream}` : (staff.grade || 'Unassigned Class');
                                                     })()}
                                                   </p>
                                                 </td>
