@@ -180,7 +180,7 @@ const Staff = () => {
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [selectedAccessStaff, setSelectedAccessStaff] = useState<StaffMember | null>(null);
   const [isBulkActivating, setIsBulkActivating] = useState(false);
-  const [formData, setFormData] = useState({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '' });
+  const [formData, setFormData] = useState({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '', assignedGrade: '', assignedStream: '' });
   const [formError, setFormError] = useState('');
   const [showTeachingFields, setShowTeachingFields] = useState(true);
 
@@ -217,7 +217,7 @@ const Staff = () => {
   const handleOpenAdd = () => {
     setModalMode('add');
     setEditingStaff(null);
-    setFormData({ full_name: '', role: '', systemRole: 'subject_teacher', phone: '', email: '', tsc_number: '' });
+    setFormData({ full_name: '', role: '', systemRole: 'subject_teacher', phone: '', email: '', tsc_number: '', assignedGrade: '', assignedStream: '' });
     setShowTeachingFields(true);
     setFormError('');
     setIsModalOpen(true);
@@ -235,7 +235,9 @@ const Staff = () => {
       systemRole: staff.systemRole || 'subject_teacher',
       phone: staff.phone,
       email: staff.email,
-      tsc_number: staff.tsc_no || ''
+      tsc_number: staff.tsc_no || '',
+      assignedGrade: (staff as any).assignedGrade || (staff as any).grade || '',
+      assignedStream: (staff as any).assignedStream || (staff as any).stream || '',
     });
     setFormError('');
     setIsModalOpen(true);
@@ -245,7 +247,7 @@ const Staff = () => {
     setIsModalOpen(false);
     setEditingStaff(null);
     setFormError('');
-    setFormData({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '' });
+    setFormData({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '', assignedGrade: '', assignedStream: '' });
     setShowTeachingFields(true);
   };
 
@@ -288,9 +290,10 @@ const Staff = () => {
           role: designation,
           systemRole: resolvedSystemRole,
           department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
-          // Clear teaching-specific fields for non-teaching staff
-          assignedGrade: isNonTeaching ? undefined : undefined,
-          assignedStream: isNonTeaching ? undefined : undefined,
+          assignedGrade: isNonTeaching ? undefined : ((formData as any).assignedGrade || undefined),
+          assignedStream: isNonTeaching ? undefined : ((formData as any).assignedStream || undefined),
+          grade: isNonTeaching ? undefined : ((formData as any).assignedGrade || undefined),
+          stream: isNonTeaching ? undefined : ((formData as any).assignedStream || undefined),
           assignedSubjects: isNonTeaching ? [] : [],
           status: 'Pre-Registered',
         });
@@ -325,7 +328,20 @@ const Staff = () => {
         if (isNonTeaching) {
           updatePayload.assignedGrade = undefined;
           updatePayload.assignedStream = undefined;
+          updatePayload.grade = undefined;
+          updatePayload.stream = undefined;
           updatePayload.assignedSubjects = [];
+        } else {
+          const g = (formData as any).assignedGrade;
+          const s = (formData as any).assignedStream;
+          if (g) {
+            updatePayload.assignedGrade = g;
+            updatePayload.grade = g;
+          }
+          if (s) {
+            updatePayload.assignedStream = s;
+            updatePayload.stream = s;
+          }
         }
 
         updateStaffMaster(editingStaff.id, updatePayload);
@@ -347,7 +363,8 @@ const Staff = () => {
 
     setIsModalOpen(false);
     setEditingStaff(null);
-    setFormData({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '' });
+    setFormData({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '', assignedGrade: '', assignedStream: '' });
+    setIsSaving(false);
     setShowTeachingFields(true);
     setIsSaving(false);
   };
@@ -582,8 +599,8 @@ const Staff = () => {
                                                   <p className="text-xs text-slate-400 font-medium whitespace-nowrap">
                                                     {(() => {
                                                       const mRole = String(member.role || member.systemRole || '').toLowerCase();
-                                                      const assignedG = (member as any).assignedGrade || (member as any).assigned_grade;
-                                                      const assignedS = (member as any).assignedStream || (member as any).assigned_stream;
+                                                      const assignedG = (member as any).assignedGrade || (member as any).grade || (member as any).assigned_grade;
+                                                      const assignedS = (member as any).assignedStream || (member as any).stream || (member as any).assigned_stream;
                                                       if (mRole.includes('class') || assignedG) {
                                                         if (assignedG) {
                                                           const cleanS = assignedS ? String(assignedS).replace(/stream/gi, '').trim() : '';
@@ -772,9 +789,9 @@ const Staff = () => {
                 )}
               </div>
 
-              {(formData.role.toLowerCase().includes('class') || formData.role === 'class_teacher' || formData.systemRole === 'class_teacher' || String(formData.systemRole).toLowerCase().includes('class')) && (
+              {(showTeachingFields || formData.role.toLowerCase().includes('teacher') || formData.role.toLowerCase().includes('class') || formData.systemRole === 'class_teacher' || formData.systemRole === 'subject_teacher') && (
                 <div className="space-y-2 min-h-[90px] pt-1">
-                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assign Class & Stream *</Label>
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assign Class & Stream</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       {(() => {
@@ -821,6 +838,17 @@ const Staff = () => {
                                   const cleanLabel = s.replace(/stream/gi, '').trim() || s;
                                   return (
                                     <SelectItem key={s} value={s}>{cleanLabel}</SelectItem>
+                                  );
+                                })
+                              )}
+                            </SelectContent>
+                          </Select>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
                                   );
                                 })
                               )}
