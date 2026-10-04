@@ -601,13 +601,9 @@ const Staff = () => {
                                                   <p className="text-xs text-slate-400 font-medium whitespace-nowrap">
                                                     {(() => {
                                                       const item = member as any;
-                                                      const r = String(item.role || item.systemRole || '').toLowerCase();
-                                                      if (r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream || item.grade) {
-                                                        return item.assignedGrade && item.assignedStream
-                                                          ? `${item.assignedGrade} ${item.assignedStream}`
-                                                          : 'Unassigned Class';
-                                                      }
-                                                      return item.department || item.specialization || 'School Administration';
+                                                      return item.assignedGrade && item.assignedStream
+                                                        ? `${item.assignedGrade} ${item.assignedStream}`
+                                                        : 'Unassigned Class';
                                                     })()}
                                                   </p>
                                                 </td>
