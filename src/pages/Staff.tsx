@@ -590,26 +590,25 @@ const Staff = () => {
                         <td className="px-8 py-5 min-w-[180px]">
                                                   <p className="font-bold text-slate-800 whitespace-nowrap">
                                                     {(() => {
-                                                      const staff = member as any;
-                                                      const g = staff.assignedGrade || staff.assigned_grade || staff.grade || staff.assignedClass;
-                                                      const s = staff.assignedStream || staff.assigned_stream || staff.stream;
-                                                      if (g || s) {
+                                                      const item = member as any;
+                                                      const hasClass = item.assignedGrade || item.assignedStream || item.grade || item.stream || item.assignedClass || item.className;
+                                                      if (hasClass) {
+                                                        const g = item.assignedGrade || item.grade || item.assignedClass || '';
+                                                        const s = item.assignedStream || item.stream || item.className || '';
                                                         const cleanS = s ? String(s).replace(/stream/gi, '').trim() : '';
                                                         return `Class Teacher (${g}${cleanS ? ` ${cleanS}` : ''})`;
                                                       }
-                                                      return toTitleCase(staff.role || 'Pending Assignment');
+                                                      return toTitleCase(item.role || 'Pending Assignment');
                                                     })()}
                                                   </p>
                                                   <p className="text-xs text-slate-400 font-medium whitespace-nowrap">
                                                     {(() => {
-                                                      const staff = member as any;
-                                                      const g = staff.assignedGrade || staff.assigned_grade || staff.grade || staff.assignedClass;
-                                                      const s = staff.assignedStream || staff.assigned_stream || staff.stream;
-                                                      if (g && s) {
-                                                        const cleanS = String(s).replace(/stream/gi, '').trim();
-                                                        return `${g} ${cleanS}`;
-                                                      }
-                                                      return g || 'Unassigned Class';
+                                                      const item = member as any;
+                                                      return item.assignedGrade && item.assignedStream
+                                                        ? `${item.assignedGrade} ${item.assignedStream}`
+                                                        : item.grade && item.stream
+                                                        ? `${item.grade} ${item.stream}`
+                                                        : item.assignedClass || item.className || item.department || 'Unassigned Class';
                                                     })()}
                                                   </p>
                                                 </td>
