@@ -280,7 +280,6 @@ const Staff = () => {
       try {
         const resolvedSystemRole: MasterSystemRole = mappedSystemRole || 'subject_teacher';
         const staffPayload = {
-          ...editingStaff,
           name: formData.full_name.trim(),
           nationalId: natId,
           email: formData.email.trim(),
@@ -289,10 +288,10 @@ const Staff = () => {
           role: designation,
           systemRole: resolvedSystemRole,
           department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
-          assignedGrade: (formData as any).assignedGrade || '',
-          assignedStream: (formData as any).assignedStream || '',
-          grade: (formData as any).assignedGrade || '',
-          stream: (formData as any).assignedStream || '',
+          assignedGrade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
+          assignedStream: isNonTeaching ? '' : ((formData as any).assignedStream || ''),
+          grade: isNonTeaching ? '' : ((formData as any).assignedGrade || ''),
+          stream: isNonTeaching ? '' : ((formData as any).assignedStream || ''),
           assignedSubjects: isNonTeaching ? [] : [],
           status: 'Pre-Registered' as const,
         };
@@ -315,7 +314,6 @@ const Staff = () => {
       try {
         const resolvedSystemRole: MasterSystemRole = mappedSystemRole || (formData.systemRole as MasterSystemRole) || 'subject_teacher';
         const staffPayload = {
-          ...editingStaff,
           name: formData.full_name.trim(),
           role: designation,
           systemRole: resolvedSystemRole,
@@ -335,7 +333,7 @@ const Staff = () => {
           staffPayload.assignedStream = '';
           staffPayload.grade = '';
           staffPayload.stream = '';
-          staffPayload.assignedSubjects = [];
+          (staffPayload as any).assignedSubjects = [];
         }
 
         updateStaffMaster(editingStaff.id, staffPayload);
