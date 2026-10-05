@@ -223,71 +223,8 @@ const TeacherDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Activity & School Notices */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 rounded-3xl border-slate-200 bg-white shadow-sm">
-          <CardHeader className="p-6 border-b border-slate-100 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-black text-slate-900">Recent School Announcements</CardTitle>
-              <CardDescription className="text-xs">Direct circulars from administration & head teacher</CardDescription>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/notices')} className="text-blue-600 font-bold text-xs">
-              View All
-            </Button>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            {(() => {
-              let liveNotices: any[] = [];
-              try {
-                const saved = localStorage.getItem('events_and_notices');
-                if (saved) {
-                  const parsed = JSON.parse(saved);
-                  if (Array.isArray(parsed)) liveNotices = parsed;
-                }
-              } catch {}
-
-              // Sort most recent first
-              liveNotices.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-
-              if (liveNotices.length === 0) {
-                return (
-                  <div className="text-center py-10 text-slate-400 text-xs font-medium">
-                    No school announcements posted yet.
-                  </div>
-                );
-              }
-
-              return liveNotices.slice(0, 3).map((notice: any) => {
-                const isMeeting = (notice.category || '').toLowerCase().includes('meeting') || (notice.title || '').toLowerCase().includes('meeting');
-                return (
-                  <div key={notice.id || notice.title} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className={`w-10 h-10 rounded-xl ${isMeeting ? 'bg-indigo-600' : 'bg-blue-600'} text-white flex items-center justify-center shrink-0 mt-0.5 shadow-md`}>
-                      {isMeeting ? <Calendar size={18} /> : <Megaphone size={18} />}
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-bold text-slate-900 text-sm">{notice.title}</h4>
-                        {notice.category && (
-                          <Badge className={`${isMeeting ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700'} hover:opacity-100 text-[10px] font-bold`}>
-                            {notice.category}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        {notice.content || notice.description}
-                      </p>
-                      <p className="text-[10px] text-slate-400 font-medium pt-1">
-                        Posted {notice.author ? `by ${notice.author}` : ''} {notice.date ? `· ${new Date(notice.date).toLocaleDateString()}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </CardContent>
-        </Card>
-
-        {/* Quick Sync & Profile Summary */}
+      {/* Quick Sync & Profile Summary */}
+      <div className="max-w-md">
         <Card className="rounded-3xl border-slate-200 bg-white shadow-sm flex flex-col justify-between">
           <div>
             <CardHeader className="p-6 border-b border-slate-100">
@@ -319,7 +256,7 @@ const TeacherDashboard: React.FC = () => {
           </div>
 
           <div className="p-6 pt-0">
-            <Button 
+            <Button
               onClick={() => navigate('/study-corner')}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-2xl shadow-lg flex items-center justify-center gap-2"
             >
