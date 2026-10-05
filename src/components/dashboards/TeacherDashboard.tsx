@@ -229,28 +229,35 @@ const TeacherDashboard: React.FC = () => {
           <div>
             <CardHeader className="p-6 border-b border-slate-100">
               <CardTitle className="text-lg font-black text-slate-900">Teacher Profile & Sync</CardTitle>
-              <CardDescription className="text-xs">Local Database & Credentials</CardDescription>
+              <CardDescription className="text-xs">Active Session & Offline Store</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                  {teacherName.charAt(0)}
+              {user ? (
+                <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                    {teacherName.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900 truncate">{teacherName}</p>
+                    <p className="text-xs text-slate-500">{teacherRole} · Assigned: {fullClassTitle}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-900 truncate">{teacherName}</p>
-                  <p className="text-xs text-slate-500">{fullClassTitle}</p>
+              ) : (
+                <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-center justify-between">
+                  <span>No active teacher session found.</span>
+                  <Button size="sm" variant="outline" onClick={() => navigate('/auth')} className="text-xs font-bold bg-white">Sign In</Button>
                 </div>
-              </div>
+              )}
 
               <div className="space-y-2 pt-2">
                 <div className="flex justify-between text-xs font-semibold text-slate-600">
-                  <span>Database Synchronization</span>
-                  <span className="text-emerald-600 font-bold">Synced</span>
+                  <span>Local Offline Store</span>
+                  <span className="text-blue-600 font-bold">{students.length} Learners · {attendanceRecords.length} Logs</span>
                 </div>
                 <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div className="bg-emerald-500 h-full w-full rounded-full" />
+                  <div className="bg-blue-600 h-full rounded-full" style={{ width: `${Math.min(100, Math.max(10, students.length * 5))}%` }} />
                 </div>
-                <p className="text-[10px] text-slate-400">All local grades and attendance logs are backed up.</p>
+                <p className="text-[10px] text-slate-400">Records are securely persisted in local storage for offline operations.</p>
               </div>
             </CardContent>
           </div>
