@@ -44,11 +44,12 @@ const TeacherDashboard: React.FC = () => {
     return localStorage.getItem('teacher_dashboard_stream') || (user as any)?.assignedStream || (user as any)?.stream || 'Green';
   });
 
-  const fullClassTitle = `${selectedGrade} ${selectedStream}`;
+  const currentGrade = selectedGrade || "Grade 1";
+  const currentStream = selectedStream || "Blue";
+  const fullClassTitle = `${currentGrade} ${currentStream}`;
 
-  // Calculate dynamic assigned learners & attendance counts based on selected Grade & Stream
+  // Get students list
   let storedStudents: any[] = [];
-  let attendanceList: any[] = [];
   try {
     const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
     if (Array.isArray(centralDb.students)) {
@@ -61,37 +62,35 @@ const TeacherDashboard: React.FC = () => {
     storedStudents = [];
   }
 
-  const filteredStudents = storedStudents.length > 0
-    ? storedStudents.filter((s: any) => {
-        const sGrade = s.grade || s.gradeLevel || s.assignedClass || '';
-        const sStream = s.stream || s.assignedStream || '';
-        return sGrade.toLowerCase() === selectedGrade.toLowerCase() && sStream.toLowerCase() === selectedStream.toLowerCase();
-      })
-    : [];
-
-  const assignedLearnersCount = filteredStudents.length > 0
-    ? filteredStudents.length
-    : (storedStudents.length > 0 ? storedStudents.length : (totalStudents > 0 ? totalStudents : 24));
-
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Get attendance records
+  let attendanceRecords: any[] = [];
   try {
     const rawAtt = localStorage.getItem('school_attendance_logs');
     if (rawAtt) {
       const parsed = JSON.parse(rawAtt);
       if (Array.isArray(parsed)) {
-        attendanceList = parsed.filter((r: any) =>
-          r.date === todayStr &&
-          (filteredStudents.some((s: any) => s.id === r.studentId || s.admNo === r.studentId) || !filteredStudents.length)
-        );
+        attendanceRecords = parsed;
       }
     }
   } catch {
-    attendanceList = [];
+    attendanceRecords = [];
   }
 
-  const presentCount = attendanceList.length > 0
-    ? attendanceList.filter((r: any) => r.status === 'present' || r.status === 'late').length
-    : Math.min(assignedLearnersCount, Math.max(0, assignedLearnersCount - 1));
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayAttendance = attendanceRecords.filter(r => r.date === todayStr);
+
+  const filteredLearners = storedStudents.filter(
+    s => ((s.grade || s.gradeLevel || s.assignedClass || "") === currentGrade) && ((s.stream || s.assignedStream || "") === currentStream)
+  );
+
+  const assignedCount = filteredLearners.length > 0 ? filteredLearners.length : (storedStudents.length > 0 ? storedStudents.length : 24);
+
+  // If filteredLearners is empty (e.g. mock data fallback), fallback students filter match or count
+  const effectiveLearners = filteredLearners.length > 0 ? filteredLearners : storedStudents;
+
+  const presentCount = todayAttendance.filter(
+    r => effectiveLearners.some(s => s.id === r.studentId || s.admNo === r.studentId) && (r.status === 'present' || r.status === 'late')
+  ).length || Math.min(assignedCount, Math.max(0, assignedCount - 1));
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full font-sans">
@@ -131,12 +130,12 @@ const TeacherDashboard: React.FC = () => {
             </Button>
           </div>
         </div>
-              </div>
+      </div>
         
-              {/* Teacher Batch Export Module */}
-              <div id="teacher-export-module">
-                <TeacherExportModule />
-              </div>
+      {/* Teacher Batch Export Module */}
+      <div id="teacher-export-module">
+        <TeacherExportModule />
+      </div>
 
       {/* Assigned Learners & Today's Attendance Cards (2-Column Horizontal Grid) */}
       <div className="grid grid-cols-2 gap-3 mb-4">
@@ -144,9 +143,9 @@ const TeacherDashboard: React.FC = () => {
         <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Assigned Learners</p>
-            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{assignedLearnersCount}</h3>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{assignedCount}</h3>
             <p className="text-[10px] text-green-600 font-medium">
-              Active in {selectedGrade || "Grade 1"} {selectedStream || "Blue"}
+              Active in {currentGrade} {currentStream}
             </p>
           </div>
           <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -158,7 +157,7 @@ const TeacherDashboard: React.FC = () => {
         <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Today's Attendance</p>
-            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{presentCount} / {assignedLearnersCount}</h3>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{presentCount} / {assignedCount}</h3>
             <p className="text-[10px] text-blue-600 font-medium">Roll call marked</p>
           </div>
           <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
@@ -210,8 +209,6 @@ const TeacherDashboard: React.FC = () => {
               <span>Enter Marks</span> <ArrowRight size={14} />
             </div>
           </div>
-
-          {/* Timetable card removed for teachers */}
 
           <div 
             onClick={() => navigate('/students')}
