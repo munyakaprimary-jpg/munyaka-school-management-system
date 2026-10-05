@@ -35,11 +35,18 @@ const TeacherDashboard: React.FC = () => {
 
   const teacherName = user?.name || 'Teacher';
   const teacherRole = user?.role || 'Class Teacher';
-  const assignedClass = (user as any)?.assignedClass || (user as any)?.grade || 'Grade 4';
-  const assignedStream = (user as any)?.assignedStream || (user as any)?.stream || 'Green';
-  const fullClassTitle = `${assignedClass} ${assignedStream}`;
+  
+  // Grade and Stream state from localStorage or user context
+  const [selectedGrade, setSelectedGrade] = React.useState<string>(() => {
+    return localStorage.getItem('teacher_dashboard_grade') || (user as any)?.assignedClass || (user as any)?.grade || 'Grade 4';
+  });
+  const [selectedStream, setSelectedStream] = React.useState<string>(() => {
+    return localStorage.getItem('teacher_dashboard_stream') || (user as any)?.assignedStream || (user as any)?.stream || 'Green';
+  });
 
-  // Calculate dynamic assigned learners & attendance counts
+  const fullClassTitle = `${selectedGrade} ${selectedStream}`;
+
+  // Calculate dynamic assigned learners & attendance counts based on selected Grade & Stream
   let storedStudents: any[] = [];
   let attendanceList: any[] = [];
   try {
@@ -54,12 +61,17 @@ const TeacherDashboard: React.FC = () => {
     storedStudents = [];
   }
 
-  const assignedLearnersCount = storedStudents.length > 0
-    ? storedStudents.filter((s: any) =>
-        (s.grade === assignedClass || s.assignedClass === assignedClass) &&
-        (s.stream === assignedStream || s.assignedStream === assignedStream)
-      ).length || storedStudents.length
-    : (totalStudents > 0 ? totalStudents : 24);
+  const filteredStudents = storedStudents.length > 0
+    ? storedStudents.filter((s: any) => {
+        const sGrade = s.grade || s.gradeLevel || s.assignedClass || '';
+        const sStream = s.stream || s.assignedStream || '';
+        return sGrade.toLowerCase() === selectedGrade.toLowerCase() && sStream.toLowerCase() === selectedStream.toLowerCase();
+      })
+    : [];
+
+  const assignedLearnersCount = filteredStudents.length > 0
+    ? filteredStudents.length
+    : (storedStudents.length > 0 ? storedStudents.length : (totalStudents > 0 ? totalStudents : 24));
 
   const todayStr = new Date().toISOString().split('T')[0];
   try {
@@ -67,7 +79,10 @@ const TeacherDashboard: React.FC = () => {
     if (rawAtt) {
       const parsed = JSON.parse(rawAtt);
       if (Array.isArray(parsed)) {
-        attendanceList = parsed.filter((r: any) => r.date === todayStr);
+        attendanceList = parsed.filter((r: any) =>
+          r.date === todayStr &&
+          (filteredStudents.some((s: any) => s.id === r.studentId || s.admNo === r.studentId) || !filteredStudents.length)
+        );
       }
     }
   } catch {
@@ -76,8 +91,7 @@ const TeacherDashboard: React.FC = () => {
 
   const presentCount = attendanceList.length > 0
     ? attendanceList.filter((r: any) => r.status === 'present' || r.status === 'late').length
-    : Math.max(0, assignedLearnersCount - 3);
-  const totalAttendanceMarked = attendanceList.length > 0 ? attendanceList.length : assignedLearnersCount;
+    : Math.min(assignedLearnersCount, Math.max(0, assignedLearnersCount - 1));
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full font-sans">
