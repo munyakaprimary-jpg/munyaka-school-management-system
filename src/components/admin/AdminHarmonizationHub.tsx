@@ -150,21 +150,50 @@ export const AdminHarmonizationHub: React.FC = () => {
             {isAdmin && (
               <Button
                 onClick={() => exportMasterSyncPackage()}
-                className="bg-white text-emerald-950 hover:bg-emerald-50 font-bold px-6 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2.5 border border-white/30"
+                className="bg-white text-emerald-950 hover:bg-emerald-50 font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2.5 border border-white/30"
               >
                 <PackageOpen size={18} className="text-emerald-600" />
                 <span>Export Master Sync Package</span>
               </Button>
             )}
 
-            <label className="cursor-pointer bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2 backdrop-blur-md">
-              <Upload size={18} className="text-emerald-200" />
+            <label className="cursor-pointer bg-white text-teal-950 hover:bg-teal-50 font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2.5 border border-white/30">
+              <Upload size={18} className="text-teal-600" />
               <span>{isUploading ? 'Parsing Files...' : 'Upload Teacher Export(s)'}</span>
               <input
                 type="file"
                 accept=".json,application/json"
                 multiple
                 onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+
+            <label className="cursor-pointer bg-[#CCFF00] hover:bg-[#b8e600] text-slate-950 font-bold px-5 py-3.5 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2.5">
+              <Upload size={18} className="text-slate-900" />
+              <span>{isImportingMaster ? 'Syncing Master...' : 'Import Master Sync Package'}</span>
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setIsImportingMaster(true);
+                  try {
+                    const result = await importMasterSyncPackage(file);
+                    if (result.success) {
+                      showSuccess(result.message || 'Master sync package imported successfully!');
+                      setTimeout(() => window.location.reload(), 1200);
+                    } else {
+                      showError(result.message || 'Failed to import master sync package.');
+                    }
+                  } catch (err: any) {
+                    showError(err?.message || 'Failed to import master sync package.');
+                  } finally {
+                    setIsImportingMaster(false);
+                    e.target.value = '';
+                  }
+                }}
                 className="hidden"
               />
             </label>
