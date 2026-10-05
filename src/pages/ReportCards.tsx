@@ -218,6 +218,9 @@ export default function ReportCards() {
       `;
     }).join('');
 
+    const formattedClosing = formatDateDisplay(closingDate);
+    const formattedOpening = formatDateDisplay(openingDate);
+
     return `
       <!DOCTYPE html>
       <html>
@@ -242,7 +245,9 @@ export default function ReportCards() {
             .remarks-box { border: 1px solid #94a3b8; padding: 12px; margin-bottom: 20px; font-size: 13px; background: #f8fafc; }
             .remarks-title { font-weight: bold; margin-bottom: 4px; color: #1e3a8a; }
             
-            .footer { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 40px; }
+            .dates-banner { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px 14px; margin-bottom: 25px; font-size: 13px; font-weight: bold; text-align: center; }
+            
+            .footer { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 35px; }
             .closing-footer { font-size: 12px; text-align: center; color: #555; margin-top: 25px; border-top: 1px solid #cbd5e1; padding-top: 10px; }
           </style>
         </head>
@@ -290,13 +295,17 @@ export default function ReportCards() {
             <div>${hoiRemarks}</div>
           </div>
 
+          <div class="dates-banner">
+            Term Closing Date: ${formattedClosing} &nbsp;&nbsp;|&nbsp;&nbsp; Term Opening Date: ${formattedOpening}
+          </div>
+
           <div class="footer">
             <div>Class Teacher Sign: .......................................</div>
             <div>Headteacher Sign & Stamp: .......................................</div>
           </div>
 
           <div class="closing-footer">
-            Closing Date: <strong>${formatDateDisplay(closingDate)}</strong> | Opening Date: <strong>${formatDateDisplay(openingDate)}</strong> | System Powered by Jamlyan Analytics
+            System Powered by Jamlyan Analytics — Munyaka Primary and Junior School
           </div>
         </body>
       </html>
@@ -332,7 +341,7 @@ export default function ReportCards() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card Generator</h2>
-          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks, and download clean HTML report card files.</p>
+          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks and term dates, and download clean HTML report card files.</p>
         </div>
         <button 
           onClick={handleDownloadReport}
