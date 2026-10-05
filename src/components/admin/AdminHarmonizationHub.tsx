@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Upload, FileText, CheckCircle2, AlertCircle, ShieldCheck, Database, RefreshCw, Trash2, ArrowRight, PackageOpen, Download } from 'lucide-react';
 import { harmonizationService, HarmonizationAuditItem } from '@/services/harmonizationService';
-import { exportMasterDatabase } from '@/utils/exportMasterDatabase';
-import { exportMasterSyncPackage } from '@/utils/importMasterSyncPackage';
+import { exportMasterDatabase, exportMasterSyncPackage } from '@/utils/exportMasterDatabase';
+import { importMasterSyncPackage } from '@/utils/importMasterSyncPackage';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
