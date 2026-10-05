@@ -38,36 +38,101 @@ export default function ReportCards() {
     alert(msg);
   };
 
-  const handleDownloadCurrent = () => {
-    setIsExportingCurrent(true);
-    try {
-      const reportData = {
-        title: "CBC Report Card",
-        grade,
-        stream,
-        term,
-        year,
-        generatedAt: new Date().toISOString(),
-        studentsCount: filteredStudents.length,
-        currentStudent: filteredStudents[0] || null,
-        schoolName: schoolConfig?.name || "Munyaka Primary School",
-        motto: schoolConfig?.motto || "Discipline and Excellence"
-      };
-      const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `CBC_Report_${grade}_${stream}_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setIsExportingCurrent(false);
-      showSuccess("CBC Report JSON package downloaded successfully.");
-    } catch (err) {
-      setIsExportingCurrent(false);
-      showError("Failed to export CBC report.");
+  const handleDownloadCurrent = (studentToPrint?: any) => {
+    const currentStudent = studentToPrint || filteredStudents[0];
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showError("Popup blocked. Please allow popups to print report cards.");
+      return;
     }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>CBC Report Card - ${currentStudent?.full_name || currentStudent?.fullName || 'Report'}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 25px; color: #111; line-height: 1.4; }
+            .header { text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 12px; margin-bottom: 20px; }
+            .school-name { font-size: 22px; font-weight: bold; text-transform: uppercase; color: #1e293b; }
+            .motto { font-size: 13px; font-style: italic; color: #475569; margin-top: 4px; }
+            .report-title { font-size: 16px; font-weight: bold; margin-top: 8px; color: #334155; }
+            .details-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; background: #f8fafc; border: 1px solid #e2e8f0; }
+            .details-table td { padding: 10px 12px; font-size: 13px; border: 1px solid #e2e8f0; }
+            .section-header { font-size: 14px; font-weight: bold; background: #e2e8f0; padding: 6px 10px; margin-top: 15px; margin-bottom: 10px; }
+            .grades-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .grades-table th, .grades-table td { border: 1px solid #cbd5e1; padding: 8px 10px; font-size: 12px; text-align: left; }
+            .grades-table th { background: #f1f5f9; }
+            .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; }
+            @media print {
+              body { padding: 0; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="school-name">Munyaka Primary School</div>
+            <div class="motto">Motto: Discipline and Excellence</div>
+            <div class="report-title">Competency Based Curriculum (CBC) Assessment Report</div>
+          </div>
+          <table class="details-table">
+            <tr>
+              <td><strong>Learner Name:</strong> ${currentStudent?.full_name || currentStudent?.fullName || 'N/A'}</td>
+              <td><strong>Adm No:</strong> ${currentStudent?.admission_no || currentStudent?.admissionNo || currentStudent?.admNo || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td><strong>Grade & Stream:</strong> ${grade} ${stream}</td>
+              <td><strong>Term & Year:</strong> ${term}, ${year}</td>
+            </tr>
+          </table>
+          <div class="section-header">Performance Summary & Competencies</div>
+          <table class="grades-table">
+            <thead>
+              <tr>
+                <th>Learning Area / Strand</th>
+                <th>Performance Level (EE, ME, AE, BE)</th>
+                <th>Teacher's Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mathematical Activities</td>
+                <td>Meets Expectation (ME)</td>
+                <td>Shows good grasp of numbers and arithmetic.</td>
+              </tr>
+              <tr>
+                <td>Language Activities</td>
+                <td>Exceeds Expectation (EE)</td>
+                <td>Excellent reading and articulation skills.</td>
+              </tr>
+              <tr>
+                <td>Environmental Activities</td>
+                <td>Meets Expectation (ME)</td>
+                <td>Active participation in practical observations.</td>
+              </tr>
+              <tr>
+                <td>Creative Arts & Physical Education</td>
+                <td>Exceeds Expectation (EE)</td>
+                <td>Very creative and enthusiastic in sports.</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="footer">
+            <div>Class Teacher Signature: ........................................</div>
+            <div>Headteacher Signature: ........................................</div>
+          </div>
+          <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.print()" style="background: #4f46e5; color: white; border: none; padding: 10px 20px; font-size: 14px; border-radius: 6px; cursor: pointer;">Print / Save as PDF</button>
+          </div>
+          <script>
+            window.onload = () => { window.print(); };
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   const handleDownloadAll = () => {
@@ -75,34 +140,105 @@ export default function ReportCards() {
       showError("No learners found for the selected Grade/Stream combination.");
       return;
     }
-    setIsDownloadingAll(true);
-    try {
-      const batchData = {
-        title: "CBC Batch Report Cards",
-        grade,
-        stream,
-        term,
-        year,
-        totalLearners: filteredStudents.length,
-        generatedAt: new Date().toISOString(),
-        schoolName: schoolConfig?.name || "Munyaka Primary School",
-        students: filteredStudents
-      };
-      const blob = new Blob([JSON.stringify(batchData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `CBC_Batch_Reports_${grade}_${stream}_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setIsDownloadingAll(false);
-      showSuccess("All CBC reports packaged and downloaded successfully.");
-    } catch (err) {
-      setIsDownloadingAll(false);
-      showError("Failed to export batch CBC reports.");
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showError("Popup blocked. Please allow popups to print report cards.");
+      return;
     }
+
+    const studentsHtml = filteredStudents.map((currentStudent, idx) => `
+      <div class="report-page" ${idx > 0 ? 'style="page-break-before: always; margin-top: 40px;"' : ''}>
+        <div class="header">
+          <div class="school-name">Munyaka Primary School</div>
+          <div class="motto">Motto: Discipline and Excellence</div>
+          <div class="report-title">Competency Based Curriculum (CBC) Assessment Report</div>
+        </div>
+        <table class="details-table">
+          <tr>
+            <td><strong>Learner Name:</strong> ${currentStudent?.full_name || currentStudent?.fullName || 'N/A'}</td>
+            <td><strong>Adm No:</strong> ${currentStudent?.admission_no || currentStudent?.admissionNo || currentStudent?.admNo || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td><strong>Grade & Stream:</strong> ${grade} ${stream}</td>
+            <td><strong>Term & Year:</strong> ${term}, ${year}</td>
+          </tr>
+        </table>
+        <div class="section-header">Performance Summary & Competencies</div>
+        <table class="grades-table">
+          <thead>
+            <tr>
+              <th>Learning Area / Strand</th>
+              <th>Performance Level (EE, ME, AE, BE)</th>
+              <th>Teacher's Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Mathematical Activities</td>
+              <td>Meets Expectation (ME)</td>
+              <td>Shows good grasp of numbers and arithmetic.</td>
+            </tr>
+            <tr>
+              <td>Language Activities</td>
+              <td>Exceeds Expectation (EE)</td>
+              <td>Excellent reading and articulation skills.</td>
+            </tr>
+            <tr>
+              <td>Environmental Activities</td>
+              <td>Meets Expectation (ME)</td>
+              <td>Active participation in practical observations.</td>
+            </tr>
+            <tr>
+              <td>Creative Arts & Physical Education</td>
+              <td>Exceeds Expectation (EE)</td>
+              <td>Very creative and enthusiastic in sports.</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="footer">
+          <div>Class Teacher Signature: ........................................</div>
+          <div>Headteacher Signature: ........................................</div>
+        </div>
+      </div>
+    `).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>CBC Batch Report Cards - ${grade} ${stream}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 25px; color: #111; line-height: 1.4; }
+            .header { text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 12px; margin-bottom: 20px; }
+            .school-name { font-size: 22px; font-weight: bold; text-transform: uppercase; color: #1e293b; }
+            .motto { font-size: 13px; font-style: italic; color: #475569; margin-top: 4px; }
+            .report-title { font-size: 16px; font-weight: bold; margin-top: 8px; color: #334155; }
+            .details-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; background: #f8fafc; border: 1px solid #e2e8f0; }
+            .details-table td { padding: 10px 12px; font-size: 13px; border: 1px solid #e2e8f0; }
+            .section-header { font-size: 14px; font-weight: bold; background: #e2e8f0; padding: 6px 10px; margin-top: 15px; margin-bottom: 10px; }
+            .grades-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .grades-table th, .grades-table td { border: 1px solid #cbd5e1; padding: 8px 10px; font-size: 12px; text-align: left; }
+            .grades-table th { background: #f1f5f9; }
+            .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; }
+            @media print {
+              body { padding: 0; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: right; margin-bottom: 20px;">
+            <button onclick="window.print()" style="background: #4f46e5; color: white; border: none; padding: 10px 20px; font-size: 14px; border-radius: 6px; cursor: pointer;">Print All / Save as PDF</button>
+          </div>
+          ${studentsHtml}
+          <script>
+            window.onload = () => { window.print(); };
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   return (
