@@ -7,9 +7,7 @@ import { getLearners } from '@/hooks/useCentralData';
 import { getSchoolProfile } from '@/utils/storage';
 
 export default function ReportCards() {
-  const students = CentralDataService.getLearners();
-  const schoolConfig = { name: "Munyaka Primary School", motto: "Discipline and Excellence" };
-  const refreshData = () => {};
+  const { students, schoolConfig, refreshData } = useCentralData();
   const [grade, setGrade] = useState('Grade 4');
   const [stream, setStream] = useState('Green');
   const [term, setTerm] = useState('Term 2');
