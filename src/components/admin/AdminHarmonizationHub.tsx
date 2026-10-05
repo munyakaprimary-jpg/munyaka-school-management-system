@@ -183,13 +183,24 @@ export const AdminHarmonizationHub: React.FC = () => {
                   try {
                     const result = await importMasterSyncPackage(file);
                     if (result.success) {
-                      showSuccess(result.message || 'Master sync package imported successfully!');
+                      toast({
+                        title: "Success",
+                        description: result.message || 'Master sync package imported successfully!',
+                      });
                       setTimeout(() => window.location.reload(), 1200);
                     } else {
-                      showError(result.message || 'Failed to import master sync package.');
+                      toast({
+                        title: "Error",
+                        description: result.message || 'Failed to import master sync package.',
+                        variant: "destructive",
+                      });
                     }
                   } catch (err: any) {
-                    showError(err?.message || 'Failed to import master sync package.');
+                    toast({
+                      title: "Error",
+                      description: err?.message || 'Failed to import master sync package.',
+                      variant: "destructive",
+                    });
                   } finally {
                     setIsImportingMaster(false);
                     e.target.value = '';
