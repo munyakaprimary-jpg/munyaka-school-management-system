@@ -226,7 +226,7 @@ export default function ReportCards() {
           <title>CBC Report Card - ${studentName}</title>
           <style>
             @page { size: A4 portrait; margin: 10mm; }
-            body { font-family: Arial, sans-serif; padding: 15px; color: #111; max-width: 800px; margin: auto; line-height: 1.4; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            body { font-family: Arial, sans-serif; padding: 20px; color: #111; max-width: 800px; margin: auto; line-height: 1.4; background: #fff; }
             .header { text-align: center; border-bottom: 3px solid #111; padding-bottom: 12px; margin-bottom: 20px; }
             .school { font-size: 20px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
             .address { font-size: 12px; margin-bottom: 2px; }
@@ -310,51 +310,22 @@ export default function ReportCards() {
       const studentName = selectedLearner.fullName || selectedLearner.name || 'Learner';
       const htmlContent = buildReportHtml();
 
-      // Create a hidden print iframe to trigger standard PDF print dialog / save as PDF
-      let pdfFrame = document.getElementById('report-pdf-print-frame') as HTMLIFrameElement;
-      if (!pdfFrame) {
-        pdfFrame = document.createElement('iframe');
-        pdfFrame.id = 'report-pdf-print-frame';
-        pdfFrame.style.position = 'fixed';
-        pdfFrame.style.right = '0';
-        pdfFrame.style.bottom = '0';
-        pdfFrame.style.width = '0';
-        pdfFrame.style.height = '0';
-        pdfFrame.style.border = '0';
-        document.body.appendChild(pdfFrame);
-      }
+      // Direct HTML-to-file Blob download with .html extension so teachers can open or save instantly on any browser or Android device without print preview errors
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CBC_Report_${studentName.replace(/\s+/g, '_')}_${academicYear}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
-      const pw = pdfFrame.contentWindow;
-      const frameDoc = pw?.document;
-      if (!frameDoc) {
-        // Fallback to Blob download if iframe is unavailable
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `CBC_Report_${studentName.replace(/\s+/g, '_')}_${academicYear}.pdf.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        setIsExporting(false);
-        showSuccess("Report card exported successfully.");
-        return;
-      }
-
-      frameDoc.open();
-      frameDoc.write(htmlContent);
-      frameDoc.close();
-
-      setTimeout(() => {
-        pw?.focus();
-        pw?.print();
-        setIsExporting(false);
-        showSuccess("PDF export dialog opened successfully.");
-      }, 500);
+      setIsExporting(false);
+      showSuccess("Report card downloaded successfully.");
     } catch (err) {
       setIsExporting(false);
-      showError("Failed to export PDF report card.");
+      showError("Failed to download report card file.");
     }
   };
 
@@ -362,15 +333,15 @@ export default function ReportCards() {
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card PDF Generator</h2>
-          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks, and export formal PDF report cards.</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card Generator</h2>
+          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks, and download direct HTML-to-file report cards.</p>
         </div>
         <button 
           onClick={handleDownloadReport}
           disabled={isExporting}
           className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold px-6 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
         >
-          <Download className="h-4 w-4" /> {isExporting ? 'Preparing PDF...' : 'Download / Save PDF Report'}
+          <Download className="h-4 w-4" /> {isExporting ? 'Generating File...' : 'Download Report Card File'}
         </button>
       </div>
 
