@@ -790,7 +790,7 @@ export default function Students() {
           </>
         }
       >
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
+        <div className="max-h-[75vh] overflow-y-auto px-6 py-4 pb-24 space-y-4 -mx-6 -my-4">
           <div className="space-y-2">
             <Label className="text-xs font-bold text-slate-700 uppercase">Full Name *</Label>
             <Input
