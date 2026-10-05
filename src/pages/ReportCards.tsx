@@ -85,7 +85,7 @@ export default function ReportCards() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter students dynamically by Grade and Stream, then by search term
+  // Filter students strictly by Grade and Stream
   const filteredStudents = useMemo(() => {
     return allStudents.filter(s => {
       const studentGrade = String(s.grade || '').toLowerCase().trim();
@@ -100,24 +100,25 @@ export default function ReportCards() {
     });
   }, [allStudents, selectedGrade, selectedStream]);
 
-  // Search filtered suggestions
+  // Search filtered suggestions within the grade/stream filtered list
   const searchFilteredStudents = useMemo(() => {
     if (!searchTerm.trim()) return filteredStudents.slice(0, 10);
-    const term = searchTerm.toLowerCase();
+    const termStr = searchTerm.toLowerCase().trim();
     return filteredStudents.filter(s => {
       const name = (s.fullName || s.name || '').toLowerCase();
       const adm = (s.admissionNumber || '').toLowerCase();
       const asm = (s.assessmentNumber || s.assessmentNo || '').toLowerCase();
-      return name.includes(term) || adm.includes(term) || asm.includes(term);
+      return name.includes(termStr) || adm.includes(termStr) || asm.includes(termStr);
     }).slice(0, 10);
   }, [filteredStudents, searchTerm]);
 
-  // When Grade or Stream changes, check if current active learner is still valid
+  // When Grade or Stream changes, verify if current active learner belongs to the new class. If not, pick the first available learner in that class.
   useEffect(() => {
     if (filteredStudents.length > 0) {
       const isCurrentValid = filteredStudents.some(s => 
         (s.admissionNumber && s.admissionNumber === selectedLearner.admissionNumber) ||
-        (s.fullName && s.fullName === selectedLearner.fullName)
+        (s.fullName && s.fullName === selectedLearner.fullName) ||
+        (s.id && s.id === selectedLearner.admissionNumber)
       );
       if (!isCurrentValid) {
         const first = filteredStudents[0];
@@ -129,6 +130,15 @@ export default function ReportCards() {
           stream: first.stream || selectedStream
         });
       }
+    } else {
+      // If no students in this grade/stream, keep empty placeholder state
+      setSelectedLearner({
+        fullName: 'No student in this class',
+        admissionNumber: 'N/A',
+        assessmentNumber: 'N/A',
+        grade: selectedGrade,
+        stream: selectedStream
+      });
     }
   }, [selectedGrade, selectedStream, filteredStudents]);
 
@@ -273,7 +283,7 @@ export default function ReportCards() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card Generator</h2>
-          <p className="text-sm text-slate-600 mt-0.5">Select academic year, term, exam type, grade, and stream, then preview or download formal report cards.</p>
+          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, select student from live search, and export formal report cards.</p>
         </div>
         <button 
           onClick={handleDownloadReport}
@@ -356,10 +366,12 @@ export default function ReportCards() {
             </div>
           </div>
           
-          {/* Live Learner Search Box */}
+          {/* Live Learner Search Box (Restricted to selected Grade & Stream) */}
           <div className="relative" ref={searchRef}>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold uppercase text-slate-500">Search Learner in {selectedGrade} ({filteredStudents.length} available)</label>
+              <label className="text-xs font-semibold uppercase text-slate-500">
+                Search Learner in {selectedGrade} ({filteredStudents.length} available)
+              </label>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -376,27 +388,34 @@ export default function ReportCards() {
               />
             </div>
 
-            {showSuggestions && searchFilteredStudents.length > 0 && (
+            {showSuggestions && (
               <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-                {searchFilteredStudents.map((student, idx) => {
-                  const name = student.fullName || student.name || 'Unnamed Learner';
-                  const adm = student.admissionNumber || student.id || 'N/A';
-                  return (
-                    <div
-                      key={student.id || idx}
-                      onClick={() => handleSelectLearner(student)}
-                      className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-semibold text-slate-800 text-sm">{name}</div>
-                        <div className="text-xs text-slate-500">Adm: {adm} | Stream: {student.stream || 'General'}</div>
+                {searchFilteredStudents.length > 0 ? (
+                  searchFilteredStudents.map((student, idx) => {
+                    const name = student.fullName || student.name || 'Unnamed Learner';
+                    const adm = student.admissionNumber || student.id || 'N/A';
+                    const asm = student.assessmentNumber || student.assessmentNo || 'N/A';
+                    return (
+                      <div
+                        key={student.id || idx}
+                        onClick={() => handleSelectLearner(student)}
+                        className="px-4 py-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0 flex items-center justify-between transition"
+                      >
+                        <div>
+                          <div className="font-semibold text-slate-800 text-sm">{name}</div>
+                          <div className="text-xs text-slate-500">Adm: {adm} | Assessment: {asm}</div>
+                        </div>
+                        <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md font-semibold">
+                          {student.stream || selectedStream}
+                        </span>
                       </div>
-                      <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md font-semibold">
-                        {student.grade || selectedGrade}
-                      </span>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  <div className="px-4 py-3 text-xs text-slate-500 text-center">
+                    No matching learners found in {selectedGrade}.
+                  </div>
+                )}
               </div>
             )}
           </div>
