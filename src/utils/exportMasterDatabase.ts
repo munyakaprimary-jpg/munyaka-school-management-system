@@ -172,96 +172,43 @@ export function generateMasterSyncPackage(senderInfo?: {
   };
 }
 
-export async function exportMasterSyncPackage(senderInfo?: {
-  senderName?: string;
-  staffId?: string;
-  departmentOrStream?: string;
-  role?: string;
-}): Promise<MasterExportResult> {
-  try {
-    const payload = generateMasterSyncPackage(senderInfo);
-    const jsonString = JSON.stringify(payload, null, 2);
-    const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const fileName = `munyaka_master_sync_v1_${dateStr}.json`;
-
-    if (Capacitor.isNativePlatform()) {
-      let targetDir = Directory.ExternalStorage;
-      let writeResult;
-      try {
-        writeResult = await Filesystem.writeFile({
-          path: fileName,
-          data: jsonString,
-          directory: targetDir,
-          encoding: Encoding.UTF8
-        });
-      } catch (err) {
-        targetDir = Directory.Documents;
-        writeResult = await Filesystem.writeFile({
-          path: fileName,
-          data: jsonString,
-          directory: targetDir,
-          encoding: Encoding.UTF8
-        });
-      }
-
-      let fileUri = writeResult?.uri;
-      if (!fileUri && writeResult) {
-        const uriResult = await Filesystem.getUri({
-          directory: targetDir,
-          path: fileName,
-        });
-        fileUri = uriResult.uri;
-      }
-
-      try {
-        if (fileUri) {
-          await Share.share({
-            title: 'Munyaka Master Sync Package',
-            text: `Master Sync Package generated at ${new Date().toLocaleString()}`,
-            files: [fileUri],
-            url: fileUri,
-            dialogTitle: 'Share Master Sync Package',
-          });
-        }
-      } catch (shareErr: any) {
-        console.warn('Share dialog dismissed or failed:', shareErr);
-      }
-
-      showSuccess(`Master Sync Package cached & shared: ${fileName}`);
-      return {
-        success: true,
-        filePath: fileUri,
-        fileName,
-        size: jsonString.length,
-        message: `Successfully generated and shared ${fileName}`,
-      };
-    } else {
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      showSuccess(`Master Sync Package downloaded successfully: ${fileName}`);
-      return {
-        success: true,
-        fileName,
-        size: jsonString.length,
-        message: `Successfully downloaded ${fileName}`,
-      };
+export const exportMasterSyncPackage = () => {
+  // 1. Gather all local storage keys and state tables dynamically
+  const masterPayload = {
+    version: "2.0",
+    exportedAt: new Date().toISOString(),
+    institution: "Munyaka Primary and Junior School",
+    data: {
+      learners: JSON.parse(localStorage.getItem('learners') || localStorage.getItem('school_learners_master') || '[]'),
+      staff: JSON.parse(localStorage.getItem('staff') || localStorage.getItem('staff_members') || '[]'),
+      fees: JSON.parse(localStorage.getItem('fees') || localStorage.getItem('fee_records') || '[]'),
+      attendance: JSON.parse(localStorage.getItem('attendance') || localStorage.getItem('munyaka_attendance_records') || '[]'),
+      marks: JSON.parse(localStorage.getItem('marks') || localStorage.getItem('munyaka_marks_records') || '[]'),
+      exams: JSON.parse(localStorage.getItem('exams') || localStorage.getItem('munyaka_exams') || '[]'),
+      library: JSON.parse(localStorage.getItem('library') || localStorage.getItem('munyaka_library_books') || '[]'),
+      inventory: JSON.parse(localStorage.getItem('inventory') || localStorage.getItem('munyaka_store_items') || '[]'),
+      streams: JSON.parse(localStorage.getItem('streams') || localStorage.getItem('munyaka_streams') || '[]'),
+      settings: JSON.parse(localStorage.getItem('settings') || localStorage.getItem('munyaka_system_settings') || '{}')
     }
-  } catch (err: any) {
-    console.error('Error exporting master sync package:', err);
-    showError(err?.message || 'Failed to export master sync package.');
-    return {
-      success: false,
-      fileName: 'munyaka_master_sync_v1.json',
-      size: 0,
-      message: err?.message || 'Failed to export master sync package.',
-    };
-  }
-}
+  };
+
+  // 2. Trigger verification log to confirm record counts
+  console.log("Master Sync Bundled Records:", Object.keys(masterPayload.data).reduce((acc, key) => {
+    const val = masterPayload.data[key as keyof typeof masterPayload.data];
+    (acc as Record<string, number>)[key] = Array.isArray(val) ? val.length : (val && typeof val === 'object' ? Object.keys(val).length : 0);
+    return acc;
+  }, {} as Record<string, number>));
+
+  // 3. Convert to Blob and trigger download
+  const blob = new Blob([JSON.stringify(masterPayload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `Munyaka_Master_Sync_${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+export const exportMasterDatabase = exportMasterSyncPackage;
