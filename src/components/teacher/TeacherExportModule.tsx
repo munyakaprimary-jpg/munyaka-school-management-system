@@ -240,33 +240,34 @@ export const TeacherExportModule: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Buttons: Export & Import Master Sync (2-column side-by-side grid) */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          accept=".json"
-          className="hidden"
-        />
-
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          <button
+        {/* Action Buttons: Export & Import Master Sync */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <Button
             onClick={handleExport}
             disabled={isExporting}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 rounded-2xl shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
           >
-            {isExporting ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Download className="w-4 h-4 shrink-0" />}
-            <span className="truncate">{isExporting ? 'Packaging...' : 'Export Class Package'}</span>
-          </button>
+            <Download size={16} />
+            <span>{isExporting ? 'Packaging...' : `Export Class Package`}</span>
+          </Button>
 
-          <button
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".json"
+            className="hidden"
+          />
+
+          <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-emerald-600 text-emerald-700 text-xs font-medium rounded-lg shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50"
+            variant="outline"
+            className="w-full border-emerald-300 hover:bg-emerald-50 text-emerald-700 font-bold h-12 rounded-2xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 text-sm"
           >
-            {isImporting ? <RefreshCw className="w-4 h-4 animate-spin shrink-0" /> : <Upload className="w-4 h-4 shrink-0 text-emerald-600" />}
-            <span className="truncate">{isImporting ? 'Syncing...' : 'Import Master Sync Package'}</span>
-          </button>
+            {isImporting ? <RefreshCw size={16} className="animate-spin" /> : <Upload size={16} />}
+            <span>{isImporting ? 'Syncing Master Data...' : 'Import Master Sync Package'}</span>
+          </Button>
         </div>
       </CardContent>
     </Card>
