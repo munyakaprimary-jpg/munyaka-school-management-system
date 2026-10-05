@@ -218,12 +218,10 @@ const ReportCards = () => {
   const handleDownloadCurrent = async () => {
     setIsExportingCurrent(true);
     try {
-      // 1. Sync live values from textareas into DOM text
       document.querySelectorAll('textarea').forEach(textarea => {
         textarea.innerText = textarea.value;
       });
 
-      // 2. Clone the report card element
       const reportElement = wrapperRef.current || (document.querySelector('.reports-print-wrapper') as HTMLElement | null);
       if (!reportElement) {
         showError("Report card container not found.");
@@ -231,52 +229,58 @@ const ReportCards = () => {
         return;
       }
       const printContent = reportElement.cloneNode(true) as HTMLElement;
-
-      // 3. Remove .no-print elements
       printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
 
       const activeStudent = filteredStudents[0];
 
-      const htmlContent = `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>CBC_ReportCard_${activeStudent?.admissionNumber || 'learner'}</title>
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-      body { background: #ffffff; padding: 10mm; margin: 0; }
-      @page { size: A4 portrait; margin: 5mm; }
-      .reports-print-wrapper {
-        width: 100%;
-        padding: 10mm;
-        border: none !important;
-        box-shadow: none !important;
-        font-size: 11px;
-        line-height: 1.3;
-      }
-      .school-header { text-align: center; margin-bottom: 8px; }
-      .school-name { font-size: 13px; font-weight: bold; }
-      .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
-      .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
-      .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
-      .meta-item { display: flex; gap: 4px; }
-      .meta-label { font-weight: bold; }
-      .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-      .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
-      .grading-table th { background: #f1f5f9; font-weight: bold; }
-      .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-      .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
-      .remark-header { font-weight: bold; margin-bottom: 4px; }
-      .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
-      .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
-      .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
-      textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
-    </style>
-  </head>
-  <body>
-    ${printContent.outerHTML}
-  </body>
-</html>`;
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>CBC Report Card - Munyaka Primary and Junior School</title>
+            <style>
+              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111; margin: 0; padding: 20px; font-size: 13px; line-height: 1.4; background: #fff; }
+              .report-page { page-break-after: always; min-height: 95vh; display: flex; flex-direction: column; justify-content: space-between; }
+              .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 15px; }
+              .school-name { font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+              .address { font-size: 12px; margin-bottom: 2px; }
+              .motto { font-size: 12px; font-style: italic; margin-bottom: 6px; }
+              .doc-title { font-size: 13px; font-weight: bold; text-transform: uppercase; background: #eee; padding: 4px; margin-top: 5px; }
+              
+              .bio-grid { width: 100%; margin-bottom: 15px; border-collapse: collapse; }
+              .bio-grid td { padding: 4px 6px; font-size: 12px; border: 1px solid #ccc; width: 50%; }
+              
+              .scores-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+              .scores-table th, .scores-table td { border: 1px solid #999; padding: 6px 8px; font-size: 12px; text-align: left; }
+              .scores-table th { background: #f2f2f2; font-weight: bold; }
+              
+              .remarks-box { border: 1px solid #ccc; padding: 8px; margin-bottom: 15px; font-size: 12px; }
+              .signatures { display: flex; justify-content: space-between; margin-top: 30px; font-size: 12px; font-weight: bold; }
+              .footer-note { font-size: 10px; text-align: center; color: #666; margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
+              .reports-print-wrapper { width: 100%; }
+              .report-card { page-break-after: always !important; margin-bottom: 20px; }
+              textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+            </style>
+          </head>
+          <body>
+            <div class="report-page">
+              <div>
+                ${printContent.innerHTML}
+              </div>
+              <div>
+                <div class="signatures">
+                  <div>Sign: .......................................</div>
+                  <div>Sign & Stamp: .......................................</div>
+                </div>
+                <div class="footer-note">
+                  Closing Date: ${closingDate ? formatDateDisplay(closingDate) : '10/04/2026'} | Opening Date: ${openingDate ? formatDateDisplay(openingDate) : '04/05/2026'} | System Powered by Jamlyan Analytics
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
 
       const blob = new Blob([htmlContent], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
@@ -317,47 +321,41 @@ const ReportCards = () => {
       const printContent = reportElement.cloneNode(true) as HTMLElement;
       printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
 
-      const htmlContent = `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>CBC_Report_Cards_Batch_${grade}_${stream}</title>
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-      body { background: #ffffff; padding: 10mm; margin: 0; }
-      @page { size: A4 portrait; margin: 5mm; }
-      .reports-print-wrapper {
-        width: 100%;
-        padding: 10mm;
-        border: none !important;
-        box-shadow: none !important;
-        font-size: 11px;
-        line-height: 1.3;
-      }
-      .school-header { text-align: center; margin-bottom: 8px; }
-      .school-name { font-size: 13px; font-weight: bold; }
-      .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
-      .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
-      .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
-      .meta-item { display: flex; gap: 4px; }
-      .meta-label { font-weight: bold; }
-      .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-      .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
-      .grading-table th { background: #f1f5f9; font-weight: bold; }
-      .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-      .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
-      .remark-header { font-weight: bold; margin-bottom: 4px; }
-      .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
-      .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
-      .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
-      textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
-      .report-card { page-break-after: always !important; margin-bottom: 20px; }
-    </style>
-  </head>
-  <body>
-    ${printContent.outerHTML}
-  </body>
-</html>`;
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>CBC Report Cards Batch - Munyaka Primary and Junior School</title>
+            <style>
+              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111; margin: 0; padding: 20px; font-size: 13px; line-height: 1.4; background: #fff; }
+              .report-page { page-break-after: always; min-height: 95vh; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 30px; }
+              .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 15px; }
+              .school-name { font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+              .address { font-size: 12px; margin-bottom: 2px; }
+              .motto { font-size: 12px; font-style: italic; margin-bottom: 6px; }
+              .doc-title { font-size: 13px; font-weight: bold; text-transform: uppercase; background: #eee; padding: 4px; margin-top: 5px; }
+              
+              .bio-grid { width: 100%; margin-bottom: 15px; border-collapse: collapse; }
+              .bio-grid td { padding: 4px 6px; font-size: 12px; border: 1px solid #ccc; width: 50%; }
+              
+              .scores-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+              .scores-table th, .scores-table td { border: 1px solid #999; padding: 6px 8px; font-size: 12px; text-align: left; }
+              .scores-table th { background: #f2f2f2; font-weight: bold; }
+              
+              .remarks-box { border: 1px solid #ccc; padding: 8px; margin-bottom: 15px; font-size: 12px; }
+              .signatures { display: flex; justify-content: space-between; margin-top: 30px; font-size: 12px; font-weight: bold; }
+              .footer-note { font-size: 10px; text-align: center; color: #666; margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
+              .reports-print-wrapper { width: 100%; }
+              .report-card { page-break-after: always !important; margin-bottom: 20px; }
+              textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+            </style>
+          </head>
+          <body>
+            ${printContent.innerHTML}
+          </body>
+        </html>
+      `;
 
       const blob = new Blob([htmlContent], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
