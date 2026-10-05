@@ -10,7 +10,9 @@ import {
   ArrowRight,
   FileSpreadsheet,
   Megaphone,
-  Lock
+  Lock,
+  Bell,
+  Clock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -234,37 +236,76 @@ const TeacherDashboard: React.FC = () => {
             </Button>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-md">
-                <Megaphone size={18} />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm">End of Term 2 Assessment Submission Deadline</h4>
-                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] font-bold">Important</Badge>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  All teachers are required to upload formative and summative competency assessment scores by Friday 4:00 PM.
-                </p>
-                <p className="text-[10px] text-slate-400 font-medium pt-1">Posted by Administration · 2 hours ago</p>
-              </div>
-            </div>
+            {(() => {
+              let liveNotices: any[] = [];
+              try {
+                const saved = localStorage.getItem('events_and_notices');
+                if (saved) {
+                  const parsed = JSON.parse(saved);
+                  if (Array.isArray(parsed)) liveNotices = parsed;
+                }
+              } catch {}
 
-            <div className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-md">
-                <Calendar size={18} />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-900 text-sm">Staff Briefing Meeting in the Main Hall</h4>
-                  <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 text-[10px] font-bold">Meeting</Badge>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Briefing on upcoming extracurricular sports tournament and CBC portfolio inspection. Attendance is mandatory.
-                </p>
-                <p className="text-[10px] text-slate-400 font-medium pt-1">Posted by Head Teacher · Yesterday</p>
-              </div>
-            </div>
+              // Fallback to default notices if none exist
+              if (liveNotices.length === 0) {
+                liveNotices = [
+                  {
+                    id: 'n-1',
+                    title: 'End of Term 2 Assessment Submission Deadline',
+                    content: 'All teachers are required to upload formative and summative competency assessment scores by Friday 4:00 PM.',
+                    category: 'Important',
+                    date: new Date(Date.now() - 7200000).toISOString(),
+                    author: 'Administration'
+                  },
+                  {
+                    id: 'n-2',
+                    title: 'Staff Briefing Meeting in the Main Hall',
+                    content: 'Briefing on upcoming extracurricular sports tournament and CBC portfolio inspection. Attendance is mandatory.',
+                    category: 'Meeting',
+                    date: new Date(Date.now() - 86400000).toISOString(),
+                    author: 'Head Teacher'
+                  }
+                ];
+              }
+
+              // Sort most recent first
+              liveNotices.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+              if (liveNotices.length === 0) {
+                return (
+                  <div className="text-center py-8 text-slate-400 text-xs font-medium">
+                    No school announcements posted yet.
+                  </div>
+                );
+              }
+
+              return liveNotices.slice(0, 3).map((notice: any) => {
+                const isMeeting = (notice.category || '').toLowerCase().includes('meeting') || (notice.title || '').toLowerCase().includes('meeting');
+                return (
+                  <div key={notice.id || notice.title} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className={`w-10 h-10 rounded-xl ${isMeeting ? 'bg-indigo-600' : 'bg-blue-600'} text-white flex items-center justify-center shrink-0 mt-0.5 shadow-md`}>
+                      {isMeeting ? <Calendar size={18} /> : <Megaphone size={18} />}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-bold text-slate-900 text-sm">{notice.title}</h4>
+                        {notice.category && (
+                          <Badge className={`${isMeeting ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700'} hover:opacity-100 text-[10px] font-bold`}>
+                            {notice.category}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {notice.content || notice.description}
+                      </p>
+                      <p className="text-[10px] text-slate-400 font-medium pt-1">
+                        Posted {notice.author ? `by ${notice.author}` : ''} {notice.date ? `· ${new Date(notice.date).toLocaleDateString()}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </CardContent>
         </Card>
 
