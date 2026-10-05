@@ -261,15 +261,6 @@ const TeacherDashboard: React.FC = () => {
               </div>
             </CardContent>
           </div>
-
-          <div className="p-6 pt-0">
-            <Button
-              onClick={() => navigate('/study-corner')}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-2xl shadow-lg flex items-center justify-center gap-2"
-            >
-              <BookOpen size={16} /> Open Study Corner & E-Resources
-            </Button>
-          </div>
         </Card>
       </div>
     </div>
