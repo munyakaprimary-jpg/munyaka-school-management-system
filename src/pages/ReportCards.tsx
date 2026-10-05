@@ -8,6 +8,22 @@ const ACADEMIC_YEARS = ['2026', '2025', '2024'];
 const TERMS = ['Term 1', 'Term 2', 'Term 3'];
 const EXAM_TYPES = ['End Term Assessment', 'Mid Term Assessment', 'Opener Assessment'];
 
+const SUBJECTS_BY_CATEGORY: Record<string, string[]> = {
+  'PP': ['Language Activities', 'Mathematical Activities', 'Environmental Activities', 'Psychomotor & Creative', 'Religious Education'],
+  'Lower': ['Literacy', 'English', 'Kiswahili', 'Mathematical Activities', 'Environmental Activities', 'Creative Arts', 'Religious Education'],
+  'Upper': ['English', 'Kiswahili', 'Mathematics', 'Science & Tech', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts', 'Religious Education'],
+  'Junior': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Pre-Technical Studies', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts & Sports', 'Religious Education']
+};
+
+const getCategory = (grade: string) => {
+  const g = grade.toUpperCase();
+  if (g.includes('PP') || g.includes('PLAYGROUP')) return 'PP';
+  const num = parseInt(g.replace(/[^0-9]/g, '')) || 4;
+  if (num <= 3) return 'Lower';
+  if (num <= 6) return 'Upper';
+  return 'Junior';
+};
+
 interface Learner {
   id?: string;
   name?: string;
@@ -17,6 +33,7 @@ interface Learner {
   assessmentNo?: string;
   grade?: string;
   stream?: string;
+  marks?: Record<string, { mid?: number | string; end?: number | string; avg?: number | string; rubric?: string } | number>;
 }
 
 export default function ReportCards() {
@@ -59,13 +76,7 @@ export default function ReportCards() {
           return gMatch;
         }) || loaded[0];
 
-        setSelectedLearner({
-          fullName: firstMatch.fullName || firstMatch.name || 'Learner',
-          admissionNumber: firstMatch.admissionNumber || firstMatch.id || 'N/A',
-          assessmentNumber: firstMatch.assessmentNumber || firstMatch.assessmentNo || 'B004991382',
-          grade: firstMatch.grade || selectedGrade,
-          stream: firstMatch.stream || selectedStream
-        });
+        setSelectedLearner(firstMatch);
         if (firstMatch.grade) setSelectedGrade(firstMatch.grade);
         if (firstMatch.stream) setSelectedStream(firstMatch.stream);
       }
@@ -121,35 +132,22 @@ export default function ReportCards() {
         (s.id && s.id === selectedLearner.admissionNumber)
       );
       if (!isCurrentValid) {
-        const first = filteredStudents[0];
-        setSelectedLearner({
-          fullName: first.fullName || first.name || 'Learner',
-          admissionNumber: first.admissionNumber || first.id || 'N/A',
-          assessmentNumber: first.assessmentNumber || first.assessmentNo || 'B004991382',
-          grade: first.grade || selectedGrade,
-          stream: first.stream || selectedStream
-        });
+        setSelectedLearner(filteredStudents[0]);
       }
     } else {
-      // If no students in this grade/stream, keep empty placeholder state
       setSelectedLearner({
         fullName: 'No student in this class',
         admissionNumber: 'N/A',
         assessmentNumber: 'N/A',
         grade: selectedGrade,
-        stream: selectedStream
+        stream: selectedStream,
+        marks: {}
       });
     }
   }, [selectedGrade, selectedStream, filteredStudents]);
 
   const handleSelectLearner = (student: Learner) => {
-    setSelectedLearner({
-      fullName: student.fullName || student.name || 'Learner',
-      admissionNumber: student.admissionNumber || student.id || 'N/A',
-      assessmentNumber: student.assessmentNumber || student.assessmentNo || 'B004991382',
-      grade: student.grade || selectedGrade,
-      stream: student.stream || selectedStream
-    });
+    setSelectedLearner(student);
     setSearchTerm('');
     setShowSuggestions(false);
   };
@@ -164,12 +162,60 @@ export default function ReportCards() {
     return dateStr;
   };
 
+  // Helper to compute rubric from score
+  const getRubric = (score: number) => {
+    if (score >= 80) return 'EE';
+    if (score >= 65) return 'ME';
+    if (score >= 50) return 'AE';
+    return 'BE';
+  };
+
   const buildReportHtml = () => {
-    const studentName = selectedLearner.fullName || 'Learner';
-    const admNo = selectedLearner.admissionNumber || 'N/A';
-    const asmNo = selectedLearner.assessmentNumber || 'N/A';
+    const studentName = selectedLearner.fullName || selectedLearner.name || 'Learner';
+    const admNo = selectedLearner.admissionNumber || selectedLearner.id || 'N/A';
+    const asmNo = selectedLearner.assessmentNumber || selectedLearner.assessmentNo || 'N/A';
     const grade = selectedLearner.grade || selectedGrade;
     const stream = selectedLearner.stream || selectedStream;
+
+    const cat = getCategory(grade);
+    const subjects = SUBJECTS_BY_CATEGORY[cat] || SUBJECTS_BY_CATEGORY['Upper'];
+    const learnerMarks = selectedLearner.marks || {};
+
+    const rowsHtml = subjects.map(subj => {
+      const subjData = (learnerMarks as any)[subj];
+      let mid = '-';
+      let end = '-';
+      let avg = '-';
+      let rubric = '-';
+
+      if (subjData !== undefined && subjData !== null) {
+        if (typeof subjData === 'object') {
+          mid = subjData.mid !== undefined && subjData.mid !== '' ? subjData.mid : '-';
+          end = subjData.end !== undefined && subjData.end !== '' ? subjData.end : '-';
+          avg = subjData.avg !== undefined && subjData.avg !== '' ? subjData.avg : '-';
+          if (avg !== '-' && !isNaN(Number(avg))) {
+            rubric = getRubric(Number(avg));
+          } else if (subjData.rubric) {
+            rubric = subjData.rubric;
+          }
+        } else if (typeof subjData === 'number' || !isNaN(Number(subjData))) {
+          mid = '-';
+          end = String(subjData);
+          avg = String(subjData);
+          rubric = getRubric(Number(subjData));
+        }
+      }
+
+      return `
+        <tr>
+          <td>${subj}</td>
+          <td style="text-align: center;">${mid}</td>
+          <td style="text-align: center;">${end}</td>
+          <td style="text-align: center;">${avg}</td>
+          <td style="text-align: center; font-weight: bold;">${rubric}</td>
+        </tr>
+      `;
+    }).join('');
 
     return `
       <!DOCTYPE html>
@@ -189,7 +235,7 @@ export default function ReportCards() {
             .info-table td { padding: 6px 10px; border: 1px solid #94a3b8; font-size: 12px; width: 50%; }
             
             .marks-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .marks-table th, .marks-table td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: left; font-size: 12px; }
+            .marks-table th, .marks-table td { border: 1px solid #94a3b8; padding: 6px 8px; font-size: 12px; text-align: left; }
             .marks-table th { background-color: #f1f5f9; font-weight: bold; }
             
             .remarks-box { border: 1px solid #94a3b8; padding: 10px; margin-bottom: 15px; font-size: 12px; background: #f8fafc; }
@@ -222,21 +268,14 @@ export default function ReportCards() {
             <thead>
               <tr>
                 <th>Subject / Learning Area</th>
-                <th>Mid Term</th>
-                <th>End Term</th>
-                <th>Average</th>
-                <th>Rubric</th>
+                <th style="text-align: center;">Mid Term</th>
+                <th style="text-align: center;">End Term</th>
+                <th style="text-align: center;">Average</th>
+                <th style="text-align: center;">Rubric</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>English</td><td>78</td><td>82</td><td>80</td><td>EE</td></tr>
-              <tr><td>Kiswahili</td><td>74</td><td>76</td><td>75</td><td>ME</td></tr>
-              <tr><td>Mathematics</td><td>85</td><td>88</td><td>86.5</td><td>EE</td></tr>
-              <tr><td>Science & Tech</td><td>80</td><td>82</td><td>81</td><td>EE</td></tr>
-              <tr><td>Social Studies</td><td>72</td><td>75</td><td>73.5</td><td>ME</td></tr>
-              <tr><td>Agriculture & Nutrition</td><td>76</td><td>78</td><td>77</td><td>ME</td></tr>
-              <tr><td>Creative Arts</td><td>82</td><td>85</td><td>83.5</td><td>EE</td></tr>
-              <tr><td>Religious Education</td><td>80</td><td>84</td><td>82</td><td>EE</td></tr>
+              ${rowsHtml}
             </tbody>
           </table>
 
@@ -264,7 +303,7 @@ export default function ReportCards() {
   };
 
   const handleDownloadReport = () => {
-    const studentName = selectedLearner.fullName || 'Learner';
+    const studentName = selectedLearner.fullName || selectedLearner.name || 'Learner';
     const htmlContent = buildReportHtml();
 
     const blob = new Blob([htmlContent], { type: 'text/html' });
@@ -424,10 +463,10 @@ export default function ReportCards() {
             <div className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1.5">
               <UserCheck className="h-3.5 w-3.5" /> Active Learner
             </div>
-            <div className="font-bold text-slate-900 text-base">{selectedLearner.fullName}</div>
+            <div className="font-bold text-slate-900 text-base">{selectedLearner.fullName || selectedLearner.name || '—'}</div>
             <div className="text-xs text-slate-600">
-              Adm: <span className="font-medium">{selectedLearner.admissionNumber}</span> | 
-              Grade: <span className="font-medium">{selectedLearner.grade} {selectedLearner.stream}</span>
+              Adm: <span className="font-medium">{selectedLearner.admissionNumber || selectedLearner.id || 'N/A'}</span> | 
+              Grade: <span className="font-medium">{selectedLearner.grade || selectedGrade} {selectedLearner.stream || selectedStream}</span>
             </div>
           </div>
 
