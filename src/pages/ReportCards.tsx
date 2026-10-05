@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getStudents } from '@/services/persistentStore';
 import { Search, UserCheck, Eye, Download, MessageSquare, Calendar } from 'lucide-react';
+import { showSuccess, showError } from '@/utils/toast';
 
 const GRADES = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
 const STREAMS = ['Green', 'Blue', 'Red', 'Gold', 'East', 'West', 'All'];
@@ -64,6 +65,7 @@ export default function ReportCards() {
   const [hoiRemarks, setHoiRemarks] = useState('A commendable term! Keep aiming higher.');
   const [closingDate, setClosingDate] = useState('2026-04-10');
   const [openingDate, setOpeningDate] = useState('2026-05-04');
+  const [isExporting, setIsExporting] = useState(false);
 
   // Load students on mount
   useEffect(() => {
@@ -123,7 +125,7 @@ export default function ReportCards() {
     }).slice(0, 10);
   }, [filteredStudents, searchTerm]);
 
-  // When Grade or Stream changes, verify if current active learner belongs to the new class. If not, pick the first available learner in that class.
+  // When Grade or Stream changes, verify if current active learner belongs to the new class
   useEffect(() => {
     if (filteredStudents.length > 0) {
       const isCurrentValid = filteredStudents.some(s => 
@@ -162,7 +164,6 @@ export default function ReportCards() {
     return dateStr;
   };
 
-  // Helper to compute rubric from score
   const getRubric = (score: number) => {
     if (score >= 80) return 'EE';
     if (score >= 65) return 'ME';
@@ -224,7 +225,8 @@ export default function ReportCards() {
           <meta charset="utf-8">
           <title>CBC Report Card - ${studentName}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 25px; color: #111; max-width: 800px; margin: auto; line-height: 1.4; background: #fff; }
+            @page { size: A4 portrait; margin: 10mm; }
+            body { font-family: Arial, sans-serif; padding: 15px; color: #111; max-width: 800px; margin: auto; line-height: 1.4; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .header { text-align: center; border-bottom: 3px solid #111; padding-bottom: 12px; margin-bottom: 20px; }
             .school { font-size: 20px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
             .address { font-size: 12px; margin-bottom: 2px; }
@@ -235,7 +237,7 @@ export default function ReportCards() {
             .info-table td { padding: 6px 10px; border: 1px solid #94a3b8; font-size: 12px; width: 50%; }
             
             .marks-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .marks-table th, .marks-table td { border: 1px solid #94a3b8; padding: 6px 8px; font-size: 12px; text-align: left; }
+            .marks-table th, .marks-table td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: left; font-size: 12px; }
             .marks-table th { background-color: #f1f5f9; font-weight: bold; }
             
             .remarks-box { border: 1px solid #94a3b8; padding: 10px; margin-bottom: 15px; font-size: 12px; background: #f8fafc; }
@@ -303,32 +305,72 @@ export default function ReportCards() {
   };
 
   const handleDownloadReport = () => {
-    const studentName = selectedLearner.fullName || selectedLearner.name || 'Learner';
-    const htmlContent = buildReportHtml();
+    setIsExporting(true);
+    try {
+      const studentName = selectedLearner.fullName || selectedLearner.name || 'Learner';
+      const htmlContent = buildReportHtml();
 
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `CBC_Report_${studentName.replace(/\s+/g, '_')}_${academicYear}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      // Create a hidden print iframe to trigger standard PDF print dialog / save as PDF
+      let pdfFrame = document.getElementById('report-pdf-print-frame') as HTMLIFrameElement;
+      if (!pdfFrame) {
+        pdfFrame = document.createElement('iframe');
+        pdfFrame.id = 'report-pdf-print-frame';
+        pdfFrame.style.position = 'fixed';
+        pdfFrame.style.right = '0';
+        pdfFrame.style.bottom = '0';
+        pdfFrame.style.width = '0';
+        pdfFrame.style.height = '0';
+        pdfFrame.style.border = '0';
+        document.body.appendChild(pdfFrame);
+      }
+
+      const pw = pdfFrame.contentWindow;
+      const frameDoc = pw?.document;
+      if (!frameDoc) {
+        // Fallback to Blob download if iframe is unavailable
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `CBC_Report_${studentName.replace(/\s+/g, '_')}_${academicYear}.pdf.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setIsExporting(false);
+        showSuccess("Report card exported successfully.");
+        return;
+      }
+
+      frameDoc.open();
+      frameDoc.write(htmlContent);
+      frameDoc.close();
+
+      setTimeout(() => {
+        pw?.focus();
+        pw?.print();
+        setIsExporting(false);
+        showSuccess("PDF export dialog opened successfully.");
+      }, 500);
+    } catch (err) {
+      setIsExporting(false);
+      showError("Failed to export PDF report card.");
+    }
   };
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card Generator</h2>
-          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, select student from live search, and export formal report cards.</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card PDF Generator</h2>
+          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks, and export formal PDF report cards.</p>
         </div>
         <button 
           onClick={handleDownloadReport}
-          className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold px-6 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm"
+          disabled={isExporting}
+          className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold px-6 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
         >
-          <Download className="h-4 w-4" /> Download Report Card (.html)
+          <Download className="h-4 w-4" /> {isExporting ? 'Preparing PDF...' : 'Download / Save PDF Report'}
         </button>
       </div>
 
