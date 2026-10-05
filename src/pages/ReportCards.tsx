@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getStudents } from '@/services/persistentStore';
-import { Search, UserCheck, Eye, Download, MessageSquare, Calendar } from 'lucide-react';
+import { Search, UserCheck, Eye, Download, MessageSquare, Calendar, Layers } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
 const GRADES = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
@@ -66,6 +66,7 @@ export default function ReportCards() {
   const [closingDate, setClosingDate] = useState('2026-04-10');
   const [openingDate, setOpeningDate] = useState('2026-05-04');
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingAll, setIsExportingAll] = useState(false);
 
   // Load students on mount
   useEffect(() => {
@@ -171,16 +172,16 @@ export default function ReportCards() {
     return 'BE';
   };
 
-  const buildReportHtml = () => {
-    const studentName = selectedLearner.fullName || selectedLearner.name || 'Learner';
-    const admNo = selectedLearner.admissionNumber || selectedLearner.id || 'N/A';
-    const asmNo = selectedLearner.assessmentNumber || selectedLearner.assessmentNo || 'N/A';
-    const grade = selectedLearner.grade || selectedGrade;
-    const stream = selectedLearner.stream || selectedStream;
+  const buildSingleReportHtml = (student: Learner, totalClassCount: number) => {
+    const studentName = student.fullName || student.name || 'Learner';
+    const admNo = student.admissionNumber || student.id || 'N/A';
+    const asmNo = student.assessmentNumber || student.assessmentNo || 'N/A';
+    const grade = student.grade || selectedGrade;
+    const stream = student.stream || selectedStream;
 
     const cat = getCategory(grade);
     const subjects = SUBJECTS_BY_CATEGORY[cat] || SUBJECTS_BY_CATEGORY['Upper'];
-    const learnerMarks = selectedLearner.marks || {};
+    const learnerMarks = student.marks || {};
 
     const rowsHtml = subjects.map(subj => {
       const subjData = (learnerMarks as any)[subj];
@@ -222,62 +223,34 @@ export default function ReportCards() {
     const formattedOpening = formatDateDisplay(openingDate);
 
     return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>CBC Report Card - ${studentName}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 30px; color: #111; max-width: 800px; margin: auto; line-height: 1.5; background: #fff; }
-            .header { text-align: center; border-bottom: 3px solid #111; padding-bottom: 15px; margin-bottom: 25px; }
-            .school { font-size: 22px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
-            .address { font-size: 13px; margin-bottom: 2px; }
-            .motto { font-size: 13px; font-style: italic; margin-bottom: 10px; }
-            .title { font-size: 14px; font-weight: bold; text-transform: uppercase; background: #e2e8f0; padding: 6px; margin-top: 10px; }
-            
-            .info-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
-            .info-table td { padding: 8px 12px; border: 1px solid #94a3b8; font-size: 13px; width: 50%; }
-            
-            .marks-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
-            .marks-table th, .marks-table td { border: 1px solid #94a3b8; padding: 8px 12px; text-align: left; font-size: 13px; }
-            .marks-table th { background-color: #f1f5f9; font-weight: bold; }
-            
-            .remarks-box { border: 1px solid #94a3b8; padding: 12px; margin-bottom: 20px; font-size: 13px; background: #f8fafc; }
-            .remarks-title { font-weight: bold; margin-bottom: 4px; color: #1e3a8a; }
-            
-            .dates-banner { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px 14px; margin-bottom: 25px; font-size: 13px; font-weight: bold; text-align: center; }
-            
-            .footer { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 35px; }
-            .closing-footer { font-size: 12px; text-align: center; color: #555; margin-top: 25px; border-top: 1px solid #cbd5e1; padding-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="school">Munyaka Primary and Junior School</div>
-            <div class="address">P.O. BOX 5239-30100, ELDORET</div>
-            <div class="motto">MOTTO: Knowledge is Power</div>
-            <div class="title">Competency Based Curriculum ${examType} — ${term}, ${academicYear}</div>
+      <div class="report-page" style="page-break-after: always; min-height: 95vh; display: flex; flex-direction: column; justify-content: space-between; padding-bottom: 30px;">
+        <div>
+          <div class="header" style="text-align: center; border-bottom: 3px solid #111; padding-bottom: 15px; margin-bottom: 25px;">
+            <div style="font-size: 22px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px;">Munyaka Primary and Junior School</div>
+            <div style="font-size: 13px; margin-bottom: 2px;">P.O. BOX 5239-30100, ELDORET</div>
+            <div style="font-size: 13px; font-style: italic; margin-bottom: 10px;">MOTTO: Knowledge is Power</div>
+            <div style="font-size: 14px; font-weight: bold; text-transform: uppercase; background: #e2e8f0; padding: 6px; margin-top: 10px;">Competency Based Curriculum ${examType} — ${term}, ${academicYear}</div>
           </div>
 
-          <table class="info-table">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
             <tr>
-              <td><strong>Learner Name:</strong> ${studentName}</td>
-              <td><strong>Assessment No / Adm:</strong> ${asmNo} (${admNo})</td>
+              <td style="padding: 8px 12px; border: 1px solid #94a3b8; font-size: 13px; width: 50%;"><strong>Learner Name:</strong> ${studentName}</td>
+              <td style="padding: 8px 12px; border: 1px solid #94a3b8; font-size: 13px; width: 50%;"><strong>Assessment No / Adm:</strong> ${asmNo} (${admNo})</td>
             </tr>
             <tr>
-              <td><strong>Grade / Stream:</strong> ${grade} — ${stream}</td>
-              <td><strong>Class Rank:</strong> 1 of ${filteredStudents.length || 1}</td>
+              <td style="padding: 8px 12px; border: 1px solid #94a3b8; font-size: 13px; width: 50%;"><strong>Grade / Stream:</strong> ${grade} — ${stream}</td>
+              <td style="padding: 8px 12px; border: 1px solid #94a3b8; font-size: 13px; width: 50%;"><strong>Class Rank:</strong> 1 of ${totalClassCount}</td>
             </tr>
           </table>
 
-          <table class="marks-table">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
             <thead>
               <tr>
-                <th>Subject / Learning Area</th>
-                <th style="text-align: center;">Mid Term</th>
-                <th style="text-align: center;">End Term</th>
-                <th style="text-align: center;">Average</th>
-                <th style="text-align: center;">Rubric</th>
+                <th style="border: 1px solid #94a3b8; padding: 8px 12px; text-align: left; font-size: 13px; background-color: #f1f5f9;">Subject / Learning Area</th>
+                <th style="border: 1px solid #94a3b8; padding: 8px 12px; text-align: center; font-size: 13px; background-color: #f1f5f9;">Mid Term</th>
+                <th style="border: 1px solid #94a3b8; padding: 8px 12px; text-align: center; font-size: 13px; background-color: #f1f5f9;">End Term</th>
+                <th style="border: 1px solid #94a3b8; padding: 8px 12px; text-align: center; font-size: 13px; background-color: #f1f5f9;">Average</th>
+                <th style="border: 1px solid #94a3b8; padding: 8px 12px; text-align: center; font-size: 13px; background-color: #f1f5f9;">Rubric</th>
               </tr>
             </thead>
             <tbody>
@@ -285,28 +258,48 @@ export default function ReportCards() {
             </tbody>
           </table>
 
-          <div class="remarks-box">
-            <div class="remarks-title">Class Teacher Remarks:</div>
+          <div style="border: 1px solid #94a3b8; padding: 12px; margin-bottom: 20px; font-size: 13px; background: #f8fafc;">
+            <div style="font-weight: bold; margin-bottom: 4px; color: #1e3a8a;">Class Teacher Remarks:</div>
             <div>${teacherRemarks}</div>
           </div>
 
-          <div class="remarks-box">
-            <div class="remarks-title">Head Teacher Remarks:</div>
+          <div style="border: 1px solid #94a3b8; padding: 12px; margin-bottom: 20px; font-size: 13px; background: #f8fafc;">
+            <div style="font-weight: bold; margin-bottom: 4px; color: #1e3a8a;">Head Teacher Remarks:</div>
             <div>${hoiRemarks}</div>
           </div>
 
-          <div class="dates-banner">
+          <div style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px 14px; margin-bottom: 25px; font-size: 13px; font-weight: bold; text-align: center;">
             Term Closing Date: ${formattedClosing} &nbsp;&nbsp;|&nbsp;&nbsp; Term Opening Date: ${formattedOpening}
           </div>
+        </div>
 
-          <div class="footer">
+        <div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 35px;">
             <div>Class Teacher Sign: .......................................</div>
             <div>Headteacher Sign & Stamp: .......................................</div>
           </div>
 
-          <div class="closing-footer">
+          <div style="font-size: 12px; text-align: center; color: #555; margin-top: 25px; border-top: 1px solid #cbd5e1; padding-top: 10px;">
             System Powered by Jamlyan Analytics — Munyaka Primary and Junior School
           </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const buildReportHtml = () => {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>CBC Report Card - ${selectedLearner.fullName || selectedLearner.name || 'Learner'}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 30px; color: #111; max-width: 800px; margin: auto; line-height: 1.5; background: #fff; }
+          </style>
+        </head>
+        <body>
+          ${buildSingleReportHtml(selectedLearner, filteredStudents.length)}
         </body>
       </html>
     `;
@@ -336,20 +329,71 @@ export default function ReportCards() {
     }
   };
 
+  const handleDownloadAll = () => {
+    if (filteredStudents.length === 0) {
+      showError(`No learners found in ${selectedGrade} ${selectedStream === 'All' ? '' : selectedStream}.`);
+      return;
+    }
+    setIsExportingAll(true);
+    try {
+      const pagesHtml = filteredStudents.map(student => buildSingleReportHtml(student, filteredStudents.length)).join('');
+      const fullHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>CBC Report Cards - ${selectedGrade} ${selectedStream} (${academicYear})</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 30px; color: #111; max-width: 800px; margin: auto; line-height: 1.5; background: #fff; }
+            </style>
+          </head>
+          <body>
+            ${pagesHtml}
+          </body>
+        </html>
+      `;
+
+      const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CBC_Reports_${selectedGrade.replace(/\s+/g, '_')}_${selectedStream}_${academicYear}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setIsExportingAll(false);
+      showSuccess(`Successfully compiled and downloaded report cards for all ${filteredStudents.length} learners in ${selectedGrade}!`);
+    } catch (err) {
+      setIsExportingAll(false);
+      showError("Failed to generate bulk report cards.");
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card Generator</h2>
-          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks and term dates, and download clean HTML report card files.</p>
+          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks and term dates, and download single or bulk report cards.</p>
         </div>
-        <button 
-          onClick={handleDownloadReport}
-          disabled={isExporting}
-          className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold px-6 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-        >
-          <Download className="h-4 w-4" /> {isExporting ? 'Downloading...' : 'Download Report Card File'}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button 
+            onClick={handleDownloadReport}
+            disabled={isExporting}
+            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold px-5 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" /> {isExporting ? 'Downloading...' : 'Download Current Report'}
+          </button>
+          <button 
+            onClick={handleDownloadAll}
+            disabled={isExportingAll || filteredStudents.length === 0}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+          >
+            <Layers className="h-4 w-4" /> {isExportingAll ? 'Compiling All...' : `Download All for ${selectedGrade} (${filteredStudents.length})`}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
