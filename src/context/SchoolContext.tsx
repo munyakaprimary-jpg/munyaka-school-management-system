@@ -2,7 +2,21 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { showSuccess, showError } from '@/utils/toast';
 
 interface SchoolContextType {
-  state: Record<string, any>;
+  data: {
+    learners: any[];
+    staff: any[];
+    fees: any[];
+    attendance: any[];
+    exams: any[];
+    marks: any[];
+    timetable: any[];
+    library: any[];
+    inventory: any[];
+    streams: any[];
+    settings: Record<string, any>;
+    [key: string]: any;
+  };
+  updateData: (section: string, payload: any) => void;
   refreshState: () => void;
   exportMasterJSON: () => void;
   importMasterJSON: (file: File) => Promise<boolean>;
@@ -11,7 +25,45 @@ interface SchoolContextType {
 const SchoolContext = createContext<SchoolContextType | undefined>(undefined);
 
 export const SchoolProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<Record<string, any>>({});
+  const [data, setData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_master_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch (e) {
+      console.error('Failed to load munyaka_master_state:', e);
+    }
+
+    // Fallback: collect from localStorage keys or initial defaults
+    const allData: Record<string, any> = {
+      learners: [],
+      staff: [],
+      fees: [],
+      attendance: [],
+      exams: [],
+      marks: [],
+      timetable: [],
+      library: [],
+      inventory: [],
+      streams: [],
+      settings: { schoolName: "Munyaka Primary and Junior School" }
+    };
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        const rawValue = localStorage.getItem(key);
+        try {
+          allData[key] = rawValue ? JSON.parse(rawValue) : null;
+        } catch {
+          allData[key] = rawValue;
+        }
+      }
+    }
+    return allData;
+  });
 
   const refreshState = () => {
     try {
@@ -27,11 +79,20 @@ export const SchoolProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           }
         }
       }
-      setState(allData);
+      setData(prev => ({ ...prev, ...allData }));
     } catch (err) {
-      console.error('Failed to load school state from localStorage:', err);
+      console.error('Failed to refresh school state:', err);
     }
   };
+
+  // Auto-save master state on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('munyaka_master_state', JSON.stringify(data));
+    } catch (err) {
+      console.error('Failed to save munyaka_master_state:', err);
+    }
+  }, [data]);
 
   useEffect(() => {
     refreshState();
@@ -50,6 +111,18 @@ export const SchoolProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     };
   }, []);
 
+  const updateData = (section: string, payload: any) => {
+    setData(prev => {
+      const next = { ...prev, [section]: payload };
+      try {
+        localStorage.setItem(section, typeof payload === 'string' ? payload : JSON.stringify(payload));
+      } catch (err) {
+        console.error(`Failed to persist section ${section} to localStorage:`, err);
+      }
+      return next;
+    });
+  };
+
   const exportMasterJSON = () => {
     try {
       const allData: Record<string, any> = {};
@@ -66,11 +139,14 @@ export const SchoolProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
 
       const masterPayload = {
-        version: "3.0",
+        version: "4.0",
         timestamp: new Date().toISOString(),
-        institution: "Munyaka Primary and Junior School",
+        school: "Munyaka Primary and Junior School",
         totalKeysCaptured: Object.keys(allData).length,
-        data: allData
+        state: {
+          ...data,
+          ...allData
+        }
       };
 
       const jsonString = JSON.stringify(masterPayload, null, 2);
@@ -79,7 +155,7 @@ export const SchoolProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Munyaka_Master_Full_Backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `Munyaka_Master_Export_${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -99,17 +175,17 @@ export const SchoolProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         try {
           const text = event.target?.result as string;
           const parsed = JSON.parse(text);
-          const targetData = parsed.data || parsed;
+          const targetState = parsed.state || parsed.data || parsed;
 
-          if (!targetData || typeof targetData !== 'object') {
+          if (!targetState || typeof targetState !== 'object') {
             showError('Invalid master backup file format.');
             resolve(false);
             return;
           }
 
           // Save every key into localStorage
-          Object.keys(targetData).forEach(key => {
-            const val = targetData[key];
+          Object.keys(targetState).forEach(key => {
+            const val = targetState[key];
             try {
               localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
             } catch (err) {
@@ -117,6 +193,7 @@ export const SchoolProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             }
           });
 
+          setData(targetState);
           refreshState();
           showSuccess('Master backup imported successfully! Refreshing app...');
           
@@ -140,16 +217,18 @@ export const SchoolProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   return (
-    <SchoolContext.Provider value={{ state, refreshState, exportMasterJSON, importMasterJSON }}>
+    <SchoolContext.Provider value={{ data, updateData, refreshState, exportMasterJSON, importMasterJSON }}>
       {children}
     </SchoolContext.Provider>
   );
 };
 
-export const useSchoolContext = () => {
+export const useSchool = () => {
   const context = useContext(SchoolContext);
   if (!context) {
-    throw new Error('useSchoolContext must be used within a SchoolProvider');
+    throw new Error('useSchool must be used within a SchoolProvider');
   }
   return context;
 };
+
+export const useSchoolContext = useSchool;
