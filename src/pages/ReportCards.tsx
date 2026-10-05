@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getStudents } from '@/services/persistentStore';
-import { Search, UserCheck, Eye, Download, MessageSquare } from 'lucide-react';
+import { Search, UserCheck, Eye, Download, MessageSquare, Calendar } from 'lucide-react';
 
 const GRADES = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
 const STREAMS = ['Green', 'Blue', 'Red', 'Gold', 'East', 'West', 'All'];
+const ACADEMIC_YEARS = ['2026', '2025', '2024'];
+const TERMS = ['Term 1', 'Term 2', 'Term 3'];
+const EXAM_TYPES = ['End Term Assessment', 'Mid Term Assessment', 'Opener Assessment'];
 
 interface Learner {
   id?: string;
@@ -19,6 +22,9 @@ interface Learner {
 export default function ReportCards() {
   const [selectedGrade, setSelectedGrade] = useState('Grade 6');
   const [selectedStream, setSelectedStream] = useState('Green');
+  const [academicYear, setAcademicYear] = useState('2026');
+  const [term, setTerm] = useState('Term 1');
+  const [examType, setExamType] = useState('End Term Assessment');
   
   // Stored students from persistentStore
   const [allStudents, setAllStudents] = useState<Learner[]>([]);
@@ -37,7 +43,7 @@ export default function ReportCards() {
   });
 
   // Remarks & Dates state
-  const [teacherRemarks, setTeacherRemarks] = useState('Excellent performance and strong grasp of core concepts. Very disciplined learner. Maintain the same effort in Term 2.');
+  const [teacherRemarks, setTeacherRemarks] = useState('Excellent performance and strong grasp of core concepts. Very disciplined learner. Maintain the same effort in the next term.');
   const [hoiRemarks, setHoiRemarks] = useState('A commendable term! Keep aiming higher.');
   const [closingDate, setClosingDate] = useState('2026-04-10');
   const [openingDate, setOpeningDate] = useState('2026-05-04');
@@ -48,7 +54,6 @@ export default function ReportCards() {
       const loaded = getStudents();
       if (loaded && loaded.length > 0) {
         setAllStudents(loaded);
-        // Find first student matching initial grade/stream or fallback to first student
         const firstMatch = loaded.find(s => {
           const gMatch = !selectedGrade || String(s.grade || '').toLowerCase().includes(selectedGrade.toLowerCase().replace('grade ', ''));
           return gMatch;
@@ -83,12 +88,10 @@ export default function ReportCards() {
   // Filter students dynamically by Grade and Stream, then by search term
   const filteredStudents = useMemo(() => {
     return allStudents.filter(s => {
-      // Grade match check
       const studentGrade = String(s.grade || '').toLowerCase().trim();
       const targetGrade = selectedGrade.toLowerCase().trim();
       const gradeMatches = !selectedGrade || studentGrade.includes(targetGrade) || targetGrade.includes(studentGrade);
 
-      // Stream match check (if stream is not 'All')
       const studentStream = String(s.stream || '').toLowerCase().trim();
       const targetStream = selectedStream.toLowerCase().trim();
       const streamMatches = selectedStream === 'All' || !selectedStream || studentStream.includes(targetStream) || targetStream.includes(studentStream);
@@ -109,7 +112,7 @@ export default function ReportCards() {
     }).slice(0, 10);
   }, [filteredStudents, searchTerm]);
 
-  // When Grade or Stream changes, check if current active learner is still in filtered set. If not, auto-select the first matching learner.
+  // When Grade or Stream changes, check if current active learner is still valid
   useEffect(() => {
     if (filteredStudents.length > 0) {
       const isCurrentValid = filteredStudents.some(s => 
@@ -191,7 +194,7 @@ export default function ReportCards() {
             <div class="school">Munyaka Primary and Junior School</div>
             <div class="address">P.O. BOX 5239-30100, ELDORET</div>
             <div class="motto">MOTTO: Knowledge is Power</div>
-            <div class="title">Competency Based Curriculum Progress Report — Term 1, 2026</div>
+            <div class="title">Competency Based Curriculum ${examType} — ${term}, ${academicYear}</div>
           </div>
 
           <table class="info-table">
@@ -258,7 +261,7 @@ export default function ReportCards() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `CBC_Report_${studentName.replace(/\s+/g, '_')}.html`;
+    a.download = `CBC_Report_${studentName.replace(/\s+/g, '_')}_${academicYear}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -270,7 +273,7 @@ export default function ReportCards() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card Generator</h2>
-          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks, and preview or download formal report cards.</p>
+          <p className="text-sm text-slate-600 mt-0.5">Select academic year, term, exam type, grade, and stream, then preview or download formal report cards.</p>
         </div>
         <button 
           onClick={handleDownloadReport}
@@ -284,10 +287,49 @@ export default function ReportCards() {
         {/* Left Column: Controls & Search */}
         <div className="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
           <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-            <Search className="h-4 w-4 text-blue-600" /> Grade & Stream Filtering
+            <Calendar className="h-4 w-4 text-blue-600" /> Exam & Academic Period
           </h3>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-500 mb-1">Year</label>
+              <select 
+                value={academicYear} 
+                onChange={(e) => setAcademicYear(e.target.value)} 
+                className="w-full p-2 border rounded-xl bg-white text-slate-800 font-medium text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {ACADEMIC_YEARS.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-500 mb-1">Term</label>
+              <select 
+                value={term} 
+                onChange={(e) => setTerm(e.target.value)} 
+                className="w-full p-2 border rounded-xl bg-white text-slate-800 font-medium text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {TERMS.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase text-slate-500 mb-1">Exam Type</label>
+              <select 
+                value={examType} 
+                onChange={(e) => setExamType(e.target.value)} 
+                className="w-full p-2 border rounded-xl bg-white text-slate-800 font-medium text-xs outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {EXAM_TYPES.map(et => (
+                  <option key={et} value={et}>{et}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
             <div>
               <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Grade</label>
               <select 
@@ -314,7 +356,7 @@ export default function ReportCards() {
             </div>
           </div>
           
-          {/* Live Learner Search Box (Restricted to selected Grade & Stream) */}
+          {/* Live Learner Search Box */}
           <div className="relative" ref={searchRef}>
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-semibold uppercase text-slate-500">Search Learner in {selectedGrade} ({filteredStudents.length} available)</label>
@@ -339,7 +381,6 @@ export default function ReportCards() {
                 {searchFilteredStudents.map((student, idx) => {
                   const name = student.fullName || student.name || 'Unnamed Learner';
                   const adm = student.admissionNumber || student.id || 'N/A';
-                  const asm = student.assessmentNumber || student.assessmentNo || 'N/A';
                   return (
                     <div
                       key={student.id || idx}
