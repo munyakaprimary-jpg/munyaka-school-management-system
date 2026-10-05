@@ -233,13 +233,23 @@ const TeacherDashboard: React.FC = () => {
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               {user ? (
-                <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                    {teacherName.charAt(0)}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                      {teacherName.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900 truncate">{teacherName}</p>
+                      <p className="text-xs text-slate-500">{teacherRole}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate">{teacherName}</p>
-                    <p className="text-xs text-slate-500">{teacherRole} · Assigned: {fullClassTitle}</p>
+
+                  {/* Locked Assigned Grade & Stream Badge */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100">
+                    <span className="text-xs font-bold text-indigo-900 uppercase tracking-wider">Authorized Class Access</span>
+                    <Badge className="bg-indigo-600 text-white font-mono text-xs px-3 py-1 rounded-xl">
+                      {fullClassTitle}
+                    </Badge>
                   </div>
                 </div>
               ) : (
