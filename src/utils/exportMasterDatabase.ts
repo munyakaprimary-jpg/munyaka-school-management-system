@@ -158,7 +158,8 @@ export function generateMasterSyncPackage(senderInfo?: {
   const attendance = (() => {
     const keys = ['munyaka_attendance_records', 'munyaka_attendance', 'roll_call_records', 'attendance', 'attendance_logs'];
     for (const k of keys) {
-      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
+      const val = allKeys[k];
+      if (Array.isArray(val)) return val;
     }
     return [];
   })();
@@ -178,7 +179,7 @@ export function generateMasterSyncPackage(senderInfo?: {
     ];
     for (const k of keys) {
       const val = allKeys[k];
-      if (Array.isArray(val) && val.length > 0) return val;
+      if (Array.isArray(val)) return val;
       if (val && typeof val === 'object' && Object.keys(val).length > 0) return val;
     }
     return [];
@@ -188,7 +189,7 @@ export function generateMasterSyncPackage(senderInfo?: {
     const keys = ['student_payments', 'munyaka_student_payments', 'fee_ledgers', 'transactions', 'fee_records'];
     for (const k of keys) {
       const val = allKeys[k];
-      if (Array.isArray(val) && val.length > 0) return val;
+      if (Array.isArray(val)) return val;
     }
     return [];
   })();
@@ -196,7 +197,8 @@ export function generateMasterSyncPackage(senderInfo?: {
   const library = (() => {
     const keys = ['munyaka_library_books', 'school_library_inventory_v1', 'library_data', 'library'];
     for (const k of keys) {
-      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
+      const val = allKeys[k];
+      if (Array.isArray(val)) return val;
     }
     return [];
   })();
@@ -204,7 +206,8 @@ export function generateMasterSyncPackage(senderInfo?: {
   const marks = (() => {
     const keys = ['munyaka_marks_records', 'marked_student_submissions', 'marks'];
     for (const k of keys) {
-      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
+      const val = allKeys[k];
+      if (Array.isArray(val)) return val;
     }
     return [];
   })();
@@ -212,7 +215,8 @@ export function generateMasterSyncPackage(senderInfo?: {
   const exams = (() => {
     const keys = ['all_set_exams', 'munyaka_exams', 'exams'];
     for (const k of keys) {
-      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
+      const val = allKeys[k];
+      if (Array.isArray(val)) return val;
     }
     return [];
   })();
@@ -220,7 +224,8 @@ export function generateMasterSyncPackage(senderInfo?: {
   const streams = (() => {
     const keys = ['munyaka_streams', 'streams', 'grades_and_streams_config'];
     for (const k of keys) {
-      if (allKeys[k]) return allKeys[k];
+      const val = allKeys[k];
+      if (val !== undefined && val !== null) return val;
     }
     return [];
   })();
@@ -458,13 +463,14 @@ export function aggregateMasterDatabase(): MasterExportPackage {
     console.error('Error iterating localStorage for master export:', err);
   }
 
-  // Fallbacks if specific keys were not found in localStorage loop
+  // Fallbacks if specific keys were not found in localStorage loop - return empty arrays [] instead of fake hardcoded test data to ensure accurate live audit packages
   if (learners.length === 0) {
     try {
       const fallback = localStorage.getItem('school_learners_v1') || localStorage.getItem('munyaka_learners');
       if (fallback) learners = JSON.parse(fallback);
     } catch {}
   }
+  if (!Array.isArray(learners)) learners = [];
 
   if (attendance.length === 0) {
     try {
@@ -472,12 +478,17 @@ export function aggregateMasterDatabase(): MasterExportPackage {
       if (fallback) attendance = JSON.parse(fallback);
     } catch {}
   }
+  if (!Array.isArray(attendance)) attendance = [];
 
   if (fees.length === 0) {
     try {
       const fallback = localStorage.getItem('fees_data') || localStorage.getItem('munyaka_fees');
       if (fallback) fees = JSON.parse(fallback);
     } catch {}
+  }
+  if (!Array.isArray(fees) && typeof fees !== 'object') fees = [];
+
+  if (!Array.isArray(library)) library = [];
   }
 
   if (library.length === 0) {
