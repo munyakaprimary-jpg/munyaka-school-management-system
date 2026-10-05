@@ -15,6 +15,7 @@ export const AdminHarmonizationHub: React.FC = () => {
   const [auditItems, setAuditItems] = useState<HarmonizationAuditItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isHarmonizing, setIsHarmonizing] = useState(false);
+  const [isImportingMaster, setIsImportingMaster] = useState(false);
   const [harmonizationResult, setHarmonizationResult] = useState<{ successCount: number; errors: string[] } | null>(null);
   const [recentActivities, setRecentActivities] = useState<any[]>(() => {
     try {
