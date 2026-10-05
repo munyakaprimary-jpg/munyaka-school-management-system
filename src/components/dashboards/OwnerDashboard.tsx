@@ -665,9 +665,6 @@ const useOwnerDashboardData = (): OwnerDashboardData => {
   const { totalStudents: centralStudents, totalTeachers: centralTeachers, isLoading: centralLoading } = useCentralData();
 
   const [tick, setTick] = React.useState(0);
-  const tickRef = useRef(tick);
-  tickRef.current = tick;
-
   const [isBillingLoading, setIsBillingLoading] = useState(true);
 
   const triggerRefresh = useCallback(() => {
