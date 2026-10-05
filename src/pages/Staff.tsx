@@ -92,6 +92,10 @@ interface StaffMember {
   status: 'Active' | 'Pre-Registered' | 'Suspended';
   joined: string;
   department: string;
+  assignedGrade?: string;
+  assignedStream?: string;
+  grade?: string;
+  stream?: string;
 }
 
 const systemRoleToLabel: Record<string, string> = {

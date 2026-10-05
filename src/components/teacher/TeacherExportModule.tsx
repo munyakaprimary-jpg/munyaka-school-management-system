@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Upload, CheckCircle2, ShieldCheck, Database, FileText, ArrowRight, School, RefreshCw } from 'lucide-react';
+import { Download, Upload, CheckCircle2, ShieldCheck, Database, FileText, ArrowRight, School, RefreshCw, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { exportClassPackage } from '@/services/departmentExportService';
 import { readGradesAndStreams, getStreamsForGrade } from '@/services/gradesStreamsConfig';

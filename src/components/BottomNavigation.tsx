@@ -35,7 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'accountant', 'staff'] },
   { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin'] },
   { icon: Server, label: 'Settings', path: '/mobile/settings', roles: ['admin', 'teacher', 'accountant', 'staff', 'student'] },
-    { icon: Shield, label: 'Staff Management', path: '/staff', roles: ['admin', 'head_teacher'] },
+    { icon: Shield, label: 'Staff Management', path: '/staff', roles: ['admin', 'teacher'] },
   { icon: Key, label: 'Licenses', path: '/licenses', roles: ['admin'] },
   { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin'] },
   { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin'] },
