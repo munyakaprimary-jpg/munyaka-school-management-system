@@ -262,21 +262,37 @@ export default function CentralDataServicePage() {
 
   const handleExportSeedData = async () => {
     try {
-      const res = await fetch('/api/save-seed', {
-        method: 'POST',
-        body: JSON.stringify(useSchoolStore.getState())
-      });
-      if (res.ok) {
-        const jsonRes = await res.json();
-        if (jsonRes.success) {
-          showSuccess("Master seed file saved directly to src/data/initialSeedData.ts on disk!");
-          return;
+      // Gather all active localStorage keys
+      const exportData = {
+        version: "2.0",
+        timestamp: new Date().toISOString(),
+        school: "Munyaka Primary and Junior School",
+        data: {
+          learners: JSON.parse(localStorage.getItem('learners') || localStorage.getItem('school_learners_master') || '[]'),
+          staff: JSON.parse(localStorage.getItem('staff') || localStorage.getItem('staff_members') || '[]'),
+          fees: JSON.parse(localStorage.getItem('fees') || localStorage.getItem('fee_records') || '[]'),
+          attendance: JSON.parse(localStorage.getItem('attendance') || localStorage.getItem('munyaka_attendance_records') || '[]'),
+          settings: JSON.parse(localStorage.getItem('settings') || localStorage.getItem('munyaka_system_settings') || '{}')
         }
-      }
-      throw new Error('Server returned non-ok status');
-    } catch (err: any) {
-      console.error('[CentralDataServicePage] Export seed error:', err);
-      showError('Failed to save seed file: ' + (err?.message || err));
+      };
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Munyaka_Master_Backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      console.log("Master backup exported successfully.");
+      showSuccess("Master backup exported successfully!");
+    } catch (error: any) {
+      console.error("Export failed:", error);
+      showError("Failed to generate master backup file.");
     }
   };
 
