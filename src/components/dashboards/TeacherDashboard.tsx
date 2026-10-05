@@ -246,34 +246,12 @@ const TeacherDashboard: React.FC = () => {
                 }
               } catch {}
 
-              // Fallback to default notices if none exist
-              if (liveNotices.length === 0) {
-                liveNotices = [
-                  {
-                    id: 'n-1',
-                    title: 'End of Term 2 Assessment Submission Deadline',
-                    content: 'All teachers are required to upload formative and summative competency assessment scores by Friday 4:00 PM.',
-                    category: 'Important',
-                    date: new Date(Date.now() - 7200000).toISOString(),
-                    author: 'Administration'
-                  },
-                  {
-                    id: 'n-2',
-                    title: 'Staff Briefing Meeting in the Main Hall',
-                    content: 'Briefing on upcoming extracurricular sports tournament and CBC portfolio inspection. Attendance is mandatory.',
-                    category: 'Meeting',
-                    date: new Date(Date.now() - 86400000).toISOString(),
-                    author: 'Head Teacher'
-                  }
-                ];
-              }
-
               // Sort most recent first
               liveNotices.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 
               if (liveNotices.length === 0) {
                 return (
-                  <div className="text-center py-8 text-slate-400 text-xs font-medium">
+                  <div className="text-center py-10 text-slate-400 text-xs font-medium">
                     No school announcements posted yet.
                   </div>
                 );
