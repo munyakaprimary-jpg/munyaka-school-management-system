@@ -148,11 +148,42 @@ const ScienceLab = () => {
     gradeClass: "", itemBroken: "", qty: "1", cost: "", status: "Pending" as BreakageStatus
   });
 
-  // Persistence
-  useEffect(() => { localStorage.setItem('munyaka_science_chemicals', JSON.stringify(chemicals)); notifyDataChanged('munyaka_science_chemicals'); }, [chemicals]);
-  useEffect(() => { localStorage.setItem('munyaka_science_equipment', JSON.stringify(equipment)); notifyDataChanged('munyaka_science_equipment'); }, [equipment]);
-  useEffect(() => { localStorage.setItem('munyaka_science_bookings', JSON.stringify(bookings)); notifyDataChanged('munyaka_science_bookings'); }, [bookings]);
-  useEffect(() => { localStorage.setItem('munyaka_science_breakages', JSON.stringify(breakages)); notifyDataChanged('munyaka_science_breakages'); }, [breakages]);
+  // Persistence with guard check
+  const prevChemicalsRef = useRef(chemicals);
+  useEffect(() => {
+    if (prevChemicalsRef.current !== chemicals) {
+      prevChemicalsRef.current = chemicals;
+      localStorage.setItem('munyaka_science_chemicals', JSON.stringify(chemicals));
+      notifyDataChanged('munyaka_science_chemicals');
+    }
+  }, [chemicals]);
+
+  const prevEquipmentRef = useRef(equipment);
+  useEffect(() => {
+    if (prevEquipmentRef.current !== equipment) {
+      prevEquipmentRef.current = equipment;
+      localStorage.setItem('munyaka_science_equipment', JSON.stringify(equipment));
+      notifyDataChanged('munyaka_science_equipment');
+    }
+  }, [equipment]);
+
+  const prevBookingsRef = useRef(bookings);
+  useEffect(() => {
+    if (prevBookingsRef.current !== bookings) {
+      prevBookingsRef.current = bookings;
+      localStorage.setItem('munyaka_science_bookings', JSON.stringify(bookings));
+      notifyDataChanged('munyaka_science_bookings');
+    }
+  }, [bookings]);
+
+  const prevBreakagesRef = useRef(breakages);
+  useEffect(() => {
+    if (prevBreakagesRef.current !== breakages) {
+      prevBreakagesRef.current = breakages;
+      localStorage.setItem('munyaka_science_breakages', JSON.stringify(breakages));
+      notifyDataChanged('munyaka_science_breakages');
+    }
+  }, [breakages]);
 
   // Filtered Data
   const filteredChemicals = useMemo(() => chemicals.filter(c => {
