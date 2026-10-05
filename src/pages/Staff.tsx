@@ -687,19 +687,10 @@ const Staff = () => {
                         <td className="px-8 py-5 min-w-[220px]">
                           <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{member.email || 'No Email Provided'}</span>
                         </td>
-                        <td className="px-8 py-5 min-w-[180px]">
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-xs font-semibold text-indigo-700 w-fit">
-                              <span className="text-[9px] text-gray-500 uppercase font-bold">Active Code:</span>
-                              <span className="font-mono font-bold">{member.access_key || (member as any).tempAccessCode || (member as any).accessCode || (member as any).ref || `KEY-${Math.floor(100000 + Math.random() * 900000)}`}</span>
-                            </div>
-                            {(member as any).previousAccessCode && (
-                              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-medium text-gray-600 w-fit">
-                                <span className="text-[9px] text-gray-400 uppercase font-bold">Previous:</span>
-                                <span className="font-mono">{(member as any).previousAccessCode}</span>
-                              </div>
-                            )}
-                          </div>
+                        <td className="px-8 py-5 min-w-[140px]">
+                          <span className="font-mono text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 whitespace-nowrap">
+                            {member.access_key || (member as any).tempAccessCode || (member as any).accessCode || (member as any).ref || `KEY-${Math.floor(100000 + Math.random() * 900000)}`}
+                          </span>
                         </td>
                         <td className="px-8 py-5 text-center min-w-[140px]">
                           <Badge className={member.status === 'Active' ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl" : "bg-amber-50 text-amber-700 border-none font-bold text-xs px-3 py-1 rounded-xl"}>
@@ -778,17 +769,11 @@ const Staff = () => {
             </div>
             
             <div className="space-y-4">
-              <div className="p-4 bg-slate-50 rounded-2xl space-y-2">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-xl text-xs font-semibold text-indigo-700 w-fit">
-                  <span className="text-[10px] text-gray-500 uppercase font-bold">Active Code:</span>
-                  <span className="font-mono font-black text-sm">{selectedAccessStaff.access_key || (selectedAccessStaff as any).ref || (selectedAccessStaff as any).accessCode || 'No Key Generated'}</span>
-                </div>
-                {(selectedAccessStaff as any).previousAccessCode && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-600 w-fit">
-                    <span className="text-[10px] text-gray-400 uppercase font-bold">Previous Code:</span>
-                    <span className="font-mono">{(selectedAccessStaff as any).previousAccessCode}</span>
-                  </div>
-                )}
+              <div className="p-4 bg-slate-50 rounded-2xl space-y-1">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Current Access Code</p>
+                <p className="text-xl font-mono font-black text-indigo-600">
+                  {selectedAccessStaff.access_key || (selectedAccessStaff as any).ref || (selectedAccessStaff as any).accessCode || 'No Key Generated'}
+                </p>
               </div>
               <p className="text-xs text-slate-500 font-medium">
                 Generating a new access key will replace the existing security code. The staff member will use this key for quick system access and portal login verification.
