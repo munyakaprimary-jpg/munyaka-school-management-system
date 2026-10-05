@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getStudents } from '@/services/persistentStore';
-import { Search, UserCheck, Eye, Printer, MessageSquare, Calendar } from 'lucide-react';
+import { Search, UserCheck, Eye, Download, MessageSquare, Calendar } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
 const GRADES = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
@@ -225,26 +225,25 @@ export default function ReportCards() {
           <meta charset="utf-8">
           <title>CBC Report Card - ${studentName}</title>
           <style>
-            @page { size: A4 portrait; margin: 10mm; }
-            body { font-family: Arial, sans-serif; padding: 20px; color: #111; max-width: 800px; margin: auto; line-height: 1.4; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .header { text-align: center; border-bottom: 3px solid #111; padding-bottom: 12px; margin-bottom: 20px; }
-            .school { font-size: 20px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
-            .address { font-size: 12px; margin-bottom: 2px; }
-            .motto { font-size: 12px; font-style: italic; margin-bottom: 8px; }
-            .title { font-size: 13px; font-weight: bold; text-transform: uppercase; background: #e2e8f0; padding: 6px; margin-top: 8px; }
+            body { font-family: Arial, sans-serif; padding: 30px; color: #111; max-width: 800px; margin: auto; line-height: 1.5; background: #fff; }
+            .header { text-align: center; border-bottom: 3px solid #111; padding-bottom: 15px; margin-bottom: 25px; }
+            .school { font-size: 22px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
+            .address { font-size: 13px; margin-bottom: 2px; }
+            .motto { font-size: 13px; font-style: italic; margin-bottom: 10px; }
+            .title { font-size: 14px; font-weight: bold; text-transform: uppercase; background: #e2e8f0; padding: 6px; margin-top: 10px; }
             
-            .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .info-table td { padding: 6px 10px; border: 1px solid #94a3b8; font-size: 12px; width: 50%; }
+            .info-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+            .info-table td { padding: 8px 12px; border: 1px solid #94a3b8; font-size: 13px; width: 50%; }
             
-            .marks-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .marks-table th, .marks-table td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: left; font-size: 12px; }
+            .marks-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+            .marks-table th, .marks-table td { border: 1px solid #94a3b8; padding: 8px 12px; text-align: left; font-size: 13px; }
             .marks-table th { background-color: #f1f5f9; font-weight: bold; }
             
-            .remarks-box { border: 1px solid #94a3b8; padding: 10px; margin-bottom: 15px; font-size: 12px; background: #f8fafc; }
-            .remarks-title { font-weight: bold; margin-bottom: 2px; color: #1e3a8a; }
+            .remarks-box { border: 1px solid #94a3b8; padding: 12px; margin-bottom: 20px; font-size: 13px; background: #f8fafc; }
+            .remarks-title { font-weight: bold; margin-bottom: 4px; color: #1e3a8a; }
             
-            .footer { display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; margin-top: 25px; }
-            .closing-footer { font-size: 11px; text-align: center; color: #555; margin-top: 20px; border-top: 1px solid #cbd5e1; padding-top: 8px; }
+            .footer { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; margin-top: 40px; }
+            .closing-footer { font-size: 12px; text-align: center; color: #555; margin-top: 25px; border-top: 1px solid #cbd5e1; padding-top: 10px; }
           </style>
         </head>
         <body>
@@ -307,43 +306,24 @@ export default function ReportCards() {
   const handleDownloadReport = () => {
     setIsExporting(true);
     try {
+      const studentName = selectedLearner.fullName || selectedLearner.name || 'Learner';
       const htmlContent = buildReportHtml();
 
-      // Open in hidden iframe and invoke window.print() so user can select "Save as PDF" directly from browser print-to-PDF dialog
-      let printFrame = document.getElementById('pdf-print-frame-hidden') as HTMLIFrameElement;
-      if (!printFrame) {
-        printFrame = document.createElement('iframe');
-        printFrame.id = 'pdf-print-frame-hidden';
-        printFrame.style.position = 'fixed';
-        printFrame.style.right = '0';
-        printFrame.style.bottom = '0';
-        printFrame.style.width = '0';
-        printFrame.style.height = '0';
-        printFrame.style.border = '0';
-        document.body.appendChild(printFrame);
-      }
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CBC_Report_${studentName.replace(/\s+/g, '_')}_${academicYear}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
-      const pw = printFrame.contentWindow;
-      const frameDoc = pw?.document;
-      if (!frameDoc) {
-        setIsExporting(false);
-        showError("Could not access print window.");
-        return;
-      }
-
-      frameDoc.open();
-      frameDoc.write(htmlContent);
-      frameDoc.close();
-
-      setTimeout(() => {
-        pw?.focus();
-        pw?.print();
-        setIsExporting(false);
-        showSuccess("Print dialog opened. Select 'Save as PDF' to save your PDF report card.");
-      }, 400);
+      setIsExporting(false);
+      showSuccess("Report card file downloaded successfully.");
     } catch (err) {
       setIsExporting(false);
-      showError("Failed to trigger PDF print dialog.");
+      showError("Failed to download report card file.");
     }
   };
 
@@ -351,15 +331,15 @@ export default function ReportCards() {
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card PDF Generator</h2>
-          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks, and save as PDF via system print dialog.</p>
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card Generator</h2>
+          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks, and download clean HTML report card files.</p>
         </div>
         <button 
           onClick={handleDownloadReport}
           disabled={isExporting}
           className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold px-6 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
         >
-          <Printer className="h-4 w-4" /> {isExporting ? 'Preparing PDF...' : 'Print / Save as PDF'}
+          <Download className="h-4 w-4" /> {isExporting ? 'Downloading...' : 'Download Report Card File'}
         </button>
       </div>
 
