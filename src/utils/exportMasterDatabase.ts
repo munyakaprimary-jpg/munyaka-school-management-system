@@ -193,14 +193,6 @@ export function generateMasterSyncPackage(senderInfo?: {
     return [];
   })();
 
-  const library = (() => {
-    const keys = ['munyaka_library_books', 'school_library_inventory_v1', 'library_data', 'library'];
-    for (const k of keys) {
-      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
-    }
-    return [];
-  })();
-
   const marks = (() => {
     const keys = ['munyaka_marks_records', 'marked_student_submissions', 'marks'];
     for (const k of keys) {
