@@ -6,20 +6,10 @@ import {
   ClipboardCheck,
   BookOpen,
   Calendar,
-  Award,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
   Sparkles,
   ArrowRight,
   FileSpreadsheet,
-  MessageSquare,
   Megaphone,
-  Wifi,
-  Database,
-  GraduationCap,
-  CheckSquare,
-  Download,
   Lock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -33,29 +23,17 @@ const TeacherDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { totalStudents } = useCentralData();
 
-  const teacherName = user?.name || 'Teacher';
+  const teacherName = user?.name || 'Lawrence Mwangi';
   const teacherRole = user?.role || 'Class Teacher';
-  const isAdmin = teacherRole.toLowerCase().includes('admin') || teacherRole.toLowerCase().includes('head') || teacherRole.toLowerCase().includes('owner');
+  const roleLower = String(teacherRole).toLowerCase();
+  const isAdmin = roleLower.includes('admin') || roleLower.includes('head') || roleLower.includes('owner');
 
-  // Teacher class credentials
-  const assignedTeacherGrade = (user as any)?.grade || (user as any)?.assignedClass || 'Grade 1';
-  const assignedTeacherStream = (user as any)?.stream || (user as any)?.assignedStream || 'Blue';
+  // Strict class restriction for teacher Lawrence / non-admins: always Grade 1 Blue
+  const assignedTeacherGrade = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Grade 1' : ((user as any)?.grade || (user as any)?.assignedClass || 'Grade 1');
+  const assignedTeacherStream = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Blue' : ((user as any)?.stream || (user as any)?.assignedStream || 'Blue');
 
-  // Available grades and streams restricted for teachers
-  const availableGrades = isAdmin ? ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'PP1', 'PP2'] : [assignedTeacherGrade];
-  const availableStreams = isAdmin ? ['Blue', 'Green', 'Red', 'Gold', 'East', 'West'] : [assignedTeacherStream];
-
-  // Lock default states
-  const [selectedGrade, setSelectedGrade] = React.useState<string>(() => {
-    return isAdmin ? (localStorage.getItem('teacher_dashboard_grade') || assignedTeacherGrade) : assignedTeacherGrade;
-  });
-
-  const [selectedStream, setSelectedStream] = React.useState<string>(() => {
-    return isAdmin ? (localStorage.getItem('teacher_dashboard_stream') || assignedTeacherStream) : assignedTeacherStream;
-  });
-
-  const activeGrade = isAdmin ? (selectedGrade || assignedTeacherGrade) : assignedTeacherGrade;
-  const activeStream = isAdmin ? (selectedStream || assignedTeacherStream) : assignedTeacherStream;
+  const activeGrade = assignedTeacherGrade;
+  const activeStream = assignedTeacherStream;
   const fullClassTitle = `${activeGrade} ${activeStream}`;
 
   // Get student records
@@ -86,7 +64,7 @@ const TeacherDashboard: React.FC = () => {
     attendanceRecords = [];
   }
 
-  // Filter real student records matching the selected grade and stream
+  // Filter real student records matching the assigned grade and stream strictly
   const matchingStudents = students.filter(
     (s) => String(s.grade || s.gradeLevel || s.assignedClass || "").trim().toLowerCase() === String(activeGrade).trim().toLowerCase() &&
            String(s.stream || s.assignedStream || "").trim().toLowerCase() === String(activeStream).trim().toLowerCase()
@@ -113,17 +91,15 @@ const TeacherDashboard: React.FC = () => {
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold uppercase tracking-wider text-blue-200">
                 <Sparkles size={14} /> CBC Portal
               </div>
-              {!isAdmin && (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 text-xs font-bold text-emerald-200">
-                  <Lock size={12} /> Class Locked: {fullClassTitle}
-                </div>
-              )}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 text-xs font-bold text-emerald-200">
+                <Lock size={12} /> Class Locked: {fullClassTitle}
+              </div>
             </div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight">
               Welcome back, {teacherName}!
             </h1>
             <p className="text-blue-100 text-sm md:text-base max-w-xl font-medium">
-              You are signed in as <span className="underline decoration-blue-400 font-bold">{teacherName}</span> ({teacherRole}). Ready to inspire learners and manage your classroom today?
+              You are signed in as <span className="underline decoration-blue-400 font-bold">{teacherName}</span> ({teacherRole}). Your dashboard is strictly restricted to <span className="font-bold">{fullClassTitle}</span>.
             </p>
           </div>
           

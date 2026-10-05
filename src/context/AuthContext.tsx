@@ -121,15 +121,15 @@ const DEFAULT_TEACHER = {
   password: 'munyaka5239',
   user: {
     id: 'teacher-001',
-    name: 'Jane Mwangi',
-    email: 'jane.mwangi@munyaka.sc.ke',
+    name: 'Lawrence Mwangi',
+    email: 'lawrence.mwangi@munyaka.sc.ke',
     phone: '+254 712 345 678',
     role: 'teacher' as UserRole,
-    avatar: 'JM',
-    assignedClass: 'Grade 4',
-    assignedStream: 'Green',
-    grade: 'Grade 4',
-    stream: 'Green',
+    avatar: 'LM',
+    assignedClass: 'Grade 1',
+    assignedStream: 'Blue',
+    grade: 'Grade 1',
+    stream: 'Blue',
     department: 'Academics'
   }
 };
