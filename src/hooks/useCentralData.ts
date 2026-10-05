@@ -378,15 +378,10 @@ export const notifyDataChanged = (key?: string) => {
   } catch { /* SSR / no window */ }
 };
 
-/** Get raw learners array */
-export const getLearners = (): Learner[] => {
-  return CentralDataService.getLearners();
-};
-
 /** Get raw active learners array (for Central Data view details). */
 export const getActiveLearners = (): Learner[] => {
   const activeSchoolId = getActiveSchoolId();
-  return CentralDataService.getLearners();
+  return getLearners();
 };
 
 /** Get raw active teachers array. */
