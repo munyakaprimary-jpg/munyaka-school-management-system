@@ -2,7 +2,6 @@ import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { showSuccess, showError } from '@/utils/toast';
-import { getStoredLearners } from './learnersStore';
 
 export interface MasterExportResult {
   success: boolean;
@@ -10,19 +9,6 @@ export interface MasterExportResult {
   fileName: string;
   size: number;
   message: string;
-}
-
-export interface MasterExportPackage {
-  exportVersion: string;
-  generatedAt: string;
-  schoolName: string;
-  data: {
-    learners: any[];
-    attendance: any[];
-    fees: any[];
-    library: any[];
-    otherKeys: Record<string, any>;
-  };
 }
 
 export interface MasterSyncPackage {
@@ -65,341 +51,83 @@ export function generateMasterSyncPackage(senderInfo?: {
   departmentOrStream?: string;
   role?: string;
 }): MasterSyncPackage {
-  const allKeys: Record<string, any> = {};
+  // 1. Guaranteed variable scoping for all requested tables
+  let learners: any[] = [];
+  let staff: any[] = [];
+  let attendance: any[] = [];
+  let fees: any[] = [];
+  let library: any[] = [];
+  let marks: any[] = [];
+  let exams: any[] = [];
+  let streams: any[] = [];
+  let classAssignments: any[] = [];
+  let learningAreas: any[] = [];
+  let examTypes: any[] = [];
+  let feeStructures: any[] = [];
+  let notices: any[] = [];
+  let events: any[] = [];
+  let ictEquipment: any[] = [];
+  let scienceInventory: any[] = [];
+  let storeInventory: any[] = [];
+  let timetable: any[] = [];
+  let settings: Record<string, any> = {};
+
   try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key) continue;
-      const rawVal = localStorage.getItem(key);
-      try {
-        allKeys[key] = rawVal ? JSON.parse(rawVal) : null;
-      } catch {
-        allKeys[key] = rawVal;
+    // 2. Pure live localStorage queries without any hardcoded fallback templates or fake mock objects
+    const getStorageArray = (...keys: string[]): any[] => {
+      for (const key of keys) {
+        try {
+          const item = localStorage.getItem(key);
+          if (item) {
+            const parsed = JSON.parse(item);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            if (parsed && typeof parsed === 'object' && Array.isArray(parsed.students)) return parsed.students;
+            if (parsed && typeof parsed === 'object' && Array.isArray(parsed.learners)) return parsed.learners;
+            if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+              // If it's a map or single object container, wrap in array if needed or return
+              return [parsed];
+            }
+          }
+        } catch {}
       }
-    }
+      return [];
+    };
+
+    const getStorageObjectOrArray = (...keys: string[]): any => {
+      for (const key of keys) {
+        try {
+          const item = localStorage.getItem(key);
+          if (item) {
+            const parsed = JSON.parse(item);
+            if (parsed !== null && parsed !== undefined) return parsed;
+          }
+        } catch {}
+      }
+      return [];
+    };
+
+    learners = getStorageArray('school_learners_master', 'munyaka_learners', 'learners', 'students', 'school_learners_v1', 'munyaka_central_db', 'school_students_v1');
+    staff = getStorageArray('staff_members', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff', 'school_staff_master');
+    attendance = getStorageArray('munyaka_attendance_records', 'munyaka_attendance', 'roll_call_records', 'attendance', 'attendance_logs');
+    fees = getStorageArray('fee_records', 'fees', 'munyaka_fees', 'munyaka_fees_records', 'fees_data', 'student_payments', 'fee_ledgers', 'transactions');
+    library = getStorageArray('munyaka_library_books', 'school_library_inventory_v1', 'library_data', 'library', 'books');
+    marks = getStorageArray('munyaka_marks_records', 'marked_student_submissions', 'marks');
+    exams = getStorageArray('all_set_exams', 'munyaka_exams', 'exams');
+    streams = getStorageArray('munyaka_streams', 'streams', 'grades_and_streams_config');
+    classAssignments = getStorageArray('munyaka_class_assignments', 'classAssignments');
+    learningAreas = getStorageArray('munyaka_learning_areas', 'learningAreas');
+    examTypes = getStorageArray('munyaka_exam_types', 'examTypes');
+    feeStructures = getStorageArray('munyaka_fee_structures', 'feeStructures');
+    notices = getStorageArray('munyaka_notices_board', 'munyaka_notices');
+    events = getStorageArray('munyaka_events');
+    ictEquipment = getStorageArray('munyaka_ict_assets', 'ictEquipment');
+    scienceInventory = getStorageArray('munyaka_science_lab', 'scienceInventory');
+    storeInventory = getStorageArray('munyaka_store_items', 'storeInventory');
+    timetable = getStorageArray('munyaka_timetable', 'school-timetable-data');
+    settings = getStorageObjectOrArray('munyaka_system_settings_v3', 'munyaka_system_settings');
   } catch (err) {
-    console.error('Error crawling localStorage for master sync:', err);
+    console.error('Error reading localStorage for master sync package:', err);
   }
-
-  const learners = (() => {
-    try {
-      const map = new Map();
-      const candidateKeys = [
-        'school_learners_master',
-        'munyaka_learners',
-        'learners',
-        'students',
-        'school_learners_v1',
-        'munyaka_central_db',
-        'school_students_v1',
-        'enrolled_learners'
-      ];
-      for (const key of candidateKeys) {
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              parsed.forEach((l: any) => {
-                const id = l?.id || l?.admissionNumber || l?.upi || JSON.stringify(l);
-                if (id) map.set(id, l);
-              });
-            } else if (parsed && typeof parsed === 'object') {
-              if (Array.isArray(parsed.students)) {
-                parsed.students.forEach((l: any) => {
-                  const id = l?.id || l?.admissionNumber || l?.upi || JSON.stringify(l);
-                  if (id) map.set(id, l);
-                });
-              } else if (Array.isArray(parsed.learners)) {
-                parsed.learners.forEach((l: any) => {
-                  const id = l?.id || l?.admissionNumber || l?.upi || JSON.stringify(l);
-                  if (id) map.set(id, l);
-                });
-              }
-            }
-          }
-        } catch {}
-        
-        const val = allKeys[key];
-        if (Array.isArray(val)) {
-          val.forEach((l: any) => {
-            const id = l?.id || l?.admissionNumber || l?.upi || JSON.stringify(l);
-            if (id) map.set(id, l);
-          });
-        } else if (val && typeof val === 'object' && Array.isArray(val.students)) {
-          val.students.forEach((l: any) => {
-            const id = l?.id || l?.admissionNumber || l?.upi || JSON.stringify(l);
-            if (id) map.set(id, l);
-          });
-        }
-      }
-      const storeLearners = getStoredLearners();
-      if (Array.isArray(storeLearners)) {
-        storeLearners.forEach((l: any) => {
-          const id = l?.id || l?.admissionNumber || l?.upi || JSON.stringify(l);
-          if (id) map.set(id, l);
-        });
-      }
-      return Array.from(map.values());
-    } catch {
-      return [];
-    }
-  })();
-
-  const staff = (() => {
-    try {
-      const map = new Map();
-      const candidateKeys = [
-        'staff_members',
-        'munyaka_staff_directory',
-        'munyaka_master_staff_list',
-        'munyaka_staff',
-        'staff',
-        'school_staff_master'
-      ];
-      for (const key of candidateKeys) {
-        try {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              parsed.forEach((s: any) => {
-                const id = s?.id || s?.staffId || s?.email || JSON.stringify(s);
-                if (id) map.set(id, s);
-              });
-            }
-          }
-        } catch {}
-        const val = allKeys[key];
-        if (Array.isArray(val)) {
-          val.forEach((s: any) => {
-            const id = s?.id || s?.staffId || s?.email || JSON.stringify(s);
-            if (id) map.set(id, s);
-          });
-        }
-      }
-      return Array.from(map.values());
-    } catch {
-      return [];
-    }
-  })();
-
-  const attendance = (() => {
-    try {
-      const keys = ['munyaka_attendance_records', 'munyaka_attendance', 'roll_call_records', 'attendance', 'attendance_logs'];
-      for (const k of keys) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-          }
-        } catch {}
-        if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  })();
-
-  const fees = (() => {
-    try {
-      const keys = [
-        'fee_records',
-        'fees',
-        'munyaka_fees',
-        'munyaka_fees_records',
-        'fees_data',
-        'student_payments',
-        'fee_ledgers',
-        'transactions',
-        'munyaka_fee_ledgers',
-        'munyaka_student_payments'
-      ];
-      for (const k of keys) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-            if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) return parsed;
-          }
-        } catch {}
-        const val = allKeys[k];
-        if (Array.isArray(val) && val.length > 0) return val;
-        if (val && typeof val === 'object' && Object.keys(val).length > 0) return val;
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  })();
-
-  const library = (() => {
-    try {
-      const keys = ['munyaka_library_books', 'school_library_inventory_v1', 'library_data', 'library', 'books'];
-      for (const k of keys) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-          }
-        } catch {}
-        const val = allKeys[k];
-        if (Array.isArray(val) && val.length > 0) return val;
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  })();
-
-  const marks = (() => {
-    try {
-      const keys = ['munyaka_marks_records', 'marked_student_submissions', 'marks'];
-      for (const k of keys) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-          }
-        } catch {}
-        if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  })();
-
-  const exams = (() => {
-    try {
-      const keys = ['all_set_exams', 'munyaka_exams', 'exams'];
-      for (const k of keys) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-          }
-        } catch {}
-        if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  })();
-
-  const streams = (() => {
-    try {
-      const keys = ['munyaka_streams', 'streams', 'grades_and_streams_config'];
-      for (const k of keys) {
-        try {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed) return parsed;
-          }
-        } catch {}
-        if (allKeys[k]) return allKeys[k];
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  })();
-
-  const classAssignments = (() => {
-    try {
-      return allKeys['munyaka_class_assignments'] || allKeys['classAssignments'] || JSON.parse(localStorage.getItem('munyaka_class_assignments') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const learningAreas = (() => {
-    try {
-      return allKeys['munyaka_learning_areas'] || allKeys['learningAreas'] || JSON.parse(localStorage.getItem('munyaka_learning_areas') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const examTypes = (() => {
-    try {
-      return allKeys['munyaka_exam_types'] || allKeys['examTypes'] || JSON.parse(localStorage.getItem('munyaka_exam_types') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const feeStructures = (() => {
-    try {
-      return allKeys['munyaka_fee_structures'] || allKeys['feeStructures'] || JSON.parse(localStorage.getItem('munyaka_fee_structures') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const notices = (() => {
-    try {
-      return allKeys['munyaka_notices_board'] || allKeys['munyaka_notices'] || JSON.parse(localStorage.getItem('munyaka_notices_board') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const events = (() => {
-    try {
-      return allKeys['munyaka_events'] || JSON.parse(localStorage.getItem('munyaka_events') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const ictEquipment = (() => {
-    try {
-      return allKeys['munyaka_ict_assets'] || allKeys['ictEquipment'] || JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const scienceInventory = (() => {
-    try {
-      return allKeys['munyaka_science_lab'] || allKeys['scienceInventory'] || JSON.parse(localStorage.getItem('munyaka_science_lab') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const storeInventory = (() => {
-    try {
-      return allKeys['munyaka_store_items'] || allKeys['storeInventory'] || JSON.parse(localStorage.getItem('munyaka_store_items') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const timetable = (() => {
-    try {
-      return allKeys['munyaka_timetable'] || allKeys['school-timetable-data'] || JSON.parse(localStorage.getItem('munyaka_timetable') || '[]');
-    } catch {
-      return [];
-    }
-  })();
-
-  const settings = (() => {
-    try {
-      return allKeys['munyaka_system_settings_v3'] || allKeys['munyaka_system_settings'] || JSON.parse(localStorage.getItem('munyaka_system_settings_v3') || '{}');
-    } catch {
-      return {};
-    }
-  })();
 
   const currentUser = (() => {
     try {
@@ -424,22 +152,22 @@ export function generateMasterSyncPackage(senderInfo?: {
       learners: Array.isArray(learners) ? learners : [],
       staff: Array.isArray(staff) ? staff : [],
       attendance: Array.isArray(attendance) ? attendance : [],
-      fees: fees || [],
+      fees: Array.isArray(fees) ? fees : (fees ? [fees] : []),
       library: Array.isArray(library) ? library : [],
       marks: Array.isArray(marks) ? marks : [],
       exams: Array.isArray(exams) ? exams : [],
-      streams: streams || [],
-      classAssignments: classAssignments || [],
-      learningAreas: learningAreas || [],
-      examTypes: examTypes || [],
-      feeStructures: feeStructures || [],
-      notices: notices || [],
-      events: events || [],
-      ictEquipment: ictEquipment || [],
-      scienceInventory: scienceInventory || [],
-      storeInventory: storeInventory || [],
-      timetable: timetable || [],
-      settings: settings || {},
+      streams: Array.isArray(streams) ? streams : (streams ? [streams] : []),
+      classAssignments: Array.isArray(classAssignments) ? classAssignments : [],
+      learningAreas: Array.isArray(learningAreas) ? learningAreas : [],
+      examTypes: Array.isArray(examTypes) ? examTypes : [],
+      feeStructures: Array.isArray(feeStructures) ? feeStructures : [],
+      notices: Array.isArray(notices) ? notices : [],
+      events: Array.isArray(events) ? events : [],
+      ictEquipment: Array.isArray(ictEquipment) ? ictEquipment : [],
+      scienceInventory: Array.isArray(scienceInventory) ? scienceInventory : [],
+      storeInventory: Array.isArray(storeInventory) ? storeInventory : [],
+      timetable: Array.isArray(timetable) ? timetable : [],
+      settings: settings && typeof settings === 'object' ? settings : {},
     },
   };
 }
