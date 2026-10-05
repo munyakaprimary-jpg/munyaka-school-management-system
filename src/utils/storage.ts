@@ -154,27 +154,21 @@ export interface TermFeesConfig {
   [key: string]: any;
 }
 
-export const getStoredTermFees = (): TermFeesConfig => {
+export const getStoredLearners = (): any[] => {
   try {
-    const data = localStorage.getItem('term_fees') || localStorage.getItem('fees_structure') || localStorage.getItem('munyaka_fee_structures');
-    if (data) {
-      const parsed = JSON.parse(data);
-      if (typeof parsed === 'number') {
-        return { termFee: parsed };
-      }
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const first = parsed[0];
-        const feeAmount = Number(first.amount || first.termFee || first.totalFee || 1400);
-        return { ...first, termFee: isNaN(feeAmount) ? 1400 : feeAmount };
-      }
-      if (parsed && typeof parsed === 'object') {
-        const feeAmount = Number(parsed.termFee || parsed.amount || parsed.totalFee || 1400);
-        return { ...parsed, termFee: isNaN(feeAmount) ? 1400 : feeAmount };
+    const keys = ['learners', 'school_learners_master', 'munyaka_learners', 'students', 'school_students_v1'];
+    for (const key of keys) {
+      const data = localStorage.getItem(key);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.students)) return parsed.students;
+        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.learners)) return parsed.learners;
       }
     }
-    return { termFee: 1400 };
+    return [];
   } catch {
-    return { termFee: 1400 };
+    return [];
   }
 };
 
@@ -320,6 +314,8 @@ export function notifyDataChanged(key?: string): void {
   if (typeof window === 'undefined') return;
   try {
     window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key } }));
+    window.dispatchEvent(new Event('storage-updated'));
+    window.dispatchEvent(new Event('students-updated'));
   } catch {
     /* no-op */
   }
