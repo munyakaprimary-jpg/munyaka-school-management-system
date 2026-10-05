@@ -84,70 +84,31 @@ const TeacherDashboard: React.FC = () => {
                 <TeacherExportModule />
               </div>
 
-      {/* Summary Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Assigned Learners</p>
-              <h3 className="text-3xl font-black text-slate-900">{totalStudents > 0 ? totalStudents : '42'}</h3>
-              <p className="text-xs font-medium text-emerald-600 flex items-center gap-1 mt-1">
-                <CheckCircle2 size={12} /> Active in {fullClassTitle}
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
-              <Users size={28} />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Assigned Learners & Today's Attendance Cards (2-Column Horizontal Grid) */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* Assigned Learners Card */}
+        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Assigned Learners</p>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{totalStudents > 0 ? totalStudents : '24'}</h3>
+            <p className="text-[10px] text-green-600 font-medium">Active in {fullClassTitle}</p>
+          </div>
+          <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+            <Users size={20} />
+          </div>
+        </div>
 
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Today's Attendance</p>
-              <h3 className="text-3xl font-black text-slate-900">39 / 42</h3>
-              <p className="text-xs font-medium text-blue-600 flex items-center gap-1 mt-1">
-                <Clock size={12} /> Roll call marked
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-inner">
-              <ClipboardCheck size={28} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Pending Assessments</p>
-              <h3 className="text-3xl font-black text-slate-900">3</h3>
-              <p className="text-xs font-medium text-amber-600 flex items-center gap-1 mt-1">
-                <AlertCircle size={12} /> CBC strands awaiting scoring
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner">
-              <Award size={28} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">System Sync Status</p>
-              <h3 className="text-xl font-black text-slate-900 flex items-center gap-2 mt-1">
-                <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
-                {isOnline ? 'Online Sync' : 'Local Wi-Fi'}
-              </h3>
-              <p className="text-xs font-medium text-slate-500 mt-1">
-                Central database connected
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-              <Wifi size={28} />
-            </div>
-          </CardContent>
-        </Card>
+        {/* Today's Attendance Card */}
+        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Today's Attendance</p>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">39 / 42</h3>
+            <p className="text-[10px] text-blue-600 font-medium">Roll call marked</p>
+          </div>
+          <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+            <ClipboardCheck size={20} />
+          </div>
+        </div>
       </div>
 
       {/* Quick Action Shortcuts */}
