@@ -19,7 +19,8 @@ import {
   Database,
   GraduationCap,
   CheckSquare,
-  Download
+  Download,
+  Lock
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,22 +32,28 @@ const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { totalStudents } = useCentralData();
-  const isOnline = true;
 
   const teacherName = user?.name || 'Teacher';
   const teacherRole = user?.role || 'Class Teacher';
-  
-  // Grade and Stream state from localStorage or user context
+  const isAdmin = teacherRole.toLowerCase().includes('admin') || teacherRole.toLowerCase().includes('head') || teacherRole.toLowerCase().includes('owner');
+
+  // Enforce teacher class restrictions (grade & stream lock)
+  const assignedTeacherGrade = (user as any)?.grade || (user as any)?.assignedClass || 'Grade 1';
+  const assignedTeacherStream = (user as any)?.stream || (user as any)?.assignedStream || 'Blue';
+
+  // If not an admin, lock state to their assigned class
   const [selectedGrade, setSelectedGrade] = React.useState<string>(() => {
-    return localStorage.getItem('teacher_dashboard_grade') || (user as any)?.assignedClass || (user as any)?.grade || 'Grade 1';
-  });
-  const [selectedStream, setSelectedStream] = React.useState<string>(() => {
-    return localStorage.getItem('teacher_dashboard_stream') || (user as any)?.assignedStream || (user as any)?.stream || 'Blue';
+    if (!isAdmin) return assignedTeacherGrade;
+    return localStorage.getItem('teacher_dashboard_grade') || assignedTeacherGrade;
   });
 
-  // Get active filter values from dropdown state or fallback to first available
-  const activeGrade = selectedGrade || "Grade 1";
-  const activeStream = selectedStream || "Blue";
+  const [selectedStream, setSelectedStream] = React.useState<string>(() => {
+    if (!isAdmin) return assignedTeacherStream;
+    return localStorage.getItem('teacher_dashboard_stream') || assignedTeacherStream;
+  });
+
+  const activeGrade = isAdmin ? (selectedGrade || assignedTeacherGrade) : assignedTeacherGrade;
+  const activeStream = isAdmin ? (selectedStream || assignedTeacherStream) : assignedTeacherStream;
   const fullClassTitle = `${activeGrade} ${activeStream}`;
 
   // Get student records
@@ -99,9 +106,16 @@ const TeacherDashboard: React.FC = () => {
         <div className="absolute right-32 bottom-0 w-64 h-64 rounded-full bg-indigo-500/20 blur-2xl pointer-events-none" />
         
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold uppercase tracking-wider text-blue-200">
-              <Sparkles size={14} /> CBC Portal · {fullClassTitle}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold uppercase tracking-wider text-blue-200">
+                <Sparkles size={14} /> CBC Portal
+              </div>
+              {!isAdmin && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 text-xs font-bold text-emerald-200">
+                  <Lock size={12} /> Class Locked: {fullClassTitle}
+                </div>
+              )}
             </div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight">
               Welcome back, {teacherName}!
