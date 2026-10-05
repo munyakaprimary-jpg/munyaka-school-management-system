@@ -36,10 +36,10 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [learners, setLearners] = useState<any[]>(filteredLearners);
 
+  // Sync state when filteredLearners content actually changes
   useEffect(() => {
-    // Keep local state in sync when user changes or underlying storage updates
     setLearners(filteredLearners);
-  }, [filteredLearners]);
+  }, [JSON.stringify(filteredLearners)]);
 
   const addLearner = (newLearner: any) => {
     setLearners((prev) => {
