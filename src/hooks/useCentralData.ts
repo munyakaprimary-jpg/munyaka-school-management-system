@@ -290,12 +290,16 @@ export const useCentralData = (): CentralDataStats => {
   });
 
   const refresh = useCallback(() => {
-    initializeStaffMaster();
-    const newStats = computeStats();
-    if (!statsEqual(stats, newStats)) {
-      setStats(newStats);
-    }
-  }, [stats]);
+      initializeStaffMaster();
+      const newStats = computeStats();
+      // Use functional update to avoid depending on `stats` in the closure
+      setStats((currentStats) => {
+        if (!statsEqual(currentStats, newStats)) {
+          return newStats;
+        }
+        return currentStats;
+      });
+    }, []);
 
   // Stable ref so event listeners/intervals always call the freshest refresh
   // without re-running the listener-setup effect (guard against
