@@ -133,6 +133,7 @@ import Communication from "./pages/Communication";
 import TeacherCommunication from "./pages/TeacherCommunication";
 import Library from "./pages/Library";
 import Inventory from "./pages/Inventory";
+import { SchoolProvider } from "./context/SchoolContext";
 import { LearnerProvider } from './context/LearnerContext';
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
@@ -496,7 +497,8 @@ const App = () => {
                     <Toaster />
                     <Sonner />
                     <GlobalExportListener />
-                    <LearnerProvider>
+                    <SchoolProvider>
+                      <LearnerProvider>
                       <Routes>
                         {/* Public Routes */}
                       <Route path="/login" element={<Login />} />
@@ -577,6 +579,7 @@ const App = () => {
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                     </LearnerProvider>
+                  </SchoolProvider>
                   </TooltipProvider>
                 </ThemeProvider>
               </NotificationProvider>

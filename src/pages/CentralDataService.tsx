@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSchoolStore } from '@/store/useSchoolStore';
+import { useSchoolContext } from '@/context/SchoolContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { Download, Upload, Database, RefreshCw, Layers, ShieldCheck, Users, GraduationCap, DollarSign, CalendarCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -51,6 +52,7 @@ function stripBase64Blobs(obj: any): any {
 
 export default function CentralDataServicePage() {
   const { learners, staff, fees, attendance, exams, marks, timetable, settings, refreshStore } = useSchoolStore();
+  const { exportMasterJSON, importMasterJSON } = useSchoolContext();
 
   useEffect(() => {
     refreshStore();
@@ -70,104 +72,16 @@ export default function CentralDataServicePage() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-  
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          setLoading(true);
-          const content = event.target?.result as string;
-          const parsed = JSON.parse(content);
-          if (!parsed || typeof parsed !== 'object') {
-            showError('Invalid JSON backup file.');
-            return;
-          }
-  
-          // ── Strip unnecessary base64 blobs to reduce payload size ──────
-          // Large base64 strings (e.g. images, PDFs) can blow past the
-          // localStorage quota limit (typically 5–10 MB). We remove them
-          // from the parsed data before serializing back to storage.
-          const stripped = stripBase64Blobs(parsed);
-  
-          // ── Check approximate payload size before writing ─────────────
-          const payloadSize = JSON.stringify(stripped).length;
-          const estimatedBytes = payloadSize * 2; // JS UTF-16 encoding ~2 bytes/char
-          if (estimatedBytes > 8 * 1024 * 1024) {
-            // 8 MB safety threshold (localStorage limits vary 5–10 MB)
-            showError(
-              `Backup payload is too large (${(estimatedBytes / (1024 * 1024)).toFixed(1)} MB). ` +
-              'Please export a smaller snapshot or clear old records first.'
-            );
-            setLoading(false);
-            if (e.target) e.target.value = '';
-            return;
-          }
-  
-          // ── Write to localStorage with quota error handling ────────────
-          const storageOps: Array<[string, unknown]> = [
-            ['munyaka_students', stripped.students],
-            ['munyaka_staff', stripped.staff],
-            ['munyaka_fees', stripped.fees],
-            ['munyaka_attendance', stripped.attendance],
-            ['all_set_exams', stripped.exams],
-            ['marked_student_submissions', stripped.marks],
-            ['school-timetable-data', stripped.timetable],
-            ['munyaka_system_settings_v3', stripped.settings],
-            ['munyaka_central_db', stripped],
-          ];
-  
-          const failures: string[] = [];
-          for (const [key, value] of storageOps) {
-            if (value === undefined || value === null) continue;
-            const ok = safeWrite(key, value, { operation: 'import' });
-            if (!ok) {
-              failures.push(key);
-            }
-          }
-  
-          if (failures.length > 0) {
-            // Quota errors were already reported by safeWrite → handleQuotaError
-            if (failures.some(k => k === 'munyaka_central_db')) {
-              showError(
-                'Storage quota exceeded while importing backup. ' +
-                'Please export your data and clear old records to free up space, ' +
-                'then try importing a smaller snapshot.'
-              );
-            }
-            setLoading(false);
-            if (e.target) e.target.value = '';
-            return;
-          }
-  
-          // Force update Zustand store state
-          useSchoolStore.setState({
-            learners: stripped.students || learners,
-            staff: stripped.staff || staff,
-            fees: stripped.fees || fees,
-            attendance: stripped.attendance || attendance,
-            exams: stripped.exams || exams,
-            marks: stripped.marks || marks,
-            timetable: stripped.timetable || timetable,
-            settings: stripped.settings || settings,
-          });
-  
-          refreshStore();
-          refreshStats();
-          window.dispatchEvent(new Event('munyaka:data-changed'));
-          window.dispatchEvent(new Event('staff-changed'));
-          window.dispatchEvent(new Event('students-updated'));
-  
-          showSuccess('Successfully uploaded and hydrated store from backup file!');
-        } catch (err: any) {
-          showError('Failed to parse uploaded JSON: ' + (err?.message || err));
-        } finally {
-          setLoading(false);
-          if (e.target) e.target.value = '';
-        }
-      };
-      reader.readAsText(file);
+      try {
+        setLoading(true);
+        await importMasterJSON(file);
+      } finally {
+        setLoading(false);
+        if (e.target) e.target.value = '';
+      }
     };
 
   const [stats, setStats] = useState({
@@ -261,48 +175,7 @@ export default function CentralDataServicePage() {
   }, [learners, staff, fees, attendance, exams, marks, timetable, settings]);
 
   const handleExportSeedData = async () => {
-    try {
-      const allData: Record<string, any> = {};
-      
-      // Loop through all keys present in browser/device storage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) {
-          const rawValue = localStorage.getItem(key);
-          try {
-            allData[key] = rawValue ? JSON.parse(rawValue) : null;
-          } catch {
-            allData[key] = rawValue;
-          }
-        }
-      }
-
-      const masterPayload = {
-        version: "3.0",
-        timestamp: new Date().toISOString(),
-        school: "Munyaka Primary and Junior School",
-        totalKeysCaptured: Object.keys(allData).length,
-        data: allData
-      };
-
-      const jsonString = JSON.stringify(masterPayload, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Munyaka_Master_Full_Backup_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      console.log("Master full backup exported successfully. Keys captured:", Object.keys(allData).length);
-      showSuccess("Master full backup exported successfully!");
-    } catch (error: any) {
-      console.error("Export failed:", error);
-      showError("Failed to generate master backup file.");
-    }
+    exportMasterJSON();
   };
 
   const handleSyncStoreToCentralData = async () => {
