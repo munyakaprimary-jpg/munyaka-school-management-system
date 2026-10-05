@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { getStudents } from '@/services/persistentStore';
-import { Search, UserCheck, Eye, Download, Calendar, MessageSquare } from 'lucide-react';
+import { Search, UserCheck, Eye, Download, MessageSquare } from 'lucide-react';
 
 const GRADES = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
 const STREAMS = ['Green', 'Blue', 'Red', 'Gold', 'East', 'West', 'All'];
@@ -48,16 +48,21 @@ export default function ReportCards() {
       const loaded = getStudents();
       if (loaded && loaded.length > 0) {
         setAllStudents(loaded);
-        const first = loaded[0];
+        // Find first student matching initial grade/stream or fallback to first student
+        const firstMatch = loaded.find(s => {
+          const gMatch = !selectedGrade || String(s.grade || '').toLowerCase().includes(selectedGrade.toLowerCase().replace('grade ', ''));
+          return gMatch;
+        }) || loaded[0];
+
         setSelectedLearner({
-          fullName: first.fullName || first.name || 'Learner',
-          admissionNumber: first.admissionNumber || first.id || 'N/A',
-          assessmentNumber: first.assessmentNumber || first.assessmentNo || 'B004991382',
-          grade: first.grade || 'Grade 6',
-          stream: first.stream || 'Green'
+          fullName: firstMatch.fullName || firstMatch.name || 'Learner',
+          admissionNumber: firstMatch.admissionNumber || firstMatch.id || 'N/A',
+          assessmentNumber: firstMatch.assessmentNumber || firstMatch.assessmentNo || 'B004991382',
+          grade: firstMatch.grade || selectedGrade,
+          stream: firstMatch.stream || selectedStream
         });
-        if (first.grade) setSelectedGrade(first.grade);
-        if (first.stream) setSelectedStream(first.stream);
+        if (firstMatch.grade) setSelectedGrade(firstMatch.grade);
+        if (firstMatch.stream) setSelectedStream(firstMatch.stream);
       }
     } catch (err) {
       console.error("Failed to load students:", err);
@@ -75,16 +80,54 @@ export default function ReportCards() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Filter students dynamically by Grade and Stream, then by search term
   const filteredStudents = useMemo(() => {
-    if (!searchTerm.trim()) return allStudents.slice(0, 8);
-    const term = searchTerm.toLowerCase();
     return allStudents.filter(s => {
+      // Grade match check
+      const studentGrade = String(s.grade || '').toLowerCase().trim();
+      const targetGrade = selectedGrade.toLowerCase().trim();
+      const gradeMatches = !selectedGrade || studentGrade.includes(targetGrade) || targetGrade.includes(studentGrade);
+
+      // Stream match check (if stream is not 'All')
+      const studentStream = String(s.stream || '').toLowerCase().trim();
+      const targetStream = selectedStream.toLowerCase().trim();
+      const streamMatches = selectedStream === 'All' || !selectedStream || studentStream.includes(targetStream) || targetStream.includes(studentStream);
+
+      return gradeMatches && streamMatches;
+    });
+  }, [allStudents, selectedGrade, selectedStream]);
+
+  // Search filtered suggestions
+  const searchFilteredStudents = useMemo(() => {
+    if (!searchTerm.trim()) return filteredStudents.slice(0, 10);
+    const term = searchTerm.toLowerCase();
+    return filteredStudents.filter(s => {
       const name = (s.fullName || s.name || '').toLowerCase();
       const adm = (s.admissionNumber || '').toLowerCase();
       const asm = (s.assessmentNumber || s.assessmentNo || '').toLowerCase();
       return name.includes(term) || adm.includes(term) || asm.includes(term);
     }).slice(0, 10);
-  }, [allStudents, searchTerm]);
+  }, [filteredStudents, searchTerm]);
+
+  // When Grade or Stream changes, check if current active learner is still in filtered set. If not, auto-select the first matching learner.
+  useEffect(() => {
+    if (filteredStudents.length > 0) {
+      const isCurrentValid = filteredStudents.some(s => 
+        (s.admissionNumber && s.admissionNumber === selectedLearner.admissionNumber) ||
+        (s.fullName && s.fullName === selectedLearner.fullName)
+      );
+      if (!isCurrentValid) {
+        const first = filteredStudents[0];
+        setSelectedLearner({
+          fullName: first.fullName || first.name || 'Learner',
+          admissionNumber: first.admissionNumber || first.id || 'N/A',
+          assessmentNumber: first.assessmentNumber || first.assessmentNo || 'B004991382',
+          grade: first.grade || selectedGrade,
+          stream: first.stream || selectedStream
+        });
+      }
+    }
+  }, [selectedGrade, selectedStream, filteredStudents]);
 
   const handleSelectLearner = (student: Learner) => {
     setSelectedLearner({
@@ -94,8 +137,6 @@ export default function ReportCards() {
       grade: student.grade || selectedGrade,
       stream: student.stream || selectedStream
     });
-    if (student.grade) setSelectedGrade(student.grade);
-    if (student.stream) setSelectedStream(student.stream);
     setSearchTerm('');
     setShowSuggestions(false);
   };
@@ -160,7 +201,7 @@ export default function ReportCards() {
             </tr>
             <tr>
               <td><strong>Grade / Stream:</strong> ${grade} — ${stream}</td>
-              <td><strong>Overall Rank:</strong> 1 of ${allStudents.length || 8}</td>
+              <td><strong>Class Rank:</strong> 1 of ${filteredStudents.length || 1}</td>
             </tr>
           </table>
 
@@ -229,7 +270,7 @@ export default function ReportCards() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
         <div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Card Generator</h2>
-          <p className="text-sm text-slate-600 mt-0.5">Search learners, customize remarks and term dates, and export or preview formal report cards.</p>
+          <p className="text-sm text-slate-600 mt-0.5">Filter learners by grade & stream, customize remarks, and preview or download formal report cards.</p>
         </div>
         <button 
           onClick={handleDownloadReport}
@@ -243,7 +284,7 @@ export default function ReportCards() {
         {/* Left Column: Controls & Search */}
         <div className="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
           <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">
-            <Search className="h-4 w-4 text-blue-600" /> Learner & Class Configuration
+            <Search className="h-4 w-4 text-blue-600" /> Grade & Stream Filtering
           </h3>
 
           <div className="grid grid-cols-2 gap-3">
@@ -273,9 +314,11 @@ export default function ReportCards() {
             </div>
           </div>
           
-          {/* Live Learner Search Box */}
+          {/* Live Learner Search Box (Restricted to selected Grade & Stream) */}
           <div className="relative" ref={searchRef}>
-            <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Search Learner (Name, Adm No, Assessment No)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold uppercase text-slate-500">Search Learner in {selectedGrade} ({filteredStudents.length} available)</label>
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <input 
@@ -286,14 +329,14 @@ export default function ReportCards() {
                   setShowSuggestions(true);
                 }}
                 onFocus={() => setShowSuggestions(true)}
-                placeholder="Type student name or admission number..."
+                placeholder="Type name or admission number..."
                 className="w-full pl-9 pr-4 py-2.5 border rounded-xl text-slate-800 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
 
-            {showSuggestions && filteredStudents.length > 0 && (
+            {showSuggestions && searchFilteredStudents.length > 0 && (
               <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
-                {filteredStudents.map((student, idx) => {
+                {searchFilteredStudents.map((student, idx) => {
                   const name = student.fullName || student.name || 'Unnamed Learner';
                   const adm = student.admissionNumber || student.id || 'N/A';
                   const asm = student.assessmentNumber || student.assessmentNo || 'N/A';
@@ -305,7 +348,7 @@ export default function ReportCards() {
                     >
                       <div>
                         <div className="font-semibold text-slate-800 text-sm">{name}</div>
-                        <div className="text-xs text-slate-500">Adm: {adm} | Assessment: {asm}</div>
+                        <div className="text-xs text-slate-500">Adm: {adm} | Stream: {student.stream || 'General'}</div>
                       </div>
                       <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md font-semibold">
                         {student.grade || selectedGrade}
@@ -324,7 +367,7 @@ export default function ReportCards() {
             <div className="font-bold text-slate-900 text-base">{selectedLearner.fullName}</div>
             <div className="text-xs text-slate-600">
               Adm: <span className="font-medium">{selectedLearner.admissionNumber}</span> | 
-              Assessment No: <span className="font-medium">{selectedLearner.assessmentNumber}</span>
+              Grade: <span className="font-medium">{selectedLearner.grade} {selectedLearner.stream}</span>
             </div>
           </div>
 
