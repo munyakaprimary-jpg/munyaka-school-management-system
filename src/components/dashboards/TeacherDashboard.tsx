@@ -145,7 +145,9 @@ const TeacherDashboard: React.FC = () => {
           <div>
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Assigned Learners</p>
             <h3 className="text-xl font-bold text-gray-900 mt-0.5">{assignedLearnersCount}</h3>
-            <p className="text-[10px] text-green-600 font-medium">Active in {fullClassTitle}</p>
+            <p className="text-[10px] text-green-600 font-medium">
+              Active in {selectedGrade || "Grade 1"} {selectedStream || "Blue"}
+            </p>
           </div>
           <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
             <Users size={20} />
