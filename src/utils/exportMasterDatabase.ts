@@ -173,42 +173,51 @@ export function generateMasterSyncPackage(senderInfo?: {
 }
 
 export const exportMasterSyncPackage = () => {
-  // 1. Gather all local storage keys and state tables dynamically
-  const masterPayload = {
-    version: "2.0",
-    exportedAt: new Date().toISOString(),
-    institution: "Munyaka Primary and Junior School",
-    data: {
-      learners: JSON.parse(localStorage.getItem('learners') || localStorage.getItem('school_learners_master') || '[]'),
-      staff: JSON.parse(localStorage.getItem('staff') || localStorage.getItem('staff_members') || '[]'),
-      fees: JSON.parse(localStorage.getItem('fees') || localStorage.getItem('fee_records') || '[]'),
-      attendance: JSON.parse(localStorage.getItem('attendance') || localStorage.getItem('munyaka_attendance_records') || '[]'),
-      marks: JSON.parse(localStorage.getItem('marks') || localStorage.getItem('munyaka_marks_records') || '[]'),
-      exams: JSON.parse(localStorage.getItem('exams') || localStorage.getItem('munyaka_exams') || '[]'),
-      library: JSON.parse(localStorage.getItem('library') || localStorage.getItem('munyaka_library_books') || '[]'),
-      inventory: JSON.parse(localStorage.getItem('inventory') || localStorage.getItem('munyaka_store_items') || '[]'),
-      streams: JSON.parse(localStorage.getItem('streams') || localStorage.getItem('munyaka_streams') || '[]'),
-      settings: JSON.parse(localStorage.getItem('settings') || localStorage.getItem('munyaka_system_settings') || '{}')
+  try {
+    const allData: Record<string, any> = {};
+    
+    // Loop through all keys present in browser/device storage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        const rawValue = localStorage.getItem(key);
+        try {
+          // Parse JSON if valid, otherwise store as raw string
+          allData[key] = rawValue ? JSON.parse(rawValue) : null;
+        } catch {
+          allData[key] = rawValue;
+        }
+      }
     }
-  };
 
-  // 2. Trigger verification log to confirm record counts
-  console.log("Master Sync Bundled Records:", Object.keys(masterPayload.data).reduce((acc, key) => {
-    const val = masterPayload.data[key as keyof typeof masterPayload.data];
-    (acc as Record<string, number>)[key] = Array.isArray(val) ? val.length : (val && typeof val === 'object' ? Object.keys(val).length : 0);
-    return acc;
-  }, {} as Record<string, number>));
+    const masterPayload = {
+      version: "3.0",
+      timestamp: new Date().toISOString(),
+      school: "Munyaka Primary and Junior School",
+      institution: "Munyaka Primary and Junior School",
+      totalKeysCaptured: Object.keys(allData).length,
+      data: allData
+    };
 
-  // 3. Convert to Blob and trigger download
-  const blob = new Blob([JSON.stringify(masterPayload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `Munyaka_Master_Sync_${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+    console.log("Master Sync Bundled Records:", Object.keys(masterPayload.data).reduce((acc, key) => {
+      const val = masterPayload.data[key];
+      acc[key] = Array.isArray(val) ? val.length : (val && typeof val === 'object' ? Object.keys(val).length : 1);
+      return acc;
+    }, {} as Record<string, number>));
+
+    const blob = new Blob([JSON.stringify(masterPayload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Munyaka_Master_Full_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Full export failed:", error);
+    alert("Failed to export complete database.");
+  }
 };
 
 export const exportMasterDatabase = exportMasterSyncPackage;

@@ -262,34 +262,43 @@ export default function CentralDataServicePage() {
 
   const handleExportSeedData = async () => {
     try {
-      // Gather all active localStorage keys
-      const exportData = {
-        version: "2.0",
+      const allData: Record<string, any> = {};
+      
+      // Loop through all keys present in browser/device storage
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          const rawValue = localStorage.getItem(key);
+          try {
+            allData[key] = rawValue ? JSON.parse(rawValue) : null;
+          } catch {
+            allData[key] = rawValue;
+          }
+        }
+      }
+
+      const masterPayload = {
+        version: "3.0",
         timestamp: new Date().toISOString(),
         school: "Munyaka Primary and Junior School",
-        data: {
-          learners: JSON.parse(localStorage.getItem('learners') || localStorage.getItem('school_learners_master') || '[]'),
-          staff: JSON.parse(localStorage.getItem('staff') || localStorage.getItem('staff_members') || '[]'),
-          fees: JSON.parse(localStorage.getItem('fees') || localStorage.getItem('fee_records') || '[]'),
-          attendance: JSON.parse(localStorage.getItem('attendance') || localStorage.getItem('munyaka_attendance_records') || '[]'),
-          settings: JSON.parse(localStorage.getItem('settings') || localStorage.getItem('munyaka_system_settings') || '{}')
-        }
+        totalKeysCaptured: Object.keys(allData).length,
+        data: allData
       };
 
-      const jsonString = JSON.stringify(exportData, null, 2);
+      const jsonString = JSON.stringify(masterPayload, null, 2);
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Munyaka_Master_Backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `Munyaka_Master_Full_Backup_${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      console.log("Master backup exported successfully.");
-      showSuccess("Master backup exported successfully!");
+      console.log("Master full backup exported successfully. Keys captured:", Object.keys(allData).length);
+      showSuccess("Master full backup exported successfully!");
     } catch (error: any) {
       console.error("Export failed:", error);
       showError("Failed to generate master backup file.");
