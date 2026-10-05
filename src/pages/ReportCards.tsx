@@ -1,6 +1,7 @@
+// ReportCards.tsx
 import React, { useState, useRef, useMemo } from 'react';
-import { 
-  FileText, Download, Printer, Search, School, CheckCircle2, 
+import {
+  FileText, Download, Printer, Search, School, CheckCircle2,
   AlertCircle, RefreshCw, Layers, Calendar, User, ShieldCheck, Award
 } from 'lucide-react';
 import { useCentralData } from '@/hooks/useCentralData';
