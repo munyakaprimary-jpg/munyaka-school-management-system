@@ -3,8 +3,7 @@ import {
   FileText, Download, Printer, Search, School, CheckCircle2, 
   AlertCircle, RefreshCw, Layers, Calendar, User, ShieldCheck, Award
 } from 'lucide-react';
-import { getLearners } from '@/hooks/useCentralData';
-import { getSchoolProfile } from '@/utils/storage';
+import { useCentralData } from '@/hooks/useCentralData';
 
 export default function ReportCards() {
   const { students, schoolConfig, refreshData } = useCentralData();
