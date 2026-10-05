@@ -3,10 +3,10 @@ import {
   FileText, Download, Printer, Search, School, CheckCircle2, 
   AlertCircle, RefreshCw, Layers, Calendar, User, ShieldCheck, Award
 } from 'lucide-react';
-import { CentralDataService } from '@/services/centralDataService';
+import { getLearners } from '@/hooks/useCentralData';
 
 export default function ReportCards() {
-  const students = CentralDataService.getLearners();
+  const students = getLearners();
   const schoolConfig = { name: "Munyaka Primary School", motto: "Discipline and Excellence" };
   const refreshData = () => {};
   const [grade, setGrade] = useState('Grade 4');
