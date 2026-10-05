@@ -138,20 +138,41 @@ const isActiveRecord = (row: { isArchived?: boolean; deletedAt?: string }): bool
   return true;
 };
 
+const getStoredLearners = (): Learner[] => {
+  try {
+    const ls = getLocalStorage();
+    const fromLS = tryParse<Learner[]>(ls?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
+    if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
+    const centralData = tryParse<Record<string, any>>(ls?.getItem('munyaka_central_db') ?? null);
+    if (centralData && Array.isArray(centralData.students) && centralData.students.length > 0) {
+      return centralData.students;
+    }
+    const fallback = tryParse<Learner[]>(ls?.getItem('munyaka_students') ?? null);
+    if (Array.isArray(fallback) && fallback.length > 0) return fallback;
+  } catch {
+    // ignore
+  }
+  return [];
+};
+
 const getLearners = (): Learner[] => {
-  return getStoredLearners() as unknown as Learner[];
+  return getStoredLearners();
 };
 
 const getTeachers = (): Teacher[] => {
-  const master = getStaffMaster();
-  if (master.length > 0) {
-    return master as unknown as Teacher[];
+  try {
+    const master = getStaffMaster();
+    if (master.length > 0) {
+      return master as unknown as Teacher[];
+    }
+    const ls = getLocalStorage();
+    const fromLS = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_LEGACY) ?? null);
+    if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
+    const fromFallback = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
+    if (Array.isArray(fromFallback) && fromFallback.length > 0) return fromFallback;
+  } catch {
+    // ignore
   }
-  const ls = getLocalStorage();
-  const fromLS = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_LEGACY) ?? null);
-  if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
-  const fromFallback = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
-  if (Array.isArray(fromFallback) && fromFallback.length > 0) return fromFallback;
   return [];
 };
 
