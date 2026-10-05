@@ -55,9 +55,6 @@ interface StaffMemberProfile {
   qualifications?: string;
   documents?: Array<{ label: string; status: string; date: string }>;
   emergency_contact?: { phone?: string };
-  accessCode?: string;
-  tempAccessCode?: string;
-  access_key?: string;
 }
 
 // Return the display name regardless of which key the record uses.
@@ -71,10 +68,6 @@ const getDepartment = (m: StaffMemberProfile) => m.department || 'General Staff'
 const getStatus = (m: StaffMemberProfile) => m.status || 'Active';
 const getSubjects = (m: StaffMemberProfile) => m.subjects || [];
 const getTscNo = (m: StaffMemberProfile) => m.tsc_no || m.tsc_number || 'N/A';
-const getAccessCode = (m: StaffMemberProfile) =>
-  m.accessCode || m.access_key || '';
-const getTempAccessCode = (m: StaffMemberProfile) =>
-  m.tempAccessCode || '';
 const getQualifications = (m: any) =>
   m?.qualifications || m?.qualification || m?.credentials || 'Not Provided';
 const getAssignedGrade = (m: any) =>
@@ -558,21 +551,11 @@ const StaffProfile = () => {
                                 <h2 className="text-xl font-bold text-slate-900">{getDisplayName(member)}</h2>
                                 <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-2">{getRole(member)}</p>
                                 <p className="text-xs text-slate-400 font-medium mb-6">{getDepartment(member)}</p>
-                                <div className="flex justify-center gap-2 mb-2 flex-wrap">
+                                <div className="flex justify-center gap-2 mb-8 flex-wrap">
                                   <Badge className={getStatus(member) === 'Active' ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50" : "bg-slate-100 text-slate-500"}>
                                     {getStatus(member)}
                                   </Badge>
                                   <Badge variant="outline" className="border-slate-200">ID: {getDisplayId(member)}</Badge>
-                                  {getAccessCode(member) && (
-                                    <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-xs font-semibold text-indigo-700">
-                                      Access Code: {getAccessCode(member)}
-                                    </span>
-                                  )}
-                                  {getTempAccessCode(member) && (
-                                    <span className="px-2.5 py-1 bg-blue-50 border border-blue-100 rounded-full text-xs font-semibold text-blue-700">
-                                      Temp Code: {getTempAccessCode(member)}
-                                    </span>
-                                  )}
                                 </div>
                       <div className="space-y-4 text-left border-t pt-8">
                         <div className="flex items-center gap-3 text-sm text-slate-600">
