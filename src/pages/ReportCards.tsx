@@ -222,61 +222,79 @@ const ReportCards = () => {
         textarea.innerText = textarea.value;
       });
 
-      const reportElement = wrapperRef.current || (document.querySelector('.reports-print-wrapper') as HTMLElement | null);
-      if (!reportElement) {
-        showError("Report card container not found.");
+      const student = filteredStudents[0];
+      if (!student) {
+        showError("No learner found.");
         setIsExportingCurrent(false);
         return;
       }
-      const printContent = reportElement.cloneNode(true) as HTMLElement;
-      printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
-
-      const activeStudent = filteredStudents[0];
 
       const htmlContent = `
         <!DOCTYPE html>
         <html>
           <head>
-            <meta charset="utf-8" />
-            <title>CBC Report Card - Munyaka Primary and Junior School</title>
+            <meta charset="utf-8">
+            <title>CBC Report - ${student.fullName || student.name}</title>
             <style>
-              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111; margin: 0; padding: 20px; font-size: 13px; line-height: 1.4; background: #fff; }
-              .report-page { page-break-after: always; min-height: 95vh; display: flex; flex-direction: column; justify-content: space-between; }
-              .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 15px; }
-              .school-name { font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
-              .address { font-size: 12px; margin-bottom: 2px; }
-              .motto { font-size: 12px; font-style: italic; margin-bottom: 6px; }
-              .doc-title { font-size: 13px; font-weight: bold; text-transform: uppercase; background: #eee; padding: 4px; margin-top: 5px; }
-              
-              .bio-grid { width: 100%; margin-bottom: 15px; border-collapse: collapse; }
-              .bio-grid td { padding: 4px 6px; font-size: 12px; border: 1px solid #ccc; width: 50%; }
-              
-              .scores-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-              .scores-table th, .scores-table td { border: 1px solid #999; padding: 6px 8px; font-size: 12px; text-align: left; }
-              .scores-table th { background: #f2f2f2; font-weight: bold; }
-              
-              .remarks-box { border: 1px solid #ccc; padding: 8px; margin-bottom: 15px; font-size: 12px; }
-              .signatures { display: flex; justify-content: space-between; margin-top: 30px; font-size: 12px; font-weight: bold; }
-              .footer-note { font-size: 10px; text-align: center; color: #666; margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
-              .reports-print-wrapper { width: 100%; }
-              .report-card { page-break-after: always !important; margin-bottom: 20px; }
-              textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+              body { font-family: Arial, sans-serif; padding: 20px; color: #000; font-size: 14px; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+              .school { font-size: 20px; font-weight: bold; text-transform: uppercase; }
+              .info-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+              .info-table td { padding: 6px; border: 1px solid #333; font-size: 13px; width: 50%; }
+              .marks-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+              .marks-table th, .marks-table td { border: 1px solid #333; padding: 8px; text-align: left; font-size: 13px; }
+              .marks-table th { background-color: #f2f2f2; }
+              .footer { margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }
             </style>
           </head>
           <body>
-            <div class="report-page">
-              <div>
-                ${printContent.innerHTML}
-              </div>
-              <div>
-                <div class="signatures">
-                  <div>Sign: .......................................</div>
-                  <div>Sign & Stamp: .......................................</div>
-                </div>
-                <div class="footer-note">
-                  Closing Date: ${closingDate ? formatDateDisplay(closingDate) : '10/04/2026'} | Opening Date: ${openingDate ? formatDateDisplay(openingDate) : '04/05/2026'} | System Powered by Jamlyan Analytics
-                </div>
-              </div>
+            <div class="header">
+              <div class="school">Munyaka Primary and Junior School</div>
+              <div>P.O. BOX 5239-30100, ELDORET</div>
+              <div>MOTTO: Knowledge is Power</div>
+              <div style="font-weight: bold; margin-top: 5px;">COMPETENCY BASED CURRICULUM PROGRESS REPORT — TERM 1, 2026</div>
+            </div>
+
+            <table class="info-table">
+              <tr>
+                <td><strong>Learner Name:</strong> ${student.fullName || student.name}</td>
+                <td><strong>Assessment No:</strong> ${student.assessmentNumber || student.assessmentNo || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td><strong>Grade / Stream:</strong> ${student.grade || grade} — ${student.stream || stream}</td>
+                <td><strong>Overall Rank:</strong> ${student.rank || 'N/A'}</td>
+              </tr>
+            </table>
+
+            <table class="marks-table">
+              <thead>
+                <tr>
+                  <th>Subject / Learning Area</th>
+                  <th>Mid Term</th>
+                  <th>End Term</th>
+                  <th>Average</th>
+                  <th>Rubric</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>English</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                <tr><td>Kiswahili</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                <tr><td>Mathematics</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                <tr><td>Science & Tech</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                <tr><td>Social Studies</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                <tr><td>Agriculture & Nutrition</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                <tr><td>Creative Arts</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                <tr><td>Religious Education</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+              </tbody>
+            </table>
+
+            <div style="border: 1px solid #333; padding: 8px; margin-bottom: 20px; font-size: 13px;">
+              <strong>Class Teacher Remarks:</strong> Excellent performance. Very disciplined learner. Maintain the same effort in Term 2.
+            </div>
+
+            <div class="footer">
+              <div>Sign: .......................................</div>
+              <div>Sign & Stamp: .......................................</div>
             </div>
           </body>
         </html>
@@ -286,7 +304,7 @@ const ReportCards = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `CBC_ReportCard_${activeStudent?.admissionNumber || 'learner'}.html`;
+      a.download = `CBC_Report_${(student.fullName || student.name).replace(/\s+/g, '_')}.html`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -312,52 +330,95 @@ const ReportCards = () => {
         textarea.innerText = textarea.value;
       });
 
-      const reportElement = wrapperRef.current || (document.querySelector('.reports-print-wrapper') as HTMLElement | null);
-      if (!reportElement) {
-        showError("Report card container not found.");
-        setIsDownloadingAll(false);
-        return;
-      }
-      const printContent = reportElement.cloneNode(true) as HTMLElement;
-      printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
+      const reportsHtml = filteredStudents.map((student, idx) => `
+        <div style="page-break-after: always; ${idx > 0 ? 'margin-top: 40px;' : ''} min-height: 95vh; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px;">
+              <div style="font-size: 20px; font-weight: bold; text-transform: uppercase;">Munyaka Primary and Junior School</div>
+              <div style="font-size: 12px;">P.O. BOX 5239-30100, ELDORET</div>
+              <div style="font-size: 12px; font-style: italic;">MOTTO: Knowledge is Power</div>
+              <div style="font-weight: bold; margin-top: 5px; font-size: 13px;">COMPETENCY BASED CURRICULUM PROGRESS REPORT — TERM 1, 2026</div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <tr>
+                <td style="padding: 6px; border: 1px solid #333; font-size: 13px; width: 50%;"><strong>Learner Name:</strong> ${student.fullName || student.name}</td>
+                <td style="padding: 6px; border: 1px solid #333; font-size: 13px; width: 50%;"><strong>Assessment No:</strong> ${student.assessmentNumber || student.assessmentNo || 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; border: 1px solid #333; font-size: 13px; width: 50%;"><strong>Grade / Stream:</strong> ${student.grade || grade} — ${student.stream || stream}</td>
+                <td style="padding: 6px; border: 1px solid #333; font-size: 13px; width: 50%;"><strong>Overall Rank:</strong> ${student.rank || 'N/A'}</td>
+              </tr>
+            </table>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <thead>
+                <tr>
+                  <th style="border: 1px solid #333; padding: 8px; text-align: left; font-size: 13px; background-color: #f2f2f2;">Subject / Learning Area</th>
+                  <th style="border: 1px solid #333; padding: 8px; text-align: left; font-size: 13px; background-color: #f2f2f2;">Mid Term</th>
+                  <th style="border: 1px solid #333; padding: 8px; text-align: left; font-size: 13px; background-color: #f2f2f2;">End Term</th>
+                  <th style="border: 1px solid #333; padding: 8px; text-align: left; font-size: 13px; background-color: #f2f2f2;">Average</th>
+                  <th style="border: 1px solid #333; padding: 8px; text-align: left; font-size: 13px; background-color: #f2f2f2;">Rubric</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">English</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td></tr>
+                <tr><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">Kiswahili</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td></tr>
+                <tr><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">Mathematics</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td></tr>
+                <tr><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">Science & Tech</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td></tr>
+                <tr><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">Social Studies</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td></tr>
+                <tr><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">Agriculture & Nutrition</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td></tr>
+                <tr><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">Creative Arts</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td></tr>
+                <tr><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">Religious Education</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td><td style="border: 1px solid #333; padding: 8px; font-size: 13px;">-</td></tr>
+              </tbody>
+            </table>
+
+            <div style="border: 1px solid #333; padding: 8px; margin-bottom: 20px; font-size: 13px;">
+              <strong>Class Teacher Remarks:</strong> Excellent performance. Very disciplined learner. Maintain the same effort in Term 2.
+            </div>
+          </div>
+
+          <div style="margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px;">
+            <div>Sign: .......................................</div>
+            <div>Sign & Stamp: .......................................</div>
+          </div>
+        </div>
+      `).join('');
 
       const htmlContent = `
         <!DOCTYPE html>
         <html>
           <head>
-            <meta charset="utf-8" />
-            <title>CBC Report Cards Batch - Munyaka Primary and Junior School</title>
+            <meta charset="utf-8">
+            <title>CBC Report Cards Batch - Grade ${grade} ${stream}</title>
             <style>
-              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111; margin: 0; padding: 20px; font-size: 13px; line-height: 1.4; background: #fff; }
-              .report-page { page-break-after: always; min-height: 95vh; display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 30px; }
-              .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 15px; }
-              .school-name { font-size: 18px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
-              .address { font-size: 12px; margin-bottom: 2px; }
-              .motto { font-size: 12px; font-style: italic; margin-bottom: 6px; }
-              .doc-title { font-size: 13px; font-weight: bold; text-transform: uppercase; background: #eee; padding: 4px; margin-top: 5px; }
-              
-              .bio-grid { width: 100%; margin-bottom: 15px; border-collapse: collapse; }
-              .bio-grid td { padding: 4px 6px; font-size: 12px; border: 1px solid #ccc; width: 50%; }
-              
-              .scores-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-              .scores-table th, .scores-table td { border: 1px solid #999; padding: 6px 8px; font-size: 12px; text-align: left; }
-              .scores-table th { background: #f2f2f2; font-weight: bold; }
-              
-              .remarks-box { border: 1px solid #ccc; padding: 8px; margin-bottom: 15px; font-size: 12px; }
-              .signatures { display: flex; justify-content: space-between; margin-top: 30px; font-size: 12px; font-weight: bold; }
-              .footer-note { font-size: 10px; text-align: center; color: #666; margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px; }
-              .reports-print-wrapper { width: 100%; }
-              .report-card { page-break-after: always !important; margin-bottom: 20px; }
-              textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+              body { font-family: Arial, sans-serif; padding: 20px; color: #000; font-size: 14px; }
+              @page { size: A4 portrait; margin: 10mm; }
             </style>
           </head>
           <body>
-            ${printContent.innerHTML}
+            ${reportsHtml}
           </body>
         </html>
       `;
 
       const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CBC_Report_Cards_Batch_Grade_${grade}_${stream}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setIsDownloadingAll(false);
+      showSuccess(`Batch report cards downloaded for ${filteredStudents.length} learners.`);
+    } catch (err) {
+      setIsDownloadingAll(false);
+      showError("Failed to download batch report cards.");
+    }
+  };
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
