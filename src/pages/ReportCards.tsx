@@ -214,7 +214,7 @@ const ReportCards = () => {
     );
   };
 
-  // Handler: "Download Current"
+  // Handler: "Download Current" (Direct Blob HTML Download)
   const handleDownloadCurrent = async () => {
     setIsExportingCurrent(true);
     try {
@@ -223,10 +223,11 @@ const ReportCards = () => {
         textarea.innerText = textarea.value;
       });
 
-      // 2. Clone the report card element (or first filtered card)
+      // 2. Clone the report card element
       const reportElement = wrapperRef.current || (document.querySelector('.reports-print-wrapper') as HTMLElement | null);
       if (!reportElement) {
         showError("Report card container not found.");
+        setIsExportingCurrent(false);
         return;
       }
       const printContent = reportElement.cloneNode(true) as HTMLElement;
@@ -234,79 +235,64 @@ const ReportCards = () => {
       // 3. Remove .no-print elements
       printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
 
-      // 4. Create or reuse hidden iframe
-      let printFrame = document.getElementById('pdf-print-frame') as HTMLIFrameElement;
-      if (!printFrame) {
-        printFrame = document.createElement('iframe');
-        printFrame.id = 'pdf-print-frame';
-        printFrame.style.position = 'fixed';
-        printFrame.style.right = '0';
-        printFrame.style.bottom = '0';
-        printFrame.style.width = '0';
-        printFrame.style.height = '0';
-        printFrame.style.border = '0';
-        document.body.appendChild(printFrame);
-      }
+      const activeStudent = filteredStudents[0];
 
-      const pw = printFrame?.contentWindow;
-      const frameDoc = pw?.document;
-      if (!frameDoc) {
-        showError("Could not access print iframe document.");
-        return;
+      const htmlContent = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>CBC_ReportCard_${activeStudent?.admissionNumber || 'learner'}</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+      body { background: #ffffff; padding: 10mm; margin: 0; }
+      @page { size: A4 portrait; margin: 5mm; }
+      .reports-print-wrapper {
+        width: 100%;
+        padding: 10mm;
+        border: none !important;
+        box-shadow: none !important;
+        font-size: 11px;
+        line-height: 1.3;
       }
-      frameDoc.open();
-      frameDoc.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>CBC_Report_Card</title>
-            <style>
-              * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-              body { background: #ffffff; padding: 0; margin: 0; }
-              @page { size: A4 portrait; margin: 5mm; }
-              .reports-print-wrapper {
-                width: 100%;
-                padding: 10mm;
-                border: none !important;
-                box-shadow: none !important;
-                font-size: 11px;
-                line-height: 1.3;
-              }
-              .school-header { text-align: center; margin-bottom: 8px; }
-              .school-name { font-size: 13px; font-weight: bold; }
-              .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
-              .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
-              .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
-              .meta-item { display: flex; gap: 4px; }
-              .meta-label { font-weight: bold; }
-              .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-              .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
-              .grading-table th { background: #f1f5f9; font-weight: bold; }
-              .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-              .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
-              .remark-header { font-weight: bold; margin-bottom: 4px; }
-              .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
-              .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
-              .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
-              textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
-            </style>
-          </head>
-          <body>
-            ${printContent.outerHTML}
-          </body>
-        </html>
-      `);
-      frameDoc.close();
+      .school-header { text-align: center; margin-bottom: 8px; }
+      .school-name { font-size: 13px; font-weight: bold; }
+      .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
+      .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
+      .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
+      .meta-item { display: flex; gap: 4px; }
+      .meta-label { font-weight: bold; }
+      .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+      .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
+      .grading-table th { background: #f1f5f9; font-weight: bold; }
+      .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+      .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
+      .remark-header { font-weight: bold; margin-bottom: 4px; }
+      .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
+      .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
+      .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
+      textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+    </style>
+  </head>
+  <body>
+    ${printContent.outerHTML}
+  </body>
+</html>`;
 
-      setTimeout(() => {
-        pw?.focus();
-        pw?.print();
-        setIsExportingCurrent(false);
-        showSuccess("PDF print dialog opened successfully.");
-      }, 400);
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CBC_ReportCard_${activeStudent?.admissionNumber || 'learner'}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setIsExportingCurrent(false);
+      showSuccess("Report card downloaded successfully.");
     } catch (err) {
       setIsExportingCurrent(false);
-      showError("Failed to generate PDF.");
+      showError("Failed to download report card.");
     }
   };
 
@@ -331,80 +317,63 @@ const ReportCards = () => {
       const printContent = reportElement.cloneNode(true) as HTMLElement;
       printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
 
-      let printFrame = document.getElementById('pdf-print-frame') as HTMLIFrameElement;
-      if (!printFrame) {
-        printFrame = document.createElement('iframe');
-        printFrame.id = 'pdf-print-frame';
-        printFrame.style.position = 'fixed';
-        printFrame.style.right = '0';
-        printFrame.style.bottom = '0';
-        printFrame.style.width = '0';
-        printFrame.style.height = '0';
-        printFrame.style.border = '0';
-        document.body.appendChild(printFrame);
+      const htmlContent = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>CBC_Report_Cards_Batch_${grade}_${stream}</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+      body { background: #ffffff; padding: 10mm; margin: 0; }
+      @page { size: A4 portrait; margin: 5mm; }
+      .reports-print-wrapper {
+        width: 100%;
+        padding: 10mm;
+        border: none !important;
+        box-shadow: none !important;
+        font-size: 11px;
+        line-height: 1.3;
       }
+      .school-header { text-align: center; margin-bottom: 8px; }
+      .school-name { font-size: 13px; font-weight: bold; }
+      .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
+      .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
+      .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
+      .meta-item { display: flex; gap: 4px; }
+      .meta-label { font-weight: bold; }
+      .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+      .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
+      .grading-table th { background: #f1f5f9; font-weight: bold; }
+      .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+      .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
+      .remark-header { font-weight: bold; margin-bottom: 4px; }
+      .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
+      .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
+      .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
+      textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+      .report-card { page-break-after: always !important; margin-bottom: 20px; }
+    </style>
+  </head>
+  <body>
+    ${printContent.outerHTML}
+  </body>
+</html>`;
 
-      const pwAll = printFrame?.contentWindow;
-      const frameDocAll = pwAll?.document;
-      if (!frameDocAll) {
-        showError("Could not access print iframe document.");
-        setIsDownloadingAll(false);
-        return;
-      }
-      frameDocAll.open();
-      frameDocAll.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>CBC_Report_Cards_Batch_${grade}_${stream}</title>
-            <style>
-              * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-              body { background: #ffffff; padding: 0; margin: 0; }
-              @page { size: A4 portrait; margin: 5mm; }
-              .reports-print-wrapper {
-                width: 100%;
-                padding: 10mm;
-                border: none !important;
-                box-shadow: none !important;
-                font-size: 11px;
-                line-height: 1.3;
-              }
-              .school-header { text-align: center; margin-bottom: 8px; }
-              .school-name { font-size: 13px; font-weight: bold; }
-              .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
-              .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
-              .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
-              .meta-item { display: flex; gap: 4px; }
-              .meta-label { font-weight: bold; }
-              .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-              .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
-              .grading-table th { background: #f1f5f9; font-weight: bold; }
-              .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-              .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
-              .remark-header { font-weight: bold; margin-bottom: 4px; }
-              .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
-              .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
-              .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
-              textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
-              .report-card { page-break-after: always !important; margin-bottom: 20px; }
-            </style>
-          </head>
-          <body>
-            ${printContent.outerHTML}
-          </body>
-        </html>
-      `);
-      frameDocAll.close();
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CBC_Report_Cards_Batch_${grade}_${stream}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
-      setTimeout(() => {
-        pwAll?.focus();
-        pwAll?.print();
-        setIsDownloadingAll(false);
-        showSuccess(`Bulk export initiated for ${filteredStudents.length} learners.`);
-      }, 500);
+      setIsDownloadingAll(false);
+      showSuccess(`Batch report cards downloaded for ${filteredStudents.length} learners.`);
     } catch (err) {
       setIsDownloadingAll(false);
-      showError("Failed to generate bulk PDFs.");
+      showError("Failed to download batch report cards.");
     }
   };
 
