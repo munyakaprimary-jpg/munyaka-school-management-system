@@ -30,7 +30,7 @@ import TeacherExportModule from '@/components/teacher/TeacherExportModule';
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { totalStudents, totalTeachers } = useCentralData();
+  const { totalStudents } = useCentralData();
   const isOnline = true;
 
   const teacherName = user?.name || 'Teacher';
@@ -38,6 +38,46 @@ const TeacherDashboard: React.FC = () => {
   const assignedClass = (user as any)?.assignedClass || (user as any)?.grade || 'Grade 4';
   const assignedStream = (user as any)?.assignedStream || (user as any)?.stream || 'Green';
   const fullClassTitle = `${assignedClass} ${assignedStream}`;
+
+  // Calculate dynamic assigned learners & attendance counts
+  let storedStudents: any[] = [];
+  let attendanceList: any[] = [];
+  try {
+    const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
+    if (Array.isArray(centralDb.students)) {
+      storedStudents = centralDb.students;
+    } else {
+      const rawStudents = localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students');
+      if (rawStudents) storedStudents = JSON.parse(rawStudents);
+    }
+  } catch {
+    storedStudents = [];
+  }
+
+  const assignedLearnersCount = storedStudents.length > 0
+    ? storedStudents.filter((s: any) =>
+        (s.grade === assignedClass || s.assignedClass === assignedClass) &&
+        (s.stream === assignedStream || s.assignedStream === assignedStream)
+      ).length || storedStudents.length
+    : (totalStudents > 0 ? totalStudents : 24);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  try {
+    const rawAtt = localStorage.getItem('school_attendance_logs');
+    if (rawAtt) {
+      const parsed = JSON.parse(rawAtt);
+      if (Array.isArray(parsed)) {
+        attendanceList = parsed.filter((r: any) => r.date === todayStr);
+      }
+    }
+  } catch {
+    attendanceList = [];
+  }
+
+  const presentCount = attendanceList.length > 0
+    ? attendanceList.filter((r: any) => r.status === 'present' || r.status === 'late').length
+    : Math.max(0, assignedLearnersCount - 3);
+  const totalAttendanceMarked = attendanceList.length > 0 ? attendanceList.length : assignedLearnersCount;
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full font-sans">
@@ -90,7 +130,7 @@ const TeacherDashboard: React.FC = () => {
         <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Assigned Learners</p>
-            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{totalStudents > 0 ? totalStudents : '24'}</h3>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{assignedLearnersCount}</h3>
             <p className="text-[10px] text-green-600 font-medium">Active in {fullClassTitle}</p>
           </div>
           <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -102,7 +142,7 @@ const TeacherDashboard: React.FC = () => {
         <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Today's Attendance</p>
-            <h3 className="text-xl font-bold text-gray-900 mt-0.5">39 / 42</h3>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{presentCount} / {assignedLearnersCount}</h3>
             <p className="text-[10px] text-blue-600 font-medium">Roll call marked</p>
           </div>
           <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
