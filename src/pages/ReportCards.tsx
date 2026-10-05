@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 
+const GRADES = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
+const STREAMS = ['Green', 'Blue', 'Red', 'Gold', 'East', 'West'];
+
 export default function ReportCards() {
-  // Simple state management for grade, stream, and selected learner
   const [selectedGrade, setSelectedGrade] = useState('Grade 6');
   const [selectedStream, setSelectedStream] = useState('Green');
   const [selectedStudentName, setSelectedStudentName] = useState('NICOLE WAITHIRA MUHORO');
@@ -102,17 +104,41 @@ export default function ReportCards() {
       <p className="text-sm text-slate-600">Export clean, structured individual assessment report cards for your learners.</p>
       
       <div className="space-y-3 pt-2">
-        <div>
-          <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Select Grade & Stream</label>
-          <div className="flex gap-3">
-            <input type="text" value={selectedGrade} onChange={(e) => setSelectedGrade(e.target.value)} className="w-1/2 p-2 border rounded-lg" />
-            <input type="text" value={selectedStream} onChange={(e) => setSelectedStream(e.target.value)} className="w-1/2 p-2 border rounded-lg" />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Select Grade</label>
+            <select 
+              value={selectedGrade} 
+              onChange={(e) => setSelectedGrade(e.target.value)} 
+              className="w-full p-2.5 border rounded-lg bg-white text-slate-800 font-medium"
+            >
+              {GRADES.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Select Stream</label>
+            <select 
+              value={selectedStream} 
+              onChange={(e) => setSelectedStream(e.target.value)} 
+              className="w-full p-2.5 border rounded-lg bg-white text-slate-800 font-medium"
+            >
+              {STREAMS.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
         </div>
         
         <div>
           <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">Learner Name</label>
-          <input type="text" value={selectedStudentName} onChange={(e) => setSelectedStudentName(e.target.value)} className="w-full p-2 border rounded-lg" />
+          <input 
+            type="text" 
+            value={selectedStudentName} 
+            onChange={(e) => setSelectedStudentName(e.target.value)} 
+            className="w-full p-2.5 border rounded-lg text-slate-800 font-medium" 
+          />
         </div>
 
         <button 
