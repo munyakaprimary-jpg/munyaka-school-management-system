@@ -6,7 +6,7 @@ import {
 import { useCentralData } from '@/hooks/useCentralData';
 
 export default function ReportCards() {
-  const { students, schoolConfig, refreshData } = useCentralData();
+  const { students = [], schoolConfig, refreshData } = useCentralData();
   const [grade, setGrade] = useState('Grade 4');
   const [stream, setStream] = useState('Green');
   const [term, setTerm] = useState('Term 2');

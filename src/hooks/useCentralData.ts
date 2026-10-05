@@ -58,6 +58,9 @@ export interface CentralDataStats {
   categorizedMetrics?: CategorizedStaffMetrics;
   todayAttendanceRate: number;
   isLoading: boolean;
+  students?: any[];
+  schoolConfig?: any;
+  refreshData?: () => void;
 }
 
 export interface CategorizedStaffMetrics {
@@ -261,6 +264,9 @@ const computeStats = (): CentralDataStats => {
       categorizedMetrics,
       todayAttendanceRate,
       isLoading: false,
+      students: activeLearners,
+      schoolConfig: JSON.parse(localStorage.getItem('munyaka_school_profile') || '{}'),
+      refreshData: refresh,
     };
   } catch (err) {
     console.error('useCentralData compute error:', err);
@@ -272,6 +278,9 @@ const computeStats = (): CentralDataStats => {
       categorizedMetrics: undefined,
       todayAttendanceRate: 0,
       isLoading: false,
+      students: [],
+      schoolConfig: {},
+      refreshData: () => {},
     };
   }
 };
