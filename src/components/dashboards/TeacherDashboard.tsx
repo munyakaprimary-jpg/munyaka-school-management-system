@@ -38,28 +38,29 @@ const TeacherDashboard: React.FC = () => {
   
   // Grade and Stream state from localStorage or user context
   const [selectedGrade, setSelectedGrade] = React.useState<string>(() => {
-    return localStorage.getItem('teacher_dashboard_grade') || (user as any)?.assignedClass || (user as any)?.grade || 'Grade 4';
+    return localStorage.getItem('teacher_dashboard_grade') || (user as any)?.assignedClass || (user as any)?.grade || 'Grade 1';
   });
   const [selectedStream, setSelectedStream] = React.useState<string>(() => {
-    return localStorage.getItem('teacher_dashboard_stream') || (user as any)?.assignedStream || (user as any)?.stream || 'Green';
+    return localStorage.getItem('teacher_dashboard_stream') || (user as any)?.assignedStream || (user as any)?.stream || 'Blue';
   });
 
-  const currentGrade = selectedGrade || "Grade 1";
-  const currentStream = selectedStream || "Blue";
-  const fullClassTitle = `${currentGrade} ${currentStream}`;
+  // Get active filter values from dropdown state or fallback to first available
+  const activeGrade = selectedGrade || "Grade 1";
+  const activeStream = selectedStream || "Blue";
+  const fullClassTitle = `${activeGrade} ${activeStream}`;
 
-  // Get students list
-  let storedStudents: any[] = [];
+  // Get student records
+  let students: any[] = [];
   try {
     const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
     if (Array.isArray(centralDb.students)) {
-      storedStudents = centralDb.students;
+      students = centralDb.students;
     } else {
       const rawStudents = localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students');
-      if (rawStudents) storedStudents = JSON.parse(rawStudents);
+      if (rawStudents) students = JSON.parse(rawStudents);
     }
   } catch {
-    storedStudents = [];
+    students = [];
   }
 
   // Get attendance records
@@ -76,21 +77,19 @@ const TeacherDashboard: React.FC = () => {
     attendanceRecords = [];
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayAttendance = attendanceRecords.filter(r => r.date === todayStr);
-
-  const filteredLearners = storedStudents.filter(
-    s => ((s.grade || s.gradeLevel || s.assignedClass || "") === currentGrade) && ((s.stream || s.assignedStream || "") === currentStream)
+  // Filter real student records matching the selected grade and stream
+  const matchingStudents = students.filter(
+    (s) => String(s.grade || s.gradeLevel || s.assignedClass || "").trim().toLowerCase() === String(activeGrade).trim().toLowerCase() &&
+           String(s.stream || s.assignedStream || "").trim().toLowerCase() === String(activeStream).trim().toLowerCase()
   );
 
-  const assignedCount = filteredLearners.length > 0 ? filteredLearners.length : (storedStudents.length > 0 ? storedStudents.length : 24);
+  const realLearnerCount = matchingStudents.length;
 
-  // If filteredLearners is empty (e.g. mock data fallback), fallback students filter match or count
-  const effectiveLearners = filteredLearners.length > 0 ? filteredLearners : storedStudents;
-
-  const presentCount = todayAttendance.filter(
-    r => effectiveLearners.some(s => s.id === r.studentId || s.admNo === r.studentId) && (r.status === 'present' || r.status === 'late')
-  ).length || Math.min(assignedCount, Math.max(0, assignedCount - 1));
+  // Calculate attendance for these specific filtered students
+  const todayKey = new Date().toISOString().split('T')[0];
+  const presentLearners = attendanceRecords.filter(
+    (r) => matchingStudents.some((s) => s.id === r.studentId || s.admNo === r.studentId) && r.date === todayKey && (r.status === 'present' || r.status === 'late')
+  ).length;
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full font-sans">
@@ -143,9 +142,9 @@ const TeacherDashboard: React.FC = () => {
         <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Assigned Learners</p>
-            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{assignedCount}</h3>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{realLearnerCount}</h3>
             <p className="text-[10px] text-green-600 font-medium">
-              Active in {currentGrade} {currentStream}
+              Active in {activeGrade} {activeStream}
             </p>
           </div>
           <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -157,7 +156,7 @@ const TeacherDashboard: React.FC = () => {
         <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Today's Attendance</p>
-            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{presentCount} / {assignedCount}</h3>
+            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{presentLearners} / {realLearnerCount}</h3>
             <p className="text-[10px] text-blue-600 font-medium">Roll call marked</p>
           </div>
           <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
