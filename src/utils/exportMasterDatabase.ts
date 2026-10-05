@@ -98,7 +98,7 @@ export function generateMasterSyncPackage(senderInfo?: {
 
   // 2. Extract live runtime data with absolute exhaustive harvesting across all keys
   const learners = (() => {
-    // Collect all unique learner records from every possible key to guarantee 100% capture of all 21 learners
+    // Collect all unique learner records from every possible key to guarantee 100% capture
     const map = new Map();
     const candidateKeys = [
       'school_learners_master',
@@ -106,9 +106,36 @@ export function generateMasterSyncPackage(senderInfo?: {
       'learners',
       'students',
       'school_learners_v1',
-      'munyaka_central_db'
+      'munyaka_central_db',
+      'school_students_v1',
+      'enrolled_learners'
     ];
     for (const key of candidateKeys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((l: any) => {
+              const id = l.id || l.admissionNumber || l.upi || JSON.stringify(l);
+              map.set(id, l);
+            });
+          } else if (parsed && typeof parsed === 'object') {
+            if (Array.isArray(parsed.students)) {
+              parsed.students.forEach((l: any) => {
+                const id = l.id || l.admissionNumber || l.upi || JSON.stringify(l);
+                map.set(id, l);
+              });
+            } else if (Array.isArray(parsed.learners)) {
+              parsed.learners.forEach((l: any) => {
+                const id = l.id || l.admissionNumber || l.upi || JSON.stringify(l);
+                map.set(id, l);
+              });
+            }
+          }
+        }
+      } catch {}
+      
       const val = allKeys[key];
       if (Array.isArray(val)) {
         val.forEach((l: any) => {
@@ -132,44 +159,13 @@ export function generateMasterSyncPackage(senderInfo?: {
     return Array.from(map.values());
   })();
 
-  const staff = (() => {
-    // Collect all unique staff members from every possible key to guarantee 100% capture of all 5 staff
-    const map = new Map();
-    const candidateKeys = [
-      'staff_members',
-      'munyaka_staff_directory',
-      'munyaka_master_staff_list',
-      'munyaka_staff',
-      'staff',
-      'school_staff_master'
-    ];
-    for (const key of candidateKeys) {
-      const val = allKeys[key];
-      if (Array.isArray(val)) {
-        val.forEach((s: any) => {
-          const id = s.id || s.staffId || s.email || JSON.stringify(s);
-          map.set(id, s);
-        });
-      }
-    }
-    return Array.from(map.values());
-  })();
-
-  const attendance = (() => {
-    const keys = ['munyaka_attendance_records', 'munyaka_attendance', 'roll_call_records', 'attendance', 'attendance_logs'];
-    for (const k of keys) {
-      if (Array.isArray(allKeys[k]) && allKeys[k].length > 0) return allKeys[k];
-    }
-    return [];
-  })();
-
   const fees = (() => {
     const keys = [
-      'munyaka_fees_records',
-      'munyaka_fees',
-      'fees_data',
-      'fees',
       'fee_records',
+      'fees',
+      'munyaka_fees',
+      'munyaka_fees_records',
+      'fees_data',
       'student_payments',
       'fee_ledgers',
       'transactions',
@@ -177,6 +173,14 @@ export function generateMasterSyncPackage(senderInfo?: {
       'munyaka_student_payments'
     ];
     for (const k of keys) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) return parsed;
+        }
+      } catch {}
       const val = allKeys[k];
       if (Array.isArray(val) && val.length > 0) return val;
       if (val && typeof val === 'object' && Object.keys(val).length > 0) return val;
