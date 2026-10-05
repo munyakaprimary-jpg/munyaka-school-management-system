@@ -51,6 +51,13 @@ export async function importMasterSyncPackage(file: File): Promise<MasterImportR
         if (Array.isArray(payloadData.fees)) {
           localStorage.setItem('fee_records', JSON.stringify(payloadData.fees));
         }
+        if (payloadData.feeStructures || payloadData.fees_structure || payloadData.term_fees) {
+          const feesStruct = payloadData.feeStructures || payloadData.fees_structure || payloadData.term_fees;
+          localStorage.setItem('fee_structures', JSON.stringify(feesStruct));
+          localStorage.setItem('fees_structure', JSON.stringify(feesStruct));
+          localStorage.setItem('munyaka_fee_structures', JSON.stringify(feesStruct));
+          localStorage.setItem('term_fees', JSON.stringify(feesStruct));
+        }
         if (Array.isArray(payloadData.attendance)) {
           localStorage.setItem('munyaka_attendance_records', JSON.stringify(payloadData.attendance));
         }

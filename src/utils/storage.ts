@@ -145,6 +145,39 @@ export interface Subscription {
   [key: string]: unknown;
 }
 
+export interface TermFeesConfig {
+  termFee: number;
+  boardingFee?: number;
+  activityFee?: number;
+  examFee?: number;
+  maintenanceFee?: number;
+  [key: string]: any;
+}
+
+export const getStoredTermFees = (): TermFeesConfig => {
+  try {
+    const data = localStorage.getItem('term_fees') || localStorage.getItem('fees_structure') || localStorage.getItem('munyaka_fee_structures');
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (typeof parsed === 'number') {
+        return { termFee: parsed };
+      }
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const first = parsed[0];
+        const feeAmount = Number(first.amount || first.termFee || first.totalFee || 1400);
+        return { ...first, termFee: isNaN(feeAmount) ? 1400 : feeAmount };
+      }
+      if (parsed && typeof parsed === 'object') {
+        const feeAmount = Number(parsed.termFee || parsed.amount || parsed.totalFee || 1400);
+        return { ...parsed, termFee: isNaN(feeAmount) ? 1400 : feeAmount };
+      }
+    }
+    return { termFee: 1400 };
+  } catch {
+    return { termFee: 1400 };
+  }
+};
+
 export interface LearningAreaCluster {
   id: string;
   name: string;
