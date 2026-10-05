@@ -5,10 +5,11 @@ import {
   AlertCircle, RefreshCw, Layers, Calendar, User, ShieldCheck, Award
 } from 'lucide-react';
 import { useCentralData } from '@/hooks/useCentralData';
+import { CentralDataService } from '@/services/centralDataService';
 
 export default function ReportCards() {
   const centralStats = useCentralData();
-  const students = centralStats.learners || [];
+  const students = CentralDataService.getLearners() || [];
   const schoolConfig = { name: "Munyaka Primary School", motto: "Discipline and Excellence" };
   const refreshData = () => {};
   const [grade, setGrade] = useState('Grade 4');
