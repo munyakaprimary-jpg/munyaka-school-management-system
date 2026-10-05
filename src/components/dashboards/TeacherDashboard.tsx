@@ -37,19 +37,21 @@ const TeacherDashboard: React.FC = () => {
   const teacherRole = user?.role || 'Class Teacher';
   const isAdmin = teacherRole.toLowerCase().includes('admin') || teacherRole.toLowerCase().includes('head') || teacherRole.toLowerCase().includes('owner');
 
-  // Enforce teacher class restrictions (grade & stream lock)
+  // Teacher class credentials
   const assignedTeacherGrade = (user as any)?.grade || (user as any)?.assignedClass || 'Grade 1';
   const assignedTeacherStream = (user as any)?.stream || (user as any)?.assignedStream || 'Blue';
 
-  // If not an admin, lock state to their assigned class
+  // Available grades and streams restricted for teachers
+  const availableGrades = isAdmin ? ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'PP1', 'PP2'] : [assignedTeacherGrade];
+  const availableStreams = isAdmin ? ['Blue', 'Green', 'Red', 'Gold', 'East', 'West'] : [assignedTeacherStream];
+
+  // Lock default states
   const [selectedGrade, setSelectedGrade] = React.useState<string>(() => {
-    if (!isAdmin) return assignedTeacherGrade;
-    return localStorage.getItem('teacher_dashboard_grade') || assignedTeacherGrade;
+    return isAdmin ? (localStorage.getItem('teacher_dashboard_grade') || assignedTeacherGrade) : assignedTeacherGrade;
   });
 
   const [selectedStream, setSelectedStream] = React.useState<string>(() => {
-    if (!isAdmin) return assignedTeacherStream;
-    return localStorage.getItem('teacher_dashboard_stream') || assignedTeacherStream;
+    return isAdmin ? (localStorage.getItem('teacher_dashboard_stream') || assignedTeacherStream) : assignedTeacherStream;
   });
 
   const activeGrade = isAdmin ? (selectedGrade || assignedTeacherGrade) : assignedTeacherGrade;
