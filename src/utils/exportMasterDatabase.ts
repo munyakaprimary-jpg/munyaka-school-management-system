@@ -489,7 +489,6 @@ export function aggregateMasterDatabase(): MasterExportPackage {
   if (!Array.isArray(fees) && typeof fees !== 'object') fees = [];
 
   if (!Array.isArray(library)) library = [];
-  }
 
   if (library.length === 0) {
     try {
@@ -497,6 +496,21 @@ export function aggregateMasterDatabase(): MasterExportPackage {
       if (fallback) library = JSON.parse(fallback);
     } catch {}
   }
+  if (!Array.isArray(library)) library = [];
+
+  return {
+    exportVersion: '2.0.0',
+    generatedAt: new Date().toISOString(),
+    schoolName: 'Munyaka School',
+    data: {
+      learners,
+      attendance,
+      fees,
+      library,
+      otherKeys,
+    },
+  };
+}
 
   return {
     exportVersion: '1.0',
