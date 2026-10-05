@@ -110,8 +110,13 @@ const ensureProperAdmissionNumbers = (list: any[]) => {
 export default function Students() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const roleLower = String(user?.role || (typeof window !== 'undefined' ? localStorage.getItem('current_user_role') : '') || '').toLowerCase();
+  const teacherName = user?.name || 'Lawrence Mwangi';
+  const teacherRole = user?.role || 'Class Teacher';
+  const roleLower = String(teacherRole || (typeof window !== 'undefined' ? localStorage.getItem('current_user_role') : '') || '').toLowerCase();
   const isAdmin = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin') || roleLower === 'administrator';
+
+  const assignedTeacherGrade = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Grade 1' : ((user as any)?.grade || (user as any)?.assignedClass || 'Grade 1');
+  const assignedTeacherStream = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Blue' : ((user as any)?.stream || (user as any)?.assignedStream || 'BLUE');
 
   const [students, setStudents] = useState<any[]>(() => {
     let rawList: any[] = [];
@@ -518,12 +523,20 @@ export default function Students() {
       const name = (s.name || s.fullName || '').toLowerCase();
       const adm = (s.admissionNumber || s.admNo || '').toLowerCase();
       const ass = (s.assessmentNo || s.assessmentNumber || '').toLowerCase();
-      const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase());
       
       const sGrade = s.grade || s.class || '';
-      const matchesGrade = gradeFilter === 'all' || sGrade.toLowerCase() === gradeFilter.toLowerCase();
-
       const sStream = s.stream || '';
+
+      // If user is a teacher (non-admin), restrict strictly to assigned grade & stream
+      if (!isAdmin) {
+        const gradeMatch = sGrade.toLowerCase().includes(assignedTeacherGrade.toLowerCase()) || assignedTeacherGrade.toLowerCase().includes(sGrade.toLowerCase());
+        const streamMatch = sStream.toLowerCase().includes(assignedTeacherStream.toLowerCase()) || assignedTeacherStream.toLowerCase().includes(sStream.toLowerCase());
+        if (!gradeMatch || !streamMatch) return false;
+      }
+
+      const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase());
+      
+      const matchesGrade = gradeFilter === 'all' || sGrade.toLowerCase() === gradeFilter.toLowerCase();
       const matchesStream = streamFilter === 'all' || sStream.toLowerCase() === streamFilter.toLowerCase();
 
       const sGender = s.gender || '';
@@ -531,7 +544,7 @@ export default function Students() {
 
       return matchesSearch && matchesGrade && matchesStream && matchesGender;
     });
-  }, [students, searchTerm, gradeFilter, streamFilter, genderFilter]);
+  }, [students, searchTerm, gradeFilter, streamFilter, genderFilter, isAdmin, assignedTeacherGrade, assignedTeacherStream]);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
