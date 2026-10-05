@@ -184,8 +184,8 @@ export function generateMasterSyncPackage(senderInfo?: {
     return [];
   })();
 
-  const studentPayments = (() => {
-    const keys = ['student_payments', 'munyaka_student_payments', 'fee_ledgers', 'transactions', 'fee_records'];
+  const library = (() => {
+    const keys = ['munyaka_library_books', 'school_library_inventory_v1', 'library_data', 'library', 'books'];
     for (const k of keys) {
       const val = allKeys[k];
       if (Array.isArray(val) && val.length > 0) return val;
