@@ -155,7 +155,7 @@ const getStoredLearners = (): Learner[] => {
   return [];
 };
 
-export const getLearners = (): Learner[] => {
+const getLearners = (): Learner[] => {
   return getStoredLearners();
 };
 
