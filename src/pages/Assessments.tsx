@@ -310,8 +310,6 @@ const Assessments = () => {
     return [];
   }, []);
 
-  const { user } = useAuth();
-
   const availableGrades = useMemo(() => {
     const roleLower = String(user?.role || (typeof window !== 'undefined' ? localStorage.getItem('current_user_role') : '') || '').toLowerCase();
     const isAdmin = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin') || roleLower === 'administrator';
