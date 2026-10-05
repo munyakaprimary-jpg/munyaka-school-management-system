@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getLocalStorage, tryParse } from '@/utils/storageUtils';
 import { STAFF_MASTER_KEY, getStaffMaster } from '@/services/staffMasterService';
 
@@ -240,19 +240,25 @@ export const useDashboardData = (): DashboardStats => {
     setStats(computeStats());
   }, []);
 
+  // Use a ref to always access the latest refresh function
+  // without re-running the listener-setup effect (guard against
+  // "maximum update depth exceeded" on state-dependent callback changes).
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+
   // ── Re-compute on mount + visibility changes + every 30s while focused ────
   useEffect(() => {
-    refresh();
-    const onVisibility = () => { if (!document.hidden) refresh(); };
+    refreshRef.current();
+    const onVisibility = () => { if (!document.hidden) refreshRef.current(); };
     document.addEventListener('visibilitychange', onVisibility);
 
-    const interval = window.setInterval(refresh, 30_000);
+    const interval = window.setInterval(refreshRef.current, 30_000);
 
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
       window.clearInterval(interval);
     };
-  }, [refresh]);
+  }, []);
 
   // ── Real-time sync via the storage event ───────────────────────────────────
   // Fires when a DIFFERENT tab/window modifies any of the watched keys.
@@ -272,12 +278,12 @@ export const useDashboardData = (): DashboardStats => {
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
       if (watchedKeys.includes(e.key as any) || e.key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) {
-        refresh();
+        refreshRef.current();
       }
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, [refresh]);
+  }, []);
 
   // ── Same-tab sync via custom event ─────────────────────────────────────────
   // Modules that mutate the data (Students, Staff, Attendance) dispatch
@@ -302,11 +308,11 @@ export const useDashboardData = (): DashboardStats => {
           return;
         }
       }
-      refresh();
+      refreshRef.current();
     };
     window.addEventListener('munyaka:data-changed', onChanged as EventListener);
     return () => window.removeEventListener('munyaka:data-changed', onChanged as EventListener);
-  }, [refresh]);
+  }, []);
 
   return stats;
 };

@@ -1,11 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// Unified Central Data Hook — single source of truth for students, staff, attendance
-// ─────────────────────────────────────────────────────────────────────────────
-// Both Dashboard Overview and Central Data Service MUST use this hook to ensure
-// identical counts and real-time sync across views.
-// ─────────────────────────────────────────────────────────────────────────────
+"use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { lsSet, notifyDataChanged as fireDataChanged, lsRead } from '@/utils/storage';
 import { getLocalStorage, tryParse } from '@/utils/storageUtils';
 import {
@@ -17,8 +12,7 @@ import {
   getStaffMaster,
 } from '@/services/staffMasterService';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
+// ─── Types ────────────────────────────────────────────────────────────────
 export interface Learner {
   id: string;
   status?: string;
@@ -59,21 +53,8 @@ export interface AttendanceLog {
 export interface CentralDataStats {
   totalStudents: number;
   totalTeachers: number;
-  /**
-   * Sub-count of teachers whose status is "Active" / "Verified".
-   * Optional because not every consumer needs it; when absent
-   * the consumer should treat `totalTeachers` as the canonical count.
-   */
   activeTeacherCount?: number;
-  /**
-   * Sub-count of teachers whose status is "Pre-Registered".
-   * Used for Dashboard/Hub pending breakdown display.
-   */
   pendingTeacherCount?: number;
-  /**
-   * Categorized staff metrics for Teaching vs Non-Teaching breakdown.
-   * Use this for displaying separate Teaching Staff and Support/Admin counts.
-   */
   categorizedMetrics?: CategorizedStaffMetrics;
   todayAttendanceRate: number;
   isLoading: boolean;
@@ -92,7 +73,7 @@ export interface CategorizedStaffMetrics {
 
 const STORAGE_KEYS = {
   LEARNERS:             'school_learners_data',
-  TEACHERS:             STAFF_MASTER_KEY,         // single source of truth
+  TEACHERS:             STAFF_MASTER_KEY,
   TEACHERS_LEGACY:      'munyaka_staff_directory',
   TEACHERS_FALLBACK:    'munyaka_staff',
   TEACHERS_PREREG:      'munyaka_staff_prereg',
@@ -121,30 +102,25 @@ const getActiveSchoolId = (): string | null => {
   }
 };
 
-// ─── Teacher-role matching ───────────────────────────────────────────────────
-
 const TEACHER_KEYWORDS = /(teacher|head teacher|principal|ict|class teacher|subject teacher|senior teacher)/i;
 const TEACHER_SYSTEM_ROLES = new Set([
   'subject_teacher', 'senior_teacher', 'class_teacher', 'head_teacher', 'ict_teacher', 'teacher',
 ]);
 
-// Non-teaching keywords to explicitly exclude from teacher classification
 const NON_TEACHING_KEYWORDS = /(librarian|bursar|storekeeper|lab assistant|support staff|ict technician|admin)/i;
 
 const isTeacherRecord = (t: Teacher): boolean => {
   if (!t) return false;
   if (t.isTeacher === true) return true;
-  
+
   const systemRole = (t.systemRole || '').toLowerCase().trim();
   const role = (t.role || '').toUpperCase().trim();
-  
-  // Explicitly exclude librarian and non-teaching roles
+
   if (systemRole === 'librarian') return false;
   if (role === 'LIBRARIAN') return false;
-  
-  // Check if designation suggests non-teaching role
+
   if (NON_TEACHING_KEYWORDS.test(t.role || '')) return false;
-  
+
   if (systemRole && TEACHER_SYSTEM_ROLES.has(systemRole)) return true;
   if (TEACHER_KEYWORDS.test(t.role || '')) return true;
   return false;
@@ -162,27 +138,20 @@ const isActiveRecord = (row: { isArchived?: boolean; deletedAt?: string }): bool
   return true;
 };
 
-// ─── Core data selectors (memoized) ───────────────────────────────────────────
-
-import { getStoredLearners } from '@/utils/learnersStore';
-
 const getLearners = (): Learner[] => {
   return getStoredLearners() as unknown as Learner[];
 };
 
 const getTeachers = (): Teacher[] => {
-  // Primary: read from the unified staff master ledger
   const master = getStaffMaster();
   if (master.length > 0) {
     return master as unknown as Teacher[];
   }
-  // Fallback: legacy keys (for apps that haven't been seeded yet)
   const ls = getLocalStorage();
   const fromLS = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_LEGACY) ?? null);
   if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
   const fromFallback = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
   if (Array.isArray(fromFallback) && fromFallback.length > 0) return fromFallback;
-  // Pure localStorage read — no seed fallback.
   return [];
 };
 
@@ -190,7 +159,6 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
   const todayStr = getTodayDate();
   const activeSchoolId = getActiveSchoolId();
 
-  // 1. Flat attendance log
   const flat = tryParse<AttendanceLog[]>(
     getLocalStorage()?.getItem(STORAGE_KEYS.ATTENDANCE) ?? null
   );
@@ -203,7 +171,6 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
     });
   }
 
-  // 2. Per-grade v2 registers
   const logs: AttendanceLog[] = [];
   const ls = getLocalStorage();
   if (!ls) return logs;
@@ -230,44 +197,32 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
   return logs;
 };
 
-// ─── Computation ──────────────────────────────────────────────────────────────
-
 const computeStats = (): CentralDataStats => {
   try {
     const activeSchoolId = getActiveSchoolId();
     const todayStr = getTodayDate();
 
-    // ── Learners ──
     const allLearners = getLearners();
     const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
     const centralStudents = centralData.students || allLearners;
     const activeLearners = centralStudents.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED');
     const totalStudents = activeLearners.length;
 
-    // ── Teachers ──
-        // Use centralized getCategorizedMetrics() for consistent counts across all views.
-        // This ensures Dashboard, Central Hub, and APK menus all show identical totals
-        // with Teaching vs Non-Teaching breakdown.
-        const categorizedMetrics = getCategorizedMetrics(activeSchoolId);
-        const staffMetrics = getStaffMetrics(activeSchoolId);
+    const categorizedMetrics = getCategorizedMetrics(activeSchoolId);
+    const staffMetrics = getStaffMetrics(activeSchoolId);
 
-        // For display purposes, we still need teacher-role filtering.
-        // Apply same filtering as staffMasterService but capture metrics.
-        const allTeachers: Teacher[] = getTeachers();
-        const teacherRecords = allTeachers.filter((t) => {
-          if (!t) return false;
-          if (!matchesActiveSchool(t, activeSchoolId)) return false;
-          if (!isActiveRecord(t)) return false;
-          return isTeacherRecord(t);
-        });
+    const allTeachers: Teacher[] = getTeachers();
+    const teacherRecords = allTeachers.filter((t) => {
+      if (!t) return false;
+      if (!matchesActiveSchool(t, activeSchoolId)) return false;
+      if (!isActiveRecord(t)) return false;
+      return isTeacherRecord(t);
+    });
 
-        // Use staffMasterService counts as source of truth for staff metrics,
-        // then filter by teacher role for display-specific counts.
-        const totalTeachers = staffMetrics.total;
-        const activeTeacherCount = staffMetrics.active;
-        const pendingTeacherCount = staffMetrics.pending;
+    const totalTeachers = staffMetrics.total;
+    const activeTeacherCount = staffMetrics.active;
+    const pendingTeacherCount = staffMetrics.pending;
 
-    // ── Today's attendance — deduplicated by studentId ──
     const todayLogs = getTodayAttendanceLogs();
     const uniquePresentStudents = new Set(
       todayLogs.filter((l) => l.status === 'present').map((l) => l.studentId)
@@ -288,8 +243,6 @@ const computeStats = (): CentralDataStats => {
     };
   } catch (err) {
     console.error('useCentralData compute error:', err);
-    // On error, fall back to zero counts. We never read the seed dataset
-    // for fallback metrics — the app must reflect real localStorage state.
     return {
       totalStudents: 0,
       totalTeachers: 0,
@@ -302,7 +255,31 @@ const computeStats = (): CentralDataStats => {
   }
 };
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+const statsEqual = (a: CentralDataStats, b: CentralDataStats): boolean => {
+  if (a.totalStudents !== b.totalStudents) return false;
+  if (a.totalTeachers !== b.totalTeachers) return false;
+  if (a.activeTeacherCount !== b.activeTeacherCount) return false;
+  if (a.pendingTeacherCount !== b.pendingTeacherCount) return false;
+  if (a.todayAttendanceRate !== b.todayAttendanceRate) return false;
+  if (a.isLoading !== b.isLoading) return false;
+
+  if (a.categorizedMetrics === undefined && b.categorizedMetrics === undefined) return true;
+  if (a.categorizedMetrics === undefined || b.categorizedMetrics === undefined) return false;
+  const am = a.categorizedMetrics;
+  const bm = b.categorizedMetrics;
+  return (
+    am.teachingTotal === bm.teachingTotal &&
+    am.teachingActive === bm.teachingActive &&
+    am.teachingPending === bm.teachingPending &&
+    am.nonTeachingTotal === bm.nonTeachingTotal &&
+    am.nonTeachingActive === bm.nonTeachingActive &&
+    am.nonTeachingPending === bm.nonTeachingPending &&
+    am.teaching === bm.teaching &&
+    am.nonTeaching === bm.nonTeaching
+  );
+};
+
+// ─── Hook ──────────────────────────────────────────────────────────────────
 
 export const useCentralData = (): CentralDataStats => {
   const [stats, setStats] = useState<CentralDataStats>(() => {
@@ -314,35 +291,60 @@ export const useCentralData = (): CentralDataStats => {
 
   const refresh = useCallback(() => {
     initializeStaffMaster();
-    setStats(computeStats());
-  }, []);
+    const newStats = computeStats();
+    if (!statsEqual(stats, newStats)) {
+      setStats(newStats);
+    }
+  }, [stats]);
 
-  // 3. Reactive Updates: Add a useCallback or useEffect listener on window focus / custom storage events so that whenever student records are modified, the Dashboard total dynamically reflects the true count (3).
+  // Stable ref so event listeners/intervals always call the freshest refresh
+  // without re-running the listener-setup effect (guard against
+  // "maximum update depth exceeded" on state-dependent callback changes).
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+
+  // One-time listeners + interval, never recreated.
   useEffect(() => {
-    refresh();
-    const onVisibility = () => { if (!document.hidden) refresh(); };
-    const onWindowFocus = () => refresh();
-    const onStorageCustom = () => refresh();
+    const refreshLatest = () => refreshRef.current();
+
+    let mounted = true;
+
+    const onVisibility = () => {
+      if (!document.hidden) refreshLatest();
+    };
+    const onWindowFocus = () => refreshLatest();
+    const onStorageCustom = () => refreshLatest();
 
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('focus', onWindowFocus);
     window.addEventListener('storage', onStorageCustom);
     window.addEventListener('munyaka:data-changed', onStorageCustom);
 
-    const interval = window.setInterval(refresh, 5_000);
+    const interval = window.setInterval(refreshLatest, 5_000);
+
     return () => {
+      mounted = false;
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('focus', onWindowFocus);
       window.removeEventListener('storage', onStorageCustom);
       window.removeEventListener('munyaka:data-changed', onStorageCustom);
       window.clearInterval(interval);
     };
-  }, [refresh]);
+  }, []);
+
+  // One-time initial refresh with a mount guard.
+  useEffect(() => {
+    let mounted = true;
+    refreshRef.current();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return stats;
 };
 
-// ─── Exported helpers for other modules ───────────────────────────────────────
+// ─── Exported helpers for other modules ─────────────────────────────────────
 
 /** Call after mutating localStorage to trigger immediate recompute everywhere. */
 export const notifyDataChanged = (key?: string) => {
