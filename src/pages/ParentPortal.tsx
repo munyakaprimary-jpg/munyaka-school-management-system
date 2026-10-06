@@ -168,10 +168,10 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
 
-  // Normalize identifier: remove spaces, dashes, and convert to uppercase
+  // Normalize identifier: remove spaces, dashes, and convert to case-insensitive / lowercase or uppercase
   const normalizeIdentifier = (id: string): string => {
     if (!id) return '';
-    return id.trim().toUpperCase().replace(/[\s-]/g, '');
+    return id.trim().toLowerCase().replace(/[\s-]/g, '');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -192,47 +192,31 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
       const normalizedId = normalizeIdentifier(rawInput);
 
       console.log('[Portal Login] Searching for identifier:', { rawInput, normalizedId });
-      console.log('[Portal Login] Available students pool:', students.map(s => ({
-        id: s.id,
-        name: s.name,
-        admNo: s.admNo,
-        admissionNo: (s as any).admissionNo,
-        assessmentNumber: (s as any).assessmentNumber,
-        assessment_no: (s as any).assessment_no,
-        assessmentNo: (s as any).assessmentNo,
-        assessment: (s as any).assessment,
-        birthCertificateNumber: (s as any).birthCertificateNumber,
-        birth_cert_no: (s as any).birth_cert_no,
-        birthCertificateNo: (s as any).birthCertificateNo,
-        birthCertNo: (s as any).birthCertNo
-      })));
 
       const matchedStudent = students.find(s => {
-        const studentAdm = normalizeIdentifier(s.admNo || '');
-        const studentAdmissionNo = normalizeIdentifier((s as any).admissionNo || '');
-        const studentAssessmentNumber = normalizeIdentifier((s as any).assessmentNumber || '');
-        const studentAssessmentNo = normalizeIdentifier((s as any).assessmentNo || '');
-        const studentAssessment_no = normalizeIdentifier((s as any).assessment_no || '');
-        const studentAssessment = normalizeIdentifier((s as any).assessment || '');
-        
-        const studentBirthCertNumber = normalizeIdentifier((s as any).birthCertificateNumber || '');
-        const studentBirthCertNo = normalizeIdentifier((s as any).birthCertificateNo || '');
-        const studentBirth_cert_no = normalizeIdentifier((s as any).birth_cert_no || '');
-        const studentBirthCert = normalizeIdentifier((s as any).birthCertNo || '');
+        // Check all possible field variants
+        const possibleValues = [
+          s.admNo,
+          (s as any).admissionNo,
+          (s as any).admissionNumber,
+          (s as any).assessmentNumber,
+          (s as any).assessmentNo,
+          (s as any).assessment_no,
+          (s as any).assessment,
+          (s as any).birthCertificateNumber,
+          (s as any).birthCertificateNo,
+          (s as any).birth_cert_no,
+          (s as any).birthCertNo,
+          (s as any).upi,
+          (s as any).studentId,
+          s.id
+        ];
 
-        const idMatches =
-          studentAdm === normalizedId ||
-          studentAdmissionNo === normalizedId ||
-          studentAssessmentNumber === normalizedId ||
-          studentAssessmentNo === normalizedId ||
-          studentAssessment_no === normalizedId ||
-          studentAssessment === normalizedId ||
-          studentBirthCertNumber === normalizedId ||
-          studentBirthCertNo === normalizedId ||
-          studentBirth_cert_no === normalizedId ||
-          studentBirthCert === normalizedId;
-
-        return idMatches;
+        return possibleValues.some(val => {
+          if (!val) return false;
+          const normalizedVal = normalizeIdentifier(String(val));
+          return normalizedVal === normalizedId || normalizedVal.includes(normalizedId) || normalizedId.includes(normalizedVal);
+        });
       });
 
       if (matchedStudent) {
