@@ -26,16 +26,11 @@ interface Learner {
 }
 
 export default function Attendance() {
-  const { user } = useAuth();
   const [learners, setLearners] = useState<Learner[]>([]);
   const [grades, setGrades] = useState<string[]>([]);
   const [streams, setStreams] = useState<string[]>([]);
   
-  const userRole = (user?.role || '').toLowerCase();
-  const isAdmin = ['admin', 'owner', 'super_admin', 'super', 'head_teacher'].includes(userRole);
-  const assignedGrades = (user as any)?.assignedGrades || ((user as any)?.assignedClass ? [(user as any).assignedClass] : []) || ((user as any)?.grade ? [(user as any)?.grade] : []);
-
-  const [selectedGrade, setSelectedGrade] = useState<string>(!isAdmin && assignedGrades.length > 0 ? assignedGrades[0] : 'all');
+  const [selectedGrade, setSelectedGrade] = useState<string>('all');
   const [selectedStream, setSelectedStream] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -120,21 +115,11 @@ export default function Attendance() {
         if (s && String(s).trim()) streamSet.add(String(s).trim());
       });
 
-      const sortedGrades = Array.from(gradeSet).filter(g => {
-        if (isAdmin || assignedGrades.length === 0) return true;
-        return assignedGrades.some((ag: string) =>
-          g.toLowerCase() === ag.toLowerCase() || g.includes(ag.toUpperCase()) || ag.toUpperCase().includes(g)
-        );
-      }).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      const sortedGrades = Array.from(gradeSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
       const sortedStreams = Array.from(streamSet).sort();
 
       setGrades(sortedGrades);
       setStreams(sortedStreams);
-
-      // Default selected grade for non-admin if 'all' or unassigned
-      if (!isAdmin && assignedGrades.length > 0 && (selectedGrade === 'all' || !sortedGrades.some(g => g.toLowerCase() === selectedGrade.toLowerCase()))) {
-        setSelectedGrade(sortedGrades[0] || assignedGrades[0]);
-      }
     } catch (err) {
       console.error('Failed to load master learners directory:', err);
       toast.error('Failed to load registered learners from master directory.');

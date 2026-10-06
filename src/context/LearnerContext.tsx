@@ -22,17 +22,13 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return allLearners;
     }
     const assignedGrade = (user as any).assignedClass || (user as any).grade || '';
-    const assignedGrades = (user as any).assignedGrades || (assignedGrade ? [assignedGrade] : []);
     const assignedStream = (user as any).assignedStream || (user as any).stream || '';
-    if (assignedGrades.length === 0 && !assignedStream) return allLearners;
+    if (!assignedGrade && !assignedStream) return allLearners;
 
     return allLearners.filter((l: any) => {
       const lGrade = l.grade || l.class || l.assignedClass || '';
       const lStream = l.stream || l.assignedStream || '';
-      
-      const gradeMatch = assignedGrades.length === 0 || assignedGrades.some((ag: string) =>
-        lGrade.toLowerCase().includes(ag.toLowerCase()) || ag.toLowerCase().includes(lGrade.toLowerCase())
-      );
+      const gradeMatch = !assignedGrade || lGrade.toLowerCase().includes(assignedGrade.toLowerCase()) || assignedGrade.toLowerCase().includes(lGrade.toLowerCase());
       const streamMatch = !assignedStream || lStream.toLowerCase() === assignedStream.toLowerCase();
       return gradeMatch && streamMatch;
     });

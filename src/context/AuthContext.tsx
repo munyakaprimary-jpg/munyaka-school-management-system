@@ -41,8 +41,6 @@ interface User {
   /** Assigned grade/class for teachers — enforces stream/class access */
   assignedClass?: string;
   assignedStream?: string;
-  /** Array of assigned grades for multi-grade teachers (e.g. ['Grade 5', 'Grade 7']) */
-  assignedGrades?: string[];
   /** Alias fields used by some components */
   grade?: string;
   stream?: string;
@@ -269,7 +267,6 @@ const initializeUsersStorage = () => {
       emailConfirmed: true, // Explicit verification flag
       staffId: staff.staffId, // preserve the staffId on the stored record
       assignedClass: staff.assignedGrade || 'Grade 4',
-      assignedGrades: (staff as any).assignedGrades || (staff.assignedGrade ? [staff.assignedGrade] : ['Grade 4']),
       assignedStream: staff.assignedStream || 'Green',
       grade: staff.assignedGrade || 'Grade 4',
       stream: staff.assignedStream || 'Green',

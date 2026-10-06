@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useGradesAndStreams, cleanStreamLabel } from '@/hooks/useGradesStreams';
-import { useAuth } from '@/context/AuthContext';
 
 interface GradeDropdownProps {
   selectedGrade: string;
@@ -18,25 +17,7 @@ export const GradeDropdown: React.FC<GradeDropdownProps> = ({
   className = "rounded-xl h-12 bg-slate-50 border-none font-bold",
   disabled = false
 }) => {
-  const { grades: allGrades } = useGradesAndStreams();
-  const { user } = useAuth();
-
-  const grades = useMemo(() => {
-    const userRole = (user?.role || '').toLowerCase();
-    const isAdmin = ['admin', 'owner', 'super_admin', 'super', 'head_teacher'].includes(userRole);
-    if (isAdmin || !user) {
-      return allGrades;
-    }
-    const assignedGrades = (user as any).assignedGrades || ((user as any).assignedClass ? [(user as any).assignedClass] : []) || ((user as any).grade ? [(user as any).grade] : []);
-    if (assignedGrades.length === 0) return allGrades;
-    
-    // Filter configured grades to only those assigned
-    return allGrades.filter(g => assignedGrades.some((ag: string) =>
-      g.toLowerCase().trim() === ag.toLowerCase().trim() ||
-      g.toLowerCase().includes(ag.toLowerCase()) ||
-      ag.toLowerCase().includes(g.toLowerCase())
-    ));
-  }, [allGrades, user]);
+  const { grades } = useGradesAndStreams();
 
   return (
     <Select value={selectedGrade} onValueChange={setSelectedGrade} disabled={disabled}>
@@ -46,7 +27,7 @@ export const GradeDropdown: React.FC<GradeDropdownProps> = ({
       <SelectContent className="rounded-xl">
         {grades.length === 0 ? (
           <div className="py-2 px-3 text-sm text-slate-400 text-center font-medium">
-            (No assigned grades)
+            (No grades configured)
           </div>
         ) : (
           grades.map((g) => (
