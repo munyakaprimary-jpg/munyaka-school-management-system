@@ -478,7 +478,7 @@ export default function LANServerConfig() {
       {/* Server Lifecycle Card */}
       <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 border-b pb-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               {isServerActive ? (
                 <Zap className="w-5 h-5 text-emerald-600" />
@@ -766,9 +766,9 @@ function HelpRow({ num, title, desc }: { num: number; title: string; desc: strin
       <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
         <span className="font-black text-amber-700 dark:text-amber-400 text-xs">{num}</span>
       </div>
-      <div className="min-w-0">
-        <p className="font-bold text-slate-900 dark:text-white text-sm">{title}</p>
-        <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
+      <div className="min-w-0 flex-1">
+        <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{title}</p>
+        <p className="text-xs text-slate-500 mt-0.5 truncate">{desc}</p>
       </div>
     </div>
   );

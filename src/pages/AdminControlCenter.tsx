@@ -642,7 +642,7 @@ export default function AdminControlCenter() {
                   {devices.map((device) => (
                     <div
                       key={device.id}
-                      className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700"
                     >
                       <div className="flex items-center gap-4">
                         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
@@ -846,19 +846,19 @@ export default function AdminControlCenter() {
                   {users.map((u) => (
                     <div
                       key={u.id}
-                      className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 gap-3"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 shrink-0 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 font-bold text-sm">
                           {u.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                         </div>
-                        <div>
-                          <p className="font-bold text-sm text-slate-900 dark:text-white">{u.name}</p>
-                          <p className="text-xs text-slate-500">{u.email || u.staff_id || 'No email'}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-sm text-slate-900 dark:text-white truncate">{u.name}</p>
+                          <p className="text-xs text-slate-500 truncate">{u.email || u.staff_id || 'No email'}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="rounded-lg text-xs">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 flex-wrap shrink-0">
+                        <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className="rounded-lg text-xs truncate max-w-[120px]">
                           {u.role.replace('_', ' ')}
                         </Badge>
                         <Badge
@@ -870,10 +870,10 @@ export default function AdminControlCenter() {
                           }`}
                           onClick={() => handleToggleUserStatus(u)}
                         >
-                          {u.is_active ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <XCircle className="w-3 h-3 mr-1" />}
+                          {u.is_active ? <CheckCircle2 className="w-3 h-3 mr-1 shrink-0" /> : <XCircle className="w-3 h-3 mr-1 shrink-0" />}
                           {u.is_active ? 'Active' : 'Inactive'}
                         </Badge>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 shrink-0">
                           <Button
                             variant="ghost"
                             size="icon"

@@ -139,11 +139,11 @@ export default function ConnectedDevicesMonitor() {
                   </div>
 
                   {/* Teacher info */}
-                  <div className="mb-3">
-                    <h3 className="font-black text-slate-900 dark:text-white text-base">
+                  <div className="mb-3 min-w-0">
+                    <h3 className="font-black text-slate-900 dark:text-white text-base truncate">
                       {device.teacherName}
                     </h3>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
                       {device.role}
                     </p>
                   </div>
