@@ -182,8 +182,8 @@ export default function Students() {
   });
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('all');
-  const [streamFilter, setStreamFilter] = useState('all');
+  const [gradeFilter, setGradeFilter] = useState(() => (!isAdmin ? assignedTeacherGrade : 'all'));
+  const [streamFilter, setStreamFilter] = useState(() => (!isAdmin ? assignedTeacherStream : 'all'));
   const [genderFilter, setGenderFilter] = useState('all');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
