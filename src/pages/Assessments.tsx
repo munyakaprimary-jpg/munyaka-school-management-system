@@ -93,7 +93,6 @@ interface Student {
 }
 
 const Assessments = () => {
-  const { user } = useAuth();
   // Control States bound to localStorage / defaults
   const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
   const [academicYearOptions, setAcademicYearOptions] = useState<string[]>(() => {
@@ -310,18 +309,7 @@ const Assessments = () => {
     return [];
   }, []);
 
-  const { user } = useAuth();
-
   const availableGrades = useMemo(() => {
-    const roleLower = String(user?.role || (typeof window !== 'undefined' ? localStorage.getItem('current_user_role') : '') || '').toLowerCase();
-    const isAdmin = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin') || roleLower === 'administrator';
-    const teacherName = user?.name || 'Lawrence Mwangi';
-    const assignedTeacherGrade = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Grade 1' : ((user as any)?.grade || (user as any)?.assignedClass || 'Grade 1');
-
-    if (!isAdmin) {
-      return [assignedTeacherGrade];
-    }
-
     const cbcOrder = [
       "pp1", "pp2", "playgroup", "pp1/pp2",
       "grade 1", "grade 2", "grade 3",
