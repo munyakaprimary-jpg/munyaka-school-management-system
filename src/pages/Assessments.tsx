@@ -93,6 +93,13 @@ interface Student {
 }
 
 const Assessments = () => {
+  const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('munyaka_session') || '{}') : {};
+  const isAdmin = currentUser.role === 'admin' || currentUser.systemRole === 'admin' || currentUser.role === 'Head Teacher' || currentUser.role === 'Deputy Head';
+  const teacherName = currentUser.name || currentUser.username || '';
+  
+  const assignedTeacherGrade = (!isAdmin && teacherName.toLowerCase().includes('lawrence')) ? 'Grade 1' : (currentUser.grade || currentUser.assignedClass || 'Grade 4');
+  const assignedTeacherStream = (!isAdmin && teacherName.toLowerCase().includes('lawrence')) ? 'Blue' : (currentUser.stream || currentUser.assignedStream || 'GREEN');
+
   // Control States bound to localStorage / defaults
   const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
   const [academicYearOptions, setAcademicYearOptions] = useState<string[]>(() => {
@@ -100,8 +107,8 @@ const Assessments = () => {
     return [String(currentY - 1), String(currentY), String(currentY + 1), String(currentY + 2)];
   });
   
-  const [grade, setGrade] = useState<string>(() => "Grade 4");
-  const [stream, setStream] = useState<string>("All Streams");
+  const [grade, setGrade] = useState<string>(() => !isAdmin ? assignedTeacherGrade : 'Grade 4');
+  const [stream, setStream] = useState<string>(() => !isAdmin ? assignedTeacherStream : 'All Streams');
   const [examType, setExamType] = useState<string>("Formative Assessment");
   // Helper function to ensure consistent string formatting
   const formatTerm = (val: any): string => {
