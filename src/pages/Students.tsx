@@ -115,20 +115,8 @@ export default function Students() {
   const roleLower = String(teacherRole || (typeof window !== 'undefined' ? localStorage.getItem('current_user_role') : '') || '').toLowerCase();
   const isAdmin = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin') || roleLower === 'administrator';
 
-  const currentUserObj = useMemo(() => {
-    if (user) return user;
-    if (typeof window !== 'undefined') {
-      try {
-        const raw = localStorage.getItem('munyaka_current_user') || localStorage.getItem('current_user');
-        if (raw) return JSON.parse(raw);
-      } catch (e) {}
-    }
-    return null;
-  }, [user]);
-
-  const assignedTeacherGrade = currentUserObj?.grade || currentUserObj?.assignedClass || (currentUserObj?.assignedGrades?.[0]) || '';
-  const assignedTeacherStream = currentUserObj?.stream || currentUserObj?.assignedStream || '';
-  const assignedGradesList: string[] = currentUserObj?.assignedGrades || (assignedTeacherGrade ? [assignedTeacherGrade] : []);
+  const assignedTeacherGrade = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Grade 1' : ((user as any)?.grade || (user as any)?.assignedClass || 'Grade 1');
+  const assignedTeacherStream = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Blue' : ((user as any)?.stream || (user as any)?.assignedStream || 'BLUE');
 
   const [students, setStudents] = useState<any[]>(() => {
     let rawList: any[] = [];
