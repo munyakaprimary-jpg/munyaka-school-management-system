@@ -322,7 +322,7 @@ const Assessments = () => {
       return [assignedTeacherGrade];
     }
 
-    const cbcOrderList = [
+    const cbcOrder = [
       "pp1", "pp2", "playgroup", "pp1/pp2",
       "grade 1", "grade 2", "grade 3",
       "grade 4", "grade 5", "grade 6",
@@ -344,30 +344,20 @@ const Assessments = () => {
       }
     }
 
-    // Sort according to cbcOrderList with normalization
-    const sorted = [...rawGrades].sort((a, b) => {
-      const itemA = typeof a === 'object' && a !== null ? a.name : a;
-      const itemB = typeof b === 'object' && b !== null ? b.name : b;
-
-      const nameA = String(itemA ?? '').trim();
-      const nameB = String(itemB ?? '').trim();
-
-      const indexA = cbcOrderList.indexOf(nameA.toLowerCase());
-      const indexB = cbcOrderList.indexOf(nameB.toLowerCase());
-
-      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-      if (indexA !== -1) return -1;
-      if (indexB !== -1) return 1;
-      return nameA.localeCompare(nameB);
-    });
-
-    return sorted.length > 0 ? sorted : ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
-  }, [gradesListFromStorage, studentsList, user]);
-      return nameA.localeCompare(nameB);
-    });
-
-    return sorted.length > 0 ? sorted : ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
-  }, [gradesListFromStorage, studentsList, user]);
+    // Sort according to cbcOrder with normalization
+        const sorted = [...rawGrades].sort((a, b) => {
+          const itemA = typeof a === 'object' && a !== null ? a.name : a;
+          const itemB = typeof b === 'object' && b !== null ? b.name : b;
+    
+          const nameA = String(itemA ?? '').trim();
+          const nameB = String(itemB ?? '').trim();
+    
+          const indexA = cbcOrder.indexOf(nameA);
+          const indexB = cbcOrder.indexOf(nameB);
+    
+          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+          if (indexA !== -1) return -1;
+          if (indexB !== -1) return 1;
           return nameA.localeCompare(nameB);
         });
 
