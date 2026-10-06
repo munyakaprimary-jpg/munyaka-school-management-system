@@ -179,7 +179,7 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
     setError('');
 
     if (!identifier.trim()) {
-      setError('Please enter your Assessment Number or Birth Certificate Number');
+      setError('Please enter your Admission Number or Assessment Number');
       return;
     }
 
@@ -248,7 +248,7 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
         onLogin(session);
         showSuccess(`Welcome, ${matchedStudent.name}!`);
       } else {
-        setError('No matching record found. Please verify your Assessment Number or Birth Certificate Number.');
+        setError('No matching record found. Please verify your Admission Number or Assessment Number.');
         setIsSearching(false);
       }
     }, 800);
@@ -296,14 +296,14 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
 
             <div className="space-y-2">
               <Label htmlFor="identifier" className="text-slate-700 font-bold text-sm">
-                Assessment Number / Birth Certificate No.
+                Admission Number / Assessment Number
               </Label>
               <Input
                 id="identifier"
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="e.g., Assessment No. or Birth Cert No."
+                placeholder="e.g., Adm No. or Assessment No."
                 className="h-12 rounded-xl border-slate-200 bg-slate-50 text-slate-700 font-medium placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-100"
                 autoComplete="off"
               />
