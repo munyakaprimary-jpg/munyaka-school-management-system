@@ -26,8 +26,9 @@ import {
   Loader2,
   X,
   Gamepad2,
-  BookMarked
-} from "lucide-react";
+    BookMarked,
+    Menu
+  } from "lucide-react";
 import BilingualMatch from "@/components/games/BilingualMatch";
 import MemoryMatch from "@/components/games/MemoryMatch";
 import PatternMemory from "@/components/games/PatternMemory";
@@ -336,6 +337,7 @@ const Dashboard = ({
 }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'reports' | 'fees' | 'games' | 'study'>('overview');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const attendance = useMemo(() => getAttendanceForStudent(session.studentId), [session.studentId]);
   const assessments = useMemo(() => getAssessmentScoresForStudent(session.studentId), [session.studentId]);
@@ -370,13 +372,45 @@ const Dashboard = ({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-72 bg-gradient-to-b from-indigo-900 via-indigo-800 to-purple-900 text-white flex flex-col shrink-0 shadow-xl">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row relative">
+      {/* Mobile Top Header Bar with Hamburger Toggle */}
+      <div className="md:hidden bg-indigo-900 text-white px-4 py-3 flex items-center justify-between shadow-md z-40 sticky top-0">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu size={20} className="text-white" />
+          </button>
+          <div>
+            <h2 className="font-black text-sm tracking-tight truncate max-w-[180px]">{session.studentName}</h2>
+            <p className="text-indigo-200 text-xs font-medium">{session.grade}{session.stream ? ` • ${session.stream}` : ''}</p>
+          </div>
+        </div>
+        <div className="bg-white/10 px-3 py-1 rounded-lg text-xs font-mono">
+          ID: {session.admissionNo}
+        </div>
+      </div>
+
+      {/* Backdrop overlay for mobile drawer */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
+        />
+      )}
+
+      {/* Sidebar Navigation Drawer */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 w-72 bg-gradient-to-b from-indigo-900 via-indigo-800 to-purple-900 text-white flex flex-col shadow-2xl transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:z-auto",
+        mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
         {/* Profile Header */}
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0">
+        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 bg-white/25 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0">
               <GraduationCap size={24} className="text-white" />
             </div>
             <div className="min-w-0 flex-1">
@@ -386,6 +420,18 @@ const Dashboard = ({
               </p>
             </div>
           </div>
+          {/* Close button for mobile drawer */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(false)}
+            className="md:hidden w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center shrink-0 text-white"
+            aria-label="Close Navigation Menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="px-6 py-3 border-b border-white/10">
           <div className="bg-white/10 rounded-xl p-2.5 text-xs text-indigo-100 font-mono text-center truncate">
             ID: {session.admissionNo}
           </div>
@@ -396,7 +442,10 @@ const Dashboard = ({
           {navItems.map(item => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                setActiveTab(item.id);
+                setMobileMenuOpen(false);
+              }}
               className={cn(
                 "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all text-left",
                 activeTab === item.id
@@ -413,7 +462,10 @@ const Dashboard = ({
         {/* Sidebar Footer Controls */}
         <div className="p-4 border-t border-white/10 space-y-2">
           <Button
-            onClick={onLogout}
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onLogout();
+            }}
             variant="outline"
             className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl justify-start font-bold"
           >
@@ -421,7 +473,10 @@ const Dashboard = ({
             Logout
           </Button>
           <Button
-            onClick={() => navigate('/login')}
+            onClick={() => {
+              setMobileMenuOpen(false);
+              navigate('/login');
+            }}
             variant="ghost"
             className="w-full text-indigo-200 hover:text-white hover:bg-white/10 rounded-xl justify-start text-xs font-medium"
           >
