@@ -53,7 +53,7 @@ const LEVEL_SUBJECTS_MAP: Record<string, string[]> = {
 const GRADES = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 const STREAMS = ['North', 'South', 'East', 'West', 'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Green', 'Blue', 'Red', 'Yellow'];
 
-export interface DetailedSubjectAssignment {
+export interface AllocationItem {
   subject: string;
   grade: string;
   stream: string;
@@ -64,7 +64,7 @@ export default function SubjectTeachersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStaff, setSelectedStaff] = useState<MasterStaffRecord | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [detailedAssignments, setDetailedAssignments] = useState<DetailedSubjectAssignment[]>([]);
+  const [allocations, setAllocations] = useState<AllocationItem[]>([]);
 
   const [newGrade, setNewGrade] = useState('Grade 7');
   const [newStream, setNewStream] = useState('Mercury');
@@ -100,12 +100,13 @@ export default function SubjectTeachersPage() {
         const merged = list.map(s => {
           const found = parsed.find((p: any) => p.id === s.id || p.staffId === s.staffId || p.phone === s.phone);
           if (found) {
-            const allocations = found.detailedAssignments || found.subjectAllocations || found.assignedStreams || s.detailedAssignments;
+            const listAllocations = found.allocations || found.detailedAssignments || found.subjectAllocations || found.assignedStreams || s.allocations || [];
             return { 
               ...s, 
-              detailedAssignments: allocations,
-              subjectAllocations: allocations,
-              assignedStreams: allocations,
+              allocations: listAllocations,
+              detailedAssignments: listAllocations,
+              subjectAllocations: listAllocations,
+              assignedStreams: listAllocations,
               assignedSubjects: found.assignedSubjects || s.assignedSubjects 
             };
           }
@@ -126,8 +127,8 @@ export default function SubjectTeachersPage() {
 
   const handleOpenAssign = (staff: MasterStaffRecord) => {
     setSelectedStaff(staff);
-    const existing = (staff as any).detailedAssignments || (staff as any).subjectAllocations || (staff as any).assignedStreams || staff.assignedSubjects || [];
-    const normalized: DetailedSubjectAssignment[] = existing.map((item: any) => {
+    const existing = (staff as any).allocations || (staff as any).detailedAssignments || (staff as any).subjectAllocations || (staff as any).assignedStreams || staff.assignedSubjects || [];
+    const normalized: AllocationItem[] = existing.map((item: any) => {
       if (typeof item === 'string') {
         return { subject: item, grade: staff.assignedGrade || 'Grade 7', stream: staff.assignedStream || 'Mercury' };
       }
@@ -137,45 +138,48 @@ export default function SubjectTeachersPage() {
         stream: item.stream || 'Mercury'
       };
     });
-    setDetailedAssignments(normalized);
+    setAllocations(normalized);
     setNewGrade('Grade 7');
     setNewSubj('Mathematics');
     setIsAssignModalOpen(true);
   };
 
-  const handleAddAssignment = () => {
-    const exists = detailedAssignments.some(d => d.subject === newSubj && d.grade === newGrade && d.stream === newStream);
+  const handleAddAllocation = () => {
+    const exists = allocations.some(d => d.subject === newSubj && d.grade === newGrade && d.stream === newStream);
     if (exists) {
       showError('This exact subject, grade, and stream combination is already assigned.');
       return;
     }
-    setDetailedAssignments([
-      ...detailedAssignments,
+    setAllocations([
+      ...allocations,
       { subject: newSubj, grade: newGrade, stream: newStream }
     ]);
     showSuccess('Added subject allocation.');
   };
 
-  const handleRemoveAssignment = (index: number) => {
-    setDetailedAssignments(detailedAssignments.filter((_, i) => i !== index));
+  const handleRemoveAllocation = (index: number) => {
+    setAllocations(allocations.filter((_, i) => i !== index));
   };
 
   const handleSaveAssignments = () => {
     if (!selectedStaff) return;
     try {
-      const legacySubjects = Array.from(new Set(detailedAssignments.map(d => d.subject)));
+      const legacySubjects = Array.from(new Set(allocations.map(d => d.subject)));
       
       const updatePayload = {
-        detailedAssignments,
-        subjectAllocations: detailedAssignments,
-        assignedStreams: detailedAssignments,
+        allocations,
+        detailedAssignments: allocations,
+        subjectAllocations: allocations,
+        assignedStreams: allocations,
         assignedSubjects: legacySubjects,
-        assignedGrade: detailedAssignments[0]?.grade || selectedStaff.assignedGrade || 'Grade 7',
-        assignedStream: detailedAssignments[0]?.stream || selectedStaff.assignedStream || 'Mercury'
+        assignedGrade: allocations[0]?.grade || selectedStaff.assignedGrade || 'Grade 7',
+        assignedStream: allocations[0]?.stream || selectedStaff.assignedStream || 'Mercury'
       };
 
+      // 1. Update master store service
       updateStaffMaster(selectedStaff.id, updatePayload);
 
+      // 2. Commit directly across localStorage keys
       try {
         const keys = ['munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
         for (const k of keys) {
@@ -197,9 +201,17 @@ export default function SubjectTeachersPage() {
         console.error('Direct localStorage persistence error:', lsErr);
       }
 
-      showSuccess(`Successfully saved ${detailedAssignments.length} subject stream allocations for ${selectedStaff.name}!`);
+      // 3. Immediately update React state for instant UI re-render without page refresh
+      const updatedStaffList = staffList.map(st => {
+        if (st.id === selectedStaff.id || st.staffId === selectedStaff.staffId) {
+          return { ...st, ...updatePayload };
+        }
+        return st;
+      });
+      setStaffList(updatedStaffList);
+
+      showSuccess(`Successfully saved ${allocations.length} subject stream allocations for ${selectedStaff.name}!`);
       setIsAssignModalOpen(false);
-      loadStaff();
     } catch (err) {
       showError('Failed to save subject allocations.');
     }
@@ -283,7 +295,7 @@ export default function SubjectTeachersPage() {
                 </tr>
               ) : (
                 filteredStaff.map((staff) => {
-                  const allocations: DetailedSubjectAssignment[] = (staff as any).detailedAssignments || (staff as any).subjectAllocations || (staff as any).assignedStreams || (staff.assignedSubjects || []).map((s: string) => ({ subject: s, grade: staff.assignedGrade || 'Grade 7', stream: staff.assignedStream || 'Mercury' }));
+                  const teacherAllocations: AllocationItem[] = (staff as any).allocations || (staff as any).detailedAssignments || (staff as any).subjectAllocations || (staff.assignedSubjects || []).map((s: string) => ({ subject: s, grade: staff.assignedGrade || 'Grade 7', stream: staff.assignedStream || 'Mercury' }));
                   return (
                     <tr key={staff.id} className="hover:bg-slate-50/60 transition-colors">
                       <td className="py-2 px-3 sm:px-4">
@@ -302,25 +314,25 @@ export default function SubjectTeachersPage() {
                       </td>
                       <td className="py-2 px-3 sm:px-4 text-center">
                         <div className="flex flex-wrap gap-1 justify-center max-w-xs">
-                          {allocations.length === 0 ? (
+                          {teacherAllocations.length === 0 ? (
                             <span className="text-slate-400 italic text-[11px]">No streams assigned</span>
                           ) : (
-                            allocations.slice(0, 2).map((a, i) => (
+                            teacherAllocations.slice(0, 2).map((a, i) => (
                               <Badge key={i} variant="outline" className="bg-slate-50 text-slate-700 text-[10px] font-medium">
                                 {a.subject} ({a.grade} - {a.stream})
                               </Badge>
                             ))
                           )}
-                          {allocations.length > 2 && (
+                          {teacherAllocations.length > 2 && (
                             <Badge variant="outline" className="bg-indigo-50 text-indigo-700 text-[10px] font-bold">
-                              +{allocations.length - 2} more
+                              +{teacherAllocations.length - 2} more
                             </Badge>
                           )}
                         </div>
                       </td>
                       <td className="py-2 px-3 sm:px-4 text-center">
                         <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 font-black text-[10px] px-2 py-0.5">
-                          {allocations.length} Allocations
+                          {teacherAllocations.length} Allocations
                         </Badge>
                       </td>
                       <td className="py-2 px-3 sm:px-4 text-right space-x-1.5 whitespace-nowrap">
@@ -360,7 +372,7 @@ export default function SubjectTeachersPage() {
                 <p className="text-xs text-slate-500 mt-1">Configure level-filtered subjects for <span className="font-bold text-indigo-600">{selectedStaff.name}</span>.</p>
               </div>
               <Badge className="bg-indigo-100 text-indigo-800 font-bold">
-                {detailedAssignments.length} Assigned
+                {allocations.length} Assigned
               </Badge>
             </div>
 
@@ -415,7 +427,7 @@ export default function SubjectTeachersPage() {
 
               <div className="flex justify-end pt-1">
                 <Button 
-                  onClick={handleAddAssignment}
+                  onClick={handleAddAllocation}
                   className="h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold gap-1.5 shadow-sm"
                 >
                   <Plus size={14} /> Add Allocation
@@ -426,12 +438,12 @@ export default function SubjectTeachersPage() {
             {/* List of current assignments */}
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Current Assigned Allocations</h3>
-              {detailedAssignments.length === 0 ? (
+              {allocations.length === 0 ? (
                 <div className="text-center py-6 text-slate-400 text-xs italic bg-slate-50 rounded-2xl border border-dashed">
                   No subject stream allocations added yet. Use the builder above to add assignments.
                 </div>
               ) : (
-                detailedAssignments.map((item, idx) => (
+                allocations.map((item, idx) => (
                   <div key={idx} className="flex items-center justify-between p-3 rounded-2xl border bg-white shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
@@ -447,7 +459,7 @@ export default function SubjectTeachersPage() {
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      onClick={() => handleRemoveAssignment(idx)}
+                      onClick={() => handleRemoveAllocation(idx)}
                       className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8 w-8 p-0 rounded-xl"
                     >
                       <Trash2 size={15} />
