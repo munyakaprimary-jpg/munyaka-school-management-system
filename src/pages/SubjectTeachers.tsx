@@ -96,15 +96,25 @@ export default function SubjectTeachersPage() {
   const loadStaff = () => {
     let list: any[] = [];
     try {
-      // Always read directly from munyaka_staff_db and all known keys
-      const keys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
-      for (const k of keys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            list = parsed;
-            break;
+      // Prioritize munyaka_staff_db and all backup keys
+      const rawDb = localStorage.getItem('munyaka_staff_db');
+      if (rawDb) {
+        const parsedDb = JSON.parse(rawDb);
+        if (Array.isArray(parsedDb) && parsedDb.length > 0) {
+          list = parsedDb;
+        }
+      }
+
+      if (list.length === 0) {
+        const keys = ['munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+        for (const k of keys) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              list = parsed;
+              break;
+            }
           }
         }
       }
