@@ -119,9 +119,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config', roles: ['teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'admin', 'owner'] },
   ];
 
-  const filteredMenu = React.useMemo(() => {
-    return menuItems;
-  }, [user]);
+  const filteredMenu = menuItems;
 
   const activePath = location.pathname;
 
