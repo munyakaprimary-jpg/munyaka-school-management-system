@@ -73,7 +73,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Wifi, label: 'LAN Server Config', path: '/lan-server-config', global: true },
     { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config', global: true },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-    { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin'] },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
