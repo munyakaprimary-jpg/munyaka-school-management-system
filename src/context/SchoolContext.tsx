@@ -85,12 +85,17 @@ export const SchoolProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
-  // Auto-save master state on change
+  // Auto-save master state on change with quota safeguard
   useEffect(() => {
     try {
-      localStorage.setItem('munyaka_master_state', JSON.stringify(data));
-    } catch (err) {
-      console.error('Failed to save munyaka_master_state:', err);
+      // Store minimal metadata in munyaka_master_state instead of compounding redundant bulky blobs
+      const minimalState = {
+        updatedAt: new Date().toISOString(),
+        keysCount: Object.keys(data || {}).length
+      };
+      localStorage.setItem('munyaka_master_state', JSON.stringify(minimalState));
+    } catch (err: any) {
+      console.warn('QuotaExceededError handled when saving munyaka_master_state:', err);
     }
   }, [data]);
 
