@@ -4,23 +4,52 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckSquare, Square, Search, BookOpen, Plus, Trash2, Layers } from 'lucide-react';
+import { Search, BookOpen, Plus, Trash2 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { showSuccess, showError } from '@/utils/toast';
 import { getStaffMaster, updateStaffMaster, type MasterStaffRecord } from '@/services/staffMasterService';
 
-const PRIMARY_SUBJECTS = [
-  'Mathematics',
-  'English Language',
-  'Kiswahili Language',
-  'Integrated Science',
-  'Social Studies',
-  'Creative Arts & Sports',
-  'Religious Education (CRE/IRE/HRE)',
-  'Pre-Technical Studies',
-  'Agriculture & Nutrition',
-  'Computer Science / ICT'
-];
+// Default CBC Learning Areas by Educational Level
+const LEVEL_SUBJECTS_MAP: Record<string, string[]> = {
+  'Pre-Primary': [
+    'Language Activities',
+    'Mathematical Activities',
+    'Environmental Activities',
+    'Psychomotor & Creative Activities',
+    'Religious Education (CRE/IRE/HRE)'
+  ],
+  'Lower Primary': [
+    'Mathematics',
+    'English Language',
+    'Kiswahili Language',
+    'Environmental Activities',
+    'Religious Education (CRE/IRE/HRE)',
+    'Creative Arts & Sports'
+  ],
+  'Upper Primary': [
+    'Mathematics',
+    'English Language',
+    'Kiswahili Language',
+    'Science and Technology',
+    'Social Studies',
+    'Agriculture and Nutrition',
+    'Creative Arts & Sports',
+    'Religious Education (CRE/IRE/HRE)'
+  ],
+  'Junior School': [
+    'Mathematics',
+    'English Language',
+    'Kiswahili Language',
+    'Integrated Science',
+    'Health Education',
+    'Social Studies',
+    'Pre-Technical Studies',
+    'Agriculture and Nutrition',
+    'Creative Arts & Sports',
+    'Religious Education (CRE/IRE/HRE)',
+    'Computer Science / ICT'
+  ]
+};
 
 const GRADES = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 const STREAMS = ['North', 'South', 'East', 'West', 'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Green', 'Blue', 'Red', 'Yellow'];
@@ -39,9 +68,42 @@ export default function SubjectTeachersPage() {
   const [detailedAssignments, setDetailedAssignments] = useState<DetailedSubjectAssignment[]>([]);
 
   // New row builder state
-  const [newSubj, setNewSubj] = useState(PRIMARY_SUBJECTS[0]);
   const [newGrade, setNewGrade] = useState('Grade 7');
   const [newStream, setNewStream] = useState('Mercury');
+  const [newSubj, setNewSubj] = useState('');
+
+  // Determine educational level category from grade
+  const getLevelForGrade = (grade: string): string => {
+    const g = grade.toLowerCase();
+    if (g.includes('pp1') || g.includes('pp2')) return 'Pre-Primary';
+    if (g.includes('grade 1') || g.includes('grade 2') || g.includes('grade 3')) return 'Lower Primary';
+    if (g.includes('grade 4') || g.includes('grade 5') || g.includes('grade 6')) return 'Upper Primary';
+    return 'Junior School';
+  };
+
+  // Get dynamic subjects for selected grade
+  const availableSubjectsForGrade = LEVEL_SUBJECTS_MAP[getLevelForGrade(newGrade)] || LEVEL_SUBJECTS_MAP['Junior School'];
+
+  useEffect(() => {
+    // Check if custom learning areas exist in storage
+    try {
+      const customAreas = localStorage.getItem('munyaka_learning_areas_db') || localStorage.getItem('learning_areas');
+      if (customAreas) {
+        const parsed = JSON.parse(customAreas);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // parse custom areas if needed
+        }
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    // Reset or ensure newSubj is valid when grade changes
+    const validSubs = LEVEL_SUBJECTS_MAP[getLevelForGrade(newGrade)] || [];
+    if (!validSubs.includes(newSubj)) {
+      setNewSubj(validSubs[0] || 'Mathematics');
+    }
+  }, [newGrade]);
 
   useEffect(() => {
     loadStaff();
@@ -60,24 +122,24 @@ export default function SubjectTeachersPage() {
 
   const handleOpenAssign = (staff: MasterStaffRecord) => {
     setSelectedStaff(staff);
-    // Support migration from string array or object array
     const existing = staff.detailedAssignments || staff.assignedSubjects || [];
     const normalized: DetailedSubjectAssignment[] = existing.map((item: any) => {
       if (typeof item === 'string') {
         return { subject: item, grade: staff.assignedGrade || 'Grade 7', stream: staff.assignedStream || 'Mercury' };
       }
       return {
-        subject: item.subject || PRIMARY_SUBJECTS[0],
+        subject: item.subject || 'Mathematics',
         grade: item.grade || 'Grade 7',
         stream: item.stream || 'Mercury'
       };
     });
     setDetailedAssignments(normalized);
+    setNewGrade('Grade 7');
+    setNewSubj('Mathematics');
     setIsAssignModalOpen(true);
   };
 
   const handleAddAssignment = () => {
-    // Check if duplicate
     const exists = detailedAssignments.some(d => d.subject === newSubj && d.grade === newGrade && d.stream === newStream);
     if (exists) {
       showError('This exact subject, grade, and stream combination is already assigned.');
@@ -97,7 +159,6 @@ export default function SubjectTeachersPage() {
   const handleSaveAssignments = () => {
     if (!selectedStaff) return;
     try {
-      // Also derive legacy assignedSubjects array for backwards compatibility
       const legacySubjects = Array.from(new Set(detailedAssignments.map(d => d.subject)));
       
       updateStaffMaster(selectedStaff.id, {
@@ -139,7 +200,7 @@ export default function SubjectTeachersPage() {
             <BookOpen className="w-7 h-7 text-indigo-600" />
             Subject Teachers & Subject Assignment Hub
           </h1>
-          <p className="text-sm text-slate-500">Manage teaching staff rosters, precise grade & stream subject allocations, and role-based portal filtering.</p>
+          <p className="text-sm text-slate-500">Manage teaching staff rosters, level-filtered subject allocations, and role-based portal filtering.</p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 font-bold px-3 py-1.5 text-xs">
@@ -161,7 +222,7 @@ export default function SubjectTeachersPage() {
             />
           </div>
           <div className="text-xs text-slate-400 font-semibold">
-            Teachers only see assigned subjects and streams across grading, lesson plans, and grade books.
+            Subjects are dynamically filtered based on the selected educational level (Pre-Primary, Lower/Upper Primary, Junior School).
           </div>
         </CardContent>
       </Card>
@@ -259,14 +320,14 @@ export default function SubjectTeachersPage() {
         </CardContent>
       </Card>
 
-      {/* Assign Subjects Modal with Grade & Stream Selectors */}
+      {/* Assign Subjects Modal with Level-Filtered Subject Selection */}
       {isAssignModalOpen && selectedStaff && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl border animate-in fade-in zoom-in-95 duration-200 space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-black text-slate-900">Assign Subjects, Grades & Streams</h2>
-                <p className="text-xs text-slate-500 mt-1">Configure precise subject and class stream allocations for <span className="font-bold text-indigo-600">{selectedStaff.name}</span>.</p>
+                <p className="text-xs text-slate-500 mt-1">Configure level-filtered subjects for <span className="font-bold text-indigo-600">{selectedStaff.name}</span>.</p>
               </div>
               <Badge className="bg-indigo-100 text-indigo-800 font-bold">
                 {detailedAssignments.length} Assigned
@@ -274,31 +335,34 @@ export default function SubjectTeachersPage() {
             </div>
 
             {/* Add new allocation builder */}
-            <Card className="border bg-slate-50/50 rounded-2xl p-4">
+            <Card className="border bg-slate-50/50 rounded-2xl p-4 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 uppercase">Subject</label>
-                  <Select value={newSubj} onValueChange={setNewSubj}>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-600 uppercase">Grade Level</label>
+                    <span className="text-[10px] text-indigo-600 font-semibold">({getLevelForGrade(newGrade)})</span>
+                  </div>
+                  <Select value={newGrade} onValueChange={setNewGrade}>
                     <SelectTrigger className="h-10 rounded-xl bg-white text-xs font-semibold">
-                      <SelectValue placeholder="Select Subject" />
+                      <SelectValue placeholder="Select Grade" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-2xl">
-                      {PRIMARY_SUBJECTS.map(s => (
-                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                    <SelectContent className="rounded-2xl max-h-60">
+                      {GRADES.map(g => (
+                        <SelectItem key={g} value={g}>{g} <span className="text-[10px] text-slate-400">({getLevelForGrade(g)})</span></SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 uppercase">Grade</label>
-                  <Select value={newGrade} onValueChange={setNewGrade}>
+                  <label className="text-[11px] font-bold text-slate-600 uppercase">Subject ({getLevelForGrade(newGrade)})</label>
+                  <Select value={newSubj} onValueChange={setNewSubj}>
                     <SelectTrigger className="h-10 rounded-xl bg-white text-xs font-semibold">
-                      <SelectValue placeholder="Select Grade" />
+                      <SelectValue placeholder="Select Subject" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-2xl">
-                      {GRADES.map(g => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
+                    <SelectContent className="rounded-2xl max-h-60">
+                      {availableSubjectsForGrade.map(s => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -310,7 +374,7 @@ export default function SubjectTeachersPage() {
                     <SelectTrigger className="h-10 rounded-xl bg-white text-xs font-semibold">
                       <SelectValue placeholder="Select Stream" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-2xl">
+                    <SelectContent className="rounded-2xl max-h-60">
                       {STREAMS.map(st => (
                         <SelectItem key={st} value={st}>{st}</SelectItem>
                       ))}
@@ -319,7 +383,7 @@ export default function SubjectTeachersPage() {
                 </div>
               </div>
 
-              <div className="mt-3 flex justify-end">
+              <div className="flex justify-end pt-1">
                 <Button 
                   onClick={handleAddAssignment}
                   className="h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold gap-1.5 shadow-sm"
