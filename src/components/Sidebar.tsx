@@ -73,7 +73,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Wifi, label: 'LAN Server Config', path: '/lan-server-config', global: true },
     { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config', global: true },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-    { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'] },
+    { icon: Shield, label: 'Admin Dashboard', path: '/system-management', global: true },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin'] },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
@@ -151,10 +151,16 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
           {!isCollapsed && (
-            <Link className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors mb-2 border border-blue-500/30 bg-blue-500/10 text-white" to="/lan-config">
-              <Wifi className="w-5 h-5 text-blue-400 shrink-0"/>
-              <span className="truncate flex-1 font-bold">LAN Server Config</span>
-            </Link>
+            <div className="space-y-1 mb-3">
+              <Link className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold text-white bg-blue-600/30 border border-blue-500/40 hover:bg-blue-600/40 transition-colors shadow-sm" to="/lan-server-config">
+                <Wifi className="w-5 h-5 text-blue-400 shrink-0"/>
+                <span className="truncate flex-1">LAN Server Config</span>
+              </Link>
+              <Link className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-bold text-white bg-indigo-600/30 border border-indigo-500/40 hover:bg-indigo-600/40 transition-colors shadow-sm" to="/teacher-lan-config">
+                <Wifi className="w-5 h-5 text-indigo-400 shrink-0"/>
+                <span className="truncate flex-1">Teacher LAN Config</span>
+              </Link>
+            </div>
           )}
 
           {/* Staff Management link block */}
