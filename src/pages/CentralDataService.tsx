@@ -206,55 +206,6 @@ export default function CentralDataServicePage() {
         }
       });
 
-      const rawRoll = localStorage.getItem('roll_call_records');
-      if (rawRoll) {
-        try {
-          const parsed = JSON.parse(rawRoll);
-          if (parsed && typeof parsed === 'object') {
-            const entries = Object.entries(parsed);
-            if (entries.length > 50) {
-              const sliced = entries.slice(entries.length - 30);
-              localStorage.setItem('roll_call_records', JSON.stringify(Object.fromEntries(sliced)));
-            }
-          }
-        } catch (e) {}
-      }
-
-      refreshStats();
-      showSuccess(`Successfully cleared old logs and cached audit trails (${removedCount} temporary log keys removed)!`);
-    } catch (err: any) {
-      showError('Failed to clear old logs: ' + (err?.message || err));
-    }
-  };
-
-  const handleClearOldLogs = () => {
-    const confirmed = window.confirm(
-      "This will remove old historical logs and cached audit trails to free up storage space. Your core student and staff records will remain safe. Proceed?"
-    );
-    if (!confirmed) return;
-
-    try {
-      const keysToRemove = [
-        'attendance_logs',
-        'audit_trail',
-        'audit_logs',
-        'debug_history',
-        'temp_sync_cache',
-        'sync_queue',
-        'app_cache',
-        'roll_call_history_old',
-        'munyaka_temp_export',
-        'system_logs'
-      ];
-
-      let removedCount = 0;
-      keysToRemove.forEach(key => {
-        if (localStorage.getItem(key)) {
-          localStorage.removeItem(key);
-          removedCount++;
-        }
-      });
-
       // Also clean old date-based roll call records if more than 50 entries
       const rawRoll = localStorage.getItem('roll_call_records');
       if (rawRoll) {
@@ -263,37 +214,6 @@ export default function CentralDataServicePage() {
           if (parsed && typeof parsed === 'object') {
             const entries = Object.entries(parsed);
             if (entries.length > 50) {
-              const sliced = entries.slice(entries.length - 30);
-              localStorage.setItem('roll_call_records', JSON.stringify(Object.fromEntries(sliced)));
-            }
-          }
-        } catch (e) {}
-      }
-
-      refreshStats();
-      showSuccess(`Successfully cleared old logs and cached audit trails (${removedCount} temporary log keys removed)!`);
-    } catch (err: any) {
-      showError('Failed to clear old logs: ' + (err?.message || err));
-    }
-  };
-
-      let removedCount = 0;
-      keysToRemove.forEach(key => {
-        if (localStorage.getItem(key)) {
-          localStorage.removeItem(key);
-          removedCount++;
-        }
-      });
-
-      // Also clean old date-based roll call records if more than 30 entries
-      const rawRoll = localStorage.getItem('roll_call_records');
-      if (rawRoll) {
-        try {
-          const parsed = JSON.parse(rawRoll);
-          if (parsed && typeof parsed === 'object') {
-            const entries = Object.entries(parsed);
-            if (entries.length > 50) {
-              // Keep only the most recent 30 entries
               const sliced = entries.slice(entries.length - 30);
               localStorage.setItem('roll_call_records', JSON.stringify(Object.fromEntries(sliced)));
             }

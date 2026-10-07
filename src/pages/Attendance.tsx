@@ -59,7 +59,8 @@ export default function Attendance() {
 
   // Time Lock & Role check helper
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || (user?.role as string) === 'head_teacher' || (user?.role as string) === 'owner' || user?.email?.includes('admin');
+  const roleStr = String((user as any)?.role || '');
+  const isAdmin = roleStr === 'admin' || roleStr === 'head_teacher' || roleStr === 'owner' || user?.email?.includes('admin');
 
   const checkIsLocked = (session: 'morning' | 'afternoon') => {
     if (session === 'morning' && manualMorningLock) return true;
