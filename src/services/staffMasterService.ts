@@ -2,6 +2,48 @@ import { CentralDataService, STORAGE_KEYS } from './centralDataService';
 
 export const STAFF_MASTER_KEY = STORAGE_KEYS.STAFF;
 
+const initialStaff: any[] = [
+  {
+    id: 'staff-1',
+    name: 'JANET GATHONI KUNGU',
+    nationalId: '28475920',
+    email: 'janet.gathoni@munyaka.ac.ke',
+    phone: '0720869310',
+    tscNumber: '487406',
+    role: 'Librarian',
+    systemRole: 'librarian',
+    department: 'Library',
+    status: 'Active',
+    staffId: 'STF-001'
+  },
+  {
+    id: 'staff-2',
+    name: 'PETER KAMAU MWANGI',
+    nationalId: '25489102',
+    email: 'peter.kamau@munyaka.ac.ke',
+    phone: '0712345678',
+    tscNumber: '392810',
+    role: 'Senior Teacher',
+    systemRole: 'senior_teacher',
+    department: 'Academics',
+    status: 'Active',
+    staffId: 'STF-002'
+  },
+  {
+    id: 'staff-3',
+    name: 'GRACE WANJIKU NJOROGE',
+    nationalId: '27192840',
+    email: 'grace.wanjiku@munyaka.ac.ke',
+    phone: '0733445566',
+    tscNumber: '419203',
+    role: 'Class Teacher',
+    systemRole: 'class_teacher',
+    department: 'Lower Primary',
+    status: 'Active',
+    staffId: 'STF-003'
+  }
+];
+
 export type MasterSystemRole =
   | 'head_teacher'
   | 'senior_teacher'
@@ -104,15 +146,52 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
   if (localStorage.getItem('munyaka_staff_cleared_explicitly') === 'true') {
     return [];
   }
-  const rawStaff = CentralDataService.getStaff() || [];
+
+  let list: any[] = [];
+  try {
+    const keys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          list = [...list, ...parsed];
+        }
+      }
+    }
+  } catch {}
+
+  const centralRaw = CentralDataService.getStaff() || [];
+  list = [...list, ...centralRaw];
+
+  if (list.length === 0) {
+    list = initialStaff;
+  }
+
+  // Deduplicate by id / phone / name
+  const map = new Map<string, any>();
+  list.forEach(s => {
+    if (s && (s.id || s.phone || s.name || s.staffId || s.email)) {
+      const key = String(s.id || s.phone || s.email || s.name || s.staffId).trim().toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, s);
+      }
+    }
+  });
+
+  const uniqueList = Array.from(map.values());
+  try {
+    localStorage.setItem('munyaka_staff_db', JSON.stringify(uniqueList));
+  } catch {}
+
   const localOverrides = JSON.parse(localStorage.getItem('munyaka_staff_class_overrides') || '{}');
   
-  return rawStaff.map((s: any) => {
+  return uniqueList.map((s: any) => {
     const override = localOverrides[s.id || s.email] || {};
     return {
-      id: s.id,
+      id: s.id || s.staffId || `staff_${Math.random()}`,
       name: s.name || s.full_name || 'Staff Member',
-      nationalId: s.nationalId || s.id_no || `ID-${s.id}`,
+      nationalId: s.nationalId || s.id_no || `ID-${s.id || '000'}`,
       email: s.email || '',
       phone: s.phone || '',
       tscNumber: s.tscNumber || s.tsc_no,
@@ -121,7 +200,9 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
       department: s.department || 'Administration',
       assignedGrade: override.assignedGrade || s.assignedGrade || s.assigned_grade || s.grade || '',
       assignedStream: override.assignedStream || s.assignedStream || s.assigned_stream || s.stream || '',
-      status: s.status || 'Pre-Registered',
+      assignedSubjects: s.assignedSubjects || s.subjectAllocations || s.allocations || [],
+      allocations: s.allocations || s.subjectAllocations || s.detailedAssignments || [],
+      status: s.status || 'Active',
       staffId: s.staffId || s.staff_id,
       tempAccessCode: s.tempAccessCode || s.access_key || s.ref,
     };
