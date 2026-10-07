@@ -262,7 +262,7 @@ export default function SubjectTeachersPage() {
       {/* Assign Subjects Modal with Grade & Stream Selectors */}
       {isAssignModalOpen && selectedStaff && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border animate-in fade-in zoom-in-95 duration-200 space-y-6">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl border animate-in fade-in zoom-in-95 duration-200 space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-black text-slate-900">Assign Subjects, Grades & Streams</h2>
