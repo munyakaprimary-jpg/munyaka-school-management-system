@@ -141,14 +141,13 @@ const isActiveRecord = (row: { isArchived?: boolean; deletedAt?: string }): bool
 const getStoredLearners = (): Learner[] => {
   try {
     const ls = getLocalStorage();
-    const fromLS = tryParse<Learner[]>(ls?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
-    if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
-    const centralData = tryParse<Record<string, any>>(ls?.getItem('munyaka_central_db') ?? null);
-    if (centralData && Array.isArray(centralData.students) && centralData.students.length > 0) {
-      return centralData.students;
+    for (const k of ['munyaka_learners_db', 'munyaka_central_db', 'school_learners_master', 'school_learners_data', 'munyaka_students', 'students', 'learners']) {
+      const raw = ls?.getItem(k);
+      if (raw) {
+        const parsed = tryParse<Learner[]>(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     }
-    const fallback = tryParse<Learner[]>(ls?.getItem('munyaka_students') ?? null);
-    if (Array.isArray(fallback) && fallback.length > 0) return fallback;
   } catch {
     // ignore
   }
@@ -223,11 +222,9 @@ const computeStats = (): CentralDataStats => {
     const activeSchoolId = getActiveSchoolId();
     const todayStr = getTodayDate();
 
-    const allLearners = getLearners();
-    const centralData = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-    const centralStudents = centralData.students || allLearners;
-    const activeLearners = centralStudents.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED');
-    const totalStudents = activeLearners.length;
+    const allLearners = getStoredLearners();
+    const activeLearners = allLearners.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED');
+    const totalStudents = activeLearners.length > 0 ? activeLearners.length : allLearners.length;
 
     const categorizedMetrics = getCategorizedMetrics(activeSchoolId);
     const staffMetrics = getStaffMetrics(activeSchoolId);

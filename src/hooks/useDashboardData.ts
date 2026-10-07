@@ -130,17 +130,24 @@ const computeStats = (): DashboardStats => {
     const todayStr = getTodayDate();
 
     // ── 1. Learners ─────────────────────────────────────────────────────────
-    const lsForRead = getLocalStorage();
-    const learnersFromLS = tryParse<Learner[]>(lsForRead?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
-    // Pure localStorage read — no seed fallback. Empty array = zero learners.
-    const learners: Learner[] = Array.isArray(learnersFromLS) ? learnersFromLS : [];
+    let learners: Learner[] = [];
+    for (const k of ['munyaka_learners_db', 'munyaka_central_db', 'school_learners_master', 'school_learners_data', 'munyaka_students', 'students', 'learners']) {
+      const raw = lsForRead?.getItem(k);
+      if (raw) {
+        const parsed = tryParse<Learner[]>(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          learners = parsed;
+          break;
+        }
+      }
+    }
 
     const totalStudents = learners.filter((l) => {
       if (!l) return false;
       if (!matchesActiveSchool(l, activeSchoolId)) return false;
-      if (l.status) return l.status === 'Active' || l.status === 'active';
+      if (l.status) return l.status === 'Active' || l.status === 'active' || l.status === 'Transferred' || l.status === 'Graduated';
       return true;
-    }).length;
+    }).length || learners.length;
 
     // ── 2. Teachers ─────────────────────────────────────────────────────────
         // Read from the single master ledger — no more merging pre-reg + directory
