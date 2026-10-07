@@ -137,6 +137,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
     { icon: Users, label: 'Staff Management', path: '/staff', roles: ['admin', 'head_teacher'] },
+    { icon: BookOpen, label: 'Subject Allocations', path: '/subject-allocations', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
     { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
