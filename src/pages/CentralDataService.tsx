@@ -177,6 +177,54 @@ export default function CentralDataServicePage() {
     exportMasterJSON();
   };
 
+  const handleMasterSystemSyncAndExport = () => {
+    try {
+      setLoading(true);
+      const masterBundle: Record<string, any> = {};
+      const allKeys = Object.keys(localStorage);
+
+      allKeys.forEach(key => {
+        try {
+          const val = localStorage.getItem(key);
+          if (val) {
+            try {
+              masterBundle[key] = JSON.parse(val);
+            } catch {
+              masterBundle[key] = val;
+            }
+          }
+        } catch (e) {}
+      });
+
+      const structuredPayload = {
+        timestamp: new Date().toISOString(),
+        school: "Munyaka Primary School",
+        version: "3.5.0",
+        systemStatus: "Master Synchronized",
+        data: masterBundle
+      };
+
+      const jsonString = JSON.stringify(structuredPayload, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const dateStr = new Date().toISOString().split('T')[0];
+      link.download = `munyaka_master_backup_${dateStr}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showSuccess("Universal Master System Sync & Export completed successfully!");
+    } catch (err: any) {
+      console.error('Master export error:', err);
+      showError('Failed to export master system bundle: ' + (err?.message || err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleClearOldLogs = () => {
     const confirmed = window.confirm(
       "Emergency Storage Purge: This will safely remove old logs and cached audit trails to free up storage space. Core student and staff records will remain safe. Proceed?"
@@ -450,6 +498,14 @@ export default function CentralDataServicePage() {
             >
               <Download className="w-4 h-4 mr-2" />
               Export Master JSON Backup
+            </Button>
+            <Button
+              onClick={handleMasterSystemSyncAndExport}
+              disabled={loading}
+              className="rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-900/30 font-semibold gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Master System Sync & Export JSON
             </Button>
             <Button
               onClick={handleClearOldLogs}
