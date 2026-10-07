@@ -9,7 +9,6 @@ import BackButton from '@/components/ui/BackButton';
 import { showSuccess, showError } from '@/utils/toast';
 import { getStaffMaster, updateStaffMaster, type MasterStaffRecord } from '@/services/staffMasterService';
 
-// Default CBC Learning Areas by Educational Level
 const LEVEL_SUBJECTS_MAP: Record<string, string[]> = {
   'Pre-Primary': [
     'Language Activities',
@@ -67,12 +66,10 @@ export default function SubjectTeachersPage() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [detailedAssignments, setDetailedAssignments] = useState<DetailedSubjectAssignment[]>([]);
 
-  // New row builder state
   const [newGrade, setNewGrade] = useState('Grade 7');
   const [newStream, setNewStream] = useState('Mercury');
   const [newSubj, setNewSubj] = useState('');
 
-  // Determine educational level category from grade
   const getLevelForGrade = (grade: string): string => {
     const g = grade.toLowerCase();
     if (g.includes('pp1') || g.includes('pp2')) return 'Pre-Primary';
@@ -81,24 +78,9 @@ export default function SubjectTeachersPage() {
     return 'Junior School';
   };
 
-  // Get dynamic subjects for selected grade
   const availableSubjectsForGrade = LEVEL_SUBJECTS_MAP[getLevelForGrade(newGrade)] || LEVEL_SUBJECTS_MAP['Junior School'];
 
   useEffect(() => {
-    // Check if custom learning areas exist in storage
-    try {
-      const customAreas = localStorage.getItem('munyaka_learning_areas_db') || localStorage.getItem('learning_areas');
-      if (customAreas) {
-        const parsed = JSON.parse(customAreas);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // parse custom areas if needed
-        }
-      }
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    // Reset or ensure newSubj is valid when grade changes
     const validSubs = LEVEL_SUBJECTS_MAP[getLevelForGrade(newGrade)] || [];
     if (!validSubs.includes(newSubj)) {
       setNewSubj(validSubs[0] || 'Mathematics');
@@ -111,15 +93,21 @@ export default function SubjectTeachersPage() {
 
   const loadStaff = () => {
     const list = getStaffMaster();
-    // Also merge any direct detailedAssignments stored in legacy staff keys
     try {
       const raw = localStorage.getItem('munyaka_staff_master_v1') || localStorage.getItem('staff') || '[]';
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         const merged = list.map(s => {
           const found = parsed.find((p: any) => p.id === s.id || p.staffId === s.staffId || p.phone === s.phone);
-          if (found && found.detailedAssignments) {
-            return { ...s, detailedAssignments: found.detailedAssignments, assignedSubjects: found.assignedSubjects || s.assignedSubjects };
+          if (found) {
+            const allocations = found.detailedAssignments || found.subjectAllocations || found.assignedStreams || s.detailedAssignments;
+            return { 
+              ...s, 
+              detailedAssignments: allocations,
+              subjectAllocations: allocations,
+              assignedStreams: allocations,
+              assignedSubjects: found.assignedSubjects || s.assignedSubjects 
+            };
           }
           return s;
         });
@@ -138,7 +126,7 @@ export default function SubjectTeachersPage() {
 
   const handleOpenAssign = (staff: MasterStaffRecord) => {
     setSelectedStaff(staff);
-    const existing = staff.detailedAssignments || staff.assignedSubjects || [];
+    const existing = (staff as any).detailedAssignments || (staff as any).subjectAllocations || (staff as any).assignedStreams || staff.assignedSubjects || [];
     const normalized: DetailedSubjectAssignment[] = existing.map((item: any) => {
       if (typeof item === 'string') {
         return { subject: item, grade: staff.assignedGrade || 'Grade 7', stream: staff.assignedStream || 'Mercury' };
@@ -179,12 +167,13 @@ export default function SubjectTeachersPage() {
       
       const updatePayload = {
         detailedAssignments,
+        subjectAllocations: detailedAssignments,
+        assignedStreams: detailedAssignments,
         assignedSubjects: legacySubjects,
         assignedGrade: detailedAssignments[0]?.grade || selectedStaff.assignedGrade || 'Grade 7',
         assignedStream: detailedAssignments[0]?.stream || selectedStaff.assignedStream || 'Mercury'
       };
 
-      // Explicitly commit directly to localStorage and master storage keys to guarantee zero data loss
       updateStaffMaster(selectedStaff.id, updatePayload);
 
       try {
@@ -294,7 +283,7 @@ export default function SubjectTeachersPage() {
                 </tr>
               ) : (
                 filteredStaff.map((staff) => {
-                  const allocations: DetailedSubjectAssignment[] = staff.detailedAssignments || (staff.assignedSubjects || []).map((s: string) => ({ subject: s, grade: staff.assignedGrade || 'Grade 7', stream: staff.assignedStream || 'Mercury' }));
+                  const allocations: DetailedSubjectAssignment[] = (staff as any).detailedAssignments || (staff as any).subjectAllocations || (staff as any).assignedStreams || (staff.assignedSubjects || []).map((s: string) => ({ subject: s, grade: staff.assignedGrade || 'Grade 7', stream: staff.assignedStream || 'Mercury' }));
                   return (
                     <tr key={staff.id} className="hover:bg-slate-50/60 transition-colors">
                       <td className="py-2 px-3 sm:px-4">
