@@ -507,9 +507,6 @@ const Staff = () => {
           <Button variant="outline" className="h-11 px-6 rounded-2xl gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold" onClick={() => navigate('/staff/subject-teachers')}>
             <BookOpen size={18} /> Subject Allocations
           </Button>
-          <Button variant="outline" className="h-11 px-6 rounded-2xl gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold" onClick={() => navigate('/staff/subject-teachers')}>
-            <BookOpen size={18} /> Subject Allocations
-          </Button>
         </div>
       </div>
 
