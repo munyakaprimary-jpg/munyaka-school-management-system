@@ -185,36 +185,47 @@ export default function CentralDataServicePage() {
     if (!confirmed) return;
 
     try {
-      const keysToRemove = [
-        'attendance_logs',
-        'audit_trail',
-        'audit_logs',
-        'debug_history',
-        'temp_sync_cache',
-        'sync_queue',
-        'app_cache',
-        'roll_call_history_old',
-        'munyaka_temp_export',
-        'system_logs'
+      // Protected core keys that must NEVER be deleted
+      const protectedKeys = [
+        'currentUser',
+        'munyaka_learners_db',
+        'munyaka_staff',
+        'munyaka_staff_directory',
+        'munyaka_master_staff_list',
+        'munyaka_central_db',
+        'school_fees_v1',
+        'school_settings_v1'
       ];
 
       let removedCount = 0;
-      keysToRemove.forEach(key => {
-        if (localStorage.getItem(key)) {
+      const allKeys = Object.keys(localStorage);
+      
+      allKeys.forEach(key => {
+        const lowerKey = key.toLowerCase();
+        const isProtected = protectedKeys.includes(key);
+        const matchesLogOrCache =
+          lowerKey.includes('log') ||
+          lowerKey.includes('cache') ||
+          lowerKey.includes('debug') ||
+          lowerKey.includes('temp') ||
+          lowerKey.includes('audit') ||
+          lowerKey.includes('history_old');
+
+        if (!isProtected && matchesLogOrCache) {
           localStorage.removeItem(key);
           removedCount++;
         }
       });
 
-      // Also clean old date-based roll call records if more than 50 entries
+      // Also clean old date-based roll call records if more than 30 entries
       const rawRoll = localStorage.getItem('roll_call_records');
       if (rawRoll) {
         try {
           const parsed = JSON.parse(rawRoll);
           if (parsed && typeof parsed === 'object') {
             const entries = Object.entries(parsed);
-            if (entries.length > 50) {
-              const sliced = entries.slice(entries.length - 30);
+            if (entries.length > 30) {
+              const sliced = entries.slice(entries.length - 20);
               localStorage.setItem('roll_call_records', JSON.stringify(Object.fromEntries(sliced)));
             }
           }
@@ -222,8 +233,12 @@ export default function CentralDataServicePage() {
       }
 
       refreshStats();
-      showSuccess(`Successfully cleared old logs and cached audit trails (${removedCount} temporary log keys removed)!`);
+      showSuccess(`Successfully cleaned ${removedCount} temporary log and cache keys. Refreshing...`);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (err: any) {
+      console.error('Error clearing logs:', err);
       showError('Failed to clear old logs: ' + (err?.message || err));
     }
   };
