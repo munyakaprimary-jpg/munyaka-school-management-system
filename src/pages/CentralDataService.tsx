@@ -60,6 +60,29 @@ export default function CentralDataServicePage() {
   const [isRestoreOpen, setIsRestoreOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const handleCopyLiveStoreJson = async () => {
+    try {
+      const fullDump = CentralDataService.getFullStateDump();
+      const jsonStr = JSON.stringify(fullDump, null, 2);
+      await navigator.clipboard.writeText(jsonStr);
+      showSuccess('Successfully copied all live store JSON to clipboard!');
+    } catch (err: any) {
+      showError('Failed to copy to clipboard: ' + (err?.message || err));
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setLoading(true);
+      await importMasterJSON(file);
+    } finally {
+      setLoading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
   const [stats, setStats] = useState({
     registeredStudents: 0,
     teachingStaff: 0,
