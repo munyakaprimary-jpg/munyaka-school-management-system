@@ -96,7 +96,7 @@ export default function SubjectTeachersPage() {
   const loadStaff = () => {
     let list: any[] = [];
     try {
-      // Prioritize munyaka_staff_db and all backup keys
+      // 1. Read strictly from munyaka_staff_db first
       const rawDb = localStorage.getItem('munyaka_staff_db');
       if (rawDb) {
         const parsedDb = JSON.parse(rawDb);
@@ -105,16 +105,13 @@ export default function SubjectTeachersPage() {
         }
       }
 
+      // 2. Fallback to munyaka_staff_master_v1 or getStaffMaster if munyaka_staff_db is empty
       if (list.length === 0) {
-        const keys = ['munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
-        for (const k of keys) {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              list = parsed;
-              break;
-            }
+        const rawMaster = localStorage.getItem('munyaka_staff_master_v1');
+        if (rawMaster) {
+          const parsedMaster = JSON.parse(rawMaster);
+          if (Array.isArray(parsedMaster) && parsedMaster.length > 0) {
+            list = parsedMaster;
           }
         }
       }
@@ -122,6 +119,11 @@ export default function SubjectTeachersPage() {
 
     if (list.length === 0) {
       list = getStaffMaster();
+    }
+
+    // Ensure munyaka_staff_db is populated if it was empty
+    if (list.length > 0 && !localStorage.getItem('munyaka_staff_db')) {
+      localStorage.setItem('munyaka_staff_db', JSON.stringify(list));
     }
 
     const normalized = list.map(s => {
