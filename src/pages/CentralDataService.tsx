@@ -485,21 +485,6 @@ export default function CentralDataServicePage() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button
-              onClick={handleSyncStoreToCentralData}
-              disabled={loading}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-900/30 font-semibold"
-            >
-              <Database className="w-4 h-4 mr-2" />
-              Sync Store to Central Data
-            </Button>
-            <Button
-              onClick={handleExportSeedData}
-              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/30 font-semibold"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export Master JSON Backup
-            </Button>
-            <Button
               onClick={handleMasterSystemSyncAndExport}
               disabled={loading}
               className="rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-900/30 font-semibold gap-2"
