@@ -507,9 +507,9 @@ const Staff = () => {
         </div>
       </div>
 
-      {/* Metrics - horizontal row with smooth scroll on mobile */}
-      <div className="flex flex-row gap-3 mb-4 overflow-x-auto pb-2 scrollbar-none w-full">
-        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between min-w-[260px] sm:min-w-[280px] flex-1 flex-shrink-0">
+      {/* Metrics - permanent single-column vertical stack */}
+      <div className="grid grid-cols-1 gap-4 mb-4">
+        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Staff</p>
             <h3 className="text-xl font-bold text-gray-900 mt-0.5">{masterStaffList.length}</h3>
@@ -519,7 +519,7 @@ const Staff = () => {
           </div>
         </div>
 
-        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between min-w-[260px] sm:min-w-[280px] flex-1 flex-shrink-0">
+        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active</p>
             <h3 className="text-xl font-bold text-gray-900 mt-0.5">{activeCount}</h3>
@@ -529,7 +529,7 @@ const Staff = () => {
           </div>
         </div>
 
-        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between min-w-[260px] sm:min-w-[280px] flex-1 flex-shrink-0">
+        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Pre-Registered</p>
             <h3 className="text-xl font-bold text-gray-900 mt-0.5">{preRegCount}</h3>
