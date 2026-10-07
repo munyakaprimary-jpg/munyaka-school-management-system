@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard,
@@ -120,48 +120,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const filteredMenu = React.useMemo(() => {
     return menuItems;
   }, [user]);
-          item.label.includes("Grades & Streams") ||
-          item.label.includes("Staff Directory") ||
-          item.label.includes("Timetable") ||
-          item.label.includes("Learning Areas") ||
-          item.label.includes("Exam Types") ||
-          item.path === '/central-data' ||
-          item.path === '/grades' ||
-          item.path === '/staff' ||
-          item.path === '/timetable' ||
-          item.path === '/learning-areas' ||
-          item.path === '/exam-types'
-        ) {
-          return false;
-        }
-      }
-
-      if (isAdminOrOwner) {
-        return !['/payment-management', '/dev/tenants'].includes(item.path);
-      }
-      
-      const rolesList = (item.roles || []).map(r => String(r).toLowerCase());
-      if (rolesList.includes(roleLower) || (resolvedR && rolesList.includes(resolvedR))) {
-        return true;
-      }
-
-      const permKey = ROUTE_PERMISSIONS[item.path];
-      if (permKey) {
-        return roleHas(role, permKey);
-      }
-
-      return rolesList.includes('admin');
-    }).map(item => {
-      if (item?.path === '/') {
-        const isAdminOrHead = roleLower.includes('admin') || roleLower.includes('head');
-        const isIct = roleLower.includes('ict');
-        const isLib = roleLower.includes('librarian') || roleLower.includes('library');
-        const labelText = isAdminOrHead ? 'Dashboard' : isIct ? 'ICT Dashboard' : isLib ? 'Library Dashboard' : "Teacher's Dashboard";
-        return { ...item, label: labelText };
-      }
-      return item;
-    });
-  }, [user]);
 
   const activePath = location.pathname;
 
@@ -194,17 +152,19 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
+          {/* Staff Management link block */}
           {filteredMenu.map((item, idx) => {
             const Icon = item.icon;
             const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
+            const isStaffManagement = item.path === '/staff';
             return (
-              <div key={idx}>
+              <React.Fragment key={idx}>
                 <NavLink
                   to={item.path}
                   className={cn(
                     "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
-                    isActive 
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25" 
+                    isActive
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
                       : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
                   )}
                   title={isCollapsed ? item.label : undefined}
@@ -235,7 +195,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                     })}
                   </div>
                 )}
-              </div>
+
+                {isStaffManagement && !isCollapsed && (
+                  <Link className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors" to="/subject-allocations">
+                    <BookOpen className="w-5 h-5"/>
+                    <span>Subject Allocations</span>
+                  </Link>
+                )}
+              </React.Fragment>
             );
           })}
         </div>
