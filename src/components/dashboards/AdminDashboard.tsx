@@ -26,9 +26,32 @@ export const AdminDashboardComponent: React.FC = () => {
     } catch {}
   }, []);
 
-  // Use unified central data source for consistent student counts across Admin & Teacher dashboards
+  // Use unified central data source and reactive state for consistent student counts across Admin & Teacher dashboards
   const { totalStudents: centralTotalStudents } = useCentralData();
-  const learners = getStoredLearners();
+  const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => getStoredLearners());
+
+  useEffect(() => {
+    const handleReactiveStorage = () => {
+      try {
+        const fresh = getStoredLearners();
+        if (Array.isArray(fresh) && fresh.length > 0) {
+          setReactiveLearners(fresh);
+        }
+      } catch {}
+    };
+
+    window.addEventListener('storage', handleReactiveStorage);
+    window.addEventListener('munyaka:data-changed', handleReactiveStorage);
+    window.addEventListener('munyaka_learners_updated', handleReactiveStorage);
+
+    return () => {
+      window.removeEventListener('storage', handleReactiveStorage);
+      window.removeEventListener('munyaka:data-changed', handleReactiveStorage);
+      window.removeEventListener('munyaka_learners_updated', handleReactiveStorage);
+    };
+  }, []);
+
+  const learners = reactiveLearners.length > 0 ? reactiveLearners : getStoredLearners();
 
   const [localStaff, setLocalStaff] = useState<any[]>(() => {
     try {
