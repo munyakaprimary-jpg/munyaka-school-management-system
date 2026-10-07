@@ -27,8 +27,16 @@ export const AdminDashboardComponent: React.FC = () => {
   }, []);
 
   // Use unified central data source and reactive state for consistent student counts across Admin & Teacher dashboards
-  const { totalStudents: centralTotalStudents } = useCentralData();
-  const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => getStoredLearners());
+  const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => {
+    try {
+      const raw = localStorage.getItem('munyaka_learners_db') || localStorage.getItem('school_learners_master') || localStorage.getItem('school_learners_data');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return getStoredLearners();
+  });
 
   useEffect(() => {
     const handleReactiveStorage = () => {
@@ -114,13 +122,13 @@ export const AdminDashboardComponent: React.FC = () => {
   });
 
   const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
-    const junior = learners.length - primary.length;
-  
-    const totalStudents = centralTotalStudents;
-    const teachingStaffCount = teaching.length;
-    const nonTeachingStaffCount = nonTeaching.length;
-    const primaryCount = primary.length;
-    const juniorCount = junior;
+  const junior = learners.length - primary.length;
+
+  const totalStudents = learners.length;
+  const teachingStaffCount = teaching.length;
+  const nonTeachingStaffCount = nonTeaching.length;
+  const primaryCount = primary.length;
+  const juniorCount = junior;
 
   const [selectedYear, setSelectedYear] = useState('2026');
 
