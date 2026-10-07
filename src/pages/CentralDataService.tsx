@@ -180,7 +180,7 @@ export default function CentralDataServicePage() {
 
   const handleClearOldLogs = () => {
     const confirmed = window.confirm(
-      "This will remove old historical logs and cached audit trails to free up storage space. Your core student and staff records will remain safe. Proceed?"
+      "Emergency Storage Purge: This will safely remove old logs and cached audit trails to free up storage space. Core student and staff records will remain safe. Proceed?"
     );
     if (!confirmed) return;
 
@@ -188,13 +188,20 @@ export default function CentralDataServicePage() {
       // Protected core keys that must NEVER be deleted
       const protectedKeys = [
         'currentUser',
+        'munyaka_session',
         'munyaka_learners_db',
+        'school_learners_data',
+        'munyaka_students',
+        'munyaka_master_learner_list',
         'munyaka_staff',
         'munyaka_staff_directory',
         'munyaka_master_staff_list',
         'munyaka_central_db',
         'school_fees_v1',
-        'school_settings_v1'
+        'school_settings_v1',
+        'munyaka_admin_email',
+        'munyaka_admin_password',
+        'users'
       ];
 
       let removedCount = 0;
@@ -209,18 +216,21 @@ export default function CentralDataServicePage() {
           lowerKey.includes('debug') ||
           lowerKey.includes('temp') ||
           lowerKey.includes('audit') ||
-          lowerKey.includes('history_old');
+          lowerKey.includes('history_old') ||
+          lowerKey.includes('sync_queue');
 
         if (!isProtected && matchesLogOrCache) {
-          localStorage.removeItem(key);
-          removedCount++;
+          try {
+            localStorage.removeItem(key);
+            removedCount++;
+          } catch (e) {}
         }
       });
 
       // Also clean old date-based roll call records if more than 30 entries
-      const rawRoll = localStorage.getItem('roll_call_records');
-      if (rawRoll) {
-        try {
+      try {
+        const rawRoll = localStorage.getItem('roll_call_records');
+        if (rawRoll) {
           const parsed = JSON.parse(rawRoll);
           if (parsed && typeof parsed === 'object') {
             const entries = Object.entries(parsed);
@@ -229,16 +239,15 @@ export default function CentralDataServicePage() {
               localStorage.setItem('roll_call_records', JSON.stringify(Object.fromEntries(sliced)));
             }
           }
-        } catch (e) {}
-      }
+        }
+      } catch (e) {}
 
-      refreshStats();
-      showSuccess(`Successfully cleaned ${removedCount} temporary log and cache keys. Refreshing...`);
+      showSuccess(`Emergency purge complete! Removed ${removedCount} temporary log/cache keys. Reloading safely...`);
       setTimeout(() => {
         window.location.reload();
       }, 1000);
     } catch (err: any) {
-      console.error('Error clearing logs:', err);
+      console.error('Error during emergency storage purge:', err);
       showError('Failed to clear old logs: ' + (err?.message || err));
     }
   };
