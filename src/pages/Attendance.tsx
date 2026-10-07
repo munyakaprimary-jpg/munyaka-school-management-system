@@ -440,117 +440,106 @@ export default function Attendance() {
                 </div>
               )}
               {/* Header Banner */}
-              <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 p-6 rounded-2xl text-white shadow-xl">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="outline" className="bg-white/20 text-white border-white/30 text-xs px-2.5 py-0.5">
-                      Teacher Portal
-                    </Badge>
-                    <Badge variant="outline" className="bg-emerald-500/30 text-emerald-100 border-emerald-400/40 text-xs flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" /> Master Directory Sync (`munyaka_learners_db`)
-                    </Badge>
-                  </div>
-                  <h1 className="text-2xl font-black tracking-tight">Student Attendance & Roll Call</h1>
-                  <p className="text-emerald-100 text-sm">
-                    Directly synchronized with the primary master learners database and Admin Roll Call records.
-                  </p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 p-6 rounded-2xl text-white shadow-xl">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="outline" className="bg-white/20 text-white border-white/30 text-xs px-2.5 py-0.5">
+                    Teacher Portal
+                  </Badge>
+                  <Badge variant="outline" className="bg-emerald-500/30 text-emerald-100 border-emerald-400/40 text-xs flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Master Directory Sync (`munyaka_learners_db`)
+                  </Badge>
                 </div>
-        
-                <div className="flex flex-wrap items-center gap-3 pt-2 xl:pt-0">
-                  {/* Prominent Manual Cutoff Toggle for Administrators / Head Teachers */}
-                  {isAdministrator && (
-                    <div className="flex items-center gap-2 bg-black/30 px-3.5 py-2.5 rounded-xl border border-white/20 shadow-inner">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200">Admin Cutoff Control</span>
-                        <span className="text-xs font-semibold text-white">
-                          {manualCutoffLocked ? 'Roll Call: Closed' : 'Roll Call: Open'}
-                        </span>
-                      </div>
-                      <Button
-                        onClick={() => {
-                          const newLockState = !manualCutoffLocked;
-                          setManualCutoffLocked(newLockState);
-                          localStorage.setItem('attendance_locked', JSON.stringify(newLockState));
-                          if (newLockState) {
-                            toast.error('Roll Call has been closed by the administration.');
-                          } else {
-                            toast.success('Roll Call has been reopened by the administration.');
-                          }
-                        }}
-                        size="sm"
-                        className={`h-8 text-xs font-bold px-3 shadow-md transition-all ${
-                          manualCutoffLocked
-                            ? 'bg-rose-600 text-white hover:bg-rose-700 border border-rose-400/50'
-                            : 'bg-emerald-500 text-white hover:bg-emerald-600 border border-emerald-400/50'
-                        }`}
-                      >
-                        {manualCutoffLocked ? (
-                          <>
-                            <Lock className="w-3.5 h-3.5 mr-1.5" /> Unlock Roll Call
-                          </>
-                        ) : (
-                          <>
-                            <Unlock className="w-3.5 h-3.5 mr-1.5" /> Lock Roll Call
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-        
-                  <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-                      {manualCutoffLocked ? (
-                        <span className="text-rose-300 font-medium">
-                          <Lock className="w-3 h-3 inline mr-1" /> Closed by Admin
-                        </span>
-                      ) : isTimeLocked ? (
-                        <span className="text-amber-300 font-medium">
-                          {timeLockedSession === 'morning' ? 'Morning locked (>9:40 AM)' : 'Afternoon locked (>15:00)'}
-                        </span>
-                      ) : (
-                        <span className="text-emerald-300 text-xs flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> Time-Lock Active
-                        </span>
-                      )}
-                    </div>
-                  </div>
-        
-                  <Button
-                    onClick={() => {
-                      if (isAdministrator) {
-                        setIsTimeLocked(!isTimeLocked);
-                        setTimeLockedSession(null);
-                        toast.success(isTimeLocked ? 'Time lock re-enabled.' : 'Time lock bypassed (Admin override).');
-                        return;
-                      }
-                      if (isTimeLocked) {
-                        setIsTimeLocked(false);
-                        setTimeLockedSession(null);
-                        toast.info('Time lock automatically re-applied for next save.');
-                      } else {
-                        toast.info('Administrator override required to bypass time locks.');
-                      }
-                    }}
-                    disabled={!isAdministrator}
-                    variant="outline"
-                    className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs h-9"
-                  >
-                    <Clock className="w-3.5 h-3.5" /> Time Lock Status
-                  </Button>
-        
-                  <Button
-                    onClick={() => {
-                      loadMasterLearners();
-                      loadRollCallRecords();
-                      toast.success('Refreshed learners & attendance data');
-                    }}
-                    variant="outline"
-                    className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs h-9"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" /> Refresh
-                  </Button>
-                </div>
+                <h1 className="text-2xl font-black tracking-tight">Student Attendance & Roll Call</h1>
+                <p className="text-emerald-100 text-sm mt-1">
+                  Directly synchronized with the primary master learners database and Admin Roll Call records.
+                </p>
               </div>
+      
+              <div className="flex flex-wrap items-center gap-3">
+                              <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+                                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+                                  {manualCutoffLocked ? (
+                                    <span className="text-red-600 font-medium">
+                                      <Lock className="w-3 h-3" /> Roll Call Closed by Administration
+                                    </span>
+                                  ) : isTimeLocked ? (
+                                    <span className="text-emerald-600 font-medium">
+                                      {timeLockedSession === 'morning' ? 'Morning attendance is locked after 9:40 AM.' : 'Afternoon attendance is locked after 15:00.'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-emerald-400 text-xs">
+                                      <Clock className="w-3 h-3" /> Time-Lock Enforced
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+              
+                              {isAdministrator && (
+                                <Button
+                                  onClick={() => {
+                                    const newLockState = !manualCutoffLocked;
+                                    setManualCutoffLocked(newLockState);
+                                    localStorage.setItem('attendance_locked', JSON.stringify(newLockState));
+                                    if (newLockState) {
+                                      toast.error('Roll Call has been closed by the administration.');
+                                    } else {
+                                      toast.success('Roll Call has been reopened by the administration.');
+                                    }
+                                  }}
+                                  variant={manualCutoffLocked ? 'default' : 'outline'}
+                                  className={`h-7 text-xs px-3 ${manualCutoffLocked ? 'bg-red-600 text-white hover:bg-red-700 border-none' : 'bg-white/10 text-white hover:bg-white/20 border-white/20'}`}
+                                >
+                                  {manualCutoffLocked ? (
+                                    <>
+                                      <Unlock className="w-3.5 h-3.5" /> Unlock Roll Call
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Lock className="w-3.5 h-3.5" /> Lock Roll Call
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+              
+                              <Button
+                                onClick={() => {
+                                  // Admin-only bypass: if user is admin, allow bypass
+                                  if (isAdministrator) {
+                                    setIsTimeLocked(!isTimeLocked);
+                                    setTimeLockedSession(null);
+                                    toast.success(isTimeLocked ? 'Time lock re-enabled.' : 'Time lock bypassed (Admin override).');
+                                    return;
+                                  }
+                                  // For non-admin users, show alert and don't toggle
+                                  if (isTimeLocked) {
+                                    setIsTimeLocked(false);
+                                    setTimeLockedSession(null);
+                                    toast.info('Time lock automatically re-applied for next save.');
+                                  } else {
+                                    toast.info('Administrator override required to bypass time locks.');
+                                  }
+                                }}
+                                disabled={!isAdministrator}
+                                variant="outline"
+                                className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
+                              >
+                                <Clock className="w-3.5 h-3.5" /> Time Lock Status
+                              </Button>
+              
+                              <Button
+                                onClick={() => {
+                                  loadMasterLearners();
+                                  loadRollCallRecords();
+                                  toast.success('Refreshed learners & attendance data');
+                                }}
+                                variant="outline"
+                                className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
+                              </Button>
+                            </div>
+            </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
