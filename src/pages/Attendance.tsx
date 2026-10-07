@@ -213,11 +213,11 @@ export default function Attendance() {
   };
 
   const handleStatusChange = (id: string, session: 'morning' | 'afternoon', status: string) => {
-    if (session === 'morning' && morningLocked && !isAdmin) {
+    if (session === 'morning' && morningLocked && (!isAdmin || !bypassCutoff)) {
       toast.error('Morning attendance is locked after 9:40 AM.');
       return;
     }
-    if (session === 'afternoon' && afternoonLocked && !isAdmin) {
+    if (session === 'afternoon' && afternoonLocked && (!isAdmin || !bypassCutoff)) {
       toast.error('Afternoon attendance is locked after 15:00.');
       return;
     }
@@ -241,11 +241,11 @@ export default function Attendance() {
   };
 
   const markAll = (session: 'morning' | 'afternoon', status: string) => {
-    if (session === 'morning' && morningLocked && !isAdmin) {
+    if (session === 'morning' && morningLocked && (!isAdmin || !bypassCutoff)) {
       toast.error('Morning attendance is locked after 9:40 AM.');
       return;
     }
-    if (session === 'afternoon' && afternoonLocked && !isAdmin) {
+    if (session === 'afternoon' && afternoonLocked && (!isAdmin || !bypassCutoff)) {
       toast.error('Afternoon attendance is locked after 15:00.');
       return;
     }
@@ -686,15 +686,19 @@ export default function Attendance() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <div className="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+                          <div className={`inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 ${morningLocked && (!isAdmin || !bypassCutoff) ? 'opacity-60 cursor-not-allowed' : ''}`}>
                             {['Present', 'Absent', 'Late', 'Excused'].map(status => {
                               const active = currentData.morning === status;
+                              const isLocked = morningLocked && (!isAdmin || !bypassCutoff);
                               return (
                                 <button
                                   key={status}
                                   type="button"
+                                  disabled={isLocked}
                                   onClick={() => handleStatusChange(id, 'morning', status)}
                                   className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                                    isLocked ? 'cursor-not-allowed' : ''
+                                  } ${
                                     active
                                       ? status === 'Present' ? 'bg-emerald-600 text-white shadow-sm'
                                         : status === 'Absent' ? 'bg-rose-600 text-white shadow-sm'
@@ -710,15 +714,19 @@ export default function Attendance() {
                           </div>
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <div className="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+                          <div className={`inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 ${afternoonLocked && (!isAdmin || !bypassCutoff) ? 'opacity-60 cursor-not-allowed' : ''}`}>
                             {['Present', 'Absent', 'Late', 'Excused'].map(status => {
                               const active = currentData.afternoon === status;
+                              const isLocked = afternoonLocked && (!isAdmin || !bypassCutoff);
                               return (
                                 <button
                                   key={status}
                                   type="button"
+                                  disabled={isLocked}
                                   onClick={() => handleStatusChange(id, 'afternoon', status)}
                                   className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                                    isLocked ? 'cursor-not-allowed' : ''
+                                  } ${
                                     active
                                       ? status === 'Present' ? 'bg-emerald-600 text-white shadow-sm'
                                         : status === 'Absent' ? 'bg-rose-600 text-white shadow-sm'
