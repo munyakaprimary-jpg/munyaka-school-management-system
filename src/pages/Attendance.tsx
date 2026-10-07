@@ -41,6 +41,11 @@ export default function Attendance() {
     const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
     const [timeLockMessage, setTimeLockMessage] = useState<string>('');
     const [isTimeLocked, setIsTimeLocked] = useState<boolean>(false);
+    const [timeLockedSession, setTimeLockedSession] = useState<'morning' | 'afternoon' | null>(null);
+
+  // Role-based override flag — only Administrators can bypass time locks
+  const { user } = useAuth();
+  const isAdministrator = user?.role?.toLowerCase() === 'administrator';
 
   // 1. Master State Synchronization: Pull from primary master learners store
   useEffect(() => {
@@ -191,14 +196,40 @@ export default function Attendance() {
   };
 
   const handleStatusChange = (id: string, session: 'morning' | 'afternoon', status: string) => {
-    setAttendanceMap(prev => ({
-      ...prev,
-      [id]: {
-        ...(prev[id] || { morning: 'Present', afternoon: 'Present', remarks: '' }),
-        [session]: status
+      setAttendanceMap(prev => ({
+        ...prev,
+        [id]: {
+          ...(prev[id] || { morning: 'Present', afternoon: 'Present', remarks: '' }),
+          [session]: status
+        }
+      }));
+    };
+  
+    // Time lock enforcement: morning session locks after 9:40 AM, afternoon session locks after 15:00
+    const checkTimeLock = (session: 'morning' | 'afternoon'): boolean => {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+  
+      if (session === 'morning') {
+        // Morning attendance locks after 9:40 AM
+        if (hours > 9 || (hours === 9 && minutes > 40)) {
+          setTimeLockMessage('Morning attendance is locked after 9:40 AM.');
+          setTimeLockedSession('morning');
+          setIsTimeLocked(true);
+          return true; // locked
+        }
+      } else if (session === 'afternoon') {
+        // Afternoon attendance locks after 15:00 (3:00 PM)
+        if (hours >= 15) {
+          setTimeLockMessage('Afternoon attendance is locked after 15:00.');
+          setTimeLockedSession('afternoon');
+          setIsTimeLocked(true);
+          return true; // locked
+        }
       }
-    }));
-  };
+      return false; // not locked
+    };
 
   const handleRemarksChange = (id: string, remarks: string) => {
     setAttendanceMap(prev => ({
@@ -229,19 +260,52 @@ export default function Attendance() {
   };
 
   const handleSaveAttendance = () => {
-    setIsSaving(true);
+      // Time lock enforcement — check both sessions
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+  
+      // Morning session lock: past 9:40 AM
+      const morningLocked = hours > 9 || (hours === 9 && minutes > 40);
+      // Afternoon session lock: 15:00 or later
+      const afternoonLocked = hours >= 15;
+  
+      // Administrators can bypass the time lock
+      if (!isAdministrator) {
+        if (morningLocked) {
+          setTimeLockMessage('Morning attendance is locked after 9:40 AM.');
+          setTimeLockedSession('morning');
+          setIsTimeLocked(true);
+          toast.error('Morning attendance is locked after 9:40 AM.');
+          return;
+        }
+        if (afternoonLocked) {
+          setTimeLockMessage('Afternoon attendance is locked after 15:00.');
+          setTimeLockedSession('afternoon');
+          setIsTimeLocked(true);
+          toast.error('Afternoon attendance is locked after 15:00.');
+          return;
+        }
+      }
+  
+      // Clear any previous lock state
+      setIsTimeLocked(false);
+      setTimeLockMessage('');
+      setTimeLockedSession(null);
+  
+      setIsSaving(true);
     try {
       const targetLearners = getFilteredLearners();
       const activeKey = `${selectedDate}_${selectedGrade}_${selectedStream}`;
       
       const recordPayload = {
-        date: selectedDate,
-        grade: selectedGrade,
-        stream: selectedStream,
-        updatedAt: new Date().toISOString(),
-        markedBy: 'Teacher Portal',
-        bypassCutoffUsed: bypassCutoff,
-        students: Object.fromEntries(
+              date: selectedDate,
+              grade: selectedGrade,
+              stream: selectedStream,
+              updatedAt: new Date().toISOString(),
+              markedBy: 'Teacher Portal',
+              timeLockBypassed: isAdministrator && isTimeLocked,
+              students: Object.fromEntries(
           targetLearners.map(l => {
             const id = l.id || l.admissionNo || l.admissionNumber || '';
             const data = attendanceMap[id] || { morning: 'Present', afternoon: 'Present', remarks: '' };
@@ -335,55 +399,91 @@ export default function Attendance() {
 
   return (
     <div className="space-y-6 pb-16">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 p-6 rounded-2xl text-white shadow-xl">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Badge variant="outline" className="bg-white/20 text-white border-white/30 text-xs px-2.5 py-0.5">
-              Teacher Portal
-            </Badge>
-            <Badge variant="outline" className="bg-emerald-500/30 text-emerald-100 border-emerald-400/40 text-xs flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> Master Directory Sync (`munyaka_learners_db`)
-            </Badge>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight">Student Attendance & Roll Call</h1>
-          <p className="text-emerald-100 text-sm mt-1">
-            Directly synchronized with the primary master learners database and Admin Roll Call records.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-              {bypassCutoff ? <Unlock className="w-4 h-4 text-emerald-300" /> : <Lock className="w-4 h-4 text-amber-300" />}
-              <span>Time-Lock Bypass:</span>
+          {/* Time Lock Message Banner */}
+          {isTimeLocked && !isAdministrator && (
+            <div className="bg-amber-50 dark:bg-amber-900/50 border-l-4 border-amber-400 p-4 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-5 w-5 text-amber-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">
+                    {timeLockMessage}
+                  </p>
+                </div>
+              </div>
             </div>
-            <Button
-              size="sm"
-              variant={bypassCutoff ? 'default' : 'outline'}
-              className={`h-7 text-xs px-3 ${bypassCutoff ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-none' : 'bg-white/10 text-white hover:bg-white/20 border-white/20'}`}
-              onClick={() => {
-                setBypassCutoff(!bypassCutoff);
-                toast.success(bypassCutoff ? 'Time cutoff lock active.' : 'Time cutoff restrictions bypassed for testing!');
-              }}
-            >
-              {bypassCutoff ? 'Bypassed (Dev/Testing)' : 'Enforced'}
-            </Button>
-          </div>
-
-          <Button
-            onClick={() => {
-              loadMasterLearners();
-              loadRollCallRecords();
-              toast.success('Refreshed learners & attendance data');
-            }}
-            variant="outline"
-            className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
-          </Button>
-        </div>
-      </div>
+          )}
+          {/* Header Banner */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 p-6 rounded-2xl text-white shadow-xl">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="outline" className="bg-white/20 text-white border-white/30 text-xs px-2.5 py-0.5">
+                    Teacher Portal
+                  </Badge>
+                  <Badge variant="outline" className="bg-emerald-500/30 text-emerald-100 border-emerald-400/40 text-xs flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Master Directory Sync (`munyaka_learners_db`)
+                  </Badge>
+                </div>
+                <h1 className="text-2xl font-black tracking-tight">Student Attendance & Roll Call</h1>
+                <p className="text-emerald-100 text-sm mt-1">
+                  Directly synchronized with the primary master learners database and Admin Roll Call records.
+                </p>
+              </div>
+      
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+                    {isTimeLocked ? (
+                      <span className="text-emerald-600 font-medium">
+                        {timeLockedSession === 'morning' ? 'Morning attendance is locked after 9:40 AM.' : 'Afternoon attendance is locked after 15:00.'}
+                      </span>
+                    ) : (
+                      <span className="text-emerald-400 text-xs">
+                        <Clock className="w-3 h-3" /> Time-Lock Enforced
+                      </span>
+                    )}
+                  </div>
+                </div>
+      
+                <Button
+                  onClick={() => {
+                    // Admin-only bypass: if user is admin, allow bypass
+                    if (isAdministrator) {
+                      setIsTimeLocked(!isTimeLocked);
+                      setTimeLockedSession(null);
+                      toast.success(isTimeLocked ? 'Time lock re-enabled.' : 'Time lock bypassed (Admin override).');
+                      return;
+                    }
+                    // For non-admin users, show alert and don't toggle
+                    if (isTimeLocked) {
+                      setIsTimeLocked(false);
+                      setTimeLockedSession(null);
+                      toast.info('Time lock automatically re-applied for next save.');
+                    } else {
+                      toast.info('Administrator override required to bypass time locks.');
+                    }
+                  }}
+                  disabled={!isAdministrator}
+                  variant="outline"
+                  className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
+                >
+                  <Clock className="w-3.5 h-3.5" /> Time Lock Status
+                </Button>
+      
+                <Button
+                  onClick={() => {
+                    loadMasterLearners();
+                    loadRollCallRecords();
+                    toast.success('Refreshed learners & attendance data');
+                  }}
+                  variant="outline"
+                  className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
+                </Button>
+              </div>
+            </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -473,28 +573,28 @@ export default function Attendance() {
       {/* Main Content Card */}
       <Card className="border-slate-200/80 shadow-lg rounded-2xl overflow-hidden">
         <CardHeader className="bg-slate-50/80 border-b border-slate-100 pb-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <CheckSquare className="w-5 h-5 text-emerald-600" />
-                Roll Call Completion Register
-              </CardTitle>
-              <CardDescription className="text-xs text-slate-500 mt-0.5">
-                Mark morning and afternoon attendance. Writes directly to shared admin storage keys.
-              </CardDescription>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleSaveAttendance}
-                disabled={isSaving || totalLearnersCount === 0}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
-              >
-                <Save className="w-4 h-4" />
-                {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
-              </Button>
-            </div>
-          </div>
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <CheckSquare className="w-5 h-5 text-emerald-600" />
+                        Roll Call Completion Register
+                      </CardTitle>
+                      <CardDescription className="text-xs text-slate-500 mt-0.5">
+                        Mark morning and afternoon attendance. Writes directly to shared admin storage keys.
+                      </CardDescription>
+                    </div>
+        
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={handleSaveAttendance}
+                        disabled={isSaving || totalLearnersCount === 0 || (isTimeLocked && !isAdministrator)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
+                      >
+                        <Save className="w-4 h-4" />
+                        {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
+                      </Button>
+                    </div>
+                  </div>
 
           {/* Filter Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-200/60">
@@ -685,18 +785,18 @@ export default function Attendance() {
           </div>
 
           <div className="bg-slate-50 p-4 border-t border-slate-200 flex items-center justify-between">
-            <p className="text-xs text-slate-500">
-              Legend: <strong>P</strong> = Present, <strong>A</strong> = Absent, <strong>L</strong> = Late, <strong>E</strong> = Excused
-            </p>
-            <Button
-              onClick={handleSaveAttendance}
-              disabled={isSaving || totalLearnersCount === 0}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
-            >
-              <Save className="w-4 h-4" />
-              {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
-            </Button>
-          </div>
+                      <p className="text-xs text-slate-500">
+                        Legend: <strong>P</strong> = Present, <strong>A</strong> = Absent, <strong>L</strong> = Late, <strong>E</strong> = Excused
+                      </p>
+                      <Button
+                        onClick={handleSaveAttendance}
+                        disabled={isSaving || totalLearnersCount === 0 || (isTimeLocked && !isAdministrator)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
+                      >
+                        <Save className="w-4 h-4" />
+                        {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
+                      </Button>
+                    </div>
         </CardContent>
       </Card>
     </div>
