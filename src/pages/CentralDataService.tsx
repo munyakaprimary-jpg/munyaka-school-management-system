@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSchoolStore } from '@/store/useSchoolStore';
@@ -177,7 +179,7 @@ export default function CentralDataServicePage() {
     exportMasterJSON();
   };
 
-  const handleMasterSystemSyncAndExport = () => {
+  const handleMasterSystemSyncAndExport = async () => {
     try {
       setLoading(true);
       const masterBundle: Record<string, any> = {};
@@ -205,24 +207,53 @@ export default function CentralDataServicePage() {
       };
 
       const jsonString = JSON.stringify(structuredPayload, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
       const dateStr = new Date().toISOString().split('T')[0];
-      link.download = `munyaka_master_backup_${dateStr}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const fileName = `munyaka_master_backup_${dateStr}.json`;
 
-      showSuccess("Universal Master System Sync & Export completed successfully!");
+      if (Capacitor.isNativePlatform()) {
+        try {
+          // Request permissions if needed
+          try {
+            await Filesystem.requestPermissions();
+          } catch (permErr) {
+            console.warn('Filesystem permission request note:', permErr);
+          }
+
+          // Write file to device Documents directory
+          await Filesystem.writeFile({
+            path: fileName,
+            data: jsonString,
+            directory: Directory.Documents,
+            encoding: 'utf8' as any
+          });
+
+          showSuccess(`Master backup successfully saved to device Documents folder as ${fileName}!`);
+        } catch (nativeErr: any) {
+          console.error('Native filesystem write error, falling back to browser download:', nativeErr);
+          triggerBrowserDownload(jsonString, fileName);
+        }
+      } else {
+        triggerBrowserDownload(jsonString, fileName);
+      }
     } catch (err: any) {
       console.error('Master export error:', err);
       showError('Failed to export master system bundle: ' + (err?.message || err));
     } finally {
       setLoading(false);
     }
+  };
+
+  const triggerBrowserDownload = (jsonString: string, fileName: string) => {
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showSuccess(`Universal Master System Sync & Export completed successfully! Downloaded ${fileName}.`);
   };
 
   const handleClearOldLogs = () => {
