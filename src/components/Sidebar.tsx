@@ -70,7 +70,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'owner', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'] },
-    { icon: BookOpen, label: 'Subject Allocations', path: '/subject-allocations', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
@@ -79,6 +78,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Management', path: '/staff', roles: ['admin', 'head_teacher'] },
+    { icon: BookOpen, label: 'Subject Allocations', path: '/subject-allocations', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: School, label: 'Developer Hub / Tenants', path: '/dev/tenants', roles: ['owner', 'admin'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
     { icon: User, label: 'Profile Settings', path: '/settings/profile', roles: ['admin', 'owner'] },
