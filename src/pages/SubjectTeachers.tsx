@@ -73,7 +73,7 @@ export default function SubjectTeachersPage() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const getLevelForGrade = (grade: string): string => {
-    const g = grade.toLowerCase();
+    const g = (grade || '').toLowerCase();
     if (g.includes('pp1') || g.includes('pp2')) return 'Pre-Primary';
     if (g.includes('grade 1') || g.includes('grade 2') || g.includes('grade 3')) return 'Lower Primary';
     if (g.includes('grade 4') || g.includes('grade 5') || g.includes('grade 6')) return 'Upper Primary';
@@ -96,7 +96,7 @@ export default function SubjectTeachersPage() {
   const loadStaff = () => {
     let list: any[] = [];
     try {
-      // Always read directly from munyaka_staff_db and fallback master keys first
+      // Always read directly from munyaka_staff_db and all known keys
       const keys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
       for (const k of keys) {
         const raw = localStorage.getItem(k);
@@ -130,9 +130,9 @@ export default function SubjectTeachersPage() {
   };
 
   const filteredStaff = staffList.filter(s => 
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.phone.includes(searchTerm)
+    (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.role || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.phone || '').includes(searchTerm)
   );
 
   const handleOpenAssign = (staff: MasterStaffRecord) => {
