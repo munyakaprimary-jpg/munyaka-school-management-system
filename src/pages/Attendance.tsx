@@ -439,53 +439,57 @@ export default function Attendance() {
     </div>
 
     <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-          {bypassCutoff ? <Unlock className="w-4 h-4 text-emerald-300" /> : <Lock className="w-4 h-4 text-amber-300" />}
-          <span>Time-Lock Bypass:</span>
-        </div>
-        <Button
-          size="sm"
-          variant={bypassCutoff ? 'default' : 'outline'}
-          className={`h-7 text-xs px-3 ${bypassCutoff ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-none' : 'bg-white/10 text-white hover:bg-white/20 border-white/20'}`}
-          onClick={() => {
-            setBypassCutoff(!bypassCutoff);
-            toast.success(bypassCutoff ? 'Time cutoff lock active.' : 'Time cutoff restrictions bypassed for testing!');
-          }}
-        >
-          {bypassCutoff ? 'Bypassed (Dev/Testing)' : 'Enforced'}
-        </Button>
-      </div>
+      {isAdmin && (
+        <>
+          <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+              {bypassCutoff ? <Unlock className="w-4 h-4 text-emerald-300" /> : <Lock className="w-4 h-4 text-amber-300" />}
+              <span>Time-Lock Bypass:</span>
+            </div>
+            <Button
+              size="sm"
+              variant={bypassCutoff ? 'default' : 'outline'}
+              className={`h-7 text-xs px-3 ${bypassCutoff ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-none' : 'bg-white/10 text-white hover:bg-white/20 border-white/20'}`}
+              onClick={() => {
+                setBypassCutoff(!bypassCutoff);
+                toast.success(bypassCutoff ? 'Time cutoff lock active.' : 'Time cutoff restrictions bypassed for testing!');
+              }}
+            >
+              {bypassCutoff ? 'Bypassed (Dev/Testing)' : 'Enforced'}
+            </Button>
+          </div>
 
-      <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-          {manualMorningLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
-          <span>Manual Morning:</span>
-        </div>
-        <Button
-          size="sm"
-          variant={manualMorningLock ? 'destructive' : 'outline'}
-          className={`h-7 text-xs px-3 ${manualMorningLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
-          onClick={toggleManualMorningLock}
-        >
-          {manualMorningLock ? 'Locked' : 'Unlocked'}
-        </Button>
-      </div>
+          <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+              {manualMorningLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
+              <span>Manual Morning:</span>
+            </div>
+            <Button
+              size="sm"
+              variant={manualMorningLock ? 'destructive' : 'outline'}
+              className={`h-7 text-xs px-3 ${manualMorningLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
+              onClick={toggleManualMorningLock}
+            >
+              {manualMorningLock ? 'Locked' : 'Unlocked'}
+            </Button>
+          </div>
 
-      <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-          {manualAfternoonLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
-          <span>Manual Afternoon:</span>
-        </div>
-        <Button
-          size="sm"
-          variant={manualAfternoonLock ? 'destructive' : 'outline'}
-          className={`h-7 text-xs px-3 ${manualAfternoonLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
-          onClick={toggleManualAfternoonLock}
-        >
-          {manualAfternoonLock ? 'Locked' : 'Unlocked'}
-        </Button>
-      </div>
+          <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+              {manualAfternoonLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
+              <span>Manual Afternoon:</span>
+            </div>
+            <Button
+              size="sm"
+              variant={manualAfternoonLock ? 'destructive' : 'outline'}
+              className={`h-7 text-xs px-3 ${manualAfternoonLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
+              onClick={toggleManualAfternoonLock}
+            >
+              {manualAfternoonLock ? 'Locked' : 'Unlocked'}
+            </Button>
+          </div>
+        </>
+      )}
 
       <Button
         onClick={() => {
