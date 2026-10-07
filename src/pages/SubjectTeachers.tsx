@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, BookOpen, Plus, Trash2 } from 'lucide-react';
+import { Search, BookOpen, Plus, Trash2, Edit2 } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { showSuccess, showError } from '@/utils/toast';
 import { getStaffMaster, updateStaffMaster, type MasterStaffRecord } from '@/services/staffMasterService';
@@ -69,6 +69,8 @@ export default function SubjectTeachersPage() {
   const [newGrade, setNewGrade] = useState('Grade 7');
   const [newStream, setNewStream] = useState('Mercury');
   const [newSubj, setNewSubj] = useState('');
+
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const getLevelForGrade = (grade: string): string => {
     const g = grade.toLowerCase();
@@ -153,16 +155,35 @@ export default function SubjectTeachersPage() {
   };
 
   const handleAddAllocation = () => {
-    const exists = allocations.some(d => d.subject === newSubj && d.grade === newGrade && d.stream === newStream);
+    const exists = allocations.some((d, i) => i !== editingIndex && d.subject === newSubj && d.grade === newGrade && d.stream === newStream);
     if (exists) {
       showError('This exact subject, grade, and stream combination is already assigned.');
       return;
     }
-    setAllocations([
-      ...allocations,
-      { subject: newSubj, grade: newGrade, stream: newStream }
-    ]);
-    showSuccess('Added subject allocation.');
+
+    if (editingIndex !== null) {
+      const updated = [...allocations];
+      updated[editingIndex] = { subject: newSubj, grade: newGrade, stream: newStream };
+      setAllocations(updated);
+      setEditingIndex(null);
+      showSuccess('Updated subject allocation.');
+    } else {
+      setAllocations([
+        ...allocations,
+        { subject: newSubj, grade: newGrade, stream: newStream }
+      ]);
+      showSuccess('Added subject allocation.');
+    }
+  };
+
+  const handleEditAllocation = (index: number) => {
+    const item = allocations[index];
+    if (item) {
+      setNewGrade(item.grade);
+      setNewStream(item.stream);
+      setNewSubj(item.subject);
+      setEditingIndex(index);
+    }
   };
 
   const handleRemoveAllocation = (index: number) => {
@@ -448,12 +469,22 @@ export default function SubjectTeachersPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-1">
-                <Button 
+              <div className="flex justify-between items-center pt-1">
+                {editingIndex !== null ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setEditingIndex(null); }}
+                    className="text-xs text-slate-500 hover:text-slate-700"
+                  >
+                    Cancel Edit
+                  </Button>
+                ) : <div />}
+                <Button
                   onClick={handleAddAllocation}
-                  className="h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold gap-1.5 shadow-sm"
+                  className="h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold gap-1.5 shadow-sm ml-auto"
                 >
-                  <Plus size={14} /> Add Allocation
+                  <Plus size={14} /> {editingIndex !== null ? 'Update Allocation' : 'Add Allocation'}
                 </Button>
               </div>
             </Card>
@@ -479,14 +510,26 @@ export default function SubjectTeachersPage() {
                         </div>
                       </div>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => handleRemoveAllocation(idx)}
-                      className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8 w-8 p-0 rounded-xl"
-                    >
-                      <Trash2 size={15} />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditAllocation(idx)}
+                        className={`h-8 w-8 p-0 rounded-xl ${editingIndex === idx ? 'bg-indigo-100 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                        title="Edit Allocation"
+                      >
+                        <Edit2 size={15} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRemoveAllocation(idx)}
+                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 h-8 w-8 p-0 rounded-xl"
+                        title="Delete Allocation"
+                      >
+                        <Trash2 size={15} />
+                      </Button>
+                    </div>
                   </div>
                 ))
               )}
