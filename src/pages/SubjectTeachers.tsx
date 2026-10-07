@@ -220,41 +220,23 @@ export default function SubjectTeachersPage() {
       // 1. Update master store service
       updateStaffMaster(selectedStaff.id, updatePayload);
 
-      // 2. Commit directly across localStorage keys including munyaka_staff_db
+      // 2. Commit directly to munyaka_staff_db and munyaka_staff_master_v1
       try {
-        const keys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
-        for (const k of keys) {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              const updated = parsed.map((s: any) => {
-                if (s.id === selectedStaff.id || s.staffId === selectedStaff.staffId || s.phone === selectedStaff.phone) {
-                  return { ...s, ...updatePayload };
-                }
-                return s;
-              });
-              localStorage.setItem(k, JSON.stringify(updated));
-            }
-          }
-        }
+        const rawDb = localStorage.getItem('munyaka_staff_db') || '[]';
+        let parsedDb = JSON.parse(rawDb);
+        if (!Array.isArray(parsedDb)) parsedDb = [];
 
-        // Also ensure munyaka_staff_db always has the full updated array
-        const primaryRaw = localStorage.getItem('munyaka_staff_db') || localStorage.getItem('munyaka_staff_master_v1') || '[]';
-        const primaryParsed = JSON.parse(primaryRaw);
-        if (Array.isArray(primaryParsed)) {
-          const exists = primaryParsed.some((s: any) => s.id === selectedStaff.id || s.staffId === selectedStaff.staffId);
-          let finalArr = primaryParsed;
-          if (!exists) {
-            finalArr = [{ ...selectedStaff, ...updatePayload }, ...primaryParsed];
-          } else {
-            finalArr = primaryParsed.map((s: any) => (s.id === selectedStaff.id || s.staffId === selectedStaff.staffId || s.phone === selectedStaff.phone) ? { ...s, ...updatePayload } : s);
-          }
-          localStorage.setItem('munyaka_staff_db', JSON.stringify(finalArr));
-          localStorage.setItem('munyaka_staff_master_v1', JSON.stringify(finalArr));
+        const exists = parsedDb.some((s: any) => s.id === selectedStaff.id || s.staffId === selectedStaff.staffId || s.phone === selectedStaff.phone);
+        let finalDb = parsedDb;
+        if (!exists) {
+          finalDb = [{ ...selectedStaff, ...updatePayload }, ...parsedDb];
+        } else {
+          finalDb = parsedDb.map((s: any) => (s.id === selectedStaff.id || s.staffId === selectedStaff.staffId || s.phone === selectedStaff.phone) ? { ...s, ...updatePayload } : s);
         }
+        localStorage.setItem('munyaka_staff_db', JSON.stringify(finalDb));
+        localStorage.setItem('munyaka_staff_master_v1', JSON.stringify(finalDb));
       } catch (lsErr) {
-        console.error('Direct localStorage persistence error:', lsErr);
+        console.error('munyaka_staff_db persistence error:', lsErr);
       }
 
       // 3. Immediately update React state for instant UI re-render without page refresh
