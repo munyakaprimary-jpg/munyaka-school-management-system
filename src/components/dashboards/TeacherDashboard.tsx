@@ -19,8 +19,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCentralData } from '@/hooks/useCentralData';
 import TeacherExportModule from '@/components/teacher/TeacherExportModule';
-import { Wifi, Copy, Check, QrCode, Monitor } from 'lucide-react';
-import { useState } from 'react';
 
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -81,15 +79,6 @@ const TeacherDashboard: React.FC = () => {
   const presentLearners = attendanceRecords.filter(
     (r) => matchingStudents.some((s) => s.id === r.studentId || s.admNo === r.studentId) && r.date === todayKey && (r.status === 'present' || r.status === 'late')
   ).length;
-
-  const [copiedUrl, setCopiedUrl] = useState(false);
-  const lanUrl = "http://192.168.182.181:4173";
-
-  const handleCopyLanUrl = () => {
-    navigator.clipboard.writeText(lanUrl);
-    setCopiedUrl(true);
-    setTimeout(() => setCopiedUrl(false), 2500);
-  };
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full font-sans">
@@ -235,7 +224,7 @@ const TeacherDashboard: React.FC = () => {
       </div>
 
       {/* Quick Sync & Profile Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="max-w-md">
         <Card className="rounded-3xl border-slate-200 bg-white shadow-sm flex flex-col justify-between">
           <div>
             <CardHeader className="p-6 border-b border-slate-100">
@@ -282,52 +271,6 @@ const TeacherDashboard: React.FC = () => {
               </div>
             </CardContent>
           </div>
-        </Card>
-
-        {/* LAN Network Connection Widget */}
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm flex flex-col justify-between overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-6 text-white">
-            <div className="flex items-center justify-between mb-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-bold text-emerald-100">
-                <Wifi size={14} className="text-emerald-300 animate-pulse" /> LAN Server Active
-              </div>
-              <span className="text-xs font-mono bg-black/20 px-2.5 py-1 rounded-lg text-emerald-200">Port 4173</span>
-            </div>
-            <h3 className="text-xl font-black tracking-tight">LAN Network Connection</h3>
-            <p className="text-xs text-emerald-100 mt-1">
-              Connect other devices on your Wi-Fi or router to access this portal.
-            </p>
-          </div>
-
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Server URL</label>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 font-mono text-sm font-bold text-slate-800 flex items-center gap-2 overflow-x-auto">
-                  <Monitor size={16} className="text-emerald-600 shrink-0" />
-                  <span className="truncate">{lanUrl}</span>
-                </div>
-                <Button
-                  onClick={handleCopyLanUrl}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-3 rounded-2xl shrink-0 flex items-center gap-1.5 transition-all shadow-sm"
-                >
-                  {copiedUrl ? <Check size={16} /> : <Copy size={16} />}
-                  <span>{copiedUrl ? 'Copied' : 'Copy'}</span>
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
-              <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <QrCode size={14} className="text-slate-600" /> Connection Instructions:
-              </p>
-              <ul className="text-xs text-slate-600 space-y-1 pl-4 list-disc font-medium">
-                <li>Ensure your phone, tablet, or laptop is connected to the same local Wi-Fi or router.</li>
-                <li>Open your mobile or workstation browser and enter <span className="font-mono font-bold text-emerald-700">{lanUrl}</span>.</li>
-                <li>Bookmark the page on your device for quick daily access to the teacher portal.</li>
-              </ul>
-            </div>
-          </CardContent>
         </Card>
       </div>
     </div>
