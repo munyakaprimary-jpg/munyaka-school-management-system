@@ -43,6 +43,14 @@ export default function Attendance() {
   const [manualAfternoonLock, setManualAfternoonLock] = useState<boolean>(() => {
     return localStorage.getItem('manual_afternoon_lock') === 'true';
   });
+
+  // Configurable Cutoff Time Settings
+  const [morningCutoffTime, setMorningCutoffTime] = useState<string>(() => {
+    return localStorage.getItem('attendance_morning_cutoff') || '09:40';
+  });
+  const [afternoonCutoffTime, setAfternoonCutoffTime] = useState<string>(() => {
+    return localStorage.getItem('attendance_afternoon_cutoff') || '15:00';
+  });
   
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { morning: string; afternoon: string; remarks: string }>>({});
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -59,22 +67,36 @@ export default function Attendance() {
 
     if (isAdmin && bypassCutoff) return false;
     
-    // If not admin or if bypassCutoff is toggled off for standard enforcement
     const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const currentTimeMinutes = currentHours * 60 + currentMinutes;
 
     if (session === 'morning') {
-      // 9:40 AM lock
-      return hours > 9 || (hours === 9 && minutes > 40);
+      const [mHours, mMinutes] = morningCutoffTime.split(':').map(Number);
+      const cutoffMinutes = (isNaN(mHours) ? 9 : mHours) * 60 + (isNaN(mMinutes) ? 40 : mMinutes);
+      return currentTimeMinutes > cutoffMinutes;
     } else {
-      // 15:00 hours lock
-      return hours >= 15;
+      const [aHours, aMinutes] = afternoonCutoffTime.split(':').map(Number);
+      const cutoffMinutes = (isNaN(aHours) ? 15 : aHours) * 60 + (isNaN(aMinutes) ? 0 : aMinutes);
+      return currentTimeMinutes >= cutoffMinutes;
     }
   };
 
   const morningLocked = checkIsLocked('morning');
   const afternoonLocked = checkIsLocked('afternoon');
+
+  const handleMorningCutoffChange = (newVal: string) => {
+    setMorningCutoffTime(newVal);
+    localStorage.setItem('attendance_morning_cutoff', newVal);
+    toast.success(`Morning attendance cutoff updated to ${newVal}`);
+  };
+
+  const handleAfternoonCutoffChange = (newVal: string) => {
+    setAfternoonCutoffTime(newVal);
+    localStorage.setItem('attendance_afternoon_cutoff', newVal);
+    toast.success(`Afternoon attendance cutoff updated to ${newVal}`);
+  };
 
   const toggleManualMorningLock = () => {
     const nextVal = !manualMorningLock;
@@ -485,8 +507,8 @@ export default function Attendance() {
       <div className="flex items-center gap-3">
         <Clock className="w-5 h-5 text-amber-600" />
         <div>
-          <p className="text-sm font-bold text-amber-900">Morning attendance is locked after 9:40 AM.</p>
-          <p className="text-xs text-amber-700">Submissions and status updates for morning sessions are restricted. {isAdmin ? 'Administrators can bypass using the toggle above.' : ''}</p>
+          <p className="text-sm font-bold text-amber-900">Morning attendance is locked after {morningCutoffTime}.</p>
+          <p className="text-xs text-amber-700">Submissions and status updates for morning sessions are restricted. {isAdmin ? 'Administrators can bypass using the toggle above or adjust cutoff time.' : ''}</p>
         </div>
       </div>
       <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Morning Locked</Badge>
@@ -498,12 +520,51 @@ export default function Attendance() {
       <div className="flex items-center gap-3">
         <Clock className="w-5 h-5 text-amber-600" />
         <div>
-          <p className="text-sm font-bold text-amber-900">Afternoon attendance is locked after 15:00.</p>
-          <p className="text-xs text-amber-700">Submissions and status updates for afternoon sessions are restricted. {isAdmin ? 'Administrators can bypass using the toggle above.' : ''}</p>
+          <p className="text-sm font-bold text-amber-900">Afternoon attendance is locked after {afternoonCutoffTime}.</p>
+          <p className="text-xs text-amber-700">Submissions and status updates for afternoon sessions are restricted. {isAdmin ? 'Administrators can bypass using the toggle above or adjust cutoff time.' : ''}</p>
         </div>
       </div>
       <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Afternoon Locked</Badge>
     </div>
+  )}
+
+  {/* Admin Cutoff Settings Box */}
+  {isAdmin && (
+    <Card className="border-indigo-100 bg-indigo-50/40 shadow-sm">
+      <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-indigo-950">Configurable Attendance Cutoff Times</h4>
+            <p className="text-xs text-indigo-700">Customize the exact locking hours for morning and afternoon sessions across the school.</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
+            <span className="text-xs font-semibold text-slate-700">Morning Cutoff:</span>
+            <input
+              type="time"
+              value={morningCutoffTime}
+              onChange={(e) => handleMorningCutoffChange(e.target.value)}
+              className="text-xs font-mono font-bold text-indigo-900 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
+            <span className="text-xs font-semibold text-slate-700">Afternoon Cutoff:</span>
+            <input
+              type="time"
+              value={afternoonCutoffTime}
+              onChange={(e) => handleAfternoonCutoffChange(e.target.value)}
+              className="text-xs font-mono font-bold text-indigo-900 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )}
 
       {/* Stats Overview */}
