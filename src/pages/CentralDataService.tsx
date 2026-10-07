@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSchoolStore } from '@/store/useSchoolStore';
@@ -54,34 +54,11 @@ export default function CentralDataServicePage() {
   const { learners, staff, fees, attendance, exams, marks, timetable, settings, refreshStore } = useSchoolStore();
   const { exportMasterJSON, importMasterJSON } = useSchoolContext();
 
-  useEffect(() => {
-    refreshStats();
-  }, []);
-
   const [pasteJsonInput, setPasteJsonInput] = useState('');
-
-  const handleCopyLiveStoreJson = async () => {
-    try {
-      const fullDump = CentralDataService.getFullStateDump();
-      const jsonStr = JSON.stringify(fullDump, null, 2);
-      await navigator.clipboard.writeText(jsonStr);
-      showSuccess('Successfully copied all live store JSON to clipboard!');
-    } catch (err: any) {
-      showError('Failed to copy to clipboard: ' + (err?.message || err));
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      try {
-        setLoading(true);
-        await importMasterJSON(file);
-      } finally {
-        setLoading(false);
-        if (e.target) e.target.value = '';
-      }
-    };
+  const [snapshotJson, setSnapshotJson] = useState('');
+  const [restoreJson, setRestoreJson] = useState('');
+  const [isRestoreOpen, setIsRestoreOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [stats, setStats] = useState({
     registeredStudents: 0,
@@ -98,12 +75,7 @@ export default function CentralDataServicePage() {
     settingsConfigured: 0,
   });
 
-  const [snapshotJson, setSnapshotJson] = useState('');
-  const [restoreJson, setRestoreJson] = useState('');
-  const [isRestoreOpen, setIsRestoreOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const refreshStats = () => {
+  const refreshStats = useCallback(() => {
     try {
       refreshStore();
       
@@ -140,15 +112,20 @@ export default function CentralDataServicePage() {
         ? attendance.length
         : Object.keys(attendance || {}).length;
 
-      const feeCount = Array.isArray(fees) ? fees.length : Object.keys(fees || {}).length;
-      const marksCount = Array.isArray(marks) ? marks.length : Object.keys(marks || {}).length;
+      const feeRecords = Array.isArray(fees)
+        ? fees.length
+        : Object.keys(fees || {}).length;
+
+      const marksCount = Array.isArray(marks)
+        ? marks.length
+        : Object.keys(marks || {}).length;
 
       setStats({
         registeredStudents: masterLearners.length,
-        teachingStaff: masterStaff.length,
+        teachingStaff,
         nonTeachingStaff,
         attendanceRecords: attendanceCount,
-        feeRecords: feeCount,
+        feeRecords,
         examsCount: Array.isArray(exams) ? exams.length : 0,
         marksCount,
         timetableCount: Array.isArray(timetable) ? timetable.length : Object.keys(timetable || {}).length,
@@ -160,7 +137,7 @@ export default function CentralDataServicePage() {
     } catch (e) {
       console.error('Error refreshing central data stats:', e);
     }
-  };
+  }, [refreshStore, learners, staff, fees, attendance, exams, marks, timetable, settings]);
 
   useEffect(() => {
     refreshStats();
@@ -171,7 +148,7 @@ export default function CentralDataServicePage() {
       window.removeEventListener('munyaka:data-changed', handleDataChange);
       window.removeEventListener('storage', handleDataChange);
     };
-  }, [learners, staff, fees, attendance, exams, marks, timetable, settings]);
+  }, [refreshStats]);
 
   const handleExportSeedData = async () => {
     exportMasterJSON();
