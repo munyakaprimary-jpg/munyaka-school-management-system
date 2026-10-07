@@ -36,6 +36,14 @@ export default function Attendance() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [bypassCutoff, setBypassCutoff] = useState<boolean>(true);
   
+  // Independent Manual Attendance Locks
+  const [manualMorningLock, setManualMorningLock] = useState<boolean>(() => {
+    return localStorage.getItem('manual_morning_lock') === 'true';
+  });
+  const [manualAfternoonLock, setManualAfternoonLock] = useState<boolean>(() => {
+    return localStorage.getItem('manual_afternoon_lock') === 'true';
+  });
+  
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { morning: string; afternoon: string; remarks: string }>>({});
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
@@ -46,7 +54,11 @@ export default function Attendance() {
   const isAdmin = user?.role === 'admin' || user?.role === 'head_teacher' || user?.role === 'owner' || user?.email?.includes('admin');
 
   const checkIsLocked = (session: 'morning' | 'afternoon') => {
+    if (session === 'morning' && manualMorningLock) return true;
+    if (session === 'afternoon' && manualAfternoonLock) return true;
+
     if (isAdmin && bypassCutoff) return false;
+    
     // If not admin or if bypassCutoff is toggled off for standard enforcement
     const now = new Date();
     const hours = now.getHours();
@@ -63,6 +75,20 @@ export default function Attendance() {
 
   const morningLocked = checkIsLocked('morning');
   const afternoonLocked = checkIsLocked('afternoon');
+
+  const toggleManualMorningLock = () => {
+    const nextVal = !manualMorningLock;
+    setManualMorningLock(nextVal);
+    localStorage.setItem('manual_morning_lock', String(nextVal));
+    toast.success(nextVal ? 'Manual Morning Attendance Lock enabled.' : 'Manual Morning Attendance Lock released.');
+  };
+
+  const toggleManualAfternoonLock = () => {
+    const nextVal = !manualAfternoonLock;
+    setManualAfternoonLock(nextVal);
+    localStorage.setItem('manual_afternoon_lock', String(nextVal));
+    toast.success(nextVal ? 'Manual Afternoon Attendance Lock enabled.' : 'Manual Afternoon Attendance Lock released.');
+  };
 
   // 1. Master State Synchronization: Pull from primary master learners store
   useEffect(() => {
@@ -406,6 +432,36 @@ export default function Attendance() {
           }}
         >
           {bypassCutoff ? 'Bypassed (Dev/Testing)' : 'Enforced'}
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+          {manualMorningLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
+          <span>Manual Morning:</span>
+        </div>
+        <Button
+          size="sm"
+          variant={manualMorningLock ? 'destructive' : 'outline'}
+          className={`h-7 text-xs px-3 ${manualMorningLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
+          onClick={toggleManualMorningLock}
+        >
+          {manualMorningLock ? 'Locked' : 'Unlocked'}
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+          {manualAfternoonLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
+          <span>Manual Afternoon:</span>
+        </div>
+        <Button
+          size="sm"
+          variant={manualAfternoonLock ? 'destructive' : 'outline'}
+          className={`h-7 text-xs px-3 ${manualAfternoonLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
+          onClick={toggleManualAfternoonLock}
+        >
+          {manualAfternoonLock ? 'Locked' : 'Unlocked'}
         </Button>
       </div>
 
