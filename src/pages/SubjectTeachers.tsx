@@ -92,31 +92,39 @@ export default function SubjectTeachersPage() {
   }, []);
 
   const loadStaff = () => {
-    const list = getStaffMaster();
+    let list: any[] = [];
     try {
-      const raw = localStorage.getItem('munyaka_staff_master_v1') || localStorage.getItem('staff') || '[]';
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const merged = list.map(s => {
-          const found = parsed.find((p: any) => p.id === s.id || p.staffId === s.staffId || p.phone === s.phone);
-          if (found) {
-            const listAllocations = found.allocations || found.detailedAssignments || found.subjectAllocations || found.assignedStreams || s.allocations || [];
-            return { 
-              ...s, 
-              allocations: listAllocations,
-              detailedAssignments: listAllocations,
-              subjectAllocations: listAllocations,
-              assignedStreams: listAllocations,
-              assignedSubjects: found.assignedSubjects || s.assignedSubjects 
-            };
+      // Always read directly from munyaka_staff_db and fallback master keys first
+      const keys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            list = parsed;
+            break;
           }
-          return s;
-        });
-        setStaffList(merged);
-        return;
+        }
       }
     } catch {}
-    setStaffList(list);
+
+    if (list.length === 0) {
+      list = getStaffMaster();
+    }
+
+    const normalized = list.map(s => {
+      const listAllocations = s.allocations || s.detailedAssignments || s.subjectAllocations || s.assignedStreams || [];
+      return {
+        ...s,
+        id: s.id || s.staffId || `staff_${Math.random()}`,
+        allocations: listAllocations,
+        detailedAssignments: listAllocations,
+        subjectAllocations: listAllocations,
+        assignedStreams: listAllocations
+      };
+    });
+
+    setStaffList(normalized);
   };
 
   const filteredStaff = staffList.filter(s => 
@@ -179,9 +187,9 @@ export default function SubjectTeachersPage() {
       // 1. Update master store service
       updateStaffMaster(selectedStaff.id, updatePayload);
 
-      // 2. Commit directly across localStorage keys
+      // 2. Commit directly across localStorage keys including munyaka_staff_db
       try {
-        const keys = ['munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+        const keys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
         for (const k of keys) {
           const raw = localStorage.getItem(k);
           if (raw) {
@@ -197,13 +205,28 @@ export default function SubjectTeachersPage() {
             }
           }
         }
+
+        // Also ensure munyaka_staff_db always has the full updated array
+        const primaryRaw = localStorage.getItem('munyaka_staff_db') || localStorage.getItem('munyaka_staff_master_v1') || '[]';
+        const primaryParsed = JSON.parse(primaryRaw);
+        if (Array.isArray(primaryParsed)) {
+          const exists = primaryParsed.some((s: any) => s.id === selectedStaff.id || s.staffId === selectedStaff.staffId);
+          let finalArr = primaryParsed;
+          if (!exists) {
+            finalArr = [{ ...selectedStaff, ...updatePayload }, ...primaryParsed];
+          } else {
+            finalArr = primaryParsed.map((s: any) => (s.id === selectedStaff.id || s.staffId === selectedStaff.staffId || s.phone === selectedStaff.phone) ? { ...s, ...updatePayload } : s);
+          }
+          localStorage.setItem('munyaka_staff_db', JSON.stringify(finalArr));
+          localStorage.setItem('munyaka_staff_master_v1', JSON.stringify(finalArr));
+        }
       } catch (lsErr) {
         console.error('Direct localStorage persistence error:', lsErr);
       }
 
       // 3. Immediately update React state for instant UI re-render without page refresh
       const updatedStaffList = staffList.map(st => {
-        if (st.id === selectedStaff.id || st.staffId === selectedStaff.staffId) {
+        if (st.id === selectedStaff.id || st.staffId === selectedStaff.staffId || st.phone === selectedStaff.phone) {
           return { ...st, ...updatePayload };
         }
         return st;
