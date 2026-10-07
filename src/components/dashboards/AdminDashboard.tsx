@@ -18,13 +18,26 @@ export const AdminDashboardComponent: React.FC = () => {
   // ── Centralized LocalStorage DB Sync (Exact match to Central Data Hub & Subject Allocations) ──
   const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => {
     try {
-      const keys = ['munyaka_learners_db', 'school_learners_master', 'school_learners_data', 'munyaka_students_db'];
+      const keys = ['munyaka_learners_db', 'school_learners_master', 'school_learners_data', 'munyaka_students_db', 'munyaka_students', 'students', 'learners'];
+      let all: any[] = [];
       for (const k of keys) {
         const raw = localStorage.getItem(k);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            all = [...all, ...parsed];
+          }
         }
+      }
+      if (all.length > 0) {
+        const map = new Map<string, any>();
+        all.forEach(l => {
+          if (l && (l.id || l.admissionNumber || l.admission_no || l.name)) {
+            const key = String(l.id || l.admissionNumber || l.admission_no || l.name).trim().toLowerCase();
+            if (!map.has(key)) map.set(key, l);
+          }
+        });
+        return Array.from(map.values());
       }
     } catch {}
     return getStoredLearners();
@@ -47,16 +60,28 @@ export const AdminDashboardComponent: React.FC = () => {
   useEffect(() => {
     const handleSync = () => {
       try {
-        const lKeys = ['munyaka_learners_db', 'school_learners_master', 'school_learners_data', 'munyaka_students_db'];
+        const lKeys = ['munyaka_learners_db', 'school_learners_master', 'school_learners_data', 'munyaka_students_db', 'munyaka_students', 'students', 'learners'];
+        let all: any[] = [];
         for (const k of lKeys) {
           const raw = localStorage.getItem(k);
           if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              setReactiveLearners(parsed);
-              break;
+              all = [...all, ...parsed];
             }
           }
+        }
+        if (all.length > 0) {
+          const map = new Map<string, any>();
+          all.forEach(l => {
+            if (l && (l.id || l.admissionNumber || l.admission_no || l.name)) {
+              const key = String(l.id || l.admissionNumber || l.admission_no || l.name).trim().toLowerCase();
+              if (!map.has(key)) map.set(key, l);
+            }
+          });
+          setReactiveLearners(Array.from(map.values()));
+        } else {
+          setReactiveLearners(getStoredLearners());
         }
 
         const sKeys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
@@ -73,6 +98,7 @@ export const AdminDashboardComponent: React.FC = () => {
       } catch {}
     };
 
+    handleSync();
     window.addEventListener('storage', handleSync);
     window.addEventListener('munyaka:data-changed', handleSync);
     window.addEventListener('munyaka_learners_updated', handleSync);
