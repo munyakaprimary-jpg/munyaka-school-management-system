@@ -55,9 +55,8 @@ export default function CentralDataServicePage() {
   const { exportMasterJSON, importMasterJSON } = useSchoolContext();
 
   useEffect(() => {
-    refreshStore();
     refreshStats();
-  }, [learners, staff, fees, attendance]);
+  }, []);
 
   const [pasteJsonInput, setPasteJsonInput] = useState('');
 
