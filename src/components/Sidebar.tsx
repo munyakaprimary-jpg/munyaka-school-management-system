@@ -70,7 +70,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'owner', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'] },
-    { icon: BookOpen, label: 'Subject Allocations', path: '/subject-allocations', roles: ['admin', 'head_teacher', 'teacher'] },
+    { icon: BookOpen, label: 'Subject Allocations', path: '/subject-allocations', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
@@ -132,17 +132,16 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
     if (isTeacherVariant && !isAdminOrOwner) {
       const teacherPaths = [
-        '/', '/students', '/teacher-communication', '/notices',
+        '/', '/subject-allocations', '/students', '/teacher-communication', '/notices',
         '/attendance', '/attendance/students', '/staff/check-in', '/staff/attendance',
         '/assessments', '/assessments/marked-scripts', '/analysis', '/digital-hub',
         '/digital-skills', '/practical-competencies', '/portfolio', '/library', '/study-corner',
         '/inventory', '/fees', '/reports', '/games', '/science-lab', '/lan-config', '/settings', '/settings/profile',
         '/question-creator', '/assessment-settings', '/grading', '/assessments/student', '/assessments/grading', '/assessments/create', '/assessments/list'
       ];
-      // Ensure '/teacher-communication' is explicitly present in the teacher menu items
-      const hasTeacherComm = teacherPaths.includes('/teacher-communication');
-      if (!hasTeacherComm) {
-        teacherPaths.push('/teacher-communication');
+      // Ensure '/subject-allocations' is explicitly included for teachers
+      if (!teacherPaths.includes('/subject-allocations')) {
+        teacherPaths.splice(1, 0, '/subject-allocations');
       }
       const items = menuItems.filter(item => teacherPaths.includes(item.path));
       return teacherPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
