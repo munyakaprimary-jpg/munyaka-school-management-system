@@ -115,6 +115,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Archive, label: 'Transferred Archive', path: '/transferred-archive', roles: ['admin'] },
     { icon: ArrowUpCircle, label: 'Promote Students', path: '/promote-students', roles: ['admin'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: Wifi, label: 'LAN Server Config', path: '/lan-server-config', roles: ['admin', 'owner', 'ict_technician', 'ict_teacher'] },
   ];
 
   const filteredMenu = React.useMemo(() => {
