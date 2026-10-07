@@ -212,7 +212,7 @@ export default function Attendance() {
       const minutes = now.getMinutes();
   
       if (session === 'morning') {
-        // Morning attendance locks after 9:40 AM (locked at 9:41 onward; exactly 9:40:00 still allowed)
+        // Morning attendance locks after 9:40 AM
         if (hours > 9 || (hours === 9 && minutes > 40)) {
           setTimeLockMessage('Morning attendance is locked after 9:40 AM.');
           setTimeLockedSession('morning');
@@ -220,8 +220,8 @@ export default function Attendance() {
           return true; // locked
         }
       } else if (session === 'afternoon') {
-        // Afternoon attendance locks after 15:00 (locked at 15:01 onward; exactly 15:00:00 still allowed)
-        if (hours > 15 || (hours === 15 && minutes > 0)) {
+        // Afternoon attendance locks after 15:00 (3:00 PM)
+        if (hours >= 15) {
           setTimeLockMessage('Afternoon attendance is locked after 15:00.');
           setTimeLockedSession('afternoon');
           setIsTimeLocked(true);
@@ -267,8 +267,8 @@ export default function Attendance() {
   
       // Morning session lock: past 9:40 AM
       const morningLocked = hours > 9 || (hours === 9 && minutes > 40);
-      // Afternoon session lock: past 15:00 (i.e., 15:01 onward; exactly 15:00:00 still allowed)
-      const afternoonLocked = hours > 15 || (hours === 15 && minutes > 0);
+      // Afternoon session lock: 15:00 or later
+      const afternoonLocked = hours >= 15;
   
       // Administrators can bypass the time lock
       if (!isAdministrator) {
