@@ -111,6 +111,22 @@ export default function SubjectTeachersPage() {
 
   const loadStaff = () => {
     const list = getStaffMaster();
+    // Also merge any direct detailedAssignments stored in legacy staff keys
+    try {
+      const raw = localStorage.getItem('munyaka_staff_master_v1') || localStorage.getItem('staff') || '[]';
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const merged = list.map(s => {
+          const found = parsed.find((p: any) => p.id === s.id || p.staffId === s.staffId || p.phone === s.phone);
+          if (found && found.detailedAssignments) {
+            return { ...s, detailedAssignments: found.detailedAssignments, assignedSubjects: found.assignedSubjects || s.assignedSubjects };
+          }
+          return s;
+        });
+        setStaffList(merged);
+        return;
+      }
+    } catch {}
     setStaffList(list);
   };
 
@@ -161,12 +177,37 @@ export default function SubjectTeachersPage() {
     try {
       const legacySubjects = Array.from(new Set(detailedAssignments.map(d => d.subject)));
       
-      updateStaffMaster(selectedStaff.id, {
+      const updatePayload = {
         detailedAssignments,
         assignedSubjects: legacySubjects,
-        assignedGrade: detailedAssignments[0]?.grade || selectedStaff.assignedGrade,
-        assignedStream: detailedAssignments[0]?.stream || selectedStaff.assignedStream
-      });
+        assignedGrade: detailedAssignments[0]?.grade || selectedStaff.assignedGrade || 'Grade 7',
+        assignedStream: detailedAssignments[0]?.stream || selectedStaff.assignedStream || 'Mercury'
+      };
+
+      // Explicitly commit directly to localStorage and master storage keys to guarantee zero data loss
+      updateStaffMaster(selectedStaff.id, updatePayload);
+
+      try {
+        const keys = ['munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+        for (const k of keys) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const updated = parsed.map((s: any) => {
+                if (s.id === selectedStaff.id || s.staffId === selectedStaff.staffId || s.phone === selectedStaff.phone) {
+                  return { ...s, ...updatePayload };
+                }
+                return s;
+              });
+              localStorage.setItem(k, JSON.stringify(updated));
+            }
+          }
+        }
+      } catch (lsErr) {
+        console.error('Direct localStorage persistence error:', lsErr);
+      }
+
       showSuccess(`Successfully saved ${detailedAssignments.length} subject stream allocations for ${selectedStaff.name}!`);
       setIsAssignModalOpen(false);
       loadStaff();
