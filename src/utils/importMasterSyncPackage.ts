@@ -8,10 +8,7 @@ export interface MasterImportResult {
 
 export function validateMasterPackage(pkg: any): boolean {
   if (!pkg || typeof pkg !== 'object') return false;
-  if (!pkg.packageType || pkg.packageType !== 'munyaka_master_sync') {
-    // Also accept generic packages or v1 exports
-    if (!pkg.data && !pkg.exportVersion) return false;
-  }
+  if (!pkg.packageType && !pkg.data && !pkg.version && !pkg.exportVersion) return false;
   return true;
 }
 
@@ -22,73 +19,107 @@ export async function importMasterSyncPackage(file: File): Promise<MasterImportR
       try {
         const text = event.target?.result as string;
         const parsed = JSON.parse(text);
-        const payloadData = parsed.data || parsed; // support both formats
         
+        // Extract payload data supporting multiple nesting styles: parsed.data, parsed.munyaka_learners_db, or root level
+        const payloadData = parsed.data || parsed;
         const updatedKeys: string[] = [];
-        
-        // Iterate and save every table directly to localStorage
-        Object.keys(payloadData).forEach(key => {
-          const val = payloadData[key];
-          if (Array.isArray(val) || (val && typeof val === 'object')) {
-            try {
-              localStorage.setItem(key, JSON.stringify(val));
-              updatedKeys.push(key);
-            } catch (err) {
-              console.error(`Failed to store key ${key}:`, err);
-            }
-          }
-        });
 
-        // Also map standard keys to ensure compatibility with all views
+        // 1. Precise extraction of learners array from any possible location in master JSON package
+        let extractedLearners: any[] = [];
         if (Array.isArray(payloadData.learners)) {
-          localStorage.setItem('school_learners_master', JSON.stringify(payloadData.learners));
-          localStorage.setItem('munyaka_learners', JSON.stringify(payloadData.learners));
-        }
-        if (Array.isArray(payloadData.staff)) {
-          localStorage.setItem('staff_members', JSON.stringify(payloadData.staff));
-          localStorage.setItem('munyaka_staff_directory', JSON.stringify(payloadData.staff));
-        }
-        if (Array.isArray(payloadData.fees)) {
-          localStorage.setItem('fee_records', JSON.stringify(payloadData.fees));
-        }
-        if (payloadData.feeStructures || payloadData.fees_structure || payloadData.term_fees) {
-          const feesStruct = payloadData.feeStructures || payloadData.fees_structure || payloadData.term_fees;
-          localStorage.setItem('fee_structures', JSON.stringify(feesStruct));
-          localStorage.setItem('fees_structure', JSON.stringify(feesStruct));
-          localStorage.setItem('munyaka_fee_structures', JSON.stringify(feesStruct));
-          localStorage.setItem('term_fees', JSON.stringify(feesStruct));
-        }
-        if (Array.isArray(payloadData.attendance)) {
-          localStorage.setItem('munyaka_attendance_records', JSON.stringify(payloadData.attendance));
-        }
-        if (Array.isArray(payloadData.marks)) {
-          localStorage.setItem('munyaka_marks_records', JSON.stringify(payloadData.marks));
-        }
-        if (Array.isArray(payloadData.exams)) {
-          localStorage.setItem('all_set_exams', JSON.stringify(payloadData.exams));
-        }
-        if (Array.isArray(payloadData.library)) {
-          localStorage.setItem('munyaka_library_books', JSON.stringify(payloadData.library));
-        }
-        if (Array.isArray(payloadData.inventory)) {
-          localStorage.setItem('munyaka_store_items', JSON.stringify(payloadData.inventory));
-        }
-        if (Array.isArray(payloadData.streams)) {
-          localStorage.setItem('munyaka_streams', JSON.stringify(payloadData.streams));
-        }
-        if (payloadData.settings && typeof payloadData.settings === 'object') {
-          localStorage.setItem('munyaka_system_settings', JSON.stringify(payloadData.settings));
+          extractedLearners = payloadData.learners;
+        } else if (Array.isArray(payloadData.munyaka_learners_db)) {
+          extractedLearners = payloadData.munyaka_learners_db;
+        } else if (Array.isArray(payloadData.school_learners_master)) {
+          extractedLearners = payloadData.school_learners_master;
+        } else if (Array.isArray(payloadData.school_learners_data)) {
+          extractedLearners = payloadData.school_learners_data;
+        } else if (Array.isArray(payloadData.munyaka_students)) {
+          extractedLearners = payloadData.munyaka_students;
+        } else if (Array.isArray(payloadData.students)) {
+          extractedLearners = payloadData.students;
+        } else if (Array.isArray(parsed.learners)) {
+          extractedLearners = parsed.learners;
+        } else if (Array.isArray(parsed.munyaka_learners_db)) {
+          extractedLearners = parsed.munyaka_learners_db;
+        } else {
+          // Search any key in payloadData or parsed that is an array containing learner-like items (e.g. has admNo, admissionNo, or name)
+          const allCandidateObjects = [payloadData, parsed];
+          for (const container of allCandidateObjects) {
+            if (container && typeof container === 'object') {
+              for (const k of Object.keys(container)) {
+                const val = container[k];
+                if (Array.isArray(val) && val.length > 0) {
+                  // Check if items look like learners
+                  const sample = val[0];
+                  if (sample && typeof sample === 'object' && (sample.admNo || sample.admissionNo || sample.grade || sample.guardian || (sample.name && sample.id))) {
+                    extractedLearners = val;
+                    break;
+                  }
+                }
+              }
+            }
+            if (extractedLearners.length > 0) break;
+          }
         }
 
-        showSuccess('Master sync package imported successfully! Refreshing app...');
-        
+        console.log(`[MasterImport] Extracted learners count: ${extractedLearners.length}`);
+
+        // 2. Write the full array directly into munyaka_learners_db and all synchronized learner keys
+        if (extractedLearners.length > 0) {
+          const learnersJson = JSON.stringify(extractedLearners);
+          localStorage.setItem('munyaka_learners_db', learnersJson);
+          localStorage.setItem('munyaka_central_db', learnersJson);
+          localStorage.setItem('school_learners_master', learnersJson);
+          localStorage.setItem('school_learners_data', learnersJson);
+          localStorage.setItem('munyaka_students', learnersJson);
+          localStorage.setItem('students', learnersJson);
+          updatedKeys.push('munyaka_learners_db', 'school_learners_master', 'school_learners_data');
+        }
+
+        // 3. Iterate and save every other table / key found in the master package
+        const recordsToSave = payloadData.data || payloadData;
+        if (recordsToSave && typeof recordsToSave === 'object') {
+          Object.keys(recordsToSave).forEach(key => {
+            if (key === 'learners' || key === 'munyaka_learners_db' || key === 'school_learners_master') return; // already handled
+            const val = recordsToSave[key];
+            if (val !== undefined && val !== null) {
+              try {
+                localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+                updatedKeys.push(key);
+              } catch (err) {
+                console.error(`Failed to store master key ${key}:`, err);
+              }
+            }
+          });
+        }
+
+        // Also check root parsed keys if different
+        if (parsed && typeof parsed === 'object') {
+          Object.keys(parsed).forEach(key => {
+            if (key === 'data' || key === 'learners' || key === 'munyaka_learners_db') return;
+            const val = parsed[key];
+            if (val !== undefined && val !== null && typeof val !== 'function') {
+              try {
+                localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+                if (!updatedKeys.includes(key)) updatedKeys.push(key);
+              } catch (err) {
+                console.error(`Failed to store root key ${key}:`, err);
+              }
+            }
+          });
+        }
+
+        showSuccess(`Master sync package imported successfully! (${extractedLearners.length} learners loaded). Refreshing dashboard...`);
+
+        // 4. Immediately trigger window.location.reload() upon successful import so dashboard re-initializes from scratch
         setTimeout(() => {
           window.location.reload();
-        }, 1000);
+        }, 800);
 
         resolve({
           success: true,
-          message: 'Master sync package imported successfully!',
+          message: `Master sync package imported successfully! ${extractedLearners.length} learners synchronized.`,
           updatedKeys
         });
       } catch (err: any) {
