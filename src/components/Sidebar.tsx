@@ -150,6 +150,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
+          {!isCollapsed && (
+            <Link className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors mb-2 border border-blue-500/30 bg-blue-500/10 text-white" to="/lan-config">
+              <Wifi className="w-5 h-5 text-blue-400 shrink-0"/>
+              <span className="truncate flex-1 font-bold">LAN Server Config</span>
+            </Link>
+          )}
+
           {/* Staff Management link block */}
           {filteredMenu.map((item, idx) => {
             const Icon = item.icon;
