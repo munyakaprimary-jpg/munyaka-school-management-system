@@ -14,56 +14,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export const AdminDashboardComponent: React.FC = () => {
   const navigate = useNavigate();
-  const storeLearners = useSchoolStore(state => state.learners);
-  const storeStaff = useSchoolStore(state => state.staff);
 
-  useEffect(() => {
-    try {
-      const syncFn = (useSchoolStore.getState() as any).syncFromStorage;
-      if (typeof syncFn === 'function') {
-        syncFn();
-      }
-    } catch {}
-  }, []);
-
-  // Use unified central data source and reactive state for consistent student counts across Admin & Teacher dashboards
+  // ── Centralized LocalStorage DB Sync (Exact match to Central Data Hub & Subject Allocations) ──
   const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => {
     try {
-      const raw = localStorage.getItem('munyaka_learners_db') || localStorage.getItem('school_learners_master') || localStorage.getItem('school_learners_data');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const keys = ['munyaka_learners_db', 'school_learners_master', 'school_learners_data', 'munyaka_students_db'];
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
       }
     } catch {}
     return getStoredLearners();
   });
 
-  useEffect(() => {
-    const handleReactiveStorage = () => {
-      try {
-        const fresh = getStoredLearners();
-        if (Array.isArray(fresh) && fresh.length > 0) {
-          setReactiveLearners(fresh);
-        }
-      } catch {}
-    };
-
-    window.addEventListener('storage', handleReactiveStorage);
-    window.addEventListener('munyaka:data-changed', handleReactiveStorage);
-    window.addEventListener('munyaka_learners_updated', handleReactiveStorage);
-
-    return () => {
-      window.removeEventListener('storage', handleReactiveStorage);
-      window.removeEventListener('munyaka:data-changed', handleReactiveStorage);
-      window.removeEventListener('munyaka_learners_updated', handleReactiveStorage);
-    };
-  }, []);
-
-  const learners = reactiveLearners.length > 0 ? reactiveLearners : getStoredLearners();
-
   const [localStaff, setLocalStaff] = useState<any[]>(() => {
     try {
-      const keys = ['munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+      const keys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
       for (const k of keys) {
         const raw = localStorage.getItem(k);
         if (raw) {
@@ -76,31 +45,49 @@ export const AdminDashboardComponent: React.FC = () => {
   });
 
   useEffect(() => {
-    const handleStorage = () => {
+    const handleSync = () => {
       try {
-        const keys = ['munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
-        for (const k of keys) {
+        const lKeys = ['munyaka_learners_db', 'school_learners_master', 'school_learners_data', 'munyaka_students_db'];
+        for (const k of lKeys) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setReactiveLearners(parsed);
+              break;
+            }
+          }
+        }
+
+        const sKeys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+        for (const k of sKeys) {
           const raw = localStorage.getItem(k);
           if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
               setLocalStaff(parsed);
-              return;
+              break;
             }
           }
         }
       } catch {}
     };
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('munyaka:data-changed', handleStorage);
+
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('munyaka:data-changed', handleSync);
+    window.addEventListener('munyaka_learners_updated', handleSync);
+    window.addEventListener('staff-changed', handleSync);
+
     return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('munyaka:data-changed', handleStorage);
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('munyaka:data-changed', handleSync);
+      window.removeEventListener('munyaka_learners_updated', handleSync);
+      window.removeEventListener('staff-changed', handleSync);
     };
   }, []);
 
-  const rawStoreStaff = useSchoolStore(state => state.staff);
-  const staff = (rawStoreStaff && rawStoreStaff.length > 0) ? rawStoreStaff : (localStaff.length > 0 ? localStaff : (CentralDataService.getStaff() || []));
+  const learners = reactiveLearners.length > 0 ? reactiveLearners : getStoredLearners();
+  const staff = localStaff.length > 0 ? localStaff : (CentralDataService.getStaff() || []);
 
   const teaching = staff.filter((s: any) => {
     const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
@@ -217,7 +204,7 @@ export const AdminDashboardComponent: React.FC = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Admin Dashboard</h1>
-          <p className="text-sm text-gray-500">Live operational metrics for Munyaka Primary and Junior School.</p>
+          <p className="text-sm text-gray-500">Live operational metrics synchronized with the master database.</p>
         </div>
         <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 px-3 py-1 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -389,7 +376,6 @@ export const AdminDashboardComponent: React.FC = () => {
             </TableHeader>
             <TableBody>
               {(() => {
-                // Compute real aggregates from live master learners and roll call attendance records
                 let learnersList: any[] = [];
                 let attendanceLogs: Record<string, any> = {};
                 try {
@@ -415,7 +401,6 @@ export const AdminDashboardComponent: React.FC = () => {
                   attendanceLogs = {};
                 }
 
-                // Group learners by unique normalized Grade & Stream
                 const streamMap: Record<string, { grade: string; stream: string; learners: any[] }> = {};
                 
                 learnersList.forEach(l => {
@@ -430,7 +415,6 @@ export const AdminDashboardComponent: React.FC = () => {
 
                 const streamKeys = Object.keys(streamMap);
 
-                // Fallback if no streams found in learners database
                 if (streamKeys.length === 0) {
                   return (
                     <TableRow>
@@ -446,7 +430,6 @@ export const AdminDashboardComponent: React.FC = () => {
                   const enrolled = group.learners.length;
                   const streamName = `${group.grade} - ${group.stream}`;
 
-                  // Search for today's or most recent roll call record for this specific grade and stream
                   let morningPresent = 0;
                   let afternoonPresent = 0;
                   let hasMarkedRecord = false;
@@ -469,7 +452,6 @@ export const AdminDashboardComponent: React.FC = () => {
                     }
                   });
 
-                  // If no specific roll call record exists yet for this stream, use actual enrolled learners count with realistic defaults
                   const effectiveMorning = hasMarkedRecord ? morningPresent : Math.round(enrolled * 0.94);
                   const effectiveAfternoon = hasMarkedRecord ? afternoonPresent : Math.round(enrolled * 0.91);
                   const morningRate = enrolled > 0 ? Math.round((effectiveMorning / enrolled) * 100) : 0;
