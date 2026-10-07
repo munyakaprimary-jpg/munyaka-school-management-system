@@ -31,16 +31,15 @@ export default function Attendance() {
   const [streams, setStreams] = useState<string[]>([]);
   
   const [selectedGrade, setSelectedGrade] = useState<string>('all');
-    const [selectedStream, setSelectedStream] = useState<string>('all');
-    const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-    const [searchQuery, setSearchQuery] = useState<string>('');
-    
-    const [attendanceMap, setAttendanceMap] = useState<Record<string, { morning: string; afternoon: string; remarks: string }>>({});
-    const [isSaving, setIsSaving] = useState<boolean>(false);
-    const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
-    const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
-    const [timeLockMessage, setTimeLockMessage] = useState<string>('');
-    const [isTimeLocked, setIsTimeLocked] = useState<boolean>(false);
+  const [selectedStream, setSelectedStream] = useState<string>('all');
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [bypassCutoff, setBypassCutoff] = useState<boolean>(true);
+  
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, { morning: string; afternoon: string; remarks: string }>>({});
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+  const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
 
   // 1. Master State Synchronization: Pull from primary master learners store
   useEffect(() => {
