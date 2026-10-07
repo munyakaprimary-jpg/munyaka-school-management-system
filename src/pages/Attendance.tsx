@@ -41,11 +41,15 @@ export default function Attendance() {
     const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
     const [timeLockMessage, setTimeLockMessage] = useState<string>('');
     const [isTimeLocked, setIsTimeLocked] = useState<boolean>(false);
-    const [timeLockedSession, setTimeLockedSession] = useState<'morning' | 'afternoon' | null>(null);
-
-  // Role-based override flag — only Administrators can bypass time locks
-  const { user } = useAuth();
-  const isAdministrator = user?.role?.toLowerCase() === 'administrator';
+        const [timeLockedSession, setTimeLockedSession] = useState<'morning' | 'afternoon' | null>(null);
+        const [manualCutoffLocked, setManualCutoffLocked] = useState<boolean>(() => {
+          const stored = localStorage.getItem('attendance_locked');
+          return stored ? JSON.parse(stored) : false;
+        });
+    
+      // Role-based override flag — only Administrators can bypass time locks
+      const { user } = useAuth();
+      const isAdministrator = user?.role?.toLowerCase() === 'administrator' || user?.role?.toLowerCase() === 'head_teacher';
 
   // 1. Master State Synchronization: Pull from primary master learners store
   useEffect(() => {
@@ -260,40 +264,46 @@ export default function Attendance() {
   };
 
   const handleSaveAttendance = () => {
-      // Time lock enforcement — check both sessions
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-  
-      // Morning session lock: past 9:40 AM
-      const morningLocked = hours > 9 || (hours === 9 && minutes > 40);
-      // Afternoon session lock: past 15:00 (i.e., 15:01 onward; exactly 15:00:00 still allowed)
-      const afternoonLocked = hours > 15 || (hours === 15 && minutes > 0);
-  
-      // Administrators can bypass the time lock
-      if (!isAdministrator) {
-        if (morningLocked) {
-          setTimeLockMessage('Morning attendance is locked after 9:40 AM.');
-          setTimeLockedSession('morning');
-          setIsTimeLocked(true);
-          toast.error('Morning attendance is locked after 9:40 AM.');
+        // Manual cutoff lock check — administrators can override
+        if (manualCutoffLocked && !isAdministrator) {
+          toast.error('Roll Call has been closed by the administration. Attendance marking is disabled.');
           return;
         }
-        if (afternoonLocked) {
-          setTimeLockMessage('Afternoon attendance is locked after 15:00.');
-          setTimeLockedSession('afternoon');
-          setIsTimeLocked(true);
-          toast.error('Afternoon attendance is locked after 15:00.');
-          return;
+  
+        // Time lock enforcement — check both sessions
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+   
+        // Morning session lock: past 9:40 AM
+        const morningLocked = hours > 9 || (hours === 9 && minutes > 40);
+        // Afternoon session lock: past 15:00 (i.e., 15:01 onward; exactly 15:00:00 still allowed)
+        const afternoonLocked = hours > 15 || (hours === 15 && minutes > 0);
+   
+        // Administrators can bypass the time lock
+        if (!isAdministrator) {
+          if (morningLocked) {
+            setTimeLockMessage('Morning attendance is locked after 9:40 AM.');
+            setTimeLockedSession('morning');
+            setIsTimeLocked(true);
+            toast.error('Morning attendance is locked after 9:40 AM.');
+            return;
+          }
+          if (afternoonLocked) {
+            setTimeLockMessage('Afternoon attendance is locked after 15:00.');
+            setTimeLockedSession('afternoon');
+            setIsTimeLocked(true);
+            toast.error('Afternoon attendance is locked after 15:00.');
+            return;
+          }
         }
-      }
-  
-      // Clear any previous lock state
-      setIsTimeLocked(false);
-      setTimeLockMessage('');
-      setTimeLockedSession(null);
-  
-      setIsSaving(true);
+   
+        // Clear any previous lock state
+        setIsTimeLocked(false);
+        setTimeLockMessage('');
+        setTimeLockedSession(null);
+   
+        setIsSaving(true);
     try {
       const targetLearners = getFilteredLearners();
       const activeKey = `${selectedDate}_${selectedGrade}_${selectedStream}`;
@@ -399,22 +409,37 @@ export default function Attendance() {
 
   return (
     <div className="space-y-6 pb-16">
-          {/* Time Lock Message Banner */}
-          {isTimeLocked && !isAdministrator && (
-            <div className="bg-amber-50 dark:bg-amber-900/50 border-l-4 border-amber-400 p-4 mb-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <AlertCircle className="h-5 w-5 text-amber-400" />
+              {/* Manual Cutoff Lock Banner */}
+              {manualCutoffLocked && (
+                <div className="bg-red-50 dark:bg-red-900/50 border-l-4 border-red-400 p-4 mb-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <Lock className="h-5 w-5 text-red-400" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-red-700 dark:text-red-300 font-medium">
+                        Roll Call has been closed by the administration. Attendance marking is disabled.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">
-                    {timeLockMessage}
-                  </p>
+              )}
+              {/* Time Lock Message Banner */}
+              {isTimeLocked && !manualCutoffLocked && !isAdministrator && (
+                <div className="bg-amber-50 dark:bg-amber-900/50 border-l-4 border-amber-400 p-4 mb-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <AlertCircle className="h-5 w-5 text-amber-400" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">
+                        {timeLockMessage}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
-          {/* Header Banner */}
+              )}
+              {/* Header Banner */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 p-6 rounded-2xl text-white shadow-xl">
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -432,57 +457,88 @@ export default function Attendance() {
               </div>
       
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-                    {isTimeLocked ? (
-                      <span className="text-emerald-600 font-medium">
-                        {timeLockedSession === 'morning' ? 'Morning attendance is locked after 9:40 AM.' : 'Afternoon attendance is locked after 15:00.'}
-                      </span>
-                    ) : (
-                      <span className="text-emerald-400 text-xs">
-                        <Clock className="w-3 h-3" /> Time-Lock Enforced
-                      </span>
-                    )}
-                  </div>
-                </div>
-      
-                <Button
-                  onClick={() => {
-                    // Admin-only bypass: if user is admin, allow bypass
-                    if (isAdministrator) {
-                      setIsTimeLocked(!isTimeLocked);
-                      setTimeLockedSession(null);
-                      toast.success(isTimeLocked ? 'Time lock re-enabled.' : 'Time lock bypassed (Admin override).');
-                      return;
-                    }
-                    // For non-admin users, show alert and don't toggle
-                    if (isTimeLocked) {
-                      setIsTimeLocked(false);
-                      setTimeLockedSession(null);
-                      toast.info('Time lock automatically re-applied for next save.');
-                    } else {
-                      toast.info('Administrator override required to bypass time locks.');
-                    }
-                  }}
-                  disabled={!isAdministrator}
-                  variant="outline"
-                  className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
-                >
-                  <Clock className="w-3.5 h-3.5" /> Time Lock Status
-                </Button>
-      
-                <Button
-                  onClick={() => {
-                    loadMasterLearners();
-                    loadRollCallRecords();
-                    toast.success('Refreshed learners & attendance data');
-                  }}
-                  variant="outline"
-                  className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
-                </Button>
-              </div>
+                              <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+                                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+                                  {manualCutoffLocked ? (
+                                    <span className="text-red-600 font-medium">
+                                      <Lock className="w-3 h-3" /> Roll Call Closed by Administration
+                                    </span>
+                                  ) : isTimeLocked ? (
+                                    <span className="text-emerald-600 font-medium">
+                                      {timeLockedSession === 'morning' ? 'Morning attendance is locked after 9:40 AM.' : 'Afternoon attendance is locked after 15:00.'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-emerald-400 text-xs">
+                                      <Clock className="w-3 h-3" /> Time-Lock Enforced
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+              
+                              {isAdministrator && (
+                                <Button
+                                  onClick={() => {
+                                    const newLockState = !manualCutoffLocked;
+                                    setManualCutoffLocked(newLockState);
+                                    localStorage.setItem('attendance_locked', JSON.stringify(newLockState));
+                                    if (newLockState) {
+                                      toast.error('Roll Call has been closed by the administration.');
+                                    } else {
+                                      toast.success('Roll Call has been reopened by the administration.');
+                                    }
+                                  }}
+                                  variant={manualCutoffLocked ? 'default' : 'outline'}
+                                  className={`h-7 text-xs px-3 ${manualCutoffLocked ? 'bg-red-600 text-white hover:bg-red-700 border-none' : 'bg-white/10 text-white hover:bg-white/20 border-white/20'}`}
+                                >
+                                  {manualCutoffLocked ? (
+                                    <>
+                                      <Unlock className="w-3.5 h-3.5" /> Unlock Roll Call
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Lock className="w-3.5 h-3.5" /> Lock Roll Call
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+              
+                              <Button
+                                onClick={() => {
+                                  // Admin-only bypass: if user is admin, allow bypass
+                                  if (isAdministrator) {
+                                    setIsTimeLocked(!isTimeLocked);
+                                    setTimeLockedSession(null);
+                                    toast.success(isTimeLocked ? 'Time lock re-enabled.' : 'Time lock bypassed (Admin override).');
+                                    return;
+                                  }
+                                  // For non-admin users, show alert and don't toggle
+                                  if (isTimeLocked) {
+                                    setIsTimeLocked(false);
+                                    setTimeLockedSession(null);
+                                    toast.info('Time lock automatically re-applied for next save.');
+                                  } else {
+                                    toast.info('Administrator override required to bypass time locks.');
+                                  }
+                                }}
+                                disabled={!isAdministrator}
+                                variant="outline"
+                                className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
+                              >
+                                <Clock className="w-3.5 h-3.5" /> Time Lock Status
+                              </Button>
+              
+                              <Button
+                                onClick={() => {
+                                  loadMasterLearners();
+                                  loadRollCallRecords();
+                                  toast.success('Refreshed learners & attendance data');
+                                }}
+                                variant="outline"
+                                className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
+                              </Button>
+                            </div>
             </div>
 
       {/* Stats Overview */}
@@ -585,15 +641,15 @@ export default function Attendance() {
                     </div>
         
                     <div className="flex items-center gap-2">
-                      <Button
-                        onClick={handleSaveAttendance}
-                        disabled={isSaving || totalLearnersCount === 0 || (isTimeLocked && !isAdministrator)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
-                      >
-                        <Save className="w-4 h-4" />
-                        {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
-                      </Button>
-                    </div>
+                                          <Button
+                                            onClick={handleSaveAttendance}
+                                            disabled={isSaving || totalLearnersCount === 0 || (manualCutoffLocked && !isAdministrator) || (isTimeLocked && !isAdministrator)}
+                                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
+                                          >
+                                            <Save className="w-4 h-4" />
+                                            {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
+                                          </Button>
+                                        </div>
                   </div>
 
           {/* Filter Bar */}
@@ -789,13 +845,13 @@ export default function Attendance() {
                         Legend: <strong>P</strong> = Present, <strong>A</strong> = Absent, <strong>L</strong> = Late, <strong>E</strong> = Excused
                       </p>
                       <Button
-                        onClick={handleSaveAttendance}
-                        disabled={isSaving || totalLearnersCount === 0 || (isTimeLocked && !isAdministrator)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
-                      >
-                        <Save className="w-4 h-4" />
-                        {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
-                      </Button>
+                                              onClick={handleSaveAttendance}
+                                              disabled={isSaving || totalLearnersCount === 0 || (manualCutoffLocked && !isAdministrator) || (isTimeLocked && !isAdministrator)}
+                                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-md gap-2"
+                                            >
+                                              <Save className="w-4 h-4" />
+                                              {savedSuccess ? 'Saved Successfully!' : 'Save Roll Call'}
+                                            </Button>
                     </div>
         </CardContent>
       </Card>
