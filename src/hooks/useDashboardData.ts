@@ -131,8 +131,9 @@ const computeStats = (): DashboardStats => {
 
     // ── 1. Learners ─────────────────────────────────────────────────────────
     let learners: Learner[] = [];
+    const storageObj = getLocalStorage();
     for (const k of ['munyaka_learners_db', 'munyaka_central_db', 'school_learners_master', 'school_learners_data', 'munyaka_students', 'students', 'learners']) {
-      const raw = lsForRead?.getItem(k);
+      const raw = storageObj?.getItem(k);
       if (raw) {
         const parsed = tryParse<Learner[]>(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -167,7 +168,8 @@ const computeStats = (): DashboardStats => {
     }).length;
 
     // ── 3. Today's attendance % — deduplicated by studentId, capped at 100% ─
-    const flatAttendance = tryParse<AttendanceLog[]>(lsForRead?.getItem(STORAGE_KEYS.ATTENDANCE) ?? null) ?? [];
+    const storageObj2 = getLocalStorage();
+    const flatAttendance = tryParse<AttendanceLog[]>(storageObj2?.getItem(STORAGE_KEYS.ATTENDANCE) ?? null) ?? [];
     const presentStudentIds = new Set<string>();
     const ls = getLocalStorage();
 
