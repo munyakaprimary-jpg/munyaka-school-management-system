@@ -145,7 +145,7 @@ export const UnifiedDataStorage = {
   },
 
   getStaff: (): any[] => {
-    return readStorage<any[]>('munyaka_staff_db', []);
+    const res = readStorage<any[]>('munyaka_staff_db', []);
     return res.length > 0 ? res : (initialSeedData.staff || []);
   },
 

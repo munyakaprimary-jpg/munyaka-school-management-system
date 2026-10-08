@@ -83,6 +83,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication', roles: ['teacher', 'class_teacher', 'subject_teacher'] },
     { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'ict_technician', 'ict_teacher'] },
     { icon: Clock, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
+    { icon: Users, label: 'Staff Registry', path: '/staff-registry', roles: ['admin', 'head_teacher'] },
     { icon: CheckSquare, label: 'Attendance Management', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'bursar', 'ict_technician', 'ict_teacher'] },

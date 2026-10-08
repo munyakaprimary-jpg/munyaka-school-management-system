@@ -2,6 +2,36 @@ import { CentralDataService, STORAGE_KEYS } from './centralDataService';
 
 export const STAFF_MASTER_KEY = STORAGE_KEYS.STAFF;
 
+export interface StaffMember {
+  id: string;
+  name: string;
+  category?: string;
+  nationalId: string;
+  email: string;
+  phone: string;
+  tscNumber?: string;
+  role: string;
+  systemRole: MasterSystemRole;
+  department: string;
+  assignedGrade?: string;
+  assignedStream?: string;
+  assignedSubjects?: string[];
+  status: 'Active' | 'Pre-Registered' | 'Suspended' | 'On Leave' | 'Inactive';
+  staffId?: string;
+  tempAccessCode?: string;
+  accessCode?: string;
+  joinedDate?: string;
+  gender?: string;
+  salary?: number | string;
+  emergencyContact?: string;
+  emergencyName?: string;
+  schoolId?: string;
+  datePreRegistered?: string;
+  activatedAt?: string;
+  lastLogin?: string;
+  profileComplete?: boolean;
+}
+
 export const initialStaff: StaffMember[] = [];
 
 export type MasterSystemRole =
