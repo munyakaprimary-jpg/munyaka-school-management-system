@@ -459,9 +459,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             if (!isTeacherVariant) return null;
 
             const lanItems = [
-              { icon: Server, label: 'LAN Server Config', path: '/lan-server-config' },
-              { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config' },
-            ];
+                          { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config' },
+                        ];
 
             return (
               <>

@@ -69,11 +69,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/', global: true },
-    { icon: Wifi, label: 'LAN Server Config', path: '/lan-server-config', global: true },
-    { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config', global: true },
-    { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
-    { icon: Shield, label: 'Admin Dashboard', path: '/system-management', global: true },
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/', global: true },
+      { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config', global: true },
+      { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
+      { icon: Shield, label: 'Admin Dashboard', path: '/system-management', global: true },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin'] },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
