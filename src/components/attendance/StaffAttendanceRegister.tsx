@@ -38,7 +38,7 @@ export function StaffAttendanceRegister() {
   const [selectedGrade, setSelectedGrade] = useState<string>(assignedGrade);
   const [selectedStream, setSelectedStream] = useState<string>(assignedStream);
 
-  // If teacher, lock grade/stream to their assigned values
+  // If teacher, enforce assigned grade and stream
   useEffect(() => {
     if (!isAdmin) {
       if (user?.assignedClass || user?.grade) {
@@ -219,11 +219,16 @@ export function StaffAttendanceRegister() {
         {/* Filters and Date */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-gray-100">
           <div>
-            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Grade Level</label>
+            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
+              Grade Level {!isAdmin && <span className="text-indigo-600 font-bold">(Assigned)</span>}
+            </label>
             <select
               value={selectedGrade}
-              onChange={(e) => setSelectedGrade(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              onChange={(e) => isAdmin && setSelectedGrade(e.target.value)}
+              disabled={!isAdmin}
+              className={`w-full px-3 py-2 rounded-xl border text-xs font-medium ${
+                !isAdmin ? "bg-gray-100 text-gray-700 cursor-not-allowed border-gray-200" : "border-gray-200 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              }`}
             >
               <option value="PP1">PP1</option>
               <option value="PP2">PP2</option>
@@ -235,20 +240,27 @@ export function StaffAttendanceRegister() {
               <option value="Grade 6">Grade 6</option>
               <option value="Grade 7">Grade 7</option>
               <option value="Grade 8">Grade 8</option>
+              <option value={assignedGrade}>{assignedGrade}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Stream</label>
+            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
+              Stream {!isAdmin && <span className="text-indigo-600 font-bold">(Assigned)</span>}
+            </label>
             <select
               value={selectedStream}
-              onChange={(e) => setSelectedStream(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              onChange={(e) => isAdmin && setSelectedStream(e.target.value)}
+              disabled={!isAdmin}
+              className={`w-full px-3 py-2 rounded-xl border text-xs font-medium ${
+                !isAdmin ? "bg-gray-100 text-gray-700 cursor-not-allowed border-gray-200" : "border-gray-200 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              }`}
             >
               <option value="East">East</option>
               <option value="West">West</option>
               <option value="Green">Green</option>
               <option value="Blue">Blue</option>
+              <option value={assignedStream}>{assignedStream}</option>
             </select>
           </div>
 

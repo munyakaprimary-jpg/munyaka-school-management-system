@@ -265,8 +265,10 @@ export default function Students() {
 
   const handleOpenAdd = () => {
     resetForm();
-    const initialGrade = 'Grade 6';
+    const initialGrade = !isAdmin ? assignedTeacherGrade : 'Grade 6';
+    const initialStream = !isAdmin ? assignedTeacherStream : 'BLUE';
     setGrade(initialGrade);
+    setStream(initialStream);
     setAdmissionNumber(generateAdmissionNumber(initialGrade, students));
     setIsModalOpen(true);
   };
@@ -832,31 +834,46 @@ export default function Students() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-700 uppercase">Grade Level</Label>
-              <Select value={grade} onValueChange={(val) => {
-                setGrade(val);
-                setAdmissionNumber(generateAdmissionNumber(val, students));
-              }}>
-                <SelectTrigger className="rounded-xl h-12 border-slate-200">
+              <Label className="text-xs font-bold text-slate-700 uppercase">
+                Grade Level {!isAdmin && <span className="text-indigo-600 font-normal">(Assigned)</span>}
+              </Label>
+              <Select
+                value={grade}
+                onValueChange={(val) => {
+                  if (!isAdmin) return;
+                  setGrade(val);
+                  setAdmissionNumber(generateAdmissionNumber(val, students));
+                }}
+                disabled={!isAdmin}
+              >
+                <SelectTrigger className={`rounded-xl h-12 border-slate-200 ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}>
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableGrades.map(g => (
                     <SelectItem key={g} value={g}>{g}</SelectItem>
                   ))}
+                  {!isAdmin && <SelectItem value={assignedTeacherGrade}>{assignedTeacherGrade}</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-700 uppercase">Stream</Label>
-              <Select value={stream} onValueChange={setStream}>
-                <SelectTrigger className="rounded-xl h-12 border-slate-200">
+              <Label className="text-xs font-bold text-slate-700 uppercase">
+                Stream {!isAdmin && <span className="text-indigo-600 font-normal">(Assigned)</span>}
+              </Label>
+              <Select
+                value={stream}
+                onValueChange={(val) => isAdmin && setStream(val)}
+                disabled={!isAdmin}
+              >
+                <SelectTrigger className={`rounded-xl h-12 border-slate-200 ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}>
                   <SelectValue placeholder="Select stream" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableStreams.map(st => (
                     <SelectItem key={st} value={st}>{st}</SelectItem>
                   ))}
+                  {!isAdmin && <SelectItem value={assignedTeacherStream}>{assignedTeacherStream}</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
