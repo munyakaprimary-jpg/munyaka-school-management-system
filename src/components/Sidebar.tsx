@@ -49,11 +49,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
-import { isTeacherRole, isIctRole, isLibrarianRole, normalizeRole } from '@/utils/roleHelper';
-import { roleHas, resolveRole, ROUTE_PERMISSIONS } from '@/rbac/permissionMatrix';
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
@@ -61,7 +58,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  useMobileBackButton(isOpen, () => setIsOpen(false));
+  useMobileBackButton(false, () => {});
 
   const handleLogout = async () => {
     await logout();
@@ -69,52 +66,29 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   };
 
   const menuItems = [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/', global: true },
-      { icon: Shield, label: 'Admin Dashboard', path: '/system-management', global: true },
-      { icon: Users, label: 'Staff Registry', path: '/staff-registry', global: true },
-      { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config', global: true },
-      { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
-    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin'] },
-    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
-    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
-    { icon: School, label: 'Developer Hub / Tenants', path: '/dev/tenants', roles: ['owner', 'admin'] },
-    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
-    { icon: User, label: 'Profile Settings', path: '/settings/profile', roles: ['admin', 'owner'] },
-    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher'] },
-    { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication', roles: ['teacher', 'class_teacher', 'subject_teacher'] },
-    { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar', 'parent', 'student', 'ict_technician', 'ict_teacher'] },
-    { icon: Clock, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
-    { icon: CheckSquare, label: 'Attendance Management', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
-    { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance/students', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'bursar', 'ict_technician', 'ict_teacher'] },
-    { icon: Fingerprint, label: 'Staff Attendance', path: '/staff/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'bursar'],
-      subItems: [
-        { label: 'Check In/Out', path: '/staff/check-in' },
-        { label: 'Monitor', path: '/staff/attendance-monitor', roles: ['admin'] }
-      ]
-    },
-    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
-    { icon: FileText, label: 'Marked Scripts', path: '/assessments/marked-scripts', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
-    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
-    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student', 'ict_technician', 'ict_teacher'] },
-    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'ict_teacher', 'ict_technician'] },
-    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'ict_technician', 'ict_teacher'] },
-    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
-    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student'] },
-    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'librarian', 'library_teacher'] },
-    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'student', 'parent', 'librarian', 'library_teacher', 'ict_technician', 'ict_teacher'] },
-    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher'] },
-    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent', 'teacher', 'class_teacher', 'subject_teacher'] },
-    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'parent', 'student'] },
-    { icon: Shield, label: 'Admin Dashboard', path: '/system-management', roles: ['admin'] },
-    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
-    { icon: FileText, label: 'Admin Harmonization Hub', path: '/admin-harmonization-hub', roles: ['admin'] },
-    { icon: Archive, label: 'Transferred Archive', path: '/transferred-archive', roles: ['admin'] },
-    { icon: ArrowUpCircle, label: 'Promote Students', path: '/promote-students', roles: ['admin'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: Users, label: 'Staff Registry', path: '/staff-registry' },
+    { icon: Shield, label: 'Admin Dashboard', path: '/system-management' },
+    { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config' },
+    { icon: Gamepad2, label: 'Games Hub', path: '/games' },
+    { icon: Layers, label: 'Grades & Streams', path: '/grades' },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas' },
+    { icon: Award, label: 'Exam Types', path: '/exam-types' },
+    { icon: Clock, label: 'Timetable', path: '/timetable' },
+    { icon: CheckSquare, label: 'Attendance Management', path: '/attendance' },
+    { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance/students' },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in' },
+    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments' },
+    { icon: FileText, label: 'Marked Scripts', path: '/assessments/marked-scripts' },
+    { icon: BarChart3, label: 'Results Analysis', path: '/analysis' },
+    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub' },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab' },
+    { icon: Library, label: 'Library & E-Resources', path: '/library' },
+    { icon: Box, label: 'Tools & Inventory', path: '/inventory' },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees' },
+    { icon: FileText, label: 'Report Cards', path: '/reports' },
+    { icon: Settings, label: 'Settings', path: '/settings' },
   ];
-
-  const filteredMenu = menuItems;
 
   const activePath = location.pathname;
 
@@ -147,57 +121,27 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
-          {/* Staff Management link block */}
-          {filteredMenu.map((item, idx) => {
+          {menuItems.map((item, idx) => {
             const Icon = item.icon;
             const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
-            const isStaffManagement = item.path === '/staff';
             return (
-              <React.Fragment key={idx}>
-                <NavLink
-                  to={item.path}
-                  className={cn(
-                    "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
-                    isActive
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
-                      : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
-                  )}
-                  title={isCollapsed ? item.label : undefined}
-                >
-                  <Icon size={20} className={cn("transition-transform group-hover:scale-110 shrink-0", isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200")} />
-                  {!isCollapsed && <span className="truncate flex-1">{item.label}</span>}
-                  {isActive && !isCollapsed && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0" />
-                  )}
-                </NavLink>
-
-                {!isCollapsed && (item as any).subItems && isActive && (
-                  <div className="ml-8 mt-1 space-y-1 border-l-2 border-slate-800 pl-3">
-                    {(item as any).subItems.map((sub: any, sIdx: number) => {
-                      const isSubActive = activePath === sub.path;
-                      return (
-                        <NavLink
-                          key={sIdx}
-                          to={sub.path}
-                          className={cn(
-                            "block py-1.5 px-2.5 rounded-lg text-xs font-medium transition-colors",
-                            isSubActive ? "text-blue-400 bg-blue-500/10 font-bold" : "text-slate-400 hover:text-slate-200"
-                          )}
-                        >
-                          {sub.label}
-                        </NavLink>
-                      );
-                    })}
-                  </div>
+              <NavLink
+                key={idx}
+                to={item.path}
+                className={cn(
+                  "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
+                  isActive
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
+                    : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
                 )}
-
-                {isStaffManagement && !isCollapsed && (
-                  <Link className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors" to="/subject-allocations">
-                    <BookOpen className="w-5 h-5 text-indigo-500"/>
-                    <span>Subject Allocations</span>
-                  </Link>
+                title={isCollapsed ? item.label : undefined}
+              >
+                <Icon size={20} className={cn("transition-transform group-hover:scale-110 shrink-0", isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200")} />
+                {!isCollapsed && <span className="truncate flex-1">{item.label}</span>}
+                {isActive && !isCollapsed && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0" />
                 )}
-              </React.Fragment>
+              </NavLink>
             );
           })}
         </div>
@@ -234,7 +178,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
-                className="text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl"
+                className="text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl h-9 w-9"
                 title="Logout"
               >
                 <LogOut size={16} />
@@ -244,8 +188,22 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-y-auto">
-        {children}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md px-6 flex items-center justify-between md:hidden z-20">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">
+              M
+            </div>
+            <h1 className="font-black text-white text-sm">MUNYAKA</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto bg-slate-950">
+          {children}
+        </main>
       </div>
     </div>
   );
