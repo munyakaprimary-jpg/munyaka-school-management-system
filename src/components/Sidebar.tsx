@@ -67,13 +67,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   const navItems = [
     { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard },
-    <Link
-  to="/staff-registry"
-  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors my-1"
->
-  <Users className="w-5 h-5" />
-  <span>Staff Registry</span>
-</Link>
+    { name: 'Staff Registry', path: '/staff-registry', icon: Users },
     { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck },
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi },
