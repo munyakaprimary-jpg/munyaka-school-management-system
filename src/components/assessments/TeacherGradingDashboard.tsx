@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
+import { normalizeGradeStr } from "@/utils/gradePermissionGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -264,6 +266,11 @@ interface TeacherGradingDashboardProps {
 const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   preselectedAssessmentId,
 }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'super_admin';
+  const assignedGrade = !isAdmin ? (user?.assignedClass || user?.grade || 'Grade 1') : ALL_GRADES_VALUE;
+  const assignedStream = !isAdmin ? (user?.assignedStream || user?.stream || ALL_STREAMS_VALUE) : ALL_STREAMS_VALUE;
+
   const csvExport = useFileDownload();
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -276,8 +283,20 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   // ── Filter controls ────────────────────────────────────────────────────────
-  const [selectedGrade, setSelectedGrade] = useState<string>(ALL_GRADES_VALUE);
-  const [selectedStream, setSelectedStream] = useState<string>(ALL_STREAMS_VALUE);
+  const [selectedGrade, setSelectedGrade] = useState<string>(!isAdmin ? assignedGrade : ALL_GRADES_VALUE);
+  const [selectedStream, setSelectedStream] = useState<string>(!isAdmin ? assignedStream : ALL_STREAMS_VALUE);
+
+  // Enforce grade & stream lock for teachers
+  useEffect(() => {
+    if (!isAdmin) {
+      if (user?.assignedClass || user?.grade) {
+        setSelectedGrade(user.assignedClass || user.grade || assignedGrade);
+      }
+      if (user?.assignedStream || user?.stream) {
+        setSelectedStream(user.assignedStream || user.stream || assignedStream);
+      }
+    }
+  }, [user, isAdmin, assignedGrade, assignedStream]);
 
   // ── Auto-reset: when grade or stream changes, select the first matching exam
   //    (but preserve "all" if the user had explicitly chosen it and it's still valid).
@@ -980,9 +999,13 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
           </div>
 
           <div className="sm:ml-auto flex flex-wrap items-center gap-3">
-            {/* ── Grade Selector ─────────────────────────────────────────── */}
-            <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-              <SelectTrigger className="w-44 rounded-xl border-slate-200 bg-slate-50 font-medium">
+            {/* ── Grade Selector (Locked for teachers) ─────────────────────────────────── */}
+            <Select
+              value={selectedGrade}
+              onValueChange={(val) => isAdmin && setSelectedGrade(val)}
+              disabled={!isAdmin}
+            >
+              <SelectTrigger className={`w-44 rounded-xl border-slate-200 font-medium ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : 'bg-slate-50'}`}>
                 <SelectValue placeholder="All Grades" />
               </SelectTrigger>
               <SelectContent>
@@ -990,14 +1013,18 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                 {GRADE_OPTIONS.map((g) => (
                   <SelectItem key={g} value={g}>{g}</SelectItem>
                 ))}
+                {!isAdmin && <SelectItem value={user?.assignedClass || user?.grade || 'Grade 1'}>{user?.assignedClass || user?.grade || 'Grade 1'}</SelectItem>}
               </SelectContent>
             </Select>
 
-            {/* ── Stream Selector (native <select> for dynamic options) ──────── */}
+            {/* ── Stream Selector (Locked for teachers) ──────────────────────── */}
             <select
               value={selectedStream}
-              onChange={(e) => setSelectedStream(e.target.value)}
-              className="h-11 w-36 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              onChange={(e) => isAdmin && setSelectedStream(e.target.value)}
+              disabled={!isAdmin}
+              className={`h-11 w-36 rounded-xl border border-slate-200 px-3 text-sm font-medium ${
+                !isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : 'bg-slate-50 text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100'
+              }`}
               aria-label="Filter by stream"
             >
               <option value={ALL_STREAMS_VALUE}>All Streams</option>
@@ -1006,6 +1033,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                   {streamName}
                 </option>
               ))}
+              {!isAdmin && <option value={user?.assignedStream || user?.stream || 'East'}>{user?.assignedStream || user?.stream || 'East'}</option>}
             </select>
 
             {/* ── Exam Selector (cascaded by grade & stream) ─────────────────── */}
