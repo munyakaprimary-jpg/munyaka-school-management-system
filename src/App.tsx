@@ -26,7 +26,7 @@ import ReportCards from "./pages/ReportCards";
 import Portfolio from "./pages/Portfolio";
 import Fees from "./pages/Fees";
 import Settings from "./pages/Settings";
-import TeachersDirectory from "./pages/TeachersDirectory";
+// Staff routing removed
 import Timetable from "./pages/Timetable";
 import NoticeAndEvents from "./pages/NoticeAndEvents";
 import AdminProfile from "./pages/AdminProfile";
@@ -515,7 +515,7 @@ const App = () => {
                       <Route path="/grades" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><GradesStreams /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/learning-areas" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><LearningAreas /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/exam-types" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ExamTypes /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher']}><AppUnlock><Layout><TeachersDirectory /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher']}><AppUnlock><Layout><div className="p-12 text-center font-bold text-slate-500">Staff Management Disabled</div></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/attendance" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><StaffAttendancePage /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/check-in" element={<ProtectedRoute><AppUnlock><Layout><StaffCheckInSelector /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff-checkin" element={<ProtectedRoute><AppUnlock><Layout><StaffCheckIn /></Layout></AppUnlock></ProtectedRoute>} />
