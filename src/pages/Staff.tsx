@@ -634,11 +634,13 @@ const Staff = () => {
                       <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
                         <Checkbox checked={filteredStaff.length > 0 && selectedIds.size === filteredStaff.length} onCheckedChange={toggleSelectAll} aria-label="Select all staff" />
                       </th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff Name</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">System Role</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Registered Email</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Access Codes</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Name</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">TSC No.</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Email</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Phone</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">Subjects</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Access Code</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[100px]">Status</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
                     </tr>
                   </thead>
@@ -649,54 +651,37 @@ const Staff = () => {
                           <Checkbox checked={selectedIds.has(member.id)} onCheckedChange={() => toggleSelectOne(member.id)} aria-label={`Select ${member.full_name}`} />
                         </td>
                         <td className="px-8 py-5 min-w-[200px]">
-                                                  <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                                      {initialsOf(member.full_name)}
-                                                    </div>
-                                                    <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{toTitleCase(member.full_name)}</span>
-                                                  </div>
-                                                </td>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                              {initialsOf(member.full_name)}
+                            </div>
+                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{toTitleCase(member.full_name)}</span>
+                          </div>
+                        </td>
                         <td className="px-8 py-5 min-w-[140px]">
-                                                  <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
-                                                    {(() => {
-                                                      // Priority: tscNumber (actual TSC) > nationalId (ID) — do NOT use staffId/login placeholder
-                                                      const tscNumber = (member as any).tscNo || member.tsc_no;
-                                                      const nationalId = (member as any).nationalId;
-                                                      const validId = tscNumber || nationalId;
-                                                      if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
-                                                        return validId;
-                                                      }
-                                                      return '—';
-                                                    })()}
-                                                  </span>
-                                                </td>
-                        <td className="px-8 py-5 min-w-[180px]">
-                                                  <div className="flex flex-col">
-                                                    <span className="font-semibold text-slate-900">{toTitleCase(member.role || member.systemRole || 'Teacher')}</span>
-                                                    <span className="text-slate-500 text-sm">
-                                                      {(() => {
-                                                        const item = member as any;
-                                                        const r = String(item.role || item.systemRole || '').toLowerCase();
-                                                        const isClassTeacher = r.includes('class') || r.includes('teacher') || item.assignedGrade || item.assignedStream || item.grade;
-                                                        if (isClassTeacher) {
-                                                          return (item.assignedGrade || item.grade) && (item.assignedStream || item.stream)
-                                                            ? `${item.assignedGrade || item.grade} ${item.assignedStream || item.stream}`
-                                                            : 'Unassigned Class';
-                                                        }
-                                                        return item.department || 'School Administration';
-                                                      })()}
-                                                    </span>
-                                                  </div>
-                                                </td>
+                          <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
+                            {member.tsc_no || (member as any).tscNumber || '—'}
+                          </span>
+                        </td>
                         <td className="px-8 py-5 min-w-[220px]">
-                          <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{member.email || 'No Email Provided'}</span>
+                          <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{member.email || '—'}</span>
+                        </td>
+                        <td className="px-8 py-5 min-w-[140px]">
+                          <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{member.phone || '—'}</span>
+                        </td>
+                        <td className="px-8 py-5 min-w-[180px]">
+                          <span className="text-xs font-medium text-slate-700 whitespace-nowrap">
+                            {Array.isArray((member as any).subjects) && (member as any).subjects.length > 0
+                              ? (member as any).subjects.join(', ')
+                              : 'General'}
+                          </span>
                         </td>
                         <td className="px-8 py-5 min-w-[140px]">
                           <span className="font-mono text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 whitespace-nowrap">
                             {member.access_key || (member as any).tempAccessCode || (member as any).accessCode || (member as any).ref || `KEY-${Math.floor(100000 + Math.random() * 900000)}`}
                           </span>
                         </td>
-                        <td className="px-8 py-5 text-center min-w-[140px]">
+                        <td className="px-8 py-5 min-w-[100px]">
                           <Badge className={member.status === 'Active' ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl" : "bg-amber-50 text-amber-700 border-none font-bold text-xs px-3 py-1 rounded-xl"}>
                             {member.status}
                           </Badge>
