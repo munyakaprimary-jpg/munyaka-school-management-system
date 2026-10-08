@@ -65,122 +65,30 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     navigate('/login');
   };
 
-  const menuItems = [
-    {
-      name: 'Dashboard',
-      path: '/',
-      icon: LayoutDashboard
-    },
-    {
-      name: 'Admin Dashboard',
-      path: '/system-management',
-      icon: Shield
-    },
-    {
-      name: 'Staff Registry',
-      path: '/staff-registry',
-      icon: Users
-    },
-    {
-      name: 'Data Harmonization Hub',
-      path: '/admin/harmonization',
-      icon: ShieldCheck
-    },
-    {
-      name: 'Teacher LAN Config',
-      path: '/teacher-lan-config',
-      icon: Wifi
-    },
-    {
-      name: 'Games Hub',
-      path: '/games',
-      icon: Gamepad2
-    },
-    {
-      name: 'Grades & Streams',
-      path: '/grades',
-      icon: Layers
-    },
-    {
-      name: 'Learning Areas',
-      path: '/learning-areas',
-      icon: BookOpen
-    },
-    {
-      name: 'Exam Types',
-      path: '/exam-types',
-      icon: Award
-    },
-    {
-      name: 'Timetable',
-      path: '/timetable',
-      icon: Clock
-    },
-    {
-      name: 'Attendance Management',
-      path: '/attendance',
-      icon: CheckSquare
-    },
-    {
-      name: 'Student Attendance',
-      path: '/attendance/students',
-      icon: ClipboardCheck
-    },
-    {
-      name: 'Daily Check-In',
-      path: '/staff/check-in',
-      icon: LogIn
-    },
-    {
-      name: 'Enter Marks',
-      path: '/assessments',
-      icon: FileSpreadsheet
-    },
-    {
-      name: 'Marked Scripts',
-      path: '/assessments/marked-scripts',
-      icon: FileText
-    },
-    {
-      name: 'Results Analysis',
-      path: '/analysis',
-      icon: BarChart3
-    },
-    {
-      name: 'Digital Hub',
-      path: '/digital-hub',
-      icon: Laptop
-    },
-    {
-      name: 'ICT Lab & Devices',
-      path: '/ict-lab',
-      icon: Monitor
-    },
-    {
-      name: 'Library & E-Resources',
-      path: '/library',
-      icon: Library
-    },
-    {
-      name: 'Tools & Inventory',
-      path: '/inventory',
-      icon: Box
-    },
-    {
-      name: 'Fees & Finance',
-      path: '/fees',
-      icon: Wallet
-    },
-    {
-      name: 'Report Cards',
-      path: '/reports',
-      icon: FileText
-    },
-    {
-      name: 'Settings',
-      path: '/settings',
-      icon: Settings
-    }
+  const navItems = [
+    { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard },
+    { name: 'Staff Registry', path: '/staff-registry', icon: Users },
+    { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck },
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi },
+    { name: 'Games Hub', path: '/games', icon: Gamepad2 },
+    { name: 'Grades & Streams', path: '/grades', icon: Layers },
+    { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen },
+    { name: 'Exam Types', path: '/exam-types', icon: Award },
+    { name: 'Timetable', path: '/timetable', icon: Clock },
+    { name: 'Attendance Management', path: '/attendance', icon: CheckSquare },
+    { name: 'Student Attendance', path: '/attendance/students', icon: ClipboardCheck },
+    { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn },
+    { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet },
+    { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText },
+    { name: 'Results Analysis', path: '/analysis', icon: BarChart3 },
+    { name: 'Digital Hub', path: '/digital-hub', icon: Laptop },
+    { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor },
+    { name: 'Library & E-Resources', path: '/library', icon: Library },
+    { name: 'Tools & Inventory', path: '/inventory', icon: Box },
+    { name: 'Fees & Finance', path: '/fees', icon: Wallet },
+    { name: 'Report Cards', path: '/reports', icon: FileText },
+    { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
   const activePath = location.pathname;
@@ -214,7 +122,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
-          {menuItems.map((item, idx) => {
+          {navItems.map((item, idx) => {
             const Icon = item.icon;
             const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
             return (
