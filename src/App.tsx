@@ -26,8 +26,7 @@ import ReportCards from "./pages/ReportCards";
 import Portfolio from "./pages/Portfolio";
 import Fees from "./pages/Fees";
 import Settings from "./pages/Settings";
-import Staff from "./pages/Staff";
-import StaffProfile from "./pages/StaffProfile";
+// Staff routing removed
 import Timetable from "./pages/Timetable";
 import NoticeAndEvents from "./pages/NoticeAndEvents";
 import AdminProfile from "./pages/AdminProfile";
