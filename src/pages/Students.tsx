@@ -596,22 +596,22 @@ export default function Students() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
             {isAdmin ? (
-              <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
-                  <SelectValue placeholder="All Grades" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Grades</SelectItem>
-                  {availableGrades.map(g => (
-                    <SelectItem key={g} value={g}>{g}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="h-11 px-3 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center text-xs font-bold text-indigo-950 truncate">
-                Locked: {assignedTeacherGrade}
-              </div>
-            )}
+                          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                            <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
+                              <SelectValue placeholder="All Grades" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Grades</SelectItem>
+                              {availableGrades.map(g => (
+                                <SelectItem key={g} value={g}>{g}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div className="h-11 px-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center text-xs font-bold text-emerald-950 truncate">
+                            Accessible: {assignedTeacherGrade}
+                          </div>
+                        )}
             {isAdmin ? (
               <Select value={streamFilter} onValueChange={setStreamFilter}>
                 <SelectTrigger className="rounded-xl h-11 text-xs font-medium border-slate-200">
