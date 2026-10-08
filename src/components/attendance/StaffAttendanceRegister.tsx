@@ -31,8 +31,24 @@ interface AttendanceRecord {
 
 export function StaffAttendanceRegister() {
   const { user } = useAuth();
-  const [selectedGrade, setSelectedGrade] = useState<string>("Grade 1");
-  const [selectedStream, setSelectedStream] = useState<string>("East");
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'super_admin';
+  const assignedGrade = !isAdmin ? (user?.assignedClass || user?.grade || 'Grade 1') : 'Grade 1';
+  const assignedStream = !isAdmin ? (user?.assignedStream || user?.stream || 'East') : 'East';
+
+  const [selectedGrade, setSelectedGrade] = useState<string>(assignedGrade);
+  const [selectedStream, setSelectedStream] = useState<string>(assignedStream);
+
+  // If teacher, lock grade/stream to their assigned values
+  useEffect(() => {
+    if (!isAdmin) {
+      if (user?.assignedClass || user?.grade) {
+        setSelectedGrade(user.assignedClass || user.grade || 'Grade 1');
+      }
+      if (user?.assignedStream || user?.stream) {
+        setSelectedStream(user.assignedStream || user.stream || 'East');
+      }
+    }
+  }, [user, isAdmin]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split("T")[0]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [learners, setLearners] = useState<Learner[]>([]);

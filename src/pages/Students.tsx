@@ -29,6 +29,8 @@ import { showSuccess, showError } from '@/utils/toast';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { CentralDataService } from '@/services/centralDataService';
+import { checkGradePermission } from '@/utils/gradePermissionGuard';
+import { useAuth } from '@/context/AuthContext';
 
 const STUDENTS_STORAGE_KEY = 'munyaka_students';
 const API_BASE_URL = '/api';
