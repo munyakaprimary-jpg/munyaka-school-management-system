@@ -134,8 +134,31 @@ export default function Students() {
   const roleLower = String(teacherRole || (typeof window !== 'undefined' ? localStorage.getItem('current_user_role') : '') || '').toLowerCase();
   const isAdmin = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin') || roleLower === 'administrator';
 
-  const assignedTeacherGrade = !isAdmin ? ((user as any)?.grade || (user as any)?.assignedClass || 'Grade 1') : 'all';
-    const assignedTeacherStream = !isAdmin ? ((user as any)?.stream || (user as any)?.assignedStream || 'BLUE') : 'all';
+  // Dynamically resolve assigned grade/stream from munyaka_staff_db if user is a teacher
+  const staffDbRaw = typeof window !== 'undefined' ? (localStorage.getItem('munyaka_staff_db') || localStorage.getItem('school_staff_data') || '') : '';
+  let resolvedGrade = (user as any)?.grade || (user as any)?.assignedClass || (user as any)?.assignedGrade || '';
+  let resolvedStream = (user as any)?.stream || (user as any)?.assignedStream || '';
+
+  if (!resolvedGrade || !resolvedStream) {
+    try {
+      if (staffDbRaw) {
+        const staffList = JSON.parse(staffDbRaw);
+        if (Array.isArray(staffList)) {
+          const found = staffList.find((s: any) =>
+            (user?.email && s.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
+            (user?.name && s.name && s.name.toLowerCase() === user.name.toLowerCase())
+          );
+          if (found) {
+            resolvedGrade = found.assignedGrade || found.grade || found.assignedClass || resolvedGrade;
+            resolvedStream = found.assignedStream || found.stream || resolvedStream;
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const assignedTeacherGrade = !isAdmin ? (resolvedGrade || 'Grade 1') : 'all';
+  const assignedTeacherStream = !isAdmin ? (resolvedStream || 'BLUE') : 'all';
 
   const [students, setStudents] = useState<any[]>(() => {
       // Load from centralized master data service (aggregates across all storage keys)

@@ -30,9 +30,28 @@ const TeacherDashboard: React.FC = () => {
   const roleLower = String(teacherRole).toLowerCase();
   const isAdmin = roleLower.includes('admin') || roleLower.includes('head') || roleLower.includes('owner');
 
-  // Strict class restriction for teacher Lawrence / non-admins: always Grade 1 Blue
-  const assignedTeacherGrade = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Grade 1' : ((user as any)?.grade || (user as any)?.assignedClass || 'Grade 1');
-  const assignedTeacherStream = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Blue' : ((user as any)?.stream || (user as any)?.assignedStream || 'Blue');
+  // Dynamically resolve assigned grade/stream from munyaka_staff_db
+  let resGrade = (user as any)?.grade || (user as any)?.assignedClass || (user as any)?.assignedGrade || '';
+  let resStream = (user as any)?.stream || (user as any)?.assignedStream || '';
+  try {
+    const rawDb = localStorage.getItem('munyaka_staff_db') || localStorage.getItem('school_staff_data') || '';
+    if (rawDb) {
+      const list = JSON.parse(rawDb);
+      if (Array.isArray(list)) {
+        const found = list.find((s: any) =>
+          (user?.email && s.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
+          (user?.name && s.name && s.name.toLowerCase() === user.name.toLowerCase())
+        );
+        if (found) {
+          resGrade = found.assignedGrade || found.grade || found.assignedClass || resGrade;
+          resStream = found.assignedStream || found.stream || resStream;
+        }
+      }
+    }
+  } catch {}
+
+  const assignedTeacherGrade = !isAdmin ? (resGrade || 'Grade 1') : ((user as any)?.grade || (user as any)?.assignedClass || 'Grade 1');
+  const assignedTeacherStream = !isAdmin ? (resStream || 'Blue') : ((user as any)?.stream || (user as any)?.assignedStream || 'Blue');
 
   const activeGrade = assignedTeacherGrade;
   const activeStream = assignedTeacherStream;
