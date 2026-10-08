@@ -27,7 +27,6 @@ import Portfolio from "./pages/Portfolio";
 import Fees from "./pages/Fees";
 import Settings from "./pages/Settings";
 import Staff from "./pages/Staff";
-import SubjectTeachersPage from "./pages/SubjectTeachers";
 import StaffProfile from "./pages/StaffProfile";
 import Timetable from "./pages/Timetable";
 import NoticeAndEvents from "./pages/NoticeAndEvents";
@@ -518,8 +517,6 @@ const App = () => {
                       <Route path="/learning-areas" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><LearningAreas /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/exam-types" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ExamTypes /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher']}><AppUnlock><Layout><Staff /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/staff/subject-teachers" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher']}><AppUnlock><Layout><SubjectTeachersPage /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/subject-allocations" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher', 'teacher']}><AppUnlock><Layout><SubjectTeachersPage /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/attendance" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><StaffAttendancePage /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/check-in" element={<ProtectedRoute><AppUnlock><Layout><StaffCheckInSelector /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff-checkin" element={<ProtectedRoute><AppUnlock><Layout><StaffCheckIn /></Layout></AppUnlock></ProtectedRoute>} />
