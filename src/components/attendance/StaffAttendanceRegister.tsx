@@ -31,7 +31,8 @@ interface AttendanceRecord {
 
 export function StaffAttendanceRegister() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'super_admin';
+  const roleLower = String(user?.role || '').toLowerCase();
+  const isAdmin = roleLower === 'admin' || roleLower === 'owner' || roleLower === 'super_admin';
   const assignedGrade = !isAdmin ? (user?.assignedClass || user?.grade || 'Grade 1') : 'Grade 1';
   const assignedStream = !isAdmin ? (user?.assignedStream || user?.stream || 'East') : 'East';
 

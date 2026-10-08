@@ -2,7 +2,6 @@
  * Global Grade-Specific Teacher Permission Guard Helper
  * Enforces that teachers can only view/modify records for their explicitly assigned grade and stream.
  */
-import { normalizeGradeStr } from '@/utils/gradeUtils';
 
 export interface UserContextType {
   role?: string;
@@ -11,6 +10,26 @@ export interface UserContextType {
   grade?: string;
   stream?: string;
 }
+
+/**
+ * Harmonized grade matcher (supports "1", "Grade 1", "Grade One", etc.)
+ */
+export const normalizeGradeStr = (val: string): string => {
+  if (!val) return '';
+  const lower = val.toLowerCase().trim();
+  const match = lower.match(/(\d+)/);
+  if (match) return match[1];
+  if (lower.includes('one') || lower.includes('1')) return '1';
+  if (lower.includes('two') || lower.includes('2')) return '2';
+  if (lower.includes('three') || lower.includes('3')) return '3';
+  if (lower.includes('four') || lower.includes('4')) return '4';
+  if (lower.includes('five') || lower.includes('5')) return '5';
+  if (lower.includes('six') || lower.includes('6')) return '6';
+  if (lower.includes('seven') || lower.includes('7')) return '7';
+  if (lower.includes('eight') || lower.includes('8')) return '8';
+  if (lower.includes('nine') || lower.includes('9')) return '9';
+  return lower;
+};
 
 /**
  * Checks if the user is authorized to access a specific student/record based on grade and stream.
@@ -63,8 +82,3 @@ export const checkGradePermission = (
     isStreamMatch: streamMatch,
   };
 };
-
-/**
- * Helper to normalize grade strings consistently across the app.
- */
-export { normalizeGradeStr };

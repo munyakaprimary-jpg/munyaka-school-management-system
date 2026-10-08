@@ -267,7 +267,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   preselectedAssessmentId,
 }) => {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'super_admin';
+  const isAdmin = String(user?.role || '').toLowerCase() === 'admin' || String(user?.role || '').toLowerCase() === 'owner' || String(user?.role || '').toLowerCase() === 'super_admin';
   const assignedGrade = !isAdmin ? (user?.assignedClass || user?.grade || 'Grade 1') : ALL_GRADES_VALUE;
   const assignedStream = !isAdmin ? (user?.assignedStream || user?.stream || ALL_STREAMS_VALUE) : ALL_STREAMS_VALUE;
 
