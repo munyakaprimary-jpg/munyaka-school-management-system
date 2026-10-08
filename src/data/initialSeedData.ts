@@ -1262,148 +1262,7 @@ export const initialSeedData = {
       "createdAt": "2026-09-29T10:52:20.445Z"
     }
   ],
-  "staff": [
-    {
-      "name": "JAMES NDIKI",
-      "nationalId": "ID-1789969050865",
-      "email": "jndiki@munyaka.sc.ke",
-      "phone": "0740583662",
-      "tscNumber": "327775",
-      "role": "CLASS TEACHER",
-      "systemRole": "class_teacher",
-      "department": "School Administration",
-      "status": "Active",
-      "id": "staff_1789969050866_xbcva",
-      "full_name": "JAMES NDIKI",
-      "staffId": "MUN-2430",
-      "tempAccessCode": "134082",
-      "joined": "2026-09-21",
-      "assignedSubjects": [],
-      "assignedGrade": "Grade 1",
-      "assignedStream": "Blue",
-      "grade": "Grade 1",
-      "stream": "Blue"
-    },
-    {
-      "name": "ALICE MAINA",
-      "nationalId": "ID-1790072852855",
-      "email": "maina@munyaka.sc.ke",
-      "phone": "0722345567",
-      "tscNumber": "1123345",
-      "role": "CLASS TEACHER",
-      "systemRole": "class_teacher",
-      "department": "School Administration",
-      "status": "Active",
-      "id": "staff_1790072852855_fys7j",
-      "full_name": "ALICE MAINA",
-      "staffId": "MUN-4881",
-      "tempAccessCode": "313167",
-      "joined": "2026-09-22"
-    },
-    {
-      "name": "ANN NDUTA MBUGUA",
-      "nationalId": "ID-1790157907617",
-      "email": "annmbugua@munyaka.sc.ke",
-      "phone": "0724467137",
-      "tscNumber": "452588",
-      "role": "CLASS TEACHER",
-      "systemRole": "class_teacher",
-      "department": "School Administration",
-      "status": "Active",
-      "id": "staff_1790157907618_qk42q",
-      "full_name": "ANN NDUTA MBUGUA",
-      "staffId": "MUN-2020",
-      "tempAccessCode": "443492",
-      "joined": "2026-09-23"
-    },
-    {
-      "name": "JANET GATHONI KUNGU",
-      "nationalId": "ID-1790170127489",
-      "email": "janetkungu@munyaka.sc.ke",
-      "phone": "0720869310",
-      "tscNumber": "487406",
-      "role": "LIBRARIAN",
-      "systemRole": "librarian",
-      "department": "Library",
-      "status": "Active",
-      "id": "staff_1790170127489_uw96a",
-      "full_name": "JANET GATHONI KUNGU",
-      "staffId": "MUN-3433",
-      "tempAccessCode": "774938",
-      "joined": "2026-09-23"
-    },
-    {
-      "name": "LAWRENCE NDEGWA GIOSHE",
-      "nationalId": "ID-1790174007943",
-      "email": "lndegwa@munyaka.sc.ke",
-      "phone": "0720583097",
-      "tscNumber": "516570",
-      "role": "CLASS TEACHER",
-      "systemRole": "class_teacher",
-      "department": "School Administration",
-      "status": "Active",
-      "id": "staff_1790174007943_xtycd",
-      "full_name": "LAWRENCE NDEGWA GIOSHE",
-      "staffId": "MUN-1788",
-      "tempAccessCode": "493306",
-      "joined": "2026-09-23",
-      "assignedGrade": "Grade 1",
-      "assignedStream": "Green",
-      "grade": "Grade 1",
-      "stream": "Green",
-      "classGrade": "Grade 1",
-      "classStream": "Green"
-    },
-    {
-      "name": "JAMES MAINA",
-      "nationalId": "ID-1791106909946",
-      "email": "jmaina@munyaka.sc.ke",
-      "phone": "0722345678",
-      "tscNumber": "456789",
-      "role": "CLASS TEACHER",
-      "systemRole": "class_teacher",
-      "department": "School Administration",
-      "status": "Active",
-      "id": "staff_1791106909948_2cc24",
-      "full_name": "JAMES MAINA",
-      "staffId": "MUN-1632",
-      "tempAccessCode": "560773",
-      "joined": "2026-10-04",
-      "assignedGrade": "Grade 5",
-      "assignedStream": "Yellow",
-      "grade": "Grade 5",
-      "stream": "Yellow",
-      "classGrade": "Grade 5",
-      "classStream": "Yellow"
-    },
-    {
-      "name": "IRENE MOKAYA",
-      "nationalId": "ID-1791112104321",
-      "email": "imokaya@munyaka.sc.ke",
-      "phone": "0718678900",
-      "tscNumber": "112345",
-      "role": "CLASS TEACHER",
-      "systemRole": "class_teacher",
-      "department": "School Administration",
-      "status": "Active",
-      "id": "staff_1791112104322_sg4qz",
-      "full_name": "IRENE MOKAYA",
-      "staffId": "MUN-6035",
-      "tempAccessCode": "311020",
-      "joined": "2026-10-04",
-      "assignedGrade": "Grade 6",
-      "assignedStream": "Green",
-      "id_no": "ID-1791112104321",
-      "staff_id": "MUN-6035",
-      "access_key": "311020",
-      "tsc_no": "112345",
-      "subjects": [],
-      "grade": "Grade 6",
-      "stream": "Green",
-      "classGrade": "Grade 6",
-      "classStream": "Green"
-    }
-  ],
+  "staff": [],
   "fees": [
     {
       "id": "FEE-001",
@@ -1712,7 +1571,7 @@ export const initialExamTypes = (initialSeedData as any).examTypes || (initialSe
 export const initialMarks = (initialSeedData as any).marks || (initialSeedData as any).assessments || (initialSeedData as any).marked_student_submissions || [];
 export const initialQuestions = (initialSeedData as any).questions || (initialSeedData as any).question_bank || [];
 export const initialLearners = initialSeedData.students || [];
-export const initialStaff = initialSeedData.staff || [];
+export const initialStaff = [];
 export const initialReportCards = (initialSeedData as any).reportCards || [];
 export const initialFeeStructures = (initialSeedData as any).feeStructures || (initialSeedData as any).fees_structures || [];
 export const initialFeePayments = (initialSeedData as any).fees || (initialSeedData as any).payments || [];
@@ -1721,7 +1580,7 @@ export const initialLibraryBooks = (initialSeedData as any).libraryBooks || (ini
 export const initialLibraryLogs = (initialSeedData as any).libraryLogs || (initialSeedData as any).library_logs || [];
 export const mockLearners = initialSeedData.students || [];
 export const mockStudents = initialSeedData.students || [];
-export const mockStaff = initialSeedData.staff || [];
+export const mockStaff = [];
 export const initialGrades = (initialSeedData as any).grades || [];
 export const initialStreams = (initialSeedData as any).streams || [];
 export const initialClassAssignments = (initialSeedData as any).classAssignments || [];

@@ -145,29 +145,7 @@ export const UnifiedDataStorage = {
   },
 
   getStaff: (): any[] => {
-    if (localStorage.getItem('munyaka_staff_cleared_explicitly') === 'true') {
-      return initialSeedData.staff || [];
-    }
-    
-    const primary = readStorage<any[]>(STORAGE_KEYS.STAFF, []);
-    const directory = readStorage<any[]>('munyaka_staff_directory', []);
-    const master = readStorage<any[]>('munyaka_master_staff_list', []);
-    const dbKey = readStorage<any[]>('munyaka_staff_db', []);
-    const masterV1 = readStorage<any[]>('munyaka_staff_master_v1', []);
-
-    const combined = [...dbKey, ...masterV1, ...primary, ...directory, ...master, ...(initialSeedData.staff || [])];
-
-    const map = new Map<string, any>();
-    combined.forEach(s => {
-      if (s && (s.id || s.email || s.name || s.staffId)) {
-        const key = String(s.id || s.email || s.name || s.staffId).trim().toLowerCase();
-        if (!map.has(key)) {
-          map.set(key, s);
-        }
-      }
-    });
-
-    const res = Array.from(map.values());
+    return readStorage<any[]>('munyaka_staff_db', []);
     return res.length > 0 ? res : (initialSeedData.staff || []);
   },
 

@@ -2,47 +2,7 @@ import { CentralDataService, STORAGE_KEYS } from './centralDataService';
 
 export const STAFF_MASTER_KEY = STORAGE_KEYS.STAFF;
 
-const initialStaff: any[] = [
-  {
-    id: 'staff-1',
-    name: 'JANET GATHONI KUNGU',
-    nationalId: '28475920',
-    email: 'janet.gathoni@munyaka.ac.ke',
-    phone: '0720869310',
-    tscNumber: '487406',
-    role: 'Librarian',
-    systemRole: 'librarian',
-    department: 'Library',
-    status: 'Active',
-    staffId: 'STF-001'
-  },
-  {
-    id: 'staff-2',
-    name: 'PETER KAMAU MWANGI',
-    nationalId: '25489102',
-    email: 'peter.kamau@munyaka.ac.ke',
-    phone: '0712345678',
-    tscNumber: '392810',
-    role: 'Senior Teacher',
-    systemRole: 'senior_teacher',
-    department: 'Academics',
-    status: 'Active',
-    staffId: 'STF-002'
-  },
-  {
-    id: 'staff-3',
-    name: 'GRACE WANJIKU NJOROGE',
-    nationalId: '27192840',
-    email: 'grace.wanjiku@munyaka.ac.ke',
-    phone: '0733445566',
-    tscNumber: '419203',
-    role: 'Class Teacher',
-    systemRole: 'class_teacher',
-    department: 'Lower Primary',
-    status: 'Active',
-    staffId: 'STF-003'
-  }
-];
+export const initialStaff: StaffMember[] = [];
 
 export type MasterSystemRole =
   | 'head_teacher'
@@ -143,30 +103,16 @@ export const mapDesignationToSystemRole = (role: string): MasterSystemRole => {
 export const initializeStaffMaster = (): void => {};
 
 export const getStaffMaster = (): MasterStaffRecord[] => {
-  if (localStorage.getItem('munyaka_staff_cleared_explicitly') === 'true') {
-    return [];
-  }
-
   let list: any[] = [];
   try {
-    const keys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
-    for (const k of keys) {
-      const raw = localStorage.getItem(k);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          list = [...list, ...parsed];
-        }
+    const raw = localStorage.getItem('munyaka_staff_db');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        list = parsed;
       }
     }
   } catch {}
-
-  const centralRaw = CentralDataService.getStaff() || [];
-  list = [...list, ...centralRaw];
-
-  if (list.length === 0) {
-    list = initialStaff;
-  }
 
   // Deduplicate by id / phone / name
   const map = new Map<string, any>();
