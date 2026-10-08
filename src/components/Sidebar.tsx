@@ -66,29 +66,121 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Shield, label: 'Admin Dashboard', path: '/system-management' },
-    { icon: Users, label: 'Staff Registry', path: '/staff-registry' },
-    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization' },
-    { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config' },
-    { icon: Gamepad2, label: 'Games Hub', path: '/games' },
-    { icon: Layers, label: 'Grades & Streams', path: '/grades' },
-    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas' },
-    { icon: Award, label: 'Exam Types', path: '/exam-types' },
-    { icon: Clock, label: 'Timetable', path: '/timetable' },
-    { icon: CheckSquare, label: 'Attendance Management', path: '/attendance' },
-    { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance/students' },
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in' },
-    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments' },
-    { icon: FileText, label: 'Marked Scripts', path: '/assessments/marked-scripts' },
-    { icon: BarChart3, label: 'Results Analysis', path: '/analysis' },
-    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub' },
-    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab' },
-    { icon: Library, label: 'Library & E-Resources', path: '/library' },
-    { icon: Box, label: 'Tools & Inventory', path: '/inventory' },
-    { icon: Wallet, label: 'Fees & Finance', path: '/fees' },
-    { icon: FileText, label: 'Report Cards', path: '/reports' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
+    {
+      name: 'Dashboard',
+      path: '/',
+      icon: LayoutDashboard
+    },
+    {
+      name: 'Admin Dashboard',
+      path: '/system-management',
+      icon: Shield
+    },
+    {
+      name: 'Staff Registry',
+      path: '/staff-registry',
+      icon: Users
+    },
+    {
+      name: 'Data Harmonization Hub',
+      path: '/admin/harmonization',
+      icon: ShieldCheck
+    },
+    {
+      name: 'Teacher LAN Config',
+      path: '/teacher-lan-config',
+      icon: Wifi
+    },
+    {
+      name: 'Games Hub',
+      path: '/games',
+      icon: Gamepad2
+    },
+    {
+      name: 'Grades & Streams',
+      path: '/grades',
+      icon: Layers
+    },
+    {
+      name: 'Learning Areas',
+      path: '/learning-areas',
+      icon: BookOpen
+    },
+    {
+      name: 'Exam Types',
+      path: '/exam-types',
+      icon: Award
+    },
+    {
+      name: 'Timetable',
+      path: '/timetable',
+      icon: Clock
+    },
+    {
+      name: 'Attendance Management',
+      path: '/attendance',
+      icon: CheckSquare
+    },
+    {
+      name: 'Student Attendance',
+      path: '/attendance/students',
+      icon: ClipboardCheck
+    },
+    {
+      name: 'Daily Check-In',
+      path: '/staff/check-in',
+      icon: LogIn
+    },
+    {
+      name: 'Enter Marks',
+      path: '/assessments',
+      icon: FileSpreadsheet
+    },
+    {
+      name: 'Marked Scripts',
+      path: '/assessments/marked-scripts',
+      icon: FileText
+    },
+    {
+      name: 'Results Analysis',
+      path: '/analysis',
+      icon: BarChart3
+    },
+    {
+      name: 'Digital Hub',
+      path: '/digital-hub',
+      icon: Laptop
+    },
+    {
+      name: 'ICT Lab & Devices',
+      path: '/ict-lab',
+      icon: Monitor
+    },
+    {
+      name: 'Library & E-Resources',
+      path: '/library',
+      icon: Library
+    },
+    {
+      name: 'Tools & Inventory',
+      path: '/inventory',
+      icon: Box
+    },
+    {
+      name: 'Fees & Finance',
+      path: '/fees',
+      icon: Wallet
+    },
+    {
+      name: 'Report Cards',
+      path: '/reports',
+      icon: FileText
+    },
+    {
+      name: 'Settings',
+      path: '/settings',
+      icon: Settings
+    }
   ];
 
   const activePath = location.pathname;
@@ -135,10 +227,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                     ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
                     : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
                 )}
-                title={isCollapsed ? item.label : undefined}
+                title={isCollapsed ? item.name : undefined}
               >
                 <Icon size={20} className={cn("transition-transform group-hover:scale-110 shrink-0", isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200")} />
-                {!isCollapsed && <span className="truncate flex-1">{item.label}</span>}
+                {!isCollapsed && <span className="truncate flex-1">{item.name}</span>}
                 {isActive && !isCollapsed && (
                   <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0" />
                 )}
