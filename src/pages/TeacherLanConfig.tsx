@@ -117,7 +117,7 @@ const describeError = (type: ErrorType): { title: string; message: string } => {
   }
 };
 
-export default function LANServerConfig() {
+export default function TeacherLanConfig() {
   const [serverUrl, setServerUrl] = useState<string>(() => {
     return localStorage.getItem(LAN_SERVER_KEY) || DEFAULT_LAN_URL;
   });

@@ -444,6 +444,52 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               </Link>
             );
           })}
+
+          {/* ── Hardcoded LAN Config links for teacher roles ──
+              Placed between Dashboard and Games Hub in the sidebar.
+              Visible only to teacher-variant roles. */}
+          {user && (() => {
+            const roleLower = (user.role ?? '').toLowerCase();
+            const isTeacherVariant =
+              roleLower.includes('teacher') ||
+              roleLower.includes('educator') ||
+              roleLower === 'class_teacher' ||
+              roleLower === 'subject_teacher' ||
+              roleLower === 'senior_teacher';
+            if (!isTeacherVariant) return null;
+
+            const lanItems = [
+              { icon: Server, label: 'LAN Server Config', path: '/lan-server-config' },
+              { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config' },
+            ];
+
+            return (
+              <>
+                {lanItems.map((lanItem) => {
+                  const isActive = location.pathname === lanItem.path;
+                  return (
+                    <Link
+                      key={lanItem.path}
+                      to={lanItem.path}
+                      onClick={() => setIsOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
+                        isActive
+                          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
+                          : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
+                      )}
+                    >
+                      <lanItem.icon size={20} className={cn(
+                        "shrink-0",
+                        isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                      )} />
+                      {!isCollapsed && <span className="truncate">{lanItem.label}</span>}
+                    </Link>
+                  );
+                })}
+              </>
+            );
+          })()}
         </nav>
 
         {/* User Account Footer */}
