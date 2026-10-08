@@ -487,7 +487,7 @@ const Staff = () => {
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <BackButton parentPath="/" />
           <div className="min-w-0">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Staff &amp; Personnel</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Staff Registry</h1>
             <p className="text-muted-foreground break-words hyphens-auto">Master directory of teachers, administrators, and support staff.</p>
           </div>
         </div>
