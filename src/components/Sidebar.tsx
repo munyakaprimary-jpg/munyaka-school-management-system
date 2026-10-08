@@ -67,8 +67,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Users, label: 'Staff Registry', path: '/staff-registry' },
     { icon: Shield, label: 'Admin Dashboard', path: '/system-management' },
+    { icon: Users, label: 'Staff Registry', path: '/staff-registry' },
+    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization' },
     { icon: Wifi, label: 'Teacher LAN Config', path: '/teacher-lan-config' },
     { icon: Gamepad2, label: 'Games Hub', path: '/games' },
     { icon: Layers, label: 'Grades & Streams', path: '/grades' },
