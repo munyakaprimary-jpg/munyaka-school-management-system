@@ -122,6 +122,26 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
+          {/* Explicit Hardcoded Staff Registry Button */}
+          <Link 
+            to="/staff-registry" 
+            className={cn(
+              "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative border border-indigo-500/40 shadow-md",
+              activePath === '/staff-registry'
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
+                : "bg-indigo-950/40 text-indigo-200 hover:bg-indigo-900/60 hover:text-white"
+            )}
+            title={isCollapsed ? "Staff Registry" : undefined}
+          >
+            <Users size={20} className="text-indigo-400 group-hover:text-white shrink-0" />
+            {!isCollapsed && <span className="truncate flex-1 font-bold">Staff Registry</span>}
+            {!isCollapsed && (
+              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-mono border border-indigo-500/30">
+                NEW
+              </span>
+            )}
+          </Link>
+
           {navItems.map((item, idx) => {
             const Icon = item.icon;
             const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
