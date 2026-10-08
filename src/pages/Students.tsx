@@ -28,10 +28,28 @@ import {
 import { showSuccess, showError } from '@/utils/toast';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
+import { CentralDataService } from '@/services/centralDataService';
 
 const STUDENTS_STORAGE_KEY = 'munyaka_students';
-const CENTRAL_DB_KEY = 'munyaka_central_db';
 const API_BASE_URL = '/api';
+
+// Harmonized grade matcher (supports "1", "Grade 1", "Grade One", etc.)
+const normalizeGradeStr = (val: string) => {
+  if (!val) return '';
+  const lower = val.toLowerCase().trim();
+  const match = lower.match(/(\d+)/);
+  if (match) return match[1];
+  if (lower.includes('one') || lower.includes('1')) return '1';
+  if (lower.includes('two') || lower.includes('2')) return '2';
+  if (lower.includes('three') || lower.includes('3')) return '3';
+  if (lower.includes('four') || lower.includes('4')) return '4';
+  if (lower.includes('five') || lower.includes('5')) return '5';
+  if (lower.includes('six') || lower.includes('6')) return '6';
+  if (lower.includes('seven') || lower.includes('7')) return '7';
+  if (lower.includes('eight') || lower.includes('8')) return '8';
+  if (lower.includes('nine') || lower.includes('9')) return '9';
+  return lower;
+};
 
 const generateAdmissionNumber = (grade: string, existingStudents: any[] = []) => {
   const match = grade.match(/(\d+)/);
@@ -115,71 +133,40 @@ export default function Students() {
   const roleLower = String(teacherRole || (typeof window !== 'undefined' ? localStorage.getItem('current_user_role') : '') || '').toLowerCase();
   const isAdmin = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin') || roleLower === 'administrator';
 
-  const assignedTeacherGrade = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Grade 1' : ((user as any)?.grade || (user as any)?.assignedClass || 'Grade 1');
-  const assignedTeacherStream = (!isAdmin && (teacherName.toLowerCase().includes('lawrence') || !isAdmin)) ? 'Blue' : ((user as any)?.stream || (user as any)?.assignedStream || 'BLUE');
+  const assignedTeacherGrade = !isAdmin ? ((user as any)?.grade || (user as any)?.assignedClass || 'Grade 1') : 'all';
+    const assignedTeacherStream = !isAdmin ? ((user as any)?.stream || (user as any)?.assignedStream || 'BLUE') : 'all';
 
   const [students, setStudents] = useState<any[]>(() => {
-    let rawList: any[] = [];
-    try {
-      const saved = localStorage.getItem(STUDENTS_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) rawList = parsed;
-      }
-      if (rawList.length === 0) {
-        const central = localStorage.getItem(CENTRAL_DB_KEY);
-        if (central) {
-          const parsedCentral = JSON.parse(central);
-          if (Array.isArray(parsedCentral.students) && parsedCentral.students.length > 0) {
-            rawList = parsedCentral.students;
-          }
-        }
-      }
-    } catch {}
-
-    if (rawList.length === 0) {
-      rawList = [
-        {
-          id: 's-101',
-          name: 'Amina Kiprop',
-          fullName: 'Amina Kiprop',
-          admissionNumber: 'Mny/6/4821',
-          admNo: 'Mny/6/4821',
-          assessmentNo: 'ASS-827361',
-          gender: 'Female',
-          dateOfBirth: '2013-05-14',
-          dob: '2013-05-14',
-          grade: 'Grade 6',
-          class: 'Grade 6',
-          stream: 'BLUE',
-          parentName: 'Sarah Kiprop',
-          guardian: 'Sarah Kiprop',
-          phoneNumber: '+254 712 345 678',
-          parentPhone: '+254 712 345 678'
-        },
-        {
-          id: 's-102',
-          name: 'Brian Omondi',
-          fullName: 'Brian Omondi',
-          admissionNumber: 'Mny/6/9132',
-          admNo: 'Mny/6/9132',
-          assessmentNo: 'ASS-827362',
-          gender: 'Male',
-          dateOfBirth: '2013-11-22',
-          dob: '2013-11-22',
-          grade: 'Grade 6',
-          class: 'Grade 6',
-          stream: 'BLUE',
-          parentName: 'James Omondi',
-          guardian: 'James Omondi',
-          phoneNumber: '+254 722 987 654',
-          parentPhone: '+254 722 987 654'
-        }
-      ];
-    }
-
-    return ensureProperAdmissionNumbers(rawList);
-  });
+      // Load from centralized master data service (aggregates across all storage keys)
+      const loaded = CentralDataService.getLearners();
+      return ensureProperAdmissionNumbers(loaded);
+    });
+  
+    // Keep localStorage in sync when central data changes
+    useEffect(() => {
+      const handleStudentsUpdated = () => {
+        const loaded = CentralDataService.getLearners();
+        setStudents(ensureProperAdmissionNumbers(loaded));
+      };
+      const handleLearnersUpdated = () => {
+        const loaded = CentralDataService.getLearners();
+        setStudents(ensureProperAdmissionNumbers(loaded));
+      };
+      const handleDataChanged = () => {
+        const loaded = CentralDataService.getLearners();
+        setStudents(ensureProperAdmissionNumbers(loaded));
+      };
+  
+      window.addEventListener('students-updated', handleStudentsUpdated);
+      window.addEventListener('learners-updated', handleLearnersUpdated);
+      window.addEventListener('munyaka:data-changed', handleDataChanged);
+  
+      return () => {
+        window.removeEventListener('students-updated', handleStudentsUpdated);
+        window.removeEventListener('learners-updated', handleLearnersUpdated);
+        window.removeEventListener('munyaka:data-changed', handleDataChanged);
+      };
+    }, []);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState(() => (!isAdmin ? assignedTeacherGrade : 'all'));
@@ -254,12 +241,12 @@ export default function Students() {
   const availableGrades = gradesConfig.grades.length > 0 ? gradesConfig.grades : ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
   const availableStreams = gradesConfig.streams.length > 0 ? gradesConfig.streams : ['BLUE', 'RED', 'GREEN', 'YELLOW'];
 
-  // Persist students
-  useEffect(() => {
-    try {
-      localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(students));
-    } catch {}
-  }, [students]);
+  // Persist students through centralized data service
+    useEffect(() => {
+      try {
+        CentralDataService.saveLearners(students);
+      } catch {}
+    }, [students]);
 
   const resetForm = () => {
     setEditingId(null);
@@ -362,18 +349,14 @@ export default function Students() {
       };
 
       const updated = [studentData, ...students];
-      const resequenced = ensureProperAdmissionNumbers(updated);
-      setStudents(resequenced);
-
-      try {
-        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(resequenced));
-        const centralData = JSON.parse(localStorage.getItem(CENTRAL_DB_KEY) || '{}');
-        centralData.students = resequenced;
-        localStorage.setItem(CENTRAL_DB_KEY, JSON.stringify(centralData));
-        window.dispatchEvent(new CustomEvent('central-data-updated', { detail: { students: resequenced } }));
-      } catch {}
-
-      showSuccess(`Successfully transferred in ${studentData.fullName}`);
+            const resequenced = ensureProperAdmissionNumbers(updated);
+            setStudents(resequenced);
+      
+            try {
+              CentralDataService.saveLearners(resequenced);
+            } catch {}
+      
+            showSuccess(`Successfully transferred in ${studentData.fullName}`);
       setIsTransferModalOpen(false);
     } catch (err) {
       showError("Failed to transfer in learner.");
@@ -464,16 +447,12 @@ export default function Students() {
       }
 
       setStudents(updated);
-
-      try {
-        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updated));
-        const centralData = JSON.parse(localStorage.getItem(CENTRAL_DB_KEY) || '{}');
-        centralData.students = updated;
-        localStorage.setItem(CENTRAL_DB_KEY, JSON.stringify(centralData));
-        window.dispatchEvent(new CustomEvent('central-data-updated', { detail: { students: updated } }));
-      } catch {}
-
-      setIsModalOpen(false);
+      
+            try {
+              CentralDataService.saveLearners(updated);
+            } catch {}
+      
+            setIsModalOpen(false);
       resetForm();
     } catch (err) {
       showError("Failed to save learner record.");
@@ -501,14 +480,14 @@ export default function Students() {
 
     if (authPassword === currentAdminPass) {
       if (pendingDelete) {
-        const targetId = pendingDelete.id || pendingDelete.admissionNumber;
-        const updated = students.filter(s => (s.id || s.admissionNumber) !== targetId);
-        setStudents(updated);
-        try {
-          localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(updated));
-        } catch {}
-        showSuccess("Learner deleted successfully.");
-      }
+              const targetId = pendingDelete.id || pendingDelete.admissionNumber;
+              const updated = students.filter(s => (s.id || s.admissionNumber) !== targetId);
+              setStudents(updated);
+              try {
+                CentralDataService.saveLearners(updated);
+              } catch {}
+              showSuccess("Learner deleted successfully.");
+            }
       setIsAuthOpen(false);
       setPendingDelete(null);
     } else {
@@ -519,32 +498,36 @@ export default function Students() {
   };
 
   const filteredStudents = useMemo(() => {
-    return students.filter(s => {
-      const name = (s.name || s.fullName || '').toLowerCase();
-      const adm = (s.admissionNumber || s.admNo || '').toLowerCase();
-      const ass = (s.assessmentNo || s.assessmentNumber || '').toLowerCase();
-      
-      const sGrade = s.grade || s.class || '';
-      const sStream = s.stream || '';
-
-      // If user is a teacher (non-admin), restrict strictly to assigned grade & stream
-      if (!isAdmin) {
-        const gradeMatch = sGrade.toLowerCase().includes(assignedTeacherGrade.toLowerCase()) || assignedTeacherGrade.toLowerCase().includes(sGrade.toLowerCase());
-        const streamMatch = sStream.toLowerCase().includes(assignedTeacherStream.toLowerCase()) || assignedTeacherStream.toLowerCase().includes(sStream.toLowerCase());
-        if (!gradeMatch || !streamMatch) return false;
-      }
-
-      const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase());
-      
-      const matchesGrade = gradeFilter === 'all' || sGrade.toLowerCase() === gradeFilter.toLowerCase();
-      const matchesStream = streamFilter === 'all' || sStream.toLowerCase() === streamFilter.toLowerCase();
-
-      const sGender = s.gender || '';
-      const matchesGender = genderFilter === 'all' || sGender.toLowerCase() === genderFilter.toLowerCase();
-
-      return matchesSearch && matchesGrade && matchesStream && matchesGender;
-    });
-  }, [students, searchTerm, gradeFilter, streamFilter, genderFilter, isAdmin, assignedTeacherGrade, assignedTeacherStream]);
+      return students.filter(s => {
+        const name = (s.name || s.fullName || '').toLowerCase();
+        const adm = (s.admissionNumber || s.admNo || '').toLowerCase();
+        const ass = (s.assessmentNo || s.assessmentNumber || '').toLowerCase();
+        
+        const sGrade = s.grade || s.class || '';
+        const sStream = s.stream || '';
+        
+        const sGradeNorm = normalizeGradeStr(sGrade);
+        const assignedNorm = normalizeGradeStr(assignedTeacherGrade);
+        
+        // If user is a teacher (non-admin), restrict strictly to assigned grade & stream
+        if (!isAdmin) {
+          const gradeMatch = sGradeNorm === assignedNorm || sGrade.toLowerCase().includes(assignedTeacherGrade.toLowerCase()) || assignedTeacherGrade.toLowerCase().includes(sGrade.toLowerCase());
+          const streamMatch = !assignedTeacherStream || sStream.toLowerCase() === assignedTeacherStream.toLowerCase() || sStream.toLowerCase().includes(assignedTeacherStream.toLowerCase());
+          if (!gradeMatch || !streamMatch) return false;
+        }
+        
+        const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase());
+        
+        const filterGradeNorm = normalizeGradeStr(gradeFilter);
+        const matchesGrade = gradeFilter === 'all' || sGradeNorm === filterGradeNorm || sGrade.toLowerCase() === gradeFilter.toLowerCase();
+        const matchesStream = streamFilter === 'all' || sStream.toLowerCase() === streamFilter.toLowerCase();
+        
+        const sGender = s.gender || '';
+        const matchesGender = genderFilter === 'all' || sGender.toLowerCase() === genderFilter.toLowerCase();
+        
+        return matchesSearch && matchesGrade && matchesStream && matchesGender;
+      });
+    }, [students, searchTerm, gradeFilter, streamFilter, genderFilter, isAdmin, assignedTeacherGrade, assignedTeacherStream]);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
