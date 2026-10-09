@@ -31,6 +31,12 @@ export type StaffCategoryRole =
   | 'DHOI'
   | 'Store Master';
 
+export interface StaffAllocationRecord {
+  subject: string;
+  grade: string;
+  stream: string;
+}
+
 export interface StaffMember {
   id: string;
   name: string;
@@ -41,6 +47,7 @@ export interface StaffMember {
   subjects: string[];
   assignedClasses?: string[];
   assignedStreams?: string[];
+  allocations?: StaffAllocationRecord[];
   accessCode: string;
   status: 'Active' | 'On Leave' | 'Inactive';
   createdAt?: string;
@@ -65,6 +72,11 @@ export default function StaffRegistry() {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
   const [assignedStreams, setAssignedStreams] = useState<string[]>([]);
+  // Structured subject & class allocation records: e.g. { subject: "Mathematics", grade: "Grade 7", stream: "Mercury" }
+  const [allocations, setAllocations] = useState<StaffAllocationRecord[]>([]);
+
+  // Active subject being configured for grade/stream matrix
+  const [activeSubjectForAllocation, setActiveSubjectForAllocation] = useState<string | null>(null);
 
   // Generator for Access Code
   const generateSecureCode = () => {
@@ -110,6 +122,13 @@ export default function StaffRegistry() {
         subjects: staff.subjects || [],
         assignedClasses: staff.assignedClasses || [],
         assignedStreams: staff.assignedStreams || [],
+        allocations: Array.isArray(staff.allocations)
+          ? staff.allocations.filter((a: any) => a && typeof a === 'object' && a.subject)
+          : (staff.subjects || []).map((sub: string) => ({
+              subject: sub,
+              grade: (staff.assignedClasses || [])[0] || 'Grade 4',
+              stream: (staff.assignedStreams || [])[0] || 'Blue'
+            })),
         accessCode: staff.accessCode || Math.random().toString(36).substring(2, 7).toUpperCase(),
         status: staff.status || 'Active',
         createdAt: staff.createdAt || new Date().toISOString()
@@ -131,6 +150,8 @@ export default function StaffRegistry() {
     setSelectedSubjects([]);
     setAssignedClasses([]);
     setAssignedStreams([]);
+    setAllocations([]);
+    setActiveSubjectForAllocation(null);
     generateSecureCode();
     setIsModalOpen(true);
   };
@@ -149,9 +170,27 @@ export default function StaffRegistry() {
     setPhone(staff.phone);
     setStatus(staff.status);
     setAccessCode(staff.accessCode || generateRandomCode());
-    setSelectedSubjects(staff.subjects || []);
+    
+    const loadedSubs = staff.subjects || [];
+    setSelectedSubjects(loadedSubs);
     setAssignedClasses(staff.assignedClasses || []);
     setAssignedStreams(staff.assignedStreams || []);
+    
+    let loadedAllocs: StaffAllocationRecord[] = [];
+    if (Array.isArray(staff.allocations) && staff.allocations.length > 0) {
+      loadedAllocs = staff.allocations;
+    } else {
+      // Build default allocations if none existed
+      loadedSubs.forEach(sub => {
+        loadedAllocs.push({
+          subject: sub,
+          grade: (staff.assignedClasses || [])[0] || 'Grade 4',
+          stream: (staff.assignedStreams || [])[0] || 'Blue'
+        });
+      });
+    }
+    setAllocations(loadedAllocs);
+    setActiveSubjectForAllocation(loadedSubs[0] || null);
     setIsModalOpen(true);
   };
 
