@@ -148,7 +148,23 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
   if (list.length === 0) {
     list = [
       {
+        id: 'staff_james_ndiki',
+        staffId: 'MUN-4058',
+        name: 'James Ndiki',
+        email: 'ndiki@munyaka.sc.ke',
+        phone: '+254 740 583 662',
+        role: 'Senior Teacher',
+        systemRole: 'senior_teacher',
+        department: 'Academics',
+        assignedGrade: 'Grade 5',
+        assignedStream: 'Blue',
+        status: 'Active',
+        tempAccessCode: 'MUN-4058',
+        accessCode: 'MUN-4058'
+      },
+      {
         id: 'staff_admin_1',
+        staffId: 'MUN-1002',
         name: 'School Administrator',
         email: 'sysadmin@munyaka.sc.ke',
         phone: '+254 712 345 678',
@@ -160,6 +176,30 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
         accessCode: 'MUN-ADMIN'
       }
     ];
+  } else {
+    // Ensure James Ndiki is always present in the bootstrap ledger
+    const hasJames = list.some(s => {
+      const email = String(s.email || '').toLowerCase();
+      const name = String(s.name || '').toLowerCase();
+      return email.includes('ndiki') || name.includes('james ndiki');
+    });
+    if (!hasJames) {
+      list.unshift({
+        id: 'staff_james_ndiki',
+        staffId: 'MUN-4058',
+        name: 'James Ndiki',
+        email: 'ndiki@munyaka.sc.ke',
+        phone: '+254 740 583 662',
+        role: 'Senior Teacher',
+        systemRole: 'senior_teacher',
+        department: 'Academics',
+        assignedGrade: 'Grade 5',
+        assignedStream: 'Blue',
+        status: 'Active',
+        tempAccessCode: 'MUN-4058',
+        accessCode: 'MUN-4058'
+      });
+    }
   }
 
   const map = new Map<string, any>();

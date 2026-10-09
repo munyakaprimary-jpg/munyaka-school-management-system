@@ -156,6 +156,19 @@ interface PreRegisteredStaff {
 
 const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = [
   {
+    id: 'staff_james_ndiki',
+    staffId: 'MUN-4058',
+    fullName: 'James Ndiki',
+    email: 'ndiki@munyaka.sc.ke',
+    phone: '+254 740 583 662',
+    systemRole: 'senior_teacher',
+    department: 'Academics',
+    assignedGrade: 'Grade 5',
+    assignedStream: 'Blue',
+    tempAccessCode: 'MUN-4058',
+    status: 'Active'
+  },
+  {
     id: 'staff-001',
     staffId: 'MUN-1001',
     fullName: 'Lawrence Mwangi',
