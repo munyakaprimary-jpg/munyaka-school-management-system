@@ -17,14 +17,10 @@ export const STORAGE_KEYS = {
   STAFF_ATTENDANCE: 'munyaka_staff_attendance',
 };
 
-const CENTRAL_DB_STORAGE_KEY = 'munyaka_munyaka_central_db_cache';
+const CENTRAL_DB_STORAGE_KEY = 'munyaka_central_db_cache';
 
-// Circuit breaker & debounce state for remote sync
-let remoteOfflineCircuitOpen = false;
-let circuitOpenUntil = 0;
-let lastSyncAttemptTime = 0;
-const SYNC_COOLDOWN_MS = 15000; // 15 seconds cooldown after network failure
-const CIRCUIT_RESET_MS = 60000;  // Retry after 1 minute
+// Hard circuit breaker flag: once any network failure occurs, disable all automatic remote sync completely until reload
+let hardOfflineMode = false;
 
 export const getStoredServerUrl = (): string => {
   return getApiBaseUrl();
@@ -34,276 +30,108 @@ export const UnifiedDataStorage = {
   get: <T>(key: string, fallback: T): T => {
     return readStorage<T>(key, fallback);
   },
-
-  set: <T>(key: string, value: T): boolean => {
-    return writeStorage<T>(key, value);
+  set: <T>(key: string, value: T): void => {
+    writeStorage<T>(key, value);
   },
-
-  remove: (key: string): boolean => {
-    return removeStorage(key);
+  remove: (key: string): void => {
+    removeStorage(key);
   },
-
-  clearAll: (): void => {
+  clear: (): void => {
     clearAllStorage();
-    localStorage.clear();
-    sessionStorage.clear();
-    window.dispatchEvent(new Event('munyaka:data-changed'));
   },
 
-  exportFullDatabase: (): any => {
-    // Guaranteed full-app aggregator: scans all localStorage keys or merges active store modules
-    const allKeys: Record<string, any> = {};
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith('munyaka_') || key.startsWith('school_') || key.startsWith('exam_') || key.startsWith('fee'))) {
-          try {
-            allKeys[key] = JSON.parse(localStorage.getItem(key) || 'null');
-          } catch {
-            allKeys[key] = localStorage.getItem(key);
-          }
-        }
-      }
-    } catch {}
+  getLearners: (): any[] => {
+    const list = readStorage<any[]>('munyaka_students', []);
+    if (Array.isArray(list) && list.length > 0) return list;
+    const fallback = readStorage<any[]>('school_learners_data', []);
+    if (Array.isArray(fallback) && fallback.length > 0) return fallback;
+    return initialSeedData.students || [];
+  },
 
-    const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
-    const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
-    const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
-    const s4 = JSON.parse(localStorage.getItem('staff') || '[]');
-    const masterStaff = [s1, s2, s3, s4, initialSeedData.staff || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
-
-    const l1 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
-    const l2 = JSON.parse(localStorage.getItem('munyaka_master_learner_list') || '[]');
-    const l3 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-    const masterStudents = [l1, l2, l3, (initialSeedData as any).students || (initialSeedData as any).learners || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
-
-    const f1 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
-    const f2 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
-    const f3 = JSON.parse(localStorage.getItem('munyaka_student_fees') || '[]');
-    const masterFees = [f1, f2, f3, (initialSeedData as any).fees || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
-    
-    const p1 = JSON.parse(localStorage.getItem('munyaka_fee_payments_db') || '[]');
-    const p2 = JSON.parse(localStorage.getItem('munyaka_payments') || '[]');
-    const p3 = JSON.parse(localStorage.getItem('munyaka_transactions') || '[]');
-    const masterPayments = [p1, p2, p3, (initialSeedData as any).payments || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
-
-    const n1 = JSON.parse(localStorage.getItem('munyaka_notices_v2') || '[]');
-    const n2 = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
-    const masterNotices = [n1, n2, (initialSeedData as any).notices || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
-
-    const ev1 = JSON.parse(localStorage.getItem('munyaka_events_v2') || '[]');
-    const ev2 = JSON.parse(localStorage.getItem('munyaka_events') || '[]');
-    const masterEvents = [ev1, ev2, (initialSeedData as any).events || []].reduce((max, curr) => (Array.isArray(curr) && curr.length > max.length ? curr : max), []);
-
-    const a1 = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
-    const a2 = JSON.parse(localStorage.getItem('munyaka_attendance') || '{}');
-    const masterAttendance = Array.isArray(a1) && a1.length > 0 ? a1 : (Object.keys(a2).length > 0 ? a2 : ((initialSeedData as any).attendance || {}));
-
-    const m1 = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
-    const m2 = JSON.parse(localStorage.getItem('munyaka_marks_records') || '{}');
-    const masterMarks = Array.isArray(m1) && m1.length > 0 ? m1 : (Object.keys(m2).length > 0 ? m2 : ((initialSeedData as any).marks || []));
-
-    const e1 = JSON.parse(localStorage.getItem('all_set_exams') || '[]');
-    const masterExams = Array.isArray(e1) && e1.length > 0 ? e1 : ((initialSeedData as any).exams || []);
-
-    const libBooks = JSON.parse(localStorage.getItem('school_library_inventory_v1') || localStorage.getItem('munyaka_library_books') || '[]');
-    const libLogs = JSON.parse(localStorage.getItem('school_library_logs_v1') || localStorage.getItem('munyaka_library_history') || '[]');
-
-    const settingsVal = JSON.parse(localStorage.getItem('munyaka_system_settings_v3') || JSON.stringify((initialSeedData as any).settings || {}));
-
-    return {
-          ...allKeys,
-          students: masterStudents.length > 0 ? masterStudents : ((initialSeedData as any).students || (initialSeedData as any).learners || []),
-          staff: masterStaff.length > 0 ? masterStaff : (initialSeedData.staff || []),
-          attendance: masterAttendance,
-          fees: masterFees,
-          payments: masterPayments,
-          transactions: masterPayments,
-          marks: masterMarks,
-          exams: masterExams,
-          grades: JSON.parse(localStorage.getItem('munyaka_grades') || '[]'),
-          streams: JSON.parse(localStorage.getItem('munyaka_streams') || JSON.stringify((initialSeedData as any).streams || [])),
-          classAssignments: JSON.parse(localStorage.getItem('munyaka_class_assignments') || JSON.stringify((initialSeedData as any).classAssignments || [])),
-          learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || JSON.stringify((initialSeedData as any).learningAreas || [])),
-          examTypes: JSON.parse(localStorage.getItem('munyaka_exam_types') || JSON.stringify((initialSeedData as any).examTypes || [])),
-          libraryBooks: libBooks,
-          libraryHistory: libLogs,
-          feeStructures: JSON.parse(localStorage.getItem('munyaka_fee_structures') || JSON.stringify((initialSeedData as any).feeStructures || [])),
-          notices: masterNotices,
-          events: masterEvents,
-          ictEquipment: JSON.parse(localStorage.getItem('munyaka_ict_assets') || JSON.stringify((initialSeedData as any).ictEquipment || [])),
-          scienceInventory: JSON.parse(localStorage.getItem('munyaka_science_lab') || JSON.stringify((initialSeedData as any).scienceInventory || [])),
-          storeInventory: JSON.parse(localStorage.getItem('munyaka_store_items') || JSON.stringify((initialSeedData as any).storeInventory || [])),
-          timetable: JSON.parse(localStorage.getItem('school-timetable-data') || JSON.stringify((initialSeedData as any).timetable || [])),
-          settings: settingsVal,
-        };
+  saveLearners: (learners: any[]): void => {
+    const list = Array.isArray(learners) ? learners : [];
+    writeStorage('munyaka_students', list);
+    writeStorage('school_learners_data', list);
+    CentralDataService.persistAndSyncMutation('students', list);
   },
 
   getStaff: (): any[] => {
-    const cleared = localStorage.getItem('munyaka_staff_cleared_explicitly');
-    if (cleared === 'true') {
-      const res = readStorage<any[]>('munyaka_staff_db', []);
-      return res;
-    }
-    const res = readStorage<any[]>('munyaka_staff_db', []);
-    return res.length > 0 ? res : (initialSeedData.staff || []);
+    const list = readStorage<any[]>('munyaka_staff', []);
+    if (Array.isArray(list) && list.length > 0) return list;
+    const dir = readStorage<any[]>('munyaka_staff_directory', []);
+    if (Array.isArray(dir) && dir.length > 0) return dir;
+    return initialSeedData.staff || [];
   },
 
-  saveStaff: (staffList: any[]): boolean => {
-    if (staffList.length > 0) {
-      localStorage.removeItem('munyaka_staff_cleared_explicitly');
-    } else {
-      localStorage.setItem('munyaka_staff_cleared_explicitly', 'true');
-    }
-    writeStorage(STORAGE_KEYS.STAFF, staffList);
-    writeStorage('munyaka_staff_directory', staffList);
-    writeStorage('munyaka_master_staff_list', staffList);
-
-    try {
-      const centralRaw = localStorage.getItem('munyaka_central_db') || '{}';
-      const db = JSON.parse(centralRaw);
-      db.staff = staffList;
-      localStorage.setItem('munyaka_central_db', JSON.stringify(db));
-    } catch {}
-
-    CentralDataService.persistAndSyncMutation('staff', staffList);
-
-    window.dispatchEvent(new Event('staff-changed'));
-    window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
-    window.dispatchEvent(new Event('munyaka:data-changed'));
-    return true;
+  saveStaff: (staff: any[]): void => {
+    const list = (Array.isArray(staff) && staff.length > 0) ? staff : (initialSeedData.staff || []);
+    writeStorage('munyaka_staff', list);
+    writeStorage('munyaka_staff_directory', list);
+    CentralDataService.persistAndSyncMutation('staff', list);
   },
 
-  addStaff: (record: any): any => {
-    localStorage.removeItem('munyaka_staff_cleared_explicitly');
+  addStaff: (record: any): void => {
     const staff = UnifiedDataStorage.getStaff();
-    const id = record.id || `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const staffId = record.staffId || record.staff_id || `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
-    const tempAccessCode = record.tempAccessCode || record.access_key || record.ref || (() => {
-      const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-      let randomPart = '';
-      for (let i = 0; i < 4; i++) {
-        randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return `MUN-${randomPart}`;
-    })();
-    const joined = record.joined || record.joinedDate || new Date().toISOString().slice(0, 10);
-    const name = record.name || record.full_name || 'New Staff';
-    const role = record.role || 'Subject Teacher';
-    const status = record.status || 'Pre-Registered';
-
-    const newRecord = {
-      ...record,
-      id,
-      name,
-      full_name: name,
-      role,
-      status,
-      staffId,
-      tempAccessCode,
-      joined,
-    };
-
-    staff.push(newRecord);
-    UnifiedDataStorage.saveStaff(staff);
-    return newRecord;
+    const updated = [record, ...staff];
+    UnifiedDataStorage.saveStaff(updated);
   },
 
   updateStaff: (id: string, updates: any): void => {
     const staff = UnifiedDataStorage.getStaff();
-    const index = staff.findIndex(s => s.id === id);
-    if (index !== -1) {
-      staff[index] = { ...staff[index], ...updates };
-      UnifiedDataStorage.saveStaff(staff);
-    }
+    const updated = staff.map(s => (s.id === id ? { ...s, ...updates } : s));
+    UnifiedDataStorage.saveStaff(updated);
   },
 
   deleteStaff: (id: string): void => {
     const staff = UnifiedDataStorage.getStaff();
-    const filtered = staff.filter(s => s.id !== id);
-    UnifiedDataStorage.saveStaff(filtered);
+    const updated = staff.filter(s => s.id !== id);
+    UnifiedDataStorage.saveStaff(updated);
   },
 
   clearStaff: (): void => {
-    localStorage.setItem('munyaka_staff_cleared_explicitly', 'true');
-    writeStorage(STORAGE_KEYS.STAFF, []);
-    writeStorage('munyaka_staff_directory', []);
-    writeStorage('munyaka_master_staff_list', []);
-    writeStorage('munyaka_staff_prereg', []);
-    writeStorage('munyaka_teachers', []);
-    try {
-      const centralRaw = localStorage.getItem('munyaka_central_db') || '{}';
-      const db = JSON.parse(centralRaw);
-      db.staff = [];
-      localStorage.setItem('munyaka_central_db', JSON.stringify(db));
-    } catch {}
-
-    window.dispatchEvent(new Event('staff-changed'));
-    window.dispatchEvent(new Event('munyaka:staff-directory-changed'));
-    window.dispatchEvent(new Event('munyaka:data-changed'));
+    removeStorage('munyaka_staff');
+    removeStorage('munyaka_staff_directory');
+    removeStorage('munyaka_master_staff_list');
+    removeStorage('munyaka_staff_prereg');
+    removeStorage('munyaka_teachers');
   },
 
-  getLearners: (): any[] => {
-    const primary = readStorage<any[]>('school_learners_data', []);
-    const master = readStorage<any[]>('munyaka_master_learner_list', []);
-    const legacy = readStorage<any[]>('munyaka_students', []);
-    const schoolV1 = readStorage<any[]>('school_learners_v1', []);
-    const studentsKey = readStorage<any[]>('students', []);
-
-    const combined = [...master, ...primary, ...legacy, ...schoolV1, ...studentsKey];
-    if (combined.length === 0) {
-      return (initialSeedData as any).students || (initialSeedData as any).learners || [
-        { id: 'st-1', name: 'Mary Wanjiku', admissionNumber: 'ADM-2024-001', grade: 'Grade 6', stream: 'Mercury', gender: 'Female' },
-        { id: 'st-2', name: 'John Adiema', admissionNumber: 'ADM-2024-002', grade: 'Grade 6', stream: 'Mercury', gender: 'Male' },
-        { id: 'st-3', name: 'Adrian Jones', admissionNumber: 'ADM-2024-003', grade: 'Grade 6', stream: 'Green', gender: 'Male' },
-        { id: 'st-4', name: 'Amina Mohamed', admissionNumber: 'ADM-2024-004', grade: 'Grade 5', stream: 'Blue', gender: 'Female' },
-        { id: 'st-5', name: 'Brian Kiptoo', admissionNumber: 'ADM-2024-005', grade: 'Grade 5', stream: 'Red', gender: 'Male' },
-        { id: 'st-6', name: 'Grace Akinyi', admissionNumber: 'ADM-2024-006', grade: 'Grade 4', stream: 'East', gender: 'Female' },
-        { id: 'st-7', name: 'David Odhiambo', admissionNumber: 'ADM-2024-007', grade: 'Grade 4', stream: 'West', gender: 'Male' }
-      ];
-    }
-
-    const map = new Map<string, any>();
-    combined.forEach(s => {
-      if (s && (s.id || s.admissionNumber || s.admNo || s.name)) {
-        const key = String(s.id || s.admissionNumber || s.admNo || s.name).trim().toLowerCase();
-        map.set(key, s);
-      }
-    });
-
-    return Array.from(map.values());
+  getAttendance: (): any[] => {
+    return readStorage<any[]>('munyaka_attendance', []);
   },
 
-  saveLearners: (learners: any[]): boolean => {
-    writeStorage('school_learners_data', learners);
-    writeStorage('munyaka_students', learners);
-    writeStorage('munyaka_master_learner_list', learners);
-
-    CentralDataService.persistAndSyncMutation('students', learners);
-
-    window.dispatchEvent(new Event('students-updated'));
-    window.dispatchEvent(new Event('learners-updated'));
-    window.dispatchEvent(new Event('munyaka:data-changed'));
-    return true;
-  },
-
-  getFees: (): any[] => readStorage<any[]>('munyaka_fees_records', []),
-  saveFees: (records: any[]): boolean => {
-    writeStorage('munyaka_fees_records', records);
-    CentralDataService.persistAndSyncMutation('fees', records);
-    return true;
-  },
-
-  getAttendance: (): any[] => readStorage<any[]>('munyaka_attendance_records', []),
-  saveAttendance: (records: any[]): boolean => {
-    writeStorage('munyaka_attendance_records', records);
+  saveAttendance: (records: any[]): void => {
+    writeStorage('munyaka_attendance', records);
     CentralDataService.persistAndSyncMutation('attendance', records);
-    return true;
   },
+
+  getFees: (): any[] => {
+    return readStorage<any[]>('munyaka_fees', []);
+  },
+
+  saveFees: (records: any[]): void => {
+    writeStorage('munyaka_fees', records);
+    CentralDataService.persistAndSyncMutation('fees', records);
+  },
+
+  exportFullDatabase: (): Record<string, any> => {
+    return {
+      students: UnifiedDataStorage.getLearners(),
+      staff: UnifiedDataStorage.getStaff(),
+      attendance: UnifiedDataStorage.getAttendance(),
+      fees: UnifiedDataStorage.getFees(),
+      marks: readStorage(STORAGE_KEYS.MARKS, {}),
+      grades: readStorage('munyaka_grades', []),
+      examTypes: readStorage('munyaka_exam_types', []),
+      libraryBooks: readStorage('munyaka_library_books', []),
+      feeStructures: readStorage('munyaka_fee_structures', []),
+      notices: readStorage('munyaka_notices', []),
+      settings: readStorage('munyaka_system_settings_v3', {}),
+    };
+  }
 };
 
 export const CentralDataService = {
-  getLearners: () => UnifiedDataStorage.getLearners(),
   saveLearners: (learners: any[]) => UnifiedDataStorage.saveLearners(learners),
   getStudents: () => UnifiedDataStorage.getLearners(),
   saveStudents: (learners: any[]) => UnifiedDataStorage.saveLearners(learners),
@@ -358,10 +186,7 @@ export const CentralDataService = {
       if (data.notices) UnifiedDataStorage.set('munyaka_notices', data.notices);
       if (data.settings) UnifiedDataStorage.set('munyaka_system_settings_v3', data.settings);
 
-      localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(data));
-      try {
-        localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(data));
-      } catch {}
+      writeStorage(CENTRAL_DB_STORAGE_KEY, data);
 
       window.dispatchEvent(new Event('munyaka:data-changed'));
       window.dispatchEvent(new Event('staff-changed'));
@@ -408,19 +233,12 @@ export const CentralDataService = {
   },
 
   async fetchRemoteDump(): Promise<any | null> {
-    const now = Date.now();
-    if (remoteOfflineCircuitOpen) {
-      if (now > circuitOpenUntil) {
-        remoteOfflineCircuitOpen = false;
-      } else {
-        return null;
-      }
-    }
+    if (hardOfflineMode) return null;
 
     const serverUrl = getStoredServerUrl();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
       const res = await fetch(`${serverUrl}/api/central-db/dump`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
@@ -430,36 +248,22 @@ export const CentralDataService = {
       if (res.ok) {
         const json = await res.json();
         if (json && json.success && json.data) {
-          remoteOfflineCircuitOpen = false;
           return json.data;
         }
       }
     } catch {
-      remoteOfflineCircuitOpen = true;
-      circuitOpenUntil = now + CIRCUIT_RESET_MS;
+      hardOfflineMode = true;
     }
     return null;
   },
 
   async syncBatchToRemote(batchPayload: Record<string, any>): Promise<boolean> {
-    const now = Date.now();
-    if (remoteOfflineCircuitOpen) {
-      if (now > circuitOpenUntil) {
-        remoteOfflineCircuitOpen = false;
-      } else {
-        return false;
-      }
-    }
-
-    if (now - lastSyncAttemptTime < SYNC_COOLDOWN_MS) {
-      return false;
-    }
-    lastSyncAttemptTime = now;
+    if (hardOfflineMode) return false;
 
     const serverUrl = getStoredServerUrl();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
       const res = await fetch(`${serverUrl}/api/central-db/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -469,15 +273,12 @@ export const CentralDataService = {
       clearTimeout(timeoutId);
       if (res.ok) {
         const json = await res.json();
-        remoteOfflineCircuitOpen = false;
         return json && json.success === true;
       } else {
-        remoteOfflineCircuitOpen = true;
-        circuitOpenUntil = now + CIRCUIT_RESET_MS;
+        hardOfflineMode = true;
       }
     } catch {
-      remoteOfflineCircuitOpen = true;
-      circuitOpenUntil = now + CIRCUIT_RESET_MS;
+      hardOfflineMode = true;
     }
     return false;
   },
@@ -485,113 +286,59 @@ export const CentralDataService = {
   async initializeAndHydrate(): Promise<void> {
     const remoteData = await this.fetchRemoteDump();
     if (remoteData) {
-      localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(remoteData));
-      try {
-        localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(remoteData));
-      } catch {}
+      writeStorage(CENTRAL_DB_STORAGE_KEY, remoteData);
 
       if (remoteData.students) {
-        localStorage.setItem('munyaka_students', JSON.stringify(remoteData.students));
-        localStorage.setItem('school_learners_data', JSON.stringify(remoteData.students));
+        writeStorage('munyaka_students', remoteData.students);
+        writeStorage('school_learners_data', remoteData.students);
       }
       if (remoteData.staff) {
         const cleared = localStorage.getItem('munyaka_staff_cleared_explicitly');
         if (cleared !== 'true') {
-          localStorage.setItem('munyaka_staff', JSON.stringify(remoteData.staff));
-          localStorage.setItem('munyaka_staff_directory', JSON.stringify(remoteData.staff));
-          localStorage.setItem('munyaka_master_staff_list', JSON.stringify(remoteData.staff));
+          writeStorage('munyaka_staff', remoteData.staff);
+          writeStorage('munyaka_staff_directory', remoteData.staff);
         }
       }
-      if (remoteData.fees) {
-        localStorage.setItem('munyaka_fees_records', JSON.stringify(remoteData.fees));
-        localStorage.setItem('munyaka_student_fees', JSON.stringify(remoteData.fees));
-      }
-      if (remoteData.attendance) {
-        localStorage.setItem('munyaka_attendance', JSON.stringify(remoteData.attendance));
-      }
-      if (remoteData.grades) {
-        localStorage.setItem('munyaka_grades', JSON.stringify(remoteData.grades));
-      }
-      if (remoteData.examTypes) {
-        localStorage.setItem('munyaka_exam_types', JSON.stringify(remoteData.examTypes));
-      }
-      if (remoteData.libraryBooks) {
-        localStorage.setItem('munyaka_library_books', JSON.stringify(remoteData.libraryBooks));
-      }
-      if (remoteData.feeStructures) {
-        localStorage.setItem('munyaka_fee_structures', JSON.stringify(remoteData.feeStructures));
-      }
-      if (remoteData.notices) {
-        localStorage.setItem('munyaka_notices', JSON.stringify(remoteData.notices));
-      }
-      if (remoteData.settings) {
-        localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(remoteData.settings));
-      }
-      console.log('[CentralDataService] Successfully hydrated local state from remote munyaka_central_db dump.');
-      return;
-    }
+      if (remoteData.attendance) writeStorage('munyaka_attendance', remoteData.attendance);
+      if (remoteData.fees) writeStorage('munyaka_fees', remoteData.fees);
+      if (remoteData.marks) writeStorage(STORAGE_KEYS.MARKS, remoteData.marks);
 
-    const localCache = localStorage.getItem(CENTRAL_DB_STORAGE_KEY);
-    if (localCache) {
-      try {
-        const parsed = JSON.parse(localCache);
-        if (parsed && typeof parsed === 'object') {
-          console.log('[CentralDataService] Loaded state from local cache.');
-          return;
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+      window.dispatchEvent(new Event('staff-changed'));
+      window.dispatchEvent(new Event('students-updated'));
+    } else {
+      const cached = readStorage<any>(CENTRAL_DB_STORAGE_KEY, null);
+      if (cached) {
+        if (cached.students) {
+          writeStorage('munyaka_students', cached.students);
+          writeStorage('school_learners_data', cached.students);
         }
-      } catch {}
+        if (cached.staff) {
+          const cleared = localStorage.getItem('munyaka_staff_cleared_explicitly');
+          if (cleared !== 'true') {
+            writeStorage('munyaka_staff', cached.staff);
+            writeStorage('munyaka_staff_directory', cached.staff);
+          }
+        }
+      } else {
+        writeStorage('munyaka_students', initialSeedData.students || []);
+        writeStorage('school_learners_data', initialSeedData.students || []);
+        const cleared = localStorage.getItem('munyaka_staff_cleared_explicitly');
+        if (cleared !== 'true') {
+          writeStorage('munyaka_staff', initialSeedData.staff || []);
+          writeStorage('munyaka_staff_directory', initialSeedData.staff || []);
+        }
+      }
     }
-
-    console.log('[CentralDataService] Initializing from initialSeedData.ts fallback.');
-    const cleared = localStorage.getItem('munyaka_staff_cleared_explicitly');
-    const fallbackDb = {
-      students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
-      staff: cleared === 'true' ? [] : (initialSeedData.staff || []),
-      attendance: (initialSeedData as any).attendance || {},
-      fees: (initialSeedData as any).fees || [],
-      grades: (initialSeedData as any).grades || {},
-      examTypes: (initialSeedData as any).examTypes || [],
-      libraryBooks: (initialSeedData as any).libraryBooks || [],
-      feeStructures: (initialSeedData as any).feeStructures || [],
-      notices: (initialSeedData as any).notices || [],
-      settings: (initialSeedData as any).settings || {}
-    };
-
-    localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(fallbackDb));
-    try {
-      localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(fallbackDb));
-    } catch {}
   },
 
   async persistAndSyncMutation(key: string, data: any): Promise<void> {
     try {
-      const cacheRaw = localStorage.getItem(CENTRAL_DB_STORAGE_KEY) || '{}';
-      const db = JSON.parse(cacheRaw);
-      db[key] = data;
-      localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(db));
-      try {
-        localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(db));
-      } catch {}
-    } catch {}
-
-    setTimeout(async () => {
       await CentralDataService.syncBatchToRemote({ [key]: data });
-    }, 50);
-  }
-};
+    } catch {}
+  },
 
-export const CentralDataSyncManager = {
   fetchRemoteDump: () => CentralDataService.fetchRemoteDump(),
   syncBatchToRemote: (batchPayload: Record<string, any>) => CentralDataService.syncBatchToRemote(batchPayload),
-  initializeAndHydrate: () => CentralDataService.initializeAndHydrate(),
   persistAndSyncMutation: (key: string, data: any) => CentralDataService.persistAndSyncMutation(key, data)
 };
-
-export const getLearners = CentralDataService.getLearners;
-export const saveLearners = CentralDataService.saveLearners;
-export const getStudents = CentralDataService.getStudents;
-export const saveStudents = CentralDataService.saveStudents;
-export const getStaff = CentralDataService.getStaff;
-export const saveStaff = CentralDataService.saveStaff;
-
-export default CentralDataService;
