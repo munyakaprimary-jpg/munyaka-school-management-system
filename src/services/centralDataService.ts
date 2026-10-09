@@ -145,6 +145,11 @@ export const UnifiedDataStorage = {
   },
 
   getStaff: (): any[] => {
+    const cleared = localStorage.getItem('munyaka_staff_cleared_explicitly');
+    if (cleared === 'true') {
+      const res = readStorage<any[]>('munyaka_staff_db', []);
+      return res;
+    }
     const res = readStorage<any[]>('munyaka_staff_db', []);
     return res.length > 0 ? res : (initialSeedData.staff || []);
   },
@@ -461,9 +466,12 @@ export const CentralDataService = {
         localStorage.setItem('school_learners_data', JSON.stringify(remoteData.students));
       }
       if (remoteData.staff) {
-        localStorage.setItem('munyaka_staff', JSON.stringify(remoteData.staff));
-        localStorage.setItem('munyaka_staff_directory', JSON.stringify(remoteData.staff));
-        localStorage.setItem('munyaka_master_staff_list', JSON.stringify(remoteData.staff));
+        const cleared = localStorage.getItem('munyaka_staff_cleared_explicitly');
+        if (cleared !== 'true') {
+          localStorage.setItem('munyaka_staff', JSON.stringify(remoteData.staff));
+          localStorage.setItem('munyaka_staff_directory', JSON.stringify(remoteData.staff));
+          localStorage.setItem('munyaka_master_staff_list', JSON.stringify(remoteData.staff));
+        }
       }
       if (remoteData.fees) {
         localStorage.setItem('munyaka_fees_records', JSON.stringify(remoteData.fees));
@@ -506,9 +514,10 @@ export const CentralDataService = {
     }
 
     console.log('[CentralDataService] Initializing from initialSeedData.ts fallback.');
+    const cleared = localStorage.getItem('munyaka_staff_cleared_explicitly');
     const fallbackDb = {
       students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
-      staff: initialSeedData.staff || [],
+      staff: cleared === 'true' ? [] : (initialSeedData.staff || []),
       attendance: (initialSeedData as any).attendance || {},
       fees: (initialSeedData as any).fees || [],
       grades: (initialSeedData as any).grades || {},
