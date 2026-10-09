@@ -76,8 +76,8 @@ export default function StaffRegistry() {
   const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
   const [assignedStreams, setAssignedStreams] = useState<string[]>([]);
   const [homeroomGrade, setHomeroomGrade] = useState('Grade 7');
-  const [homeroomStream, setHomeroomStream] = useState('Mercury');
-  // Structured subject & class allocation records: e.g. { subject: "Mathematics", grade: "Grade 7", stream: "Mercury" }
+  const [homeroomStream, setHomeroomStream] = useState('');
+  // Structured subject & class allocation records: e.g. { subject: "Mathematics", grade: "Grade 7", stream: "East" }
   const [allocations, setAllocations] = useState<StaffAllocationRecord[]>([]);
 
   // Active subject being configured for grade/stream matrix
