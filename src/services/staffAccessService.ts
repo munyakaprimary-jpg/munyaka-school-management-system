@@ -7,12 +7,8 @@
  *
  * Key format rules
  * ───────────────
- * ✓ VALID   → `MUNYAKA-\d{4}`  e.g. MUNYAKA-4827, MUNYAKA-9632
+ * ✓ VALID   → `MUN-[A-Z0-9]{4}` or `MUNYAKA-[A-Z0-9]{4}`  e.g. MUN-4827, MUN-9A2F, MUNYAKA-4827
  * ✗ INVALID → anything else
- *   - starts with `PR-staff-`
- *   - starts with `PR-` followed by a timestamp / long numeric string
- *   - contains bare UUIDs or long raw IDs
- *   - empty / undefined
  *
  * All storage I/O for access keys is handled exclusively by staffMasterService.
  */
@@ -21,27 +17,30 @@ import { PreRegisteredStaff } from '@/types/staff-access';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MUNYAKA_PREFIX = 'MUNYAKA-';
+const MUN_PREFIX = 'MUN-';
 
 /**
- * The regex that defines a correctly-formatted access key.
- * Matches `MUNYAKA-` followed by exactly 4 decimal digits.
+ * The regex that defines a correctly-formatted alphanumeric access key.
+ * Matches `MUN-` or `MUNYAKA-` followed by exactly 4 alphanumeric characters (A-Z, 0-9).
  */
-export const VALID_ACCESS_KEY_PATTERN = /^MUNYAKA-\d{4}$/;
+export const VALID_ACCESS_KEY_PATTERN = /^(?:MUN-|MUNYAKA-)[A-Z0-9]{4}$/i;
 
 // ─── Key Generation ───────────────────────────────────────────────────────────
 
 /**
- * Generates a fresh, unique-ish 4-digit access key.
+ * Generates a fresh, unique 4-character alphanumeric access key.
  *
- * Format: MUNYAKA-XXXX  (e.g. MUNYAKA-4827)
+ * Format: MUN-XXXX  (e.g. MUN-4827 or MUN-9A2F)
  *
- * The 4-digit suffix is a random integer in [1000, 9999].
- * Collision risk is negligible for typical school-staff volumes.
+ * The 4-character suffix uses alphanumeric uppercase characters.
  */
 export function generateAccessKey(): string {
-  const randomDigits = Math.floor(1000 + Math.random() * 9000);
-  return `${MUNYAKA_PREFIX}${randomDigits}`;
+  const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `${MUN_PREFIX}${suffix}`;
 }
 
 // ─── Key Validation ─────────────────────────────────────────────────────────
