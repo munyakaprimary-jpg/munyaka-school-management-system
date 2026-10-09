@@ -279,6 +279,78 @@ export default function StaffRegistry() {
     'Blue', 'Red', 'Green', 'East', 'West'
   ];
 
+  // Helper function to categorize and dynamically filter subjects based on selected classes/grades
+  const filteredLearningAreasForClasses = useMemo(() => {
+    // If no classes selected, show all available learning areas
+    if (!assignedClasses || assignedClasses.length === 0) {
+      return availableLearningAreas;
+    }
+
+    // Determine highest or relevant grade tier
+    let hasPrePrimary = false;
+    let hasLowerPrimary = false;
+    let hasUpperPrimary = false;
+    let hasJuniorSecondary = false;
+
+    assignedClasses.forEach(cls => {
+      const upperCls = cls.toUpperCase();
+      if (upperCls.includes('PP1') || upperCls.includes('PP2') || upperCls.includes('PRE-PRIMARY')) {
+        hasPrePrimary = true;
+      }
+      if (upperCls.includes('GRADE 1') || upperCls.includes('GRADE 2') || upperCls.includes('GRADE 3')) {
+        hasLowerPrimary = true;
+      }
+      if (upperCls.includes('GRADE 4') || upperCls.includes('GRADE 5') || upperCls.includes('GRADE 6')) {
+        hasUpperPrimary = true;
+      }
+      if (upperCls.includes('GRADE 7') || upperCls.includes('GRADE 8') || upperCls.includes('GRADE 9') || upperCls.includes('JUNIOR')) {
+        hasJuniorSecondary = true;
+      }
+    });
+
+    // Fallback if none matched specifically
+    if (!hasPrePrimary && !hasLowerPrimary && !hasUpperPrimary && !hasJuniorSecondary) {
+      return availableLearningAreas;
+    }
+
+    // Filter available learning areas according to CBC curriculum tiers
+    const filtered = availableLearningAreas.filter(area => {
+      const lower = area.toLowerCase();
+
+      // Pre-Primary & Lower Primary focus on foundational activities (Math, Language, Environmental, Creative, Religious)
+      if ((hasPrePrimary || hasLowerPrimary) && !hasUpperPrimary && !hasJuniorSecondary) {
+        return (
+          lower.includes('math') ||
+          lower.includes('english') ||
+          lower.includes('kiswahili') ||
+          lower.includes('language') ||
+          lower.includes('lugha') ||
+          lower.includes('environmental') ||
+          lower.includes('hygiene') ||
+          lower.includes('nutrition') ||
+          lower.includes('religious') ||
+          lower.includes('cre') ||
+          lower.includes('ire') ||
+          lower.includes('hre') ||
+          lower.includes('movement') ||
+          lower.includes('creative') ||
+          lower.includes('music') ||
+          lower.includes('art')
+        );
+      }
+
+      // Upper Primary & Junior Secondary include Science, Social Studies, Agriculture, Pre-Technical, Computer Science
+      if (hasUpperPrimary || hasJuniorSecondary) {
+        return true; // All subjects apply or tailored
+      }
+
+      return true;
+    });
+
+    // If filter was too restrictive, return all to prevent empty states
+    return filtered.length > 0 ? filtered : availableLearningAreas;
+  }, [assignedClasses, availableLearningAreas]);
+
   // Filters
   const filteredStaff = useMemo(() => {
     return staffList.filter(staff => {
@@ -723,16 +795,23 @@ export default function StaffRegistry() {
               {category === 'Teaching Staff' && (
                 <div className="space-y-3 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-indigo-400" /> Subject & Learning Area Competencies
-                    </h4>
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-indigo-400" /> Subject & Learning Area Competencies
+                      </h4>
+                      {assignedClasses.length > 0 && (
+                        <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
+                          Filtered for selected grade(s): {assignedClasses.join(', ')}
+                        </p>
+                      )}
+                    </div>
                     <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
                       {selectedSubjects.length} selected
                     </span>
                   </div>
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
-                    {availableLearningAreas.map((sub) => {
+                    {filteredLearningAreasForClasses.map((sub) => {
                       const isSelected = selectedSubjects.includes(sub);
                       return (
                         <button
