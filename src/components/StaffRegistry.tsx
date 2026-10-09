@@ -98,7 +98,8 @@ export default function StaffRegistry() {
         streamsForThisGrade.forEach(s => streamSet.add(s));
       }
     });
-    return streamSet.size > 0 ? Array.from(streamSet) : (allGlobalStreams.length > 0 ? allGlobalStreams : ['Blue', 'Red', 'Green']);
+    // Return ONLY the exact configured streams for the selected grades without fallback ghost streams like Mercury
+    return Array.from(streamSet);
   }, [assignedClasses, getStreamsForGrade, allGlobalStreams]);
 
   // Generator for Access Code
@@ -1105,7 +1106,7 @@ export default function StaffRegistry() {
                           </div>
                           {isSelected && (
                             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-700/80 text-indigo-100 border border-indigo-500/50 whitespace-nowrap">
-                              {primaryGrade} {assignedStreams.length > 0 ? assignedStreams.join('/') : primaryStream}
+                              {primaryGrade} {assignedStreams.length > 0 ? assignedStreams.join(', ') : ''}
                             </span>
                           )}
                         </div>
