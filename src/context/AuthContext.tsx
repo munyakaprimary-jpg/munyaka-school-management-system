@@ -673,8 +673,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const loggedUser: User = {
           id: staffMember.id || 'staff-' + Date.now(),
           name: staffMember.name || 'Staff Member',
-          email: staffMember.email || `${staffCleanInput}@munyaka.sc.ke`,
-          phone: staffMember.phone || '+254 700 000 000',
+          email: staffMember.email || '',
+          phone: staffMember.phone || '',
           role: (staffMember.role || staffMember.system_role || 'teacher') as UserRole,
           avatar: staffMember.avatar || 'ST'
         };

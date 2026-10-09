@@ -203,8 +203,8 @@ export default function StaffRegistry() {
         name: staff.name || 'Unnamed Staff',
         category: cat,
         tscNumber: staff.tscNumber || 'N/A',
-        email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
-        phone: staff.phone || '+254 712 345 678',
+        email: staff.email || '',
+        phone: staff.phone || '',
         subjects: cleanSubjects,
         assignedClasses: cleanClasses,
         assignedStreams: cleanStreams,
@@ -245,13 +245,8 @@ export default function StaffRegistry() {
     setFullName(staff.name);
     setCategory(staff.category);
     setTscNumber(staff.tscNumber);
-    // Strip @munyaka.sc.ke or @school.ac.ke domain if present for username-only input
-    let rawEmail = staff.email || '';
-    if (rawEmail.includes('@')) {
-      rawEmail = rawEmail.split('@')[0];
-    }
-    setEmail(rawEmail);
-    setPhone(staff.phone);
+    setEmail(staff.email || '');
+    setPhone(staff.phone || '');
     setStatus(staff.status);
     setAccessCode(staff.accessCode || generateRandomCode());
     
@@ -363,16 +358,12 @@ export default function StaffRegistry() {
       return;
     }
 
-    const fullEmail = email.trim()
-      ? (email.includes('@') ? email.trim() : `${email.trim()}@munyaka.sc.ke`)
-      : `${fullName.toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`;
-
     const staffRecord: StaffMember = {
       id: editingStaff ? editingStaff.id : `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: fullName.trim(),
       category,
-      email: fullEmail,
-      phone: phone.trim() || '+254 712 345 678',
+      email: email.trim(),
+      phone: phone.trim(),
       tscNumber: tscNumber.trim(),
       status,
       accessCode: accessCode || generateRandomCode(),
@@ -624,7 +615,8 @@ export default function StaffRegistry() {
             <thead>
               <tr className="border-b border-slate-150 bg-slate-50/70 text-slate-600 text-xs font-semibold uppercase tracking-wider">
                 <th className="py-3.5 px-4 min-w-[220px]">Staff Member</th>
-                <th className="py-3.5 px-3 min-w-[150px]">Contact Info</th>
+                <th className="py-3.5 px-3 min-w-[180px]">EMAIL</th>
+                <th className="py-3.5 px-3 min-w-[150px]">PHONE NUMBER</th>
                 <th className="py-3.5 px-3 min-w-[120px]">TSC No. / ID No.</th>
                 <th className="py-3.5 px-3 min-w-[180px]">Subjects</th>
                 <th className="py-3.5 px-3 min-w-[150px]">Assigned Classes</th>
@@ -636,7 +628,7 @@ export default function StaffRegistry() {
             <tbody className="divide-y divide-slate-100 text-sm text-slate-600">
               {filteredStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <AlertCircle className="w-8 h-8 text-slate-300" />
                       <span className="font-medium text-slate-500">No staff members found matching criteria</span>
@@ -680,14 +672,15 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        <div className="space-y-0.5">
-                          <span className="text-xs text-slate-700 block flex items-center gap-1">
-                            <Mail className="w-3 h-3 text-slate-400" /> {staff.email}
-                          </span>
-                          <span className="text-xs text-slate-500 block flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-slate-400" /> {staff.phone}
-                          </span>
-                        </div>
+                        <span className="text-xs text-slate-700 block flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-slate-400" /> {staff.email}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        <span className="text-xs text-slate-600 block flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-slate-400" /> {staff.phone}
+                        </span>
                       </td>
 
                       <td className="py-3.5 px-3">
@@ -970,25 +963,15 @@ export default function StaffRegistry() {
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">Email Address</label>
-                  <div className="relative flex items-center">
-                    <Mail className="absolute left-3 w-4 h-4 text-slate-400 z-10 pointer-events-none" />
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
-                      type="text"
-                      placeholder="e.g. mary.atieno"
+                      type="email"
+                      placeholder="e.g. name@munyaka.sc.ke"
                       value={email}
-                      onChange={(e) => {
-                        // Remove any accidental @munyaka.sc.ke typed by user so we don't duplicate domain
-                        let val = e.target.value;
-                        if (val.includes('@')) {
-                          val = val.split('@')[0];
-                        }
-                        setEmail(val);
-                      }}
-                      className="w-full bg-white border border-slate-200 rounded-l-xl py-2 pl-9 pr-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
                     />
-                    <span className="bg-slate-100 border border-l-0 border-slate-200 rounded-r-xl px-3 py-2 text-xs font-semibold text-slate-500 select-none whitespace-nowrap">
-                      @munyaka.sc.ke
-                    </span>
                   </div>
                 </div>
 
