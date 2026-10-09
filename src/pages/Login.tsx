@@ -300,20 +300,21 @@ const Login: React.FC = () => {
       const trimmedPass = String(staffPassword || '').trim();
   
       if (!trimmedId) {
-        setStaffAuthError('Please enter your Email Address, TSC Number, or Staff ID.');
+        setStaffAuthError('Please enter your full school email ending with @munyaka.sc.ke.');
         return;
       }
-      // Accept email, TSC number (digits/hyphens), or staff ID (alphanumeric)
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      
+      const emailRegex = /^[^\s@]+@munyaka\.sc\.ke$/i;
       const isEmail = emailRegex.test(trimmedId);
-      const isStaffId = /^[a-z0-9_-]+$/i.test(trimmedId);
-      const isTscNumber = /^[0-9/-]+$/.test(trimmedId);
-      if (!isEmail && !isStaffId && !isTscNumber) {
-        setStaffAuthError('Please enter a valid email address, TSC Number, or Staff ID.');
+      if (!isEmail) {
+        setStaffAuthError('Staff login requires your full school email address ending with @munyaka.sc.ke.');
         return;
       }
-      if (!trimmedPass) {
-        setStaffAuthError('Please enter your Password.');
+
+      const accessCodeRegex = /^mun-[a-z0-9]{4}$/i;
+      const isAccessCode = accessCodeRegex.test(trimmedPass) || /^munyaka-[a-z0-9]+$/i.test(trimmedPass);
+      if (!trimmedPass || !isAccessCode) {
+        setStaffAuthError('Please enter your valid MUN-XXXX access code.');
         return;
       }
   
@@ -708,7 +709,7 @@ const Login: React.FC = () => {
                     {/* Email Address */}
                     <div className="space-y-2">
                       <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Email Address
+                        School Email Address (@munyaka.sc.ke)
                       </Label>
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -719,7 +720,7 @@ const Login: React.FC = () => {
                           autoCapitalize="none"
                           value={staffId}
                           onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. teacher@school.com"
+                          placeholder="e.g. teacher@munyaka.sc.ke"
                           autoComplete="username"
                           className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                           autoFocus
@@ -727,10 +728,10 @@ const Login: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Password / Access Code */}
+                    {/* Access Code */}
                     <div className="space-y-2">
                       <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Access Code / Password
+                        Access Code (MUN-XXXX)
                       </Label>
                       <div className="relative">
                         <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -739,7 +740,7 @@ const Login: React.FC = () => {
                           type={showStaffPassword ? 'text' : 'password'}
                           value={staffPassword}
                           onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="Enter your password"
+                          placeholder="e.g. MUN-6ZGC"
                           autoComplete="current-password"
                           className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                         />

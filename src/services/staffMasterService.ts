@@ -292,40 +292,29 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
   const normalizedPass = trimmedPass.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const matched = staffList.find(s => {
-    const sId = (s.staffId || '').toLowerCase();
     const sEmail = (s.email || '').toLowerCase();
-    const sTsc = (s.tscNumber || '').toLowerCase();
-    const sCode = (s.tempAccessCode || s.accessCode || '').toLowerCase();
-    const sNatId = (s.nationalId || '').toLowerCase();
-
-    const matchesId =
-      sId === trimmedId ||
-      sEmail === trimmedId ||
-      sTsc === trimmedId ||
-      sCode === trimmedId ||
-      sNatId === trimmedId;
-
-    return matchesId;
+    return sEmail === trimmedId || sEmail === `${trimmedId}@munyaka.sc.ke`;
   });
 
   if (!matched) {
-    return { success: false, error: 'Staff account not found.' };
+    return { success: false, error: 'Staff account not found. Please enter your full school email ending with @munyaka.sc.ke.' };
   }
 
-  // If tempAccessCode/accessCode or nationalId matches the password (flexible formatting support for MUN-6ZGC / MUNYAKA-XXXX etc.)
   const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
   const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-  const validPass =
-    trimmedPass === 'munyaka2026' ||
-    trimmedPass === 'admin123' ||
-    trimmedPass === matched.tempAccessCode ||
-    trimmedPass === matched.accessCode ||
-    trimmedPass === matched.nationalId ||
-    (normalizedStoredCode !== '' && normalizedStoredCode === normalizedPass);
+  // Enforce strictly school email and MUN-XXXX format access code
+  const isEmailValid = trimmedId.endsWith('@munyaka.sc.ke');
+  const isAccessCodeFormat = /^mun-[a-z0-9]{4}$/i.test(trimmedPass) || /^munyaka-[a-z0-9]+$/i.test(trimmedPass) || normalizedPass === normalizedStoredCode;
+
+  if (!isEmailValid) {
+    return { success: false, error: 'Please enter your full school email ending with @munyaka.sc.ke.' };
+  }
+
+  const validPass = storedCode !== '' && (normalizedStoredCode !== '' && normalizedStoredCode === normalizedPass);
 
   if (!validPass) {
-    return { success: false, error: 'Invalid password or access key.' };
+    return { success: false, error: 'Invalid access code. Please enter your valid MUN-XXXX access code.' };
   }
 
   return { success: true, user: matched };
