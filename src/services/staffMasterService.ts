@@ -138,29 +138,8 @@ export const initializeStaffMaster = (): void => {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) list = parsed;
     }
-    const hasJames = list.some(s => {
-      const email = String(s.email || '').toLowerCase();
-      const name = String(s.name || '').toLowerCase();
-      return email.includes('ndiki') || name.includes('james ndiki');
-    });
-    if (!hasJames || list.length === 0) {
-      list = [
-        {
-          id: 'staff_james_ndiki',
-          staffId: 'MUNYAKA-4058',
-          name: 'James Ndiki',
-          email: 'ndiki@munyaka.sc.ke',
-          phone: '+254 740 583 662',
-          role: 'Senior Teacher',
-          systemRole: 'senior_teacher',
-          department: 'Academics',
-          assignedGrade: 'Grade 5',
-          assignedStream: 'Blue',
-          status: 'Active',
-          tempAccessCode: 'MUNYAKA-4058',
-          accessCode: 'MUNYAKA-4058'
-        }
-      ];
+    if (list.length === 0) {
+      list = [];
       localStorage.setItem('munyaka_master_staff_list', JSON.stringify(list));
       localStorage.setItem('munyaka_staff_db', JSON.stringify(list));
     }
@@ -179,60 +158,6 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
       }
     }
   } catch {}
-
-  // Ensure default bootstrap active accounts if empty
-  if (list.length === 0) {
-    list = [
-      {
-        id: 'staff_james_ndiki',
-        staffId: 'MUNYAKA-4058',
-        name: 'James Ndiki',
-        email: 'ndiki@munyaka.sc.ke',
-        phone: '+254 740 583 662',
-        role: 'Senior Teacher',
-        systemRole: 'senior_teacher',
-        department: 'Academics',
-        assignedGrade: 'Grade 5',
-        assignedStream: 'Blue',
-        status: 'Active',
-        tempAccessCode: 'MUNYAKA-4058',
-        accessCode: 'MUNYAKA-4058'
-      }
-    ];
-  } else {
-    // Ensure James Ndiki is always present in the bootstrap ledger with MUNYAKA-4058
-    const jamesIndex = list.findIndex(s => {
-      const email = String(s.email || '').toLowerCase();
-      const name = String(s.name || '').toLowerCase();
-      return email.includes('ndiki') || name.includes('james ndiki');
-    });
-    if (jamesIndex >= 0) {
-      list[jamesIndex] = {
-        ...list[jamesIndex],
-        email: 'ndiki@munyaka.sc.ke',
-        staffId: 'MUNYAKA-4058',
-        tempAccessCode: 'MUNYAKA-4058',
-        accessCode: 'MUNYAKA-4058',
-        status: 'Active'
-      };
-    } else {
-      list.unshift({
-        id: 'staff_james_ndiki',
-        staffId: 'MUNYAKA-4058',
-        name: 'James Ndiki',
-        email: 'ndiki@munyaka.sc.ke',
-        phone: '+254 740 583 662',
-        role: 'Senior Teacher',
-        systemRole: 'senior_teacher',
-        department: 'Academics',
-        assignedGrade: 'Grade 5',
-        assignedStream: 'Blue',
-        status: 'Active',
-        tempAccessCode: 'MUNYAKA-4058',
-        accessCode: 'MUNYAKA-4058'
-      });
-    }
-  }
 
   const map = new Map<string, any>();
   list.forEach(s => {
