@@ -688,8 +688,8 @@ export default function StaffRegistry() {
 
                       <td className="py-3.5 px-3">
                         {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 max-w-[220px]">
-                            {staff.subjects.slice(0, 2).map((sub, sIdx) => {
+                          <div className="flex flex-wrap gap-1 max-w-[280px]">
+                            {staff.subjects.map((sub, sIdx) => {
                               const subName = typeof sub === 'string'
                                 ? sub
                                 : (sub && typeof sub === 'object'
@@ -701,11 +701,6 @@ export default function StaffRegistry() {
                                 </span>
                               );
                             })}
-                            {staff.subjects.length > 2 && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                +{staff.subjects.length - 2}
-                              </span>
-                            )}
                           </div>
                         ) : (
                           <span className="text-slate-400 text-xs">—</span>
