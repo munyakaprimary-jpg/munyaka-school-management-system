@@ -144,21 +144,23 @@ export const initializeStaffMaster = (): void => {
       return email.includes('ndiki') || name.includes('james ndiki');
     });
     if (!hasJames || list.length === 0) {
-      list.unshift({
-        id: 'staff_james_ndiki',
-        staffId: 'MUN-4058',
-        name: 'James Ndiki',
-        email: 'ndiki@munyaka.sc.ke',
-        phone: '+254 740 583 662',
-        role: 'Senior Teacher',
-        systemRole: 'senior_teacher',
-        department: 'Academics',
-        assignedGrade: 'Grade 5',
-        assignedStream: 'Blue',
-        status: 'Active',
-        tempAccessCode: 'MUN-4058',
-        accessCode: 'MUN-4058'
-      });
+      list = [
+        {
+          id: 'staff_james_ndiki',
+          staffId: 'MUN-4058',
+          name: 'James Ndiki',
+          email: 'ndiki@munyaka.sc.ke',
+          phone: '+254 740 583 662',
+          role: 'Senior Teacher',
+          systemRole: 'senior_teacher',
+          department: 'Academics',
+          assignedGrade: 'Grade 5',
+          assignedStream: 'Blue',
+          status: 'Active',
+          tempAccessCode: 'MUN-4058',
+          accessCode: 'MUN-4058'
+        }
+      ];
       localStorage.setItem('munyaka_master_staff_list', JSON.stringify(list));
       localStorage.setItem('munyaka_staff_db', JSON.stringify(list));
     }
@@ -195,19 +197,6 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
         status: 'Active',
         tempAccessCode: 'MUN-4058',
         accessCode: 'MUN-4058'
-      },
-      {
-        id: 'staff_admin_1',
-        staffId: 'MUN-1002',
-        name: 'School Administrator',
-        email: 'sysadmin@munyaka.sc.ke',
-        phone: '+254 712 345 678',
-        role: 'Administrator',
-        systemRole: 'head_teacher',
-        department: 'Administration',
-        status: 'Active',
-        tempAccessCode: 'MUN-ADMIN',
-        accessCode: 'MUN-ADMIN'
       }
     ];
   } else {

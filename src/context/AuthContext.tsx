@@ -167,41 +167,6 @@ const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = [
     assignedStream: 'Blue',
     tempAccessCode: 'MUN-4058',
     status: 'Active'
-  },
-  {
-    id: 'staff-001',
-    staffId: 'MUN-1001',
-    fullName: 'Lawrence Mwangi',
-    email: 'lawrence.mwangi@munyaka.sc.ke',
-    phone: '+254 712 345 678',
-    systemRole: 'teacher',
-    department: 'Academics',
-    assignedGrade: 'Grade 1',
-    assignedStream: 'Blue',
-    tempAccessCode: 'MUN-1001',
-    status: 'Active'
-  },
-  {
-    id: 'staff-002',
-    staffId: 'MUN-1002',
-    fullName: 'Jane Wanjiku',
-    email: 'jane.wanjiku@munyaka.sc.ke',
-    phone: '+254 722 111 222',
-    systemRole: 'admin',
-    department: 'Administration',
-    tempAccessCode: 'MUN-1002',
-    status: 'Active'
-  },
-  {
-    id: 'staff-003',
-    staffId: 'MUN-1003',
-    fullName: 'Peter Ochieng',
-    email: 'peter.ochieng@munyaka.sc.ke',
-    phone: '+254 733 444 555',
-    systemRole: 'accountant',
-    department: 'Finance',
-    tempAccessCode: 'MUN-1003',
-    status: 'Active'
   }
 ];
 
