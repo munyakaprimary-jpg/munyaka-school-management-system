@@ -225,13 +225,13 @@ const initializeUsersStorage = () => {
         assignedGrade: r.assignedGrade,
         assignedStream: r.assignedStream,
         assignedSubjects: r.assignedSubjects ?? [],
-        tempAccessCode: r.accessCode || r.tempAccessCode,
+        tempAccessCode: (r as any).accessCode || r.tempAccessCode,
         status: r.status,
         datePreRegistered: r.datePreRegistered,
         activatedAt: r.activatedAt,
         lastLogin: r.lastLogin,
       }))
-    : INITIAL_PRE_REGISTERED_STAFF;
+    : [];
 
   staffLedger.forEach((staff) => {
     const emailKey = normalizeEmail(staff.email);
@@ -344,7 +344,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     if (matchedMasterStaff) {
-      const staffAccessCode = String(matchedMasterStaff.accessCode || matchedMasterStaff.tempAccessCode || '').trim();
+      const staffAccessCode = String((matchedMasterStaff as any).accessCode || matchedMasterStaff.tempAccessCode || '').trim();
       const cleanPassUpper = cleanPass.toUpperCase();
       const staffAccessCodeUpper = staffAccessCode.toUpperCase();
 

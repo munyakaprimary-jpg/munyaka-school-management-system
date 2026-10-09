@@ -4,7 +4,7 @@
  * Merged with UnifiedDataStorage and CentralDataSyncManager for single unified synchronization.
  */
 
-import { Preferences } from '@capacitor/preferences';
+import { getApiBaseUrl } from '@/lib/apiBase';
 import { initialSeedData } from '@/data/initialSeedData';
 import { STORAGE_KEYS as PERSISTENT_KEYS, readStorage, writeStorage, removeStorage, clearAllStorage } from './persistentStore';
 
@@ -17,22 +17,10 @@ export const STORAGE_KEYS = {
   STAFF_ATTENDANCE: 'munyaka_staff_attendance',
 };
 
-const SERVER_URL_KEY = 'lan_server_url';
-const LEGACY_SERVER_URL_KEY = 'munyaka_lan_server_url';
 const CENTRAL_DB_STORAGE_KEY = 'munyaka_central_db_cache';
 
 export const getStoredServerUrl = (): string => {
-  try {
-    const primary = localStorage.getItem(SERVER_URL_KEY);
-    if (primary) return primary.trim().replace(/\/+$/, '');
-    const legacy = localStorage.getItem(LEGACY_SERVER_URL_KEY);
-    if (legacy) {
-      localStorage.setItem(SERVER_URL_KEY, legacy);
-      localStorage.removeItem(LEGACY_SERVER_URL_KEY);
-      return legacy.trim().replace(/\/+$/, '');
-    }
-  } catch {}
-  return 'http://localhost:5000';
+  return getApiBaseUrl();
 };
 
 export const UnifiedDataStorage = {
@@ -365,7 +353,7 @@ export const CentralDataService = {
 
       localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(data));
       try {
-        await Preferences.set({ key: CENTRAL_DB_STORAGE_KEY, value: JSON.stringify(data) });
+        localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(data));
       } catch {}
 
       window.dispatchEvent(new Event('munyaka:data-changed'));
@@ -458,7 +446,7 @@ export const CentralDataService = {
     if (remoteData) {
       localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(remoteData));
       try {
-        await Preferences.set({ key: CENTRAL_DB_STORAGE_KEY, value: JSON.stringify(remoteData) });
+        localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(remoteData));
       } catch {}
 
       if (remoteData.students) {
@@ -530,7 +518,7 @@ export const CentralDataService = {
 
     localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(fallbackDb));
     try {
-      await Preferences.set({ key: CENTRAL_DB_STORAGE_KEY, value: JSON.stringify(fallbackDb) });
+      localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(fallbackDb));
     } catch {}
   },
 
@@ -541,7 +529,7 @@ export const CentralDataService = {
       db[key] = data;
       localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(db));
       try {
-        await Preferences.set({ key: CENTRAL_DB_STORAGE_KEY, value: JSON.stringify(db) });
+        localStorage.setItem(CENTRAL_DB_STORAGE_KEY, JSON.stringify(db));
       } catch {}
     } catch {}
 

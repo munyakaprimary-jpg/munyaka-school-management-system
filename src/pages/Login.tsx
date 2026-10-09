@@ -336,7 +336,7 @@ const Login: React.FC = () => {
       setIsStaffVerifying(true);
       setStaffAuthError('');
 
-      const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
+      const storedCode = (matched.tempAccessCode || (matched as any).accessCode || '').trim();
       const normalizedStoredCode = storedCode.toUpperCase();
       const normalizedInputCode = trimmedPass.toUpperCase();
 
