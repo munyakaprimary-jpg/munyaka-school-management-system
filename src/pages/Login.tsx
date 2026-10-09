@@ -319,74 +319,16 @@ const Login: React.FC = () => {
       setIsStaffVerifying(true);
       setStaffAuthError('');
   
-      console.log(`[Login] Staff login attempt — server: ${getApiBaseUrl()}, identifier: ${trimmedId}`);
-  
-      // ── Try LAN server login with 3-second timeout ───────────────────────────────────
-      let serverLoginSuccess = false;
-      let serverLoginResult: LoginSuccess | null = null;
-      
-      try {
-        // Create a promise with 3-second timeout
-        const serverLoginPromise = teacherLogin(trimmedId, trimmedPass);
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Server timeout')), 3000)
-        );
-        
-        const result = await Promise.race([serverLoginPromise, timeoutPromise]);
-        
-        if (result.success) {
-          serverLoginSuccess = true;
-          serverLoginResult = result;
-          console.log('[Login] LAN auth succeeded:', result.user);
-        }
-      } catch (error) {
-        // Server login failed or timed out - proceed to offline authentication
-        console.log('[Login] LAN auth failed or timed out, proceeding to offline authentication:', error);
-      }
-  
-      // ── If server login succeeded, use it ───────────────────────────────────────────
-      if (serverLoginSuccess && serverLoginResult) {
-        const userData = {
-          id: serverLoginResult.user.id,
-          name: serverLoginResult.user.name,
-          email: serverLoginResult.user.email || trimmedId,
-          phone: serverLoginResult.user.phone || '',
-          role: serverLoginResult.user.role || 'teacher',
-          staff_id: serverLoginResult.user.staff_id,
-          tsc_number: serverLoginResult.user.tsc_number,
-          avatar: serverLoginResult.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
-        };
-
-        try {
-          localStorage.setItem('munyaka_session', JSON.stringify(userData));
-        } catch { /* ignore */ }
-
-        // Update AuthContext state synchronously so ProtectedRoute
-                // recognizes the authenticated state immediately and does not
-                // redirect back to /login (which caused the redirect loop).
-                if (setUser) {
-                  setUser({ ...userData, role: (userData.role as any) || 'teacher' });
-                }
-        
-                showSuccess(`Welcome, ${serverLoginResult.user.name}!`);
-        navigate(getStaffRedirectPath(serverLoginResult.user.role || 'subject_teacher'), { replace: true });
-        setIsStaffVerifying(false);
-        return;
-      }
-  
-      // ── Offline authentication (localStorage lookup) against master staff ledger exclusively ─────────────────────────────────
-      console.log('[Login] Attempting offline authentication against master staff ledger (munyaka_master_staff_list)...');
+      console.log(`[Login] Staff login attempt against staff registry ledger: ${trimmedId}`);
 
       // Use the selected support role for role filtering (normalized)
       const normalizedSelectedRole = selectedSupportRole ? selectedSupportRole.toLowerCase().trim() : null;
 
-      // Delegate exclusively to the robust verifyStaffLogin service which checks the
-      // canonical `munyaka_master_staff_list` ledger with case-insensitive
-      // identifier matching (email / staffId / tscNumber) and MUNYAKA-xxxx access keys.
-      const offlineResult = verifyStaffLogin(trimmedId, trimmedPass);
+      // Authenticate strictly by matching the staff email and access code in the staff registry table
+      const registryResult = verifyStaffLogin(trimmedId, trimmedPass);
 
-      if (offlineResult.success && offlineResult.user) {
-        const matchedStaff = offlineResult.user;
+      if (registryResult.success && registryResult.user) {
+        const matchedStaff = registryResult.user;
 
         // ── Role validation ────────────────────────────────────────────────
         if (normalizedSelectedRole) {
@@ -403,8 +345,8 @@ const Login: React.FC = () => {
 
           if (!roleCompatible) {
             console.error(
-              `[Login] Offline auth: role mismatch — selected "${normalizedSelectedRole}" ` +
-              `but staff "${matchedStaff.name}" (${matchedStaff.staffId}) has systemRole "${matchedStaff.systemRole}".`
+              `[Login] Registry auth: role mismatch — selected "${normalizedSelectedRole}" ` +
+              `but staff "${matchedStaff.name}" (${matchedStaff.email}) has systemRole "${matchedStaff.systemRole}".`
             );
             setStaffAuthError(
               `This account is not registered under the "${normalizedSelectedRole}" role. ` +
@@ -417,9 +359,9 @@ const Login: React.FC = () => {
         }
 
         const userData = {
-          id: matchedStaff.id || matchedStaff.staffId || `offline-${Date.now()}`,
+          id: matchedStaff.id || matchedStaff.staffId || `staff-${Date.now()}`,
           name: matchedStaff.name || 'Staff Member',
-          email: matchedStaff.email || '',
+          email: matchedStaff.email || trimmedId,
           phone: matchedStaff.phone || '',
           role: matchedStaff.systemRole || matchedStaff.role || 'staff',
           staff_id: matchedStaff.staffId || '',
@@ -436,17 +378,14 @@ const Login: React.FC = () => {
           localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
         } catch { /* ignore */ }
 
-        // Update AuthContext state synchronously so ProtectedRoute
-                // recognizes the authenticated state immediately and does not
-                // redirect back to /login (which caused the redirect loop).
-                if (setUser) {
-                  setUser({ ...userData, role: (userData.role as any) || 'staff' });
-                }
-        
-                console.log('[Login] Master staff ledger offline authentication successful:', {
+        if (setUser) {
+          setUser({ ...userData, role: (userData.role as any) || 'staff' });
+        }
+
+        console.log('[Login] Staff registry authentication successful:', {
           name: userData.name,
           role: userData.role,
-          staffId: userData.staff_id,
+          email: userData.email,
         });
 
         showSuccess(`Welcome, ${userData.name}!`);
@@ -455,9 +394,12 @@ const Login: React.FC = () => {
         return;
       }
 
-      // ── Offline authentication failed against master staff ledger ───────────────────
-      console.error(
-        `[Login] Master staff ledger offline authentication failed — error: ${offlineResult.error || 'UNKNOWN'}`
+      // ── Registry authentication failed ───────────────────
+      const errorMsg = registryResult.error || 'Invalid staff email or MUN-XXXX access code.';
+      console.error(`[Login] Staff registry authentication failed: ${errorMsg}`);
+      setStaffAuthError(errorMsg);
+      showError(errorMsg);
+      setIsStaffVerifying(false);
       );
 
       const errorMessage = offlineResult.error || 'Invalid credentials or account not found in master staff ledger.';
