@@ -637,7 +637,7 @@ export default function StaffRegistry() {
                           <div className="flex items-center gap-1.5">
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
                               <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                              {staff.homeroomGrade || 'Grade 7'} {staff.homeroomStream || 'Mercury'}
+                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : 'Mercury'}
                             </span>
                           </div>
                         ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
