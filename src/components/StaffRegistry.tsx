@@ -29,10 +29,7 @@ export type StaffCategoryRole =
   | 'Library Teacher'
   | 'HOI'
   | 'DHOI'
-  | 'Store Master'
-  | 'Teaching Staff'
-  | 'Administration'
-  | 'Support Staff';
+  | 'Store Master';
 
 export interface StaffMember {
   id: string;
@@ -97,12 +94,18 @@ export default function StaffRegistry() {
       }
       seenIds.add(id);
 
+      let cat: StaffCategoryRole = staff.category;
+      if (cat === 'Teaching Staff' as any) cat = 'Subject Teacher';
+      else if (cat === 'Administration' as any) cat = 'HOI';
+      else if (cat === 'Support Staff' as any) cat = 'Store Master';
+      else if (!cat) cat = 'Class Teacher';
+
       return {
         id,
         name: staff.name || 'Unnamed Staff',
-        category: staff.category || 'Teaching Staff',
+        category: cat,
         tscNumber: staff.tscNumber || 'N/A',
-        email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@school.ac.ke`,
+        email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
         phone: staff.phone || '+254 712 345 678',
         subjects: staff.subjects || [],
         assignedClasses: staff.assignedClasses || [],
@@ -120,7 +123,7 @@ export default function StaffRegistry() {
   const handleOpenAddModal = () => {
     setEditingStaff(null);
     setFullName('');
-    setCategory('Teaching Staff');
+    setCategory('Class Teacher');
     setTscNumber('');
     setEmail('');
     setPhone('');
@@ -205,8 +208,8 @@ export default function StaffRegistry() {
       toast.error("Full name is required");
       return;
     }
-    if (category === 'Teaching Staff' && !tscNumber.trim()) {
-      toast.error("TSC Registration Number is required for teaching staff");
+    if (category !== 'Bursar' && category !== 'Store Master' && !tscNumber.trim()) {
+      toast.error("TSC Registration Number is required for this staff role");
       return;
     }
 
@@ -223,9 +226,9 @@ export default function StaffRegistry() {
       tscNumber: tscNumber.trim(),
       status,
       accessCode: accessCode || generateRandomCode(),
-      subjects: category === 'Teaching Staff' ? selectedSubjects : [],
-      assignedClasses: category === 'Teaching Staff' ? assignedClasses : [],
-      assignedStreams: category === 'Teaching Staff' ? assignedStreams : [],
+      subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : [],
+      assignedClasses: category !== 'Bursar' && category !== 'Store Master' ? assignedClasses : [],
+      assignedStreams: category !== 'Bursar' && category !== 'Store Master' ? assignedStreams : [],
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
@@ -293,7 +296,10 @@ export default function StaffRegistry() {
     'Blue', 'Red', 'Green', 'East', 'West'
   ];
 
-  // Helper function to categorize and dynamically filter subjects based on selected classes/grades
+  // Helper function to check if a category is a teaching role
+  const categoryIsTeaching = (cat: string) => {
+    return cat !== 'Bursar' && cat !== 'Store Master';
+  };
   const filteredLearningAreasForClasses = useMemo(() => {
     // If no classes selected, show all available learning areas
     if (!assignedClasses || assignedClasses.length === 0) {
@@ -430,10 +436,16 @@ export default function StaffRegistry() {
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
           >
-            <option value="All">All Categories</option>
-            <option value="Teaching Staff">Teaching Staff</option>
-            <option value="Administration">Administration</option>
-            <option value="Support Staff">Support Staff</option>
+            <option value="All">All Roles</option>
+            <option value="Class Teacher">Class Teacher</option>
+            <option value="Subject Teacher">Subject Teacher</option>
+            <option value="ICT Teacher">ICT Teacher</option>
+            <option value="Lab Teacher">Lab Teacher</option>
+            <option value="Bursar">Bursar</option>
+            <option value="Library Teacher">Library Teacher</option>
+            <option value="HOI">HOI</option>
+            <option value="DHOI">DHOI</option>
+            <option value="Store Master">Store Master</option>
           </select>
         </div>
 
@@ -513,9 +525,9 @@ export default function StaffRegistry() {
                                 ID: {staff.id || `STF-${idx + 1}`}
                               </span>
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
-                                staff.category === 'HOI' || staff.category === 'DHOI' || staff.category === 'Administration'
+                                staff.category === 'HOI' || staff.category === 'DHOI'
                                   ? 'bg-amber-50 text-amber-700 border-amber-150'
-                                  : staff.category === 'Bursar' || staff.category === 'Store Master' || staff.category === 'Support Staff'
+                                  : staff.category === 'Bursar' || staff.category === 'Store Master'
                                     ? 'bg-slate-50 text-slate-700 border-slate-150'
                                     : 'bg-indigo-50 text-indigo-700 border-indigo-150'
                               }`}>
@@ -544,7 +556,7 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {staff.category === 'Teaching Staff' && staff.subjects && staff.subjects.length > 0 ? (
+                        {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
                           <div className="flex flex-wrap gap-1 max-w-[220px]">
                             {staff.subjects.slice(0, 2).map((sub, sIdx) => {
                               const subName = typeof sub === 'string' ? sub : (sub && typeof sub === 'object' ? String((sub as any).name || (sub as any).title || (sub as any).subject || JSON.stringify(sub)) : String(sub));
@@ -566,7 +578,7 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {staff.category === 'Teaching Staff' && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
+                        {categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
                           <div className="flex flex-col gap-1.5 max-w-[220px]">
                             {/* If assignedClasses contains structured object or string items */}
                             {staff.assignedClasses && staff.assignedClasses.length > 0 && (
@@ -740,9 +752,6 @@ export default function StaffRegistry() {
                     <option value="HOI">HOI</option>
                     <option value="DHOI">DHOI</option>
                     <option value="Store Master">Store Master</option>
-                    <option value="Teaching Staff">Teaching Staff</option>
-                    <option value="Administration">Administration</option>
-                    <option value="Support Staff">Support Staff</option>
                   </select>
                 </div>
 
@@ -839,7 +848,7 @@ export default function StaffRegistry() {
               </div>
 
               {/* Subjects Grid (Conditionally shown or optional for Teaching Staff) */}
-              {category === 'Teaching Staff' && (
+              {category !== 'Bursar' && category !== 'Store Master' && (
                 <div className="space-y-3 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
                     <div>
@@ -885,7 +894,7 @@ export default function StaffRegistry() {
               )}
 
               {/* Class & Stream Assignments Grid (Conditionally shown or optional for Teaching Staff) */}
-              {category === 'Teaching Staff' && (
+              {category !== 'Bursar' && category !== 'Store Master' && (
                 <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
