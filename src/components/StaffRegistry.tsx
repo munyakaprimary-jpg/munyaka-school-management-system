@@ -1,48 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-  Users, 
-  Plus, 
   Search, 
-  Filter, 
+  Plus, 
   Edit, 
   Trash2, 
-  Key, 
+  Check, 
+  BookOpen, 
+  GraduationCap, 
+  User, 
   Mail, 
   Phone, 
-  CheckCircle2, 
-  Clock, 
+  Award, 
+  FileSpreadsheet, 
   AlertCircle, 
-  BookOpen, 
-  Shield, 
-  Copy, 
-  Check,
-  UserCheck,
-  Building2,
-  BadgeCheck,
-  Sparkles
+  Fingerprint, 
+  Sparkles,
+  Copy
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter, 
-  DialogDescription 
-} from '@/components/ui/dialog';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
-import { defaultCbcLearningAreas } from '@/data/defaultCbcLearningAreas';
+import { toast } from 'sonner';
+import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
 
 export interface StaffMember {
   id: string;
@@ -53,105 +29,91 @@ export interface StaffMember {
   phone: string;
   subjects: string[];
   assignedClasses?: string[];
+  assignedStreams?: string[];
   accessCode: string;
   status: 'Active' | 'On Leave' | 'Inactive';
   createdAt?: string;
 }
 
-const STORAGE_KEY = 'munyaka_staff_db';
-
 export default function StaffRegistry() {
-  const { toast } = useToast();
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  
-  const topScrollRef = React.useRef<HTMLDivElement>(null);
-  const tableContainerRef = React.useRef<HTMLDivElement>(null);
-
-  const handleTopScroll = () => {
-    if (topScrollRef.current && tableContainerRef.current) {
-      if (tableContainerRef.current.scrollLeft !== topScrollRef.current.scrollLeft) {
-        tableContainerRef.current.scrollLeft = topScrollRef.current.scrollLeft;
-      }
-    }
-  };
-
-  const handleTableScroll = () => {
-    if (topScrollRef.current && tableContainerRef.current) {
-      if (topScrollRef.current.scrollLeft !== tableContainerRef.current.scrollLeft) {
-        topScrollRef.current.scrollLeft = tableContainerRef.current.scrollLeft;
-      }
-    }
-  };
-  
-  // Modal states
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
-  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
-  // Form state
+  // Form states
   const [fullName, setFullName] = useState('');
   const [category, setCategory] = useState<'Teaching Staff' | 'Administration' | 'Support Staff'>('Teaching Staff');
+  const [tscNumber, setTscNumber] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [tscNumber, setTscNumber] = useState('');
   const [status, setStatus] = useState<'Active' | 'On Leave' | 'Inactive'>('Active');
   const [accessCode, setAccessCode] = useState('');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
+  const [assignedStreams, setAssignedStreams] = useState<string[]>([]);
 
-  // Load staff database on mount
-  useEffect(() => {
-    loadStaffData();
-  }, []);
-
-  const loadStaffData = () => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setStaffList(parsed);
-          return;
-        }
-      }
-    } catch (err) {
-      console.error('Error loading staff registry:', err);
-    }
-    // Initialize empty array as requested
-    setStaffList([]);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-  };
-
-  const saveStaffData = (newList: StaffMember[]) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
-      setStaffList(newList);
-    } catch (err) {
-      console.error('Error saving staff registry:', err);
-    }
-  };
-
+  // Generator for Access Code
   const generateSecureCode = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = 'STF-';
-    for (let i = 0; i < 5; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setAccessCode(code);
+    setAccessCode(generateRandomCode());
   };
+
+  useEffect(() => {
+    // Load from local storage or fallback to mock data
+    const stored = localStorage.getItem('munyaka_staff');
+    let loadedStaff: any[] = [];
+    if (stored) {
+      try {
+        loadedStaff = JSON.parse(stored);
+      } catch (e) {
+        loadedStaff = MOCK_STAFF;
+      }
+    } else {
+      loadedStaff = MOCK_STAFF;
+    }
+
+    // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove duplicates/dashes
+    const seenIds = new Set<string>();
+    const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
+      let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
+      if (seenIds.has(id)) {
+        id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
+      }
+      seenIds.add(id);
+
+      return {
+        id,
+        name: staff.name || 'Unnamed Staff',
+        category: staff.category || 'Teaching Staff',
+        tscNumber: staff.tscNumber || 'N/A',
+        email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@school.ac.ke`,
+        phone: staff.phone || '+254 712 345 678',
+        subjects: staff.subjects || [],
+        assignedClasses: staff.assignedClasses || [],
+        assignedStreams: staff.assignedStreams || [],
+        accessCode: staff.accessCode || Math.random().toString(36).substring(2, 7).toUpperCase(),
+        status: staff.status || 'Active',
+        createdAt: staff.createdAt || new Date().toISOString()
+      };
+    });
+
+    setStaffList(sanitized);
+    localStorage.setItem('munyaka_staff', JSON.stringify(sanitized));
+  }, []);
 
   const handleOpenAddModal = () => {
     setEditingStaff(null);
     setFullName('');
     setCategory('Teaching Staff');
+    setTscNumber('');
     setEmail('');
     setPhone('');
-    setTscNumber('');
     setStatus('Active');
     setSelectedSubjects([]);
     setAssignedClasses([]);
+    setAssignedStreams([]);
     generateSecureCode();
     setIsModalOpen(true);
   };
@@ -160,23 +122,15 @@ export default function StaffRegistry() {
     setEditingStaff(staff);
     setFullName(staff.name);
     setCategory(staff.category);
+    setTscNumber(staff.tscNumber);
     setEmail(staff.email);
     setPhone(staff.phone);
-    setTscNumber(staff.tscNumber);
     setStatus(staff.status);
     setAccessCode(staff.accessCode || generateRandomCode());
     setSelectedSubjects(staff.subjects || []);
     setAssignedClasses(staff.assignedClasses || []);
+    setAssignedStreams(staff.assignedStreams || []);
     setIsModalOpen(true);
-  };
-
-  const generateRandomCode = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = 'STF-';
-    for (let i = 0; i < 5; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
   };
 
   const handleToggleSubject = (subjectName: string) => {
@@ -195,14 +149,45 @@ export default function StaffRegistry() {
     }
   };
 
-  const handleSaveStaff = (e: React.FormEvent) => {
+  const handleToggleStream = (streamName: string) => {
+    if (assignedStreams.includes(streamName)) {
+      setAssignedStreams(assignedStreams.filter(s => s !== streamName));
+    } else {
+      setAssignedStreams([...assignedStreams, streamName]);
+    }
+  };
+
+  function generateRandomCode() {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let code = '';
+    for (let i = 0; i < 5; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
+  const handleDeleteStaff = (id: string) => {
+    if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone.")) {
+      const updated = staffList.filter(s => s.id !== id);
+      setStaffList(updated);
+      localStorage.setItem('munyaka_staff', JSON.stringify(updated));
+      toast.success("Staff member removed successfully");
+    }
+  };
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success(`Access code ${code} copied to clipboard!`);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
-      toast({ title: 'Validation Error', description: 'Please enter staff full name.', variant: 'destructive' });
+      toast.error("Full name is required");
       return;
     }
-    if (!tscNumber.trim()) {
-      toast({ title: 'Validation Error', description: 'Please enter TSC or Identification Number.', variant: 'destructive' });
+    if (category === 'Teaching Staff' && !tscNumber.trim()) {
+      toast.error("TSC Registration Number is required for teaching staff");
       return;
     }
 
@@ -217,35 +202,38 @@ export default function StaffRegistry() {
       accessCode: accessCode || generateRandomCode(),
       subjects: category === 'Teaching Staff' ? selectedSubjects : [],
       assignedClasses: category === 'Teaching Staff' ? assignedClasses : [],
+      assignedStreams: category === 'Teaching Staff' ? assignedStreams : [],
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
     let updatedList: StaffMember[];
     if (editingStaff) {
       updatedList = staffList.map(s => s.id === editingStaff.id ? staffRecord : s);
-      toast({ title: 'Staff Updated', description: `Successfully updated ${staffRecord.name}.` });
+      toast.success("Staff profile updated successfully");
     } else {
       updatedList = [staffRecord, ...staffList];
-      toast({ title: 'Staff Added', description: `Successfully registered ${staffRecord.name} in the master directory.` });
+      toast.success("Staff member registered successfully");
     }
 
-    saveStaffData(updatedList);
+    setStaffList(updatedList);
+    localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
     setIsModalOpen(false);
   };
 
-  const handleDeleteStaff = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to remove ${name} from the staff registry?`)) {
-      const updatedList = staffList.filter(s => s.id !== id);
-      saveStaffData(updatedList);
-      toast({ title: 'Staff Removed', description: `${name} has been removed from the registry.` });
+  // Synchronized horizontal scrollbars
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleTopScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
     }
   };
 
-  const copyCodeToClipboard = (id: string, code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedCodeId(id);
-    toast({ title: 'Access Code Copied', description: `Copied code ${code} to clipboard.` });
-    setTimeout(() => setCopiedCodeId(null), 2500);
+  const handleBottomScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
+    }
   };
 
   // Extract unique learning areas names for subject pill grid
@@ -271,431 +259,564 @@ export default function StaffRegistry() {
     'Grade 7', 'Grade 8', 'Grade 9'
   ];
 
-  const filteredStaff = staffList.filter(staff => {
-    const matchesSearch = 
-      staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      staff.tscNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      staff.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      staff.phone.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = categoryFilter === 'all' || staff.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const availableSchoolStreams = [
+    'Blue', 'Red', 'Green', 'East', 'West'
+  ];
+
+  // Filters
+  const filteredStaff = useMemo(() => {
+    return staffList.filter(staff => {
+      const matchesSearch = 
+        staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        staff.tscNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        staff.email.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesCategory = categoryFilter === 'All' || staff.category === categoryFilter;
+      const matchesStatus = statusFilter === 'All' || staff.status === statusFilter;
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [staffList, searchQuery, categoryFilter, statusFilter]);
+
+  const getStatusBadgeConfig = (statusStr: string) => {
+    switch (statusStr) {
+      case 'Active':
+        return { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: 'Active' };
+      case 'On Leave':
+        return { bg: 'bg-amber-50 text-amber-700 border-amber-200', text: 'On Leave' };
+      case 'Inactive':
+        return { bg: 'bg-rose-50 text-rose-700 border-rose-200', text: 'Inactive' };
+      default:
+        return { bg: 'bg-slate-50 text-slate-700 border-slate-200', text: 'Unknown' };
+    }
+  };
 
   return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto animate-fade-in pb-20">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-3xl border border-indigo-500/20 shadow-xl">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shadow-inner">
-              <Users className="w-5 h-5" />
-            </div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Staff Registry</h1>
-            <Badge variant="outline" className="bg-indigo-500/10 text-indigo-300 border-indigo-500/30 font-mono text-xs">
-              {staffList.length} Total
-            </Badge>
-          </div>
-          <p className="text-slate-400 text-sm">
-            Master directory of teachers, administrators, and support staff · {staffList.length} staff
-          </p>
+    <div className="space-y-6">
+      {/* Upper Control Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-150 shadow-sm shadow-slate-100/50">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <User className="w-5 h-5 text-indigo-600" /> Staff & Teacher Registry
+          </h2>
+          <p className="text-slate-500 text-xs mt-1">Manage teaching assignments, access codes, TSC registration, and system roles.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            onClick={handleOpenAddModal}
-            className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>+ Add Staff</span>
-          </Button>
-        </div>
+        <button 
+          onClick={handleOpenAddModal}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-semibold rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-sm shadow-indigo-100 border border-indigo-700"
+        >
+          <Plus className="w-4.5 h-4.5" /> Register New Staff
+        </button>
       </div>
 
-      {/* Filters & Search Toolbar */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input 
-            placeholder="Search by name, TSC/ID, email or phone..." 
+      {/* Filters and Search Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-150">
+        <div className="relative md:col-span-2">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Search by name, TSC number, or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-slate-950/80 border-slate-800 text-slate-200 placeholder:text-slate-500 rounded-xl focus-visible:ring-indigo-500"
+            className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
           />
         </div>
 
-        <div className="flex items-center gap-2.5 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-          <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 shrink-0">
-            <Filter className="w-3.5 h-3.5" /> Category:
-          </span>
-          <div className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
-            {['all', 'Teaching Staff', 'Administration', 'Support Staff'].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  categoryFilter === cat 
-                    ? 'bg-indigo-600 text-white shadow-md' 
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                }`}
-              >
-                {cat === 'all' ? 'All Staff' : cat}
-              </button>
-            ))}
-          </div>
+        <div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+          >
+            <option value="All">All Categories</option>
+            <option value="Teaching Staff">Teaching Staff</option>
+            <option value="Administration">Administration</option>
+            <option value="Support Staff">Support Staff</option>
+          </select>
+        </div>
+
+        <div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+          >
+            <option value="All">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="On Leave">On Leave</option>
+            <option value="Inactive">Inactive</option>
+          </select>
         </div>
       </div>
 
-      {/* Staff Table Card with Synchronized Scrollbars */}
-      <Card className="bg-slate-900/80 border-slate-800 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-md">
-        {/* Top Synchronized Horizontal Scrollbar */}
-        <div
+      {/* Table Wrapper with Synchronized Double-Scrollbars */}
+      <div className="bg-white rounded-2xl border border-slate-150 shadow-sm shadow-slate-100 overflow-hidden">
+        {/* Top Scrollbar (Visible only when overflowing) */}
+        <div 
           ref={topScrollRef}
           onScroll={handleTopScroll}
-          className="overflow-x-auto overflow-y-hidden border-b border-slate-800/80 bg-slate-950/40 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900"
-          style={{ height: '14px' }}
+          className="overflow-x-auto border-b border-slate-100 bg-slate-50/50 custom-scrollbar"
         >
-          <div style={{ width: '1350px', height: '1px' }} />
+          <div className="h-2 min-w-[1200px]"></div>
         </div>
 
-        {/* Main Table Container with Bottom Horizontal Scrollbar */}
-        <div
-          ref={tableContainerRef}
-          onScroll={handleTableScroll}
-          className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900 pr-6"
+        <div 
+          ref={bottomScrollRef}
+          onScroll={handleBottomScroll}
+          className="overflow-x-auto custom-scrollbar"
         >
-          <table style={{ minWidth: '1400px' }} className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-xs font-bold uppercase tracking-wider whitespace-nowrap">
-                <th className="py-3.5 px-4 min-w-[220px]">Name</th>
-                <th className="py-3.5 px-3 min-w-[140px]">Role / Category</th>
-                <th className="py-3.5 px-3 min-w-[140px]">TSC / ID No.</th>
-                <th className="py-3.5 px-3 min-w-[170px]">Email</th>
-                <th className="py-3.5 px-3 min-w-[140px]">Phone</th>
+              <tr className="border-b border-slate-150 bg-slate-50/70 text-slate-600 text-xs font-semibold uppercase tracking-wider">
+                <th className="py-3.5 px-4 min-w-[220px]">Staff Member</th>
+                <th className="py-3.5 px-3 min-w-[150px]">Contact Info</th>
+                <th className="py-3.5 px-3 min-w-[120px]">TSC No. / ID No.</th>
                 <th className="py-3.5 px-3 min-w-[180px]">Subjects</th>
-                <th className="py-3.5 px-3 min-w-[150px]">Access Code</th>
-                <th className="py-3.5 px-3 min-w-[120px]">Status</th>
-                <th className="py-3.5 px-4 text-right min-w-[120px]">Actions</th>
+                <th className="py-3.5 px-3 min-w-[150px]">Assigned Classes</th>
+                <th className="py-3.5 px-3 text-center">Status</th>
+                <th className="py-3.5 px-4 min-w-[130px] text-center">Access Code</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-xs">
+            <tbody className="divide-y divide-slate-100 text-sm text-slate-600">
               {filteredStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center">
-                    <div className="flex flex-col items-center justify-center space-y-3 max-w-md mx-auto">
-                      <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                        <Users className="w-8 h-8" />
-                      </div>
-                      <h3 className="text-lg font-bold text-white">No staff members found</h3>
-                      <p className="text-slate-400 text-xs">
-                        {staffList.length === 0
-                          ? "Your master staff registry is currently empty. Click '+ Add Staff' above to register teachers, administration, or support staff."
-                          : "No staff members match your search criteria or active category filter."}
-                      </p>
-                      {staffList.length === 0 && (
-                        <Button
-                          onClick={handleOpenAddModal}
-                          className="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl"
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-1.5" /> Register First Staff Member
-                        </Button>
-                      )}
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <AlertCircle className="w-8 h-8 text-slate-300" />
+                      <span className="font-medium text-slate-500">No staff members found matching criteria</span>
+                      <span className="text-xs text-slate-400">Try adjusting your keyword searches or filter parameters.</span>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredStaff.map((staff) => (
-                  <tr key={staff.id} className="hover:bg-slate-800/40 transition-colors group">
-                    <td className="py-3.5 px-4 min-w-[220px]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-md shrink-0">
-                          {staff.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-100 group-hover:text-indigo-300 transition-colors whitespace-nowrap text-sm">{staff.name}</p>
-                          <p className="text-[11px] text-slate-400 font-mono">ID: {staff.id.substring(0, 8)}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-3 min-w-[140px]">
-                      <Badge variant="outline" className={`font-semibold text-xs whitespace-nowrap ${
-                        staff.category === 'Teaching Staff'
-                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                          : staff.category === 'Administration'
-                          ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                      }`}>
-                        {staff.category}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-3 font-mono text-xs text-slate-300 whitespace-nowrap min-w-[140px]">
-                      {staff.tscNumber}
-                    </td>
-                    <td className="py-3.5 px-3 text-slate-300 text-xs min-w-[170px]">
-                      <div className="flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                        <span className="truncate max-w-[150px]">{staff.email}</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-3 text-slate-300 text-xs whitespace-nowrap min-w-[140px]">
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                        <span>{staff.phone}</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-3 min-w-[180px]">
-                      {staff.category === 'Teaching Staff' && staff.subjects && staff.subjects.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 max-w-[200px]">
-                          {staff.subjects.slice(0, 2).map((sub, sIdx) => (
-                            <span key={sIdx} className="bg-slate-800 text-slate-300 text-[10px] px-2 py-0.5 rounded-md font-medium border border-slate-700 whitespace-nowrap">
-                              {sub}
+                filteredStaff.map((staff, idx) => {
+                  const statusConfig = getStatusBadgeConfig(staff.status);
+                  return (
+                    <tr 
+                      key={staff.id || `staff-${idx}`}
+                      className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors duration-150 group"
+                    >
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
+                            {staff.name ? staff.name.split(' ').pop()?.charAt(0) : 'S'}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-slate-800 block text-sm group-hover:text-indigo-600 transition-colors">
+                              {staff.name}
                             </span>
-                          ))}
-                          {staff.subjects.length > 2 && (
-                            <span className="bg-indigo-950 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded-md font-semibold border border-indigo-800/60 whitespace-nowrap">
-                              +{staff.subjects.length - 2}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                ID: {staff.id || `STF-${idx + 1}`}
+                              </span>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
+                                staff.category === 'Teaching Staff'
+                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-150'
+                                  : staff.category === 'Administration'
+                                    ? 'bg-amber-50 text-amber-700 border-amber-150'
+                                    : 'bg-slate-50 text-slate-700 border-slate-150'
+                              }`}>
+                                {staff.category || 'Teaching Staff'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        <div className="space-y-0.5">
+                          <span className="text-xs text-slate-700 block flex items-center gap-1">
+                            <Mail className="w-3 h-3 text-slate-400" /> {staff.email}
+                          </span>
+                          <span className="text-xs text-slate-500 block flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-slate-400" /> {staff.phone}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100/70 border border-slate-200/50 px-2 py-1 rounded">
+                          {staff.tscNumber || 'N/A'}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        {staff.category === 'Teaching Staff' && staff.subjects && staff.subjects.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 max-w-[220px]">
+                            {staff.subjects.slice(0, 2).map((sub, sIdx) => (
+                              <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                {sub}
+                              </span>
+                            ))}
+                            {staff.subjects.length > 2 && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                +{staff.subjects.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        {staff.category === 'Teaching Staff' && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0)) ? (
+                          <div className="flex flex-col gap-1.5 max-w-[200px]">
+                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => (
+                                  <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                    {cls}
+                                  </span>
+                                ))}
+                                {staff.assignedClasses.length > 3 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                    +{staff.assignedClasses.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => (
+                                  <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                                    {strm}
+                                  </span>
+                                ))}
+                                {staff.assignedStreams.length > 3 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                    +{staff.assignedStreams.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusConfig.bg}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5"></span>
+                          {statusConfig.text}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-150 px-2 py-1 rounded-lg">
+                          <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
+                            {staff.accessCode || '—'}
+                          </span>
+                          {staff.accessCode && (
+                            <button 
+                              onClick={() => handleCopyCode(staff.accessCode)}
+                              className="p-1 hover:bg-white rounded hover:text-indigo-600 text-slate-400 border border-transparent hover:border-slate-200 transition-all"
+                              title="Copy code to clipboard"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
                           )}
                         </div>
-                      ) : (
-                        <span className="text-slate-500 text-xs italic">N/A</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-3 min-w-[150px]">
-                      <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 w-fit">
-                        <Key className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span className="font-mono text-xs font-bold text-amber-300 tracking-wider whitespace-nowrap">{staff.accessCode}</span>
-                        <button
-                          onClick={() => copyCodeToClipboard(staff.id, staff.accessCode)}
-                          className="text-slate-400 hover:text-white transition-colors ml-1 p-0.5 rounded hover:bg-slate-800"
-                          title="Copy Access Code"
-                        >
-                          {copiedCodeId === staff.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-3 min-w-[120px]">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                        staff.status === 'Active'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                          : staff.status === 'On Leave'
-                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${
-                          staff.status === 'Active' ? 'bg-emerald-400 animate-pulse' : staff.status === 'On Leave' ? 'bg-amber-400' : 'bg-rose-400'
-                        }`} />
-                        {staff.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right min-w-[120px]">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenEditModal(staff)}
-                          className="h-8 w-8 text-slate-400 hover:text-white hover:bg-indigo-600/20 rounded-lg"
-                          title="Edit Staff Member"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteStaff(staff.id, staff.name)}
-                          className="h-8 w-8 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded-lg"
-                          title="Delete Staff Member"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleOpenEditModal(staff)}
+                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg transition-all"
+                            title="Edit profile"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStaff(staff.id)}
+                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg transition-all"
+                            title="Remove staff"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
 
-      {/* Add / Edit Staff Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-slate-100 max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-indigo-600/20 flex items-center justify-center text-indigo-400 border border-indigo-500/30">
-                <Users className="w-4 h-4" />
+      {/* Register/Edit Staff Dialog Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-150 w-full max-w-2xl overflow-hidden animate-slide-up my-8 max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-indigo-500" />
+                  {editingStaff ? "Edit Staff Profile" : "Register New Staff Member"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Fill in details below to manage system permissions and assignments.</p>
               </div>
-              {editingStaff ? 'Edit Staff Member' : 'Register New Staff Member'}
-            </DialogTitle>
-            <DialogDescription className="text-slate-400 text-xs">
-              Fill in the staff credentials, category, and subject competencies for the master school directory.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSaveStaff} className="space-y-5 pt-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Full Name */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-300">Full Name *</Label>
-                <Input
-                  placeholder="e.g. John Kamau"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-slate-200 rounded-xl focus-visible:ring-indigo-500"
-                  required
-                />
-              </div>
-
-              {/* Staff Category */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-300">Staff Category *</Label>
-                <Select value={category} onValueChange={(val: any) => setCategory(val)}>
-                  <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-200 rounded-xl">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
-                    <SelectItem value="Teaching Staff">Teaching Staff</SelectItem>
-                    <SelectItem value="Administration">Administration</SelectItem>
-                    <SelectItem value="Support Staff">Support Staff</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* TSC / ID No */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-300">TSC / Identification Number *</Label>
-                <Input
-                  placeholder="e.g. TSC/984521 or ID 31452981"
-                  value={tscNumber}
-                  onChange={(e) => setTscNumber(e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-slate-200 rounded-xl font-mono focus-visible:ring-indigo-500"
-                  required
-                />
-              </div>
-
-              {/* Status */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-300">Employment Status *</Label>
-                <Select value={status} onValueChange={(val: any) => setStatus(val)}>
-                  <SelectTrigger className="bg-slate-950 border-slate-800 text-slate-200 rounded-xl">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="On Leave">On Leave</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Email */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-300">Email Address</Label>
-                <Input
-                  type="email"
-                  placeholder="staff@school.ac.ke"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-slate-200 rounded-xl focus-visible:ring-indigo-500"
-                />
-              </div>
-
-              {/* Phone */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-300">Phone Number</Label>
-                <Input
-                  placeholder="+254 712 345 678"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-slate-200 rounded-xl focus-visible:ring-indigo-500"
-                />
-              </div>
-            </div>
-
-            {/* Access Code generation row */}
-            <div className="space-y-1.5 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                  <Key className="w-4 h-4 text-amber-400" /> Portal Login Access Code
-                </Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={generateSecureCode}
-                  className="h-7 text-xs bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700"
-                >
-                  Generate New Code
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={accessCode}
-                  onChange={(e) => setAccessCode(e.target.value)}
-                  className="bg-slate-900 border-slate-800 text-amber-300 font-mono font-bold tracking-widest text-base rounded-xl"
-                  placeholder="STF-XXXXX"
-                />
-              </div>
-              <p className="text-[11px] text-slate-400">
-                Staff member will use this secure access code to log into their staff portal.
-              </p>
-            </div>
-
-            {/* Subjects Grid (Conditionally shown or optional for Teaching Staff) */}
-            {category === 'Teaching Staff' && (
-              <div className="space-y-2 bg-slate-950/40 p-4 rounded-2xl border border-slate-800">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                    <BookOpen className="w-4 h-4 text-indigo-400" /> Subject & Learning Area Competencies
-                  </Label>
-                  <span className="text-[11px] text-slate-400 font-medium">
-                    {selectedSubjects.length} selected
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400">
-                  Click learning areas below to toggle staff teaching allocations.
-                </p>
-                <div className="flex flex-wrap gap-2 pt-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
-                  {availableLearningAreas.map((sub: string, sIdx: number) => {
-                    const isSelected = selectedSubjects.includes(sub);
-                    return (
-                      <button
-                        key={sIdx}
-                        type="button"
-                        onClick={() => handleToggleSubject(sub)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
-                          isSelected
-                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/30'
-                            : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700 hover:bg-slate-800'
-                        }`}
-                      >
-                        {sub} {isSelected && '✓'}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <DialogFooter className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
-              <Button
-                type="button"
-                variant="ghost"
+              <button 
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl"
+                className="w-8 h-8 rounded-full border border-slate-200 hover:border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-600 bg-white transition-all text-lg font-medium"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Modal Form Scroll Area */}
+            <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-5 flex-1 custom-scrollbar">
+              
+              {/* Profile details grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Full Name <span className="text-rose-500">*</span></label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Mrs. Mary Atieno"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Staff Category <span className="text-rose-500">*</span></label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as any)}
+                    className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                  >
+                    <option value="Teaching Staff">Teaching Staff (Teacher / Educator)</option>
+                    <option value="Administration">Administration (Principal, Director)</option>
+                    <option value="Support Staff">Support Staff</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+                    {category === 'Teaching Staff' ? 'TSC Registration Number *' : 'National ID / Passport No.'}
+                  </label>
+                  <div className="relative">
+                    <Award className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder={category === 'Teaching Staff' ? "e.g. TSC-884920" : "e.g. ID-8293049"}
+                      value={tscNumber}
+                      onChange={(e) => setTscNumber(e.target.value)}
+                      required={category === 'Teaching Staff'}
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Status</label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as any)}
+                    className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="On Leave">On Leave</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="email" 
+                      placeholder="e.g. mary.atieno@school.ac.ke"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="tel" 
+                      placeholder="e.g. +254 722 890 123"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Secure Portal Access Code Row */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                  <Fingerprint className="w-4 h-4 text-indigo-500 animate-pulse" /> Secure Access Code
+                </span>
+                <p className="text-[11px] text-slate-500">Provide this code to the staff member so they can authenticate and record marks under their profile.</p>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text" 
+                    readOnly
+                    value={accessCode}
+                    className="bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono font-bold tracking-wider text-slate-800 text-center w-36 select-all focus:outline-none focus:ring-0"
+                  />
+                  <button 
+                    type="button"
+                    onClick={generateSecureCode}
+                    className="px-3 py-2 bg-white hover:bg-slate-100 border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-800 transition-all flex items-center gap-1.5 shadow-sm"
+                  >
+                    Generate New Code
+                  </button>
+                </div>
+              </div>
+
+              {/* Subjects Grid (Conditionally shown or optional for Teaching Staff) */}
+              {category === 'Teaching Staff' && (
+                <div className="space-y-3 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-indigo-400" /> Subject & Learning Area Competencies
+                    </h4>
+                    <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
+                      {selectedSubjects.length} selected
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
+                    {availableLearningAreas.map((sub) => {
+                      const isSelected = selectedSubjects.includes(sub);
+                      return (
+                        <button
+                          key={sub}
+                          type="button"
+                          onClick={() => handleToggleSubject(sub)}
+                          className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
+                            isSelected
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm shadow-indigo-100/50'
+                              : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                            isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'
+                          }`}>
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </div>
+                          <span className="truncate">{sub}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Class & Stream Assignments Grid (Conditionally shown or optional for Teaching Staff) */}
+              {category === 'Teaching Staff' && (
+                <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Class & Stream Assignments
+                    </h4>
+                    <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
+                      {assignedClasses.length} class(es), {assignedStreams.length} stream(s) selected
+                    </span>
+                  </div>
+                  
+                  {/* Classes/Grades selection */}
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Grades / Classes</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
+                      {availableSchoolClasses.map((cls) => {
+                        const isSelected = assignedClasses.includes(cls);
+                        return (
+                          <button
+                            key={cls}
+                            type="button"
+                            onClick={() => handleToggleClass(cls)}
+                            className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
+                              isSelected
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm shadow-emerald-100/50'
+                                : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                              isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span className="truncate">{cls}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Streams selection */}
+                  <div className="border-t border-slate-100 pt-3">
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-1">
+                      {availableSchoolStreams.map((strm) => {
+                        const isSelected = assignedStreams.includes(strm);
+                        return (
+                          <button
+                            key={strm}
+                            type="button"
+                            onClick={() => handleToggleStream(strm)}
+                            className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
+                              isSelected
+                                ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm shadow-amber-100/50'
+                                : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                              isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-slate-300'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span className="truncate">{strm}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </form>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 hover:border-slate-300 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-800 transition-all"
               >
                 Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30"
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 border border-indigo-700 text-white text-sm font-semibold rounded-xl hover:shadow shadow-indigo-100 transition-all"
               >
-                {editingStaff ? 'Save Changes' : 'Register Staff Member'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+                {editingStaff ? "Save Changes" : "Register Staff"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
