@@ -1,24 +1,25 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  Search, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Check, 
-  BookOpen, 
-  GraduationCap, 
-  User, 
-  Mail, 
-  Phone, 
-  Award, 
-  FileSpreadsheet, 
-  AlertCircle, 
-  Fingerprint, 
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Check,
+  BookOpen,
+  GraduationCap,
+  User,
+  Mail,
+  Phone,
+  Award,
+  FileSpreadsheet,
+  AlertCircle,
+  Fingerprint,
   Sparkles,
   Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
+import { useGradesAndStreams } from '../hooks/useGradesStreams';
 
 export type StaffCategoryRole =
   | 'Class Teacher'
@@ -81,6 +82,24 @@ export default function StaffRegistry() {
 
   // Active subject being configured for grade/stream matrix
   const [activeSubjectForAllocation, setActiveSubjectForAllocation] = useState<string | null>(null);
+
+  // Grades and streams configuration hook
+  const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams } = useGradesAndStreams();
+
+  // Get relevant streams based on selected grades (or all global streams if none selected)
+  const availableSchoolStreams = useMemo(() => {
+    if (!assignedClasses || assignedClasses.length === 0) {
+      return allGlobalStreams && allGlobalStreams.length > 0 ? allGlobalStreams : ['Blue', 'Red', 'Green', 'East', 'West'];
+    }
+    const streamSet = new Set<string>();
+    assignedClasses.forEach(cls => {
+      const streamsForThisGrade = getStreamsForGrade(cls);
+      if (streamsForThisGrade && streamsForThisGrade.length > 0) {
+        streamsForThisGrade.forEach(s => streamSet.add(s));
+      }
+    });
+    return streamSet.size > 0 ? Array.from(streamSet) : (allGlobalStreams.length > 0 ? allGlobalStreams : ['Blue', 'Red', 'Green']);
+  }, [assignedClasses, getStreamsForGrade, allGlobalStreams]);
 
   // Generator for Access Code
   const generateSecureCode = () => {
@@ -371,17 +390,6 @@ export default function StaffRegistry() {
         'Agriculture and Nutrition',
         'Pre-Technical Studies'
       ];
-
-  const availableSchoolClasses = [
-    'PP1', 'PP2',
-    'Grade 1', 'Grade 2', 'Grade 3',
-    'Grade 4', 'Grade 5', 'Grade 6',
-    'Grade 7', 'Grade 8', 'Grade 9'
-  ];
-
-  const availableSchoolStreams = [
-    'Blue', 'Red', 'Green', 'East', 'West'
-  ];
 
   // Helper function to check if a category is a teaching role
   const categoryIsTeaching = (cat: string) => {
