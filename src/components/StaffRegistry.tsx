@@ -156,7 +156,7 @@ export default function StaffRegistry() {
                   return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
                 }
                 return String(s);
-              }).filter(Boolean)
+              }).filter((s: string) => s && s.toLowerCase() !== 'mercury')
             : [];
     
           const rawSubjects = staff.subjects || staff.assignedSubjects || [];
@@ -168,6 +168,41 @@ export default function StaffRegistry() {
                   return String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub));
                 }
                 return String(sub);
+              }).filter(Boolean)
+            : [];
+
+          let cleanHomeroomStream = staff.homeroomStream || cleanStreams[0] || '';
+          if (cleanHomeroomStream.toLowerCase() === 'mercury') {
+            cleanHomeroomStream = cleanStreams[0] || '';
+          }
+
+          const defaultGrade = cleanClasses[0] || 'Grade 7';
+          const defaultStream = cleanHomeroomStream;
+
+          return {
+            id,
+            name: staff.name || 'Unnamed Staff',
+            category: cat,
+            tscNumber: staff.tscNumber || 'N/A',
+            email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
+            phone: staff.phone || '+254 712 345 678',
+            subjects: cleanSubjects,
+            assignedClasses: cleanClasses,
+            assignedStreams: cleanStreams,
+            homeroomGrade: staff.homeroomGrade || defaultGrade,
+            homeroomStream: defaultStream,
+            allocations: Array.isArray(staff.allocations)
+              ? staff.allocations.filter((a: any) => a && typeof a === 'object' && a.subject && String(a.stream).toLowerCase() !== 'mercury')
+              : cleanSubjects.map((sub: string) => ({
+                  subject: sub,
+                  grade: defaultGrade,
+                  stream: defaultStream
+                })),
+            accessCode: staff.accessCode || Math.random().toString(36).substring(2, 7).toUpperCase(),
+            status: staff.status || 'Active',
+            createdAt: staff.createdAt || new Date().toISOString()
+          };
+        });
               }).filter(Boolean)
             : [];
     
