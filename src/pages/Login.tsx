@@ -311,10 +311,9 @@ const Login: React.FC = () => {
         return;
       }
 
-      const cleanCode = String(staffPassword || '').trim().toUpperCase();
-      const isValidFormat = /^MUN-[A-Z0-9]{4}$/.test(cleanCode);
-      if (!cleanCode || !isValidFormat) {
-        setStaffAuthError('Please enter your valid MUN-XXXX access code (e.g. MUN-GFRJ).');
+      const cleanCode = String(staffPassword || '').trim();
+      if (!cleanCode) {
+        setStaffAuthError('Please enter your access code.');
         return;
       }
   
