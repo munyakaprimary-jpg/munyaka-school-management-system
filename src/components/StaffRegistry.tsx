@@ -341,9 +341,9 @@ export default function StaffRegistry() {
         <div
           ref={tableContainerRef}
           onScroll={handleTableScroll}
-          className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900"
+          className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900 pr-6"
         >
-          <table style={{ minWidth: '1350px' }} className="w-full text-left border-collapse">
+          <table style={{ minWidth: '1400px' }} className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-xs font-bold uppercase tracking-wider whitespace-nowrap">
                 <th className="py-3.5 px-4 min-w-[220px]">Name</th>
