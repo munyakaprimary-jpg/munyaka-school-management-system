@@ -311,10 +311,10 @@ const Login: React.FC = () => {
         return;
       }
 
-      const accessCodeRegex = /^mun-[a-z0-9]{4}$/i;
-      const isAccessCode = accessCodeRegex.test(trimmedPass) || /^munyaka-[a-z0-9]+$/i.test(trimmedPass);
+      const accessCodeRegex = /^MUN-[A-Z0-9]{4}$/i;
+      const isAccessCode = accessCodeRegex.test(trimmedPass);
       if (!trimmedPass || !isAccessCode) {
-        setStaffAuthError('Please enter your valid MUN-XXXX access code.');
+        setStaffAuthError('Please enter your valid MUN-XXXX access code (e.g. MUN-GFRJ).');
         return;
       }
   
