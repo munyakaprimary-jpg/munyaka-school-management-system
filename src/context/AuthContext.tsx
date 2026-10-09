@@ -244,7 +244,7 @@ const initializeUsersStorage = () => {
       role: mapSystemRoleToUserRole(staff.systemRole),
       avatar: String(staff.fullName || '').split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase(),
       password: staff.tempAccessCode,
-      alternativePasswords: [staff.nationalId || '', 'munyaka5239', 'munyaka2026'].filter(Boolean),
+      alternativePasswords: [staff.nationalId || '', 'munyaka2026'].filter(Boolean),
       isActive: staff.status !== 'Suspended',
       emailConfirmed: true,
       staffId: staff.staffId,

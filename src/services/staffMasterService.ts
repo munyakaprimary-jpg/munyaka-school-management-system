@@ -147,7 +147,7 @@ export const initializeStaffMaster = (): void => {
       list = [
         {
           id: 'staff_james_ndiki',
-          staffId: 'MUN-4058',
+          staffId: 'MUNYAKA-4058',
           name: 'James Ndiki',
           email: 'ndiki@munyaka.sc.ke',
           phone: '+254 740 583 662',
@@ -157,8 +157,8 @@ export const initializeStaffMaster = (): void => {
           assignedGrade: 'Grade 5',
           assignedStream: 'Blue',
           status: 'Active',
-          tempAccessCode: 'MUN-4058',
-          accessCode: 'MUN-4058'
+          tempAccessCode: 'MUNYAKA-4058',
+          accessCode: 'MUNYAKA-4058'
         }
       ];
       localStorage.setItem('munyaka_master_staff_list', JSON.stringify(list));
@@ -185,7 +185,7 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     list = [
       {
         id: 'staff_james_ndiki',
-        staffId: 'MUN-4058',
+        staffId: 'MUNYAKA-4058',
         name: 'James Ndiki',
         email: 'ndiki@munyaka.sc.ke',
         phone: '+254 740 583 662',
@@ -195,21 +195,30 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
         assignedGrade: 'Grade 5',
         assignedStream: 'Blue',
         status: 'Active',
-        tempAccessCode: 'MUN-4058',
-        accessCode: 'MUN-4058'
+        tempAccessCode: 'MUNYAKA-4058',
+        accessCode: 'MUNYAKA-4058'
       }
     ];
   } else {
-    // Ensure James Ndiki is always present in the bootstrap ledger
-    const hasJames = list.some(s => {
+    // Ensure James Ndiki is always present in the bootstrap ledger with MUNYAKA-4058
+    const jamesIndex = list.findIndex(s => {
       const email = String(s.email || '').toLowerCase();
       const name = String(s.name || '').toLowerCase();
       return email.includes('ndiki') || name.includes('james ndiki');
     });
-    if (!hasJames) {
+    if (jamesIndex >= 0) {
+      list[jamesIndex] = {
+        ...list[jamesIndex],
+        email: 'ndiki@munyaka.sc.ke',
+        staffId: 'MUNYAKA-4058',
+        tempAccessCode: 'MUNYAKA-4058',
+        accessCode: 'MUNYAKA-4058',
+        status: 'Active'
+      };
+    } else {
       list.unshift({
         id: 'staff_james_ndiki',
-        staffId: 'MUN-4058',
+        staffId: 'MUNYAKA-4058',
         name: 'James Ndiki',
         email: 'ndiki@munyaka.sc.ke',
         phone: '+254 740 583 662',
@@ -219,8 +228,8 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
         assignedGrade: 'Grade 5',
         assignedStream: 'Blue',
         status: 'Active',
-        tempAccessCode: 'MUN-4058',
-        accessCode: 'MUN-4058'
+        tempAccessCode: 'MUNYAKA-4058',
+        accessCode: 'MUNYAKA-4058'
       });
     }
   }
