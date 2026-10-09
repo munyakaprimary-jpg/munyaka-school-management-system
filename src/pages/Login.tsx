@@ -326,7 +326,7 @@ const Login: React.FC = () => {
   
       const matched = staffList.find(s => {
         const sEmail = (s.email || '').toLowerCase().trim();
-        return sEmail === cleanEmail || sEmail === cleanInput;
+        return sEmail === cleanEmail || sEmail === cleanInput || sEmail.split('@')[0] === cleanInput.split('@')[0];
       });
 
       if (!matched) {

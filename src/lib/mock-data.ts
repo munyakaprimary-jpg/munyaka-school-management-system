@@ -70,74 +70,7 @@ export const defaultSchoolSubjects = [
   'Pre-Technical Studies'
 ];
 
-export const defaultMockStaff = [
-  {
-    id: 'staff_1',
-    name: 'Mrs. Mary Atieno',
-    category: 'Teaching Staff',
-    tscNumber: 'TSC-884920',
-    email: 'mary.atieno@school.ac.ke',
-    phone: '+254 722 890 123',
-    subjects: ['Mathematics', 'Science and Technology'],
-    assignedClasses: ['Grade 4', 'Grade 5'],
-    assignedStreams: ['Blue', 'Red'],
-    accessCode: 'MUN-7A9K',
-    status: 'Active',
-    createdAt: '2023-01-15T08:00:00.000Z'
-  },
-  {
-    id: 'staff_2',
-    name: 'Mr. John Kiprop',
-    category: 'Teaching Staff',
-    tscNumber: 'TSC-910432',
-    email: 'john.kiprop@school.ac.ke',
-    phone: '+254 733 456 789',
-    subjects: ['English Language', 'Social Studies'],
-    assignedClasses: ['Grade 6'],
-    assignedStreams: ['Green'],
-    accessCode: 'MUN-3H5M',
-    status: 'Active',
-    createdAt: '2023-02-10T09:15:00.000Z'
-  },
-  {
-    id: 'staff_3',
-    name: 'Sister Clara Nafula',
-    category: 'Administration',
-    tscNumber: 'TSC-551209',
-    email: 'clara.nafula@school.ac.ke',
-    phone: '+254 701 112 233',
-    subjects: [],
-    accessCode: 'MUN-5A1X',
-    status: 'Active',
-    createdAt: '2022-11-01T10:00:00.000Z'
-  },
-  {
-    id: 'staff_4',
-    name: 'Mr. David Owino',
-    category: 'Teaching Staff',
-    tscNumber: 'TSC-775612',
-    email: 'david.owino@school.ac.ke',
-    phone: '+254 711 223 344',
-    subjects: ['Kiswahili Lugha', 'Religious Education (CRE/IRE/HRE)'],
-    assignedClasses: ['Grade 7', 'Grade 8'],
-    assignedStreams: ['Blue'],
-    accessCode: 'MUN-4P9X',
-    status: 'Active',
-    createdAt: '2023-03-22T14:20:00.000Z'
-  },
-  {
-    id: 'staff_5',
-    name: 'Mrs. Jane Koech',
-    category: 'Support Staff',
-    tscNumber: 'N/A',
-    email: 'jane.koech@school.ac.ke',
-    phone: '+254 755 667 788',
-    subjects: [],
-    accessCode: 'MUN-9K2J',
-    status: 'Active',
-    createdAt: '2023-04-05T11:05:00.000Z'
-  }
-];
+export const defaultMockStaff = [];
 
 export const MOCK_STAFF = defaultMockStaff;
 

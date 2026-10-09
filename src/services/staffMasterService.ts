@@ -135,7 +135,7 @@ export const initializeStaffMaster = (): void => {};
 export const getStaffMaster = (): MasterStaffRecord[] => {
   let list: any[] = [];
   try {
-    const raw = localStorage.getItem('munyaka_staff_db');
+    const raw = localStorage.getItem('munyaka_staff_db') || localStorage.getItem('munyaka_staff');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
@@ -144,11 +144,28 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     }
   } catch {}
 
-  // Deduplicate by id / phone / name
+  // Ensure default bootstrap active accounts if empty
+  if (list.length === 0) {
+    list = [
+      {
+        id: 'staff_admin_1',
+        name: 'School Administrator',
+        email: 'sysadmin@munyaka.sc.ke',
+        phone: '+254 712 345 678',
+        role: 'Administrator',
+        systemRole: 'head_teacher',
+        department: 'Administration',
+        status: 'Active',
+        tempAccessCode: 'MUN-ADMIN',
+        accessCode: 'MUN-ADMIN'
+      }
+    ];
+  }
+
   const map = new Map<string, any>();
   list.forEach(s => {
     if (s && (s.id || s.phone || s.name || s.staffId || s.email)) {
-      const key = String(s.id || s.phone || s.email || s.name || s.staffId).trim().toLowerCase();
+      const key = String(s.email || s.id || s.phone || s.name).trim().toLowerCase();
       if (!map.has(key)) {
         map.set(key, s);
       }
@@ -160,10 +177,7 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     localStorage.setItem('munyaka_staff_db', JSON.stringify(uniqueList));
   } catch {}
 
-  const localOverrides = JSON.parse(localStorage.getItem('munyaka_staff_class_overrides') || '{}');
-  
   return uniqueList.map((s: any) => {
-    const override = localOverrides[s.id || s.email] || {};
     return {
       id: s.id || s.staffId || `staff_${Math.random()}`,
       name: s.name || s.full_name || 'Staff Member',
@@ -174,13 +188,13 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
       role: s.role || 'Teacher',
       systemRole: s.systemRole || 'subject_teacher',
       department: s.department || 'Administration',
-      assignedGrade: override.assignedGrade || s.assignedGrade || s.assigned_grade || s.grade || '',
-      assignedStream: override.assignedStream || s.assignedStream || s.assigned_stream || s.stream || '',
+      assignedGrade: s.assignedGrade || s.assigned_grade || s.grade || '',
+      assignedStream: s.assignedStream || s.assigned_stream || s.stream || '',
       assignedSubjects: s.assignedSubjects || s.subjectAllocations || s.allocations || [],
-      allocations: s.allocations || s.subjectAllocations || s.detailedAssignments || [],
       status: s.status || 'Active',
       staffId: s.staffId || s.staff_id,
-      tempAccessCode: s.tempAccessCode || s.access_key || s.ref,
+      tempAccessCode: s.tempAccessCode || s.accessCode || s.access_key || s.ref,
+      accessCode: s.accessCode || s.tempAccessCode || s.access_key || s.ref,
     };
   });
 };
