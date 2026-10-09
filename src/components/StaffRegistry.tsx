@@ -496,20 +496,6 @@ export default function StaffRegistry() {
           </table>
         </div>
       </Card>
-                          className="h-8 w-8 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded-lg"
-                          title="Delete Staff Member"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
 
       {/* Add / Edit Staff Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
