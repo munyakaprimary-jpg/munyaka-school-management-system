@@ -650,11 +650,9 @@ export default function StaffRegistry() {
                                   if (typeof cls === 'string') {
                                     formattedCls = cls;
                                   } else if (cls && typeof cls === 'object') {
-                                    const g = (cls as any).grade || (cls as any).name || (cls as any).className || '';
-                                    const s = (cls as any).stream || (cls as any).streamName || '';
-                                    const subj = (cls as any).subject || (cls as any).learningArea || '';
-                                    formattedCls = [g, s, subj ? `- ${subj}` : ''].filter(Boolean).join(' ');
-                                    if (!formattedCls) formattedCls = JSON.stringify(cls);
+                                    const item = cls as any;
+                                    formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedCls) formattedCls = JSON.stringify(item);
                                   } else {
                                     formattedCls = String(cls);
                                   }
@@ -680,10 +678,9 @@ export default function StaffRegistry() {
                                   if (typeof strm === 'string') {
                                     formattedStrm = strm;
                                   } else if (strm && typeof strm === 'object') {
-                                    const g = (strm as any).grade || (strm as any).name || '';
-                                    const s = (strm as any).stream || (strm as any).streamName || '';
-                                    formattedStrm = [g, s].filter(Boolean).join(' ');
-                                    if (!formattedStrm) formattedStrm = JSON.stringify(strm);
+                                    const item = strm as any;
+                                    formattedStrm = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedStrm) formattedStrm = JSON.stringify(item);
                                   } else {
                                     formattedStrm = String(strm);
                                   }
