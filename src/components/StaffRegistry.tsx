@@ -733,10 +733,8 @@ export default function StaffRegistry() {
                                     formattedCls = cls;
                                   } else if (cls && typeof cls === 'object') {
                                     const item = cls as any;
-                                    formattedCls = `${item.subject || ''} - ${item.grade || ''}${item.stream || ''}`.trim();
-                                    if (!formattedCls || formattedCls === '-') {
-                                      formattedCls = String(item.grade || item.name || item.className || JSON.stringify(item));
-                                    }
+                                    formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedCls) formattedCls = JSON.stringify(item);
                                   } else {
                                     formattedCls = String(cls);
                                   }
@@ -763,10 +761,8 @@ export default function StaffRegistry() {
                                     formattedStrm = strm;
                                   } else if (strm && typeof strm === 'object') {
                                     const item = strm as any;
-                                    formattedStrm = `${item.subject || ''} - ${item.grade || ''}${item.stream || ''}`.trim();
-                                    if (!formattedStrm || formattedStrm === '-') {
-                                      formattedStrm = String(item.stream || item.name || JSON.stringify(item));
-                                    }
+                                    formattedStrm = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedStrm) formattedStrm = JSON.stringify(item);
                                   } else {
                                     formattedStrm = String(strm);
                                   }
