@@ -127,7 +127,9 @@ export function writeStorage<T>(key: string, value: T): boolean {
   //    The store name is derived from the key pattern so we can retrieve
   //    it later in idbRead / idbWriteMany without extra mapping.
   _idbWriteThru(key, value).catch((err) => {
-    console.error(`[persistentStore] IDB write-through failed for "${key}":`, err);
+    if (err) {
+      console.error(`[persistentStore] IDB write-through failed for "${key}":`, err);
+    }
   });
 
   // 4. Notify React subscribers

@@ -426,17 +426,21 @@ export const CentralDataService = {
   async syncBatchToRemote(batchPayload: Record<string, any>): Promise<boolean> {
     const serverUrl = getStoredServerUrl();
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
       const res = await fetch(`${serverUrl}/api/central-db/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(batchPayload)
+        body: JSON.stringify(batchPayload),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const json = await res.json();
         return json && json.success === true;
       }
-    } catch (err) {
-      console.error('[CentralDataService] Failed to sync batch to remote server:', err);
+    } catch {
+      // Offline or server unreachable — fail gracefully without throwing or spamming console
     }
     return false;
   },
