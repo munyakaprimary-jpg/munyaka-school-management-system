@@ -20,10 +20,24 @@ import {
 import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
 
+export type StaffCategoryRole =
+  | 'Class Teacher'
+  | 'Subject Teacher'
+  | 'ICT Teacher'
+  | 'Lab Teacher'
+  | 'Bursar'
+  | 'Library Teacher'
+  | 'HOI'
+  | 'DHOI'
+  | 'Store Master'
+  | 'Teaching Staff'
+  | 'Administration'
+  | 'Support Staff';
+
 export interface StaffMember {
   id: string;
   name: string;
-  category: 'Teaching Staff' | 'Administration' | 'Support Staff';
+  category: StaffCategoryRole;
   tscNumber: string;
   email: string;
   phone: string;
@@ -45,7 +59,7 @@ export default function StaffRegistry() {
 
   // Form states
   const [fullName, setFullName] = useState('');
-  const [category, setCategory] = useState<'Teaching Staff' | 'Administration' | 'Support Staff'>('Teaching Staff');
+  const [category, setCategory] = useState<StaffCategoryRole>('Class Teacher');
   const [tscNumber, setTscNumber] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -499,13 +513,13 @@ export default function StaffRegistry() {
                                 ID: {staff.id || `STF-${idx + 1}`}
                               </span>
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
-                                staff.category === 'Teaching Staff'
-                                  ? 'bg-indigo-50 text-indigo-700 border-indigo-150'
-                                  : staff.category === 'Administration'
-                                    ? 'bg-amber-50 text-amber-700 border-amber-150'
-                                    : 'bg-slate-50 text-slate-700 border-slate-150'
+                                staff.category === 'HOI' || staff.category === 'DHOI' || staff.category === 'Administration'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-150'
+                                  : staff.category === 'Bursar' || staff.category === 'Store Master' || staff.category === 'Support Staff'
+                                    ? 'bg-slate-50 text-slate-700 border-slate-150'
+                                    : 'bg-indigo-50 text-indigo-700 border-indigo-150'
                               }`}>
-                                {staff.category || 'Teaching Staff'}
+                                {staff.category || 'Class Teacher'}
                               </span>
                             </div>
                           </div>
@@ -711,14 +725,23 @@ export default function StaffRegistry() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Staff Category <span className="text-rose-500">*</span></label>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Staff Category / Role <span className="text-rose-500">*</span></label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value as any)}
+                    onChange={(e) => setCategory(e.target.value as StaffCategoryRole)}
                     className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
                   >
-                    <option value="Teaching Staff">Teaching Staff (Teacher / Educator)</option>
-                    <option value="Administration">Administration (Principal, Director)</option>
+                    <option value="Class Teacher">Class Teacher</option>
+                    <option value="Subject Teacher">Subject Teacher</option>
+                    <option value="ICT Teacher">ICT Teacher</option>
+                    <option value="Lab Teacher">Lab Teacher</option>
+                    <option value="Bursar">Bursar</option>
+                    <option value="Library Teacher">Library Teacher</option>
+                    <option value="HOI">HOI</option>
+                    <option value="DHOI">DHOI</option>
+                    <option value="Store Master">Store Master</option>
+                    <option value="Teaching Staff">Teaching Staff</option>
+                    <option value="Administration">Administration</option>
                     <option value="Support Staff">Support Staff</option>
                   </select>
                 </div>
