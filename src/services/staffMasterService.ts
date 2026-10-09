@@ -300,7 +300,7 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
     return { success: false, error: 'Staff account not found. Please enter your full school email ending with @munyaka.sc.ke.' };
   }
 
-  const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
+  const storedCode = (matched.tempAccessCode || (matched as any).accessCode || '').trim();
   const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   // Exclusively enforce school email and MUN-XXXX format matching stored registry code

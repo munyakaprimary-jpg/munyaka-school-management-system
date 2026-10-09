@@ -44,7 +44,7 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
 
   const uniqueStreams = useMemo(() => {
     const streams = new Set<string>();
-    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
+    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(typeof s === 'string' ? s : s.name)));
     learners.forEach(s => { if (s.stream) streams.add(String(s.stream)); });
     return Array.from(streams).sort();
   }, [learners]);

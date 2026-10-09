@@ -33,7 +33,7 @@ import {
   X,
   Download
 } from 'lucide-react';
-import { GRADES_DATA, Grade } from '@/lib/mock-data';
+import { GRADES_DATA, GradeInfo as Grade } from '@/lib/mock-data';
 import { getStudents } from '@/services/persistentStore';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
