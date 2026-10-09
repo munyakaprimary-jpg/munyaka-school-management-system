@@ -305,10 +305,26 @@ const Login: React.FC = () => {
         return;
       }
       
-      const emailRegex = /^[^\s@]+@munyaka\.sc\.ke$/i;
-      const isEmail = emailRegex.test(trimmedId);
-      if (!isEmail) {
-        setStaffAuthError('Staff login requires your full school email address ending with @munyaka.sc.ke.');
+      // Before strict regex enforcement, check if the input matches any staff member in the live master registry first (e.g. ndiki@munyaka.sc.ke or short IDs)
+      const staffList = getStaffMaster();
+      const cleanInput = trimmedId.toLowerCase().trim();
+      const cleanEmail = cleanInput.includes('@') ? cleanInput : `${cleanInput}@munyaka.sc.ke`;
+
+      const matched = staffList.find(s => {
+        const sEmail = (s.email || '').toLowerCase().trim();
+        const sStaffId = (s.staffId || '').toLowerCase().trim();
+        const sId = (s.id || '').toLowerCase().trim();
+        return sEmail === cleanEmail || sEmail === cleanInput || sStaffId === cleanInput || sId === cleanInput || sEmail.split('@')[0] === cleanInput.split('@')[0];
+      });
+
+      if (!matched) {
+        const emailRegex = /^[^\s@]+@munyaka\.sc\.ke$/i;
+        const isEmail = emailRegex.test(trimmedId);
+        if (!isEmail) {
+          setStaffAuthError('Staff login requires your full school email address ending with @munyaka.sc.ke.');
+          return;
+        }
+        setStaffAuthError("Staff account not found. Please enter your full school email ending with @munyaka.sc.ke.");
         return;
       }
 
@@ -319,21 +335,6 @@ const Login: React.FC = () => {
   
       setIsStaffVerifying(true);
       setStaffAuthError('');
-
-      const staffList = getStaffMaster();
-      const cleanInput = trimmedId.toLowerCase().trim();
-      const cleanEmail = cleanInput.includes('@') ? cleanInput : `${cleanInput}@munyaka.sc.ke`;
-  
-      const matched = staffList.find(s => {
-        const sEmail = (s.email || '').toLowerCase().trim();
-        return sEmail === cleanEmail || sEmail === cleanInput || sEmail.split('@')[0] === cleanInput.split('@')[0];
-      });
-
-      if (!matched) {
-        setStaffAuthError("Staff account not found. Please enter your full school email ending with @munyaka.sc.ke.");
-        setIsStaffVerifying(false);
-        return;
-      }
 
       const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
       const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
