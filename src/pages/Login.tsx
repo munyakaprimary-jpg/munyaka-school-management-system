@@ -618,9 +618,14 @@ const Login: React.FC = () => {
                   <form onSubmit={handleStaffLogin} className="space-y-5">
                     {/* Email Address */}
                     <div className="space-y-2">
-                      <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Staff Email (from Staff Registry)
-                      </Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                          Staff Email / ID
+                        </Label>
+                        <span className="text-[10px] font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          Official Path: Email + Access Code
+                        </span>
+                      </div>
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <Input
@@ -629,7 +634,7 @@ const Login: React.FC = () => {
                           autoCapitalize="none"
                           value={staffId}
                           onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. staff@munyaka.sc.ke"
+                          placeholder="e.g. staff@munyaka.sc.ke or name"
                           autoComplete="username"
                           className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                           autoFocus
@@ -639,9 +644,14 @@ const Login: React.FC = () => {
 
                     {/* Access Code */}
                     <div className="space-y-2">
-                      <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Access Code (MUNYAKA-XXXX from Registry)
-                      </Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                          Access Code (MUNYAKA-XXXX)
+                        </Label>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          from Staff Registry
+                        </span>
+                      </div>
                       <div className="relative">
                         <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <Input
