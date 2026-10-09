@@ -5,6 +5,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 import { startHeartbeatService, stopHeartbeatService } from '@/services/deviceHeartbeat';
+import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
 
 export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff';
 
