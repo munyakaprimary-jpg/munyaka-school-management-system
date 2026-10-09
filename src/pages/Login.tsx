@@ -400,7 +400,7 @@ const Login: React.FC = () => {
       setStaffAuthError(errorMsg);
       showError(errorMsg);
       setIsStaffVerifying(false);
-    };
+  };
 
   // ── Lightweight server reachability check on mount ──────────────────────
   useEffect(() => {
