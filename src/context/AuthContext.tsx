@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
+import { getActiveAdminPassword, DEFAULT_ADMIN_PASSWORD } from '@/services/adminCredentials';
 import { startHeartbeatService, stopHeartbeatService } from '@/services/deviceHeartbeat';
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
 
