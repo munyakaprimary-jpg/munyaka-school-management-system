@@ -66,29 +66,31 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   };
 
   const navItems = [
-    { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard },
-    { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck },
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi },
-    { name: 'Games Hub', path: '/games', icon: Gamepad2 },
-    { name: 'Grades & Streams', path: '/grades', icon: Layers },
-    { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen },
-    { name: 'Exam Types', path: '/exam-types', icon: Award },
-    { name: 'Timetable', path: '/timetable', icon: Clock },
-    { name: 'Attendance Management', path: '/attendance', icon: CheckSquare },
-    { name: 'Student Attendance', path: '/attendance/students', icon: ClipboardCheck },
-    { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn },
-    { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet },
-    { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText },
-    { name: 'Results Analysis', path: '/analysis', icon: BarChart3 },
-    { name: 'Digital Hub', path: '/digital-hub', icon: Laptop },
-    { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor },
-    { name: 'Library & E-Resources', path: '/library', icon: Library },
-    { name: 'Tools & Inventory', path: '/inventory', icon: Box },
-    { name: 'Fees & Finance', path: '/fees', icon: Wallet },
-    { name: 'Report Cards', path: '/reports', icon: FileText },
-    { name: 'Settings', path: '/settings', icon: Settings },
-  ];
+      { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard },
+      { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck },
+      { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+      { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi },
+      { name: 'Students', path: '/students', icon: Users },
+      { name: 'Staff Registry', path: '/staff-registry', icon: UserCheck },
+      { name: 'Games Hub', path: '/games', icon: Gamepad2 },
+      { name: 'Grades & Streams', path: '/grades', icon: Layers },
+      { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen },
+      { name: 'Exam Types', path: '/exam-types', icon: Award },
+      { name: 'Timetable', path: '/timetable', icon: Clock },
+      { name: 'Attendance Management', path: '/attendance', icon: CheckSquare },
+      { name: 'Student Attendance', path: '/attendance/students', icon: ClipboardCheck },
+      { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn },
+      { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet },
+      { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText },
+      { name: 'Results Analysis', path: '/analysis', icon: BarChart3 },
+      { name: 'Digital Hub', path: '/digital-hub', icon: Laptop },
+      { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor },
+      { name: 'Library & E-Resources', path: '/library', icon: Library },
+      { name: 'Tools & Inventory', path: '/inventory', icon: Box },
+      { name: 'Fees & Finance', path: '/fees', icon: Wallet },
+      { name: 'Report Cards', path: '/reports', icon: FileText },
+      { name: 'Settings', path: '/settings', icon: Settings },
+    ];
 
   const activePath = location.pathname;
 
@@ -144,23 +146,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
               </NavLink>
             );
           })}
-        </div>
-
-        <div className="px-3 py-2 border-t border-slate-800">
-          <Link className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold shadow-md transition-colors",
-            activePath === '/staff-registry'
-              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
-              : "bg-indigo-950/60 text-indigo-200 hover:bg-indigo-900/80 hover:text-white"
-          )} to="/staff-registry" title={isCollapsed ? "Staff Registry" : undefined}>
-            <Users className="w-5 h-5 text-indigo-400 shrink-0 group-hover:text-white" />
-            {!isCollapsed && <span className="truncate flex-1 font-bold">Staff Registry</span>}
-            {!isCollapsed && (
-              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full font-mono border border-indigo-500/30">
-                NEW
-              </span>
-            )}
-          </Link>
         </div>
 
         <div className="p-4 border-t border-slate-800 bg-slate-900/50">
