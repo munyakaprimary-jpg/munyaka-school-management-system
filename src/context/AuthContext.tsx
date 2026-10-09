@@ -138,6 +138,26 @@ const USERS_STORAGE_KEY = 'munyaka_users';
 
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   const norm = String(systemRole || '').trim().toLowerCase();
+  
+  if (norm.includes('hoi') || norm.includes('head of institution') || norm.includes('dhoi') || norm.includes('deputy head') || norm.includes('principal') || norm.includes('head_teacher') || norm.includes('head teacher')) {
+    return 'admin';
+  }
+  if (norm.includes('bursar') || norm.includes('accountant') || norm.includes('finance')) {
+    return 'accountant';
+  }
+  if (norm.includes('librar')) {
+    return 'librarian';
+  }
+  if (norm.includes('store') || norm.includes('store master') || norm.includes('storekeeper')) {
+    return 'storekeeper';
+  }
+  if (norm.includes('lab') || norm.includes('laboratory')) {
+    return 'lab_assistant';
+  }
+  if (norm.includes('ict') || norm.includes('computer')) {
+    return 'ict_technician';
+  }
+
   switch (norm) {
     // Normalize legacy identifiers to the canonical 'admin' role.
     case 'owner':
@@ -152,15 +172,19 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
     case 'librarian':
     case 'library':
     case 'library_assistant':
+    case 'library teacher':
       return 'librarian';
     case 'storekeeper':
     case 'stores':
+    case 'store master':
       return 'storekeeper';
     case 'lab_assistant':
     case 'laboratory_assistant':
+    case 'lab teacher':
       return 'lab_assistant';
     case 'ict_technician':
     case 'ict_tech':
+    case 'ict teacher':
       return 'ict_technician';
     case 'non_teaching':
     case 'support_staff':
@@ -175,7 +199,9 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
       return 'staff';
     case 'senior_teacher':
     case 'class_teacher':
+    case 'class teacher':
     case 'subject_teacher':
+    case 'subject teacher':
     case 'teacher':
     default:
       return 'teacher';
@@ -489,29 +515,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Role Normalization and role checks: support staff roles (NON_TEACHING, SUPPORT, ACCOUNTANT, DRIVER, etc.)
-        const rawRole = String(matchedStaff.role || matchedStaff.systemRole || matchedStaff.system_role || 'staff').trim().toUpperCase();
+        const rawRole = String(matchedStaff.role || matchedStaff.systemRole || matchedStaff.system_role || matchedStaff.category || 'staff').trim().toUpperCase();
         
-        const isSupportOrStaff = rawRole.includes('SUPPORT') ||
-                                 rawRole.includes('NON') ||
-                                 rawRole.includes('ACCOUNTANT') ||
-                                 rawRole.includes('DRIVER') ||
-                                 rawRole.includes('STAFF') ||
-                                 rawRole.includes('TEACHER') ||
-                                 rawRole.includes('LIBRARIAN') ||
-                                 rawRole.includes('BURSAR');
-
-        if (!isSupportOrStaff && rawRole !== 'ADMIN' && rawRole !== 'OWNER' && rawRole !== 'STUDENT' && rawRole !== 'PARENT') {
-          console.error('[AuthContext.login] Error: Role Restriction: User role not permitted:', rawRole);
-          return false;
-        }
-
-        const normalizedRole: UserRole = rawRole.includes('TEACHER') && !rawRole.includes('NON') ? 'teacher' :
-                                        rawRole.includes('ADMIN') ? 'admin' :
-                                        rawRole.includes('OWNER') || rawRole.includes('SUPER') ? 'owner' :
-                                        rawRole.includes('STUDENT') ? 'student' :
-                                        rawRole.includes('PARENT') ? 'parent' :
-                                        rawRole.includes('ACCOUNTANT') ? 'accountant' :
-                                        rawRole.includes('DRIVER') ? 'driver' : 'staff';
+        const normalizedRole: UserRole =
+          (rawRole.includes('HOI') || rawRole.includes('HEAD OF INSTITUTION') || rawRole.includes('DHOI') || rawRole.includes('DEPUTY') || rawRole.includes('HEAD_TEACHER') || rawRole.includes('ADMIN')) ? 'admin' :
+          (rawRole.includes('BURSAR') || rawRole.includes('ACCOUNTANT') || rawRole.includes('FINANCE')) ? 'accountant' :
+          (rawRole.includes('LIBRAR')) ? 'librarian' :
+          (rawRole.includes('STORE')) ? 'storekeeper' :
+          (rawRole.includes('ICT')) ? 'ict_technician' :
+          (rawRole.includes('LAB')) ? 'lab_assistant' :
+          (rawRole.includes('TEACHER') && !rawRole.includes('NON')) ? 'teacher' :
+          (rawRole.includes('NON') || rawRole.includes('SUPPORT')) ? 'support_staff' :
+          rawRole.includes('OWNER') || rawRole.includes('SUPER') ? 'owner' :
+          rawRole.includes('STUDENT') ? 'student' :
+          rawRole.includes('PARENT') ? 'parent' :
+          'teacher';
 
         const loggedUser: User = {
           id: matchedStaff.id || matchedStaff.staffId || 'staff-' + Date.now(),

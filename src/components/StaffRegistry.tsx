@@ -23,7 +23,19 @@ import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
 export interface StaffMember {
   id: string;
   name: string;
-  category: 'Teaching Staff' | 'Administration' | 'Support Staff';
+  category:
+    | 'Class Teacher'
+    | 'Subject Teacher'
+    | 'ICT Teacher'
+    | 'Lab Teacher'
+    | 'Bursar'
+    | 'Library Teacher'
+    | 'HOI (Head of Institution)'
+    | 'DHOI (Deputy Head of Institution)'
+    | 'Store Master'
+    | 'Teaching Staff'
+    | 'Administration'
+    | 'Support Staff';
   tscNumber: string;
   email: string;
   phone: string;
@@ -45,7 +57,7 @@ export default function StaffRegistry() {
 
   // Form states
   const [fullName, setFullName] = useState('');
-  const [category, setCategory] = useState<'Teaching Staff' | 'Administration' | 'Support Staff'>('Teaching Staff');
+  const [category, setCategory] = useState<StaffMember['category']>('Class Teacher');
   const [tscNumber, setTscNumber] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -106,7 +118,7 @@ export default function StaffRegistry() {
   const handleOpenAddModal = () => {
     setEditingStaff(null);
     setFullName('');
-    setCategory('Teaching Staff');
+    setCategory('Class Teacher');
     setTscNumber('');
     setEmail('');
     setPhone('');
