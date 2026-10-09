@@ -128,13 +128,13 @@ export default function StaffRegistry() {
             id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
           }
           seenIds.add(id);
-
+    
           let cat: StaffCategoryRole = staff.category;
           if (cat === 'Teaching Staff' as any) cat = 'Subject Teacher';
           else if (cat === 'Administration' as any) cat = 'HOI';
           else if (cat === 'Support Staff' as any) cat = 'Store Master';
           else if (!cat) cat = 'Class Teacher';
-
+    
           const rawClasses = staff.assignedClasses || staff.classes || [];
           const cleanClasses = Array.isArray(rawClasses)
             ? rawClasses.map((c: any) => {
@@ -146,7 +146,7 @@ export default function StaffRegistry() {
                 return String(c);
               }).filter(Boolean)
             : [];
-
+    
           const rawStreams = staff.assignedStreams || staff.streams || [];
           const cleanStreams = Array.isArray(rawStreams)
             ? rawStreams.map((s: any) => {
@@ -158,7 +158,7 @@ export default function StaffRegistry() {
                 return String(s);
               }).filter(Boolean)
             : [];
-
+    
           const rawSubjects = staff.subjects || staff.assignedSubjects || [];
           const cleanSubjects = Array.isArray(rawSubjects)
             ? rawSubjects.map((sub: any) => {
@@ -170,7 +170,10 @@ export default function StaffRegistry() {
                 return String(sub);
               }).filter(Boolean)
             : [];
-
+    
+          const defaultGrade = cleanClasses[0] || 'Grade 7';
+          const defaultStream = cleanStreams[0] || '';
+    
           return {
             id,
             name: staff.name || 'Unnamed Staff',
@@ -181,14 +184,14 @@ export default function StaffRegistry() {
             subjects: cleanSubjects,
             assignedClasses: cleanClasses,
             assignedStreams: cleanStreams,
-            homeroomGrade: staff.homeroomGrade || cleanClasses[0] || 'Grade 7',
-            homeroomStream: staff.homeroomStream || cleanStreams[0] || 'Mercury',
+            homeroomGrade: staff.homeroomGrade || defaultGrade,
+            homeroomStream: staff.homeroomStream || defaultStream,
             allocations: Array.isArray(staff.allocations)
               ? staff.allocations.filter((a: any) => a && typeof a === 'object' && a.subject)
               : cleanSubjects.map((sub: string) => ({
                   subject: sub,
-                  grade: cleanClasses[0] || 'Grade 4',
-                  stream: cleanStreams[0] || 'Blue'
+                  grade: defaultGrade,
+                  stream: defaultStream
                 })),
             accessCode: staff.accessCode || Math.random().toString(36).substring(2, 7).toUpperCase(),
             status: staff.status || 'Active',
@@ -212,7 +215,7 @@ export default function StaffRegistry() {
     setAssignedClasses([]);
     setAssignedStreams([]);
     setHomeroomGrade('Grade 7');
-    setHomeroomStream('Mercury');
+    setHomeroomStream('');
     setAllocations([]);
     setActiveSubjectForAllocation(null);
     generateSecureCode();
@@ -681,7 +684,7 @@ export default function StaffRegistry() {
                           <div className="flex items-center gap-1.5">
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
                               <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : 'Mercury'}
+                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
                             </span>
                           </div>
                         ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
