@@ -3,15 +3,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
-import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
-import { PreRegisteredStaff } from '@/types/staff-access';
-import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
-import { CURRENT_AUTH_ROLE_KEY } from '@/services/licenseService';
-import {
-  MUNYAKA_ADMIN_PASSWORD,
-  DEFAULT_ADMIN_PASSWORD,
-  getActiveAdminPassword,
-} from '@/services/adminCredentials';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 import { startHeartbeatService, stopHeartbeatService } from '@/services/deviceHeartbeat';
 
@@ -435,8 +426,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Staff ID, National ID, Email, Phone Number, or TSC Number alongside TSC Number.
       let staffMembers: any[] = [];
       try {
-        const staffJson = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff_list') || localStorage.getItem('staff_members');
-        if (staffJson) staffMembers = JSON.parse(staffJson);
+        const masterList = getStaffMaster();
+        if (Array.isArray(masterList) && masterList.length > 0) {
+          staffMembers = masterList;
+        } else {
+          const staffJson = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff_list') || localStorage.getItem('staff_members');
+          if (staffJson) staffMembers = JSON.parse(staffJson);
+        }
       } catch {
         /* ignore */
       }
@@ -632,11 +628,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
 
-    // Check staff directory (munyaka_staff_directory) across staffId, tsc_number, national_id, email, phone
+    // Check staff directory using live getStaffMaster() and local storage fallback
     let staffMembers: any[] = [];
     try {
-      const staffJson = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory');
-      if (staffJson) staffMembers = JSON.parse(staffJson);
+      const masterList = getStaffMaster();
+      if (Array.isArray(masterList) && masterList.length > 0) {
+        staffMembers = masterList;
+      } else {
+        const staffJson = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory');
+        if (staffJson) staffMembers = JSON.parse(staffJson);
+      }
     } catch {
       /* ignore */
     }
