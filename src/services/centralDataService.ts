@@ -132,7 +132,7 @@ export const UnifiedDataStorage = {
 };
 
 export const CentralDataService = {
-  saveLearners: (learners: any[]) => UnifiedDataStorage.saveLearners(learners),
+  getLearners: () => UnifiedDataStorage.getLearners(),
   saveLearners: (learners: any[]) => UnifiedDataStorage.saveLearners(learners),
   getStudents: () => UnifiedDataStorage.getLearners(),
   saveStudents: (learners: any[]) => UnifiedDataStorage.saveLearners(learners),
