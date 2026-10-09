@@ -1084,7 +1084,7 @@ export default function StaffRegistry() {
                     {filteredLearningAreasForClasses.map((sub) => {
                       const isSelected = selectedSubjects.includes(sub);
                       const primaryGrade = assignedClasses[0] || homeroomGrade || 'Grade 7';
-                      const primaryStream = assignedStreams[0] || homeroomStream || 'Mercury';
+                      const primaryStream = assignedStreams[0] || homeroomStream || availableSchoolStreams[0] || 'Mercury';
                       return (
                         <div
                           key={sub}
@@ -1105,7 +1105,7 @@ export default function StaffRegistry() {
                           </div>
                           {isSelected && (
                             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-700/80 text-indigo-100 border border-indigo-500/50 whitespace-nowrap">
-                              {primaryGrade} {primaryStream}
+                              {primaryGrade} {assignedStreams.length > 0 ? assignedStreams.join('/') : primaryStream}
                             </span>
                           )}
                         </div>
