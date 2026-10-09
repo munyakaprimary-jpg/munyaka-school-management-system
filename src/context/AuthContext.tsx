@@ -480,10 +480,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Dual verification: password check against EITHER system fallback password ("munyaka2026") OR dynamic accessCode / access_code / tempAccessCode / password
         const storedCode = String(matchedStaff.access_code || matchedStaff.accessCode || matchedStaff.tempAccessCode || matchedStaff.password || '').trim();
         const fallbackPassword = 'munyaka2026';
+        const cleanPassNorm = cleanPass.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const storedCodeNorm = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
 
         const isPasswordValid =
           (cleanPass === fallbackPassword) ||
-          (storedCode !== '' && (storedCode.toLowerCase() === cleanPass.toLowerCase() || storedCode === cleanPass || storedCode.toUpperCase() === cleanPass.toUpperCase())) ||
+          (storedCode !== '' && (storedCode.toLowerCase() === cleanPass.toLowerCase() || storedCode === cleanPass || storedCode.toUpperCase() === cleanPass.toUpperCase() || (storedCodeNorm !== '' && storedCodeNorm === cleanPassNorm))) ||
           cleanPass === 'munyaka5239' ||
           cleanPass === 'Teacher@123';
 
@@ -661,8 +663,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     if (staffMember) {
-      const storedCode = String(staffMember.access_code || staffMember.accessCode || staffMember.password || '').trim();
-      const matchesCode = storedCode && (storedCode.toLowerCase() === staffCleanPass.toLowerCase() || storedCode === staffCleanPass);
+      const storedCode = String(staffMember.access_code || staffMember.accessCode || staffMember.tempAccessCode || staffMember.password || '').trim();
+      const storedCodeNorm = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const staffPassNorm = staffCleanPass.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const matchesCode = storedCode && (storedCode.toLowerCase() === staffCleanPass.toLowerCase() || storedCode === staffCleanPass || (storedCodeNorm !== '' && storedCodeNorm === staffPassNorm));
       const matchesDefault = staffCleanPass === 'munyaka2026' || staffCleanPass === 'munyaka5239' || staffCleanPass === 'Teacher@123';
 
       if (matchesCode || matchesDefault) {

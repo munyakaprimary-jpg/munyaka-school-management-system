@@ -289,12 +289,13 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
   const staffList = getStaffMaster();
   const trimmedId = (identifier || '').trim().toLowerCase();
   const trimmedPass = (pass || '').trim();
+  const normalizedPass = trimmedPass.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const matched = staffList.find(s => {
     const sId = (s.staffId || '').toLowerCase();
     const sEmail = (s.email || '').toLowerCase();
     const sTsc = (s.tscNumber || '').toLowerCase();
-    const sCode = (s.tempAccessCode || '').toLowerCase();
+    const sCode = (s.tempAccessCode || s.accessCode || '').toLowerCase();
     const sNatId = (s.nationalId || '').toLowerCase();
 
     const matchesId =
@@ -311,12 +312,17 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
     return { success: false, error: 'Staff account not found.' };
   }
 
-  // If tempAccessCode or nationalId matches the password
+  // If tempAccessCode/accessCode or nationalId matches the password (flexible formatting support for MUN-6ZGC / MUNYAKA-XXXX etc.)
+  const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
+  const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+
   const validPass =
     trimmedPass === 'munyaka2026' ||
     trimmedPass === 'admin123' ||
     trimmedPass === matched.tempAccessCode ||
-    trimmedPass === matched.nationalId;
+    trimmedPass === matched.accessCode ||
+    trimmedPass === matched.nationalId ||
+    (normalizedStoredCode !== '' && normalizedStoredCode === normalizedPass);
 
   if (!validPass) {
     return { success: false, error: 'Invalid password or access key.' };
