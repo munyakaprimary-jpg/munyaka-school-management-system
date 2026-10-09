@@ -219,6 +219,7 @@ export default function StaffRegistry() {
 
     setStaffList(sanitized);
     localStorage.setItem('munyaka_staff', JSON.stringify(sanitized));
+    localStorage.setItem('munyaka_staff_registry', JSON.stringify(sanitized));
   }, []);
 
   const handleOpenAddModal = () => {
@@ -338,6 +339,7 @@ export default function StaffRegistry() {
       const updated = staffList.filter(s => s.id !== id);
       setStaffList(updated);
       localStorage.setItem('munyaka_staff', JSON.stringify(updated));
+      localStorage.setItem('munyaka_staff_registry', JSON.stringify(updated));
       toast.success("Staff member removed successfully");
     }
   };
@@ -386,6 +388,7 @@ export default function StaffRegistry() {
 
     setStaffList(updatedList);
     localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff_registry', JSON.stringify(updatedList));
     setIsModalOpen(false);
   };
 

@@ -435,7 +435,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Staff ID, National ID, Email, Phone Number, or TSC Number alongside TSC Number.
       let staffMembers: any[] = [];
       try {
-        const staffJson = localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff_list') || localStorage.getItem('staff_members');
+        const staffJson = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff_list') || localStorage.getItem('staff_members');
         if (staffJson) staffMembers = JSON.parse(staffJson);
       } catch {
         /* ignore */
@@ -635,7 +635,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Check staff directory (munyaka_staff_directory) across staffId, tsc_number, national_id, email, phone
     let staffMembers: any[] = [];
     try {
-      const staffJson = localStorage.getItem('munyaka_staff_directory');
+      const staffJson = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory');
       if (staffJson) staffMembers = JSON.parse(staffJson);
     } catch {
       /* ignore */
