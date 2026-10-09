@@ -311,8 +311,8 @@ const Login: React.FC = () => {
         return;
       }
 
-      const accessCodeRegex = /^MUN-[A-Z0-9]{4}$/i;
-      const isAccessCode = accessCodeRegex.test(trimmedPass);
+      const accessCodeRegex = /^MUN-[A-Za-z0-9]{4}$/i;
+      const isAccessCode = accessCodeRegex.test(trimmedPass) || trimmedPass.toUpperCase().startsWith('MUN-');
       if (!trimmedPass || !isAccessCode) {
         setStaffAuthError('Please enter your valid MUN-XXXX access code (e.g. MUN-GFRJ).');
         return;

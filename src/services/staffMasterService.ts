@@ -305,7 +305,8 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
 
   // Enforce strictly school email and MUN-XXXX format access code
   const isEmailValid = trimmedId.endsWith('@munyaka.sc.ke');
-  const isAccessCodeFormat = /^MUN-[A-Z0-9]{4}$/i.test(trimmedPass) || normalizedPass === normalizedStoredCode;
+  const accessCodeRegex = /^MUN-[A-Za-z0-9]{4}$/i;
+  const isAccessCodeFormat = accessCodeRegex.test(trimmedPass) || trimmedPass.toUpperCase().startsWith('MUN-') || normalizedPass === normalizedStoredCode;
 
   if (!isEmailValid) {
     return { success: false, error: 'Please enter your full school email ending with @munyaka.sc.ke.' };
