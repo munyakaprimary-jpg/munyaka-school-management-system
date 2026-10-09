@@ -309,18 +309,18 @@ export default function StaffRegistry() {
       {/* Staff Table Card */}
       <Card className="bg-slate-900/80 border-slate-800 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-md">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table style={{ tableLayout: 'fixed' }} className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                <th className="py-4 px-5">Name</th>
-                <th className="py-4 px-4">Role / Category</th>
-                <th className="py-4 px-4">TSC / ID No.</th>
-                <th className="py-4 px-4">Email</th>
-                <th className="py-4 px-4">Phone</th>
-                <th className="py-4 px-4">Subjects</th>
-                <th className="py-4 px-4">Access Code</th>
-                <th className="py-4 px-4">Status</th>
-                <th className="py-4 px-5 text-right">Actions</th>
+                <th className="py-4 px-5 w-[22%]">Name</th>
+                <th className="py-4 px-4 w-[10%]">Role / Category</th>
+                <th className="py-4 px-4 w-[10%]">TSC / ID No.</th>
+                <th className="py-4 px-4 w-[13%]">Email</th>
+                <th className="py-4 px-4 w-[10%]">Phone</th>
+                <th className="py-4 px-4 w-[13%]">Subjects</th>
+                <th className="py-4 px-4 w-[6%]">Access Code</th>
+                <th className="py-4 px-4 w-[6%]">Status</th>
+                <th className="py-4 px-5 text-right w-[10%]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-sm">
@@ -419,8 +419,8 @@ export default function StaffRegistry() {
                         </button>
                       </div>
                     </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+                    <td className="py-4 px-4 text-right">
+                                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
                         staff.status === 'Active' 
                           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
                           : staff.status === 'On Leave'
