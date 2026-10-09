@@ -187,7 +187,17 @@ export default function StaffRegistry() {
                 grade: defaultGrade,
                 stream: defaultStream
               }));
-    
+
+          let code = staff.accessCode;
+          if (!code || !code.startsWith('MUN-')) {
+            const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+            let randomPart = '';
+            for (let i = 0; i < 4; i++) {
+              randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            code = `MUN-${randomPart}`;
+          }
+
           return {
             id,
             name: staff.name || 'Unnamed Staff',
@@ -201,7 +211,7 @@ export default function StaffRegistry() {
             homeroomGrade: staff.homeroomGrade || defaultGrade,
             homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
             allocations: cleanAllocations,
-            accessCode: staff.accessCode || Math.random().toString(36).substring(2, 7).toUpperCase(),
+            accessCode: code,
             status: staff.status || 'Active',
             createdAt: staff.createdAt || new Date().toISOString()
           };
@@ -322,10 +332,10 @@ export default function StaffRegistry() {
   function generateRandomCode() {
     const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
     let code = '';
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 4; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return code;
+    return `MUN-${code}`;
   }
 
   const handleDeleteStaff = (id: string) => {

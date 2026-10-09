@@ -73,7 +73,7 @@ export const defaultMockStaff = [
     subjects: ['Mathematics', 'Science and Technology'],
     assignedClasses: ['Grade 4', 'Grade 5'],
     assignedStreams: ['Blue', 'Red'],
-    accessCode: '7A9K2',
+    accessCode: 'MUN-7A9K',
     status: 'Active',
     createdAt: '2023-01-15T08:00:00.000Z'
   },
@@ -87,7 +87,7 @@ export const defaultMockStaff = [
     subjects: ['English Language', 'Social Studies'],
     assignedClasses: ['Grade 6'],
     assignedStreams: ['Green'],
-    accessCode: '3H5M8',
+    accessCode: 'MUN-3H5M',
     status: 'Active',
     createdAt: '2023-02-10T09:15:00.000Z'
   },
@@ -99,7 +99,7 @@ export const defaultMockStaff = [
     email: 'clara.nafula@school.ac.ke',
     phone: '+254 701 112 233',
     subjects: [],
-    accessCode: '5A1X9',
+    accessCode: 'MUN-5A1X',
     status: 'Active',
     createdAt: '2022-11-01T10:00:00.000Z'
   },
@@ -113,7 +113,7 @@ export const defaultMockStaff = [
     subjects: ['Kiswahili Lugha', 'Religious Education (CRE/IRE/HRE)'],
     assignedClasses: ['Grade 7', 'Grade 8'],
     assignedStreams: ['Blue'],
-    accessCode: '4P9X1',
+    accessCode: 'MUN-4P9X',
     status: 'Active',
     createdAt: '2023-03-22T14:20:00.000Z'
   },
@@ -125,7 +125,7 @@ export const defaultMockStaff = [
     email: 'jane.koech@school.ac.ke',
     phone: '+254 755 667 788',
     subjects: [],
-    accessCode: '9K2J5',
+    accessCode: 'MUN-9K2J',
     status: 'Active',
     createdAt: '2023-04-05T11:05:00.000Z'
   }
