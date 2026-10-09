@@ -94,10 +94,11 @@ export function isOldAccessKeyFormat(key?: string | null): boolean {
 /**
  * Returns a normalised access key.
  *
- * - Valid MUNYAKA-XXXX keys are returned unchanged.
- * - Old-format / missing keys are regenerated using `generateAccessKey()`.
+ * - Valid MUNYAKA-XXXX or MUN-XXXX keys are returned unchanged (NEVER regenerated during login).
+ * - Only used for administrative record creation or seeding.
  */
 export function normalizeAccessKey(key?: string | null): string {
-  if (isValidAccessKey(key)) return key as string;
+  const trimmed = String(key || '').trim();
+  if (trimmed) return trimmed;
   return generateAccessKey();
 }
