@@ -321,9 +321,13 @@ const Login: React.FC = () => {
       setStaffAuthError('');
 
       const staffList = getStaffMaster();
+      const cleanInput = trimmedId.toLowerCase();
+      const cleanEmail = cleanInput.includes('@') ? cleanInput : `${cleanInput}@munyaka.sc.ke`;
+  
       const matched = staffList.find(s => {
-        const sEmail = (s.email || '').toLowerCase();
-        return sEmail === trimmedId.toLowerCase() || sEmail === `${trimmedId.toLowerCase()}@munyaka.sc.ke`;
+        const sEmail = (s.email || '').toLowerCase().trim();
+        const sName = (s.name || '').toLowerCase();
+        return sEmail === cleanEmail || sEmail === cleanInput || sEmail.startsWith(cleanInput.split('@')[0]);
       });
 
       if (!matched) {
