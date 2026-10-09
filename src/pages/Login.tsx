@@ -329,7 +329,7 @@ const Login: React.FC = () => {
       }
 
       if (!trimmedPass) {
-        setStaffAuthError('Please enter your assigned MUN-XXXX access code.');
+        setStaffAuthError('Please enter your assigned MUNYAKA-XXXX access code.');
         return;
       }
   
@@ -337,13 +337,13 @@ const Login: React.FC = () => {
       setStaffAuthError('');
 
       const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
-      const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const normalizedInputCode = trimmedPass.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const normalizedStoredCode = storedCode.toUpperCase();
+      const normalizedInputCode = trimmedPass.toUpperCase();
 
       const validPass = storedCode !== '' && normalizedStoredCode === normalizedInputCode;
 
       if (!validPass) {
-        setStaffAuthError("Invalid MUN-XXXX access code. Please check your assigned staff access code.");
+        setStaffAuthError("Invalid MUNYAKA-XXXX access code. Please check your assigned staff access code against the master staff ledger.");
         setIsStaffVerifying(false);
         return;
       }
@@ -639,7 +639,7 @@ const Login: React.FC = () => {
                     {/* Access Code */}
                     <div className="space-y-2">
                       <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Access Code (MUN-XXXX)
+                        Access Code (MUNYAKA-XXXX)
                       </Label>
                       <div className="relative">
                         <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -648,7 +648,7 @@ const Login: React.FC = () => {
                           type={showStaffPassword ? 'text' : 'password'}
                           value={staffPassword}
                           onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. MUN-6ZGC"
+                          placeholder="e.g. MUNYAKA-4827"
                           autoComplete="current-password"
                           className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                         />

@@ -328,7 +328,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initializeUsersStorage();
 
-    // 1. Live Staff Master Service verification for MUN-XXXX access codes and @munyaka.sc.ke emails
+    // 1. Live Staff Master Service verification for MUNYAKA-XXXX access codes and @munyaka.sc.ke emails
     const liveStaffMaster = getStaffMaster();
     const matchedMasterStaff = liveStaffMaster.find(staff => {
       const staffEmail = String(staff.email || '').trim().toLowerCase();
@@ -379,11 +379,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const serverUrl = localStorage.getItem('lan_server_url') || 'http://10.53.221.196:5000';
           startHeartbeatService(serverUrl, userData);
         } catch {}
-        showSuccess(`Welcome back, ${userData.name}! (Authenticated via MUN-XXXX access code)`);
+        showSuccess(`Welcome back, ${userData.name}! (Authenticated via MUNYAKA-XXXX access code)`);
         return true;
       } else {
-        console.error('[AuthContext.login] Invalid MUN-XXXX access code for staff member:', matchedMasterStaff.name);
-        showError('Invalid MUN-XXXX access code. Please check your assigned access code from the staff registry.');
+        console.error('[AuthContext.login] Invalid MUNYAKA-XXXX access code for staff member:', matchedMasterStaff.name);
+        showError('Invalid MUNYAKA-XXXX access code. Please check your assigned access code from the master staff ledger.');
         return false;
       }
     }
