@@ -120,102 +120,102 @@ export default function StaffRegistry() {
       loadedStaff = MOCK_STAFF;
     }
 
-        // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove legacy streams
-        const seenIds = new Set<string>();
-        const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
-          let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
-          if (seenIds.has(id)) {
-            id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
-          }
-          seenIds.add(id);
-    
-          let cat: StaffCategoryRole = staff.category;
-          if (cat === 'Teaching Staff' as any) cat = 'Subject Teacher';
-          else if (cat === 'Administration' as any) cat = 'HOI';
-          else if (cat === 'Support Staff' as any) cat = 'Store Master';
-          else if (!cat) cat = 'Class Teacher';
-    
-          const rawClasses = staff.assignedClasses || staff.classes || [];
-          const cleanClasses = Array.isArray(rawClasses)
-            ? rawClasses.map((c: any) => {
-                if (!c) return '';
-                if (typeof c === 'string') return c;
-                if (typeof c === 'object') {
-                  return String(c.grade || c.name || c.className || `${c.subject || ''} ${c.grade || ''}${c.stream || ''}`.trim() || JSON.stringify(c));
-                }
-                return String(c);
-              }).filter(Boolean)
-            : [];
-    
-          const rawStreams = staff.assignedStreams || staff.streams || [];
-          const cleanStreams = Array.isArray(rawStreams)
-            ? rawStreams.map((s: any) => {
-                if (!s) return '';
-                if (typeof s === 'string') return s;
-                if (typeof s === 'object') {
-                  return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
-                }
-                return String(s);
-              }).filter(s => s && s !== 'Mercury')
-            : [];
-    
-          const rawSubjects = staff.subjects || staff.assignedSubjects || [];
-          const cleanSubjects = Array.isArray(rawSubjects)
-            ? rawSubjects.map((sub: any) => {
-                if (!sub) return '';
-                if (typeof sub === 'string') return sub;
-                if (typeof sub === 'object') {
-                  return String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub));
-                }
-                return String(sub);
-              }).filter(Boolean)
-            : [];
-    
-          const defaultGrade = cleanClasses[0] || 'Grade 7';
-          const defaultStream = cleanStreams[0] || '';
-    
-          const cleanAllocations = Array.isArray(staff.allocations)
-            ? staff.allocations
-                .filter((a: any) => a && typeof a === 'object' && a.subject)
-                .map((a: any) => ({
-                  subject: String(a.subject),
-                  grade: String(a.grade || defaultGrade),
-                  stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
-                }))
-            : cleanSubjects.map((sub: string) => ({
-                subject: sub,
-                grade: defaultGrade,
-                stream: defaultStream
-              }));
+    // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove legacy streams
+    const seenIds = new Set<string>();
+    const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
+      let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
+      if (seenIds.has(id)) {
+        id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
+      }
+      seenIds.add(id);
 
-          let code = staff.accessCode;
-          if (!code || !code.startsWith('MUN-')) {
-            const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-            let randomPart = '';
-            for (let i = 0; i < 4; i++) {
-              randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+      let cat: StaffCategoryRole = staff.category;
+      if (cat === ('Teaching Staff' as any)) cat = 'Subject Teacher';
+      else if (cat === ('Administration' as any)) cat = 'HOI';
+      else if (cat === ('Support Staff' as any)) cat = 'Store Master';
+      else if (!cat) cat = 'Class Teacher';
+
+      const rawClasses = staff.assignedClasses || staff.classes || [];
+      const cleanClasses = Array.isArray(rawClasses)
+        ? rawClasses.map((c: any) => {
+            if (!c) return '';
+            if (typeof c === 'string') return c;
+            if (typeof c === 'object') {
+              return String(c.grade || c.name || c.className || `${c.subject || ''} ${c.grade || ''}${c.stream || ''}`.trim() || JSON.stringify(c));
             }
-            code = `MUN-${randomPart}`;
-          }
+            return String(c);
+          }).filter(Boolean)
+        : [];
 
-          return {
-            id,
-            name: staff.name || 'Unnamed Staff',
-            category: cat,
-            tscNumber: staff.tscNumber || 'N/A',
-            email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
-            phone: staff.phone || '+254 712 345 678',
-            subjects: cleanSubjects,
-            assignedClasses: cleanClasses,
-            assignedStreams: cleanStreams,
-            homeroomGrade: staff.homeroomGrade || defaultGrade,
-            homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
-            allocations: cleanAllocations,
-            accessCode: code,
-            status: staff.status || 'Active',
-            createdAt: staff.createdAt || new Date().toISOString()
-          };
-        });
+      const rawStreams = staff.assignedStreams || staff.streams || [];
+      const cleanStreams = Array.isArray(rawStreams)
+        ? rawStreams.map((s: any) => {
+            if (!s) return '';
+            if (typeof s === 'string') return s;
+            if (typeof s === 'object') {
+              return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
+            }
+            return String(s);
+          }).filter(s => s && s !== 'Mercury')
+        : [];
+
+      const rawSubjects = staff.subjects || staff.assignedSubjects || [];
+      const cleanSubjects = Array.isArray(rawSubjects)
+        ? rawSubjects.map((sub: any) => {
+            if (!sub) return '';
+            if (typeof sub === 'string') return sub;
+            if (typeof sub === 'object') {
+              return String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub));
+            }
+            return String(sub);
+          }).filter(Boolean)
+        : [];
+
+      const defaultGrade = cleanClasses[0] || 'Grade 7';
+      const defaultStream = cleanStreams[0] || '';
+
+      const cleanAllocations = Array.isArray(staff.allocations)
+        ? staff.allocations
+            .filter((a: any) => a && typeof a === 'object' && a.subject)
+            .map((a: any) => ({
+              subject: String(a.subject),
+              grade: String(a.grade || defaultGrade),
+              stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
+            }))
+        : cleanSubjects.map((sub: string) => ({
+            subject: sub,
+            grade: defaultGrade,
+            stream: defaultStream
+          }));
+
+      let code = staff.accessCode;
+      if (!code || !code.startsWith('MUN-')) {
+        const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+        let randomPart = '';
+        for (let i = 0; i < 4; i++) {
+          randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        code = `MUN-${randomPart}`;
+      }
+
+      return {
+        id,
+        name: staff.name || 'Unnamed Staff',
+        category: cat,
+        tscNumber: staff.tscNumber || 'N/A',
+        email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
+        phone: staff.phone || '+254 712 345 678',
+        subjects: cleanSubjects,
+        assignedClasses: cleanClasses,
+        assignedStreams: cleanStreams,
+        homeroomGrade: staff.homeroomGrade || defaultGrade,
+        homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
+        allocations: cleanAllocations,
+        accessCode: code,
+        status: staff.status || 'Active',
+        createdAt: staff.createdAt || new Date().toISOString()
+      };
+    });
 
     setStaffList(sanitized);
     localStorage.setItem('munyaka_staff', JSON.stringify(sanitized));
