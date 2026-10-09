@@ -47,6 +47,8 @@ export interface StaffMember {
   subjects: string[];
   assignedClasses?: string[];
   assignedStreams?: string[];
+  homeroomGrade?: string;
+  homeroomStream?: string;
   allocations?: StaffAllocationRecord[];
   accessCode: string;
   status: 'Active' | 'On Leave' | 'Inactive';
@@ -72,6 +74,8 @@ export default function StaffRegistry() {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
   const [assignedStreams, setAssignedStreams] = useState<string[]>([]);
+  const [homeroomGrade, setHomeroomGrade] = useState('Grade 7');
+  const [homeroomStream, setHomeroomStream] = useState('Mercury');
   // Structured subject & class allocation records: e.g. { subject: "Mathematics", grade: "Grade 7", stream: "Mercury" }
   const [allocations, setAllocations] = useState<StaffAllocationRecord[]>([]);
 
@@ -122,6 +126,8 @@ export default function StaffRegistry() {
         subjects: staff.subjects || [],
         assignedClasses: staff.assignedClasses || [],
         assignedStreams: staff.assignedStreams || [],
+        homeroomGrade: staff.homeroomGrade || (staff.assignedClasses && staff.assignedClasses[0]) || 'Grade 7',
+        homeroomStream: staff.homeroomStream || (staff.assignedStreams && staff.assignedStreams[0]) || 'Mercury',
         allocations: Array.isArray(staff.allocations)
           ? staff.allocations.filter((a: any) => a && typeof a === 'object' && a.subject)
           : (staff.subjects || []).map((sub: string) => ({
@@ -150,6 +156,8 @@ export default function StaffRegistry() {
     setSelectedSubjects([]);
     setAssignedClasses([]);
     setAssignedStreams([]);
+    setHomeroomGrade('Grade 7');
+    setHomeroomStream('Mercury');
     setAllocations([]);
     setActiveSubjectForAllocation(null);
     generateSecureCode();
@@ -175,6 +183,8 @@ export default function StaffRegistry() {
     setSelectedSubjects(loadedSubs);
     setAssignedClasses(staff.assignedClasses || []);
     setAssignedStreams(staff.assignedStreams || []);
+    setHomeroomGrade(staff.homeroomGrade || (staff.assignedClasses && staff.assignedClasses[0]) || 'Grade 7');
+    setHomeroomStream(staff.homeroomStream || (staff.assignedStreams && staff.assignedStreams[0]) || 'Mercury');
     
     let loadedAllocs: StaffAllocationRecord[] = [];
     if (Array.isArray(staff.allocations) && staff.allocations.length > 0) {
@@ -268,6 +278,8 @@ export default function StaffRegistry() {
       subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : [],
       assignedClasses: category !== 'Bursar' && category !== 'Store Master' ? assignedClasses : [],
       assignedStreams: category !== 'Bursar' && category !== 'Store Master' ? assignedStreams : [],
+      homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
+      homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
