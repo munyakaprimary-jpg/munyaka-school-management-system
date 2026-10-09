@@ -481,7 +481,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const storedCode = String(matchedStaff.access_code || matchedStaff.accessCode || matchedStaff.tempAccessCode || matchedStaff.password || '').trim();
         const fallbackPassword = 'munyaka2026';
 
-        const isPasswordValid = (cleanPass === fallbackPassword) || (storedCode !== '' && (storedCode.toLowerCase() === cleanPass.toLowerCase() || storedCode === cleanPass)) || cleanPass === 'munyaka5239' || cleanPass === 'Teacher@123';
+        const isPasswordValid =
+          (cleanPass === fallbackPassword) ||
+          (storedCode !== '' && (storedCode.toLowerCase() === cleanPass.toLowerCase() || storedCode === cleanPass || storedCode.toUpperCase() === cleanPass.toUpperCase())) ||
+          cleanPass === 'munyaka5239' ||
+          cleanPass === 'Teacher@123';
 
         if (!isPasswordValid) {
           console.error('[AuthContext.login] Error: Password/Access Code Mismatch for user:', matchedStaff.name || matchedStaff.email || inputEmail);
