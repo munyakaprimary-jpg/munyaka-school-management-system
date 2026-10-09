@@ -400,13 +400,6 @@ const Login: React.FC = () => {
       setStaffAuthError(errorMsg);
       showError(errorMsg);
       setIsStaffVerifying(false);
-      );
-
-      const errorMessage = offlineResult.error || 'Invalid credentials or account not found in master staff ledger.';
-
-      setStaffAuthError(errorMessage);
-      showError(errorMessage);
-      setIsStaffVerifying(false);
     };
 
   // ── Lightweight server reachability check on mount ──────────────────────
