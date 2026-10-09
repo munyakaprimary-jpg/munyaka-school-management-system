@@ -347,8 +347,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const staffAccessCode = String(matchedMasterStaff.accessCode || matchedMasterStaff.tempAccessCode || '').trim();
       const cleanPassUpper = cleanPass.toUpperCase();
       const staffAccessCodeUpper = staffAccessCode.toUpperCase();
-      const legacyNumericCode = staffAccessCode.replace(/[^0-9]/g, '');
-      const inputNumericCode = cleanPass.replace(/[^0-9]/g, '');
 
       const isOwnerOrAdmin = String(matchedMasterStaff.systemRole || matchedMasterStaff.role || '').toLowerCase().includes('admin') ||
                              String(matchedMasterStaff.email || '').includes('munyakaprimary');
@@ -356,9 +354,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const isAccessCodeValid =
         (staffAccessCode !== '' &&
-         (cleanPassUpper === staffAccessCodeUpper ||
-          cleanPass === staffAccessCode ||
-          (legacyNumericCode !== '' && inputNumericCode !== '' && legacyNumericCode === inputNumericCode))) ||
+         (cleanPassUpper === staffAccessCodeUpper || cleanPass === staffAccessCode)) ||
         (isOwnerOrAdmin && (cleanPass === activeAdminPin || cleanPass === DEFAULT_ADMIN_PASSWORD));
 
       if (isAccessCodeValid) {

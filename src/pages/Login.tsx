@@ -339,17 +339,13 @@ const Login: React.FC = () => {
       const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
       const normalizedStoredCode = storedCode.toUpperCase();
       const normalizedInputCode = trimmedPass.toUpperCase();
-      const legacyNumericCode = storedCode.replace(/[^0-9]/g, '');
-      const inputNumericCode = trimmedPass.replace(/[^0-9]/g, '');
 
       const validPass =
         storedCode !== '' &&
-        (normalizedStoredCode === normalizedInputCode ||
-         storedCode === trimmedPass ||
-         (legacyNumericCode !== '' && inputNumericCode !== '' && legacyNumericCode === inputNumericCode));
+        (normalizedStoredCode === normalizedInputCode || storedCode === trimmedPass);
 
       if (!validPass) {
-        setStaffAuthError("Invalid access code. Please check your assigned MUNYAKA-XXXX or legacy numeric staff code against the master staff ledger.");
+        setStaffAuthError("Invalid MUNYAKA-XXXX access code. Please check your assigned staff access code against the master staff ledger.");
         setIsStaffVerifying(false);
         return;
       }

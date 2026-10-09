@@ -391,17 +391,18 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
 
   const storedCode = (matched.tempAccessCode || (matched as any).accessCode || '').trim();
   const normalizedStoredCode = storedCode.toUpperCase();
-  const legacyNumericCode = storedCode.replace(/[^0-9]/g, '');
-  const inputNumericCode = trimmedPass.replace(/[^0-9]/g, '');
 
+  const isEmailValid = trimmedId.endsWith('@munyaka.sc.ke');
   const validPass =
     storedCode !== '' &&
-    (normalizedStoredCode === normalizedPass ||
-     storedCode === trimmedPass ||
-     (legacyNumericCode !== '' && inputNumericCode !== '' && legacyNumericCode === inputNumericCode));
+    (normalizedStoredCode === normalizedPass || storedCode === trimmedPass);
+
+  if (!isEmailValid) {
+    return { success: false, error: 'Please enter your full school email ending with @munyaka.sc.ke.' };
+  }
 
   if (!validPass) {
-    return { success: false, error: 'Invalid access code. Please check your assigned MUNYAKA-XXXX or legacy numeric staff code against the master staff ledger.' };
+    return { success: false, error: 'Invalid MUNYAKA-XXXX access code. Please check your assigned staff access code against the master staff ledger.' };
   }
 
   return { success: true, user: matched };
