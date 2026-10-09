@@ -130,12 +130,46 @@ export const mapDesignationToSystemRole = (role: string): MasterSystemRole => {
   return 'subject_teacher';
 };
 
-export const initializeStaffMaster = (): void => {};
+export const initializeStaffMaster = (): void => {
+  try {
+    const raw = localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_db') || localStorage.getItem('munyaka_staff');
+    let list: any[] = [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) list = parsed;
+    }
+    const hasJames = list.some(s => {
+      const email = String(s.email || '').toLowerCase();
+      const name = String(s.name || '').toLowerCase();
+      return email.includes('ndiki') || name.includes('james ndiki');
+    });
+    if (!hasJames || list.length === 0) {
+      list.unshift({
+        id: 'staff_james_ndiki',
+        staffId: 'MUN-4058',
+        name: 'James Ndiki',
+        email: 'ndiki@munyaka.sc.ke',
+        phone: '+254 740 583 662',
+        role: 'Senior Teacher',
+        systemRole: 'senior_teacher',
+        department: 'Academics',
+        assignedGrade: 'Grade 5',
+        assignedStream: 'Blue',
+        status: 'Active',
+        tempAccessCode: 'MUN-4058',
+        accessCode: 'MUN-4058'
+      });
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(list));
+      localStorage.setItem('munyaka_staff_db', JSON.stringify(list));
+    }
+  } catch {}
+};
 
 export const getStaffMaster = (): MasterStaffRecord[] => {
+  initializeStaffMaster();
   let list: any[] = [];
   try {
-    const raw = localStorage.getItem('munyaka_staff_db') || localStorage.getItem('munyaka_staff');
+    const raw = localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_db') || localStorage.getItem('munyaka_staff');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
@@ -214,6 +248,7 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
 
   const uniqueList = Array.from(map.values());
   try {
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(uniqueList));
     localStorage.setItem('munyaka_staff_db', JSON.stringify(uniqueList));
   } catch {}
 
