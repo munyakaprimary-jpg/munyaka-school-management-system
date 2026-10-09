@@ -36,16 +36,18 @@ const ensureProtocol = (value: string): string =>
 const ensurePort = (value: string, port: number): string => {
   // If a port is already explicit, leave it alone. Otherwise append :port
   // so user-entered IPs like "192.168.1.42" automatically become
-  // "http://192.168.1.42:5000".
+  // "http://192.168.1.42:5000". If the stored value has a Vite port (e.g. 4173) or similar,
+  // we replace it or treat the host cleanly as the base server host.
   try {
-    const u = new URL(ensureProtocol(value));
-    if (!u.port) {
-      u.port = String(port);
-      return u.toString().replace(/\/$/, '');
-    }
+    let cleanVal = String(value || '').trim();
+    // If someone stored an IP with port or browser origin like 192.168.183.131.4173 or similar malformed strings:
+    // Strip trailing Vite ports or replace them with backend port 5000
+    cleanVal = cleanVal.replace(/:\d+$/, '');
+    const u = new URL(ensureProtocol(cleanVal));
+    u.port = String(port);
     return u.toString().replace(/\/$/, '');
   } catch {
-    return value;
+    return `http://localhost:${port}`;
   }
 };
 
