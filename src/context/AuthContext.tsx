@@ -497,10 +497,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       let sysUsers: any[] = [];
       try {
         const suJson = localStorage.getItem('munyaka_users') || localStorage.getItem('sys_users');
-        if (suJson) sysUsers = JSON.parse(suJson);
+        if (suJson) {
+          const parsed = JSON.parse(suJson);
+          sysUsers = Array.isArray(parsed) ? parsed : Object.values(parsed);
+        }
       } catch {}
 
-      const combinedPool = [...staffMembers, ...sysUsers];
+      const combinedPool = [...(Array.isArray(staffMembers) ? staffMembers : []), ...(Array.isArray(sysUsers) ? sysUsers : [])];
 
       const matchedStaff = combinedPool.find((s: any) => {
         const sStaffId = String(s.staffId || s.staff_id || s.id || s.ref || '').trim().toLowerCase();
