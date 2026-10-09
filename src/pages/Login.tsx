@@ -318,87 +318,57 @@ const Login: React.FC = () => {
   
       setIsStaffVerifying(true);
       setStaffAuthError('');
-  
-      console.log(`[Login] Staff login attempt against staff registry ledger: ${trimmedId}`);
 
-      // Use the selected support role for role filtering (normalized)
-      const normalizedSelectedRole = selectedSupportRole ? selectedSupportRole.toLowerCase().trim() : null;
+      const staffList = getStaffMaster();
+      const matched = staffList.find(s => {
+        const sEmail = (s.email || '').toLowerCase();
+        return sEmail === trimmedId.toLowerCase() || sEmail === `${trimmedId.toLowerCase()}@munyaka.sc.ke`;
+      });
 
-      // Authenticate strictly by matching the staff email and access code in the staff registry table
-      const registryResult = verifyStaffLogin(trimmedId, trimmedPass);
-
-      if (registryResult.success && registryResult.user) {
-        const matchedStaff = registryResult.user;
-
-        // ── Role validation ────────────────────────────────────────────────
-        if (normalizedSelectedRole) {
-          const staffSystemRole = (matchedStaff.systemRole || '').toLowerCase().trim();
-          const roleCompatible =
-            staffSystemRole === normalizedSelectedRole ||
-            (normalizedSelectedRole === 'librarian' && staffSystemRole.includes('librar')) ||
-            staffSystemRole === 'staff' ||
-            staffSystemRole === 'support_staff' ||
-            staffSystemRole === 'support_admin' ||
-            staffSystemRole === 'bursar' ||
-            staffSystemRole === 'non_teaching' ||
-            staffSystemRole === 'support';
-
-          if (!roleCompatible) {
-            console.error(
-              `[Login] Registry auth: role mismatch — selected "${normalizedSelectedRole}" ` +
-              `but staff "${matchedStaff.name}" (${matchedStaff.email}) has systemRole "${matchedStaff.systemRole}".`
-            );
-            setStaffAuthError(
-              `This account is not registered under the "${normalizedSelectedRole}" role. ` +
-              `Please select the correct role or contact your administrator.`
-            );
-            showError('Role mismatch — please select the correct role.');
-            setIsStaffVerifying(false);
-            return;
-          }
-        }
-
-        const userData = {
-          id: matchedStaff.id || matchedStaff.staffId || `staff-${Date.now()}`,
-          name: matchedStaff.name || 'Staff Member',
-          email: matchedStaff.email || trimmedId,
-          phone: matchedStaff.phone || '',
-          role: matchedStaff.systemRole || matchedStaff.role || 'staff',
-          staff_id: matchedStaff.staffId || '',
-          avatar: (matchedStaff.name || 'U')
-            .split(' ')
-            .map(n => n[0] || '')
-            .join('')
-            .substring(0, 2)
-            .toUpperCase(),
-        };
-
-        try {
-          localStorage.setItem('munyaka_session', JSON.stringify(userData));
-          localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
-        } catch { /* ignore */ }
-
-        if (setUser) {
-          setUser({ ...userData, role: (userData.role as any) || 'staff' });
-        }
-
-        console.log('[Login] Staff registry authentication successful:', {
-          name: userData.name,
-          role: userData.role,
-          email: userData.email,
-        });
-
-        showSuccess(`Welcome, ${userData.name}!`);
-        navigate(getStaffRedirectPath(userData.role), { replace: true });
+      if (!matched) {
+        setStaffAuthError("Staff account not found. Please enter your full school email ending with @munyaka.sc.ke.");
         setIsStaffVerifying(false);
         return;
       }
 
-      // ── Registry authentication failed ───────────────────
-      const errorMsg = registryResult.error || 'Invalid staff email or MUN-XXXX access code.';
-      console.error(`[Login] Staff registry authentication failed: ${errorMsg}`);
-      setStaffAuthError(errorMsg);
-      showError(errorMsg);
+      const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
+      const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const normalizedInputCode = trimmedPass.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      const validPass = storedCode !== '' && normalizedStoredCode === normalizedInputCode;
+
+      if (!validPass) {
+        setStaffAuthError("Invalid MUN-XXXX access code. Please check your assigned staff access code.");
+        setIsStaffVerifying(false);
+        return;
+      }
+
+      const userData = {
+        id: matched.id || matched.staffId || `staff-${Date.now()}`,
+        name: matched.name || 'Staff Member',
+        email: matched.email || trimmedId,
+        phone: matched.phone || '',
+        role: matched.systemRole || matched.role || 'staff',
+        staff_id: matched.staffId || '',
+        avatar: (matched.name || 'U')
+          .split(' ')
+          .map(n => n[0] || '')
+          .join('')
+          .substring(0, 2)
+          .toUpperCase(),
+      };
+
+      try {
+        localStorage.setItem('munyaka_session', JSON.stringify(userData));
+        localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
+      } catch { /* ignore */ }
+
+      if (setUser) {
+        setUser({ ...userData, role: (userData.role as any) || 'staff' });
+      }
+
+      showSuccess(`Welcome, ${userData.name}!`);
+      navigate('/dashboard', { replace: true });
       setIsStaffVerifying(false);
   };
 
