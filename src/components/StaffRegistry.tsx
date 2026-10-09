@@ -238,7 +238,14 @@ export default function StaffRegistry() {
 
   // Extract unique learning areas names for subject pill grid
   const availableLearningAreas = Array.isArray(defaultCbcLearningAreas) && defaultCbcLearningAreas.length > 0
-    ? defaultCbcLearningAreas.map((la: any) => typeof la === 'string' ? la : (la.name || la.title || 'Learning Area'))
+    ? defaultCbcLearningAreas.map((la: any) => {
+        if (!la) return 'Learning Area';
+        if (typeof la === 'string') return la;
+        if (typeof la === 'object') {
+          return String(la.name || la.title || la.subject || la.label || JSON.stringify(la));
+        }
+        return String(la);
+      })
     : [
         'Mathematics',
         'English Language',
@@ -444,11 +451,14 @@ export default function StaffRegistry() {
                       <td className="py-3.5 px-3">
                         {staff.category === 'Teaching Staff' && staff.subjects && staff.subjects.length > 0 ? (
                           <div className="flex flex-wrap gap-1 max-w-[220px]">
-                            {staff.subjects.slice(0, 2).map((sub, sIdx) => (
-                              <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
-                                {sub}
-                              </span>
-                            ))}
+                            {staff.subjects.slice(0, 2).map((sub, sIdx) => {
+                              const subName = typeof sub === 'string' ? sub : (sub && typeof sub === 'object' ? String((sub as any).name || (sub as any).title || (sub as any).subject || JSON.stringify(sub)) : String(sub));
+                              return (
+                                <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                  {subName}
+                                </span>
+                              );
+                            })}
                             {staff.subjects.length > 2 && (
                               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                                 +{staff.subjects.length - 2}
@@ -465,11 +475,14 @@ export default function StaffRegistry() {
                           <div className="flex flex-col gap-1.5 max-w-[200px]">
                             {staff.assignedClasses && staff.assignedClasses.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => (
-                                  <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                    {cls}
-                                  </span>
-                                ))}
+                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
+                                  const clsStr = typeof cls === 'string' ? cls : (cls && typeof cls === 'object' ? String((cls as any).name || (cls as any).title || JSON.stringify(cls)) : String(cls));
+                                  return (
+                                    <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                      {clsStr}
+                                    </span>
+                                  );
+                                })}
                                 {staff.assignedClasses.length > 3 && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                                     +{staff.assignedClasses.length - 3}
@@ -479,11 +492,14 @@ export default function StaffRegistry() {
                             )}
                             {staff.assignedStreams && staff.assignedStreams.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => (
-                                  <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
-                                    {strm}
-                                  </span>
-                                ))}
+                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
+                                  const strmStr = typeof strm === 'string' ? strm : (strm && typeof strm === 'object' ? String((strm as any).name || (strm as any).title || JSON.stringify(strm)) : String(strm));
+                                  return (
+                                    <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                                      {strmStr}
+                                    </span>
+                                  );
+                                })}
                                 {staff.assignedStreams.length > 3 && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                                     +{staff.assignedStreams.length - 3}
