@@ -17,7 +17,14 @@ export const STORAGE_KEYS = {
   STAFF_ATTENDANCE: 'munyaka_staff_attendance',
 };
 
-const CENTRAL_DB_STORAGE_KEY = 'munyaka_central_db_cache';
+const CENTRAL_DB_STORAGE_KEY = 'munyaka_munyaka_central_db_cache';
+
+// Circuit breaker & debounce state for remote sync
+let remoteOfflineCircuitOpen = false;
+let circuitOpenUntil = 0;
+let lastSyncAttemptTime = 0;
+const SYNC_COOLDOWN_MS = 15000; // 15 seconds cooldown after network failure
+const CIRCUIT_RESET_MS = 60000;  // Retry after 1 minute
 
 export const getStoredServerUrl = (): string => {
   return getApiBaseUrl();
@@ -401,10 +408,19 @@ export const CentralDataService = {
   },
 
   async fetchRemoteDump(): Promise<any | null> {
+    const now = Date.now();
+    if (remoteOfflineCircuitOpen) {
+      if (now > circuitOpenUntil) {
+        remoteOfflineCircuitOpen = false;
+      } else {
+        return null;
+      }
+    }
+
     const serverUrl = getStoredServerUrl();
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
       const res = await fetch(`${serverUrl}/api/central-db/dump`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
@@ -414,16 +430,32 @@ export const CentralDataService = {
       if (res.ok) {
         const json = await res.json();
         if (json && json.success && json.data) {
+          remoteOfflineCircuitOpen = false;
           return json.data;
         }
       }
     } catch {
-      console.warn('[CentralDataService] Offline or server unreachable, falling back to local storage.');
+      remoteOfflineCircuitOpen = true;
+      circuitOpenUntil = now + CIRCUIT_RESET_MS;
     }
     return null;
   },
 
   async syncBatchToRemote(batchPayload: Record<string, any>): Promise<boolean> {
+    const now = Date.now();
+    if (remoteOfflineCircuitOpen) {
+      if (now > circuitOpenUntil) {
+        remoteOfflineCircuitOpen = false;
+      } else {
+        return false;
+      }
+    }
+
+    if (now - lastSyncAttemptTime < SYNC_COOLDOWN_MS) {
+      return false;
+    }
+    lastSyncAttemptTime = now;
+
     const serverUrl = getStoredServerUrl();
     try {
       const controller = new AbortController();
@@ -437,10 +469,15 @@ export const CentralDataService = {
       clearTimeout(timeoutId);
       if (res.ok) {
         const json = await res.json();
+        remoteOfflineCircuitOpen = false;
         return json && json.success === true;
+      } else {
+        remoteOfflineCircuitOpen = true;
+        circuitOpenUntil = now + CIRCUIT_RESET_MS;
       }
     } catch {
-      // Offline or server unreachable — fail gracefully without throwing or spamming console
+      remoteOfflineCircuitOpen = true;
+      circuitOpenUntil = now + CIRCUIT_RESET_MS;
     }
     return false;
   },
