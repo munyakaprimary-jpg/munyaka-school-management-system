@@ -552,15 +552,27 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {staff.category === 'Teaching Staff' && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0)) ? (
-                          <div className="flex flex-col gap-1.5 max-w-[200px]">
+                        {staff.category === 'Teaching Staff' && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
+                          <div className="flex flex-col gap-1.5 max-w-[220px]">
+                            {/* If assignedClasses contains structured object or string items */}
                             {staff.assignedClasses && staff.assignedClasses.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
-                                  const clsStr = typeof cls === 'string' ? cls : (cls && typeof cls === 'object' ? String((cls as any).name || (cls as any).title || JSON.stringify(cls)) : String(cls));
+                                  let formattedCls = '';
+                                  if (typeof cls === 'string') {
+                                    formattedCls = cls;
+                                  } else if (cls && typeof cls === 'object') {
+                                    const g = (cls as any).grade || (cls as any).name || (cls as any).className || '';
+                                    const s = (cls as any).stream || (cls as any).streamName || '';
+                                    const subj = (cls as any).subject || (cls as any).learningArea || '';
+                                    formattedCls = [g, s, subj ? `- ${subj}` : ''].filter(Boolean).join(' ');
+                                    if (!formattedCls) formattedCls = JSON.stringify(cls);
+                                  } else {
+                                    formattedCls = String(cls);
+                                  }
                                   return (
                                     <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                      {clsStr}
+                                      {formattedCls}
                                     </span>
                                   );
                                 })}
@@ -571,13 +583,25 @@ export default function StaffRegistry() {
                                 )}
                               </div>
                             )}
+
+                            {/* Stream or combined allocations */}
                             {staff.assignedStreams && staff.assignedStreams.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
-                                  const strmStr = typeof strm === 'string' ? strm : (strm && typeof strm === 'object' ? String((strm as any).name || (strm as any).title || JSON.stringify(strm)) : String(strm));
+                                  let formattedStrm = '';
+                                  if (typeof strm === 'string') {
+                                    formattedStrm = strm;
+                                  } else if (strm && typeof strm === 'object') {
+                                    const g = (strm as any).grade || (strm as any).name || '';
+                                    const s = (strm as any).stream || (strm as any).streamName || '';
+                                    formattedStrm = [g, s].filter(Boolean).join(' ');
+                                    if (!formattedStrm) formattedStrm = JSON.stringify(strm);
+                                  } else {
+                                    formattedStrm = String(strm);
+                                  }
                                   return (
                                     <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
-                                      {strmStr}
+                                      {formattedStrm}
                                     </span>
                                   );
                                 })}
