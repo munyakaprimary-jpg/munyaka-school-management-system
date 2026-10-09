@@ -307,23 +307,23 @@ export default function StaffRegistry() {
       </div>
 
       {/* Staff Table Card */}
-      <Card className="bg-slate-900/80 border-slate-800 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-md">
-        <div className="overflow-x-auto">
-          <table style={{ tableLayout: 'fixed' }} className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-xs font-bold uppercase tracking-wider whitespace-nowrap">
-                <th className="py-4 px-5 w-[22%] min-w-[200px]">Name</th>
-                <th className="py-4 px-4 w-[10%] min-w-[110px]">Role / Category</th>
-                <th className="py-4 px-4 w-[10%] min-w-[110px]">TSC / ID No.</th>
-                <th className="py-4 px-4 w-[13%] min-w-[130px]">Email</th>
-                <th className="py-4 px-4 w-[10%] min-w-[110px]">Phone</th>
-                <th className="py-4 px-4 w-[13%] min-w-[130px]">Subjects</th>
-                <th className="py-4 px-4 w-[6%] min-w-[90px]">Access Code</th>
-                <th className="py-4 px-4 w-[6%] min-w-[70px]">Status</th>
-                <th className="py-4 px-5 text-right w-[10%] min-w-[100px]">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 text-sm">
+            <Card className="bg-slate-900/80 border-slate-800 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-md">
+              <div className="overflow-x-auto min-w-[1000px]">
+                <table style={{ tableLayout: 'fixed' }} className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                      <th className="py-3 px-3 w-[22%] min-w-[180px]">Name</th>
+                      <th className="py-3 px-2 w-[10%] min-w-[100px]">Role / Category</th>
+                      <th className="py-3 px-2 w-[10%] min-w-[100px]">TSC / ID No.</th>
+                      <th className="py-3 px-2 w-[13%] min-w-[120px]">Email</th>
+                      <th className="py-3 px-2 w-[10%] min-w-[100px]">Phone</th>
+                      <th className="py-3 px-2 w-[13%] min-w-[120px]">Subjects</th>
+                      <th className="py-3 px-2 w-[6%] min-w-[80px]">Access Code</th>
+                      <th className="py-3 px-2 w-[6%] min-w-[70px]">Status</th>
+                      <th className="py-3 px-3 text-right w-[10%] min-w-[90px]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-xs">
               {filteredStaff.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-16 text-center">
@@ -351,14 +351,14 @@ export default function StaffRegistry() {
               ) : (
                 filteredStaff.map((staff) => (
                   <tr key={staff.id} className="hover:bg-slate-800/40 transition-colors group">
-                    <td className="py-4 px-5 min-w-[200px]">
-                                          <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-md shrink-0">
+                    <td className="py-3 px-2 min-w-[180px]">
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-md shrink-0">
                                               {staff.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div>
-                                              <p className="font-bold text-slate-100 group-hover:text-indigo-300 transition-colors whitespace-nowrap">{staff.name}</p>
-                                              <p className="text-[11px] text-slate-400 font-mono">ID: {staff.id.substring(0, 8)}</p>
+                                              <p className="font-bold text-slate-100 group-hover:text-indigo-300 transition-colors whitespace-nowrap text-xs">{staff.name}</p>
+                                              <p className="text-[10px] text-slate-400 font-mono">ID: {staff.id.substring(0, 8)}</p>
                                             </div>
                                           </div>
                                         </td>
