@@ -757,16 +757,16 @@ export default function StaffRegistry() {
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">
-                    {category === 'Teaching Staff' ? 'TSC Registration Number *' : 'National ID / Passport No.'}
+                    National ID / TSC No.
                   </label>
                   <div className="relative">
                     <Award className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input 
-                      type="text" 
-                      placeholder={category === 'Teaching Staff' ? "e.g. TSC-884920" : "e.g. ID-8293049"}
+                    <input
+                      type="text"
+                      placeholder="e.g. TSC/984521 or ID 31452981"
                       value={tscNumber}
                       onChange={(e) => setTscNumber(e.target.value)}
-                      required={category === 'Teaching Staff'}
+                      required={category !== 'Bursar' && category !== 'Store Master'}
                       className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
                     />
                   </div>
