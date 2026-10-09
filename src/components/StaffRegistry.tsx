@@ -944,58 +944,12 @@ export default function StaffRegistry() {
                 </div>
               </div>
 
-              {/* Subjects Grid (Conditionally shown or optional for Teaching Staff) */}
-              {category !== 'Bursar' && category !== 'Store Master' && (
-                <div className="space-y-3 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-indigo-400" /> Subject & Learning Area Competencies
-                      </h4>
-                      {assignedClasses.length > 0 && (
-                        <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
-                          Filtered for selected grade(s): {assignedClasses.join(', ')}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
-                      {selectedSubjects.length} selected
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
-                    {filteredLearningAreasForClasses.map((sub) => {
-                      const isSelected = selectedSubjects.includes(sub);
-                      return (
-                        <button
-                          key={sub}
-                          type="button"
-                          onClick={() => handleToggleSubject(sub)}
-                          className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
-                            isSelected
-                              ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm shadow-indigo-100/50'
-                              : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
-                            isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'
-                          }`}>
-                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                          </div>
-                          <span className="truncate">{sub}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Class & Stream Assignments Grid (Conditionally shown or optional for Teaching Staff) */}
+              {/* Class & Stream Assignments Grid FIRST (so grades/streams are chosen before subjects) */}
               {category !== 'Bursar' && category !== 'Store Master' && (
                 <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Class & Stream Assignments
+                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Assigned Grades & Streams
                     </h4>
                     <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
                       {assignedClasses.length} class(es), {assignedStreams.length} stream(s) selected
@@ -1004,7 +958,7 @@ export default function StaffRegistry() {
                   
                   {/* Classes/Grades selection */}
                   <div>
-                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Grades / Classes</span>
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Grades / Classes <span className="text-rose-500">*</span></span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
                       {availableSchoolClasses.map((cls) => {
                         const isSelected = assignedClasses.includes(cls);
@@ -1033,7 +987,7 @@ export default function StaffRegistry() {
 
                   {/* Streams selection */}
                   <div className="border-t border-slate-100 pt-3">
-                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams</span>
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams <span className="text-rose-500">*</span></span>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-1">
                       {availableSchoolStreams.map((strm) => {
                         const isSelected = assignedStreams.includes(strm);
@@ -1058,6 +1012,60 @@ export default function StaffRegistry() {
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Subjects & Learning Area Competencies (Dynamically mapped and bound to selected Grade and Stream) */}
+              {category !== 'Bursar' && category !== 'Store Master' && (
+                <div className="space-y-3 bg-indigo-50/30 p-4 rounded-xl border border-indigo-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-indigo-500" /> Subject & Learning Area Competencies (Grade & Stream Bound)
+                      </h4>
+                      <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
+                        {assignedClasses.length > 0 && assignedStreams.length > 0
+                          ? `Allocations bound to: ${assignedClasses.join(', ')} [${assignedStreams.join(', ')}]`
+                          : 'Select at least one Grade and Stream above to bind subject allocations.'}
+                      </p>
+                    </div>
+                    <span className="text-xs text-indigo-700 font-bold bg-indigo-100 px-2 py-1 rounded-full border border-indigo-200">
+                      {selectedSubjects.length} selected
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1 custom-scrollbar">
+                    {filteredLearningAreasForClasses.map((sub) => {
+                      const isSelected = selectedSubjects.includes(sub);
+                      const primaryGrade = assignedClasses[0] || homeroomGrade || 'Grade 7';
+                      const primaryStream = assignedStreams[0] || homeroomStream || 'Mercury';
+                      return (
+                        <div
+                          key={sub}
+                          onClick={() => handleToggleSubject(sub)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-xs font-medium transition-all duration-200 border ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 truncate">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                              isSelected ? 'bg-white border-white text-indigo-600' : 'border-slate-300 bg-white'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span className="truncate font-semibold">{sub}</span>
+                          </div>
+                          {isSelected && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-700/80 text-indigo-100 border border-indigo-500/50 whitespace-nowrap">
+                              {primaryGrade} {primaryStream}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
