@@ -52,6 +52,7 @@ export interface StaffMember {
   email: string;
   phone: string;
   subjects: string[];
+  assignedClasses?: string[];
   accessCode: string;
   status: 'Active' | 'On Leave' | 'Inactive';
   createdAt?: string;
@@ -98,6 +99,7 @@ export default function StaffRegistry() {
   const [status, setStatus] = useState<'Active' | 'On Leave' | 'Inactive'>('Active');
   const [accessCode, setAccessCode] = useState('');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
 
   // Load staff database on mount
   useEffect(() => {
@@ -149,6 +151,7 @@ export default function StaffRegistry() {
     setTscNumber('');
     setStatus('Active');
     setSelectedSubjects([]);
+    setAssignedClasses([]);
     generateSecureCode();
     setIsModalOpen(true);
   };
@@ -163,6 +166,7 @@ export default function StaffRegistry() {
     setStatus(staff.status);
     setAccessCode(staff.accessCode || generateRandomCode());
     setSelectedSubjects(staff.subjects || []);
+    setAssignedClasses(staff.assignedClasses || []);
     setIsModalOpen(true);
   };
 
@@ -180,6 +184,14 @@ export default function StaffRegistry() {
       setSelectedSubjects(selectedSubjects.filter(s => s !== subjectName));
     } else {
       setSelectedSubjects([...selectedSubjects, subjectName]);
+    }
+  };
+
+  const handleToggleClass = (className: string) => {
+    if (assignedClasses.includes(className)) {
+      setAssignedClasses(assignedClasses.filter(c => c !== className));
+    } else {
+      setAssignedClasses([...assignedClasses, className]);
     }
   };
 
@@ -204,6 +216,7 @@ export default function StaffRegistry() {
       status,
       accessCode: accessCode || generateRandomCode(),
       subjects: category === 'Teaching Staff' ? selectedSubjects : [],
+      assignedClasses: category === 'Teaching Staff' ? assignedClasses : [],
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
@@ -250,6 +263,13 @@ export default function StaffRegistry() {
         'Agriculture and Nutrition',
         'Pre-Technical Studies'
       ];
+
+  const availableSchoolClasses = [
+    'PP1', 'PP2',
+    'Grade 1', 'Grade 2', 'Grade 3',
+    'Grade 4', 'Grade 5', 'Grade 6',
+    'Grade 7', 'Grade 8', 'Grade 9'
+  ];
 
   const filteredStaff = staffList.filter(staff => {
     const matchesSearch = 
