@@ -64,13 +64,11 @@ export function DualScrollContainer({
   const measure = useCallback(() => {
     const bottom = bottomRef.current;
     if (!bottom) return;
-    // Use the inner content's scrollWidth when available — it stays accurate
-    // even when the bottom container itself is constrained by padding/borders.
-    const width = contentRef.current
-      ? contentRef.current.scrollWidth
-      : bottom.scrollWidth;
+    const content = contentRef.current;
+    // Compute true scrollWidth + extra safety padding (160px) to ensure Action column is fully visible without clipping
+    const width = content ? Math.max(content.scrollWidth, bottom.scrollWidth) : bottom.scrollWidth;
     const client = bottom.clientWidth;
-    setContentWidth(Math.max(width, client));
+    setContentWidth(Math.max(width + 160, client + 160));
   }, []);
 
   useIsoLayoutEffect(() => {
@@ -116,7 +114,7 @@ export function DualScrollContainer({
         className="main-table-container overflow-x-auto w-full"
         style={{ scrollbarWidth: 'thin' }}
       >
-        <div ref={contentRef} className="min-w-full">
+        <div ref={contentRef} className="min-w-[1100px] sm:min-w-full">
           {children}
         </div>
       </div>
