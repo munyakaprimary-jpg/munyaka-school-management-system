@@ -113,25 +113,6 @@ const DEFAULT_SYSTEM_ADMIN = {
   }
 };
 
-// Default test teacher account — staffId is used as the login username
-const DEFAULT_TEACHER = {
-  staffId: 'teacher1',
-  password: 'munyaka5239',
-  user: {
-    id: 'teacher-001',
-    name: 'Lawrence Mwangi',
-    email: 'lawrence.mwangi@munyaka.sc.ke',
-    phone: '+254 712 345 678',
-    role: 'teacher' as UserRole,
-    avatar: 'LM',
-    assignedClass: 'Grade 1',
-    assignedStream: 'Blue',
-    grade: 'Grade 1',
-    stream: 'Blue',
-    department: 'Academics'
-  }
-};
-
 const USERS_STORAGE_KEY = 'munyaka_users';
 
 interface PreRegisteredStaff {
@@ -223,16 +204,6 @@ const initializeUsersStorage = () => {
     ...DEFAULT_SYSTEM_ADMIN.user,
     password: DEFAULT_SYSTEM_ADMIN.password,
     alternativePasswords: [DEFAULT_SYSTEM_ADMIN.password],
-    isActive: true,
-    emailConfirmed: true
-  };
-
-  // Ensure default test teacher account
-  const teacherKey = String(DEFAULT_TEACHER.staffId || '').toLowerCase();
-  users[teacherKey] = {
-    ...DEFAULT_TEACHER.user,
-    password: DEFAULT_TEACHER.password,
-    alternativePasswords: [DEFAULT_TEACHER.password, 'munyaka5239'],
     isActive: true,
     emailConfirmed: true
   };
