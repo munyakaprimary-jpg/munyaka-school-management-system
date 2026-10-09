@@ -214,7 +214,9 @@ const GradesStreams = () => {
       id: `g-${Date.now()}`,
       name: formattedName,
       category: newGradeCategory,
-      streams: []
+      streams: [],
+      studentsCount: 0,
+      streamCount: 0
     };
 
     setGrades([...grades, newGrade]);
