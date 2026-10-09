@@ -303,18 +303,16 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
   const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
   const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-  // Enforce strictly school email
+  // Exclusively enforce school email and MUN-XXXX format matching stored registry code
   const isEmailValid = trimmedId.endsWith('@munyaka.sc.ke');
-  const cleanCode = trimmedPass;
+  const validPass = storedCode !== '' && (normalizedStoredCode !== '' && normalizedStoredCode === normalizedPass);
 
   if (!isEmailValid) {
     return { success: false, error: 'Please enter your full school email ending with @munyaka.sc.ke.' };
   }
 
-  const validPass = storedCode !== '' && (normalizedStoredCode !== '' && normalizedStoredCode === normalizedPass);
-
-  if (!cleanCode || !validPass) {
-    return { success: false, error: 'Invalid access code or password. Please verify your credentials.' };
+  if (!validPass) {
+    return { success: false, error: 'Invalid MUN-XXXX access code. Please check your assigned staff access code.' };
   }
 
   return { success: true, user: matched };

@@ -311,9 +311,8 @@ const Login: React.FC = () => {
         return;
       }
 
-      const cleanCode = String(staffPassword || '').trim();
-      if (!cleanCode) {
-        setStaffAuthError('Please enter your access code.');
+      if (!trimmedPass) {
+        setStaffAuthError('Please enter your assigned MUN-XXXX access code.');
         return;
       }
   
