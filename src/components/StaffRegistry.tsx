@@ -610,7 +610,11 @@ export default function StaffRegistry() {
                         {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
                           <div className="flex flex-wrap gap-1 max-w-[220px]">
                             {staff.subjects.slice(0, 2).map((sub, sIdx) => {
-                              const subName = typeof sub === 'string' ? sub : (sub && typeof sub === 'object' ? String((sub as any).name || (sub as any).title || (sub as any).subject || JSON.stringify(sub)) : String(sub));
+                              const subName = typeof sub === 'string'
+                                ? sub
+                                : (sub && typeof sub === 'object'
+                                    ? String((sub as any).name || (sub as any).title || (sub as any).subject || (sub as any).learningArea || JSON.stringify(sub))
+                                    : String(sub));
                               return (
                                 <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
                                   {subName}
