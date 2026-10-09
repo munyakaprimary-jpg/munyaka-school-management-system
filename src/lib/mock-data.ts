@@ -10,6 +10,32 @@ export interface Student {
   assessmentScores?: Record<string, number>; // subject -> marks
 }
 
+export interface GradeInfo {
+  id: string;
+  name: string;
+  streams: string[];
+  studentsCount: number;
+  streamCount: number;
+}
+
+export const GRADES_DATA: GradeInfo[] = [
+  { id: 'pp1', name: 'PP1', streams: ['Blue', 'Red'], studentsCount: 42, streamCount: 2 },
+  { id: 'pp2', name: 'PP2', streams: ['Blue', 'Red'], studentsCount: 45, streamCount: 2 },
+  { id: 'grade-1', name: 'Grade 1', streams: ['Blue', 'Red', 'Green'], studentsCount: 54, streamCount: 3 },
+  { id: 'grade-2', name: 'Grade 2', streams: ['Blue', 'Red', 'Green'], studentsCount: 48, streamCount: 3 },
+  { id: 'grade-3', name: 'Grade 3', streams: ['Blue', 'Red', 'Green'], studentsCount: 52, streamCount: 3 },
+  { id: 'grade-4', name: 'Grade 4', streams: ['Blue', 'Red', 'Green'], studentsCount: 50, streamCount: 3 },
+  { id: 'grade-5', name: 'Grade 5', streams: ['Blue', 'Red', 'Green'], studentsCount: 46, streamCount: 3 },
+  { id: 'grade-6', name: 'Grade 6', streams: ['Blue', 'Red', 'Green'], studentsCount: 55, streamCount: 3 },
+  { id: 'grade-7', name: 'Grade 7', streams: ['Blue', 'Red', 'Green'], studentsCount: 48, streamCount: 3 },
+  { id: 'grade-8', name: 'Grade 8', streams: ['Blue', 'Red', 'Green'], studentsCount: 42, streamCount: 3 },
+  { id: 'grade-9', name: 'Grade 9', streams: ['Blue', 'Red'], studentsCount: 38, streamCount: 2 }
+];
+
+export const STREAM_NAMES = ['Blue', 'Red', 'Green', 'East', 'West'];
+
+export const ASSESSMENT_TYPES = ['Opener Exam', 'Mid-Term Exam', 'End-Term Exam'];
+
 export const defaultCbcLearningAreas = [
   'Mathematics',
   'English Language',
@@ -46,6 +72,7 @@ export const defaultMockStaff = [
     phone: '+254 722 890 123',
     subjects: ['Mathematics', 'Science and Technology'],
     assignedClasses: ['Grade 4', 'Grade 5'],
+    assignedStreams: ['Blue', 'Red'],
     accessCode: '7A9K2',
     status: 'Active',
     createdAt: '2023-01-15T08:00:00.000Z'
@@ -59,6 +86,7 @@ export const defaultMockStaff = [
     phone: '+254 733 456 789',
     subjects: ['English Language', 'Social Studies'],
     assignedClasses: ['Grade 6'],
+    assignedStreams: ['Green'],
     accessCode: '3H5M8',
     status: 'Active',
     createdAt: '2023-02-10T09:15:00.000Z'
@@ -84,6 +112,7 @@ export const defaultMockStaff = [
     phone: '+254 711 223 344',
     subjects: ['Kiswahili Lugha', 'Religious Education (CRE/IRE/HRE)'],
     assignedClasses: ['Grade 7', 'Grade 8'],
+    assignedStreams: ['Blue'],
     accessCode: '4P9X1',
     status: 'Active',
     createdAt: '2023-03-22T14:20:00.000Z'
