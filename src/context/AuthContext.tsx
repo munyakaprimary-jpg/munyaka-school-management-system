@@ -85,7 +85,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const DEFAULT_ADMIN = {
   email: 'munyakaprimary@gmail.com',
-  password: 'munyaka2026',
+  password: 'munyaka',
   user: {
     id: 'admin-001',
     name: 'School Owner',
