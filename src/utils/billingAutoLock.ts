@@ -49,13 +49,13 @@ export async function getAuthoritativeTime(): Promise<Date> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
     
-    const response = await fetch(serverTimeEndpoint, { 
+    const response = await fetch(serverTimeEndpoint, {
       signal: controller.signal,
       headers: { 'Cache-Control': 'no-cache' }
-    });
+    }).catch(() => null);
     clearTimeout(timeoutId);
     
-    if (response.ok) {
+    if (response && response.ok) {
       const data = await response.json();
       if (data && data.timestamp) {
         const serverTimestamp = Number(data.timestamp);
