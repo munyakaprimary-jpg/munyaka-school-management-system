@@ -65,6 +65,25 @@ export default function StaffRegistry() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   
+  const topScrollRef = React.useRef<HTMLDivElement>(null);
+  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const handleTopScroll = () => {
+    if (topScrollRef.current && tableContainerRef.current) {
+      if (tableContainerRef.current.scrollLeft !== topScrollRef.current.scrollLeft) {
+        tableContainerRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+      }
+    }
+  };
+
+  const handleTableScroll = () => {
+    if (topScrollRef.current && tableContainerRef.current) {
+      if (topScrollRef.current.scrollLeft !== tableContainerRef.current.scrollLeft) {
+        topScrollRef.current.scrollLeft = tableContainerRef.current.scrollLeft;
+      }
+    }
+  };
+  
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
@@ -306,24 +325,39 @@ export default function StaffRegistry() {
         </div>
       </div>
 
-      {/* Staff Table Card */}
-            <Card className="bg-slate-900/80 border-slate-800 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-md">
-              <div className="overflow-x-auto min-w-[1000px]">
-                <table style={{ tableLayout: 'fixed' }} className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-                      <th className="py-3 px-3 w-[22%] min-w-[180px]">Name</th>
-                      <th className="py-3 px-2 w-[10%] min-w-[100px]">Role / Category</th>
-                      <th className="py-3 px-2 w-[10%] min-w-[100px]">TSC / ID No.</th>
-                      <th className="py-3 px-2 w-[13%] min-w-[120px]">Email</th>
-                      <th className="py-3 px-2 w-[10%] min-w-[100px]">Phone</th>
-                      <th className="py-3 px-2 w-[13%] min-w-[120px]">Subjects</th>
-                      <th className="py-3 px-2 w-[6%] min-w-[80px]">Access Code</th>
-                      <th className="py-3 px-2 w-[6%] min-w-[70px]">Status</th>
-                      <th className="py-3 px-3 text-right w-[10%] min-w-[90px]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-xs">
+      {/* Staff Table Card with Synchronized Scrollbars */}
+      <Card className="bg-slate-900/80 border-slate-800 shadow-2xl rounded-3xl overflow-hidden backdrop-blur-md">
+        {/* Top Synchronized Horizontal Scrollbar */}
+        <div
+          ref={topScrollRef}
+          onScroll={handleTopScroll}
+          className="overflow-x-auto overflow-y-hidden border-b border-slate-800/80 bg-slate-950/40 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900"
+          style={{ height: '14px' }}
+        >
+          <div style={{ width: '1350px', height: '1px' }} />
+        </div>
+
+        {/* Main Table Container with Bottom Horizontal Scrollbar */}
+        <div
+          ref={tableContainerRef}
+          onScroll={handleTableScroll}
+          className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900"
+        >
+          <table style={{ minWidth: '1350px' }} className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+                <th className="py-3.5 px-4 min-w-[220px]">Name</th>
+                <th className="py-3.5 px-3 min-w-[140px]">Role / Category</th>
+                <th className="py-3.5 px-3 min-w-[140px]">TSC / ID No.</th>
+                <th className="py-3.5 px-3 min-w-[170px]">Email</th>
+                <th className="py-3.5 px-3 min-w-[140px]">Phone</th>
+                <th className="py-3.5 px-3 min-w-[180px]">Subjects</th>
+                <th className="py-3.5 px-3 min-w-[150px]">Access Code</th>
+                <th className="py-3.5 px-3 min-w-[120px]">Status</th>
+                <th className="py-3.5 px-4 text-right min-w-[120px]">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60 text-xs">
               {filteredStaff.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-16 text-center">
@@ -333,12 +367,12 @@ export default function StaffRegistry() {
                       </div>
                       <h3 className="text-lg font-bold text-white">No staff members found</h3>
                       <p className="text-slate-400 text-xs">
-                        {staffList.length === 0 
+                        {staffList.length === 0
                           ? "Your master staff registry is currently empty. Click '+ Add Staff' above to register teachers, administration, or support staff."
                           : "No staff members match your search criteria or active category filter."}
                       </p>
                       {staffList.length === 0 && (
-                        <Button 
+                        <Button
                           onClick={handleOpenAddModal}
                           className="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl"
                         >
@@ -351,21 +385,21 @@ export default function StaffRegistry() {
               ) : (
                 filteredStaff.map((staff) => (
                   <tr key={staff.id} className="hover:bg-slate-800/40 transition-colors group">
-                    <td className="py-3 px-2 min-w-[180px]">
-                                          <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-md shrink-0">
-                                              {staff.name.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                              <p className="font-bold text-slate-100 group-hover:text-indigo-300 transition-colors whitespace-nowrap text-xs">{staff.name}</p>
-                                              <p className="text-[10px] text-slate-400 font-mono">ID: {staff.id.substring(0, 8)}</p>
-                                            </div>
-                                          </div>
-                                        </td>
-                    <td className="py-4 px-4">
-                      <Badge variant="outline" className={`font-semibold text-xs ${
-                        staff.category === 'Teaching Staff' 
-                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' 
+                    <td className="py-3.5 px-4 min-w-[220px]">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white font-bold text-xs shadow-md shrink-0">
+                          {staff.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-100 group-hover:text-indigo-300 transition-colors whitespace-nowrap text-sm">{staff.name}</p>
+                          <p className="text-[11px] text-slate-400 font-mono">ID: {staff.id.substring(0, 8)}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-3 min-w-[140px]">
+                      <Badge variant="outline" className={`font-semibold text-xs whitespace-nowrap ${
+                        staff.category === 'Teaching Staff'
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
                           : staff.category === 'Administration'
                           ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
                           : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
@@ -373,31 +407,31 @@ export default function StaffRegistry() {
                         {staff.category}
                       </Badge>
                     </td>
-                    <td className="py-4 px-4 font-mono text-xs text-slate-300">
+                    <td className="py-3.5 px-3 font-mono text-xs text-slate-300 whitespace-nowrap min-w-[140px]">
                       {staff.tscNumber}
                     </td>
-                    <td className="py-4 px-4 text-slate-300 text-xs">
+                    <td className="py-3.5 px-3 text-slate-300 text-xs min-w-[170px]">
                       <div className="flex items-center gap-1.5">
                         <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                        <span className="truncate max-w-[180px]">{staff.email}</span>
+                        <span className="truncate max-w-[150px]">{staff.email}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-slate-300 text-xs">
+                    <td className="py-3.5 px-3 text-slate-300 text-xs whitespace-nowrap min-w-[140px]">
                       <div className="flex items-center gap-1.5">
                         <Phone className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                         <span>{staff.phone}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-3.5 px-3 min-w-[180px]">
                       {staff.category === 'Teaching Staff' && staff.subjects && staff.subjects.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 max-w-[220px]">
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
                           {staff.subjects.slice(0, 2).map((sub, sIdx) => (
-                            <span key={sIdx} className="bg-slate-800 text-slate-300 text-[10px] px-2 py-0.5 rounded-md font-medium border border-slate-700">
+                            <span key={sIdx} className="bg-slate-800 text-slate-300 text-[10px] px-2 py-0.5 rounded-md font-medium border border-slate-700 whitespace-nowrap">
                               {sub}
                             </span>
                           ))}
                           {staff.subjects.length > 2 && (
-                            <span className="bg-indigo-950 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded-md font-semibold border border-indigo-800/60">
+                            <span className="bg-indigo-950 text-indigo-300 text-[10px] px-1.5 py-0.5 rounded-md font-semibold border border-indigo-800/60 whitespace-nowrap">
                               +{staff.subjects.length - 2}
                             </span>
                           )}
@@ -406,10 +440,10 @@ export default function StaffRegistry() {
                         <span className="text-slate-500 text-xs italic">N/A</span>
                       )}
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-3.5 px-3 min-w-[150px]">
                       <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 w-fit">
                         <Key className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span className="font-mono text-xs font-bold text-amber-300 tracking-wider">{staff.accessCode}</span>
+                        <span className="font-mono text-xs font-bold text-amber-300 tracking-wider whitespace-nowrap">{staff.accessCode}</span>
                         <button
                           onClick={() => copyCodeToClipboard(staff.id, staff.accessCode)}
                           className="text-slate-400 hover:text-white transition-colors ml-1 p-0.5 rounded hover:bg-slate-800"
@@ -419,10 +453,10 @@ export default function StaffRegistry() {
                         </button>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-right">
-                                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
-                        staff.status === 'Active' 
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
+                    <td className="py-3.5 px-3 min-w-[120px]">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                        staff.status === 'Active'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                           : staff.status === 'On Leave'
                           ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
                           : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
@@ -433,7 +467,7 @@ export default function StaffRegistry() {
                         {staff.status}
                       </span>
                     </td>
-                    <td className="py-4 px-5 text-right">
+                    <td className="py-3.5 px-4 text-right min-w-[120px]">
                       <div className="flex items-center justify-end gap-1.5">
                         <Button
                           variant="ghost"
@@ -448,6 +482,20 @@ export default function StaffRegistry() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDeleteStaff(staff.id, staff.name)}
+                          className="h-8 w-8 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded-lg"
+                          title="Delete Staff Member"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
                           className="h-8 w-8 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded-lg"
                           title="Delete Staff Member"
                         >
