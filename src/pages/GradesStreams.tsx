@@ -11,10 +11,13 @@ import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 import { Layers, Plus, Users, User, Trash2, Edit2, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { GRADES_DATA, GradeInfo as Grade, StreamInfo as Stream } from '@/lib/mock-data';
+import { GRADES_DATA, GradeInfo, StreamInfo } from '@/lib/mock-data';
 import { sortGrades, GRADE_ORDER } from '@/utils/gradeSort';
 import { notifyDataChanged } from '@/utils/storage';
 import { cn } from '@/lib/utils';
+
+type Grade = GradeInfo;
+type Stream = StreamInfo;
 
 // Primary canonical key — all readers should now use `configured_streams`.
 const STORAGE_KEY = 'configured_streams';
