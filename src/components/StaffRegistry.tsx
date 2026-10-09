@@ -629,7 +629,14 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
+                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
+                              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
+                              {staff.homeroomGrade || 'Grade 7'} {staff.homeroomStream || 'Mercury'}
+                            </span>
+                          </div>
+                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
                           <div className="flex flex-col gap-1.5 max-w-[220px]">
                             {/* If assignedClasses contains structured object or string items */}
                             {staff.assignedClasses && staff.assignedClasses.length > 0 && (
@@ -805,6 +812,45 @@ export default function StaffRegistry() {
                     <option value="Store Master">Store Master</option>
                   </select>
                 </div>
+
+                {/* Conditional Homeroom Grade & Stream Selector for Class Teacher */}
+                {category === 'Class Teacher' && (
+                  <div className="sm:col-span-2 p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl space-y-3">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-emerald-600" />
+                      <div>
+                        <h4 className="text-xs font-bold text-emerald-900">Assigned Homeroom Grade & Stream</h4>
+                        <p className="text-[11px] text-emerald-700">Select the primary homeroom class supervised by this Class Teacher.</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Grade</label>
+                        <select
+                          value={homeroomGrade}
+                          onChange={(e) => setHomeroomGrade(e.target.value)}
+                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                        >
+                          {availableSchoolClasses.map((cls) => (
+                            <option key={cls} value={cls}>{cls}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Stream</label>
+                        <select
+                          value={homeroomStream}
+                          onChange={(e) => setHomeroomStream(e.target.value)}
+                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                        >
+                          {availableSchoolStreams.map((strm) => (
+                            <option key={strm} value={strm}>{strm}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">
