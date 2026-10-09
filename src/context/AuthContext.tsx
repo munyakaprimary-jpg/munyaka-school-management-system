@@ -333,9 +333,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const matchedMasterStaff = liveStaffMaster.find(staff => {
       const staffEmail = String(staff.email || '').trim().toLowerCase();
       const staffId = String(staff.staffId || '').trim().toLowerCase();
+      const staffName = String(staff.name || '').trim().toLowerCase();
       return (
         staffEmail === cleanInput ||
         staffId === cleanInput ||
+        staffName === cleanInput ||
+        staffEmail.split('@')[0] === cleanInput.split('@')[0] ||
         (cleanInput.endsWith('@munyaka.sc.ke') && staffEmail === cleanInput)
       );
     });
@@ -344,13 +347,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const staffAccessCode = String(matchedMasterStaff.accessCode || matchedMasterStaff.tempAccessCode || '').trim();
       const cleanPassUpper = cleanPass.toUpperCase();
       const staffAccessCodeUpper = staffAccessCode.toUpperCase();
+      const legacyNumericCode = staffAccessCode.replace(/[^0-9]/g, '');
+      const inputNumericCode = cleanPass.replace(/[^0-9]/g, '');
 
       const isOwnerOrAdmin = String(matchedMasterStaff.systemRole || matchedMasterStaff.role || '').toLowerCase().includes('admin') ||
                              String(matchedMasterStaff.email || '').includes('munyakaprimary');
       const activeAdminPin = getActiveAdminPassword();
 
       const isAccessCodeValid =
-        (staffAccessCode !== '' && (cleanPassUpper === staffAccessCodeUpper || cleanPass === staffAccessCode)) ||
+        (staffAccessCode !== '' &&
+         (cleanPassUpper === staffAccessCodeUpper ||
+          cleanPass === staffAccessCode ||
+          (legacyNumericCode !== '' && inputNumericCode !== '' && legacyNumericCode === inputNumericCode))) ||
         (isOwnerOrAdmin && (cleanPass === activeAdminPin || cleanPass === DEFAULT_ADMIN_PASSWORD));
 
       if (isAccessCodeValid) {

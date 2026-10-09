@@ -367,11 +367,22 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
   const staffList = getStaffMaster();
   const trimmedId = (identifier || '').trim().toLowerCase();
   const trimmedPass = (pass || '').trim();
-  const normalizedPass = trimmedPass.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const cleanInput = trimmedId.includes('@') ? trimmedId : `${trimmedId}@munyaka.sc.ke`;
+  const normalizedPass = trimmedPass.toUpperCase();
 
   const matched = staffList.find(s => {
-    const sEmail = (s.email || '').toLowerCase();
-    return sEmail === trimmedId || sEmail === `${trimmedId}@munyaka.sc.ke`;
+    const sEmail = (s.email || '').toLowerCase().trim();
+    const sStaffId = (s.staffId || '').toLowerCase().trim();
+    const sId = (s.id || '').toLowerCase().trim();
+    const sName = (s.name || '').toLowerCase().trim();
+    return (
+      sEmail === cleanInput ||
+      sEmail === trimmedId ||
+      sStaffId === trimmedId ||
+      sId === trimmedId ||
+      sName === trimmedId ||
+      sEmail.split('@')[0] === trimmedId.split('@')[0]
+    );
   });
 
   if (!matched) {
@@ -379,18 +390,18 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
   }
 
   const storedCode = (matched.tempAccessCode || (matched as any).accessCode || '').trim();
-  const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalizedStoredCode = storedCode.toUpperCase();
+  const legacyNumericCode = storedCode.replace(/[^0-9]/g, '');
+  const inputNumericCode = trimmedPass.replace(/[^0-9]/g, '');
 
-  // Exclusively enforce school email and MUN-XXXX format matching stored registry code
-  const isEmailValid = trimmedId.endsWith('@munyaka.sc.ke');
-  const validPass = storedCode !== '' && (normalizedStoredCode !== '' && normalizedStoredCode === normalizedPass);
-
-  if (!isEmailValid) {
-    return { success: false, error: 'Please enter your full school email ending with @munyaka.sc.ke.' };
-  }
+  const validPass =
+    storedCode !== '' &&
+    (normalizedStoredCode === normalizedPass ||
+     storedCode === trimmedPass ||
+     (legacyNumericCode !== '' && inputNumericCode !== '' && legacyNumericCode === inputNumericCode));
 
   if (!validPass) {
-    return { success: false, error: 'Invalid MUN-XXXX access code. Please check your assigned staff access code.' };
+    return { success: false, error: 'Invalid access code. Please check your assigned MUNYAKA-XXXX or legacy numeric staff code against the master staff ledger.' };
   }
 
   return { success: true, user: matched };
