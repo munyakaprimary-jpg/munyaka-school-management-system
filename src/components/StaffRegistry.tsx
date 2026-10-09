@@ -120,7 +120,7 @@ export default function StaffRegistry() {
       loadedStaff = MOCK_STAFF;
     }
 
-        // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove duplicates/dashes
+        // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove legacy streams
         const seenIds = new Set<string>();
         const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
           let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
@@ -156,7 +156,7 @@ export default function StaffRegistry() {
                   return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
                 }
                 return String(s);
-              }).filter(Boolean)
+              }).filter(s => s && s !== 'Mercury')
             : [];
     
           const rawSubjects = staff.subjects || staff.assignedSubjects || [];
@@ -174,6 +174,20 @@ export default function StaffRegistry() {
           const defaultGrade = cleanClasses[0] || 'Grade 7';
           const defaultStream = cleanStreams[0] || '';
     
+          const cleanAllocations = Array.isArray(staff.allocations)
+            ? staff.allocations
+                .filter((a: any) => a && typeof a === 'object' && a.subject)
+                .map((a: any) => ({
+                  subject: String(a.subject),
+                  grade: String(a.grade || defaultGrade),
+                  stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
+                }))
+            : cleanSubjects.map((sub: string) => ({
+                subject: sub,
+                grade: defaultGrade,
+                stream: defaultStream
+              }));
+    
           return {
             id,
             name: staff.name || 'Unnamed Staff',
@@ -185,14 +199,8 @@ export default function StaffRegistry() {
             assignedClasses: cleanClasses,
             assignedStreams: cleanStreams,
             homeroomGrade: staff.homeroomGrade || defaultGrade,
-            homeroomStream: staff.homeroomStream || defaultStream,
-            allocations: Array.isArray(staff.allocations)
-              ? staff.allocations.filter((a: any) => a && typeof a === 'object' && a.subject)
-              : cleanSubjects.map((sub: string) => ({
-                  subject: sub,
-                  grade: defaultGrade,
-                  stream: defaultStream
-                })),
+            homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
+            allocations: cleanAllocations,
             accessCode: staff.accessCode || Math.random().toString(36).substring(2, 7).toUpperCase(),
             status: staff.status || 'Active',
             createdAt: staff.createdAt || new Date().toISOString()
@@ -239,21 +247,46 @@ export default function StaffRegistry() {
     
     const loadedSubs = staff.subjects || [];
     setSelectedSubjects(loadedSubs);
-    setAssignedClasses(staff.assignedClasses || []);
-    setAssignedStreams(staff.assignedStreams || []);
-    setHomeroomGrade(staff.homeroomGrade || (staff.assignedClasses && staff.assignedClasses[0]) || 'Grade 7');
-    setHomeroomStream(staff.homeroomStream || (staff.assignedStreams && staff.assignedStreams[0]) || 'Mercury');
+
+    const loadedClasses = staff.assignedClasses || [];
+    setAssignedClasses(loadedClasses);
+
+    // Validate loaded streams against valid streams for the loaded classes from central configuration
+    const validStreamsSet = new Set<string>();
+    loadedClasses.forEach(cls => {
+      const streamsForGrade = getStreamsForGrade(cls);
+      if (streamsForGrade && streamsForGrade.length > 0) {
+        streamsForGrade.forEach(s => validStreamsSet.add(s));
+      }
+    });
+
+    const rawLoadedStreams = staff.assignedStreams || [];
+    const sanitizedStreams = rawLoadedStreams.filter(strm => {
+      // If validStreamsSet is populated, only keep streams that belong to the grade. If empty, keep non-legacy.
+      if (validStreamsSet.size > 0) {
+        return validStreamsSet.has(strm);
+      }
+      return strm && strm !== 'Mercury';
+    });
+
+    setAssignedStreams(sanitizedStreams);
+    setHomeroomGrade(staff.homeroomGrade || loadedClasses[0] || 'Grade 7');
+    setHomeroomStream(staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : (sanitizedStreams[0] || ''));
     
     let loadedAllocs: StaffAllocationRecord[] = [];
     if (Array.isArray(staff.allocations) && staff.allocations.length > 0) {
-      loadedAllocs = staff.allocations;
+      loadedAllocs = staff.allocations.map(a => ({
+        subject: a.subject,
+        grade: a.grade || loadedClasses[0] || 'Grade 7',
+        stream: a.stream && a.stream !== 'Mercury' ? a.stream : (sanitizedStreams[0] || '')
+      }));
     } else {
       // Build default allocations if none existed
       loadedSubs.forEach(sub => {
         loadedAllocs.push({
           subject: sub,
-          grade: (staff.assignedClasses || [])[0] || 'Grade 4',
-          stream: (staff.assignedStreams || [])[0] || 'Blue'
+          grade: loadedClasses[0] || 'Grade 4',
+          stream: sanitizedStreams[0] || ''
         });
       });
     }
