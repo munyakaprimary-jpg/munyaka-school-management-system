@@ -133,6 +133,7 @@ export const UnifiedDataStorage = {
 
 export const CentralDataService = {
   saveLearners: (learners: any[]) => UnifiedDataStorage.saveLearners(learners),
+  saveLearners: (learners: any[]) => UnifiedDataStorage.saveLearners(learners),
   getStudents: () => UnifiedDataStorage.getLearners(),
   saveStudents: (learners: any[]) => UnifiedDataStorage.saveLearners(learners),
   
@@ -342,3 +343,5 @@ export const CentralDataService = {
   syncBatchToRemote: (batchPayload: Record<string, any>) => CentralDataService.syncBatchToRemote(batchPayload),
   persistAndSyncMutation: (key: string, data: any) => CentralDataService.persistAndSyncMutation(key, data)
 };
+
+export default CentralDataService;
