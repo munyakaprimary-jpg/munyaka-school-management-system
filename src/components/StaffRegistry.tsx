@@ -195,27 +195,75 @@ export default function StaffRegistry() {
   };
 
   const handleToggleSubject = (subjectName: string) => {
+    let nextSubjects: string[];
+    let nextAllocations = [...allocations];
+
     if (selectedSubjects.includes(subjectName)) {
-      setSelectedSubjects(selectedSubjects.filter(s => s !== subjectName));
+      nextSubjects = selectedSubjects.filter(s => s !== subjectName);
+      nextAllocations = nextAllocations.filter(a => a.subject !== subjectName);
+      if (activeSubjectForAllocation === subjectName) {
+        setActiveSubjectForAllocation(nextSubjects[0] || null);
+      }
     } else {
-      setSelectedSubjects([...selectedSubjects, subjectName]);
+      nextSubjects = [...selectedSubjects, subjectName];
+      // Add default allocation for this subject with first available grade/stream or defaults
+      const defaultGrade = availableSchoolClasses[2] || 'Grade 4';
+      const defaultStream = availableSchoolStreams[0] || 'Blue';
+      nextAllocations.push({
+        subject: subjectName,
+        grade: defaultGrade,
+        stream: defaultStream
+      });
+      if (!activeSubjectForAllocation) {
+        setActiveSubjectForAllocation(subjectName);
+      }
     }
+
+    setSelectedSubjects(nextSubjects);
+    setAllocations(nextAllocations);
+
+    // Also sync legacy assignedClasses and assignedStreams for backward compatibility
+    const uniqueGrades = Array.from(new Set(nextAllocations.map(a => a.grade).filter(Boolean)));
+    const uniqueStreams = Array.from(new Set(nextAllocations.map(a => a.stream).filter(Boolean)));
+    setAssignedClasses(uniqueGrades);
+    setAssignedStreams(uniqueStreams);
   };
 
-  const handleToggleClass = (className: string) => {
-    if (assignedClasses.includes(className)) {
-      setAssignedClasses(assignedClasses.filter(c => c !== className));
+  const handleUpdateAllocation = (subject: string, grade: string, stream: string) => {
+    const existingIdx = allocations.findIndex(a => a.subject === subject);
+    let nextAllocations = [...allocations];
+    if (existingIdx >= 0) {
+      nextAllocations[existingIdx] = { subject, grade, stream };
     } else {
-      setAssignedClasses([...assignedClasses, className]);
+      nextAllocations.push({ subject, grade, stream });
     }
+    setAllocations(nextAllocations);
+
+    // Sync legacy assignedClasses / assignedStreams
+    const uniqueGrades = Array.from(new Set(nextAllocations.map(a => a.grade).filter(Boolean)));
+    const uniqueStreams = Array.from(new Set(nextAllocations.map(a => a.stream).filter(Boolean)));
+    setAssignedClasses(uniqueGrades);
+    setAssignedStreams(uniqueStreams);
   };
 
-  const handleToggleStream = (streamName: string) => {
-    if (assignedStreams.includes(streamName)) {
-      setAssignedStreams(assignedStreams.filter(s => s !== streamName));
-    } else {
-      setAssignedStreams([...assignedStreams, streamName]);
+  const handleToggleGradeForActiveSubject = (grade: string) => {
+    if (!activeSubjectForAllocation) {
+      toast.error("Please select a subject first");
+      return;
     }
+    const currentAlloc = allocations.find(a => a.subject === activeSubjectForAllocation);
+    const currentStream = currentAlloc?.stream || availableSchoolStreams[0] || 'Blue';
+    handleUpdateAllocation(activeSubjectForAllocation, grade, currentStream);
+  };
+
+  const handleToggleStreamForActiveSubject = (stream: string) => {
+    if (!activeSubjectForAllocation) {
+      toast.error("Please select a subject first");
+      return;
+    }
+    const currentAlloc = allocations.find(a => a.subject === activeSubjectForAllocation);
+    const currentGrade = currentAlloc?.grade || availableSchoolClasses[2] || 'Grade 4';
+    handleUpdateAllocation(activeSubjectForAllocation, currentGrade, stream);
   };
 
   function generateRandomCode() {
@@ -268,6 +316,7 @@ export default function StaffRegistry() {
       subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : [],
       assignedClasses: category !== 'Bursar' && category !== 'Store Master' ? assignedClasses : [],
       assignedStreams: category !== 'Bursar' && category !== 'Store Master' ? assignedStreams : [],
+      allocations: category !== 'Bursar' && category !== 'Store Master' ? allocations : [],
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
@@ -617,67 +666,52 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
-                          <div className="flex flex-col gap-1.5 max-w-[220px]">
-                            {/* If assignedClasses contains structured object or string items */}
-                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
-                                  let formattedCls = '';
-                                  if (typeof cls === 'string') {
-                                    formattedCls = cls;
-                                  } else if (cls && typeof cls === 'object') {
-                                    const g = (cls as any).grade || (cls as any).name || (cls as any).className || '';
-                                    const s = (cls as any).stream || (cls as any).streamName || '';
-                                    const subj = (cls as any).subject || (cls as any).learningArea || '';
-                                    formattedCls = [g, s, subj ? `- ${subj}` : ''].filter(Boolean).join(' ');
-                                    if (!formattedCls) formattedCls = JSON.stringify(cls);
-                                  } else {
-                                    formattedCls = String(cls);
-                                  }
-                                  return (
-                                    <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                      {formattedCls}
-                                    </span>
-                                  );
-                                })}
-                                {staff.assignedClasses.length > 3 && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staff.assignedClasses.length - 3}
+                        {categoryIsTeaching(staff.category) && ((staff.allocations && staff.allocations.length > 0) || (staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
+                          <div className="flex flex-wrap gap-1.5 max-w-[280px]">
+                            {/* Render structured allocations cleanly: "Mathematics (Grade 7 Mercury)" */}
+                            {staff.allocations && staff.allocations.length > 0 ? (
+                              staff.allocations.slice(0, 4).map((alloc, aIdx) => {
+                                const subj = typeof alloc === 'string' ? alloc : (alloc?.subject || '');
+                                const grade = alloc?.grade || '';
+                                const stream = alloc?.stream || '';
+                                const classLoc = [grade, stream].filter(Boolean).join(' ');
+                                const displayText = subj && classLoc ? `${subj} (${classLoc})` : (subj || classLoc);
+                                return (
+                                  <span key={aIdx} className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-2xs">
+                                    {displayText || 'General Allocation'}
                                   </span>
-                                )}
-                              </div>
+                                );
+                              })
+                            ) : staff.assignedClasses && staff.assignedClasses.length > 0 ? (
+                              staff.assignedClasses.slice(0, 4).map((cls, cIdx) => {
+                                const strm = (staff.assignedStreams || [])[cIdx] || (staff.assignedStreams || [])[0] || '';
+                                const displayText = [cls, strm].filter(Boolean).join(' ');
+                                return (
+                                  <span key={cIdx} className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-2xs">
+                                    {displayText}
+                                  </span>
+                                );
+                              })
+                            ) : staff.subjects && staff.subjects.length > 0 ? (
+                              staff.subjects.slice(0, 3).map((sub, sIdx) => (
+                                <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  {sub}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-slate-400 text-xs">—</span>
                             )}
-
-                            {/* Stream or combined allocations */}
-                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
-                                  let formattedStrm = '';
-                                  if (typeof strm === 'string') {
-                                    formattedStrm = strm;
-                                  } else if (strm && typeof strm === 'object') {
-                                    const g = (strm as any).grade || (strm as any).name || '';
-                                    const s = (strm as any).stream || (strm as any).streamName || '';
-                                    formattedStrm = [g, s].filter(Boolean).join(' ');
-                                    if (!formattedStrm) formattedStrm = JSON.stringify(strm);
-                                  } else {
-                                    formattedStrm = String(strm);
-                                  }
-                                  return (
-                                    <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
-                                      {formattedStrm}
-                                    </span>
-                                  );
-                                })}
-                                {staff.assignedStreams.length > 3 && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staff.assignedStreams.length - 3}
-                                  </span>
-                                )}
-                              </div>
+                            
+                            {((staff.allocations?.length || 0) > 4 || (staff.assignedClasses?.length || 0) > 4) && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                +{Math.max((staff.allocations?.length || 0), (staff.assignedClasses?.length || 0)) - 4} more
+                              </span>
                             )}
                           </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
                         ) : (
                           <span className="text-slate-400 text-xs">—</span>
                         )}
@@ -886,121 +920,164 @@ export default function StaffRegistry() {
                 </div>
               </div>
 
-              {/* Subjects Grid (Conditionally shown or optional for Teaching Staff) */}
+              {/* Restructured Subject & Class Allocation Workflow */}
               {category !== 'Bursar' && category !== 'Store Master' && (
-                <div className="space-y-3 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                  <div className="flex items-center justify-between">
+                <div className="space-y-4 bg-slate-50/70 p-4.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  <div className="flex items-center justify-between border-b border-slate-200/60 pb-3">
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-indigo-400" /> Subject & Learning Area Competencies
+                      <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <BookOpen className="w-4.5 h-4.5 text-indigo-600" /> Subject & Class Allocations
                       </h4>
-                      {assignedClasses.length > 0 && (
-                        <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
-                          Filtered for selected grade(s): {assignedClasses.join(', ')}
-                        </p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Step 1: Select subjects taught. Step 2: Configure grade and stream for each subject.
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-full">
+                      {selectedSubjects.length} Subject(s) Selected
+                    </span>
+                  </div>
+
+                  {/* 1. Subject Selection Grid */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-2">
+                      1. Select Subjects Taught <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto p-1 custom-scrollbar">
+                      {availableLearningAreas.map((sub) => {
+                        const isSelected = selectedSubjects.includes(sub);
+                        return (
+                          <button
+                            key={sub}
+                            type="button"
+                            onClick={() => handleToggleSubject(sub)}
+                            className={`flex items-center gap-2 p-2 rounded-xl text-left text-xs font-medium transition-all duration-200 border ${
+                              isSelected
+                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-200'
+                                : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                              isSelected ? 'bg-white border-white text-indigo-600' : 'border-slate-300 bg-white'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span className="truncate">{sub}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2. Grade & Stream Assignment Per Subject */}
+                  {selectedSubjects.length > 0 && (
+                    <div className="space-y-3 pt-3 border-t border-slate-200/60">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-slate-700 block">
+                          2. Assign Grade & Stream per Subject
+                        </label>
+                        <span className="text-[11px] text-slate-500">
+                          Click a subject tab below to configure its classes
+                        </span>
+                      </div>
+
+                      {/* Subject tabs */}
+                      <div className="flex flex-wrap gap-1.5 bg-white p-2 rounded-xl border border-slate-200">
+                        {selectedSubjects.map(sub => {
+                          const isActive = activeSubjectForAllocation === sub;
+                          const alloc = allocations.find(a => a.subject === sub);
+                          const gradeBadge = alloc?.grade || 'No Grade';
+                          const streamBadge = alloc?.stream || 'No Stream';
+                          return (
+                            <button
+                              key={sub}
+                              type="button"
+                              onClick={() => setActiveSubjectForAllocation(sub)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 border ${
+                                isActive
+                                  ? 'bg-indigo-50 border-indigo-300 text-indigo-800 shadow-2xs font-semibold'
+                                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              <span>{sub}</span>
+                              <span className="text-[10px] bg-white px-1.5 py-0.5 rounded text-slate-500 border border-slate-200 font-mono">
+                                {gradeBadge} {streamBadge}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Active Subject Configuration Panel */}
+                      {activeSubjectForAllocation && (
+                        <div className="bg-white p-4 rounded-xl border border-indigo-150 shadow-2xs space-y-3">
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                              <GraduationCap className="w-4 h-4 text-indigo-600" />
+                              Configuring Grade & Stream for: <span className="underline">{activeSubjectForAllocation}</span>
+                            </span>
+                            {(() => {
+                              const curr = allocations.find(a => a.subject === activeSubjectForAllocation);
+                              return (
+                                <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                                  {curr?.grade || 'Select Grade'} — {curr?.stream || 'Select Stream'}
+                                </span>
+                              );
+                            })()}
+                          </div>
+
+                          {/* Grade Selector */}
+                          <div>
+                            <span className="text-[11px] font-semibold text-slate-500 block mb-1.5 uppercase tracking-wider">Select Grade</span>
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                              {availableSchoolClasses.map(cls => {
+                                const curr = allocations.find(a => a.subject === activeSubjectForAllocation);
+                                const isSelected = curr?.grade === cls;
+                                return (
+                                  <button
+                                    key={cls}
+                                    type="button"
+                                    onClick={() => handleToggleGradeForActiveSubject(cls)}
+                                    className={`py-1.5 px-2 rounded-lg text-xs font-medium text-center transition-all border ${
+                                      isSelected
+                                        ? 'bg-emerald-600 border-emerald-600 text-white font-semibold shadow-2xs'
+                                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-emerald-300'
+                                    }`}
+                                  >
+                                    {cls}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Stream Selector */}
+                          <div className="pt-1">
+                            <span className="text-[11px] font-semibold text-slate-500 block mb-1.5 uppercase tracking-wider">Select Stream</span>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                              {availableSchoolStreams.map(strm => {
+                                const curr = allocations.find(a => a.subject === activeSubjectForAllocation);
+                                const isSelected = curr?.stream === strm;
+                                return (
+                                  <button
+                                    key={strm}
+                                    type="button"
+                                    onClick={() => handleToggleStreamForActiveSubject(strm)}
+                                    className={`py-1.5 px-2 rounded-lg text-xs font-medium text-center transition-all border ${
+                                      isSelected
+                                        ? 'bg-amber-600 border-amber-600 text-white font-semibold shadow-2xs'
+                                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-amber-300'
+                                    }`}
+                                  >
+                                    {strm}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
-                    <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
-                      {selectedSubjects.length} selected
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
-                    {filteredLearningAreasForClasses.map((sub) => {
-                      const isSelected = selectedSubjects.includes(sub);
-                      return (
-                        <button
-                          key={sub}
-                          type="button"
-                          onClick={() => handleToggleSubject(sub)}
-                          className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
-                            isSelected
-                              ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm shadow-indigo-100/50'
-                              : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
-                            isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'
-                          }`}>
-                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                          </div>
-                          <span className="truncate">{sub}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Class & Stream Assignments Grid (Conditionally shown or optional for Teaching Staff) */}
-              {category !== 'Bursar' && category !== 'Store Master' && (
-                <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Class & Stream Assignments
-                    </h4>
-                    <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
-                      {assignedClasses.length} class(es), {assignedStreams.length} stream(s) selected
-                    </span>
-                  </div>
-                  
-                  {/* Classes/Grades selection */}
-                  <div>
-                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Grades / Classes</span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
-                      {availableSchoolClasses.map((cls) => {
-                        const isSelected = assignedClasses.includes(cls);
-                        return (
-                          <button
-                            key={cls}
-                            type="button"
-                            onClick={() => handleToggleClass(cls)}
-                            className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
-                              isSelected
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm shadow-emerald-100/50'
-                                : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
-                              isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300'
-                            }`}>
-                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                            </div>
-                            <span className="truncate">{cls}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Streams selection */}
-                  <div className="border-t border-slate-100 pt-3">
-                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams</span>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-1">
-                      {availableSchoolStreams.map((strm) => {
-                        const isSelected = assignedStreams.includes(strm);
-                        return (
-                          <button
-                            key={strm}
-                            type="button"
-                            onClick={() => handleToggleStream(strm)}
-                            className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
-                              isSelected
-                                ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm shadow-amber-100/50'
-                                : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
-                              isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-slate-300'
-                            }`}>
-                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                            </div>
-                            <span className="truncate">{strm}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
 
