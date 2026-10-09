@@ -89,7 +89,7 @@ export default function StaffRegistry() {
   // Get relevant streams based on selected grades (or all global streams if none selected)
   const availableSchoolStreams = useMemo(() => {
     if (!assignedClasses || assignedClasses.length === 0) {
-      return allGlobalStreams && allGlobalStreams.length > 0 ? allGlobalStreams : ['Blue', 'Red', 'Green', 'East', 'West'];
+      return allGlobalStreams && allGlobalStreams.length > 0 ? allGlobalStreams : [];
     }
     const streamSet = new Set<string>();
     assignedClasses.forEach(cls => {
@@ -98,7 +98,6 @@ export default function StaffRegistry() {
         streamsForThisGrade.forEach(s => streamSet.add(s));
       }
     });
-    // Return ONLY the exact configured streams for the selected grades without fallback ghost streams like Mercury
     return Array.from(streamSet);
   }, [assignedClasses, getStreamsForGrade, allGlobalStreams]);
 
