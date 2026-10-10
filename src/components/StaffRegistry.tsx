@@ -108,7 +108,7 @@ export default function StaffRegistry() {
 
   useEffect(() => {
     // Load from local storage or fallback to mock data
-    const stored = localStorage.getItem('munyaka_staff');
+    const stored = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory');
     let loadedStaff: any[] = [];
     if (stored) {
       try {
@@ -120,7 +120,7 @@ export default function StaffRegistry() {
       loadedStaff = MOCK_STAFF;
     }
 
-    // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove legacy streams
+    // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and uppercase names
     const seenIds = new Set<string>();
     const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
       let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
@@ -198,9 +198,12 @@ export default function StaffRegistry() {
         code = `MUN-${randomPart}`;
       }
 
+      const rawName = staff.name || staff.fullName || 'UNNAMED STAFF';
+      const formattedName = String(rawName).trim().toUpperCase();
+
       return {
         id,
-        name: staff.name || 'Unnamed Staff',
+        name: formattedName,
         category: cat,
         tscNumber: staff.tscNumber || 'N/A',
         email: staff.email || '',
@@ -220,6 +223,8 @@ export default function StaffRegistry() {
     setStaffList(sanitized);
     localStorage.setItem('munyaka_staff', JSON.stringify(sanitized));
     localStorage.setItem('munyaka_staff_registry', JSON.stringify(sanitized));
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(sanitized));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(sanitized));
   }, []);
 
   const handleOpenAddModal = () => {
@@ -243,7 +248,7 @@ export default function StaffRegistry() {
 
   const handleOpenEditModal = (staff: StaffMember) => {
     setEditingStaff(staff);
-    setFullName(staff.name);
+    setFullName(staff.name ? staff.name.toUpperCase() : '');
     setCategory(staff.category);
     setTscNumber(staff.tscNumber);
     setEmail(staff.email || '');
@@ -356,12 +361,13 @@ export default function StaffRegistry() {
       return;
     }
 
-    const cleanEmailInput = (email || `${fullName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
+    const formattedName = fullName.trim().toUpperCase();
+    const cleanEmailInput = (email || `${formattedName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
     const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
     
     const newStaff = {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
-      name: fullName.trim(),
+      name: formattedName,
       category: category || 'Teacher',
       designation: category || 'Class Teacher',
       specificRole: category || 'Class Teacher',
@@ -680,11 +686,11 @@ export default function StaffRegistry() {
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
-                            {staff.name ? staff.name.split(' ').pop()?.charAt(0) : 'S'}
+                            {(staff.name || 'S').trim().charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <span className="font-semibold text-slate-800 block text-sm group-hover:text-indigo-600 transition-colors">
-                              {staff.name}
+                              {staff.name ? staff.name.toUpperCase() : ''}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
@@ -699,7 +705,7 @@ export default function StaffRegistry() {
                             </div>
                           </div>
                         </div>
-                      </td>
+                      </tr>
 
                       <td className="py-3.5 px-3">
                         <span className="text-xs text-slate-700 block flex items-center gap-1">
