@@ -149,11 +149,51 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       { name: 'Settings', path: '/settings', icon: Settings },
     ];
 
+  // Read RBAC config if present
+  const rbacConfig = (() => {
+    try {
+      const raw = localStorage.getItem('munyaka_rbac_config');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const userRoleKey = String(fullProfile?.designation || fullProfile?.systemRole || user?.role || 'teacher').toUpperCase().replace(/[\s\/]+/g, '_');
+
   const navItems = rawNavItems.filter(item => {
     if (isUserAdmin) return true;
     if (item.adminOnly) return false;
-    if (item.bursarOrAdmin) return isBursar;
-    if (item.ictOrAdmin) return isIctOrDh;
+    if (item.bursarOrAdmin) return isBursar || isUserAdmin;
+    if (item.ictOrAdmin) return isIctOrDh || isUserAdmin;
+
+    if (rbacConfig && typeof rbacConfig === 'object') {
+      const rolePermissions = rbacConfig[userRoleKey] || rbacConfig[user?.role || 'teacher'];
+      if (rolePermissions && Array.isArray(rolePermissions)) {
+        const permKeyMap: Record<string, string> = {
+          'Dashboard': 'dashboard',
+          'Admin Dashboard': 'dashboard',
+          'Students': 'students',
+          'Attendance Management': 'attendance',
+          'Student Attendance': 'attendance',
+          'Enter Marks': 'assessments',
+          'Marked Scripts': 'assessments',
+          'Results Analysis': 'assessments',
+          'Fees & Finance': 'fees',
+          'Library & E-Resources': 'library',
+          'Tools & Inventory': 'stores',
+          'Digital Hub': 'hub',
+          'ICT Lab & Devices': 'ict',
+          'Timetable': 'timetable',
+          'Settings': 'settings'
+        };
+        const pKey = permKeyMap[item.name];
+        if (pKey && rolePermissions.includes(pKey)) {
+          return true;
+        }
+      }
+    }
+
     if (isTeacherOrStaff) return true;
     return true;
   });
