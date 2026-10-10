@@ -302,13 +302,10 @@ export const verifyStaffLogin = (
   inputPassword?: string
 ): { success: boolean; staff?: MasterStaffRecord; error?: string } => {
   // 1. Sanitize inputs
-  const cleanIdentifier = (identifier || '').replace(/\s+/g, '').toLowerCase();
-  const cleanPassword = (inputPassword || '').replace(/\s+/g, '').toUpperCase();
-
-  // 2. Resolve email format
-  const cleanEmail = cleanIdentifier.includes('@')
-    ? cleanIdentifier
-    : `${cleanIdentifier}@munyaka.sc.ke`;
+  const rawInput = (identifier || '').trim().toLowerCase();
+  const baseName = rawInput.replace(/@munyaka\.sc\.ke$/i, '').split('@')[0];
+  const cleanEmail = `${baseName}@munyaka.sc.ke`;
+  const cleanCode = (inputPassword || '').replace(/\s+/g, '').toUpperCase();
 
   // 3. Query localStorage exclusively
   let staffList: MasterStaffRecord[] = [];
@@ -326,10 +323,12 @@ export const verifyStaffLogin = (
     const sEmail = (s.email || '').toLowerCase().trim();
     const sStaffId = (s.staffId || '').toLowerCase().trim();
     const sId = (s.id || '').toLowerCase().trim();
+    const sBaseEmail = sEmail.replace(/@munyaka\.sc\.ke$/i, '').split('@')[0];
     return (
       sEmail === cleanEmail ||
-      sStaffId === cleanIdentifier ||
-      sId === cleanIdentifier
+      sBaseEmail === baseName ||
+      sStaffId === baseName ||
+      sId === baseName
     );
   });
 
@@ -346,7 +345,7 @@ export const verifyStaffLogin = (
       .replace(/\s+/g, '')
       .toUpperCase();
 
-    if (cleanPassword !== validCode) {
+    if (cleanCode !== validCode) {
       return {
         success: false,
         error: 'Invalid access code. Please check your assigned MUN-XXXX access code.'

@@ -297,10 +297,9 @@ const Login: React.FC = () => {
     setIsStaffVerifying(true);
     setStaffAuthError('');
 
-    const cleanInput = (staffId || '').trim().toLowerCase();
-    const fullEmail = cleanInput.includes('@')
-      ? cleanInput
-      : `${cleanInput}@munyaka.sc.ke`;
+    const rawInput = (staffId || '').trim().toLowerCase();
+    const baseName = rawInput.replace(/@munyaka\.sc\.ke$/i, '').split('@')[0];
+    const fullEmail = `${baseName}@munyaka.sc.ke`;
 
     const res = verifyStaffLogin(fullEmail, staffPassword);
 
