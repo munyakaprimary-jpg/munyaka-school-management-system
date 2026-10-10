@@ -128,7 +128,7 @@ export default function RegisterModal({
   // ── Teacher restriction logic ─────────────────────────────────────
   // For non-admin users with an assigned teaching load, restrict the
   // grade & stream options to only those the teacher is assigned to.
-  const isTeacherRestricted = isTeacherWithRestrictedLoad(
+  const isTeacherRestricted = !isCurrentUserAdmin && isTeacherWithRestrictedLoad(
     currentUserId,
     currentUserEmail,
     isCurrentUserAdmin
@@ -160,15 +160,31 @@ export default function RegisterModal({
     ));
   }, [regGrade, gradesConfig, isTeacherRestricted, currentUserId, currentUserEmail, isCurrentUserAdmin]);
 
-  // Auto-correct selections when restriction is enforced
+  // Lock grade and stream to assigned teacher class if restricted and not admin
   useEffect(() => {
-    if (!isTeacherRestricted) return;
-    // If the currently selected grade isn't in the allowed list, snap to the first allowed grade
-    if (regGrade && allowedGrades.length > 0 &&
-        !allowedGrades.some(g => g.toLowerCase().trim() === regGrade.toLowerCase().trim())) {
-      setRegGrade(allowedGrades[0]);
+    if (!isCurrentUserAdmin && currentUserId) {
+      try {
+        const currentUserStr = localStorage.getItem('munyaka_current_user');
+        if (currentUserStr) {
+          const userObj = JSON.parse(currentUserStr);
+          if (userObj?.assignedClass) {
+            // parse assignedClass e.g. "Grade 9 Venus" -> grade: "Grade 9", stream: "Venus" (or first word/token)
+            const parts = userObj.assignedClass.split(' ');
+            if (parts.length >= 2) {
+              const assignedG = `${parts[0]} ${parts[1]}`;
+              const assignedSt = parts.slice(2).join(' ') || 'BLUE';
+              if (allowedGrades.some(g => g.toLowerCase() === assignedG.toLowerCase())) {
+                setRegGrade(assignedG);
+                if (allowedStreamsForGrade.some(s => s.toLowerCase() === assignedSt.toLowerCase())) {
+                  setRegStream(assignedSt);
+                }
+              }
+            }
+          }
+        }
+      } catch {}
     }
-  }, [isTeacherRestricted, allowedGrades, regGrade, setRegGrade]);
+  }, [isCurrentUserAdmin, currentUserId, allowedGrades, allowedStreamsForGrade, setRegGrade, setRegStream]);
 
   useEffect(() => {
     if (!regGrade) return;

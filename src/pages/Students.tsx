@@ -30,6 +30,10 @@ import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { CentralDataService } from '@/services/centralDataService';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
+import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
+import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
+import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
+import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
 
 const STUDENTS_STORAGE_KEY = 'munyaka_students';
 const API_BASE_URL = '/api';
@@ -127,38 +131,32 @@ const ensureProperAdmissionNumbers = (list: any[]) => {
 };
 
 export default function Students() {
+  const currentUser = (() => {
+    try {
+      const raw = localStorage.getItem('munyaka_current_user');
+      return raw ? JSON.parse(raw) : { role: 'admin' };
+    } catch {
+      return { role: 'admin' };
+    }
+  })();
+
+  const isGlobalUser = isGlobalRole(currentUser);
+  const teacherAssignedClass = currentUser?.assignedClass || currentUser?.gradeStream || 'Grade 9 Venus';
   const navigate = useNavigate();
   const { user } = useAuth();
   const teacherName = user?.name || 'Lawrence Mwangi';
   const teacherRole = user?.role || 'Class Teacher';
-  const roleLower = String(teacherRole || (typeof window !== 'undefined' ? localStorage.getItem('current_user_role') : '') || '').toLowerCase();
-  const isAdmin = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin') || roleLower === 'administrator';
-
-  // Dynamically resolve assigned grade/stream from munyaka_staff_db if user is a teacher
-  const staffDbRaw = typeof window !== 'undefined' ? (localStorage.getItem('munyaka_staff_db') || localStorage.getItem('school_staff_data') || '') : '';
-  let resolvedGrade = (user as any)?.grade || (user as any)?.assignedClass || (user as any)?.assignedGrade || '';
-  let resolvedStream = (user as any)?.stream || (user as any)?.assignedStream || '';
-
-  if (!resolvedGrade || !resolvedStream) {
+  const currentUser = (() => {
     try {
-      if (staffDbRaw) {
-        const staffList = JSON.parse(staffDbRaw);
-        if (Array.isArray(staffList)) {
-          const found = staffList.find((s: any) =>
-            (user?.email && s.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
-            (user?.name && s.name && s.name.toLowerCase() === user.name.toLowerCase())
-          );
-          if (found) {
-            resolvedGrade = found.assignedGrade || found.grade || found.assignedClass || resolvedGrade;
-            resolvedStream = found.assignedStream || found.stream || resolvedStream;
-          }
-        }
-      }
-    } catch {}
-  }
+      const raw = localStorage.getItem('munyaka_current_user');
+      return raw ? JSON.parse(raw) : { role: 'admin' };
+    } catch {
+      return { role: 'admin' };
+    }
+  })();
 
-  const assignedTeacherGrade = !isAdmin ? (resolvedGrade || 'Grade 1') : 'all';
-  const assignedTeacherStream = !isAdmin ? (resolvedStream || 'BLUE') : 'all';
+  const isGlobalUser = isGlobalRole(currentUser);
+  const teacherAssignedClass = currentUser?.assignedClass || currentUser?.gradeStream || 'Grade 9 Venus';
 
   const [students, setStudents] = useState<any[]>(() => {
       // Force aggregation across all storage keys for admin & staff
@@ -552,7 +550,7 @@ export default function Students() {
   };
 
   const filteredStudents = useMemo(() => {
-      return students.filter(s => {
+      const list = students.filter(s => {
         const name = (s.name || s.fullName || '').toLowerCase();
         const adm = (s.admissionNumber || s.admNo || '').toLowerCase();
         const ass = (s.assessmentNo || s.assessmentNumber || '').toLowerCase();
@@ -581,6 +579,16 @@ export default function Students() {
         
         return matchesSearch && matchesGrade && matchesStream && matchesGender;
       });
+
+      const currentUser = (() => {
+        try {
+          const raw = localStorage.getItem('munyaka_current_user');
+          return raw ? JSON.parse(raw) : { role: 'admin' };
+        } catch {
+          return { role: 'admin' };
+        }
+      })();
+      return filterByTeacherScope(list, currentUser);
     }, [students, searchTerm, gradeFilter, streamFilter, genderFilter, isAdmin, assignedTeacherGrade, assignedTeacherStream]);
 
   return (

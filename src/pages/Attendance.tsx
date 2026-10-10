@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { getStoredLearners } from '@/utils/learnersStore';
+import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
 
 interface Learner {
   id?: string;
