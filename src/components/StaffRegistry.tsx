@@ -360,11 +360,16 @@ export default function StaffRegistry() {
       return;
     }
 
+    const cleanEmailInput = email.trim().toLowerCase();
+    const finalEmail = cleanEmailInput
+      ? (cleanEmailInput.includes('@') ? cleanEmailInput : `${cleanEmailInput}@munyaka.sc.ke`)
+      : `staff_${Date.now()}@munyaka.sc.ke`;
+
     const staffRecord: StaffMember = {
       id: editingStaff ? editingStaff.id : `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: fullName.trim(),
       category,
-      email: email.trim(),
+      email: finalEmail,
       phone: phone.trim(),
       tscNumber: tscNumber.trim(),
       status,
@@ -963,15 +968,18 @@ export default function StaffRegistry() {
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <div className="relative flex items-center">
+                    <Mail className="absolute left-3 w-4 h-4 text-slate-400 pointer-events-none" />
                     <input
-                      type="email"
-                      placeholder="e.g. name@munyaka.sc.ke"
+                      type="text"
+                      placeholder="e.g. lndegwa"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-32 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
                     />
+                    <span className="absolute right-3 text-xs font-mono font-bold text-slate-400 pointer-events-none bg-slate-100 px-2 py-0.5 rounded">
+                      @munyaka.sc.ke
+                    </span>
                   </div>
                 </div>
 
