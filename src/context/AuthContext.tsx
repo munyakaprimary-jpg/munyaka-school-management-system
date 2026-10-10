@@ -403,7 +403,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           grade: assignedGradeVal,
           stream: matchedMasterStaff.assignedStream || 'Green',
           department: matchedMasterStaff.department || 'Academics',
-          designation: designationVal,
           is_active: true
         };
 

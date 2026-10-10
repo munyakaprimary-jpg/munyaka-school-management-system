@@ -60,6 +60,78 @@ export const CentralDataService = {
   getLearners,
   getStaff,
   getMasterData,
+  getData: (key: string, fallback: any = []) => safeParse(key, fallback),
+  setData: (key: string, data: any) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+      window.dispatchEvent(new Event('munyaka_data_changed'));
+    } catch (e) {
+      console.error(`Error setting data for ${key}`, e);
+    }
+  },
+  saveLearners: (learners: any[]) => {
+    try {
+      localStorage.setItem('munyaka_master_learners', JSON.stringify(learners));
+      localStorage.setItem('munyaka_learners', JSON.stringify(learners));
+      window.dispatchEvent(new Event('munyaka_data_changed'));
+    } catch (e) {
+      console.error('Error saving learners', e);
+    }
+  },
+  saveStaff: (staff: any[]) => {
+    try {
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(staff));
+      window.dispatchEvent(new Event('munyaka_data_changed'));
+    } catch (e) {
+      console.error('Error saving staff', e);
+    }
+  },
+  addStaff: (record: any) => {
+    const list = getStaff();
+    const newRecord = {
+      ...record,
+      id: record.id || `staff-${Date.now()}`,
+      staffId: record.staffId || `MUN-STF-${Math.floor(1000 + Math.random() * 9000)}`,
+      joinedDate: record.joinedDate || new Date().toISOString().slice(0, 10)
+    };
+    const updated = [...list, newRecord];
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updated));
+    return newRecord;
+  },
+  updateStaff: (id: string, updates: any) => {
+    const list = getStaff();
+    const updated = list.map((s: any) => s.id === id || s.email === id ? { ...s, ...updates } : s);
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updated));
+  },
+  deleteStaff: (id: string) => {
+    const list = getStaff();
+    const updated = list.filter((s: any) => s.id !== id && s.email !== id);
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updated));
+  },
+  getMarks: () => {
+    try {
+      const raw = localStorage.getItem('munyaka_marks_matrix') || localStorage.getItem('munyaka_marks');
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  },
+  saveMarks: (marks: any) => {
+    try {
+      localStorage.setItem('munyaka_marks_matrix', JSON.stringify(marks));
+      window.dispatchEvent(new Event('munyaka_data_changed'));
+    } catch (e) {
+      console.error('Error saving marks', e);
+    }
+  },
+  isTermLocked: (termKey: string) => {
+    try {
+      const lockedMap = safeParse('munyaka_locked_terms', {});
+      return Boolean(lockedMap[termKey]);
+    } catch {
+      return false;
+    }
+  },
   getSystemStats: () => {
     try {
       const learners = getLearners();
