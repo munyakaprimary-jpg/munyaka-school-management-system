@@ -51,8 +51,8 @@ interface AuditLog {
 export default function SecurityAuthTab() {
   const [security, setSecurity] = useState<SecuritySettings>(() => {
     try {
-      const central = CentralDataService.getData<SecuritySettings>(SECURITY_SETTINGS_KEY, DEFAULT_SECURITY);
-      if (central && typeof central === 'object') return { ...DEFAULT_SECURITY, ...central };
+          const central = CentralDataService.getData(SECURITY_SETTINGS_KEY, DEFAULT_SECURITY);
+          if (central && typeof central === 'object') return { ...DEFAULT_SECURITY, ...central };
       const saved = localStorage.getItem(SECURITY_SETTINGS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -83,8 +83,8 @@ export default function SecurityAuthTab() {
   // Real Audit Logs state
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
     try {
-      const central = CentralDataService.getData<AuditLog[]>(AUDIT_LOGS_KEY, []);
-      if (central && Array.isArray(central)) return central;
+          const central = CentralDataService.getData(AUDIT_LOGS_KEY, []);
+          if (central && Array.isArray(central)) return central;
       const saved = localStorage.getItem(AUDIT_LOGS_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);

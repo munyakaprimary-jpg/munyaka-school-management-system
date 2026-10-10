@@ -96,8 +96,8 @@ const INITIAL_TENANTS: Tenant[] = [
 export default function OwnersDashboard() {
   const [tenants, setTenants] = useState<Tenant[]>(() => {
     try {
-      const central = CentralDataService.getData<Tenant[]>(STORAGE_KEY, []);
-      if (central && Array.isArray(central) && central.length > 0) return central;
+          const central = CentralDataService.getData(STORAGE_KEY, []);
+          if (central && Array.isArray(central) && central.length > 0) return central;
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -115,8 +115,8 @@ export default function OwnersDashboard() {
 
   const [activeTenantId, setActiveTenantId] = useState<string>(() => {
     try {
-      const centralActive = CentralDataService.getData<string>(ACTIVE_TENANT_KEY, '');
-      if (centralActive) return centralActive;
+          const centralActive = CentralDataService.getData(ACTIVE_TENANT_KEY, '');
+          if (centralActive) return centralActive;
       const savedActive = localStorage.getItem(ACTIVE_TENANT_KEY);
       if (savedActive) return savedActive;
     } catch (e) {
