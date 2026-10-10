@@ -302,10 +302,16 @@ export const verifyStaffLogin = (
   inputPassword?: string
 ): { success: boolean; staff?: MasterStaffRecord; error?: string } => {
   // 1. Sanitize inputs
-  const rawInput = (identifier || '').trim().toLowerCase();
-  const baseName = rawInput.replace(/@munyaka\.sc\.ke$/i, '').split('@')[0];
-  const cleanEmail = `${baseName}@munyaka.sc.ke`;
+  const cleanEmail = (identifier || '').trim().toLowerCase();
   const cleanCode = (inputPassword || '').replace(/\s+/g, '').toUpperCase();
+
+  // 2. Validate full email requirement
+  if (!cleanEmail.endsWith('@munyaka.sc.ke')) {
+    return {
+      success: false,
+      error: 'Please enter your full school email address ending with @munyaka.sc.ke.'
+    };
+  }
 
   // 3. Query localStorage exclusively
   let staffList: MasterStaffRecord[] = [];
@@ -318,18 +324,10 @@ export const verifyStaffLogin = (
     staffList = [];
   }
 
-  // 4. Find staff record by email, staffId, or id
+  // 4. Find staff record by exact full email match
   const matched = staffList.find(s => {
     const sEmail = (s.email || '').toLowerCase().trim();
-    const sStaffId = (s.staffId || '').toLowerCase().trim();
-    const sId = (s.id || '').toLowerCase().trim();
-    const sBaseEmail = sEmail.replace(/@munyaka\.sc\.ke$/i, '').split('@')[0];
-    return (
-      sEmail === cleanEmail ||
-      sBaseEmail === baseName ||
-      sStaffId === baseName ||
-      sId === baseName
-    );
+    return sEmail === cleanEmail;
   });
 
   if (!matched) {
