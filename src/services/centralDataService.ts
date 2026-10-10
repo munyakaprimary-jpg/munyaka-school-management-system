@@ -70,10 +70,12 @@ export const UnifiedDataStorage = {
     CentralDataService.persistAndSyncMutation('staff', list);
   },
 
-  addStaff: (record: any): void => {
+  addStaff: (record: any): any => {
     const staff = UnifiedDataStorage.getStaff();
-    const updated = [record, ...staff];
+    const newRecord = { id: record.id || 'staff_' + Date.now() + Math.random().toString(36).substr(2, 5), ...record };
+    const updated = [newRecord, ...staff];
     UnifiedDataStorage.saveStaff(updated);
+    return newRecord;
   },
 
   updateStaff: (id: string, updates: any): void => {
@@ -339,9 +341,7 @@ export const CentralDataService = {
     } catch {}
   },
 
-  fetchRemoteDump: () => CentralDataService.fetchRemoteDump(),
-  syncBatchToRemote: (batchPayload: Record<string, any>) => CentralDataService.syncBatchToRemote(batchPayload),
-  persistAndSyncMutation: (key: string, data: any) => CentralDataService.persistAndSyncMutation(key, data)
+  fetchRemoteDumpAlias: () => CentralDataService.fetchRemoteDump()
 };
 
 export default CentralDataService;
