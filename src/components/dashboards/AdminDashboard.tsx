@@ -121,6 +121,11 @@ export const AdminDashboardComponent: React.FC = () => {
 
   const staffSource = localStaff.length > 0 ? localStaff : (masterData.staff.length > 0 ? masterData.staff : []);
   const teachingStaffCount = staffSource.length > 0 ? staffSource.length : (masterData.totalStaff > 0 ? masterData.totalStaff : sysStats.teachingStaff);
+  const nonTeachingStaffCount = sysStats.nonTeachingStaff;
+
+  const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
+  const junior = learners.length - primary.length;
+
   const primaryCount = primary.length;
   const juniorCount = junior;
 
