@@ -1,3 +1,17 @@
+export const STORAGE_KEYS = {
+  STAFF: 'munyaka_master_staff_list',
+  TEACHERS: 'munyaka_master_staff_list',
+  TEACHERS_LEGACY: 'munyaka_staff_directory',
+  TEACHERS_FALLBACK: 'munyaka_staff',
+  TEACHERS_PREREG: 'munyaka_staff_db',
+  LEARNERS: 'munyaka_master_learners',
+  ATTENDANCE: 'munyaka_attendance',
+  ACTIVE_SCHOOL_ID: 'munyaka_active_school_id',
+  SCHOOL_PROFILE: 'munyaka_school_profile',
+  HYDRATION_DONE: 'munyaka_hydration_done',
+  SCHEMA_VERSION: 'munyaka_schema_version'
+};
+
 export const safeParse = (key: string, fallback: any = []) => {
   try {
     const item = localStorage.getItem(key);
