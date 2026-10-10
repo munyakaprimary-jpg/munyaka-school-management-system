@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -43,7 +43,8 @@ import {
   ChevronDown,
   Database,
   Server,
-  Wifi
+  Wifi,
+  FlaskConical as Beaker
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ import { useMobileBackButton } from '@/hooks/useMobileBackButton';
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [rbacVersion, setRbacVersion] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
@@ -59,6 +61,17 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
 
   useMobileBackButton(false, () => {});
+
+  // Listen for munyaka_data_changed event to re-render in real-time when RBAC settings are saved
+  useEffect(() => {
+    const handleDataChanged = () => {
+      setRbacVersion(v => v + 1);
+    };
+    window.addEventListener('munyaka_data_changed', handleDataChanged);
+    return () => {
+      window.removeEventListener('munyaka_data_changed', handleDataChanged);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -74,128 +87,106 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     }
   })();
 
-  const isAuthorizedTeacher =
-    user?.role === 'admin' ||
-    user?.role === 'staff' ||
-    user?.role === 'teacher' ||
-    (user as any)?.assignedClass ||
-    (user as any)?.gradeStream ||
-    ((user as any)?.assignedClasses && (user as any).assignedClasses.length > 0) ||
-    typeof window !== 'undefined' && localStorage.getItem('munyaka_current_user');
-
-  const fullProfile = masterStaff.find((s: any) =>
-    (s.email && sessionUser.email && s.email.toLowerCase() === sessionUser.email.toLowerCase()) ||
-    (s.id && sessionUser.id && s.id === sessionUser.id)
-  ) || sessionUser;
-
-  const userTitle =
-    fullProfile?.designation ||
-    fullProfile?.specificRole ||
-    fullProfile?.roleTitle ||
-    fullProfile?.assignedClass ||
-    fullProfile?.gradeStream ||
-    ((fullProfile as any)?.assignedClasses?.length > 0 ? (fullProfile as any).assignedClasses.join(', ') : null) ||
-    ((sessionUser as any)?.assignedClass) ||
-    ((sessionUser as any)?.gradeStream) ||
-    ((sessionUser as any)?.assignedClasses?.length > 0 ? (sessionUser as any).assignedClasses.join(', ') : null) ||
-    fullProfile?.role ||
-    "Teacher / Staff";
-
-  const isUserAdmin = String(fullProfile?.role || '').toLowerCase() === 'admin' || String(fullProfile?.role || '').toLowerCase() === 'super_admin' || String(fullProfile?.role || '').toLowerCase() === 'owner';
-  const designationLower = String(fullProfile?.designation || fullProfile?.specificRole || '').toLowerCase();
-  const isBursar = designationLower.includes('bursar') || designationLower.includes('finance');
-  const isIctOrDh = designationLower.includes('ict') || designationLower.includes('dh') || designationLower.includes('oi') || designationLower.includes('deputy');
-  const isTeacherOrStaff =
-    (user as any)?.role === 'staff' ||
-    (user as any)?.role === 'teacher' ||
-    (user as any)?.role === 'admin' ||
-    (user as any)?.role === 'head_teacher' ||
-    Boolean((user as any)?.assignedClass) ||
-    Boolean((fullProfile as any)?.assignedClass) ||
-    (fullProfile as any)?.designation === 'Class Teacher' ||
-    Boolean(localStorage.getItem('munyaka_current_user'));
-
-  const displayRole =
-    (user as any)?.assignedClass ||
-    (fullProfile as any)?.assignedClass ||
-    (user as any)?.designation ||
-    (fullProfile as any)?.designation ||
-    ((user as any)?.role === 'staff' || (user as any)?.role === 'teacher' ? 'Class Teacher' : (user as any)?.role);
-
-  const rawNavItems = [
-      { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard, adminOnly: true },
-      { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck, adminOnly: true },
-      { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-      { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi, staffOnly: true },
-      { name: 'Students', path: '/students', icon: Users, teacherOrAdmin: true },
-      { name: 'Staff Registry', path: '/staff-registry', icon: UserCheck, adminOnly: true },
-      { name: 'Games Hub', path: '/games', icon: Gamepad2 },
-      { name: 'Grades & Streams', path: '/grades', icon: Layers, adminOnly: true },
-      { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen, teacherOrAdmin: true },
-      { name: 'Exam Types', path: '/exam-types', icon: Award, teacherOrAdmin: true },
-      { name: 'Timetable', path: '/timetable', icon: Clock },
-      { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, teacherOrAdmin: true },
-      { name: 'Student Attendance', path: '/attendance/students', icon: ClipboardCheck, teacherOrAdmin: true },
-      { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn },
-      { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, teacherOrAdmin: true },
-      { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText, teacherOrAdmin: true },
-      { name: 'Results Analysis', path: '/analysis', icon: BarChart3, teacherOrAdmin: true },
-      { name: 'Digital Hub', path: '/digital-hub', icon: Laptop },
-      { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor, ictOrAdmin: true },
-      { name: 'Library & E-Resources', path: '/library', icon: Library },
-      { name: 'Tools & Inventory', path: '/inventory', icon: Box, ictOrAdmin: true },
-      { name: 'Fees & Finance', path: '/fees', icon: Wallet, bursarOrAdmin: true },
-      { name: 'Report Cards', path: '/reports', icon: FileText, teacherOrAdmin: true },
-      { name: 'Settings', path: '/settings', icon: Settings },
-    ];
-
-  // Read RBAC config if present
-  const rbacConfig = (() => {
+  const currentLoginUser = (() => {
     try {
-      const raw = localStorage.getItem('munyaka_rbac_config');
+      const raw = localStorage.getItem('munyaka_current_user');
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
     }
   })();
 
-  const userRoleKey = String(fullProfile?.designation || fullProfile?.systemRole || user?.role || 'teacher').toUpperCase().replace(/[\s\/]+/g, '_');
+  const fullProfile = currentLoginUser || masterStaff.find((s: any) =>
+    (s.email && sessionUser.email && s.email.toLowerCase() === sessionUser.email.toLowerCase()) ||
+    (s.id && sessionUser.id && s.id === sessionUser.id)
+  ) || sessionUser;
+
+  const isUserAdmin = String(fullProfile?.role || sessionUser?.role || '').toLowerCase() === 'admin' || 
+                      String(fullProfile?.role || '').toLowerCase() === 'super_admin' || 
+                      String(fullProfile?.role || '').toLowerCase() === 'owner' ||
+                      String(fullProfile?.designation || '').toUpperCase() === 'ADMIN';
+
+  // Resolve staff role against the 10 institutional roles:
+  // ['ADMIN', 'HOI', 'DHOI', 'BURSAR', 'Class Teacher', 'Subject Teacher', 'ICT Teacher', 'Library Teacher', 'Lab Teacher', 'Store Keeper']
+  const resolveRoleKey = (profile: any): string => {
+    if (isUserAdmin) return 'ADMIN';
+    const des = String(profile?.designation || profile?.specificRole || profile?.role || '').toUpperCase();
+    if (des.includes('HOI') || des.includes('HEAD OF INSTITUTION') || des.includes('HEADTEACHER')) return 'HOI';
+    if (des.includes('DHOI') || des.includes('DEPUTY')) return 'DHOI';
+    if (des.includes('BURSAR') || des.includes('FINANCE') || des.includes('ACCOUNTANT')) return 'BURSAR';
+    if (des.includes('CLASS') || des.includes('CLASS TEACHER')) return 'CLASS_TEACHER';
+    if (des.includes('SUBJECT') || des.includes('SUBJECT TEACHER')) return 'SUBJECT_TEACHER';
+    if (des.includes('ICT') || des.includes('COMPUTER')) return 'ICT_TEACHER';
+    if (des.includes('LIBRARY') || des.includes('LIBRARIAN')) return 'LIBRARY_TEACHER';
+    if (des.includes('LAB') || des.includes('SCIENCE')) return 'LAB_TEACHER';
+    if (des.includes('STORE') || des.includes('KEEPER')) return 'STORE_KEEPER';
+    if (des.includes('TEACHER')) return 'CLASS_TEACHER';
+    return 'CLASS_TEACHER';
+  };
+
+  const activeRoleKey = resolveRoleKey(fullProfile);
+
+  const displayRole =
+    fullProfile?.assignedClass ||
+    fullProfile?.designation ||
+    sessionUser?.designation ||
+    sessionUser?.role ||
+    'Class Teacher';
+
+  // Raw nav items mapped to permission keys
+  const rawNavItems = [
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard, permissionKey: 'dashboard' },
+    { name: 'Students', path: '/students', icon: Users, permissionKey: 'admissions' },
+    { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, permissionKey: 'attendance' },
+    { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, permissionKey: 'assessments' },
+    { name: 'Fees & Finance', path: '/fees', icon: Wallet, permissionKey: 'fees' },
+    { name: 'Science Lab Inventory', path: '/science-lab', icon: Beaker, permissionKey: 'science_lab' },
+    { name: 'Library & E-Resources', path: '/library', icon: Library, permissionKey: 'library' },
+    { name: 'Tools & Inventory', path: '/inventory', icon: Box, permissionKey: 'stores' },
+    { name: 'Admin Dashboard', path: '/system-management', icon: Settings, permissionKey: 'settings' },
+    { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck, permissionKey: 'settings' },
+    { name: 'Games Hub', path: '/games', icon: Gamepad2, permissionKey: 'dashboard' },
+    { name: 'Grades & Streams', path: '/grades', icon: Layers, permissionKey: 'admissions' },
+    { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen, permissionKey: 'assessments' },
+    { name: 'Exam Types', path: '/exam-types', icon: Award, permissionKey: 'assessments' },
+    { name: 'Timetable', path: '/timetable', icon: Clock, permissionKey: 'dashboard' },
+    { name: 'Student Attendance', path: '/attendance/students', icon: ClipboardCheck, permissionKey: 'attendance' },
+    { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn, permissionKey: 'attendance' },
+    { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText, permissionKey: 'assessments' },
+    { name: 'Results Analysis', path: '/analysis', icon: BarChart3, permissionKey: 'assessments' },
+    { name: 'Digital Hub', path: '/digital-hub', icon: Laptop, permissionKey: 'dashboard' },
+    { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor, permissionKey: 'science_lab' },
+    { name: 'Report Cards', path: '/reports', icon: FileText, permissionKey: 'assessments' },
+    { name: 'Settings', path: '/settings', icon: Settings, permissionKey: 'dashboard' }
+  ];
+
+  // Read RBAC config from munyaka_rbac_config
+  const rbacConfig = (() => {
+    try {
+      const raw = localStorage.getItem('munyaka_rbac_config');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    // Default matrix if not set
+    return {
+      ADMIN: ['dashboard', 'admissions', 'attendance', 'assessments', 'fees', 'science_lab', 'library', 'stores', 'settings'],
+      HOI: ['dashboard', 'admissions', 'attendance', 'assessments', 'fees', 'science_lab', 'library', 'stores', 'settings'],
+      DHOI: ['dashboard', 'admissions', 'attendance', 'assessments', 'fees', 'science_lab', 'library', 'stores'],
+      BURSAR: ['dashboard', 'admissions', 'attendance', 'fees'],
+      CLASS_TEACHER: ['dashboard', 'admissions', 'attendance', 'assessments', 'fees', 'library'],
+      SUBJECT_TEACHER: ['dashboard', 'attendance', 'assessments', 'library'],
+      ICT_TEACHER: ['dashboard', 'attendance', 'science_lab', 'library', 'stores'],
+      LIBRARY_TEACHER: ['dashboard', 'attendance', 'library'],
+      LAB_TEACHER: ['dashboard', 'attendance', 'science_lab'],
+      STORE_KEEPER: ['dashboard', 'stores']
+    };
+  })();
+
+  const allowedModules: string[] = rbacConfig[activeRoleKey] || ['dashboard', 'attendance', 'assessments'];
 
   const navItems = rawNavItems.filter(item => {
     if (isUserAdmin) return true;
-    if (item.adminOnly) return false;
-    if (item.bursarOrAdmin) return isBursar || isUserAdmin;
-    if (item.ictOrAdmin) return isIctOrDh || isUserAdmin;
-
-    if (rbacConfig && typeof rbacConfig === 'object') {
-      const rolePermissions = rbacConfig[userRoleKey] || rbacConfig[user?.role || 'teacher'];
-      if (rolePermissions && Array.isArray(rolePermissions)) {
-        const permKeyMap: Record<string, string> = {
-          'Dashboard': 'dashboard',
-          'Admin Dashboard': 'dashboard',
-          'Students': 'students',
-          'Attendance Management': 'attendance',
-          'Student Attendance': 'attendance',
-          'Enter Marks': 'assessments',
-          'Marked Scripts': 'assessments',
-          'Results Analysis': 'assessments',
-          'Fees & Finance': 'fees',
-          'Library & E-Resources': 'library',
-          'Tools & Inventory': 'stores',
-          'Digital Hub': 'hub',
-          'ICT Lab & Devices': 'ict',
-          'Timetable': 'timetable',
-          'Settings': 'settings'
-        };
-        const pKey = permKeyMap[item.name];
-        if (pKey && rolePermissions.includes(pKey)) {
-          return true;
-        }
-      }
-    }
-
-    if (isTeacherOrStaff) return true;
-    return true;
+    if (item.permissionKey === 'settings' && item.path === '/settings') return true; // Settings is always accessible for profile/preferences
+    return allowedModules.includes(item.permissionKey);
   });
 
   const activePath = location.pathname;

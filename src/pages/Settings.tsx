@@ -178,6 +178,7 @@ export default function Settings() {
       try {
         localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
         localStorage.setItem(RBAC_CONFIG_KEY, JSON.stringify(rbacConfig));
+        window.dispatchEvent(new Event('munyaka_data_changed'));
         showSuccess("All institutional settings & munyaka_rbac_config saved securely!");
       } catch (e) {
         showError("Failed to save settings.");
