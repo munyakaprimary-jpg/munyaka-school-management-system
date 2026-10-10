@@ -65,32 +65,53 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     navigate('/login');
   };
 
-  const navItems = [
-      { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard },
-      { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck },
+  const userTitle =
+    user?.designation ||
+    user?.specificRole ||
+    ((user as any)?.assignedClasses?.length > 0 ? "Class Teacher" : null) ||
+    user?.role ||
+    "Staff";
+
+  const isUserAdmin = String(user?.role || '').toLowerCase() === 'admin' || String(user?.role || '').toLowerCase() === 'super_admin' || String(user?.role || '').toLowerCase() === 'owner';
+  const designationLower = String(user?.designation || user?.specificRole || '').toLowerCase();
+  const isBursar = designationLower.includes('bursar') || designationLower.includes('finance');
+  const isIctOrDh = designationLower.includes('ict') || designationLower.includes('dh') || designationLower.includes('oi') || designationLower.includes('deputy');
+  const isClassOrSubjectTeacher = designationLower.includes('teacher') || ((user as any)?.assignedClasses?.length > 0) || !isUserAdmin && !isBursar && !isIctOrDh;
+
+  const rawNavItems = [
+      { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard, adminOnly: true },
+      { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck, adminOnly: true },
       { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-      { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi },
-      { name: 'Students', path: '/students', icon: Users },
-      { name: 'Staff Registry', path: '/staff-registry', icon: UserCheck },
+      { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi, staffOnly: true },
+      { name: 'Students', path: '/students', icon: Users, teacherOrAdmin: true },
+      { name: 'Staff Registry', path: '/staff-registry', icon: UserCheck, adminOnly: true },
       { name: 'Games Hub', path: '/games', icon: Gamepad2 },
-      { name: 'Grades & Streams', path: '/grades', icon: Layers },
-      { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen },
-      { name: 'Exam Types', path: '/exam-types', icon: Award },
+      { name: 'Grades & Streams', path: '/grades', icon: Layers, adminOnly: true },
+      { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen, teacherOrAdmin: true },
+      { name: 'Exam Types', path: '/exam-types', icon: Award, teacherOrAdmin: true },
       { name: 'Timetable', path: '/timetable', icon: Clock },
-      { name: 'Attendance Management', path: '/attendance', icon: CheckSquare },
-      { name: 'Student Attendance', path: '/attendance/students', icon: ClipboardCheck },
+      { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, teacherOrAdmin: true },
+      { name: 'Student Attendance', path: '/attendance/students', icon: ClipboardCheck, teacherOrAdmin: true },
       { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn },
-      { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet },
-      { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText },
-      { name: 'Results Analysis', path: '/analysis', icon: BarChart3 },
+      { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, teacherOrAdmin: true },
+      { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText, teacherOrAdmin: true },
+      { name: 'Results Analysis', path: '/analysis', icon: BarChart3, teacherOrAdmin: true },
       { name: 'Digital Hub', path: '/digital-hub', icon: Laptop },
-      { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor },
+      { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor, ictOrAdmin: true },
       { name: 'Library & E-Resources', path: '/library', icon: Library },
-      { name: 'Tools & Inventory', path: '/inventory', icon: Box },
-      { name: 'Fees & Finance', path: '/fees', icon: Wallet },
-      { name: 'Report Cards', path: '/reports', icon: FileText },
+      { name: 'Tools & Inventory', path: '/inventory', icon: Box, ictOrAdmin: true },
+      { name: 'Fees & Finance', path: '/fees', icon: Wallet, bursarOrAdmin: true },
+      { name: 'Report Cards', path: '/reports', icon: FileText, teacherOrAdmin: true },
       { name: 'Settings', path: '/settings', icon: Settings },
     ];
+
+  const navItems = rawNavItems.filter(item => {
+    if (isUserAdmin) return true;
+    if (item.adminOnly) return false;
+    if (item.bursarOrAdmin) return isBursar;
+    if (item.ictOrAdmin) return isIctOrDh;
+    return true;
+  });
 
   const activePath = location.pathname;
 
@@ -158,14 +179,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-200 truncate">{user?.name || 'User'}</p>
                   <p className="text-[10px] text-blue-400 font-mono tracking-wide truncate">
-                    {String(
-                      user?.designation ||
-                      user?.specificRole ||
-                      user?.roleTitle ||
-                      ((user as any)?.assignedClasses?.length > 0 ? "Class Teacher" : null) ||
-                      user?.role ||
-                      "Staff"
-                    ).toUpperCase()}
+                    {String(userTitle).toUpperCase()}
                   </p>
                 </div>
               </div>
