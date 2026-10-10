@@ -121,17 +121,10 @@ export default function CentralDataServicePage() {
       const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
       const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
 
-      // Check teaching vs non-teaching staff
-      const teachingStaff = masterStaff.filter((s: any) => {
-        const cat = String(s.staffCategory || s.category || s.type || '').toUpperCase();
-        const role = String(s.role || s.systemRole || '').toLowerCase();
-        if (cat.includes('NON') || role.includes('support') || role.includes('bursar') || role.includes('accountant') || role.includes('librarian') || role.includes('ict') || role.includes('store') || role.includes('driver')) {
-          return false;
-        }
-        return true;
-      }).length;
-
-      const nonTeachingStaff = Math.max(0, masterStaff.length - teachingStaff);
+      // Check teaching vs non-teaching staff strictly from live storage
+      const staff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+      const teachingStaff = staff.filter((s: any) => s.type === 'teaching' || s.role === 'teacher').length;
+      const nonTeachingStaff = staff.filter((s: any) => s.type === 'non-teaching' || s.role === 'support').length;
 
       const attendanceCount = Array.isArray(attendance)
         ? attendance.length

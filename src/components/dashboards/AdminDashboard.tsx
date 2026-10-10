@@ -113,33 +113,16 @@ export const AdminDashboardComponent: React.FC = () => {
   }, []);
 
   const learners = reactiveLearners.length > 0 ? reactiveLearners : getStoredLearners();
-  const staff = localStaff.length > 0 ? localStaff : (CentralDataService.getStaff() || []);
-
-  const teaching = staff.filter((s: any) => {
-    const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
-    if (roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician')) {
-      return false;
-    }
-    return roleStr.includes('teach') || roleStr.includes('head_teacher') || roleStr.includes('senior_teacher') || roleStr.includes('class_teacher') || roleStr.includes('subject_teacher') || roleStr.includes('teacher') || roleStr.includes('head teacher') || roleStr.includes('deputy');
-  });
-
-  const nonTeaching = staff.filter((s: any) => {
-    const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
-    if (roleStr.includes('teach') || roleStr.includes('head_teacher') || roleStr.includes('senior_teacher') || roleStr.includes('class_teacher') || roleStr.includes('subject_teacher') || roleStr.includes('teacher') || roleStr.includes('head teacher') || roleStr.includes('deputy')) {
-      if (roleStr.includes('bursar') || roleStr.includes('librarian') || roleStr.includes('store') || roleStr.includes('accountant') || roleStr.includes('support') || roleStr.includes('secretary') || roleStr.includes('security') || roleStr.includes('catering') || roleStr.includes('ict technician')) {
-        return true;
-      }
-      return false;
-    }
-    return true;
-  });
+  const staff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+  const teachingCount = staff.filter((s: any) => s.type === 'teaching' || s.role === 'teacher').length;
+  const nonTeachingCount = staff.filter((s: any) => s.type === 'non-teaching' || s.role === 'support').length;
 
   const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
   const junior = learners.length - primary.length;
 
   const totalStudents = learners.length;
-  const teachingStaffCount = teaching.length;
-  const nonTeachingStaffCount = nonTeaching.length;
+  const teachingStaffCount = teachingCount;
+  const nonTeachingStaffCount = nonTeachingCount;
   const primaryCount = primary.length;
   const juniorCount = junior;
 
