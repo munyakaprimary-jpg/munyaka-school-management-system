@@ -164,7 +164,7 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     if (s && (s.id || s.phone || s.name || s.staffId || s.email)) {
       const key = String(s.email || s.id || s.phone || s.name).trim().toLowerCase();
       if (!map.has(key)) {
-        // Normalize code if missing or numeric
+        // Normalize code if missing or numeric exclusively to MUN-XXXX
         let code = s.accessCode || s.tempAccessCode || s.password || s.access_key || s.ref;
         if (!code || /^\d+$/.test(String(code).trim())) {
           const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -354,14 +354,10 @@ export const verifyStaffLogin = (
   // 5. Validate access code if provided
   if (inputPassword) {
     const sAny = matched as any;
-    const storedAccessCode = sAny.accessCode || sAny.tempAccessCode || sAny.password || '';
-    const storedTempCode = sAny.tempAccessCode || '';
-    const storedPassword = sAny.password || '';
+    const cleanInputCode = (inputPassword || '').trim().replace(/\s+/g, '').toUpperCase();
+    const cleanStoredCode = (sAny.accessCode || sAny.tempAccessCode || sAny.password || '').toString().trim().replace(/\s+/g, '').toUpperCase();
 
-    const cleanInput = (inputPassword || '').trim().replace(/\s+/g, '').toUpperCase();
-    const cleanStored = (storedAccessCode || storedTempCode || storedPassword || '').trim().replace(/\s+/g, '').toUpperCase();
-
-    if (cleanInput !== cleanStored && cleanInput !== storedAccessCode.toUpperCase() && cleanInput !== storedTempCode.toUpperCase() && cleanInput !== storedPassword.toUpperCase()) {
+    if (cleanInputCode !== cleanStoredCode) {
       return {
         success: false,
         error: 'Invalid access code. Please check your assigned MUN-XXXX access code.'

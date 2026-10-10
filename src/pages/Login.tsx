@@ -297,7 +297,7 @@ const Login: React.FC = () => {
     setStaffAuthError('');
 
     const cleanInput = (staffId || '').trim().toLowerCase();
-    if (!cleanInput.endsWith('@munyaka.sc.ke')) {
+    if (!cleanInput.includes('@')) {
       const err = 'Please enter your full school email address ending with @munyaka.sc.ke.';
       setStaffAuthError(err);
       showError(err);
@@ -319,7 +319,7 @@ const Login: React.FC = () => {
     const userData = {
       id: matched.id || matched.staffId || `staff-${Date.now()}`,
       name: matched.name || 'Staff Member',
-      email: matched.email || (staffId.includes('@') ? staffId.trim() : `${staffId.trim()}@munyaka.sc.ke`),
+      email: matched.email || cleanInput,
       phone: matched.phone || '',
       role: matched.systemRole || (matched as any).role || 'staff',
       staff_id: matched.staffId || '',
@@ -329,7 +329,7 @@ const Login: React.FC = () => {
         .join('')
         .substring(0, 2)
         .toUpperCase(),
-      accessCode: (matched as any).accessCode || matched.tempAccessCode || '',
+      accessCode: matched.accessCode || matched.tempAccessCode || matched.password || '',
       assignedClass: matched.assignedGrade,
       assignedStream: matched.assignedStream,
       grade: matched.assignedGrade,
