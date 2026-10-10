@@ -164,6 +164,22 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     if (s && (s.id || s.phone || s.name || s.staffId || s.email)) {
       const key = String(s.email || s.id || s.phone || s.name).trim().toLowerCase();
       if (!map.has(key)) {
+        // Normalize code if missing or numeric
+        let code = s.accessCode || s.tempAccessCode || s.access_key || s.ref;
+        if (!code || /^\d+$/.test(String(code).trim())) {
+          const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+          let randomPart = '';
+          for (let i = 0; i < 4; i++) {
+            randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          code = `MUN-${randomPart}`;
+          s.accessCode = code;
+          s.tempAccessCode = code;
+        } else if (!String(code).startsWith('MUN-')) {
+          code = `MUN-${String(code).replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 4)}`;
+          s.accessCode = code;
+          s.tempAccessCode = code;
+        }
         map.set(key, s);
       }
     }
@@ -326,13 +342,6 @@ export const verifyStaffLogin = (
 
   // 4. Find staff record by exact full email match
   const foundRecord = staffList.find(s => (s.email || '').toLowerCase().trim() === cleanEmail);
-  if (foundRecord) {
-    console.log('--- STAFF AUTH DEBUG ---');
-    console.log('Record Found:', foundRecord);
-    console.log('Stored accessCode:', foundRecord.accessCode);
-    console.log('Stored tempAccessCode:', foundRecord.tempAccessCode);
-    console.log('Entered Password/Code:', inputPassword);
-  }
 
   const matched = foundRecord;
 
@@ -353,19 +362,20 @@ export const verifyStaffLogin = (
     const validCode = (storedAccessCode || storedTempCode || storedPassword || '').toString().replace(/\s+/g, '').toUpperCase();
     const submittedCode = (inputPassword || '').toString().replace(/\s+/g, '').toUpperCase();
 
-    console.log('--- SCREEN DIAGNOSTIC ---', {
-      emailMatched: 'YES',
-      storedAccessCode,
-      storedTempCode,
-      storedPassword,
-      submittedCode,
-      validCode
-    });
+    // Check if stored code is legacy numeric (e.g. 311020) and normalize if needed
+    const isLegacyNumeric = /^\d+$/.test(validCode);
+    const isValidNumericMatch = isLegacyNumeric && submittedCode === validCode;
 
-    if (submittedCode !== validCode && submittedCode !== storedAccessCode.toUpperCase() && submittedCode !== storedTempCode.toUpperCase() && submittedCode !== storedPassword.toUpperCase()) {
+    if (
+      submittedCode !== validCode &&
+      submittedCode !== storedAccessCode.toUpperCase() &&
+      submittedCode !== storedTempCode.toUpperCase() &&
+      submittedCode !== storedPassword.toUpperCase() &&
+      !isValidNumericMatch
+    ) {
       return {
         success: false,
-        error: `Invalid access code. Stored was [${validCode || 'NONE'}], you entered [${submittedCode}].`
+        error: 'Invalid access code. Please check your assigned MUN-XXXX access code.'
       };
     }
   }

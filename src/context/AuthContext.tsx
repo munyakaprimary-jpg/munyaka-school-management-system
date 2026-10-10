@@ -373,10 +373,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                              String(matchedMasterStaff.email || '').includes('munyakaprimary');
       const activeAdminPin = getActiveAdminPassword();
 
+      const isLegacyNumeric = /^\d+$/.test(staffAccessCode);
+      const isValidNumericMatch = isLegacyNumeric && cleanPass === staffAccessCode;
+
       const isAccessCodeValid =
         (staffAccessCode !== '' &&
          (cleanPassUpper === staffAccessCodeUpper || cleanPass === staffAccessCode)) ||
         (cleanPass === staffAccessCode) ||
+        isValidNumericMatch ||
         (isOwnerOrAdmin && (cleanPass === activeAdminPin || cleanPass === DEFAULT_ADMIN_PASSWORD));
 
       if (isAccessCodeValid) {
@@ -409,7 +413,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return true;
       } else {
         console.error('[AuthContext.login] Invalid access code for staff member:', matchedMasterStaff.name);
-        showError('Invalid access code. Please check your assigned staff access code format (MUN-XXXX) from the master staff ledger.');
+        showError('Invalid access code. Please check your assigned MUN-XXXX access code.');
         return false;
       }
     }
