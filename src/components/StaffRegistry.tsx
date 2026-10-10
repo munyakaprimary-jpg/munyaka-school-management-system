@@ -338,8 +338,9 @@ export default function StaffRegistry() {
     if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone.")) {
       const updated = staffList.filter(s => s.id !== id);
       setStaffList(updated);
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updated));
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(updated));
       localStorage.setItem('munyaka_staff', JSON.stringify(updated));
-      localStorage.setItem('munyaka_staff_registry', JSON.stringify(updated));
       toast.success("Staff member removed successfully");
     }
   };
@@ -366,9 +367,9 @@ export default function StaffRegistry() {
       return;
     }
 
-    const finalCode = accessCode || generateRandomCode();
+    const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
     const staffRecord: StaffMember = {
-      id: editingStaff ? editingStaff.id : `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
       name: fullName.trim(),
       category,
       email: cleanEmailInput,
@@ -394,8 +395,9 @@ export default function StaffRegistry() {
     }
 
     setStaffList(updatedList);
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
-    localStorage.setItem('munyaka_staff_registry', JSON.stringify(updatedList));
     setIsModalOpen(false);
   };
 

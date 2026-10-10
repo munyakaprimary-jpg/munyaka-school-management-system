@@ -296,48 +296,37 @@ const Login: React.FC = () => {
     setIsStaffVerifying(true);
     setStaffAuthError('');
 
-    const cleanInputEmail = String(staffId || '').trim().toLowerCase();
-    const cleanInputCode = String(staffPassword || '').trim().replace(/\s+/g, '').toUpperCase();
+    const inputEmail = String(staffId || '').trim().toLowerCase();
+    const inputCode = String(staffPassword || '').trim().replace(/\s+/g, '').toUpperCase();
 
-    let staffList: any[] = [];
-    try {
-      staffList = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
-    } catch {
-      staffList = [];
-    }
+    const masterList = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+    const directoryList = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
+    const combinedStaff = [...masterList, ...directoryList];
 
-    const matched = staffList.find((s: any) => (s.email || '').trim().toLowerCase() === cleanInputEmail);
+    const staffMember = combinedStaff.find(s => (s.email || '').trim().toLowerCase() === inputEmail);
 
-    if (!matched) {
-      const err = 'Staff account not found.';
+    if (!staffMember) {
+      const err = "Staff account not found.";
       setStaffAuthError(err);
       showError(err);
       setIsStaffVerifying(false);
       return;
     }
 
-    const storedCode = (matched.accessCode || '').trim().replace(/\s+/g, '').toUpperCase();
+    const validCode = (staffMember.accessCode || staffMember.code || '').trim().replace(/\s+/g, '').toUpperCase();
 
-    if (cleanInputCode !== storedCode) {
-      const err = 'Invalid access code. Please check your assigned MUN-XXXX access code.';
+    if (inputCode === validCode) {
+      localStorage.setItem('munyaka_current_user', JSON.stringify(staffMember));
+      localStorage.setItem('munyaka_staff_session', JSON.stringify(staffMember));
+      showSuccess(`Welcome back, ${staffMember.name || 'Staff'}!`);
+      navigate('/dashboard', { replace: true });
+    } else {
+      const err = "Invalid access code.";
       setStaffAuthError(err);
       showError(err);
-      setIsStaffVerifying(false);
-      return;
     }
-
-    const userData = {
-      id: matched.id || `staff-${Date.now()}`,
-      name: matched.name || 'Staff Member',
-      email: matched.email || cleanInputEmail,
-      phone: matched.phone || '',
-      role: matched.role || 'staff',
-      staff_id: matched.staffId || matched.id || '',
-      avatar: (matched.name || 'U')
-        .split(' ')
-        .map((n: string) => n[0] || '')
-        .join('')
-        .substring(0, 2)
+    setIsStaffVerifying(false);
+  };
         .toUpperCase(),
       accessCode: storedCode,
       is_active: true
