@@ -359,9 +359,7 @@ export default function StaffRegistry() {
     const cleanEmailInput = (email || `${fullName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
     const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
     
-    const currentStaff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || '[]');
-    
-    const staffRecord: StaffMember = {
+    const newStaff = {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
       name: fullName.trim(),
       category: category || 'Teacher',
@@ -383,27 +381,43 @@ export default function StaffRegistry() {
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
-    let updatedList: StaffMember[];
+    const existingStaff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || '[]');
+    
+    // Deduplicate by email or ID before pushing
+    const isDuplicate = existingStaff.some((s: any) =>
+      s.email?.toLowerCase() === newStaff.email?.toLowerCase() || (editingStaff && s.id === editingStaff.id)
+    );
+
+    let updatedList;
     if (editingStaff) {
-      updatedList = currentStaff.map((s: any) => s.id === editingStaff.id ? staffRecord : s);
+      updatedList = existingStaff.map((s: any) =>
+        s.id === editingStaff.id || s.email?.toLowerCase() === newStaff.email?.toLowerCase() ? { ...s, ...newStaff } : s
+      );
       toast.success("Staff profile updated successfully");
+    } else if (isDuplicate) {
+      updatedList = existingStaff.map((s: any) =>
+        s.email?.toLowerCase() === newStaff.email?.toLowerCase() ? { ...s, ...newStaff } : s
+      );
+      toast.success("Staff member updated successfully");
     } else {
-      updatedList = [staffRecord, ...currentStaff];
+      updatedList = [...existingStaff, newStaff];
       toast.success("Staff member registered successfully");
     }
 
-    setStaffList(updatedList);
-    
-    // Explicitly write to all master storage keys and trigger events
+    // Save updated array to all target master keys
     localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff_db', JSON.stringify(updatedList));
 
-    window.dispatchEvent(new CustomEvent('munyaka_staff_updated', { detail: { count: updatedList.length } }));
-    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_master_staff_list' } }));
+    setStaffList(updatedList);
 
-    console.log('--- NEW STAFF SUCCESSFULLY SAVED ---', staffRecord);
+    // Dispatch window event so Central Data and Dashboard re-count immediately
+    window.dispatchEvent(new Event('munyaka_data_changed'));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_master_staff_list' } }));
+    window.dispatchEvent(new Event('staff-changed'));
+
+    console.log('--- NEW STAFF SUCCESSFULLY SAVED ---', newStaff);
 
     setIsModalOpen(false);
   };

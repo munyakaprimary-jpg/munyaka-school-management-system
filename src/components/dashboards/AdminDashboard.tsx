@@ -101,12 +101,14 @@ export const AdminDashboardComponent: React.FC = () => {
     handleSync();
     window.addEventListener('storage', handleSync);
     window.addEventListener('munyaka:data-changed', handleSync);
+    window.addEventListener('munyaka_data_changed', handleSync);
     window.addEventListener('munyaka_learners_updated', handleSync);
     window.addEventListener('staff-changed', handleSync);
 
     return () => {
       window.removeEventListener('storage', handleSync);
       window.removeEventListener('munyaka:data-changed', handleSync);
+      window.removeEventListener('munyaka_data_changed', handleSync);
       window.removeEventListener('munyaka_learners_updated', handleSync);
       window.removeEventListener('staff-changed', handleSync);
     };
