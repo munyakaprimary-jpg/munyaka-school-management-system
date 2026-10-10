@@ -65,7 +65,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     navigate('/login');
   };
 
-  const sessionUser = user || {};
+  const sessionUser = (user || {}) as any;
   const masterStaff = (() => {
     try {
       return JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
@@ -106,10 +106,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const isBursar = designationLower.includes('bursar') || designationLower.includes('finance');
   const isIctOrDh = designationLower.includes('ict') || designationLower.includes('dh') || designationLower.includes('oi') || designationLower.includes('deputy');
   const isTeacherOrStaff =
-    user?.role === 'staff' ||
-    user?.role === 'teacher' ||
-    user?.role === 'admin' ||
-    user?.role === 'head_teacher' ||
+    (user as any)?.role === 'staff' ||
+    (user as any)?.role === 'teacher' ||
+    (user as any)?.role === 'admin' ||
+    (user as any)?.role === 'head_teacher' ||
     Boolean((user as any)?.assignedClass) ||
     Boolean((fullProfile as any)?.assignedClass) ||
     (fullProfile as any)?.designation === 'Class Teacher' ||

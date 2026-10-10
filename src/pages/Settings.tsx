@@ -28,7 +28,7 @@ import {
 import { exportAllData, parseAndImportBackup } from '@/utils/storage';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
-const RBAC_STORAGE_KEY = 'munyaka_rbac_permissions';
+const RBAC_CONFIG_KEY = 'munyaka_rbac_config';
 
 interface SystemSettings {
   schoolName: string;
@@ -72,39 +72,50 @@ const DEFAULT_SETTINGS: SystemSettings = {
   encryptionEnabled: true,
 };
 
-const SYSTEM_ROLES = [
-  { id: 'admin', name: 'Administrators', description: 'Full access to institutional control center, staff records, and financial ledgers.' },
-  { id: 'teacher', name: 'Teachers', description: 'Access to mark entry, student attendance, lesson plans, and CBC assessments.' },
-  { id: 'bursar', name: 'Bursars', description: 'Access to fee collections, payment records, and financial summaries.' },
-  { id: 'librarian', name: 'Librarians', description: 'Access to library catalog, book checkouts, and e-resource inventories.' },
-  { id: 'ict_technician', name: 'ICT Technicians', description: 'Access to lab devices, digital literacy hubs, and network monitoring.' },
-  { id: 'developer', name: 'Platform Developers', description: 'Full access to multi-tenant configurations, schema migrations, and raw database backups.' }
+// 10 Institutional Roles as requested
+export const INSTITUTIONAL_ROLES = [
+  { id: 'ADMIN', name: 'Administrators', badge: 'ADMIN', description: 'Full system privileges and configuration access.' },
+  { id: 'HOI', name: 'Head of Institution', badge: 'HOI', description: 'Headteacher and institutional leadership overview.' },
+  { id: 'DHOI', name: 'Deputy Head', badge: 'DHOI', description: 'Deputy headteacher academic and operational support.' },
+  { id: 'BURSAR', name: 'Bursar / Finance', badge: 'BURSAR', description: 'Fee management, collections, and financial ledgers.' },
+  { id: 'CLASS_TEACHER', name: 'Class Teachers', badge: 'Class Teacher', description: 'Class attendance, learner profiles, and CBC assessments.' },
+  { id: 'SUBJECT_TEACHER', name: 'Subject Teachers', badge: 'Subject Teacher', description: 'Subject grading and learning area management.' },
+  { id: 'ICT_TEACHER', name: 'ICT Teacher', badge: 'ICT Teacher', description: 'ICT lab devices, digital hub, and computer resources.' },
+  { id: 'LIBRARY_TEACHER', name: 'Library Teacher', badge: 'Library Teacher', description: 'Library ledger, book allocation, and cataloging.' },
+  { id: 'LAB_TEACHER', name: 'Lab Teacher', badge: 'Lab Teacher', description: 'Science lab inventory, chemicals, and apparatus.' },
+  { id: 'STORE_KEEPER', name: 'Store Keeper', badge: 'Store Keeper', description: 'Stores, assets, inventory, and supply chain.' }
 ];
 
-const MODULE_PERMISSIONS = [
+// Granular Permission Modules
+export const GRANULAR_MODULES = [
   { id: 'dashboard', name: 'Dashboard & Overview' },
   { id: 'admissions', name: 'Student Admissions & Profiles' },
-  { id: 'academics', name: 'Timetable & CBC Assessments' },
-  { id: 'finance', name: 'Fees & Financial Ledgers' },
-  { id: 'library', name: 'Library & E-Resources' },
-  { id: 'ict_labs', name: 'ICT Lab & Hardware Inventory' },
-  { id: 'communication', name: 'SMS & Email Communication' },
-  { id: 'settings', name: 'System Settings & RBAC' }
+  { id: 'attendance', name: 'Roll Call / Attendance' },
+  { id: 'assessments', name: 'CBC Marks & Assessment' },
+  { id: 'fees', name: 'Fee Management' }, // Read/Write for BURSAR/ADMIN; Read-Only for Class Teachers
+  { id: 'science_lab', name: 'Science Lab Inventory' },
+  { id: 'library', name: 'Library Ledger' },
+  { id: 'stores', name: 'Stores & Assets' },
+  { id: 'settings', name: 'System Settings & Central Backups' } // ADMIN only
 ];
 
-const DEFAULT_RBAC_MATRIX: Record<string, Record<string, boolean>> = {
-  admin: { dashboard: true, admissions: true, academics: true, finance: true, library: true, ict_labs: true, communication: true, settings: true },
-  teacher: { dashboard: true, admissions: false, academics: true, finance: false, library: true, ict_labs: true, communication: true, settings: false },
-  bursar: { dashboard: true, admissions: true, academics: false, finance: true, library: false, ict_labs: false, communication: true, settings: false },
-  librarian: { dashboard: true, admissions: false, academics: false, finance: false, library: true, ict_labs: false, communication: false, settings: false },
-  ict_technician: { dashboard: true, admissions: false, academics: false, finance: false, library: false, ict_labs: true, communication: false, settings: false },
-  developer: { dashboard: true, admissions: true, academics: true, finance: true, library: true, ict_labs: true, communication: true, settings: true }
+const DEFAULT_RBAC_CONFIG: Record<string, string[]> = {
+  ADMIN: ['dashboard', 'admissions', 'attendance', 'assessments', 'fees', 'science_lab', 'library', 'stores', 'settings'],
+  HOI: ['dashboard', 'admissions', 'attendance', 'assessments', 'fees', 'science_lab', 'library', 'stores', 'settings'],
+  DHOI: ['dashboard', 'admissions', 'attendance', 'assessments', 'fees', 'science_lab', 'library', 'stores'],
+  BURSAR: ['dashboard', 'admissions', 'attendance', 'fees'],
+  CLASS_TEACHER: ['dashboard', 'admissions', 'attendance', 'assessments', 'fees', 'library'], // Fee Management read-only for Class Teachers
+  SUBJECT_TEACHER: ['dashboard', 'attendance', 'assessments', 'library'],
+  ICT_TEACHER: ['dashboard', 'attendance', 'science_lab', 'library', 'stores'],
+  LIBRARY_TEACHER: ['dashboard', 'attendance', 'library'],
+  LAB_TEACHER: ['dashboard', 'attendance', 'science_lab'],
+  STORE_KEEPER: ['dashboard', 'stores']
 };
 
 export default function Settings() {
   const [settings, setSettings] = useState<SystemSettings>(() => {
     try {
-      const central = CentralDataService.getData<SystemSettings>(SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS);
+      const central = CentralDataService.safeParse(SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS);
       if (central && typeof central === 'object') return { ...DEFAULT_SETTINGS, ...central };
       const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
       if (saved) {
@@ -115,58 +126,59 @@ export default function Settings() {
     return DEFAULT_SETTINGS;
   });
 
-  const [rbacMatrix, setRbacMatrix] = useState<Record<string, Record<string, boolean>>>(() => {
+  const [rbacConfig, setRbacConfig] = useState<Record<string, string[]>>(() => {
     try {
-      const central = CentralDataService.getData<Record<string, Record<string, boolean>>>(RBAC_STORAGE_KEY, {});
+      const central = CentralDataService.safeParse(RBAC_CONFIG_KEY, {});
       if (central && typeof central === 'object' && Object.keys(central).length > 0) return central;
-      const saved = localStorage.getItem(RBAC_STORAGE_KEY);
+      const saved = localStorage.getItem(RBAC_CONFIG_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') return parsed;
       }
     } catch {}
-    return DEFAULT_RBAC_MATRIX;
+    return DEFAULT_RBAC_CONFIG;
   });
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isResetAuthOpen, setIsResetAuthOpen] = useState(false);
-  const [resetAdminPassword, setResetAdminPassword] = useState('');
-  const [resetAuthError, setResetAuthError] = useState('');
-  const [isVerifyingReset, setIsVerifyingReset] = useState(false);
 
   useEffect(() => {
     try {
-      CentralDataService.setData(SETTINGS_STORAGE_KEY, settings);
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
     } catch {}
   }, [settings]);
 
   useEffect(() => {
     try {
-      CentralDataService.setData(RBAC_STORAGE_KEY, rbacMatrix);
-      localStorage.setItem(RBAC_STORAGE_KEY, JSON.stringify(rbacMatrix));
+      localStorage.setItem(RBAC_CONFIG_KEY, JSON.stringify(rbacConfig));
     } catch {}
-  }, [rbacMatrix]);
+  }, [rbacConfig]);
 
-  const handlePermissionToggle = (roleId: string, moduleId: string) => {
-    setRbacMatrix(prev => ({
-      ...prev,
-      [roleId]: {
-        ...(prev[roleId] || {}),
-        [moduleId]: !prev[roleId]?.[moduleId]
-      }
-    }));
+  const handleModuleToggle = (roleId: string, moduleId: string) => {
+    // Enforce ADMIN only for 'settings'
+    if (moduleId === 'settings' && roleId !== 'ADMIN') {
+      showError("System Settings & Central Backups are restricted to Administrators only.");
+      return;
+    }
+    setRbacConfig(prev => {
+      const currentModules = prev[roleId] || [];
+      const hasModule = currentModules.includes(moduleId);
+      const updated = hasModule
+        ? currentModules.filter(m => m !== moduleId)
+        : [...currentModules, moduleId];
+      return {
+        ...prev,
+        [roleId]: updated
+      };
+    });
   };
 
   const handleSave = () => {
     setIsSaving(true);
     setTimeout(() => {
       try {
-        CentralDataService.setData(SETTINGS_STORAGE_KEY, settings);
-        CentralDataService.setData(RBAC_STORAGE_KEY, rbacMatrix);
         localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-        localStorage.setItem(RBAC_STORAGE_KEY, JSON.stringify(rbacMatrix));
-        showSuccess("All system settings and RBAC permissions saved securely!");
+        localStorage.setItem(RBAC_CONFIG_KEY, JSON.stringify(rbacConfig));
+        showSuccess("All institutional settings & munyaka_rbac_config saved securely!");
       } catch (e) {
         showError("Failed to save settings.");
       }
@@ -185,7 +197,7 @@ export default function Settings() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">System Settings & Preferences</h1>
-          <p className="text-indigo-200 text-sm mt-1">Manage institutional profile, academic setup, RBAC roles, security & auth, and database backups.</p>
+          <p className="text-indigo-200 text-sm mt-1">Manage institutional profile, 10-role RBAC matrix, security & auth, and database backups.</p>
         </div>
         <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg gap-2 shrink-0">
           {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -193,7 +205,7 @@ export default function Settings() {
         </Button>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
+      <Tabs defaultValue="rbac" className="w-full">
         {/* Scrollable sub-navigation container */}
         <div className="w-full overflow-x-auto pb-2 mb-6">
           <TabsList className="bg-white p-1.5 rounded-2xl shadow-sm border h-16 inline-flex min-w-max gap-1">
@@ -204,7 +216,7 @@ export default function Settings() {
               <Lock size={14} /> Academic Setup
             </TabsTrigger>
             <TabsTrigger value="rbac" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
-              <Users size={14} /> RBAC Roles
+              <Users size={14} /> RBAC Roles Matrix (10 Roles)
             </TabsTrigger>
             <TabsTrigger value="security" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
               <Shield size={14} /> Security & Auth
@@ -318,52 +330,90 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* 3. RBAC Roles & Permissions Matrix */}
+        {/* 3. RBAC Roles & Permissions Matrix (All 10 Institutional Roles) */}
         <TabsContent value="rbac" className="space-y-6">
           <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b">
-              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Users className="text-indigo-600" size={22} /> RBAC Roles & Granular Permissions Matrix
-              </CardTitle>
-              <CardDescription>Configure module access permissions across all institutional system roles.</CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <Users className="text-indigo-600" size={22} /> 10 Institutional Roles & Granular Permission Matrix
+                  </CardTitle>
+                  <CardDescription>Configure checkable module pills per role. Changes save to <code className="font-mono text-xs text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">munyaka_rbac_config</code>.</CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="rounded-xl border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold"
+                  onClick={() => {
+                    setRbacConfig(DEFAULT_RBAC_CONFIG);
+                    showSuccess("Reset RBAC Matrix to default configuration.");
+                  }}
+                >
+                  Reset Defaults
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="px-0 pt-6 space-y-6">
               <div className="space-y-6">
-                {SYSTEM_ROLES.map(role => (
-                  <div key={role.id} className="p-5 bg-slate-50/80 rounded-2xl border space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-slate-900 text-base">{role.name}</h4>
-                          <Badge variant="outline" className="font-mono text-xs uppercase">{role.id}</Badge>
+                {INSTITUTIONAL_ROLES.map(role => {
+                  const activeModules = rbacConfig[role.id] || [];
+                  const isAdminRole = role.id === 'ADMIN';
+
+                  return (
+                    <div key={role.id} className="p-5 bg-slate-50/80 rounded-2xl border space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2.5">
+                            <h4 className="font-bold text-slate-900 text-base">{role.name}</h4>
+                            <Badge className="font-mono text-xs uppercase bg-indigo-600 text-white">{role.badge}</Badge>
+                            {isAdminRole && <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Full Access</span>}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-2">
+                        {GRANULAR_MODULES.map(mod => {
+                          const isAllowed = activeModules.includes(mod.id);
+                          const isSettingsMod = mod.id === 'settings';
+                          const isFeeMod = mod.id === 'fees';
+
+                          return (
+                            <div 
+                              key={mod.id} 
+                              onClick={() => {
+                                if (isAdminRole && isSettingsMod) return; // Admin always has settings
+                                handleModuleToggle(role.id, mod.id);
+                              }}
+                              className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                                isAllowed 
+                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm' 
+                                  : 'bg-white border-slate-200 text-slate-400 opacity-60 hover:opacity-100'
+                              } ${isAdminRole && isSettingsMod ? 'cursor-not-allowed opacity-100 bg-indigo-100/70 border-indigo-300' : 'cursor-pointer'}`}
+                            >
+                              <div className="flex flex-col min-w-0 pr-2">
+                                <span className="text-xs font-bold truncate">{mod.name}</span>
+                                {isFeeMod && role.id === 'CLASS_TEACHER' && (
+                                  <span className="text-[10px] text-amber-600 font-semibold mt-0.5">Read-Only</span>
+                                )}
+                                {isFeeMod && (role.id === 'BURSAR' || role.id === 'ADMIN' || role.id === 'HOI') && (
+                                  <span className="text-[10px] text-emerald-600 font-semibold mt-0.5">Read/Write</span>
+                                )}
+                                {isSettingsMod && role.id === 'ADMIN' && (
+                                  <span className="text-[10px] text-indigo-600 font-semibold mt-0.5">ADMIN Only</span>
+                                )}
+                              </div>
+                              <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isAllowed ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                                {isAllowed ? <Check size={12} /> : <X size={12} />}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                      {MODULE_PERMISSIONS.map(mod => {
-                        const isAllowed = Boolean(rbacMatrix[role.id]?.[mod.id]);
-                        return (
-                          <div 
-                            key={mod.id} 
-                            onClick={() => handlePermissionToggle(role.id, mod.id)}
-                            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                              isAllowed 
-                                ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm' 
-                                : 'bg-white border-slate-200 text-slate-400 opacity-60 hover:opacity-100'
-                            }`}
-                          >
-                            <span className="text-xs font-bold truncate">{mod.name}</span>
-                            <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isAllowed ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                              {isAllowed ? <Check size={12} /> : <X size={12} />}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
