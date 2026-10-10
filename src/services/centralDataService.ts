@@ -1,10 +1,10 @@
 export const STORAGE_KEYS = {
-  STAFF: 'munyaka_staff_master_v1',
-  TEACHERS: 'munyaka_staff_master_v1',
+  STAFF: 'munyaka_master_staff_list',
+  TEACHERS: 'munyaka_master_staff_list',
   TEACHERS_LEGACY: 'munyaka_staff_directory',
-  TEACHERS_FALLBACK: 'munyaka_master_staff_list',
-  TEACHERS_PREREG: 'munyaka_staff',
-  LEARNERS: 'munyaka_students',
+  TEACHERS_FALLBACK: 'munyaka_staff',
+  TEACHERS_PREREG: 'munyaka_staff_db',
+  LEARNERS: 'munyaka_master_learners',
   ATTENDANCE: 'munyaka_attendance',
   ACTIVE_SCHOOL_ID: 'munyaka_active_school_id',
   SCHOOL_PROFILE: 'munyaka_school_profile',
@@ -14,33 +14,9 @@ export const STORAGE_KEYS = {
 
 export const getLearners = () => {
   try {
-    const keys = [
-      'munyaka_master_learners',
-      'munyaka_learners',
-      'munyaka_students',
-      'school_learners_data',
-      'munyaka_learners_db',
-      'school_learners_master',
-      'munyaka_students_db'
-    ];
-    let combined: any[] = [];
-    for (const k of keys) {
-      const raw = localStorage.getItem(k);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            combined = [...combined, ...parsed];
-          }
-        } catch {}
-      }
-    }
-    const map = new Map();
-    combined.forEach(student => {
-      const key = student.admissionNumber || student.id || student.assessmentNumber || student.name;
-      if (key) map.set(String(key).trim().toLowerCase(), student);
-    });
-    return Array.from(map.values());
+    const raw = localStorage.getItem('munyaka_master_learners') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]';
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -48,31 +24,9 @@ export const getLearners = () => {
 
 export const getStaff = () => {
   try {
-    const keys = [
-      'munyaka_master_staff_list',
-      'munyaka_staff_directory',
-      'munyaka_staff',
-      'munyaka_staff_db',
-      'munyaka_staff_master_v1'
-    ];
-    let combined: any[] = [];
-    for (const k of keys) {
-      const raw = localStorage.getItem(k);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            combined = [...combined, ...parsed];
-          }
-        } catch {}
-      }
-    }
-    const map = new Map();
-    combined.forEach(staff => {
-      const key = staff.id || staff.email || staff.tscNumber || staff.name;
-      if (key) map.set(String(key).trim().toLowerCase(), staff);
-    });
-    return Array.from(map.values());
+    const raw = localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory') || '[]';
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -124,8 +78,8 @@ export const CentralDataService = {
     } catch (e) {
       console.error('Error computing system stats:', e);
       return {
-        learners: 31,
-        teachingStaff: 2,
+        learners: 0,
+        teachingStaff: 0,
         nonTeachingStaff: 0,
         attendance: 0,
         feeRecords: 0,

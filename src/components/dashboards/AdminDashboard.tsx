@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CentralDataService, getMasterData } from '../../services/centralDataService';
+import { CentralDataService, getMasterData, getLearners, getStaff } from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { useCentralData } from '../../hooks/useCentralData';
@@ -116,11 +116,11 @@ export const AdminDashboardComponent: React.FC = () => {
 
   const sysStats = CentralDataService.getSystemStats();
   const masterData = getMasterData();
-  const actualLearners = masterData.learners.length > 0 ? masterData.learners : getStoredLearners();
+  const actualLearners = masterData.learners.length > 0 ? masterData.learners : getLearners();
   const learners = actualLearners;
 
-  const staffSource = localStaff.length > 0 ? localStaff : (masterData.staff.length > 0 ? masterData.staff : []);
-  const teachingStaffCount = staffSource.length > 0 ? staffSource.length : (masterData.totalStaff > 0 ? masterData.totalStaff : sysStats.teachingStaff);
+  const staffSource = localStaff.length > 0 ? localStaff : getStaff();
+  const teachingStaffCount = staffSource.length > 0 ? staffSource.length : masterData.totalStaff;
   const nonTeachingStaffCount = sysStats.nonTeachingStaff;
 
   const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
