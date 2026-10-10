@@ -297,48 +297,63 @@ export const bulkActivateStaffMaster = (ids: string[]): void => {
   }
 };
 
-export const verifyStaffLogin = (identifier: string, pass: string): { success: boolean; user?: MasterStaffRecord; error?: string } => {
-  const staffList = getStaffMaster();
-  const trimmedId = (identifier || '').trim().toLowerCase();
-  const trimmedPass = (pass || '').trim();
-  const cleanInput = trimmedId.includes('@') ? trimmedId : `${trimmedId}@munyaka.sc.ke`;
-  const normalizedPass = trimmedPass.toUpperCase();
+export const verifyStaffLogin = (
+  identifier: string,
+  inputPassword?: string
+): { success: boolean; staff?: MasterStaffRecord; error?: string } => {
+  // 1. Sanitize inputs
+  const cleanIdentifier = (identifier || '').replace(/\s+/g, '').toLowerCase();
+  const cleanPassword = (inputPassword || '').replace(/\s+/g, '').toUpperCase();
 
+  // 2. Resolve email format
+  const cleanEmail = cleanIdentifier.includes('@')
+    ? cleanIdentifier
+    : `${cleanIdentifier}@munyaka.sc.ke`;
+
+  // 3. Query localStorage exclusively
+  let staffList: MasterStaffRecord[] = [];
+  try {
+    const rawMaster = localStorage.getItem('munyaka_master_staff_list');
+    if (rawMaster) {
+      staffList = JSON.parse(rawMaster);
+    }
+  } catch (e) {
+    staffList = [];
+  }
+
+  // 4. Find staff record by email, staffId, or id
   const matched = staffList.find(s => {
     const sEmail = (s.email || '').toLowerCase().trim();
     const sStaffId = (s.staffId || '').toLowerCase().trim();
     const sId = (s.id || '').toLowerCase().trim();
-    const sName = (s.name || '').toLowerCase().trim();
     return (
-      sEmail === cleanInput ||
-      sEmail === trimmedId ||
-      sStaffId === trimmedId ||
-      sId === trimmedId ||
-      sName === trimmedId ||
-      sEmail.split('@')[0] === trimmedId.split('@')[0]
+      sEmail === cleanEmail ||
+      sStaffId === cleanIdentifier ||
+      sId === cleanIdentifier
     );
   });
 
   if (!matched) {
-    return { success: false, error: 'Staff account not found. Please enter your full school email ending with @munyaka.sc.ke.' };
+    return {
+      success: false,
+      error: 'Staff account not found. Please enter a valid school email address.'
+    };
   }
 
-  const storedCode = (matched.tempAccessCode || (matched as any).accessCode || '').trim();
-  const normalizedStoredCode = storedCode.toUpperCase();
+  // 5. Validate access code if provided
+  if (inputPassword) {
+    const validCode = ((matched as any).accessCode || matched.tempAccessCode || '')
+      .replace(/\s+/g, '')
+      .toUpperCase();
 
-  const isEmailValid = trimmedId.endsWith('@munyaka.sc.ke');
-  const validPass =
-    storedCode !== '' &&
-    (normalizedStoredCode === normalizedPass || storedCode === trimmedPass);
-
-  if (!isEmailValid) {
-    return { success: false, error: 'Please enter your full school email ending with @munyaka.sc.ke.' };
+    if (cleanPassword !== validCode) {
+      return {
+        success: false,
+        error: 'Invalid access code. Please check your assigned MUN-XXXX access code.'
+      };
+    }
   }
 
-  if (!validPass) {
-    return { success: false, error: 'Invalid MUNYAKA-XXXX access code. Please check your assigned staff access code against the master staff ledger.' };
-  }
-
-  return { success: true, user: matched };
+  return { success: true, staff: matched };
 };
 export const isTeachingRole = (_role: string) => true;

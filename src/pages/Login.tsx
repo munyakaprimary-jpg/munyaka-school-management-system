@@ -35,10 +35,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { teacherLogin, checkServerHealth } from '@/services/mobileAuthService';
-import { getStaffMaster } from '@/services/staffMasterService';
-import { getApiBaseUrl } from '@/lib/apiBase';
-import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
+import { checkServerHealth } from '@/services/mobileAuthService';
 import { verifyStaffLogin } from '@/services/staffMasterService';
 import {
   MUNYAKA_ADMIN_PASSWORD,
@@ -295,95 +292,56 @@ const Login: React.FC = () => {
 
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
-      e.preventDefault();
-      
-      const trimmedId = String(staffId || '').trim();
-      const trimmedPass = String(staffPassword || '').trim();
-  
-      if (!trimmedId) {
-        setStaffAuthError('Please enter your full school email ending with @munyaka.sc.ke.');
-        return;
-      }
-      
-      // Before strict regex enforcement, check if the input matches any staff member in the live master registry first (e.g. ndiki@munyaka.sc.ke or short IDs)
-      const staffList = getStaffMaster();
-      const cleanInput = trimmedId.toLowerCase().trim();
-      const cleanEmail = cleanInput.includes('@') ? cleanInput : `${cleanInput}@munyaka.sc.ke`;
+    e.preventDefault();
 
-      const matched = staffList.find(s => {
-        const sEmail = (s.email || '').toLowerCase().trim();
-        const sStaffId = (s.staffId || '').toLowerCase().trim();
-        const sId = (s.id || '').toLowerCase().trim();
-        return sEmail === cleanEmail || sEmail === cleanInput || sStaffId === cleanInput || sId === cleanInput || sEmail.split('@')[0] === cleanInput.split('@')[0];
-      });
+    setIsStaffVerifying(true);
+    setStaffAuthError('');
 
-      if (!matched) {
-        const emailRegex = /^[^\s@]+@munyaka\.sc\.ke$/i;
-        const isEmail = emailRegex.test(trimmedId);
-        if (!isEmail) {
-          setStaffAuthError('Staff login requires your full school email address ending with @munyaka.sc.ke.');
-          return;
-        }
-        setStaffAuthError("Staff account not found. Please enter your full school email ending with @munyaka.sc.ke.");
-        return;
-      }
+    const res = verifyStaffLogin(staffId, staffPassword);
 
-      if (!trimmedPass) {
-                    setStaffAuthError('Please enter your assigned access code (MUN-XXXX or MUNYAKA-XXXX).');
-                    return;
-                  }
-      
-            // Validate access code format: accepts both MUN-XXXX and MUNYAKA-XXXX prefixes
-            const accessCodeRegex = /^(MUN|MUNYAKA)-[A-Z0-9]{4}$/i;
-            if (!accessCodeRegex.test(trimmedPass)) {
-              setStaffAuthError('Access code must follow the format MUN-XXXX or MUNYAKA-XXXX (4 alphanumeric characters).');
-              return;
-            }
-      
-            setIsStaffVerifying(true);
-            setStaffAuthError('');
-
-      const storedCode = (matched.tempAccessCode || (matched as any).accessCode || '').trim();
-      const normalizedStoredCode = storedCode.toUpperCase();
-      const normalizedInputCode = trimmedPass.toUpperCase();
-
-      const validPass =
-        storedCode !== '' &&
-        (normalizedStoredCode === normalizedInputCode || storedCode === trimmedPass);
-
-      if (!validPass) {
-              setStaffAuthError("Invalid access code. Please check your assigned staff access code format (MUN-XXXX or MUNYAKA-XXXX) against the master staff ledger.");
-              setIsStaffVerifying(false);
-              return;
-            }
-
-      const userData = {
-        id: matched.id || matched.staffId || `staff-${Date.now()}`,
-        name: matched.name || 'Staff Member',
-        email: matched.email || trimmedId,
-        phone: matched.phone || '',
-        role: matched.systemRole || matched.role || 'staff',
-        staff_id: matched.staffId || '',
-        avatar: (matched.name || 'U')
-          .split(' ')
-          .map(n => n[0] || '')
-          .join('')
-          .substring(0, 2)
-          .toUpperCase(),
-      };
-
-      try {
-        localStorage.setItem('munyaka_session', JSON.stringify(userData));
-        localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
-      } catch { /* ignore */ }
-
-      if (setUser) {
-        setUser({ ...userData, role: (userData.role as any) || 'staff' });
-      }
-
-      showSuccess(`Welcome, ${userData.name}!`);
-      navigate('/dashboard', { replace: true });
+    if (!res.success || !res.staff) {
+      const err = res.error || 'Authentication failed. Please check your credentials.';
+      setStaffAuthError(err);
+      showError(err);
       setIsStaffVerifying(false);
+      return;
+    }
+
+    const matched = res.staff;
+    const userData = {
+      id: matched.id || matched.staffId || `staff-${Date.now()}`,
+      name: matched.name || 'Staff Member',
+      email: matched.email || (staffId.includes('@') ? staffId.trim() : `${staffId.trim()}@munyaka.sc.ke`),
+      phone: matched.phone || '',
+      role: matched.systemRole || (matched as any).role || 'staff',
+      staff_id: matched.staffId || '',
+      avatar: (matched.name || 'U')
+        .split(' ')
+        .map(n => n[0] || '')
+        .join('')
+        .substring(0, 2)
+        .toUpperCase(),
+      accessCode: (matched as any).accessCode || matched.tempAccessCode || '',
+      assignedClass: matched.assignedGrade,
+      assignedStream: matched.assignedStream,
+      grade: matched.assignedGrade,
+      stream: matched.assignedStream,
+      department: matched.department,
+      is_active: true
+    };
+
+    try {
+      localStorage.setItem('munyaka_session', JSON.stringify(userData));
+      localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
+    } catch { /* ignore */ }
+
+    if (setUser) {
+      setUser({ ...userData, role: (userData.role as any) || 'staff' });
+    }
+
+    showSuccess(`Welcome, ${userData.name}!`);
+    navigate('/dashboard', { replace: true });
+    setIsStaffVerifying(false);
   };
 
   // ── Lightweight server reachability check on mount ──────────────────────
