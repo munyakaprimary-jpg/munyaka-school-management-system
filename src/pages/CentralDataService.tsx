@@ -140,10 +140,14 @@ export default function CentralDataServicePage() {
     refreshStats();
     const handleDataChange = () => refreshStats();
     window.addEventListener('munyaka:data-changed', handleDataChange);
+    window.addEventListener('munyaka_data_changed', handleDataChange);
     window.addEventListener('storage', handleDataChange);
+    window.addEventListener('focus', handleDataChange);
     return () => {
       window.removeEventListener('munyaka:data-changed', handleDataChange);
+      window.removeEventListener('munyaka_data_changed', handleDataChange);
       window.removeEventListener('storage', handleDataChange);
+      window.removeEventListener('focus', handleDataChange);
     };
   }, [refreshStats]);
 
