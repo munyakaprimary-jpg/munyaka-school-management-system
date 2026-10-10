@@ -116,12 +116,13 @@ export default function CentralDataServicePage() {
       const candidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
       const masterStaff = candidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
 
-      // Learners count sync with fallback to initialSeedData
+      // Learners count sync with robust fallback to localStorage directly and initialSeedData
       const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
       const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
       const l3 = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
-      const candidateLearners = [learners, l1, l2, l3, initialSeedData.students || []].filter(Array.isArray);
-      const masterLearners = candidateLearners.reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
+      const seedLearners = initialSeedData.students || [];
+      const candidateLearners = [l1, l2, l3, learners, seedLearners].filter(Array.isArray);
+      const masterLearners = candidateLearners.reduce((max, curr) => (curr.length > max.length ? curr : max), seedLearners);
 
       // Check teaching vs non-teaching staff strictly from live storage
       const staff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
