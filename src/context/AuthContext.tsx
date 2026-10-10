@@ -344,9 +344,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initializeUsersStorage();
 
-    // 1. Direct Staff Master verification for MUN-XXXX access codes and @munyaka.sc.ke emails
-    const liveStaffMaster = readStaffMaster();
-    const matchedMasterStaff = liveStaffMaster.find(staff => {
+    // 1. Live localStorage staff ledger lookup first
+    const staffList = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+    const matchedMasterStaff = staffList.find((staff: any) => {
       const staffEmail = String(staff.email || '').trim().toLowerCase();
       const staffId = String(staff.staffId || '').trim().toLowerCase();
       const staffName = String(staff.name || '').trim().toLowerCase();
@@ -360,7 +360,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     if (matchedMasterStaff) {
-      const staffAccessCode = String((matchedMasterStaff as any).accessCode || matchedMasterStaff.tempAccessCode || '').trim();
+      if (matchedMasterStaff.status === 'Suspended') {
+        showError('Your account is suspended. Please contact the administrator.');
+        return false;
+      }
+
+      const staffAccessCode = String(matchedMasterStaff.accessCode || matchedMasterStaff.tempAccessCode || '').trim();
       const cleanPassUpper = cleanPass.toUpperCase();
       const staffAccessCodeUpper = staffAccessCode.toUpperCase();
 
@@ -371,6 +376,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const isAccessCodeValid =
         (staffAccessCode !== '' &&
          (cleanPassUpper === staffAccessCodeUpper || cleanPass === staffAccessCode)) ||
+        (cleanPass === staffAccessCode) ||
         (isOwnerOrAdmin && (cleanPass === activeAdminPin || cleanPass === DEFAULT_ADMIN_PASSWORD));
 
       if (isAccessCodeValid) {
@@ -389,7 +395,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           grade: matchedMasterStaff.assignedGrade,
           stream: matchedMasterStaff.assignedStream,
           department: matchedMasterStaff.department,
-          is_active: matchedMasterStaff.status !== 'Suspended'
+          is_active: true
         };
 
         localStorage.setItem('munyaka_session', JSON.stringify(userData));
@@ -399,11 +405,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const serverUrl = localStorage.getItem('lan_server_url') || 'http://10.53.221.196:5000';
           startHeartbeatService(serverUrl, userData);
         } catch {}
-        showSuccess(`Welcome back, ${userData.name}! (Authenticated via staff access code)`);
+        showSuccess(`Welcome back, ${userData.name}! (Authenticated via live staff ledger)`);
         return true;
       } else {
         console.error('[AuthContext.login] Invalid access code for staff member:', matchedMasterStaff.name);
-                showError('Invalid access code. Please check your assigned staff access code format (MUN-XXXX or MUNYAKA-XXXX) from the master staff ledger.');
+        showError('Invalid access code. Please check your assigned staff access code format (MUN-XXXX) from the master staff ledger.');
         return false;
       }
     }
