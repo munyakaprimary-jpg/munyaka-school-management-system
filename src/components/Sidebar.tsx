@@ -158,7 +158,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-200 truncate">{user?.name || 'User'}</p>
                   <p className="text-[10px] text-blue-400 font-mono tracking-wide truncate">
-                    {user?.specificRole || user?.designation || user?.roleTitle || user?.category || user?.role || 'Class Teacher'}
+                    {String(
+                      user?.designation ||
+                      user?.specificRole ||
+                      user?.roleTitle ||
+                      ((user as any)?.assignedClasses?.length > 0 ? "Class Teacher" : null) ||
+                      user?.role ||
+                      "Staff"
+                    ).toUpperCase()}
                   </p>
                 </div>
               </div>

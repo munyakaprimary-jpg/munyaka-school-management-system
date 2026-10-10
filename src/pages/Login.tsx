@@ -316,7 +316,7 @@ const Login: React.FC = () => {
     const validCode = (staffMember.accessCode || staffMember.code || '').trim().replace(/\s+/g, '').toUpperCase();
 
     if (inputCode === validCode) {
-      const designationTitle = staffMember.specificRole || staffMember.designation || staffMember.roleTitle || staffMember.category || 'Class Teacher';
+      const designationTitle = staffMember.designation || staffMember.specificRole || staffMember.roleTitle || staffMember.category || 'Class Teacher';
       const userData = {
         id: staffMember.id || `staff-${Date.now()}`,
         name: staffMember.name || 'Staff Member',
