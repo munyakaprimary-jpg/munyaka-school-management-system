@@ -17,6 +17,26 @@ export const STORAGE_KEYS = {
   STAFF_ATTENDANCE: 'munyaka_staff_attendance',
 };
 
+// Safe startup check: seed learners if empty/missing while keeping staff at zero
+try {
+  if (typeof window !== 'undefined') {
+    const existingLearners = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+    if (!existingLearners || JSON.parse(existingLearners).length === 0) {
+      if (initialSeedData.students && initialSeedData.students.length > 0) {
+        localStorage.setItem('munyaka_learners', JSON.stringify(initialSeedData.students));
+        localStorage.setItem('munyaka_students', JSON.stringify(initialSeedData.students));
+      }
+    }
+    // Ensure staff master list is explicitly empty or left untouched if already set, but never defaulted with mock staff
+    const existingStaff = localStorage.getItem('munyaka_master_staff_list');
+    if (!existingStaff) {
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify([]));
+    }
+  }
+} catch (e) {
+  console.error('Error seeding learners:', e);
+}
+
 const CENTRAL_DB_STORAGE_KEY = 'munyaka_central_db_cache';
 
 // Hard circuit breaker flag: once any network failure occurs, disable all automatic remote sync completely until reload
