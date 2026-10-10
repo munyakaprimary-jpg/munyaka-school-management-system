@@ -386,13 +386,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (isAccessCodeValid) {
         const userRole = mapSystemRoleToUserRole(matchedMasterStaff.systemRole || matchedMasterStaff.role);
         const assignedGradeVal = matchedMasterStaff.assignedGrade || matchedMasterStaff.grade || matchedMasterStaff.assignedClass || 'Grade 9 Venus';
+        const staffNameUpper = String(matchedMasterStaff.name || '').trim().toUpperCase();
+        const designationVal = matchedMasterStaff.designation || matchedMasterStaff.specificRole || 'Class Teacher';
+        
         const userData: User = {
           id: matchedMasterStaff.id,
-          name: matchedMasterStaff.name,
+          name: staffNameUpper,
           email: matchedMasterStaff.email || `${matchedMasterStaff.staffId || 'staff'}@munyaka.sc.ke`,
           phone: matchedMasterStaff.phone,
           role: userRole,
-          avatar: String(matchedMasterStaff.name || '').split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase(),
+          avatar: staffNameUpper.split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase(),
           staff_id: matchedMasterStaff.staffId,
           accessCode: staffAccessCode,
           assignedClass: assignedGradeVal,
@@ -400,6 +403,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           grade: assignedGradeVal,
           stream: matchedMasterStaff.assignedStream || 'Green',
           department: matchedMasterStaff.department || 'Academics',
+          designation: designationVal,
           is_active: true
         };
 

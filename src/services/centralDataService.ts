@@ -24,8 +24,8 @@ export const safeParse = (key: string, fallback: any = []) => {
 
 export const getLearners = () => {
   try {
-    const raw = safeParse('munyaka_master_learners', null) || safeParse('munyaka_learners', []);
-    return Array.isArray(raw) ? raw : [];
+    const raw = localStorage.getItem('munyaka_master_learners') || localStorage.getItem('munyaka_learners');
+    return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
@@ -33,8 +33,8 @@ export const getLearners = () => {
 
 export const getStaff = () => {
   try {
-    const raw = safeParse('munyaka_master_staff_list', []);
-    return Array.isArray(raw) ? raw : [];
+    const raw = localStorage.getItem('munyaka_master_staff_list');
+    return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }

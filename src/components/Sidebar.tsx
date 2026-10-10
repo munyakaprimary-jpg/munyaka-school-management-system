@@ -110,11 +110,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     user?.role === 'teacher' ||
     user?.role === 'admin' ||
     user?.role === 'head_teacher' ||
-    (fullProfile as any)?.designation?.toLowerCase().includes('teacher') ||
     Boolean((user as any)?.assignedClass) ||
     Boolean((fullProfile as any)?.assignedClass) ||
-    (Array.isArray((user as any)?.assignedClasses) && (user as any).assignedClasses.length > 0) ||
-    (Array.isArray((fullProfile as any)?.assignedClasses) && (fullProfile as any).assignedClasses.length > 0) ||
+    (fullProfile as any)?.designation === 'Class Teacher' ||
     Boolean(localStorage.getItem('munyaka_current_user'));
 
   const displayRole =
@@ -122,7 +120,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     (fullProfile as any)?.assignedClass ||
     (user as any)?.designation ||
     (fullProfile as any)?.designation ||
-    (user?.role === 'staff' ? 'Class Teacher (Grade 9 Venus)' : user?.role);
+    ((user as any)?.role === 'staff' || (user as any)?.role === 'teacher' ? 'Class Teacher' : (user as any)?.role);
 
   const rawNavItems = [
       { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard, adminOnly: true },
