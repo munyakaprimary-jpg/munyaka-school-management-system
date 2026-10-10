@@ -325,10 +325,16 @@ export const verifyStaffLogin = (
   }
 
   // 4. Find staff record by exact full email match
-  const matched = staffList.find(s => {
-    const sEmail = (s.email || '').toLowerCase().trim();
-    return sEmail === cleanEmail;
-  });
+  const foundRecord = staffList.find(s => (s.email || '').toLowerCase().trim() === cleanEmail);
+  if (foundRecord) {
+    console.log('--- STAFF AUTH DEBUG ---');
+    console.log('Record Found:', foundRecord);
+    console.log('Stored accessCode:', foundRecord.accessCode);
+    console.log('Stored tempAccessCode:', foundRecord.tempAccessCode);
+    console.log('Entered Password/Code:', inputPassword);
+  }
+
+  const matched = foundRecord;
 
   if (!matched) {
     return {
