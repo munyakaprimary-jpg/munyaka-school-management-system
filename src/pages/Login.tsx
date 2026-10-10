@@ -297,7 +297,12 @@ const Login: React.FC = () => {
     setIsStaffVerifying(true);
     setStaffAuthError('');
 
-    const res = verifyStaffLogin(staffId, staffPassword);
+    const cleanInput = (staffId || '').trim().toLowerCase();
+    const fullEmail = cleanInput.includes('@')
+      ? cleanInput
+      : `${cleanInput}@munyaka.sc.ke`;
+
+    const res = verifyStaffLogin(fullEmail, staffPassword);
 
     if (!res.success || !res.staff) {
       const err = res.error || 'Authentication failed. Please check your credentials.';
@@ -591,19 +596,22 @@ const Login: React.FC = () => {
                           Official Path: Email + Access Code
                         </span>
                       </div>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <div className="relative flex items-center">
+                        <Mail className="absolute left-4 text-slate-400 pointer-events-none" size={18} />
                         <Input
                           id="staff-id"
                           type="text"
                           autoCapitalize="none"
                           value={staffId}
                           onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. staff@munyaka.sc.ke or name"
+                          placeholder="e.g. lndegwa or lndegwa@munyaka.sc.ke"
                           autoComplete="username"
-                          className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
+                          className="h-12 md:h-14 pl-12 pr-36 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                           autoFocus
                         />
+                        <span className="absolute right-4 text-xs font-mono font-bold text-slate-400 pointer-events-none bg-slate-200/60 px-2.5 py-1 rounded-lg">
+                          @munyaka.sc.ke
+                        </span>
                       </div>
                     </div>
 
