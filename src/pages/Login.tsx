@@ -329,12 +329,19 @@ const Login: React.FC = () => {
       }
 
       if (!trimmedPass) {
-        setStaffAuthError('Please enter your assigned MUNYAKA-XXXX access code.');
-        return;
-      }
-  
-      setIsStaffVerifying(true);
-      setStaffAuthError('');
+                    setStaffAuthError('Please enter your assigned access code (MUN-XXXX or MUNYAKA-XXXX).');
+                    return;
+                  }
+      
+            // Validate access code format: accepts both MUN-XXXX and MUNYAKA-XXXX prefixes
+            const accessCodeRegex = /^(MUN|MUNYAKA)-[A-Z0-9]{4}$/i;
+            if (!accessCodeRegex.test(trimmedPass)) {
+              setStaffAuthError('Access code must follow the format MUN-XXXX or MUNYAKA-XXXX (4 alphanumeric characters).');
+              return;
+            }
+      
+            setIsStaffVerifying(true);
+            setStaffAuthError('');
 
       const storedCode = (matched.tempAccessCode || (matched as any).accessCode || '').trim();
       const normalizedStoredCode = storedCode.toUpperCase();
@@ -345,10 +352,10 @@ const Login: React.FC = () => {
         (normalizedStoredCode === normalizedInputCode || storedCode === trimmedPass);
 
       if (!validPass) {
-        setStaffAuthError("Invalid MUNYAKA-XXXX access code. Please check your assigned staff access code against the master staff ledger.");
-        setIsStaffVerifying(false);
-        return;
-      }
+              setStaffAuthError("Invalid access code. Please check your assigned staff access code format (MUN-XXXX or MUNYAKA-XXXX) against the master staff ledger.");
+              setIsStaffVerifying(false);
+              return;
+            }
 
       const userData = {
         id: matched.id || matched.staffId || `staff-${Date.now()}`,
@@ -646,8 +653,8 @@ const Login: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                          Access Code (MUNYAKA-XXXX)
-                        </Label>
+                                                  Access Code (MUN-XXXX / MUNYAKA-XXXX)
+                                                </Label>
                         <span className="text-[10px] font-mono text-slate-400">
                           from Staff Registry
                         </span>
