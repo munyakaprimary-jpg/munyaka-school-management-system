@@ -355,27 +355,23 @@ export default function StaffRegistry() {
       toast.error("Full name is required");
       return;
     }
-    if (category !== 'Bursar' && category !== 'Store Master' && !tscNumber.trim()) {
-      toast.error("TSC Registration Number is required for this staff role");
-      return;
-    }
 
-    const cleanEmailInput = email.trim().toLowerCase();
-    if (!cleanEmailInput.endsWith('@munyaka.sc.ke')) {
-      toast.error("Staff email must be a full school email ending with @munyaka.sc.ke");
-      return;
-    }
-
-    const finalCode = accessCode || generateRandomCode();
+    const cleanEmailInput = (email || `${fullName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
+    const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
+    
+    const currentStaff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || '[]');
+    
     const staffRecord: StaffMember = {
-      id: editingStaff ? editingStaff.id : `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
       name: fullName.trim(),
-      category,
+      category: category || 'Teacher',
       email: cleanEmailInput,
-      phone: phone.trim(),
-      tscNumber: tscNumber.trim(),
-      status,
+      phone: phone.trim() || '',
+      tscNumber: tscNumber.trim() || '',
+      status: status || 'Active',
       accessCode: finalCode,
+      role: 'staff',
+      type: 'teaching',
       subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : [],
       assignedClasses: category !== 'Bursar' && category !== 'Store Master' ? assignedClasses : [],
       assignedStreams: category !== 'Bursar' && category !== 'Store Master' ? assignedStreams : [],
@@ -386,16 +382,26 @@ export default function StaffRegistry() {
 
     let updatedList: StaffMember[];
     if (editingStaff) {
-      updatedList = staffList.map(s => s.id === editingStaff.id ? staffRecord : s);
+      updatedList = currentStaff.map((s: any) => s.id === editingStaff.id ? staffRecord : s);
       toast.success("Staff profile updated successfully");
     } else {
-      updatedList = [staffRecord, ...staffList];
+      updatedList = [staffRecord, ...currentStaff];
       toast.success("Staff member registered successfully");
     }
 
     setStaffList(updatedList);
+    
+    // Explicitly write to all master storage keys and trigger events
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
-    localStorage.setItem('munyaka_staff_registry', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff_db', JSON.stringify(updatedList));
+
+    window.dispatchEvent(new CustomEvent('munyaka_staff_updated', { detail: { count: updatedList.length } }));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_master_staff_list' } }));
+
+    console.log('--- NEW STAFF SUCCESSFULLY SAVED ---', staffRecord);
+
     setIsModalOpen(false);
   };
 
