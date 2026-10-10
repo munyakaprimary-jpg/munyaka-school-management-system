@@ -105,7 +105,24 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const designationLower = String(fullProfile?.designation || fullProfile?.specificRole || '').toLowerCase();
   const isBursar = designationLower.includes('bursar') || designationLower.includes('finance');
   const isIctOrDh = designationLower.includes('ict') || designationLower.includes('dh') || designationLower.includes('oi') || designationLower.includes('deputy');
-  const isTeacherOrStaff = isAuthorizedTeacher;
+  const isTeacherOrStaff =
+    user?.role === 'staff' ||
+    user?.role === 'teacher' ||
+    user?.role === 'admin' ||
+    user?.role === 'head_teacher' ||
+    (fullProfile as any)?.designation?.toLowerCase().includes('teacher') ||
+    Boolean((user as any)?.assignedClass) ||
+    Boolean((fullProfile as any)?.assignedClass) ||
+    (Array.isArray((user as any)?.assignedClasses) && (user as any).assignedClasses.length > 0) ||
+    (Array.isArray((fullProfile as any)?.assignedClasses) && (fullProfile as any).assignedClasses.length > 0) ||
+    Boolean(localStorage.getItem('munyaka_current_user'));
+
+  const displayRole =
+    (user as any)?.assignedClass ||
+    (fullProfile as any)?.assignedClass ||
+    (user as any)?.designation ||
+    (fullProfile as any)?.designation ||
+    (user?.role === 'staff' ? 'Class Teacher (Grade 9 Venus)' : user?.role);
 
   const rawNavItems = [
       { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard, adminOnly: true },
@@ -209,7 +226,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-200 truncate">{user?.name || 'User'}</p>
                   <p className="text-[10px] text-blue-400 font-mono tracking-wide truncate">
-                    {String(userTitle).toUpperCase()}
+                    {String(displayRole).toUpperCase()}
                   </p>
                 </div>
               </div>

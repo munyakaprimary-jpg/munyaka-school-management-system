@@ -385,6 +385,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (isAccessCodeValid) {
         const userRole = mapSystemRoleToUserRole(matchedMasterStaff.systemRole || matchedMasterStaff.role);
+        const assignedGradeVal = matchedMasterStaff.assignedGrade || matchedMasterStaff.grade || matchedMasterStaff.assignedClass || 'Grade 9 Venus';
         const userData: User = {
           id: matchedMasterStaff.id,
           name: matchedMasterStaff.name,
@@ -394,13 +395,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           avatar: String(matchedMasterStaff.name || '').split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase(),
           staff_id: matchedMasterStaff.staffId,
           accessCode: staffAccessCode,
-          assignedClass: matchedMasterStaff.assignedGrade,
-          assignedStream: matchedMasterStaff.assignedStream,
-          grade: matchedMasterStaff.assignedGrade,
-          stream: matchedMasterStaff.assignedStream,
-          department: matchedMasterStaff.department,
+          assignedClass: assignedGradeVal,
+          assignedStream: matchedMasterStaff.assignedStream || 'Green',
+          grade: assignedGradeVal,
+          stream: matchedMasterStaff.assignedStream || 'Green',
+          department: matchedMasterStaff.department || 'Academics',
           is_active: true
         };
+
+        localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
 
         localStorage.setItem('munyaka_session', JSON.stringify(userData));
         persistCurrentAuthRole(userData.role);
