@@ -1555,8 +1555,6 @@ export const initialSeedData = {
 };
 
 (initialSeedData as any).learners = initialSeedData.students;
-(initialSeedData as any).teachers = [];
-(initialSeedData as any).staff = [];
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
