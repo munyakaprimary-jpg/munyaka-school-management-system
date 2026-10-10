@@ -74,6 +74,15 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     }
   })();
 
+  const isAuthorizedTeacher =
+    user?.role === 'admin' ||
+    user?.role === 'staff' ||
+    user?.role === 'teacher' ||
+    (user as any)?.assignedClass ||
+    (user as any)?.gradeStream ||
+    ((user as any)?.assignedClasses && (user as any).assignedClasses.length > 0) ||
+    typeof window !== 'undefined' && localStorage.getItem('munyaka_current_user');
+
   const fullProfile = masterStaff.find((s: any) =>
     (s.email && sessionUser.email && s.email.toLowerCase() === sessionUser.email.toLowerCase()) ||
     (s.id && sessionUser.id && s.id === sessionUser.id)
@@ -83,15 +92,20 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     fullProfile?.designation ||
     fullProfile?.specificRole ||
     fullProfile?.roleTitle ||
-    ((fullProfile as any)?.assignedClasses?.length > 0 ? "Class Teacher" : null) ||
+    fullProfile?.assignedClass ||
+    fullProfile?.gradeStream ||
+    ((fullProfile as any)?.assignedClasses?.length > 0 ? (fullProfile as any).assignedClasses.join(', ') : null) ||
+    ((sessionUser as any)?.assignedClass) ||
+    ((sessionUser as any)?.gradeStream) ||
+    ((sessionUser as any)?.assignedClasses?.length > 0 ? (sessionUser as any).assignedClasses.join(', ') : null) ||
     fullProfile?.role ||
-    "Staff";
+    "Teacher / Staff";
 
   const isUserAdmin = String(fullProfile?.role || '').toLowerCase() === 'admin' || String(fullProfile?.role || '').toLowerCase() === 'super_admin' || String(fullProfile?.role || '').toLowerCase() === 'owner';
   const designationLower = String(fullProfile?.designation || fullProfile?.specificRole || '').toLowerCase();
   const isBursar = designationLower.includes('bursar') || designationLower.includes('finance');
   const isIctOrDh = designationLower.includes('ict') || designationLower.includes('dh') || designationLower.includes('oi') || designationLower.includes('deputy');
-  const isTeacherOrStaff = String(fullProfile?.role || '').toLowerCase() === 'staff' || String(fullProfile?.role || '').toLowerCase() === 'teacher' || Boolean(fullProfile?.designation) || ((fullProfile as any)?.assignedClasses?.length > 0);
+  const isTeacherOrStaff = isAuthorizedTeacher;
 
   const rawNavItems = [
       { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard, adminOnly: true },
