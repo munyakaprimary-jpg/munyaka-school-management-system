@@ -35,7 +35,6 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { checkServerHealth } from '@/services/mobileAuthService';
 import { verifyStaffLogin } from '@/services/staffMasterService';
 import {
   MUNYAKA_ADMIN_PASSWORD,
@@ -353,21 +352,9 @@ const Login: React.FC = () => {
     setIsStaffVerifying(false);
   };
 
-  // ── Lightweight server reachability check on mount ──────────────────────
+  // ── Lightweight server reachability check on mount (Disabled) ──────────────────────
   useEffect(() => {
-    let cancelled = false;
-    checkServerHealth().then((status) => {
-      if (cancelled) return;
-      if (!status.reachable) {
-        // Soft warning — the user can still try to log in, the service
-        // will surface the network error in the form if the server is
-        // genuinely unreachable. We just log it for diagnostics.
-        console.warn(`[Login] Health check: ${status.error} — server may be offline`);
-      } else {
-        console.log(`[Login] Health check: server reachable in ${status.latencyMs}ms`);
-      }
-    });
-    return () => { cancelled = true; };
+    // Disabled for 100% offline local authentication
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────────

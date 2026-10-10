@@ -470,9 +470,7 @@ const App = () => {
             }
           }
   
-          if (anySeeded) {
-            console.log('[App Mount] Re-seeded canonical storage keys from initialSeedData.');
-          }
+          /* Re-seeding disabled to preserve custom user credentials and data */
         } catch (err) {
           console.error("Failed to re-seed storage keys:", err);
         }
