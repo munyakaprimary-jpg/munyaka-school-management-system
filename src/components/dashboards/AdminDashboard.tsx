@@ -113,9 +113,9 @@ export const AdminDashboardComponent: React.FC = () => {
   }, []);
 
   const sysStats = CentralDataService.getSystemStats();
-  const storedLearners = localStorage.getItem('munyaka_learners');
-  const actualLearners = storedLearners ? JSON.parse(storedLearners) : [];
-  const learners = actualLearners.length > 0 ? actualLearners : (reactiveLearners.length > 0 ? reactiveLearners : getStoredLearners());
+  const allStoredLearners = getStoredLearners();
+  const actualLearners = allStoredLearners.length > 0 ? allStoredLearners : (reactiveLearners.length > 0 ? reactiveLearners : (CentralDataService.getLearners() || []));
+  const learners = actualLearners;
   const teachingCount = sysStats.teachingStaff;
   const nonTeachingCount = sysStats.nonTeachingStaff;
 
