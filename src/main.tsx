@@ -20,8 +20,28 @@ if ('serviceWorker' in navigator && !(window as unknown as { Capacitor?: unknown
   });
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App/>
-  </React.StrictMode>
-);
+try {
+  const rootElement = document.getElementById('root');
+  if (rootElement) {
+    ReactDOM.createRoot(rootElement).render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+  } else {
+    console.error('Failed to find root element with id "root"');
+  }
+} catch (e) {
+  console.error('Critical error mounting React root:', e);
+  const rootElement = document.getElementById('root');
+  if (rootElement) {
+    rootElement.innerHTML = `
+      <div style="padding: 24px; font-family: sans-serif; text-align: center; color: #333;">
+        <h2>Application Loading Error</h2>
+        <p>An unexpected error occurred while starting the application.</p>
+        <pre style="background: #f1f5f9; padding: 12px; border-radius: 6px; text-align: left; max-width: 600px; margin: 16px auto; overflow: auto;">${e instanceof Error ? e.message : String(e)}</pre>
+        <button onclick="localStorage.clear(); window.location.reload();" style="background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold;">Clear Storage & Retry</button>
+      </div>
+    `;
+  }
+}

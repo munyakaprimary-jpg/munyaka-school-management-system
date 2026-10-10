@@ -1,21 +1,17 @@
-export const STORAGE_KEYS = {
-  STAFF: 'munyaka_master_staff_list',
-  TEACHERS: 'munyaka_master_staff_list',
-  TEACHERS_LEGACY: 'munyaka_staff_directory',
-  TEACHERS_FALLBACK: 'munyaka_staff',
-  TEACHERS_PREREG: 'munyaka_staff_db',
-  LEARNERS: 'munyaka_master_learners',
-  ATTENDANCE: 'munyaka_attendance',
-  ACTIVE_SCHOOL_ID: 'munyaka_active_school_id',
-  SCHOOL_PROFILE: 'munyaka_school_profile',
-  HYDRATION_DONE: 'munyaka_hydration_done',
-  SCHEMA_VERSION: 'munyaka_schema_version'
+export const safeParse = (key: string, fallback: any = []) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch (e) {
+    console.error(`Error parsing ${key}`, e);
+    return fallback;
+  }
 };
 
 export const getLearners = () => {
   try {
-    const raw = localStorage.getItem('munyaka_master_learners') || localStorage.getItem('munyaka_learners');
-    return raw ? JSON.parse(raw) : [];
+    const raw = safeParse('munyaka_master_learners', null) || safeParse('munyaka_learners', []);
+    return Array.isArray(raw) ? raw : [];
   } catch {
     return [];
   }
@@ -23,8 +19,8 @@ export const getLearners = () => {
 
 export const getStaff = () => {
   try {
-    const raw = localStorage.getItem('munyaka_master_staff_list');
-    return raw ? JSON.parse(raw) : [];
+    const raw = safeParse('munyaka_master_staff_list', []);
+    return Array.isArray(raw) ? raw : [];
   } catch {
     return [];
   }
@@ -46,6 +42,7 @@ export const getMasterData = () => {
 };
 
 export const CentralDataService = {
+  safeParse,
   getLearners,
   getStaff,
   getMasterData,
@@ -53,13 +50,13 @@ export const CentralDataService = {
     try {
       const learners = getLearners();
       const staff = getStaff();
-      const attendanceList = JSON.parse(localStorage.getItem('munyaka_attendance') || '[]');
+      const attendanceList = safeParse('munyaka_attendance', []);
       const attendanceCount = Array.isArray(attendanceList) ? attendanceList.length : Object.keys(attendanceList || {}).length;
 
-      const feesList = JSON.parse(localStorage.getItem('munyaka_fees') || localStorage.getItem('munyaka_fees_records') || '[]');
+      const feesList = safeParse('munyaka_fees', []) || safeParse('munyaka_fees_records', []);
       const feeRecordsCount = Array.isArray(feesList) ? feesList.length : Object.keys(feesList || {}).length;
 
-      const examsList = JSON.parse(localStorage.getItem('munyaka_exams') || localStorage.getItem('munyaka_all_set_exams') || '[]');
+      const examsList = safeParse('munyaka_exams', []) || safeParse('munyaka_all_set_exams', []);
       const examsCount = Array.isArray(examsList) ? examsList.length : Object.keys(examsList || {}).length;
 
       const teachingStaff = staff.length;
