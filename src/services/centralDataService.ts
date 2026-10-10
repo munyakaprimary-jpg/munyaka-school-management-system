@@ -17,7 +17,33 @@ export const STORAGE_KEYS = {
   STAFF_ATTENDANCE: 'munyaka_staff_attendance',
 };
 
-// Safe startup check: seed learners, fees, and exams if empty/missing while keeping staff at zero
+export const getMasterLearners = () => {
+  const key1 = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
+  const key2 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
+  const key3 = JSON.parse(localStorage.getItem('munyaka_master_learners') || localStorage.getItem('school_learners_data') || '[]');
+
+  const merged = [...key1, ...key2, ...key3];
+  const map = new Map();
+  merged.forEach(item => {
+    const id = item.admissionNumber || item.admNo || item.id || item.assessmentNumber || item.name;
+    if (id) map.set(String(id).trim().toLowerCase(), item);
+  });
+  return Array.from(map.values());
+};
+
+export const getMasterStaff = () => {
+  const key1 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+  const key2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
+  const key3 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
+
+  const merged = [...key1, ...key2, ...key3];
+  const map = new Map();
+  merged.forEach(item => {
+    const id = item.email || item.id || item.accessCode || item.name;
+    if (id) map.set(String(id).trim().toLowerCase(), item);
+  });
+  return Array.from(map.values());
+};
 try {
   if (typeof window !== 'undefined') {
     const existingLearners = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || localStorage.getItem('school_learners_data');
@@ -79,10 +105,8 @@ export const UnifiedDataStorage = {
   },
 
   getLearners: (): any[] => {
-    const list = readStorage<any[]>('munyaka_students', []);
+    const list = getMasterLearners();
     if (Array.isArray(list) && list.length > 0) return list;
-    const fallback = readStorage<any[]>('school_learners_data', []);
-    if (Array.isArray(fallback) && fallback.length > 0) return fallback;
     return initialSeedData.students || [];
   },
 
@@ -90,15 +114,13 @@ export const UnifiedDataStorage = {
     const list = Array.isArray(learners) ? learners : [];
     writeStorage('munyaka_students', list);
     writeStorage('school_learners_data', list);
+    writeStorage('munyaka_learners', list);
+    writeStorage('munyaka_master_learners', list);
     CentralDataService.persistAndSyncMutation('students', list);
   },
 
   getStaff: (): any[] => {
-    const list = readStorage<any[]>('munyaka_staff', []);
-    if (Array.isArray(list) && list.length > 0) return list;
-    const dir = readStorage<any[]>('munyaka_staff_directory', []);
-    if (Array.isArray(dir) && dir.length > 0) return dir;
-    return readStorage<any[]>('munyaka_master_staff_list', []);
+    return getMasterStaff();
   },
 
   saveStaff: (staff: any[]): void => {
@@ -310,10 +332,10 @@ export const CentralDataService = {
 
   getSystemStats: () => {
     try {
-      const learnersList = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]');
+      const learnersList = getMasterLearners();
       const learnersCount = learnersList.length > 0 ? learnersList.length : (initialSeedData.students?.length || 33);
 
-      const staffList = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+      const staffList = getMasterStaff();
       const teachingStaff = staffList.filter((s: any) => s.type === 'teaching' || s.role === 'teacher').length;
       const nonTeachingStaff = staffList.filter((s: any) => s.type === 'non-teaching' || s.role === 'support').length;
 
