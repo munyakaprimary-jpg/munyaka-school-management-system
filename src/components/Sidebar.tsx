@@ -157,7 +157,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-200 truncate">{user?.name || 'User'}</p>
-                  <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider truncate">{user?.role || 'Staff'}</p>
+                  <p className="text-[10px] text-blue-400 font-mono tracking-wide truncate">
+                    {user?.specificRole || user?.designation || user?.roleTitle || user?.category || user?.role || 'Class Teacher'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">

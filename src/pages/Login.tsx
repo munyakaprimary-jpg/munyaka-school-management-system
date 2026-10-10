@@ -316,12 +316,15 @@ const Login: React.FC = () => {
     const validCode = (staffMember.accessCode || staffMember.code || '').trim().replace(/\s+/g, '').toUpperCase();
 
     if (inputCode === validCode) {
+      const designationTitle = staffMember.specificRole || staffMember.designation || staffMember.roleTitle || staffMember.category || 'Class Teacher';
       const userData = {
         id: staffMember.id || `staff-${Date.now()}`,
         name: staffMember.name || 'Staff Member',
         email: staffMember.email || inputEmail,
         phone: staffMember.phone || '',
         role: staffMember.role || 'staff',
+        specificRole: designationTitle,
+        designation: designationTitle,
         staff_id: staffMember.staffId || staffMember.id || '',
         assignedClass: staffMember.assignedClass || (staffMember.homeroomGrade && staffMember.homeroomStream ? `${staffMember.homeroomGrade} ${staffMember.homeroomStream}` : 'Grade 2 Blue'),
         grade: staffMember.homeroomGrade || 'Grade 2',

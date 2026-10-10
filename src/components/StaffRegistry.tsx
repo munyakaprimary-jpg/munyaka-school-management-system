@@ -365,6 +365,8 @@ export default function StaffRegistry() {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
       name: fullName.trim(),
       category: category || 'Teacher',
+      designation: category || 'Class Teacher',
+      specificRole: category || 'Class Teacher',
       email: cleanEmailInput,
       phone: phone.trim() || '',
       tscNumber: tscNumber.trim() || '',
