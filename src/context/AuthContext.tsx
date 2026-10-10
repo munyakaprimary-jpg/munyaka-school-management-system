@@ -344,7 +344,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initializeUsersStorage();
 
-    // 1. Direct Staff Master verification for MUN-XXXX / MUNYAKA-XXXX access codes and @munyaka.sc.ke emails
+    // 1. Direct Staff Master verification for MUN-XXXX access codes and @munyaka.sc.ke emails
     const liveStaffMaster = readStaffMaster();
     const matchedMasterStaff = liveStaffMaster.find(staff => {
       const staffEmail = String(staff.email || '').trim().toLowerCase();
