@@ -184,13 +184,9 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     }
   });
 
-  const uniqueList = Array.from(map.values());
-  try {
-    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(uniqueList));
-    localStorage.setItem('munyaka_staff_db', JSON.stringify(uniqueList));
-  } catch {}
-
-  return uniqueList.map((s: any) => {
+  const uniqueList = Array.from(map.values()).map((s: any) => {
+    // Purge tempAccessCode and password strictly
+    const code = s.accessCode || `MUN-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     return {
       id: s.id || s.staffId || `staff_${Math.random()}`,
       name: s.name || s.full_name || 'Staff Member',
@@ -206,10 +202,16 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
       assignedSubjects: s.assignedSubjects || s.subjectAllocations || s.allocations || [],
       status: s.status || 'Active',
       staffId: s.staffId || s.staff_id,
-      tempAccessCode: s.tempAccessCode || s.accessCode || s.access_key || s.ref,
-      accessCode: s.accessCode || s.tempAccessCode || s.access_key || s.ref,
+      accessCode: code,
     };
   });
+
+  try {
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(uniqueList));
+    localStorage.setItem('munyaka_staff_db', JSON.stringify(uniqueList));
+  } catch {}
+
+  return uniqueList;
 };
 
 export const getStaffMasterCount = (): number => getStaffMaster().length;
@@ -316,55 +318,40 @@ export const verifyStaffLogin = (
   identifier: string,
   inputPassword?: string
 ): { success: boolean; staff?: MasterStaffRecord; error?: string } => {
-  // 1. Sanitize inputs
-  const cleanEmail = (identifier || '').trim().toLowerCase();
-  const cleanCode = (inputPassword || '').replace(/\s+/g, '').toUpperCase();
+  const cleanInputEmail = (identifier || '').trim().toLowerCase();
+  const cleanInputCode = (inputPassword || '').trim().replace(/\s+/g, '').toUpperCase();
 
-  // 2. Validate full email requirement
-  if (!cleanEmail.endsWith('@munyaka.sc.ke')) {
-    return {
-      success: false,
-      error: 'Please enter your full school email address ending with @munyaka.sc.ke.'
-    };
-  }
-
-  // 3. Query localStorage exclusively
   let staffList: MasterStaffRecord[] = [];
   try {
     const rawMaster = localStorage.getItem('munyaka_master_staff_list');
     if (rawMaster) {
       staffList = JSON.parse(rawMaster);
     }
-  } catch (e) {
+  } catch {
     staffList = [];
   }
 
-  // 4. Find staff record by exact full email match
-  const foundRecord = staffList.find(s => (s.email || '').toLowerCase().trim() === cleanEmail);
+  const staffMember = staffList.find((s: any) => (s.email || '').trim().toLowerCase() === cleanInputEmail);
 
-  const matched = foundRecord;
-
-  if (!matched) {
+  if (!staffMember) {
     return {
       success: false,
-      error: 'Staff account not found. Please enter a valid school email address.'
+      error: 'Staff account not found.'
     };
   }
 
-  // 5. Validate access code if provided
-  if (inputPassword) {
-    const sAny = matched as any;
-    const cleanInputCode = (inputPassword || '').trim().replace(/\s+/g, '').toUpperCase();
-    const cleanStoredCode = (sAny.accessCode || sAny.tempAccessCode || sAny.password || '').toString().trim().replace(/\s+/g, '').toUpperCase();
+  const storedCode = ((staffMember as any).accessCode || '').trim().replace(/\s+/g, '').toUpperCase();
 
-    if (cleanInputCode !== cleanStoredCode) {
-      return {
-        success: false,
-        error: 'Invalid access code. Please check your assigned MUN-XXXX access code.'
-      };
-    }
+  if (cleanInputCode === storedCode) {
+    return {
+      success: true,
+      staff: staffMember
+    };
+  } else {
+    return {
+      success: false,
+      error: 'Invalid access code. Please check your assigned MUN-XXXX access code.'
+    };
   }
-
-  return { success: true, staff: matched };
 };
 export const isTeachingRole = (_role: string) => true;
