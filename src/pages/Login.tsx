@@ -323,6 +323,9 @@ const Login: React.FC = () => {
         phone: staffMember.phone || '',
         role: staffMember.role || 'staff',
         staff_id: staffMember.staffId || staffMember.id || '',
+        assignedClass: staffMember.assignedClass || (staffMember.homeroomGrade && staffMember.homeroomStream ? `${staffMember.homeroomGrade} ${staffMember.homeroomStream}` : 'Grade 2 Blue'),
+        grade: staffMember.homeroomGrade || 'Grade 2',
+        stream: staffMember.homeroomStream || 'Blue',
         accessCode: validCode,
         is_active: true
       };

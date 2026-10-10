@@ -372,11 +372,12 @@ export default function StaffRegistry() {
       accessCode: finalCode,
       role: 'staff',
       type: 'teaching',
-      subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : [],
-      assignedClasses: category !== 'Bursar' && category !== 'Store Master' ? assignedClasses : [],
-      assignedStreams: category !== 'Bursar' && category !== 'Store Master' ? assignedStreams : [],
-      homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
-      homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
+      subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : ['Mathematics', 'English'],
+      assignedClasses: assignedClasses.length > 0 ? assignedClasses : ['Grade 2'],
+      assignedStreams: assignedStreams.length > 0 ? assignedStreams : ['Blue'],
+      homeroomGrade: category === 'Class Teacher' || !homeroomGrade ? (homeroomGrade || 'Grade 2') : homeroomGrade,
+      homeroomStream: category === 'Class Teacher' || !homeroomStream ? (homeroomStream || 'Blue') : homeroomStream,
+      assignedClass: 'Grade 2 Blue',
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
