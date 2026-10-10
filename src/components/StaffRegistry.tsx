@@ -366,7 +366,8 @@ export default function StaffRegistry() {
       return;
     }
 
-    const staffRecord: StaffMember = {
+    const finalCode = accessCode || generateRandomCode();
+    const staffRecord: StaffMember & { tempAccessCode?: string; password?: string } = {
       id: editingStaff ? editingStaff.id : `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: fullName.trim(),
       category,
@@ -374,7 +375,9 @@ export default function StaffRegistry() {
       phone: phone.trim(),
       tscNumber: tscNumber.trim(),
       status,
-      accessCode: accessCode || generateRandomCode(),
+      accessCode: finalCode,
+      tempAccessCode: finalCode,
+      password: finalCode,
       subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : [],
       assignedClasses: category !== 'Bursar' && category !== 'Store Master' ? assignedClasses : [],
       assignedStreams: category !== 'Bursar' && category !== 'Store Master' ? assignedStreams : [],

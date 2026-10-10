@@ -165,7 +165,7 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
       const key = String(s.email || s.id || s.phone || s.name).trim().toLowerCase();
       if (!map.has(key)) {
         // Normalize code if missing or numeric
-        let code = s.accessCode || s.tempAccessCode || s.access_key || s.ref;
+        let code = s.accessCode || s.tempAccessCode || s.password || s.access_key || s.ref;
         if (!code || /^\d+$/.test(String(code).trim())) {
           const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
           let randomPart = '';
@@ -173,13 +173,12 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
             randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
           }
           code = `MUN-${randomPart}`;
-          s.accessCode = code;
-          s.tempAccessCode = code;
         } else if (!String(code).startsWith('MUN-')) {
           code = `MUN-${String(code).replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 4)}`;
-          s.accessCode = code;
-          s.tempAccessCode = code;
         }
+        s.accessCode = code;
+        s.tempAccessCode = code;
+        s.password = code;
         map.set(key, s);
       }
     }
@@ -355,24 +354,14 @@ export const verifyStaffLogin = (
   // 5. Validate access code if provided
   if (inputPassword) {
     const sAny = matched as any;
-    const storedAccessCode = sAny.accessCode || '';
+    const storedAccessCode = sAny.accessCode || sAny.tempAccessCode || sAny.password || '';
     const storedTempCode = sAny.tempAccessCode || '';
     const storedPassword = sAny.password || '';
 
-    const validCode = (storedAccessCode || storedTempCode || storedPassword || '').toString().replace(/\s+/g, '').toUpperCase();
-    const submittedCode = (inputPassword || '').toString().replace(/\s+/g, '').toUpperCase();
+    const cleanInput = (inputPassword || '').trim().replace(/\s+/g, '').toUpperCase();
+    const cleanStored = (storedAccessCode || storedTempCode || storedPassword || '').trim().replace(/\s+/g, '').toUpperCase();
 
-    // Check if stored code is legacy numeric (e.g. 311020) and normalize if needed
-    const isLegacyNumeric = /^\d+$/.test(validCode);
-    const isValidNumericMatch = isLegacyNumeric && submittedCode === validCode;
-
-    if (
-      submittedCode !== validCode &&
-      submittedCode !== storedAccessCode.toUpperCase() &&
-      submittedCode !== storedTempCode.toUpperCase() &&
-      submittedCode !== storedPassword.toUpperCase() &&
-      !isValidNumericMatch
-    ) {
+    if (cleanInput !== cleanStored && cleanInput !== storedAccessCode.toUpperCase() && cleanInput !== storedTempCode.toUpperCase() && cleanInput !== storedPassword.toUpperCase()) {
       return {
         success: false,
         error: 'Invalid access code. Please check your assigned MUN-XXXX access code.'
