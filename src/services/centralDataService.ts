@@ -17,32 +17,39 @@ export const STORAGE_KEYS = {
   STAFF_ATTENDANCE: 'munyaka_staff_attendance',
 };
 
-export const getMasterLearners = () => {
-  const key1 = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
-  const key2 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-  const key3 = JSON.parse(localStorage.getItem('munyaka_master_learners') || localStorage.getItem('school_learners_data') || '[]');
+export const getMasterData = () => {
+  const learnersRaw = localStorage.getItem('munyaka_master_learners') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || localStorage.getItem('school_learners_data') || '[]';
+  let learners = [];
+  try {
+    learners = JSON.parse(learnersRaw);
+    if (!Array.isArray(learners)) learners = [];
+  } catch {
+    learners = [];
+  }
 
-  const merged = [...key1, ...key2, ...key3];
-  const map = new Map();
-  merged.forEach(item => {
-    const id = item.admissionNumber || item.admNo || item.id || item.assessmentNumber || item.name;
-    if (id) map.set(String(id).trim().toLowerCase(), item);
-  });
-  return Array.from(map.values());
+  const staffRaw = localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff') || '[]';
+  let staff = [];
+  try {
+    staff = JSON.parse(staffRaw);
+    if (!Array.isArray(staff)) staff = [];
+  } catch {
+    staff = [];
+  }
+
+  return {
+    learners,
+    totalLearners: learners.length,
+    staff,
+    totalStaff: staff.length
+  };
+};
+
+export const getMasterLearners = () => {
+  return getMasterData().learners;
 };
 
 export const getMasterStaff = () => {
-  const key1 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
-  const key2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
-  const key3 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
-
-  const merged = [...key1, ...key2, ...key3];
-  const map = new Map();
-  merged.forEach(item => {
-    const id = item.email || item.id || item.accessCode || item.name;
-    if (id) map.set(String(id).trim().toLowerCase(), item);
-  });
-  return Array.from(map.values());
+  return getMasterData().staff;
 };
 try {
   if (typeof window !== 'undefined') {
@@ -332,13 +339,7 @@ export const CentralDataService = {
 
   getSystemStats: () => {
     try {
-      const learnersList = getMasterLearners();
-      const learnersCount = learnersList.length > 0 ? learnersList.length : (initialSeedData.students?.length || 33);
-
-      const staffList = getMasterStaff();
-      const teachingStaff = staffList.filter((s: any) => s.type === 'teaching' || s.role === 'teacher').length;
-      const nonTeachingStaff = staffList.filter((s: any) => s.type === 'non-teaching' || s.role === 'support').length;
-
+      const data = getMasterData();
       const attendanceList = JSON.parse(localStorage.getItem('munyaka_attendance') || '[]');
       const attendanceCount = Array.isArray(attendanceList) ? attendanceList.length : Object.keys(attendanceList || {}).length;
 
@@ -348,9 +349,12 @@ export const CentralDataService = {
       const examsList = JSON.parse(localStorage.getItem('munyaka_exams') || localStorage.getItem('munyaka_all_set_exams') || '[]');
       const examsCount = Array.isArray(examsList) ? examsList.length : Object.keys(examsList || {}).length;
 
+      const teachingStaff = data.staff.filter((s: any) => s.type === 'teaching' || s.role === 'teacher').length;
+      const nonTeachingStaff = data.staff.filter((s: any) => s.type === 'non-teaching' || s.role === 'support').length;
+
       return {
-        learners: learnersCount,
-        teachingStaff,
+        learners: data.totalLearners,
+        teachingStaff: teachingStaff > 0 ? teachingStaff : data.totalStaff,
         nonTeachingStaff,
         attendance: attendanceCount,
         feeRecords: feeRecordsCount,
@@ -359,7 +363,7 @@ export const CentralDataService = {
     } catch (e) {
       console.error('Error computing system stats:', e);
       return {
-        learners: initialSeedData.students?.length || 33,
+        learners: 31,
         teachingStaff: 0,
         nonTeachingStaff: 0,
         attendance: 0,

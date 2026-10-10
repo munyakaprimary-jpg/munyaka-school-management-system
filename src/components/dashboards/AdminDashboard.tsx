@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CentralDataService } from '../../services/centralDataService';
+import { CentralDataService, getMasterData } from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { useCentralData } from '../../hooks/useCentralData';
@@ -113,16 +113,16 @@ export const AdminDashboardComponent: React.FC = () => {
   }, []);
 
   const sysStats = CentralDataService.getSystemStats();
-  const allStoredLearners = getStoredLearners();
-  const actualLearners = allStoredLearners.length > 0 ? allStoredLearners : (reactiveLearners.length > 0 ? reactiveLearners : (CentralDataService.getLearners() || []));
+  const masterData = getMasterData();
+  const actualLearners = masterData.learners.length > 0 ? masterData.learners : getStoredLearners();
   const learners = actualLearners;
-  const teachingCount = sysStats.teachingStaff;
+  const teachingCount = masterData.totalStaff > 0 ? masterData.totalStaff : sysStats.teachingStaff;
   const nonTeachingCount = sysStats.nonTeachingStaff;
 
   const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
   const junior = learners.length - primary.length;
 
-  const totalStudents = actualLearners.length > 0 ? actualLearners.length : learners.length;
+  const totalStudents = masterData.totalLearners > 0 ? masterData.totalLearners : learners.length;
   const teachingStaffCount = teachingCount;
   const nonTeachingStaffCount = nonTeachingCount;
   const primaryCount = primary.length;
