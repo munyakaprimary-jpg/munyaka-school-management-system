@@ -79,10 +79,6 @@ export const UnifiedDataStorage = {
   },
 
   getLearners: (): any[] => {
-    const rawLearners = localStorage.getItem('munyaka_learners');
-    const learnersList = rawLearners ? JSON.parse(rawLearners) : [];
-    if (Array.isArray(learnersList) && learnersList.length > 0) return learnersList;
-
     const list = readStorage<any[]>('munyaka_students', []);
     if (Array.isArray(list) && list.length > 0) return list;
     const fallback = readStorage<any[]>('school_learners_data', []);
@@ -92,7 +88,6 @@ export const UnifiedDataStorage = {
 
   saveLearners: (learners: any[]): void => {
     const list = Array.isArray(learners) ? learners : [];
-    writeStorage('munyaka_learners', list);
     writeStorage('munyaka_students', list);
     writeStorage('school_learners_data', list);
     CentralDataService.persistAndSyncMutation('students', list);
@@ -315,9 +310,8 @@ export const CentralDataService = {
 
   getSystemStats: () => {
     try {
-      const rawLearners = localStorage.getItem('munyaka_learners');
-      const learnersList = rawLearners ? JSON.parse(rawLearners) : [];
-      const learnersCount = learnersList.length > 0 ? learnersList.length : 33;
+      const learnersList = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]');
+      const learnersCount = learnersList.length > 0 ? learnersList.length : (initialSeedData.students?.length || 33);
 
       const staffList = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
       const teachingStaff = staffList.filter((s: any) => s.type === 'teaching' || s.role === 'teacher').length;
@@ -343,7 +337,7 @@ export const CentralDataService = {
     } catch (e) {
       console.error('Error computing system stats:', e);
       return {
-        learners: 33,
+        learners: initialSeedData.students?.length || 33,
         teachingStaff: 0,
         nonTeachingStaff: 0,
         attendance: 0,

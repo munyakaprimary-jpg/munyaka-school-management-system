@@ -103,10 +103,7 @@ export default function CentralDataServicePage() {
   const refreshStats = useCallback(() => {
     try {
       refreshStore();
-      const rawLearners = localStorage.getItem('munyaka_learners');
-      const learnersList = rawLearners ? JSON.parse(rawLearners) : [];
       const sysStats = CentralDataService.getSystemStats();
-      const learnersCount = learnersList.length > 0 ? learnersList.length : sysStats.learners;
       
       const library = JSON.parse(localStorage.getItem('munyaka_library_books') || '[]');
       const notices = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
@@ -121,7 +118,7 @@ export default function CentralDataServicePage() {
         : Object.keys(marks || {}).length;
 
       setStats({
-        registeredStudents: learnersCount,
+        registeredStudents: sysStats.learners,
         teachingStaff: sysStats.teachingStaff,
         nonTeachingStaff: sysStats.nonTeachingStaff,
         attendanceRecords: attendanceCount > 0 ? attendanceCount : sysStats.attendance,
@@ -133,11 +130,6 @@ export default function CentralDataServicePage() {
         noticesCount: Array.isArray(notices) ? notices.length : 0,
         ictAssetsCount: Array.isArray(ictAssets) ? ictAssets.length : 0,
         settingsConfigured: Object.keys(settings || {}).length,
-      });
-    } catch (e) {
-      console.error('Error refreshing central data stats:', e);
-    }
-  }, [refreshStore, attendance, exams, marks, timetable, settings]);
       });
     } catch (e) {
       console.error('Error refreshing central data stats:', e);
