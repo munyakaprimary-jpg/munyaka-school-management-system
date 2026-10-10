@@ -339,11 +339,18 @@ export const verifyStaffLogin = (
 
   // 5. Validate access code if provided
   if (inputPassword) {
-    const validCode = ((matched as any).accessCode || matched.tempAccessCode || '')
-      .replace(/\s+/g, '')
-      .toUpperCase();
+    const storedCode = (
+      (matched as any).accessCode ||
+      (matched as any).tempAccessCode ||
+      (matched as any).staffAccessCode ||
+      ''
+    ).toString().replace(/\s+/g, '').toUpperCase();
 
-    if (cleanCode !== validCode) {
+    const submittedCode = (inputPassword || '').toString().replace(/\s+/g, '').toUpperCase();
+
+    console.log('Auth check:', { submittedCode, storedCode, matchedEmail: matched.email });
+
+    if (submittedCode !== storedCode) {
       return {
         success: false,
         error: 'Invalid access code. Please check your assigned MUN-XXXX access code.'
