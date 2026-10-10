@@ -353,9 +353,7 @@ const Login: React.FC = () => {
   };
 
   // ── Lightweight server reachability check on mount (Disabled) ──────────────────────
-  useEffect(() => {
-    // Disabled for 100% offline local authentication
-  }, []);
+  // (checkServerHealth removed for pure local authentication)
 
   // ─────────────────────────────────────────────────────────────────────────
     //  Render — only shown when user is NOT authenticated
