@@ -81,9 +81,6 @@ function GlobalExportListener() {
         localStorage.setItem('munyaka_staff_v2_purged', 'true');
       }
     } catch {}
-        localStorage.setItem('munyaka_staff_v2_purged', 'true');
-      }
-    } catch {}
 
     const handleExportEvent = (e: any) => {
       const { filename, data, mimeType, nativeUri, title } = e.detail || {};
