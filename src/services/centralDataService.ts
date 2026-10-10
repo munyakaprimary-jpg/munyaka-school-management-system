@@ -17,16 +17,34 @@ export const STORAGE_KEYS = {
   STAFF_ATTENDANCE: 'munyaka_staff_attendance',
 };
 
-// Safe startup check: seed learners if empty/missing while keeping staff at zero
+// Safe startup check: seed learners, fees, and exams if empty/missing while keeping staff at zero
 try {
   if (typeof window !== 'undefined') {
-    const existingLearners = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+    const existingLearners = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || localStorage.getItem('school_learners_data');
     if (!existingLearners || JSON.parse(existingLearners).length === 0) {
       if (initialSeedData.students && initialSeedData.students.length > 0) {
         localStorage.setItem('munyaka_learners', JSON.stringify(initialSeedData.students));
         localStorage.setItem('munyaka_students', JSON.stringify(initialSeedData.students));
+        localStorage.setItem('school_learners_data', JSON.stringify(initialSeedData.students));
       }
     }
+
+    const existingFees = localStorage.getItem('munyaka_fees') || localStorage.getItem('munyaka_fees_records');
+    if (!existingFees || JSON.parse(existingFees).length === 0) {
+      if ((initialSeedData as any).fees && (initialSeedData as any).fees.length > 0) {
+        localStorage.setItem('munyaka_fees', JSON.stringify((initialSeedData as any).fees));
+        localStorage.setItem('munyaka_fees_records', JSON.stringify((initialSeedData as any).fees));
+      }
+    }
+
+    const existingExams = localStorage.getItem('munyaka_exams') || localStorage.getItem('munyaka_all_set_exams');
+    if (!existingExams || JSON.parse(existingExams).length === 0) {
+      if ((initialSeedData as any).exams && (initialSeedData as any).exams.length > 0) {
+        localStorage.setItem('munyaka_exams', JSON.stringify((initialSeedData as any).exams));
+        localStorage.setItem('munyaka_all_set_exams', JSON.stringify((initialSeedData as any).exams));
+      }
+    }
+
     // Ensure staff master list is explicitly empty or left untouched if already set, but never defaulted with mock staff
     const existingStaff = localStorage.getItem('munyaka_master_staff_list');
     if (!existingStaff) {
@@ -34,7 +52,7 @@ try {
     }
   }
 } catch (e) {
-  console.error('Error seeding learners:', e);
+  console.error('Error seeding learners/fees/exams:', e);
 }
 
 const CENTRAL_DB_STORAGE_KEY = 'munyaka_central_db_cache';
