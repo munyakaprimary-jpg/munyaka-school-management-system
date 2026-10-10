@@ -705,7 +705,7 @@ export default function StaffRegistry() {
                             </div>
                           </div>
                         </div>
-                      </tr>
+                      </td>
 
                       <td className="py-3.5 px-3">
                         <span className="text-xs text-slate-700 block flex items-center gap-1">
