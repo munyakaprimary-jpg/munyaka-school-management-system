@@ -50,14 +50,37 @@ function GlobalExportListener() {
   });
 
   useEffect(() => {
-    // One-time startup sanitization: purge any stale legacy staff seed records with numeric codes
+    // One-time startup sanitization: purge any stale legacy staff seed records with numeric codes and consolidate records
     try {
       const purged = localStorage.getItem('munyaka_staff_v2_purged');
       if (!purged) {
-        localStorage.removeItem('munyaka_master_staff_list');
-        localStorage.removeItem('munyaka_staff_db');
-        localStorage.removeItem('munyaka_staff');
         localStorage.setItem('munyaka_master_staff_list', JSON.stringify([]));
+
+        const lKeys = ['munyaka_master_learners', 'munyaka_learners', 'munyaka_students', 'school_learners_data', 'munyaka_learners_db'];
+        let allLearners: any[] = [];
+        for (const k of lKeys) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                allLearners = [...allLearners, ...parsed];
+              }
+            } catch {}
+          }
+        }
+        if (allLearners.length > 0) {
+          const map = new Map();
+          allLearners.forEach(l => {
+            const key = l.admissionNumber || l.id || l.assessmentNumber || l.name;
+            if (key) map.set(String(key).trim().toLowerCase(), l);
+          });
+          localStorage.setItem('munyaka_master_learners', JSON.stringify(Array.from(map.values())));
+        }
+
+        localStorage.setItem('munyaka_staff_v2_purged', 'true');
+      }
+    } catch {}
         localStorage.setItem('munyaka_staff_v2_purged', 'true');
       }
     } catch {}

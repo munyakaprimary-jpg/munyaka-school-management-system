@@ -14,9 +14,8 @@ export const STORAGE_KEYS = {
 
 export const getLearners = () => {
   try {
-    const raw = localStorage.getItem('munyaka_master_learners') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]';
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    const raw = localStorage.getItem('munyaka_master_learners') || localStorage.getItem('munyaka_learners');
+    return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
@@ -24,9 +23,8 @@ export const getLearners = () => {
 
 export const getStaff = () => {
   try {
-    const raw = localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory') || '[]';
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    const raw = localStorage.getItem('munyaka_master_staff_list');
+    return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
