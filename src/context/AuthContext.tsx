@@ -3,10 +3,27 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
-import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 import { getActiveAdminPassword, DEFAULT_ADMIN_PASSWORD } from '@/services/adminCredentials';
 import { startHeartbeatService, stopHeartbeatService } from '@/services/deviceHeartbeat';
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
+// Staff authentication now reads directly from localStorage to avoid service-layer indirection.
+const STAFF_MASTER_STORAGE_KEY = 'munyaka_master_staff_list';
+const readStaffMaster = (): any[] => {
+  try {
+    const raw = localStorage.getItem(STAFF_MASTER_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+const writeStaffMaster = (list: any[]) => {
+  try {
+    localStorage.setItem(STAFF_MASTER_STORAGE_KEY, JSON.stringify(list));
+    notifyDataChanged(STAFF_MASTER_STORAGE_KEY);
+  } catch {
+    /* storage may be readonly */
+  }
+};
 
 export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff';
 
@@ -208,11 +225,10 @@ const initializeUsersStorage = () => {
     emailConfirmed: true
   };
 
-  initializeStaffMaster();
-
-  const masterRecords = getStaffMaster();
-  const staffLedger: PreRegisteredStaff[] = masterRecords.length > 0
-    ? masterRecords.map(r => ({
+  // Read staff master data directly from localStorage
+  const staffMasterData = readStaffMaster();
+  const staffLedger: PreRegisteredStaff[] = staffMasterData.length > 0
+    ? staffMasterData.map(r => ({
         id: r.id,
         staffId: r.staffId,
         fullName: r.name,
@@ -328,8 +344,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initializeUsersStorage();
 
-    // 1. Live Staff Master Service verification for MUNYAKA-XXXX access codes and @munyaka.sc.ke emails
-    const liveStaffMaster = getStaffMaster();
+    // 1. Direct Staff Master verification for MUNYAKA-XXXX access codes and @munyaka.sc.ke emails
+    const liveStaffMaster = readStaffMaster();
     const matchedMasterStaff = liveStaffMaster.find(staff => {
       const staffEmail = String(staff.email || '').trim().toLowerCase();
       const staffId = String(staff.staffId || '').trim().toLowerCase();
@@ -485,7 +501,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       showError("A user with this email already exists.");
       return false;
     }
-    
+
     const newUserId = `user-${Date.now()}`;
     const newUser = {
       id: newUserId,
@@ -500,10 +516,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       department: userData.department,
       createdAt: new Date().toISOString()
     };
-    
+
     users[normalizedEmail] = newUser;
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-    
+
     showSuccess(`Staff ${userData.fullName} registered successfully!`);
     return true;
   };
@@ -513,7 +529,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const updatedUser = { ...user, ...data };
     setUser(updatedUser);
     localStorage.setItem('munyaka_session', JSON.stringify(updatedUser));
-    
+
     if (data.email) {
       const normalizedEmail = normalizeEmail(data.email);
       localStorage.setItem('munyaka_admin_email', normalizedEmail);
@@ -592,7 +608,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!foundUser.alternativePasswords?.includes(newPass)) {
       foundUser.alternativePasswords.push(newPass);
     }
-    
+
     localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, newPass);
     localStorage.setItem('munyaka_owner_pass', newPass);
 
@@ -623,7 +639,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const switchRole = (role: UserRole) => {
     if (!user) return;
-    
+
     const updatedUser = { ...user, role };
     setUser(updatedUser);
     localStorage.setItem('munyaka_session', JSON.stringify(updatedUser));
