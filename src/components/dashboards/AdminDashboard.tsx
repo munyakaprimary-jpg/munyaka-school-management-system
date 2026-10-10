@@ -112,15 +112,15 @@ export const AdminDashboardComponent: React.FC = () => {
     };
   }, []);
 
+  const sysStats = CentralDataService.getSystemStats();
   const learners = reactiveLearners.length > 0 ? reactiveLearners : getStoredLearners();
-  const staff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
-  const teachingCount = staff.filter((s: any) => s.type === 'teaching' || s.role === 'teacher').length;
-  const nonTeachingCount = staff.filter((s: any) => s.type === 'non-teaching' || s.role === 'support').length;
+  const teachingCount = sysStats.teachingStaff;
+  const nonTeachingCount = sysStats.nonTeachingStaff;
 
   const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
   const junior = learners.length - primary.length;
 
-  const totalStudents = learners.length;
+  const totalStudents = sysStats.learners > learners.length ? sysStats.learners : learners.length;
   const teachingStaffCount = teachingCount;
   const nonTeachingStaffCount = nonTeachingCount;
   const primaryCount = primary.length;

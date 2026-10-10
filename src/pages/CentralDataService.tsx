@@ -103,51 +103,27 @@ export default function CentralDataServicePage() {
   const refreshStats = useCallback(() => {
     try {
       refreshStore();
+      const sysStats = CentralDataService.getSystemStats();
       
       const library = JSON.parse(localStorage.getItem('munyaka_library_books') || '[]');
       const notices = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
       const ictAssets = JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]');
 
-      // Get highest count staff array across all storage keys
-      const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
-      const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
-      const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
-      const s4 = JSON.parse(localStorage.getItem('staff') || '[]');
-      const candidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
-      const masterStaff = candidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
-
-      // Learners count sync with robust fallback to localStorage directly and initialSeedData
-      const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-      const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
-      const l3 = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
-      const seedLearners = initialSeedData.students || [];
-      const candidateLearners = [l1, l2, l3, learners, seedLearners].filter(Array.isArray);
-      const masterLearners = candidateLearners.reduce((max, curr) => (curr.length > max.length ? curr : max), seedLearners);
-
-      // Check teaching vs non-teaching staff strictly from live storage
-      const staff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
-      const teachingStaff = staff.filter((s: any) => s.type === 'teaching' || s.role === 'teacher').length;
-      const nonTeachingStaff = staff.filter((s: any) => s.type === 'non-teaching' || s.role === 'support').length;
-
       const attendanceCount = Array.isArray(attendance)
         ? attendance.length
         : Object.keys(attendance || {}).length;
-
-      const feeRecords = Array.isArray(fees)
-        ? fees.length
-        : Object.keys(fees || {}).length;
 
       const marksCount = Array.isArray(marks)
         ? marks.length
         : Object.keys(marks || {}).length;
 
       setStats({
-        registeredStudents: masterLearners.length,
-        teachingStaff,
-        nonTeachingStaff,
-        attendanceRecords: attendanceCount,
-        feeRecords,
-        examsCount: Array.isArray(exams) ? exams.length : 0,
+        registeredStudents: sysStats.learners,
+        teachingStaff: sysStats.teachingStaff,
+        nonTeachingStaff: sysStats.nonTeachingStaff,
+        attendanceRecords: attendanceCount > 0 ? attendanceCount : sysStats.attendance,
+        feeRecords: sysStats.feeRecords,
+        examsCount: sysStats.exams,
         marksCount,
         timetableCount: Array.isArray(timetable) ? timetable.length : Object.keys(timetable || {}).length,
         libraryCount: Array.isArray(library) ? library.length : 0,
@@ -158,7 +134,7 @@ export default function CentralDataServicePage() {
     } catch (e) {
       console.error('Error refreshing central data stats:', e);
     }
-  }, [refreshStore, learners, staff, fees, attendance, exams, marks, timetable, settings]);
+  }, [refreshStore, attendance, exams, marks, timetable, settings]);
 
   useEffect(() => {
     refreshStats();

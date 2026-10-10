@@ -308,6 +308,45 @@ export const CentralDataService = {
     return null;
   },
 
+  getSystemStats: () => {
+    try {
+      const learnersList = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students') || '[]');
+      const learnersCount = learnersList.length > 0 ? learnersList.length : (initialSeedData.students?.length || 33);
+
+      const staffList = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+      const teachingStaff = staffList.filter((s: any) => s.type === 'teaching' || s.role === 'teacher').length;
+      const nonTeachingStaff = staffList.filter((s: any) => s.type === 'non-teaching' || s.role === 'support').length;
+
+      const attendanceList = JSON.parse(localStorage.getItem('munyaka_attendance') || '[]');
+      const attendanceCount = Array.isArray(attendanceList) ? attendanceList.length : Object.keys(attendanceList || {}).length;
+
+      const feesList = JSON.parse(localStorage.getItem('munyaka_fees') || localStorage.getItem('munyaka_fees_records') || '[]');
+      const feeRecordsCount = Array.isArray(feesList) ? feesList.length : Object.keys(feesList || {}).length;
+
+      const examsList = JSON.parse(localStorage.getItem('munyaka_exams') || localStorage.getItem('munyaka_all_set_exams') || '[]');
+      const examsCount = Array.isArray(examsList) ? examsList.length : Object.keys(examsList || {}).length;
+
+      return {
+        learners: learnersCount,
+        teachingStaff,
+        nonTeachingStaff,
+        attendance: attendanceCount,
+        feeRecords: feeRecordsCount,
+        exams: examsCount
+      };
+    } catch (e) {
+      console.error('Error computing system stats:', e);
+      return {
+        learners: initialSeedData.students?.length || 33,
+        teachingStaff: 0,
+        nonTeachingStaff: 0,
+        attendance: 0,
+        feeRecords: 0,
+        exams: 0
+      };
+    }
+  },
+
   async syncBatchToRemote(batchPayload: Record<string, any>): Promise<boolean> {
     if (hardOfflineMode) return false;
 
