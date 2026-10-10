@@ -15,7 +15,6 @@ import jwt from 'jsonwebtoken';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
-const USERS_FILE = path.join(ROOT, 'data', 'users.json');
 
 const PORT = 5000;
 const HOST = '0.0.0.0';
@@ -33,26 +32,17 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// In-memory or centralized staff users store (replaces legacy users.json)
+let inMemoryUsersDb = { users: [] };
+
 // Helper to read users db
 function readUsersDb() {
-  try {
-    if (!fs.existsSync(USERS_FILE)) {
-      return { users: [] };
-    }
-    const data = fs.readFileSync(USERS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (e) {
-    return { users: [] };
-  }
+  return inMemoryUsersDb;
 }
 
 // Helper to write users db
 function writeUsersDb(db) {
-  const dir = path.dirname(USERS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(USERS_FILE, JSON.stringify(db, null, 2), 'utf8');
+  inMemoryUsersDb = db;
 }
 
 // Helper for temporary password generation (MUNYAKA-XXXX)
