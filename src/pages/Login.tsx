@@ -296,7 +296,7 @@ const Login: React.FC = () => {
     setIsStaffVerifying(true);
     setStaffAuthError('');
 
-    const cleanInput = (staffId || '').trim().toLowerCase();
+    const cleanInput = String(staffId || '').trim().toLowerCase();
     if (!cleanInput.includes('@')) {
       const err = 'Please enter your full school email address ending with @munyaka.sc.ke.';
       setStaffAuthError(err);
@@ -350,6 +350,15 @@ const Login: React.FC = () => {
     showSuccess(`Welcome, ${userData.name}!`);
     navigate('/dashboard', { replace: true });
     setIsStaffVerifying(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      const cleanEmail = String(staffId || '').trim().toLowerCase();
+      if (cleanEmail) {
+        handleStaffLogin(e);
+      }
+    }
   };
 
   // ── Lightweight server reachability check on mount (Disabled) ──────────────────────
@@ -593,6 +602,7 @@ const Login: React.FC = () => {
                           autoCapitalize="none"
                           value={staffId}
                           onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
+                          onKeyDown={handleKeyDown}
                           placeholder="e.g. name@munyaka.sc.ke"
                           autoComplete="username"
                           className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
@@ -618,6 +628,7 @@ const Login: React.FC = () => {
                           type={showStaffPassword ? 'text' : 'password'}
                           value={staffPassword}
                           onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
+                          onKeyDown={handleKeyDown}
                           placeholder="e.g. MUN-X7K9"
                           autoComplete="current-password"
                           className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200 font-mono tracking-wider"
