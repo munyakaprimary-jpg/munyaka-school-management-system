@@ -108,16 +108,17 @@ export default function CentralDataServicePage() {
       const notices = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
       const ictAssets = JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]');
 
-      // Get highest count staff array across all storage keys
-      const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
-      const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
-      const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
-      const s4 = JSON.parse(localStorage.getItem('staff') || '[]');
-      const candidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
-      const masterStaff = candidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
+      // Get highest count staff array across all storage keys (while keeping master staff empty as configured)
+      const masterStaff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
 
-      // Learners count sync
+      // Learners count sync - check all learner/student keys
       const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
+      const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
+      const l3 = JSON.parse(localStorage.getItem('munyaka_learners_db') || '[]');
+      const l4 = JSON.parse(localStorage.getItem('students') || '[]');
+      const l5 = JSON.parse(localStorage.getItem('learners') || '[]');
+      const allLearnerLists = [l1, l2, l3, l4, l5, learners].filter(Array.isArray);
+      const masterLearners = allLearnerLists.reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
       const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
       const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
 

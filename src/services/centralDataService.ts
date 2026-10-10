@@ -56,11 +56,14 @@ export const UnifiedDataStorage = {
   },
 
   getStaff: (): any[] => {
-    const list = readStorage<any[]>('munyaka_staff', []);
-    if (Array.isArray(list) && list.length > 0) return list;
+    // Keep staff strictly empty as requested unless explicitly added
+    const rawMaster = readStorage<any[]>('munyaka_master_staff_list', []);
+    if (rawMaster.length > 0) return rawMaster;
+    const s1 = readStorage<any[]>('munyaka_staff', []);
+    if (s1.length > 0) return s1;
     const dir = readStorage<any[]>('munyaka_staff_directory', []);
-    if (Array.isArray(dir) && dir.length > 0) return dir;
-    return readStorage<any[]>('munyaka_master_staff_list', []);
+    if (dir.length > 0) return dir;
+    return [];
   },
 
   saveStaff: (staff: any[]): void => {
