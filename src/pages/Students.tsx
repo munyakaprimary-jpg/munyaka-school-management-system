@@ -161,34 +161,58 @@ export default function Students() {
   const assignedTeacherStream = !isAdmin ? (resolvedStream || 'BLUE') : 'all';
 
   const [students, setStudents] = useState<any[]>(() => {
-      // Load from centralized master data service (aggregates across all storage keys)
-      const loaded = CentralDataService.getLearners();
-      return ensureProperAdmissionNumbers(loaded);
+      // Force aggregation across all storage keys for admin & staff
+      const p1 = JSON.parse(localStorage.getItem('munyaka_learners_db') || localStorage.getItem('school_learners_master') || localStorage.getItem('school_learners_data') || '[]');
+      const p2 = JSON.parse(localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners') || localStorage.getItem('students') || '[]');
+      const p3 = CentralDataService.getLearners() || [];
+
+      const map = new Map<string, any>();
+      [...p3, ...p1, ...p2].forEach(s => {
+        if (s && (s.id || s.admissionNumber || s.admNo || s.name)) {
+          const key = String(s.id || s.admissionNumber || s.admNo || s.name).trim().toLowerCase();
+          if (!map.has(key)) {
+            map.set(key, s);
+          }
+        }
+      });
+      const combined = Array.from(map.values());
+      return ensureProperAdmissionNumbers(combined);
     });
   
-    // Keep localStorage in sync when central data changes
+  // Keep localStorage & state in sync when central data changes
     useEffect(() => {
-      const handleStudentsUpdated = () => {
-        const loaded = CentralDataService.getLearners();
-        setStudents(ensureProperAdmissionNumbers(loaded));
+      const loadAll = () => {
+        const p1 = JSON.parse(localStorage.getItem('munyaka_learners_db') || localStorage.getItem('school_learners_master') || localStorage.getItem('school_learners_data') || '[]');
+        const p2 = JSON.parse(localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners') || localStorage.getItem('students') || '[]');
+        const p3 = CentralDataService.getLearners() || [];
+
+        const map = new Map<string, any>();
+        [...p3, ...p1, ...p2].forEach(s => {
+          if (s && (s.id || s.admissionNumber || s.admNo || s.name)) {
+            const key = String(s.id || s.admissionNumber || s.admNo || s.name).trim().toLowerCase();
+            if (!map.has(key)) {
+              map.set(key, s);
+            }
+          }
+        });
+        const combined = Array.from(map.values());
+        if (combined.length > 0) {
+          setStudents(ensureProperAdmissionNumbers(combined));
+        }
       };
-      const handleLearnersUpdated = () => {
-        const loaded = CentralDataService.getLearners();
-        setStudents(ensureProperAdmissionNumbers(loaded));
-      };
-      const handleDataChanged = () => {
-        const loaded = CentralDataService.getLearners();
-        setStudents(ensureProperAdmissionNumbers(loaded));
-      };
-  
-      window.addEventListener('students-updated', handleStudentsUpdated);
-      window.addEventListener('learners-updated', handleLearnersUpdated);
-      window.addEventListener('munyaka:data-changed', handleDataChanged);
-  
+
+      loadAll();
+
+      window.addEventListener('students-updated', loadAll);
+      window.addEventListener('learners-updated', loadAll);
+      window.addEventListener('munyaka:data-changed', loadAll);
+      window.addEventListener('munyaka_learners_updated', loadAll);
+
       return () => {
-        window.removeEventListener('students-updated', handleStudentsUpdated);
-        window.removeEventListener('learners-updated', handleLearnersUpdated);
-        window.removeEventListener('munyaka:data-changed', handleDataChanged);
+        window.removeEventListener('students-updated', loadAll);
+        window.removeEventListener('learners-updated', loadAll);
+        window.removeEventListener('munyaka:data-changed', loadAll);
+        window.removeEventListener('munyaka_learners_updated', loadAll);
       };
     }, []);
 
@@ -533,10 +557,11 @@ export default function Students() {
         const sStream = s.stream || '';
         
         const sGradeNorm = normalizeGradeStr(sGrade);
-        const assignedNorm = normalizeGradeStr(assignedTeacherGrade);
-        
-        // If user is a teacher (non-admin), restrict strictly to assigned grade & stream
+        const filterGradeNorm = normalizeGradeStr(gradeFilter);
+
+        // Remove restrictions for admin so all registered learners are visible without lock
         if (!isAdmin) {
+          const assignedNorm = normalizeGradeStr(assignedTeacherGrade);
           const gradeMatch = sGradeNorm === assignedNorm || sGrade.toLowerCase().includes(assignedTeacherGrade.toLowerCase()) || assignedTeacherGrade.toLowerCase().includes(sGrade.toLowerCase());
           const streamMatch = !assignedTeacherStream || sStream.toLowerCase() === assignedTeacherStream.toLowerCase() || sStream.toLowerCase().includes(assignedTeacherStream.toLowerCase());
           if (!gradeMatch || !streamMatch) return false;
@@ -544,7 +569,6 @@ export default function Students() {
         
         const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase());
         
-        const filterGradeNorm = normalizeGradeStr(gradeFilter);
         const matchesGrade = gradeFilter === 'all' || sGradeNorm === filterGradeNorm || sGrade.toLowerCase() === gradeFilter.toLowerCase();
         const matchesStream = streamFilter === 'all' || sStream.toLowerCase() === streamFilter.toLowerCase();
         
