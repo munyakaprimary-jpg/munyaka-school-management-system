@@ -50,6 +50,18 @@ function GlobalExportListener() {
   });
 
   useEffect(() => {
+    // One-time startup sanitization: purge any stale legacy staff seed records with numeric codes
+    try {
+      const purged = localStorage.getItem('munyaka_staff_v2_purged');
+      if (!purged) {
+        localStorage.removeItem('munyaka_master_staff_list');
+        localStorage.removeItem('munyaka_staff_db');
+        localStorage.removeItem('munyaka_staff');
+        localStorage.setItem('munyaka_master_staff_list', JSON.stringify([]));
+        localStorage.setItem('munyaka_staff_v2_purged', 'true');
+      }
+    } catch {}
+
     const handleExportEvent = (e: any) => {
       const { filename, data, mimeType, nativeUri, title } = e.detail || {};
       if (filename) {

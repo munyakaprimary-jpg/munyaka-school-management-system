@@ -147,10 +147,9 @@ export const initializeStaffMaster = (): void => {
 };
 
 export const getStaffMaster = (): MasterStaffRecord[] => {
-  initializeStaffMaster();
   let list: any[] = [];
   try {
-    const raw = localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_db') || localStorage.getItem('munyaka_staff');
+    const raw = localStorage.getItem('munyaka_master_staff_list');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
@@ -159,56 +158,32 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
     }
   } catch {}
 
-  const map = new Map<string, any>();
-  list.forEach(s => {
-    if (s && (s.id || s.phone || s.name || s.staffId || s.email)) {
-      const key = String(s.email || s.id || s.phone || s.name).trim().toLowerCase();
-      if (!map.has(key)) {
-        // Normalize code if missing or numeric exclusively to MUN-XXXX
-        let code = s.accessCode || s.tempAccessCode || s.password || s.access_key || s.ref;
-        if (!code || /^\d+$/.test(String(code).trim())) {
-          const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-          let randomPart = '';
-          for (let i = 0; i < 4; i++) {
-            randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-          }
-          code = `MUN-${randomPart}`;
-        } else if (!String(code).startsWith('MUN-')) {
-          code = `MUN-${String(code).replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 4)}`;
-        }
-        s.accessCode = code;
-        s.tempAccessCode = code;
-        s.password = code;
-        map.set(key, s);
-      }
+  const uniqueList = list.map((s: any) => {
+    let code = s.accessCode || `MUN-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    if (!String(code).startsWith('MUN-')) {
+      code = `MUN-${String(code).replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 4)}`;
     }
-  });
-
-  const uniqueList = Array.from(map.values()).map((s: any) => {
-    // Purge tempAccessCode and password strictly
-    const code = s.accessCode || `MUN-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     return {
-      id: s.id || s.staffId || `staff_${Math.random()}`,
-      name: s.name || s.full_name || 'Staff Member',
-      nationalId: s.nationalId || s.id_no || `ID-${s.id || '000'}`,
-      email: s.email || '',
+      id: s.id || `staff_${Math.random()}`,
+      name: s.name || 'Staff Member',
+      nationalId: s.nationalId || '000000',
+      email: (s.email || '').trim().toLowerCase(),
       phone: s.phone || '',
-      tscNumber: s.tscNumber || s.tsc_no,
+      tscNumber: s.tscNumber || '',
       role: s.role || 'Teacher',
       systemRole: s.systemRole || 'subject_teacher',
       department: s.department || 'Administration',
-      assignedGrade: s.assignedGrade || s.assigned_grade || s.grade || '',
-      assignedStream: s.assignedStream || s.assigned_stream || s.stream || '',
-      assignedSubjects: s.assignedSubjects || s.subjectAllocations || s.allocations || [],
+      assignedGrade: s.assignedGrade || '',
+      assignedStream: s.assignedStream || '',
+      assignedSubjects: s.assignedSubjects || [],
       status: s.status || 'Active',
-      staffId: s.staffId || s.staff_id,
-      accessCode: code,
+      staffId: s.staffId || '',
+      accessCode: code.trim().replace(/\s+/g, '').toUpperCase(),
     };
   });
 
   try {
     localStorage.setItem('munyaka_master_staff_list', JSON.stringify(uniqueList));
-    localStorage.setItem('munyaka_staff_db', JSON.stringify(uniqueList));
   } catch {}
 
   return uniqueList;

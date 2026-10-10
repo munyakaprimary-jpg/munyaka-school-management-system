@@ -296,45 +296,50 @@ const Login: React.FC = () => {
     setIsStaffVerifying(true);
     setStaffAuthError('');
 
-    const cleanInput = String(staffId || '').trim().toLowerCase();
-    if (!cleanInput.includes('@')) {
-      const err = 'Please enter your full school email address ending with @munyaka.sc.ke.';
+    const cleanInputEmail = String(staffId || '').trim().toLowerCase();
+    const cleanInputCode = String(staffPassword || '').trim().replace(/\s+/g, '').toUpperCase();
+
+    let staffList: any[] = [];
+    try {
+      staffList = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+    } catch {
+      staffList = [];
+    }
+
+    const matched = staffList.find((s: any) => (s.email || '').trim().toLowerCase() === cleanInputEmail);
+
+    if (!matched) {
+      const err = 'Staff account not found.';
       setStaffAuthError(err);
       showError(err);
       setIsStaffVerifying(false);
       return;
     }
 
-    const res = verifyStaffLogin(cleanInput, staffPassword);
+    const storedCode = (matched.accessCode || '').trim().replace(/\s+/g, '').toUpperCase();
 
-    if (!res.success || !res.staff) {
-      const err = res.error || 'Authentication failed. Please check your credentials.';
+    if (cleanInputCode !== storedCode) {
+      const err = 'Invalid access code. Please check your assigned MUN-XXXX access code.';
       setStaffAuthError(err);
       showError(err);
       setIsStaffVerifying(false);
       return;
     }
 
-    const matched = res.staff;
     const userData = {
-      id: matched.id || matched.staffId || `staff-${Date.now()}`,
+      id: matched.id || `staff-${Date.now()}`,
       name: matched.name || 'Staff Member',
-      email: matched.email || cleanInput,
+      email: matched.email || cleanInputEmail,
       phone: matched.phone || '',
-      role: matched.systemRole || (matched as any).role || 'staff',
-      staff_id: matched.staffId || '',
+      role: matched.role || 'staff',
+      staff_id: matched.staffId || matched.id || '',
       avatar: (matched.name || 'U')
         .split(' ')
-        .map(n => n[0] || '')
+        .map((n: string) => n[0] || '')
         .join('')
         .substring(0, 2)
         .toUpperCase(),
-      accessCode: matched.accessCode || matched.tempAccessCode || matched.password || '',
-      assignedClass: matched.assignedGrade,
-      assignedStream: matched.assignedStream,
-      grade: matched.assignedGrade,
-      stream: matched.assignedStream,
-      department: matched.department,
+      accessCode: storedCode,
       is_active: true
     };
 
