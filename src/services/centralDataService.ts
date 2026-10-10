@@ -12,39 +12,95 @@ export const STORAGE_KEYS = {
   SCHEMA_VERSION: 'munyaka_schema_version'
 };
 
+export const getLearners = () => {
+  try {
+    const keys = [
+      'munyaka_master_learners',
+      'munyaka_learners',
+      'munyaka_students',
+      'school_learners_data',
+      'munyaka_learners_db',
+      'school_learners_master',
+      'munyaka_students_db'
+    ];
+    let combined: any[] = [];
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            combined = [...combined, ...parsed];
+          }
+        } catch {}
+      }
+    }
+    const map = new Map();
+    combined.forEach(student => {
+      const key = student.admissionNumber || student.id || student.assessmentNumber || student.name;
+      if (key) map.set(String(key).trim().toLowerCase(), student);
+    });
+    return Array.from(map.values());
+  } catch {
+    return [];
+  }
+};
+
+export const getStaff = () => {
+  try {
+    const keys = [
+      'munyaka_master_staff_list',
+      'munyaka_staff_directory',
+      'munyaka_staff',
+      'munyaka_staff_db',
+      'munyaka_staff_master_v1'
+    ];
+    let combined: any[] = [];
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            combined = [...combined, ...parsed];
+          }
+        } catch {}
+      }
+    }
+    const map = new Map();
+    combined.forEach(staff => {
+      const key = staff.id || staff.email || staff.tscNumber || staff.name;
+      if (key) map.set(String(key).trim().toLowerCase(), staff);
+    });
+    return Array.from(map.values());
+  } catch {
+    return [];
+  }
+};
+
+export const getMasterData = () => {
+  try {
+    const learners = getLearners();
+    const staff = getStaff();
+    return {
+      learners,
+      totalLearners: learners.length,
+      staff,
+      totalStaff: staff.length
+    };
+  } catch {
+    return { learners: [], totalLearners: 0, staff: [], totalStaff: 0 };
+  }
+};
+
 export const CentralDataService = {
+  getLearners,
+  getStaff,
+  getMasterData,
   getSystemStats: () => {
     try {
-      let staff: any[] = [];
-      const staffKeys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
-      for (const k of staffKeys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              staff = parsed;
-              break;
-            }
-          } catch {}
-        }
-      }
-
-      let learners: any[] = [];
-      const learnersKeys = ['munyaka_learners_db', 'school_learners_master', 'school_learners_data', 'munyaka_students_db', 'munyaka_students', 'students', 'learners'];
-      for (const k of learnersKeys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              learners = parsed;
-              break;
-            }
-          } catch {}
-        }
-      }
-
+      const learners = getLearners();
+      const staff = getStaff();
       const attendanceList = JSON.parse(localStorage.getItem('munyaka_attendance') || '[]');
       const attendanceCount = Array.isArray(attendanceList) ? attendanceList.length : Object.keys(attendanceList || {}).length;
 
@@ -101,45 +157,4 @@ export const CentralDataService = {
   }
 };
 
-export const getMasterData = () => {
-  try {
-    const learnersKeys = ['munyaka_learners_db', 'school_learners_master', 'school_learners_data', 'munyaka_students_db', 'munyaka_students', 'students', 'learners'];
-    let learners: any[] = [];
-    for (const k of learnersKeys) {
-      const raw = localStorage.getItem(k);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            learners = parsed;
-            break;
-          }
-        } catch {}
-      }
-    }
-
-    const staffKeys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
-    let staff: any[] = [];
-    for (const k of staffKeys) {
-      const raw = localStorage.getItem(k);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            staff = parsed;
-            break;
-          }
-        } catch {}
-      }
-    }
-
-    return {
-      learners,
-      totalLearners: learners.length,
-      staff,
-      totalStaff: staff.length
-    };
-  } catch {
-    return { learners: [], totalLearners: 0, staff: [], totalStaff: 0 };
-  }
-};
+export default CentralDataService;
