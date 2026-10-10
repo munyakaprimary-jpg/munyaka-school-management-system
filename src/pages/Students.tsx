@@ -498,11 +498,15 @@ export default function Students() {
 
       setStudents(updated);
       
-            try {
-              CentralDataService.saveLearners(updated);
-            } catch {}
+      try {
+        localStorage.setItem('munyaka_master_learners', JSON.stringify(updated));
+        localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+        localStorage.setItem('munyaka_students', JSON.stringify(updated));
+        window.dispatchEvent(new Event('munyaka_data_changed'));
+        window.dispatchEvent(new Event('central_db_updated'));
+      } catch {}
       
-            setIsModalOpen(false);
+      setIsModalOpen(false);
       resetForm();
     } catch (err) {
       showError("Failed to save learner record.");

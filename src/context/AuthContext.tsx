@@ -408,6 +408,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
 
         localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
+        localStorage.setItem('munyaka_session', JSON.stringify(userData));
+        window.dispatchEvent(new Event('munyaka_data_changed'));
 
         localStorage.setItem('munyaka_session', JSON.stringify(userData));
         persistCurrentAuthRole(userData.role);

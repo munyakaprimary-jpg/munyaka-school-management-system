@@ -376,14 +376,14 @@ export default function StaffRegistry() {
       tscNumber: tscNumber.trim() || '',
       status: status || 'Active',
       accessCode: finalCode,
-      role: 'staff',
+      role: 'teacher',
       type: 'teaching',
       subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : ['Mathematics', 'English'],
-      assignedClasses: assignedClasses.length > 0 ? assignedClasses : ['Grade 2'],
-      assignedStreams: assignedStreams.length > 0 ? assignedStreams : ['Blue'],
-      homeroomGrade: category === 'Class Teacher' || !homeroomGrade ? (homeroomGrade || 'Grade 2') : homeroomGrade,
-      homeroomStream: category === 'Class Teacher' || !homeroomStream ? (homeroomStream || 'Blue') : homeroomStream,
-      assignedClass: 'Grade 2 Blue',
+      assignedClasses: assignedClasses.length > 0 ? assignedClasses : ['Grade 9 Venus'],
+      assignedStreams: assignedStreams.length > 0 ? assignedStreams : ['Green'],
+      homeroomGrade: category === 'Class Teacher' || !homeroomGrade ? (homeroomGrade || 'Grade 9 Venus') : homeroomGrade,
+      homeroomStream: category === 'Class Teacher' || !homeroomStream ? (homeroomStream || 'Green') : homeroomStream,
+      assignedClass: 'Grade 9 Venus',
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
@@ -415,6 +415,9 @@ export default function StaffRegistry() {
     localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
     localStorage.setItem('munyaka_staff_db', JSON.stringify(updatedList));
+
+    window.dispatchEvent(new Event('munyaka_data_changed'));
+    window.dispatchEvent(new Event('central_db_updated'));
 
     setStaffList(updatedList);
 
