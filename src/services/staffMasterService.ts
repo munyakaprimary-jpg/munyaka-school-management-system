@@ -345,21 +345,27 @@ export const verifyStaffLogin = (
 
   // 5. Validate access code if provided
   if (inputPassword) {
-    const storedCode = (
-      (matched as any).accessCode ||
-      (matched as any).tempAccessCode ||
-      (matched as any).staffAccessCode ||
-      ''
-    ).toString().replace(/\s+/g, '').toUpperCase();
+    const sAny = matched as any;
+    const storedAccessCode = sAny.accessCode || '';
+    const storedTempCode = sAny.tempAccessCode || '';
+    const storedPassword = sAny.password || '';
 
+    const validCode = (storedAccessCode || storedTempCode || storedPassword || '').toString().replace(/\s+/g, '').toUpperCase();
     const submittedCode = (inputPassword || '').toString().replace(/\s+/g, '').toUpperCase();
 
-    console.log('Auth check:', { submittedCode, storedCode, matchedEmail: matched.email });
+    console.log('--- SCREEN DIAGNOSTIC ---', {
+      emailMatched: 'YES',
+      storedAccessCode,
+      storedTempCode,
+      storedPassword,
+      submittedCode,
+      validCode
+    });
 
-    if (submittedCode !== storedCode) {
+    if (submittedCode !== validCode && submittedCode !== storedAccessCode.toUpperCase() && submittedCode !== storedTempCode.toUpperCase() && submittedCode !== storedPassword.toUpperCase()) {
       return {
         success: false,
-        error: 'Invalid access code. Please check your assigned MUN-XXXX access code.'
+        error: `Invalid access code. Stored was [${validCode || 'NONE'}], you entered [${submittedCode}].`
       };
     }
   }
