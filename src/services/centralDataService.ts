@@ -60,13 +60,14 @@ export const UnifiedDataStorage = {
     if (Array.isArray(list) && list.length > 0) return list;
     const dir = readStorage<any[]>('munyaka_staff_directory', []);
     if (Array.isArray(dir) && dir.length > 0) return dir;
-    return initialSeedData.staff || [];
+    return readStorage<any[]>('munyaka_master_staff_list', []);
   },
 
   saveStaff: (staff: any[]): void => {
-    const list = (Array.isArray(staff) && staff.length > 0) ? staff : (initialSeedData.staff || []);
+    const list = Array.isArray(staff) ? staff : [];
     writeStorage('munyaka_staff', list);
     writeStorage('munyaka_staff_directory', list);
+    writeStorage('munyaka_master_staff_list', list);
     CentralDataService.persistAndSyncMutation('staff', list);
   },
 
@@ -96,6 +97,15 @@ export const UnifiedDataStorage = {
     removeStorage('munyaka_master_staff_list');
     removeStorage('munyaka_staff_prereg');
     removeStorage('munyaka_teachers');
+    removeStorage('munyaka_staff_db');
+    try {
+      localStorage.removeItem('munyaka_staff');
+      localStorage.removeItem('munyaka_staff_directory');
+      localStorage.removeItem('munyaka_master_staff_list');
+      localStorage.removeItem('munyaka_staff_prereg');
+      localStorage.removeItem('munyaka_teachers');
+      localStorage.removeItem('munyaka_staff_db');
+    } catch {}
   },
 
   getAttendance: (): any[] => {
@@ -141,7 +151,7 @@ export const CentralDataService = {
   
   getStaff: () => UnifiedDataStorage.getStaff(),
   saveStaff: (staff: any[]) => {
-    const list = (staff && staff.length > 0) ? staff : (initialSeedData.staff || []);
+    const list = Array.isArray(staff) ? staff : [];
     UnifiedDataStorage.saveStaff(list);
   },
   addStaff: (record: any) => UnifiedDataStorage.addStaff(record),
