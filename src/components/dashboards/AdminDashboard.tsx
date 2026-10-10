@@ -128,6 +128,7 @@ export const AdminDashboardComponent: React.FC = () => {
 
   const primaryCount = primary.length;
   const juniorCount = junior;
+  const totalStudents = masterData.totalLearners > 0 ? masterData.totalLearners : learners.length;
 
   const [selectedYear, setSelectedYear] = useState('2026');
 
