@@ -20,7 +20,6 @@ import {
 import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
-import { CentralDataService } from '../services/centralDataService';
 
 export type StaffCategoryRole =
   | 'Class Teacher'
@@ -371,18 +370,6 @@ export default function StaffRegistry() {
     const cleanEmailInput = (email || `${formattedName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
     const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
     
-    const assigned = assignedClasses.length > 0
-      ? assignedClasses[0]
-      : 'Unassigned';
-
-    const finalAssignedClasses = Array.isArray(assignedClasses) && assignedClasses.length > 0
-      ? assignedClasses.filter(c => c && c !== 'Unassigned')
-      : [];
-
-    const finalAssignedStreams = Array.isArray(assignedStreams) && assignedStreams.length > 0
-      ? assignedStreams.filter(s => s && s !== 'Unassigned')
-      : [];
-
     const newStaff = {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
       name: formattedName,
@@ -396,12 +383,12 @@ export default function StaffRegistry() {
       accessCode: finalCode,
       role: 'teacher',
       type: 'teaching',
-      subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : [],
-      assignedClasses: finalAssignedClasses,
-      assignedStreams: finalAssignedStreams,
-      homeroomGrade: homeroomGrade || '',
-      homeroomStream: homeroomStream || '',
-      assignedClass: assigned,
+      subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : ['Mathematics', 'English'],
+      assignedClasses: assignedClasses.length > 0 ? assignedClasses : ['Grade 9 Venus'],
+      assignedStreams: assignedStreams.length > 0 ? assignedStreams : ['Green'],
+      homeroomGrade: category === 'Class Teacher' || !homeroomGrade ? (homeroomGrade || 'Grade 9 Venus') : homeroomGrade,
+      homeroomStream: category === 'Class Teacher' || !homeroomStream ? (homeroomStream || 'Green') : homeroomStream,
+      assignedClass: 'Grade 9 Venus',
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
@@ -768,29 +755,47 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {(() => {
-                          const classesToDisplay = Array.isArray(staff.assignedClasses) && staff.assignedClasses.length > 0
-                            ? staff.assignedClasses.filter((c: any) => c && c !== 'Unassigned' && c !== 'Grade 9 Venus' && c !== 'Grade 7')
-                            : (staff.assignedClass && staff.assignedClass !== 'Unassigned' && staff.assignedClass !== 'Grade 9 Venus' ? [staff.assignedClass] : []);
-
-                          if (classesToDisplay.length > 0) {
-                            return (
-                              <div className="flex flex-wrap gap-1">
-                                {classesToDisplay.map((cls: any, idx: number) => (
-                                  <span key={idx} className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                    {typeof cls === 'string' ? cls : JSON.stringify(cls)}
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          }
-                          return (
-                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                              Unassigned
+                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
+                              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
+                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
                             </span>
-                          );
-                        })()}
-                      </td>
+                          </div>
+                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
+                          <div className="flex flex-col gap-1.5 max-w-[220px]">
+                            {/* If assignedClasses contains structured object or string items */}
+                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
+                                  let formattedCls = '';
+                                  if (typeof cls === 'string') {
+                                    formattedCls = cls;
+                                  } else if (cls && typeof cls === 'object') {
+                                    const item = cls as any;
+                                    formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedCls) formattedCls = JSON.stringify(item);
+                                  } else {
+                                    formattedCls = String(cls);
+                                  }
+                                  return (
+                                    <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                      {formattedCls}
+                                    </span>
+                                  );
+                                })}
+                                {staff.assignedClasses.length > 3 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                    +{staff.assignedClasses.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Stream or combined allocations */}
+                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
                                   let formattedStrm = '';
                                   if (typeof strm === 'string') {
                                     formattedStrm = strm;
@@ -1208,7 +1213,4 @@ export default function StaffRegistry() {
       )}
     </div>
   );
-};
-
-export default StaffRegistry;
 }
