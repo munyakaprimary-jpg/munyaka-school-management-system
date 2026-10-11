@@ -1,4 +1,12 @@
-export const filterByTeacherScope = (dataArray: any[], user: any) => {
+import { User } from '@/context/AuthContext';
+
+/**
+ * Filter data array based on teacher's assigned class/stream scope
+ * @param dataArray Array of data items to filter
+ * @param user Current user object from AuthContext
+ * @returns Filtered array based on user's role and scope
+ */
+export const filterByTeacherScope = (dataArray: any[], user: User | null): any[] => {
   if (!Array.isArray(dataArray)) return [];
   if (!user) return dataArray;
 
@@ -10,12 +18,14 @@ export const filterByTeacherScope = (dataArray: any[], user: any) => {
     role === 'ADMIN' ||
     role === 'SUPER_ADMIN' ||
     role === 'OWNER' ||
+    role === 'LIBRARIAN' ||
     designation.includes('ADMIN') ||
     designation.includes('HOI') ||
     designation.includes('DHOI') ||
     designation.includes('BURSAR') ||
     designation.includes('HEAD OF INSTITUTION') ||
-    designation.includes('DEPUTY')
+    designation.includes('DEPUTY') ||
+    designation.includes('ACCOUNTANT')
   ) {
     return dataArray;
   }
@@ -24,43 +34,92 @@ export const filterByTeacherScope = (dataArray: any[], user: any) => {
   if (
     role === 'CLASS_TEACHER' ||
     designation.includes('CLASS TEACHER') ||
-    Boolean(user.assignedClass)
+    role === 'TEACHER' ||
+    designation.includes('TEACHER') ||
+    Boolean(user.assignedClass) ||
+    Boolean(user.grade)
   ) {
-    const targetClass = String(user.assignedClass || user.gradeStream || 'Grade 9 Venus').trim().toLowerCase();
-    
+    const targetClass = String(user.assignedClass || user.grade || '').trim().toLowerCase();
+    const targetStream = String(user.assignedStream || user.stream || '').trim().toLowerCase();
+
     return dataArray.filter(item => {
       if (!item) return false;
-      const itemClass = String(item.assignedClass || item.gradeStream || '').trim().toLowerCase();
-      const itemGradeStream = `${item.grade || ''} ${item.stream || ''}`.trim().toLowerCase();
-      
-      return (
-        itemClass === targetClass ||
-        itemGradeStream === targetClass ||
+
+      // Get item's class/grade and stream
+      const itemClass = String(item.assignedClass || item.grade || item.classLevel || item.class || '').trim().toLowerCase();
+      const itemStream = String(item.assignedStream || item.stream || '').trim().toLowerCase();
+
+      // Normalize grade strings for comparison (handles "Grade 1" vs "1" etc.)
+      const normalizeGrade = (gradeStr: string): string => {
+        if (!gradeStr) return '';
+        const numMatch = gradeStr.match(/(\d+)/);
+        return numMatch ? `grade${numMatch[1]}` : gradeStr.toLowerCase().replace(/\s+/g, '');
+      };
+
+      const normalizedItemClass = normalizeGrade(itemClass);
+      const normalizedTargetClass = normalizeGrade(targetClass);
+
+      // Check if item matches user's assigned class/grade
+      const classMatch = 
+        normalizedItemClass === normalizedTargetClass ||
         itemClass.includes(targetClass) ||
-        targetClass.includes(itemClass)
-      );
+        targetClass.includes(itemClass) ||
+        // Handle cases like "Grade 1" vs "1"
+        (targetClass && itemClass && 
+         ((targetClass.includes('grade') && !itemClass.includes('grade') && itemClass === targetClass.replace('grade', '')) ||
+          (!targetClass.includes('grade') && itemClass.includes('grade') && targetClass === itemClass.replace('grade', ''))));
+
+      // Check if item matches user's assigned stream (if specified)
+      const streamMatch = !targetStream || itemStream === targetStream || itemStream.includes(targetStream) || targetStream.includes(itemStream);
+
+      return classMatch && streamMatch;
     });
   }
 
   return dataArray;
 };
 
-export const isGlobalRole = (user: any): boolean => {
+/**
+ * Check if user has global role (can see all data)
+ * @param user Current user object
+ * @returns Boolean indicating if user has global access
+ */
+export const isGlobalRole = (user: User | null): boolean => {
   if (!user) return false;
   const role = String(user.role || '').toUpperCase();
-  const des = String(user.designation || user.specificRole || '').toUpperCase();
+  const designation = String(user.designation || user.specificRole || '').toUpperCase();
+
   return (
     role === 'ADMIN' ||
     role === 'SUPER_ADMIN' ||
     role === 'OWNER' ||
-    des.includes('ADMIN') ||
-    des.includes('HOI') ||
-    des.includes('DHOI') ||
-    des.includes('BURSAR')
+    role === 'LIBRARIAN' ||
+    designation.includes('ADMIN') ||
+    designation.includes('HOI') ||
+    designation.includes('DHOI') ||
+    designation.includes('BURSAR') ||
+    designation.includes('HEAD OF INSTITUTION') ||
+    designation.includes('DEPUTY') ||
+    designation.includes('ACCOUNTANT')
   );
 };
 
-export const getTeacherAssignedClass = (user: any): string => {
-  if (!user) return 'Grade 9 Venus';
-  return user.assignedClass || user.gradeStream || 'Grade 9 Venus';
+/**
+ * Get teacher's assigned class/grade
+ * @param user Current user object
+ * @returns Assigned class/grade string or default
+ */
+export const getTeacherAssignedClass = (user: User | null): string => {
+  if (!user) return 'Grade 1';
+  return user.assignedClass || user.grade || 'Grade 1';
+};
+
+/**
+ * Get teacher's assigned stream
+ * @param user Current user object
+ * @returns Assigned stream string or default
+ */
+export const getTeacherAssignedStream = (user: User | null): string => {
+  if (!user) return 'BLUE';
+  return user.assignedStream || user.stream || 'BLUE';
 };

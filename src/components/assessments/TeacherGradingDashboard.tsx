@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { normalizeGradeStr } from "@/utils/gradePermissionGuard";
+import { filterByTeacherScope, isGlobalRole } from "@/utils/rbacUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -630,7 +631,8 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const filteredGrades = useMemo(() => {
-    return studentGrades.filter((g) => {
+    const scoped = filterByTeacherScope(studentGrades, user);
+    return scoped.filter((g) => {
       const matchesExam =
         selectedExamId === ALL_EXAMS_VALUE ||
         selectedExamId === "" ||
@@ -649,7 +651,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
               g.classId.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesExam && matchesGrade && matchesStream && matchesSearch;
     });
-  }, [studentGrades, searchTerm, selectedGrade, selectedStream, selectedExamId]);
+  }, [studentGrades, searchTerm, selectedGrade, selectedStream, selectedExamId, user]);
 
   const selectedStudent = studentGrades.find((g) => g.studentId === selectedStudentId) || null;
 

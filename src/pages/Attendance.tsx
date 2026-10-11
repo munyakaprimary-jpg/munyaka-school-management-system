@@ -59,9 +59,8 @@ export default function Attendance() {
   const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
 
   // Time Lock & Role check helper
-  const { user } = useAuth();
-  const roleStr = String((user as any)?.role || '');
-  const isAdmin = roleStr === 'admin' || roleStr === 'head_teacher' || roleStr === 'owner' || user?.email?.includes('admin');
+    const { user } = useAuth();
+    const isAdmin = isGlobalRole(user);
 
   const checkIsLocked = (session: 'morning' | 'afternoon') => {
     if (session === 'morning' && manualMorningLock) return true;
@@ -241,7 +240,10 @@ export default function Attendance() {
   const getFilteredLearners = () => {
     if (!learners || learners.length === 0) return [];
 
-    const filtered = learners.filter(l => {
+    // Apply RBAC scope filtering from shared utility (role + assigned class/stream)
+    const scopedLearners = filterByTeacherScope(learners, user);
+
+    const filtered = scopedLearners.filter(l => {
       const g = String(l.grade || l.classLevel || '').trim().toUpperCase();
       const s = String(l.stream || '').trim().toLowerCase();
       

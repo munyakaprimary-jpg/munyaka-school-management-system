@@ -30,7 +30,7 @@ import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { CentralDataService } from '@/services/centralDataService';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
-import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
+import { filterByTeacherScope, isGlobalRole, getTeacherAssignedClass, getTeacherAssignedStream } from '@/utils/rbacUtils';
 
 const STUDENTS_STORAGE_KEY = 'munyaka_students';
 const API_BASE_URL = '/api';
@@ -131,8 +131,8 @@ export default function Students() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
-  const assignedTeacherGrade = user?.grade || '';
-  const assignedTeacherStream = user?.stream || '';
+  const assignedTeacherGrade = getTeacherAssignedClass(user);
+  const assignedTeacherStream = getTeacherAssignedStream(user);
   const teacherName = user?.name || 'Lawrence Mwangi';
   const teacherRole = user?.role || 'Class Teacher';
 
@@ -528,46 +528,32 @@ export default function Students() {
   };
 
   const filteredStudents = useMemo(() => {
-      const list = students.filter(s => {
+      // 1. Apply RBAC scope filtering from shared utility (role + assigned class/stream)
+      const scopedList = filterByTeacherScope(students, user);
+
+      // 2. Apply UI-level filters: search, grade, stream, gender
+      return scopedList.filter(s => {
         const name = (s.name || s.fullName || '').toLowerCase();
         const adm = (s.admissionNumber || s.admNo || '').toLowerCase();
         const ass = (s.assessmentNo || s.assessmentNumber || '').toLowerCase();
-        
+
         const sGrade = s.grade || s.class || '';
         const sStream = s.stream || '';
-        
+
         const sGradeNorm = normalizeGradeStr(sGrade);
         const filterGradeNorm = normalizeGradeStr(gradeFilter);
 
-        // Remove restrictions for admin so all registered learners are visible without lock
-        if (!isAdmin) {
-          const assignedNorm = normalizeGradeStr(assignedTeacherGrade);
-          const gradeMatch = sGradeNorm === assignedNorm || sGrade.toLowerCase().includes(assignedTeacherGrade.toLowerCase()) || assignedTeacherGrade.toLowerCase().includes(sGrade.toLowerCase());
-          const streamMatch = !assignedTeacherStream || sStream.toLowerCase() === assignedTeacherStream.toLowerCase() || sStream.toLowerCase().includes(assignedTeacherStream.toLowerCase());
-          if (!gradeMatch || !streamMatch) return false;
-        }
-        
         const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase());
-        
+
         const matchesGrade = gradeFilter === 'all' || sGradeNorm === filterGradeNorm || sGrade.toLowerCase() === gradeFilter.toLowerCase();
         const matchesStream = streamFilter === 'all' || sStream.toLowerCase() === streamFilter.toLowerCase();
-        
+
         const sGender = s.gender || '';
         const matchesGender = genderFilter === 'all' || sGender.toLowerCase() === genderFilter.toLowerCase();
-        
+
         return matchesSearch && matchesGrade && matchesStream && matchesGender;
       });
-
-      const currentUser = (() => {
-        try {
-          const raw = localStorage.getItem('munyaka_current_user');
-          return raw ? JSON.parse(raw) : { role: 'admin' };
-        } catch {
-          return { role: 'admin' };
-        }
-      })();
-      return filterByTeacherScope(list, currentUser);
-    }, [students, searchTerm, gradeFilter, streamFilter, genderFilter, isAdmin, assignedTeacherGrade, assignedTeacherStream]);
+    }, [students, searchTerm, gradeFilter, streamFilter, genderFilter, user]);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
