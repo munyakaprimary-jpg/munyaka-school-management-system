@@ -119,9 +119,27 @@ export const AdminDashboardComponent: React.FC = () => {
   const actualLearners = masterData.learners.length > 0 ? masterData.learners : CentralDataService.getLearners();
   const learners = actualLearners;
 
-  const staffSource = localStaff.length > 0 ? localStaff : CentralDataService.getStaff();
-  const teachingStaffCount = staffSource.length > 0 ? staffSource.length : masterData.totalStaff;
-  const nonTeachingStaffCount = sysStats.nonTeachingStaff;
+  const allStaff = CentralDataService.getStaff();
+  const teachingStaff = allStaff.filter(s => {
+    const role = (s.role || '').toLowerCase();
+    const designation = (s.designation || '').toLowerCase();
+    const category = (s.category || '').toLowerCase();
+    const type = (s.type || '').toLowerCase();
+    return role.includes('teacher') ||
+      designation.includes('teacher') ||
+      category.includes('teaching') ||
+      type.includes('teaching') ||
+      role === 'class teacher' ||
+      role === 'subject teacher' ||
+      role === 'head_teacher' ||
+      role === 'senior_teacher';
+  });
+  const nonTeachingStaff = allStaff.filter(s => !teachingStaff.includes(s));
+
+  const staffSource = localStaff.length > 0 ? localStaff : allStaff;
+  const teachingStaffCount = teachingStaff.length > 0 ? teachingStaff.length : (staffSource.length > 0 ? staffSource.length : masterData.totalStaff);
+  const nonTeachingStaffCount = nonTeachingStaff.length > 0 ? nonTeachingStaff.length : sysStats.nonTeachingStaff;
+  const totalStaffCount = allStaff.length;
 
   const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
   const junior = learners.length - primary.length;
@@ -242,11 +260,14 @@ export const AdminDashboardComponent: React.FC = () => {
         <Card className="border shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">TEACHING STAFF</CardTitle>
-            <GraduationCap className="w-5 h-5 text-purple-600" />
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-[10px] bg-purple-50 text-purple-700">Total: {totalStaffCount}</Badge>
+              <GraduationCap className="w-5 h-5 text-purple-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{teachingStaffCount}</div>
-            <p className="text-xs text-gray-500 mt-1">Active: {teachingStaffCount} | Pending: 0</p>
+            <p className="text-xs text-gray-500 mt-1">Teaching & Academic Staff</p>
           </CardContent>
         </Card>
 
@@ -254,11 +275,14 @@ export const AdminDashboardComponent: React.FC = () => {
         <Card className="border shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">NON-TEACHING STAFF</CardTitle>
-            <Briefcase className="w-5 h-5 text-orange-600" />
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-[10px] bg-orange-50 text-orange-700">Total: {totalStaffCount}</Badge>
+              <Briefcase className="w-5 h-5 text-orange-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{nonTeachingStaffCount}</div>
-            <p className="text-xs text-gray-500 mt-1">Active: {nonTeachingStaffCount} | Pending: 0</p>
+            <p className="text-xs text-gray-500 mt-1">Support & Administration</p>
           </CardContent>
         </Card>
 
