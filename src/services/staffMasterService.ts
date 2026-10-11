@@ -1,61 +1,15 @@
-import { CentralDataService } from './centralDataService';
-
-export const STAFF_MASTER_KEY = 'munyaka_master_staff_list';
+import CentralDataService from './CentralDataService';
 
 export const initializeStaffMaster = () => {
-  const existing = CentralDataService.getStaff();
-  if (!existing || existing.length === 0) {
-    const legacy = localStorage.getItem(STAFF_MASTER_KEY);
-    if (legacy) {
-      try {
-        const parsed = JSON.parse(legacy);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          CentralDataService.saveStaff(parsed);
-          return parsed;
-        }
-      } catch {}
-    }
-  }
-  return existing || [];
-};
-
-export const getStaffMasterCount = () => {
-  return CentralDataService.getStaff().length;
-};
-
-export const getStaffMetrics = () => {
-  const staff = CentralDataService.getStaff();
-  return {
-    total: staff.length,
-    teaching: staff.filter(s => isTeachingRole(s.role || s.category)).length,
-    support: staff.filter(s => !isTeachingRole(s.role || s.category)).length
-  };
-};
-
-export const getCategorizedMetrics = () => {
-  const sm = getStaffMetrics();
-  return {
-    teachingTotal: sm.teaching,
-    teachingActive: sm.teaching,
-    teachingPending: 0,
-    nonTeachingTotal: sm.support,
-    nonTeachingActive: sm.support,
-    nonTeachingPending: 0,
-  };
+  return CentralDataService.getStaff();
 };
 
 export const getStaffMaster = () => {
   return CentralDataService.getStaff();
 };
 
-export const verifyStaffLogin = (email: string, pin: string) => {
-  const staff = CentralDataService.getStaff();
-  return staff.find(s => (s.email === email || s.staffId === email) && (s.pin === pin || s.password === pin || pin === '1234')) || null;
-};
-
-export const isTeachingRole = (role: string = '') => {
-  const lower = role.toLowerCase();
-  return lower.includes('teach') || lower.includes('teacher') || lower.includes('educator') || lower.includes('hod') || lower.includes('principal');
+export const isTeachingRole = (category: string) => {
+  return category !== 'Bursar' && category !== 'Store Master';
 };
 
 export const staffMasterService = {
