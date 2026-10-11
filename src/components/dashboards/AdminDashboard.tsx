@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CentralDataService } from '../../services/centralDataService';
+import { calculateStaffMetrics } from '../../utils/staffMetrics';
+import { calculateStaffMetrics } from '../../utils/staffMetrics';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { useCentralData } from '../../hooks/useCentralData';
@@ -137,9 +139,11 @@ export const AdminDashboardComponent: React.FC = () => {
   const nonTeachingStaff = allStaff.filter(s => !teachingStaff.includes(s));
 
   const staffSource = localStaff.length > 0 ? localStaff : allStaff;
-  const teachingStaffCount = teachingStaff.length > 0 ? teachingStaff.length : (staffSource.length > 0 ? staffSource.length : masterData.totalStaff);
-  const nonTeachingStaffCount = nonTeachingStaff.length > 0 ? nonTeachingStaff.length : sysStats.nonTeachingStaff;
-  const totalStaffCount = allStaff.length;
+  const staffMetrics = calculateStaffMetrics(staffSource);
+
+  const teachingStaffCount = staffMetrics.teachingCount;
+  const nonTeachingStaffCount = staffMetrics.nonTeachingCount;
+  const totalStaffCount = staffMetrics.totalStaff;
 
   const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
   const junior = learners.length - primary.length;
