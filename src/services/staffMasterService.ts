@@ -1,4 +1,4 @@
-import CentralDataService from './CentralDataService';
+import { CentralDataService } from './CentralDataService';
 
 export const staffMasterService = {
   getAllStaff: () => {
