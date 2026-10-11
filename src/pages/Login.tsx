@@ -296,17 +296,34 @@ const Login: React.FC = () => {
     setIsStaffVerifying(true);
     setStaffAuthError('');
 
-    const inputEmail = (staffId || '').trim().toLowerCase();
+    const identifier = (staffId || '').trim();
     const inputCode = (staffPassword || '').trim().replace(/\s+/g, '').toUpperCase();
 
+    const db = CentralDataService.getDB();
+    const staffList = db.staff || [];
     const masterList = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
     const directoryList = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
-    const combinedStaff = [...masterList, ...directoryList];
+    const combinedStaff = [...staffList, ...masterList, ...directoryList];
 
-    const staffMember = combinedStaff.find(s => (s.email || '').trim().toLowerCase() === inputEmail);
+    // Find staff member by Access Code, TSC No, Phone, or Email
+    const staffMember = combinedStaff.find((s: any) => {
+      const sEmail = (s.email || '').trim().toLowerCase();
+      const sTsc = (s.tscNo || s.tscNumber || '').trim().toLowerCase();
+      const sPhone = (s.phone || '').trim();
+      const sCode = (s.accessCode || s.code || '').trim().replace(/\s+/g, '').toUpperCase();
+      const sId = (s.id || s.staffId || '').trim();
+
+      const cleanInput = identifier.toLowerCase();
+
+      return sEmail === cleanInput ||
+             sTsc === cleanInput ||
+             sPhone === identifier ||
+             sId.toLowerCase() === cleanInput ||
+             sCode === inputCode;
+    });
 
     if (!staffMember) {
-      const err = "Staff account not found.";
+      const err = "Staff account not found or invalid credentials.";
       setStaffAuthError(err);
       showError(err);
       setIsStaffVerifying(false);
@@ -315,37 +332,58 @@ const Login: React.FC = () => {
 
     const validCode = (staffMember.accessCode || staffMember.code || '').trim().replace(/\s+/g, '').toUpperCase();
 
-    if (inputCode === validCode) {
-      const designationTitle = staffMember.designation || staffMember.specificRole || staffMember.roleTitle || staffMember.category || 'Class Teacher';
-      const userData = {
-        id: staffMember.id || `staff-${Date.now()}`,
-        name: staffMember.name || 'Staff Member',
-        email: staffMember.email || inputEmail,
-        phone: staffMember.phone || '',
-        role: staffMember.role || 'staff',
-        specificRole: designationTitle,
-        designation: designationTitle,
-        staff_id: staffMember.staffId || staffMember.id || '',
-        assignedClass: staffMember.assignedClass || (staffMember.homeroomGrade && staffMember.homeroomStream ? `${staffMember.homeroomGrade} ${staffMember.homeroomStream}` : 'Grade 2 Blue'),
-        grade: staffMember.homeroomGrade || 'Grade 2',
-        stream: staffMember.homeroomStream || 'Blue',
-        accessCode: validCode,
-        is_active: true
-      };
-      localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
-      localStorage.setItem('munyaka_session', JSON.stringify(userData));
-      if (setUser) {
-        setUser({ ...userData, role: (userData.role as any) || 'staff' });
-      }
-      showSuccess(`Welcome, ${userData.name}!`);
-      setIsStaffVerifying(false);
-      navigate('/dashboard', { replace: true });
-    } else {
+    // If inputCode is provided, verify it if set
+    if (validCode && inputCode && inputCode !== validCode) {
       const err = "Invalid access code.";
       setStaffAuthError(err);
       showError(err);
       setIsStaffVerifying(false);
+      return;
     }
+
+    const designationTitle = staffMember.designation || staffMember.specificRole || staffMember.roleTitle || staffMember.category || 'Class Teacher';
+    const userData = {
+      id: staffMember.id || `staff-${Date.now()}`,
+      name: staffMember.name || 'Staff Member',
+      email: staffMember.email || identifier,
+      phone: staffMember.phone || '',
+      role: staffMember.role || 'staff',
+      specificRole: designationTitle,
+      designation: designationTitle,
+      staff_id: staffMember.staffId || staffMember.id || '',
+      assignedClass: staffMember.assignedClass || (staffMember.homeroomGrade && staffMember.homeroomStream ? `${staffMember.homeroomGrade} ${staffMember.homeroomStream}` : 'Grade 2 Blue'),
+      grade: staffMember.homeroomGrade || 'Grade 2',
+      stream: staffMember.homeroomStream || 'Blue',
+      accessCode: validCode,
+      is_active: true
+    };
+
+    localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
+    localStorage.setItem('munyaka_session', JSON.stringify(userData));
+    if (setUser) {
+      setUser({ ...userData, role: (userData.role as any) || 'staff' });
+    }
+
+    // Determine target route based on role
+    const roleName = (staffMember.role || staffMember.designation || staffMember.category || '').toLowerCase();
+    let targetRoute = '/dashboard';
+
+    if (roleName.includes('bursar') || roleName.includes('finance')) {
+      targetRoute = '/fees';
+    } else if (roleName.includes('teacher') || roleName.includes('subject')) {
+      targetRoute = '/teacher-portal';
+    } else if (roleName.includes('support') || roleName.includes('store') || roleName.includes('library')) {
+      targetRoute = '/support-portal';
+    } else if (roleName.includes('admin') || roleName.includes('hoi') || roleName.includes('head')) {
+      targetRoute = '/dashboard';
+    }
+
+    showSuccess(`Welcome, ${userData.name}!`);
+    setIsStaffVerifying(false);
+
+    window.location.hash = targetRoute;
+    window.dispatchEvent(new Event('munyaka_auth_changed'));
+    navigate(targetRoute, { replace: true });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
