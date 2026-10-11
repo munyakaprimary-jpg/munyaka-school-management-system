@@ -16,34 +16,39 @@ export interface StaffMetricsResult {
 }
 
 /**
- * Calculate staff metrics distinguishing Teaching vs Non-Teaching staff.
- * Teaching Staff (5): Roles or designations containing HOI, DHOI, Class Teacher, Subject Teacher, Teacher, ICT Teacher, Lab Teacher.
- * Non-Teaching Staff (2): All other roles (Bursar, Store Keeper, Support Staff, etc.).
+ * Flexible staff categorization matching exact spec requirements.
  */
-export function calculateStaffMetrics(staffList: StaffMember[] = []): StaffMetricsResult {
+export const getStaffCategoryCounts = (staffList: any[] = []) => {
   const safeList = Array.isArray(staffList) ? staffList : [];
-  
-  const teachingKeywords = ['hoi', 'dhoi', 'class teacher', 'subject teacher', 'teacher', 'ict teacher', 'lab teacher'];
+  const TEACHING_KEYWORDS = ['hoi', 'dhoi', 'teacher', 'class teacher', 'subject teacher', 'ict', 'lab'];
 
-  const teachingStaff: StaffMember[] = [];
-  const nonTeachingStaff: StaffMember[] = [];
-
-  safeList.forEach(member => {
-    const roleStr = String(member.role || member.designation || '').toLowerCase();
-    const isTeaching = teachingKeywords.some(keyword => roleStr.includes(keyword));
-
-    if (isTeaching) {
-      teachingStaff.push(member);
-    } else {
-      nonTeachingStaff.push(member);
-    }
+  const teaching = safeList.filter((s: any) => {
+    const role = (s?.role || '').toLowerCase();
+    const desig = (s?.designation || '').toLowerCase();
+    return TEACHING_KEYWORDS.some(kw => role.includes(kw) || desig.includes(kw));
   });
+
+  const nonTeaching = safeList.filter((s: any) => !teaching.includes(s));
 
   return {
     total: safeList.length,
-    teachingCount: teachingStaff.length,
-    nonTeachingCount: nonTeachingStaff.length,
-    teachingStaff,
-    nonTeachingStaff
+    teachingCount: teaching.length,
+    nonTeachingCount: nonTeaching.length,
+    teachingStaff: teaching,
+    nonTeachingStaff: nonTeaching
+  };
+};
+
+/**
+ * Legacy compatibility alias.
+ */
+export function calculateStaffMetrics(staffList: StaffMember[] = []): StaffMetricsResult {
+  const res = getStaffCategoryCounts(staffList);
+  return {
+    total: res.total,
+    teachingCount: res.teachingCount,
+    nonTeachingCount: res.nonTeachingCount,
+    teachingStaff: res.teachingStaff,
+    nonTeachingStaff: res.nonTeachingStaff
   };
 }
