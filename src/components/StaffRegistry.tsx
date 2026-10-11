@@ -69,6 +69,7 @@ export default function StaffRegistry() {
   const [category, setCategory] = useState<StaffCategoryRole>('Class Teacher');
   const [tscNumber, setTscNumber] = useState('');
   const [email, setEmail] = useState('');
+  const [emailPrefix, setEmailPrefix] = useState('');
   const [phone, setPhone] = useState('');
   const [status, setStatus] = useState<'Active' | 'On Leave' | 'Inactive'>('Active');
   const [accessCode, setAccessCode] = useState('');
@@ -254,7 +255,8 @@ export default function StaffRegistry() {
     setFullName(staff.name ? staff.name.toUpperCase() : '');
     setCategory(staff.category);
     setTscNumber(staff.tscNumber);
-    setEmail(staff.email || '');
+    const loadedEmail = staff.email || '';
+    setEmail(loadedEmail);
     setPhone(staff.phone || '');
     setStatus(staff.status);
     setAccessCode(staff.accessCode || generateRandomCode());
@@ -1005,15 +1007,21 @@ export default function StaffRegistry() {
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <div className="flex rounded-xl shadow-sm border border-slate-200 overflow-hidden bg-white">
                     <input
-                      type="email"
-                      placeholder="e.g. name@munyaka.sc.ke"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                      type="text"
+                      placeholder="e.g. jndiki"
+                      value={email.includes('@') ? email.split('@')[0] : email}
+                      onChange={(e) => {
+                        const rawVal = e.target.value.trim().split('@')[0];
+                        const fullEmail = rawVal ? `${rawVal}@munyaka.sc.ke` : '';
+                        setEmail(fullEmail);
+                      }}
+                      className="flex-1 p-2.5 border-0 focus:ring-0 focus:outline-none text-sm text-slate-700 bg-transparent"
                     />
+                    <span className="inline-flex items-center px-3 bg-slate-50 text-slate-500 text-xs font-medium border-l border-slate-200">
+                      @munyaka.sc.ke
+                    </span>
                   </div>
                 </div>
 
