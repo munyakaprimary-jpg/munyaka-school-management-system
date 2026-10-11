@@ -29,6 +29,12 @@ const DEFAULT_LEARNERS = [
   { id: 'l5', name: 'George Otieno', admissionNumber: 'MUN/2024/005', grade: 'Grade 9', gender: 'Male' }
 ];
 
+export const STORAGE_KEYS = {
+  STAFF: 'munyaka_staff',
+  LEARNERS: 'munyaka_learners',
+  CENTRAL_DB: CENTRAL_DB_KEY
+};
+
 export class CentralDataService {
   /**
    * Get the entire central database object safely.
@@ -53,7 +59,6 @@ export class CentralDataService {
       console.error("Error reading central DB:", e);
     }
 
-    // Return default initialized DB if empty or corrupted
     const defaultDb: CentralDB = {
       staff: DEFAULT_STAFF,
       learners: DEFAULT_LEARNERS,
@@ -75,7 +80,6 @@ export class CentralDataService {
   public static saveDB(db: CentralDB): void {
     try {
       localStorage.setItem(CENTRAL_DB_KEY, JSON.stringify(db));
-      // Purge legacy keys to stop re-seeding deleted records
       localStorage.removeItem('munyaka_master_staff_list');
       localStorage.removeItem('munyaka_staff');
       localStorage.removeItem('munyaka_master_learners');
@@ -116,7 +120,7 @@ export class CentralDataService {
   }
 
   /**
-   * Save staff array to central DB, purge legacy keys, and dispatch change event.
+   * Save staff array to central DB.
    */
   public static saveStaff(staffArray: any[]): void {
     try {
@@ -128,23 +132,41 @@ export class CentralDataService {
     }
   }
 
-  public static getSystemStats(): any {
+  /**
+   * Add a single staff member.
+   */
+  public static addStaff(record: any): any {
     const staff = CentralDataService.getStaff();
-    const learners = CentralDataService.getLearners();
-    return {
-      totalStaff: staff.length,
-      totalLearners: learners.length
-    };
+    const newRecord = { id: 'staff_' + Date.now(), ...record };
+    staff.push(newRecord);
+    CentralDataService.saveStaff(staff);
+    return newRecord;
   }
 
-  public static getMasterData(): any {
-    const db = CentralDataService.getDB();
-    return {
-      staff: db.staff || [],
-      learners: db.learners || [],
-      totalLearners: (db.learners || []).length
-    };
+  /**
+   * Update a staff member by ID.
+   */
+  public static updateStaff(id: string, updates: any): void {
+    const staff = CentralDataService.getStaff();
+    const index = staff.findIndex(s => String(s.id) === String(id) || String(s.tscNo) === String(id));
+    if (index !== -1) {
+      staff[index] = { ...staff[index], ...updates };
+      CentralDataService.saveStaff(staff);
+    }
   }
+
+  /**
+   * Delete a staff member by ID.
+   */
+  public static deleteStaff(id: string): void {
+    const staff = CentralDataService.getStaff();
+    const filtered = staff.filter(s => String(s.id) !== String(id) && String(s.tscNo) !== String(id) && String(s.accessCode) !== String(id));
+    CentralDataService.saveStaff(filtered);
+  }
+
+  /**
+   * Get learners array from central DB.
+   */
   public static getLearners(): any[] {
     try {
       const db = CentralDataService.getDB();
@@ -156,7 +178,7 @@ export class CentralDataService {
   }
 
   /**
-   * Save learners array to central DB, purge legacy keys, and dispatch change event.
+   * Save learners array to central DB.
    */
   public static saveLearners(learnersArray: any[]): void {
     try {
@@ -166,6 +188,111 @@ export class CentralDataService {
     } catch (e) {
       console.error("Error saving learners:", e);
     }
+  }
+
+  /**
+   * Generic get data helper for compatibility.
+   */
+  public static getData(key: string, fallback: any = null): any {
+    try {
+      const db = CentralDataService.getDB();
+      if (db[key] !== undefined) return db[key];
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.error("Error getData for key:", key, e);
+    }
+    return fallback;
+  }
+
+  /**
+   * Generic set data helper for compatibility.
+   */
+  public static setData(key: string, value: any): void {
+    try {
+      const db = CentralDataService.getDB();
+      db[key] = value;
+      CentralDataService.saveDB(db);
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.error("Error setData for key:", key, e);
+    }
+  }
+
+  /**
+   * Safe parse helper.
+   */
+  public static safeParse(key: string, fallback: any = null): any {
+    return CentralDataService.getData(key, fallback);
+  }
+
+  /**
+   * Check if term is locked.
+   */
+  public static isTermLocked(termKey: string): boolean {
+    try {
+      const lockedTerms = CentralDataService.getData('locked_terms', {});
+      if (lockedTerms && typeof lockedTerms === 'object') {
+        return !!lockedTerms[termKey];
+      }
+    } catch {}
+    return false;
+  }
+
+  /**
+   * Get marks records.
+   */
+  public static getMarks(): any[] {
+    const db = CentralDataService.getDB();
+    if (Array.isArray(db.marks)) return db.marks;
+    try {
+      const raw = localStorage.getItem('munyaka_marks') || localStorage.getItem('exam_marks');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return [];
+  }
+
+  /**
+   * Save marks records.
+   */
+  public static saveMarks(marks: any[]): void {
+    const db = CentralDataService.getDB();
+    db.marks = marks;
+    CentralDataService.saveDB(db);
+    try {
+      localStorage.setItem('munyaka_marks', JSON.stringify(marks));
+    } catch {}
+  }
+
+  /**
+   * Get full state dump for CentralDataService page.
+   */
+  public static getFullStateDump(): CentralDB {
+    return CentralDataService.getDB();
+  }
+
+  /**
+   * Get system stats.
+   */
+  public static getSystemStats(): any {
+    const staff = CentralDataService.getStaff();
+    const learners = CentralDataService.getLearners();
+    return {
+      totalStaff: staff.length,
+      totalLearners: learners.length
+    };
+  }
+
+  /**
+   * Get master data.
+   */
+  public static getMasterData(): any {
+    const db = CentralDataService.getDB();
+    return {
+      staff: db.staff || [],
+      learners: db.learners || [],
+      totalLearners: (db.learners || []).length
+    };
   }
 }
 
