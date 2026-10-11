@@ -18,7 +18,7 @@ import {
   Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
+import CentralDataService from '../services/CentralDataService';
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
 
 export type StaffCategoryRole =
@@ -107,22 +107,12 @@ export default function StaffRegistry() {
   };
 
   useEffect(() => {
-    // Load from local storage or fallback to mock data
-    const stored = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory');
-    let loadedStaff: any[] = [];
-    if (stored) {
-      try {
-        loadedStaff = JSON.parse(stored);
-      } catch (e) {
-        loadedStaff = MOCK_STAFF;
-      }
-    } else {
-      loadedStaff = MOCK_STAFF;
-    }
+    const loadedStaff = CentralDataService.getStaff();
+    const sourceStaff = loadedStaff && loadedStaff.length > 0 ? loadedStaff : MOCK_STAFF;
 
     // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and uppercase names
     const seenIds = new Set<string>();
-    const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
+    const sanitized: StaffMember[] = sourceStaff.map((staff: any, idx: number) => {
       let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
       if (seenIds.has(id)) {
         id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
@@ -221,10 +211,20 @@ export default function StaffRegistry() {
     });
 
     setStaffList(sanitized);
-    localStorage.setItem('munyaka_staff', JSON.stringify(sanitized));
-    localStorage.setItem('munyaka_staff_registry', JSON.stringify(sanitized));
-    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(sanitized));
-    localStorage.setItem('munyaka_staff_directory', JSON.stringify(sanitized));
+    CentralDataService.saveStaff(sanitized);
+
+    const handleDataChanged = () => {
+      const refreshed = CentralDataService.getStaff();
+      if (refreshed && refreshed.length > 0) {
+        setStaffList(refreshed);
+      }
+    };
+    window.addEventListener('munyaka_data_changed', handleDataChanged);
+    window.addEventListener('munyaka:data-changed', handleDataChanged as EventListener);
+    return () => {
+      window.removeEventListener('munyaka_data_changed', handleDataChanged);
+      window.removeEventListener('munyaka:data-changed', handleDataChanged as EventListener);
+    };
   }, []);
 
   const handleOpenAddModal = () => {
