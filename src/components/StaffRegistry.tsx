@@ -383,10 +383,11 @@ export default function StaffRegistry() {
     // Read class values directly from form state:
     // - If assignedClass is empty, set it strictly to 'Unassigned'.
     // - If assignedClasses is empty or empty array, set it strictly to ['Unassigned'].
-    const finalAssignedClasses = assignedClasses && assignedClasses.length > 0 ? assignedClasses : ['Unassigned'];
-    const finalAssignedStreams = assignedStreams && assignedStreams.length > 0 ? assignedStreams : ['Unassigned'];
-    const finalHomeroomGrade = homeroomGrade && homeroomGrade.trim() !== '' ? homeroomGrade : 'Unassigned';
-    const finalHomeroomStream = homeroomStream && homeroomStream.trim() !== '' ? homeroomStream : 'Unassigned';
+    const isTeachingRole = category !== 'Bursar' && category !== 'Store Master';
+    const finalAssignedClasses = isTeachingRole && assignedClasses && assignedClasses.length > 0 ? assignedClasses : ['Unassigned'];
+    const finalAssignedStreams = isTeachingRole && assignedStreams && assignedStreams.length > 0 ? assignedStreams : ['Unassigned'];
+    const finalHomeroomGrade = isTeachingRole && homeroomGrade && homeroomGrade.trim() !== '' ? homeroomGrade : 'Unassigned';
+    const finalHomeroomStream = isTeachingRole && homeroomStream && homeroomStream.trim() !== '' ? homeroomStream : 'Unassigned';
 
     const newStaff = {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
