@@ -18,7 +18,7 @@ import {
   Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
-import CentralDataService from '../services/CentralDataService';
+import CentralDataService from '../services/centralDataService';
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
 
 export type StaffCategoryRole =
@@ -56,6 +56,8 @@ export interface StaffMember {
   createdAt?: string;
 }
 
+const MOCK_STAFF: any[] = [];
+const defaultCbcLearningAreas: any[] = [];
 export default function StaffRegistry() {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [searchQuery, setSearchQuery] = useState('');

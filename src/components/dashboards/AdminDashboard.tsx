@@ -115,11 +115,11 @@ export const AdminDashboardComponent: React.FC = () => {
   }, []);
 
   const sysStats = CentralDataService.getSystemStats();
-  const masterData = getMasterData();
-  const actualLearners = masterData.learners.length > 0 ? masterData.learners : getLearners();
+  const masterData = CentralDataService.getMasterData();
+  const actualLearners = masterData.learners.length > 0 ? masterData.learners : CentralDataService.getLearners();
   const learners = actualLearners;
 
-  const staffSource = localStaff.length > 0 ? localStaff : getStaff();
+  const staffSource = localStaff.length > 0 ? localStaff : CentralDataService.getStaff();
   const teachingStaffCount = staffSource.length > 0 ? staffSource.length : masterData.totalStaff;
   const nonTeachingStaffCount = sysStats.nonTeachingStaff;
 

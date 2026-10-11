@@ -28,7 +28,7 @@ import {
 import { showSuccess, showError } from '@/utils/toast';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
-import CentralDataService from '@/services/CentralDataService';
+import CentralDataService from '@/services/centralDataService';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
 import { filterByTeacherScope, isGlobalRole, getTeacherAssignedClass, getTeacherAssignedStream } from '@/utils/rbacUtils';
 
