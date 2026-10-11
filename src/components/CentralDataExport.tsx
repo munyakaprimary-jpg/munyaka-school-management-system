@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CentralDataService } from '@/services/centralDataService';
-import { getStaffCategoryCounts } from '@/utils/staffMetrics';
+import { calculateStaffMetrics } from '@/utils/staffMetrics';
 import { exportMasterDatabase } from '@/utils/exportMasterDatabase';
 import { Database, Download, Users, GraduationCap, Briefcase, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,7 +24,7 @@ export default function CentralDataExport() {
     try {
       const db = CentralDataService.getDB();
       const staffList = Array.isArray(db.staff) ? db.staff : [];
-      const staffMetrics = getStaffCategoryCounts(staffList);
+      const staffMetrics = calculateStaffMetrics(staffList);
 
       setDbStats({
         learnersCount: Array.isArray(db.learners) ? db.learners.length : 0,

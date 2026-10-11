@@ -1,4 +1,4 @@
-// Unified Staff Categorization Utility for Munyaka Portal
+// Unified Metrics Calculator for Munyaka Portal Staff
 
 export interface StaffMember {
   id?: string;
@@ -7,7 +7,7 @@ export interface StaffMember {
   [key: string]: any;
 }
 
-export interface StaffCategoryCountsResult {
+export interface StaffMetricsResult {
   total: number;
   teachingCount: number;
   nonTeachingCount: number;
@@ -15,27 +15,35 @@ export interface StaffCategoryCountsResult {
   nonTeachingStaff: StaffMember[];
 }
 
-export const getStaffCategoryCounts = (staffList: any[] = []): StaffCategoryCountsResult => {
+/**
+ * Calculate staff metrics distinguishing Teaching vs Non-Teaching staff.
+ * Teaching Staff (5): Roles or designations containing HOI, DHOI, Class Teacher, Subject Teacher, Teacher, ICT Teacher, Lab Teacher.
+ * Non-Teaching Staff (2): All other roles (Bursar, Store Keeper, Support Staff, etc.).
+ */
+export function calculateStaffMetrics(staffList: StaffMember[] = []): StaffMetricsResult {
   const safeList = Array.isArray(staffList) ? staffList : [];
-  const TEACHING_KEYWORDS = ['hoi', 'dhoi', 'teacher', 'class teacher', 'subject teacher', 'ict', 'lab'];
+  
+  const teachingKeywords = ['hoi', 'dhoi', 'class teacher', 'subject teacher', 'teacher', 'ict teacher', 'lab teacher'];
 
-  const teaching = safeList.filter((s: any) => {
-    const role = (s?.role || '').toLowerCase();
-    const desig = (s?.designation || '').toLowerCase();
-    return TEACHING_KEYWORDS.some(kw => role.includes(kw) || desig.includes(kw));
+  const teachingStaff: StaffMember[] = [];
+  const nonTeachingStaff: StaffMember[] = [];
+
+  safeList.forEach(member => {
+    const roleStr = String(member.role || member.designation || '').toLowerCase();
+    const isTeaching = teachingKeywords.some(keyword => roleStr.includes(keyword));
+
+    if (isTeaching) {
+      teachingStaff.push(member);
+    } else {
+      nonTeachingStaff.push(member);
+    }
   });
-
-  const nonTeaching = safeList.filter((s: any) => !teaching.includes(s));
 
   return {
     total: safeList.length,
-    teachingCount: teaching.length,
-    nonTeachingCount: nonTeaching.length,
-    teachingStaff: teaching,
-    nonTeachingStaff: nonTeaching
+    teachingCount: teachingStaff.length,
+    nonTeachingCount: nonTeachingStaff.length,
+    teachingStaff,
+    nonTeachingStaff
   };
-};
-
-export const calculateStaffMetrics = getStaffCategoryCounts;
-
-export default getStaffCategoryCounts;
+}
