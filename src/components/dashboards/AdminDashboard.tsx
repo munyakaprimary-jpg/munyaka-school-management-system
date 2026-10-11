@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CentralDataService } from '../../services/centralDataService';
 import { calculateStaffMetrics } from '../../utils/staffMetrics';
-import { calculateStaffMetrics } from '../../utils/staffMetrics';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { useCentralData } from '../../hooks/useCentralData';

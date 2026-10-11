@@ -1,18 +1,21 @@
-export const calculateStaffMetrics = (staffList: any[]) => {
-  if (!Array.isArray(staffList)) {
-    return { totalStaff: 0, teachingCount: 0, nonTeachingCount: 0 };
-  }
+export interface StaffMetrics {
+  totalStaff: number;
+  teachingCount: number;
+  nonTeachingCount: number;
+}
 
-  const teachingRoles = ['HOI', 'DHOI', 'Class Teacher', 'Subject Teacher', 'Teacher', 'ICT Teacher', 'Lab Teacher', 'Library Teacher'];
+export const calculateStaffMetrics = (staffList: any[] = []): StaffMetrics => {
+  const safeList = Array.isArray(staffList) ? staffList : [];
+  const teachingRoles = ['hoi', 'dhoi', 'class teacher', 'subject teacher', 'teacher', 'ict teacher', 'lab teacher', 'library teacher'];
 
-  const teaching = staffList.filter((s: any) => {
+  const teaching = safeList.filter((s: any) => {
     if (!s) return false;
-    const role = (s.role || '').toLowerCase();
-    const desig = (s.designation || s.specificRole || '').toLowerCase();
-    const category = (s.category || '').toLowerCase();
+    const role = (s?.role || '').toLowerCase();
+    const desig = (s?.designation || s?.specificRole || '').toLowerCase();
+    const category = (s?.category || '').toLowerCase();
 
     return (
-      teachingRoles.some(r => role.includes(r.toLowerCase()) || desig.includes(r.toLowerCase())) ||
+      teachingRoles.some(r => role.includes(r) || desig.includes(r)) ||
       category === 'teaching' ||
       category === 'academic' ||
       category === 'class teacher' ||
@@ -25,10 +28,10 @@ export const calculateStaffMetrics = (staffList: any[]) => {
     );
   });
 
-  const nonTeaching = staffList.filter((s: any) => !teaching.includes(s));
+  const nonTeaching = safeList.filter((s: any) => !teaching.includes(s));
 
   return {
-    totalStaff: staffList.length,
+    totalStaff: safeList.length,
     teachingCount: teaching.length,
     nonTeachingCount: nonTeaching.length
   };
