@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CentralDataService } from '../../services/centralDataService';
+import { CentralDataService, getMasterData, getLearners, getStaff } from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { useCentralData } from '../../hooks/useCentralData';
@@ -115,11 +115,11 @@ export const AdminDashboardComponent: React.FC = () => {
   }, []);
 
   const sysStats = CentralDataService.getSystemStats();
-  const masterData = CentralDataService.getMasterData();
-  const actualLearners = masterData.learners.length > 0 ? masterData.learners : CentralDataService.getLearners();
+  const masterData = getMasterData();
+  const actualLearners = masterData.learners.length > 0 ? masterData.learners : getLearners();
   const learners = actualLearners;
 
-  const staffSource = localStaff.length > 0 ? localStaff : CentralDataService.getStaff();
+  const staffSource = localStaff.length > 0 ? localStaff : getStaff();
   const teachingStaffCount = staffSource.length > 0 ? staffSource.length : masterData.totalStaff;
   const nonTeachingStaffCount = sysStats.nonTeachingStaff;
 

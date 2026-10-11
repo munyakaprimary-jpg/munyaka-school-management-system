@@ -38,7 +38,7 @@ const MUNYAKA_ADMIN_PASSWORD = 'munyaka_admin_password';
  * Lightweight session user shape — the subset persisted in
  * `munyaka_session` and returned by the AuthContext `user` field.
  */
-export interface User {
+interface User {
   id: string;
   name: string;
   email: string;

@@ -18,7 +18,7 @@ import {
   Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
-import CentralDataService from '../services/centralDataService';
+import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
 
 export type StaffCategoryRole =
@@ -56,8 +56,6 @@ export interface StaffMember {
   createdAt?: string;
 }
 
-const MOCK_STAFF: any[] = [];
-const defaultCbcLearningAreas: any[] = [];
 export default function StaffRegistry() {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,12 +107,22 @@ export default function StaffRegistry() {
   };
 
   useEffect(() => {
-    const loadedStaff = CentralDataService.getStaff();
-    const sourceStaff = loadedStaff && loadedStaff.length > 0 ? loadedStaff : MOCK_STAFF;
+    // Load from local storage or fallback to mock data
+    const stored = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory');
+    let loadedStaff: any[] = [];
+    if (stored) {
+      try {
+        loadedStaff = JSON.parse(stored);
+      } catch (e) {
+        loadedStaff = MOCK_STAFF;
+      }
+    } else {
+      loadedStaff = MOCK_STAFF;
+    }
 
     // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and uppercase names
     const seenIds = new Set<string>();
-    const sanitized: StaffMember[] = sourceStaff.map((staff: any, idx: number) => {
+    const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
       let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
       if (seenIds.has(id)) {
         id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
@@ -213,20 +221,10 @@ export default function StaffRegistry() {
     });
 
     setStaffList(sanitized);
-    CentralDataService.saveStaff(sanitized);
-
-    const handleDataChanged = () => {
-      const refreshed = CentralDataService.getStaff();
-      if (refreshed && refreshed.length > 0) {
-        setStaffList(refreshed);
-      }
-    };
-    window.addEventListener('munyaka_data_changed', handleDataChanged);
-    window.addEventListener('munyaka:data-changed', handleDataChanged as EventListener);
-    return () => {
-      window.removeEventListener('munyaka_data_changed', handleDataChanged);
-      window.removeEventListener('munyaka:data-changed', handleDataChanged as EventListener);
-    };
+    localStorage.setItem('munyaka_staff', JSON.stringify(sanitized));
+    localStorage.setItem('munyaka_staff_registry', JSON.stringify(sanitized));
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(sanitized));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(sanitized));
   }, []);
 
   const handleOpenAddModal = () => {
@@ -681,31 +679,31 @@ export default function StaffRegistry() {
                   </td>
                 </tr>
               ) : (
-                filteredStaff.map((staffMember: any, index: number) => {
-                  const statusConfig = getStatusBadgeConfig(staffMember.status);
+                filteredStaff.map((staff, idx) => {
+                  const statusConfig = getStatusBadgeConfig(staff.status);
                   return (
-                    <tr
-                      key={staffMember.id || staffMember.tscNumber || staffMember.tscNo || index}
+                    <tr 
+                      key={staff.id || `staff-${idx}`}
                       className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors duration-150 group"
                     >
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
-                            {(staffMember.name || staffMember.fullName || 'S').trim().charAt(0).toUpperCase()}
+                            {(staff.name || 'S').trim().charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <span className="font-semibold text-slate-800 block text-sm group-hover:text-indigo-600 transition-colors">
-                              {staffMember.name || staffMember.fullName ? (staffMember.name || staffMember.fullName).toUpperCase() : 'UNKNOWN STAFF'}
+                              {staff.name ? staff.name.toUpperCase() : ''}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
-                                staffMember.category === 'HOI' || staffMember.category === 'DHOI'
+                                staff.category === 'HOI' || staff.category === 'DHOI'
                                   ? 'bg-amber-50 text-amber-700 border-amber-150'
-                                  : staffMember.category === 'Bursar' || staffMember.category === 'Store Master'
+                                  : staff.category === 'Bursar' || staff.category === 'Store Master'
                                     ? 'bg-slate-50 text-slate-700 border-slate-150'
                                     : 'bg-indigo-50 text-indigo-700 border-indigo-150'
                               }`}>
-                                {staffMember.category || staffMember.designation || 'Class Teacher'}
+                                {staff.category || 'Class Teacher'}
                               </span>
                             </div>
                           </div>
@@ -714,30 +712,30 @@ export default function StaffRegistry() {
 
                       <td className="py-3.5 px-3">
                         <span className="text-xs text-slate-700 block flex items-center gap-1">
-                          <Mail className="w-3 h-3 text-slate-400" /> {staffMember.email || '—'}
+                          <Mail className="w-3 h-3 text-slate-400" /> {staff.email}
                         </span>
                       </td>
 
                       <td className="py-3.5 px-3">
                         <span className="text-xs text-slate-600 block flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-slate-400" /> {staffMember.phone || staffMember.phoneNumber || '—'}
+                          <Phone className="w-3 h-3 text-slate-400" /> {staff.phone}
                         </span>
                       </td>
 
                       <td className="py-3.5 px-3">
                         <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100/70 border border-slate-200/50 px-2 py-1 rounded">
-                          {staffMember.tscNumber || staffMember.tscNo || staffMember.idNumber || 'N/A'}
+                          {staff.tscNumber || 'N/A'}
                         </span>
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {categoryIsTeaching(staffMember.category) && staffMember.subjects && staffMember.subjects.length > 0 ? (
+                        {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
                           <div className="flex flex-wrap gap-1 max-w-[280px]">
-                            {staffMember.subjects.map((sub: any, sIdx: number) => {
+                            {staff.subjects.map((sub, sIdx) => {
                               const subName = typeof sub === 'string'
                                 ? sub
                                 : (sub && typeof sub === 'object'
-                                    ? String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub))
+                                    ? String((sub as any).name || (sub as any).title || (sub as any).subject || (sub as any).learningArea || JSON.stringify(sub))
                                     : String(sub));
                               return (
                                 <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
@@ -752,18 +750,19 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {staffMember.category === 'Class Teacher' && (staffMember.homeroomGrade || staffMember.homeroomStream) ? (
+                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
                           <div className="flex items-center gap-1.5">
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
                               <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                              {typeof staffMember.homeroomGrade === 'string' ? staffMember.homeroomGrade : 'Grade 7'} {typeof staffMember.homeroomStream === 'string' ? staffMember.homeroomStream : ''}
+                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
                             </span>
                           </div>
-                        ) : categoryIsTeaching(staffMember.category) && ((staffMember.assignedClasses && staffMember.assignedClasses.length > 0) || (staffMember.assignedStreams && staffMember.assignedStreams.length > 0) || (staffMember.subjects && staffMember.subjects.length > 0)) ? (
+                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
                           <div className="flex flex-col gap-1.5 max-w-[220px]">
-                            {staffMember.assignedClasses && staffMember.assignedClasses.length > 0 && (
+                            {/* If assignedClasses contains structured object or string items */}
+                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {staffMember.assignedClasses.slice(0, 3).map((cls: any, cIdx: number) => {
+                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
                                   let formattedCls = '';
                                   if (typeof cls === 'string') {
                                     formattedCls = cls;
@@ -780,17 +779,18 @@ export default function StaffRegistry() {
                                     </span>
                                   );
                                 })}
-                                {staffMember.assignedClasses.length > 3 && (
+                                {staff.assignedClasses.length > 3 && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staffMember.assignedClasses.length - 3}
+                                    +{staff.assignedClasses.length - 3}
                                   </span>
                                 )}
                               </div>
                             )}
 
-                            {staffMember.assignedStreams && staffMember.assignedStreams.length > 0 && (
+                            {/* Stream or combined allocations */}
+                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {staffMember.assignedStreams.slice(0, 3).map((strm: any, sIdx: number) => {
+                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
                                   let formattedStrm = '';
                                   if (typeof strm === 'string') {
                                     formattedStrm = strm;
@@ -807,9 +807,9 @@ export default function StaffRegistry() {
                                     </span>
                                   );
                                 })}
-                                {staffMember.assignedStreams.length > 3 && (
+                                {staff.assignedStreams.length > 3 && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staffMember.assignedStreams.length - 3}
+                                    +{staff.assignedStreams.length - 3}
                                   </span>
                                 )}
                               </div>
@@ -830,11 +830,11 @@ export default function StaffRegistry() {
                       <td className="py-3.5 px-4 text-center">
                         <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-150 px-2 py-1 rounded-lg">
                           <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
-                            {staffMember.accessCode || '—'}
+                            {staff.accessCode || '—'}
                           </span>
-                          {staffMember.accessCode && (
-                            <button
-                              onClick={() => handleCopyCode(staffMember.accessCode)}
+                          {staff.accessCode && (
+                            <button 
+                              onClick={() => handleCopyCode(staff.accessCode)}
                               className="p-1 hover:bg-white rounded hover:text-indigo-600 text-slate-400 border border-transparent hover:border-slate-200 transition-all"
                               title="Copy code to clipboard"
                             >
@@ -847,14 +847,14 @@ export default function StaffRegistry() {
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => handleOpenEditModal(staffMember)}
+                            onClick={() => handleOpenEditModal(staff)}
                             className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg transition-all"
                             title="Edit profile"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteStaff(staffMember.id)}
+                            onClick={() => handleDeleteStaff(staff.id)}
                             className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg transition-all"
                             title="Remove staff"
                           >
