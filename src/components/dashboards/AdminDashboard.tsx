@@ -46,14 +46,7 @@ export const AdminDashboardComponent: React.FC = () => {
 
   const [localStaff, setLocalStaff] = useState<any[]>(() => {
     try {
-      const keys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
-      for (const k of keys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      }
+      return CentralDataService.getStaff();
     } catch {}
     return [];
   });
@@ -85,17 +78,7 @@ export const AdminDashboardComponent: React.FC = () => {
           setReactiveLearners(getStoredLearners());
         }
 
-        const sKeys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
-        for (const k of sKeys) {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setLocalStaff(parsed);
-              break;
-            }
-          }
-        }
+        setLocalStaff(CentralDataService.getStaff());
       } catch {}
     };
 
@@ -115,41 +98,22 @@ export const AdminDashboardComponent: React.FC = () => {
     };
   }, []);
 
-  const sysStats = CentralDataService.getSystemStats();
-  const masterData = CentralDataService.getMasterData();
-  const actualLearners = masterData.learners.length > 0 ? masterData.learners : CentralDataService.getLearners();
-  const learners = actualLearners;
+  const learners = CentralDataService.getLearners();
 
   const allStaff = CentralDataService.getStaff();
-  const teachingStaff = allStaff.filter(s => {
-    const role = (s.role || '').toLowerCase();
-    const designation = (s.designation || '').toLowerCase();
-    const category = (s.category || '').toLowerCase();
-    const type = (s.type || '').toLowerCase();
-    return role.includes('teacher') ||
-      designation.includes('teacher') ||
-      category.includes('teaching') ||
-      type.includes('teaching') ||
-      role === 'class teacher' ||
-      role === 'subject teacher' ||
-      role === 'head_teacher' ||
-      role === 'senior_teacher';
-  });
-  const nonTeachingStaff = allStaff.filter(s => !teachingStaff.includes(s));
-
   const staffSource = localStaff.length > 0 ? localStaff : allStaff;
   const staffMetrics = calculateStaffMetrics(staffSource);
 
   const teachingStaffCount = staffMetrics.teachingCount;
   const nonTeachingStaffCount = staffMetrics.nonTeachingCount;
-  const totalStaffCount = staffMetrics.totalStaff;
+  const totalStaffCount = staffMetrics.total;
 
   const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
   const junior = learners.length - primary.length;
 
   const primaryCount = primary.length;
   const juniorCount = junior;
-  const totalStudents = masterData.totalLearners > 0 ? masterData.totalLearners : learners.length;
+  const totalStudents = learners.length;
 
   const [selectedYear, setSelectedYear] = useState('2026');
 

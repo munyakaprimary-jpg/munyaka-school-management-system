@@ -1,38 +1,49 @@
-export interface StaffMetrics {
-  totalStaff: number;
-  teachingCount: number;
-  nonTeachingCount: number;
+// Unified Metrics Calculator for Munyaka Portal Staff
+
+export interface StaffMember {
+  id?: string;
+  role?: string;
+  designation?: string;
+  [key: string]: any;
 }
 
-export const calculateStaffMetrics = (staffList: any[] = []): StaffMetrics => {
+export interface StaffMetricsResult {
+  total: number;
+  teachingCount: number;
+  nonTeachingCount: number;
+  teachingStaff: StaffMember[];
+  nonTeachingStaff: StaffMember[];
+}
+
+/**
+ * Calculate staff metrics distinguishing Teaching vs Non-Teaching staff.
+ * Teaching Staff (5): Roles or designations containing HOI, DHOI, Class Teacher, Subject Teacher, Teacher, ICT Teacher, Lab Teacher.
+ * Non-Teaching Staff (2): All other roles (Bursar, Store Keeper, Support Staff, etc.).
+ */
+export function calculateStaffMetrics(staffList: StaffMember[] = []): StaffMetricsResult {
   const safeList = Array.isArray(staffList) ? staffList : [];
-  const teachingRoles = ['hoi', 'dhoi', 'class teacher', 'subject teacher', 'teacher', 'ict teacher', 'lab teacher', 'library teacher'];
+  
+  const teachingKeywords = ['hoi', 'dhoi', 'class teacher', 'subject teacher', 'teacher', 'ict teacher', 'lab teacher'];
 
-  const teaching = safeList.filter((s: any) => {
-    if (!s) return false;
-    const role = (s?.role || '').toLowerCase();
-    const desig = (s?.designation || s?.specificRole || '').toLowerCase();
-    const category = (s?.category || '').toLowerCase();
+  const teachingStaff: StaffMember[] = [];
+  const nonTeachingStaff: StaffMember[] = [];
 
-    return (
-      teachingRoles.some(r => role.includes(r) || desig.includes(r)) ||
-      category === 'teaching' ||
-      category === 'academic' ||
-      category === 'class teacher' ||
-      category === 'subject teacher' ||
-      category === 'ict teacher' ||
-      category === 'lab teacher' ||
-      category === 'hoi' ||
-      category === 'dhoi' ||
-      category === 'library teacher'
-    );
+  safeList.forEach(member => {
+    const roleStr = String(member.role || member.designation || '').toLowerCase();
+    const isTeaching = teachingKeywords.some(keyword => roleStr.includes(keyword));
+
+    if (isTeaching) {
+      teachingStaff.push(member);
+    } else {
+      nonTeachingStaff.push(member);
+    }
   });
 
-  const nonTeaching = safeList.filter((s: any) => !teaching.includes(s));
-
   return {
-    totalStaff: safeList.length,
-    teachingCount: teaching.length,
-    nonTeachingCount: nonTeaching.length
+    total: safeList.length,
+    teachingCount: teachingStaff.length,
+    nonTeachingCount: nonTeachingStaff.length,
+    teachingStaff,
+    nonTeachingStaff
   };
-};
+}
