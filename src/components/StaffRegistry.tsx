@@ -352,6 +352,27 @@ export default function StaffRegistry() {
     }
   };
 
+  // Standardize staff class data model resolution
+  const resolveClasses = (staff: any): string[] => {
+    if (Array.isArray(staff.assignedClasses) && staff.assignedClasses.length > 0) {
+      return staff.assignedClasses.filter(Boolean);
+    }
+    if (Array.isArray(staff.assignedClass) && staff.assignedClass.length > 0) {
+      return staff.assignedClass.filter(Boolean);
+    }
+    if (typeof staff.assignedClass === 'string' && staff.assignedClass.trim()) {
+      return [staff.assignedClass.trim()];
+    }
+    if (typeof staff.assignedClasses === 'string' && staff.assignedClasses.trim()) {
+      return [staff.assignedClasses.trim()];
+    }
+    if (staff.grade) {
+      const combined = `${staff.grade} ${staff.stream || ''}`.trim();
+      return [combined];
+    }
+    return [];
+  };
+
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success(`Access code ${code} copied to clipboard!`);
@@ -368,6 +389,8 @@ export default function StaffRegistry() {
     const cleanEmailInput = (email || `${formattedName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
     const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
     
+    const cleanClasses = assignedClasses.filter(c => c && c.trim() !== '');
+
     const newStaff = {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
       name: formattedName,
@@ -382,11 +405,11 @@ export default function StaffRegistry() {
       role: 'teacher',
       type: 'teaching',
       subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : ['Mathematics', 'English'],
-      assignedClasses: assignedClasses.length > 0 ? assignedClasses : [],
+      assignedClasses: cleanClasses,
+      assignedClass: cleanClasses[0] || '',
       assignedStreams: assignedStreams.length > 0 ? assignedStreams : [],
       homeroomGrade: homeroomGrade || '',
       homeroomStream: homeroomStream || '',
-      assignedClass: assignedClasses[0] || '',
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
@@ -754,11 +777,9 @@ export default function StaffRegistry() {
 
                       <td className="py-3.5 px-3">
                         {(() => {
-                          const classes = Array.isArray(staff.assignedClasses)
-                            ? staff.assignedClasses
-                            : (staff.assignedClass ? [staff.assignedClass] : []);
+                          const classes = resolveClasses(staff);
 
-                          if (classes.length === 0 || !classes[0] || classes[0] === 'Unassigned') {
+                          if (classes.length === 0 || classes[0] === 'Unassigned') {
                             return (
                               <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                                 Unassigned
