@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
+import { CentralDataService } from '../services/centralDataService';
 
 export type StaffCategoryRole =
   | 'Class Teacher'
@@ -1207,4 +1208,7 @@ export default function StaffRegistry() {
       )}
     </div>
   );
+};
+
+export default StaffRegistry;
 }
