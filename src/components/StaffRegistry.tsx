@@ -367,10 +367,6 @@ export default function StaffRegistry() {
     const cleanEmailInput = (email || `${formattedName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
     const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
     
-    const selectedGradeInput = homeroomGrade || (assignedClasses.length > 0 ? assignedClasses[0] : '');
-    const selectedStreamInput = homeroomStream || (assignedStreams.length > 0 ? assignedStreams[0] : '');
-    const selectedClassInput = selectedGradeInput && selectedStreamInput ? `${selectedGradeInput} ${selectedStreamInput}` : (selectedGradeInput || 'Unassigned');
-
     const newStaff = {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
       name: formattedName,
@@ -385,17 +381,15 @@ export default function StaffRegistry() {
       role: 'teacher',
       type: 'teaching',
       subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : ['Mathematics', 'English'],
-      assignedClasses: assignedClasses.length > 0 ? assignedClasses : (selectedClassInput !== 'Unassigned' ? [selectedClassInput] : []),
-      assignedStreams: assignedStreams.length > 0 ? assignedStreams : (selectedStreamInput ? [selectedStreamInput] : []),
-      homeroomGrade: selectedGradeInput || undefined,
-      homeroomStream: selectedStreamInput || undefined,
-      assignedClass: selectedClassInput,
-      assignedGrade: selectedGradeInput,
-      assignedStream: selectedStreamInput,
+      assignedClasses: assignedClasses.length > 0 ? assignedClasses : ['Grade 9 Venus'],
+      assignedStreams: assignedStreams.length > 0 ? assignedStreams : ['Green'],
+      homeroomGrade: category === 'Class Teacher' || !homeroomGrade ? (homeroomGrade || 'Grade 9 Venus') : homeroomGrade,
+      homeroomStream: category === 'Class Teacher' || !homeroomStream ? (homeroomStream || 'Green') : homeroomStream,
+      assignedClass: 'Grade 9 Venus',
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
-    const existingStaff = CentralDataService.getStaff();
+    const existingStaff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || '[]');
     
     // Deduplicate by email or ID before pushing
     const isDuplicate = existingStaff.some((s: any) =>
@@ -418,9 +412,11 @@ export default function StaffRegistry() {
       toast.success("Staff member registered successfully");
     }
 
-    // Save updated array to CentralDataService master storage engine
-    CentralDataService.saveStaff(updatedList);
-    window.dispatchEvent(new Event('munyaka_data_changed'));
+    // Save updated array to all target master keys
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff_db', JSON.stringify(updatedList));
 
     window.dispatchEvent(new Event('munyaka_data_changed'));
     window.dispatchEvent(new Event('central_db_updated'));
@@ -756,18 +752,11 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {staff.assignedClass && staff.assignedClass.trim() && staff.assignedClass !== 'Unassigned' ? (
+                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
                           <div className="flex items-center gap-1.5">
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
                               <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                              {staff.assignedClass}
-                            </span>
-                          </div>
-                        ) : staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
-                              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : ''} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
+                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
                             </span>
                           </div>
                         ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
@@ -795,17 +784,6 @@ export default function StaffRegistry() {
                                 {staff.assignedClasses.length > 3 && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                                     +{staff.assignedClasses.length - 3}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                            Unassigned
-                          </span>
-                        )}
-                      </td>
                                   </span>
                                 )}
                               </div>
