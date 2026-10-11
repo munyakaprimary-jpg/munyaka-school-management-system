@@ -96,17 +96,20 @@ export const CentralDataService = {
     };
     const updated = [...list, newRecord];
     localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updated));
+    window.dispatchEvent(new Event('munyaka_data_changed'));
     return newRecord;
   },
   updateStaff: (id: string, updates: any) => {
     const list = getStaff();
     const updated = list.map((s: any) => s.id === id || s.email === id ? { ...s, ...updates } : s);
     localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updated));
+    window.dispatchEvent(new Event('munyaka_data_changed'));
   },
   deleteStaff: (id: string) => {
     const list = getStaff();
     const updated = list.filter((s: any) => s.id !== id && s.email !== id);
     localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updated));
+    window.dispatchEvent(new Event('munyaka_data_changed'));
   },
   getMarks: () => {
     try {
