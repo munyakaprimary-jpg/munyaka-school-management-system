@@ -134,7 +134,17 @@ export const CentralDataService = {
   },
   saveStaff: (staff: any[]) => {
     try {
-      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(staff));
+      const cleanedStaff = Array.isArray(staff) ? staff.map((s: any) => {
+        const cleanClasses = Array.isArray(s.assignedClasses) ? s.assignedClasses.filter((c: any) => c && c !== 'Unassigned') : [];
+        const cleanStreams = Array.isArray(s.assignedStreams) ? s.assignedStreams.filter((st: any) => st && st !== 'Unassigned') : [];
+        return {
+          ...s,
+          assignedClasses: cleanClasses.length > 0 ? cleanClasses : ['Unassigned'],
+          assignedStreams: cleanStreams.length > 0 ? cleanStreams : ['Unassigned'],
+          assignedClass: cleanClasses.length > 0 ? cleanClasses[0] : 'Unassigned'
+        };
+      }) : staff;
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(cleanedStaff));
       window.dispatchEvent(new Event('munyaka_data_changed'));
     } catch (e) {
       console.error('Error saving staff', e);
@@ -142,8 +152,13 @@ export const CentralDataService = {
   },
   addStaff: (record: any) => {
     const list = getStaff();
+    const cleanClasses = Array.isArray(record.assignedClasses) ? record.assignedClasses.filter((c: any) => c && c !== 'Unassigned') : [];
+    const cleanStreams = Array.isArray(record.assignedStreams) ? record.assignedStreams.filter((st: any) => st && st !== 'Unassigned') : [];
     const newRecord = {
       ...record,
+      assignedClasses: cleanClasses.length > 0 ? cleanClasses : ['Unassigned'],
+      assignedStreams: cleanStreams.length > 0 ? cleanStreams : ['Unassigned'],
+      assignedClass: cleanClasses.length > 0 ? cleanClasses[0] : 'Unassigned',
       id: record.id || `staff-${Date.now()}`,
       staffId: record.staffId || `MUN-STF-${Math.floor(1000 + Math.random() * 9000)}`,
       joinedDate: record.joinedDate || new Date().toISOString().slice(0, 10)
