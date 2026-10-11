@@ -14,6 +14,16 @@ export const isTeachingRole = (category: string) => {
   return category !== 'Bursar' && category !== 'Store Master';
 };
 
+export const getCategorizedMetrics = () => {
+  const staff = CentralDataService.getStaff();
+  return {
+    total: staff.length,
+    teaching: staff.filter((s: any) => s.category !== 'Bursar' && s.category !== 'Store Master').length,
+    nonTeaching: staff.filter((s: any) => s.category === 'Bursar' || s.category === 'Store Master').length,
+    active: staff.filter((s: any) => s.status !== 'Inactive').length
+  };
+};
+
 export const staffMasterService = {
   getAllStaff: () => {
     return CentralDataService.getStaff();
