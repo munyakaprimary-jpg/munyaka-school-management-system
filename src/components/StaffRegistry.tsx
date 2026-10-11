@@ -108,7 +108,7 @@ export default function StaffRegistry() {
 
   useEffect(() => {
     // Load from local storage or fallback to mock data
-    const stored = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory');
+    const stored = localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory');
     let loadedStaff: any[] = [];
     if (stored) {
       try {
@@ -118,6 +118,15 @@ export default function StaffRegistry() {
       }
     } else {
       loadedStaff = MOCK_STAFF;
+    }
+
+    // Ensure unified storage keys & sync
+    if (loadedStaff.length > 0) {
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(loadedStaff));
+      localStorage.setItem('munyaka_staff', JSON.stringify(loadedStaff));
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(loadedStaff));
+      window.dispatchEvent(new Event('munyaka_data_changed'));
+    }
     }
 
     // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and uppercase names
