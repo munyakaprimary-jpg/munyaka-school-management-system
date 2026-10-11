@@ -146,20 +146,37 @@ export const initializeStaffMaster = (): void => {
   } catch {}
 };
 
-export const getStaffMaster = (): MasterStaffRecord[] => {
-  let list: any[] = [];
+export const getMasterStaff = (): MasterStaffRecord[] => {
+  let staffList: any[] = [];
   try {
-    const raw = localStorage.getItem('munyaka_master_staff_list');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        list = parsed;
+    const keyPrimary = localStorage.getItem('munyaka_master_staff_list');
+    const keySecondary = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('munyaka_staff_db');
+    
+    if (keyPrimary) {
+      const parsed = JSON.parse(keyPrimary);
+      if (Array.isArray(parsed)) staffList = parsed;
+    } else if (keySecondary) {
+      const parsed = JSON.parse(keySecondary);
+      if (Array.isArray(parsed)) staffList = parsed;
+    }
+
+    if (staffList.length === 0) {
+      const fallbackRaw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory');
+      if (fallbackRaw) {
+        const parsed = JSON.parse(fallbackRaw);
+        if (Array.isArray(parsed)) staffList = parsed;
       }
+    }
+
+    if (staffList.length > 0) {
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(staffList));
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(staffList));
+      localStorage.setItem('munyaka_staff', JSON.stringify(staffList));
     }
   } catch {}
 
-  const uniqueList = list.map((s: any) => {
-    let code = s.accessCode || `MUN-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  const uniqueList = staffList.map((s: any) => {
+    let code = s.accessCode || s.tempAccessCode || `MUN-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     if (!String(code).startsWith('MUN-')) {
       code = `MUN-${String(code).replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 4)}`;
     }
@@ -184,9 +201,15 @@ export const getStaffMaster = (): MasterStaffRecord[] => {
 
   try {
     localStorage.setItem('munyaka_master_staff_list', JSON.stringify(uniqueList));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(uniqueList));
+    localStorage.setItem('munyaka_staff', JSON.stringify(uniqueList));
   } catch {}
 
   return uniqueList;
+};
+
+export const getStaffMaster = (): MasterStaffRecord[] => {
+  return getMasterStaff();
 };
 
 export const getStaffMasterCount = (): number => getStaffMaster().length;
