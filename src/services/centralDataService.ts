@@ -60,12 +60,60 @@ export const CentralDataService = {
   getLearners,
   getStaff,
   getMasterData,
-  getDB: () => ({
-    staff: getStaff(),
-    learners: getLearners(),
-    marks: CentralDataService.getMarks ? CentralDataService.getMarks() : {},
-    roles: safeParse('munyaka_rbac_roles', [])
-  }),
+  getDB: () => {
+    try {
+      const centralDbRaw = localStorage.getItem('munyaka_central_db');
+      if (centralDbRaw) {
+        const parsed = JSON.parse(centralDbRaw);
+        return {
+          staff: parsed.staff || getStaff(),
+          learners: parsed.learners || getLearners(),
+          marks: parsed.marks || (CentralDataService.getMarks ? CentralDataService.getMarks() : {}),
+          roles: parsed.roles || safeParse('munyaka_rbac_roles', [])
+        };
+      }
+    } catch {}
+    return {
+      staff: getStaff(),
+      learners: getLearners(),
+      marks: CentralDataService.getMarks ? CentralDataService.getMarks() : {},
+      roles: safeParse('munyaka_rbac_roles', [])
+    };
+  },
+  saveDB: (db: any) => {
+    try {
+      localStorage.setItem('munyaka_central_db', JSON.stringify(db));
+      if (db.staff) {
+        localStorage.setItem('munyaka_master_staff_list', JSON.stringify(db.staff));
+      }
+      if (db.learners) {
+        localStorage.setItem('munyaka_master_learners', JSON.stringify(db.learners));
+      }
+      window.dispatchEvent(new Event('munyaka_data_changed'));
+    } catch (e) {
+      console.error('Error saving central DB:', e);
+    }
+  },
+  hardDeleteStaff: (staffId: string) => {
+    const db = CentralDataService.getDB();
+    if (!db.staff) return;
+
+    db.staff = db.staff.filter((s: any) =>
+      s.id !== staffId &&
+      s.tscNo !== staffId &&
+      s.tscNumber !== staffId &&
+      s.accessCode !== staffId &&
+      s.email !== staffId
+    );
+
+    CentralDataService.saveDB(db);
+
+    localStorage.removeItem('munyaka_master_staff_list');
+    localStorage.removeItem('munyaka_staff');
+    localStorage.removeItem('munyaka_backup_staff');
+
+    window.dispatchEvent(new Event('munyaka_data_changed'));
+  },
   getData: (key: string, fallback: any = []) => safeParse(key, fallback),
   setData: (key: string, data: any) => {
     try {
