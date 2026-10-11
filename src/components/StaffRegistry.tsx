@@ -113,6 +113,9 @@ export default function StaffRegistry() {
     if (stored) {
       try {
         loadedStaff = JSON.parse(stored);
+        if (!Array.isArray(loadedStaff) || loadedStaff.length === 0) {
+          loadedStaff = MOCK_STAFF;
+        }
       } catch (e) {
         loadedStaff = MOCK_STAFF;
       }
