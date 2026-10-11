@@ -378,7 +378,7 @@ export default function StaffRegistry() {
     toast.success(`Access code ${code} copied to clipboard!`);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSaveStaff = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
       toast.error("Full name is required");
@@ -389,12 +389,14 @@ export default function StaffRegistry() {
     const cleanEmailInput = (email || `${formattedName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
     const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
     
-    const cleanClasses = assignedClasses.filter(c => c && c.trim() !== '');
+    // Ensure selected value is non-empty array/string
+    const selectedValue = assignedClasses[0] || homeroomGrade || 'Unassigned';
+    const finalClasses = selectedValue === 'Unassigned' ? [] : [selectedValue];
 
-    const newStaff = {
+    const updatedStaffRecord = {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
       name: formattedName,
-      category: category || 'Teacher',
+      category: category || 'Class Teacher',
       designation: category || 'Class Teacher',
       specificRole: category || 'Class Teacher',
       email: cleanEmailInput,
@@ -404,57 +406,42 @@ export default function StaffRegistry() {
       accessCode: finalCode,
       role: 'teacher',
       type: 'teaching',
-      subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : ['Mathematics', 'English'],
-      assignedClasses: cleanClasses,
-      assignedClass: cleanClasses[0] || '',
+      subjects: selectedSubjects,
+      assignedClass: selectedValue,
+      assignedClasses: finalClasses,
+      grade: selectedValue,
       assignedStreams: assignedStreams.length > 0 ? assignedStreams : [],
-      homeroomGrade: homeroomGrade || '',
+      homeroomGrade: homeroomGrade || selectedValue,
       homeroomStream: homeroomStream || '',
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
-    const existingStaff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || '[]');
-    
-    // Deduplicate by email or ID before pushing
-    const isDuplicate = existingStaff.some((s: any) =>
-      s.email?.toLowerCase() === newStaff.email?.toLowerCase() || (editingStaff && s.id === editingStaff.id)
-    );
+    // 1. Fetch current central database
+    const centralDB = CentralDataService.getDB();
+    const existingStaff = centralDB.staff || [];
 
-    let updatedList;
-    if (editingStaff) {
-      updatedList = existingStaff.map((s: any) =>
-        s.id === editingStaff.id || s.email?.toLowerCase() === newStaff.email?.toLowerCase() ? { ...s, ...newStaff } : s
-      );
-      toast.success("Staff profile updated successfully");
-    } else if (isDuplicate) {
-      updatedList = existingStaff.map((s: any) =>
-        s.email?.toLowerCase() === newStaff.email?.toLowerCase() ? { ...s, ...newStaff } : s
-      );
-      toast.success("Staff member updated successfully");
-    } else {
-      updatedList = [...existingStaff, newStaff];
-      toast.success("Staff member registered successfully");
-    }
+    // 2. Update or insert the staff record
+    const newStaffList = existingStaff.some((s: any) => s.id === updatedStaffRecord.id || (editingStaff && s.id === editingStaff.id))
+      ? existingStaff.map((s: any) => s.id === updatedStaffRecord.id || (editingStaff && s.id === editingStaff.id) ? updatedStaffRecord : s)
+      : [...existingStaff, updatedStaffRecord];
 
-    // Save updated array to all target master keys
-    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updatedList));
-    localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
-    localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
-    localStorage.setItem('munyaka_staff_db', JSON.stringify(updatedList));
+    // 3. Write directly to master database key `munyaka_central_db`
+    centralDB.staff = newStaffList;
+    CentralDataService.saveDB(centralDB);
 
-    window.dispatchEvent(new Event('munyaka_data_changed'));
-    window.dispatchEvent(new Event('central_db_updated'));
+    // Also sync to legacy local storage keys for backward compatibility
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(newStaffList));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(newStaffList));
+    localStorage.setItem('munyaka_staff', JSON.stringify(newStaffList));
 
-    setStaffList(updatedList);
+    // 4. Force immediate component state sync & broadcast event
+    setStaffList(newStaffList);
+    setIsModalOpen(false);
+    toast.success(editingStaff ? "Staff profile updated successfully" : "Staff member registered successfully");
 
-    // Dispatch window event so Central Data and Dashboard re-count immediately
     window.dispatchEvent(new Event('munyaka_data_changed'));
     window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_master_staff_list' } }));
     window.dispatchEvent(new Event('staff-changed'));
-
-    console.log('--- NEW STAFF SUCCESSFULLY SAVED ---', newStaff);
-
-    setIsModalOpen(false);
   };
 
   // Synchronized horizontal scrollbars
@@ -777,9 +764,9 @@ export default function StaffRegistry() {
 
                       <td className="py-3.5 px-3">
                         {(() => {
-                          const classes = resolveClasses(staff);
+                          const assignedVal = staff.assignedClass || staff.assignedClasses?.[0] || 'Unassigned';
 
-                          if (classes.length === 0 || classes[0] === 'Unassigned') {
+                          if (!assignedVal || assignedVal === 'Unassigned') {
                             return (
                               <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                                 Unassigned
@@ -788,13 +775,9 @@ export default function StaffRegistry() {
                           }
 
                           return (
-                            <div className="flex flex-wrap gap-1">
-                              {classes.map((cls: string, idx: number) => (
-                                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <span className="text-emerald-500">🎓</span> {cls}
-                                </span>
-                              ))}
-                            </div>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="text-emerald-500">🎓</span> {assignedVal}
+                            </span>
                           );
                         })()}
                       </td>
@@ -872,7 +855,7 @@ export default function StaffRegistry() {
             </div>
 
             {/* Modal Form Scroll Area */}
-            <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-5 flex-1 custom-scrollbar">
+            <form onSubmit={(e) => handleSaveStaff(e)} className="overflow-y-auto p-6 space-y-5 flex-1 custom-scrollbar">
               
               {/* Profile details grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1036,45 +1019,35 @@ export default function StaffRegistry() {
                 <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Assigned Grades & Streams
+                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Assigned Class / Grade
                     </h4>
                     <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
-                      {assignedClasses.length} class(es), {assignedStreams.length} stream(s) selected
+                      {assignedClasses.length} class(es) selected
                     </span>
                   </div>
                   
-                  {/* Classes/Grades selection */}
+                  {/* Dropdown for Assigned Class */}
                   <div>
-                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Grades / Classes <span className="text-rose-500">*</span></span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
-                      {availableSchoolClasses.map((cls) => {
-                        const isSelected = assignedClasses.includes(cls);
-                        return (
-                          <button
-                            key={cls}
-                            type="button"
-                            onClick={() => handleToggleClass(cls)}
-                            className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
-                              isSelected
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm shadow-emerald-100/50'
-                                : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
-                              isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300'
-                            }`}>
-                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                            </div>
-                            <span className="truncate">{cls}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <label className="text-xs font-semibold text-slate-600 block mb-1.5">Select Assigned Class</label>
+                    <select
+                      value={assignedClasses[0] || 'Unassigned'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAssignedClasses(val === 'Unassigned' ? [] : [val]);
+                        setHomeroomGrade(val === 'Unassigned' ? 'Grade 7' : val);
+                      }}
+                      className="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                    >
+                      <option value="Unassigned">-- Select Assigned Class --</option>
+                      {availableSchoolClasses.map((cls) => (
+                        <option key={cls} value={cls}>{cls}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Streams selection */}
                   <div className="border-t border-slate-100 pt-3">
-                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams <span className="text-rose-500">*</span></span>
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams</span>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-1">
                       {availableSchoolStreams.map((strm) => {
                         const isSelected = assignedStreams.includes(strm);
