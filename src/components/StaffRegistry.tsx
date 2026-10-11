@@ -378,6 +378,9 @@ export default function StaffRegistry() {
     toast.success(`Access code ${code} copied to clipboard!`);
   };
 
+  const TEACHING_ROLES = ['Class Teacher', 'Subject Teacher', 'ICT Teacher', 'Lab Teacher', 'HOI', 'DHOI', 'Library Teacher'];
+  const isTeachingRole = TEACHING_ROLES.includes(category);
+
   const handleSaveStaff = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
@@ -389,9 +392,9 @@ export default function StaffRegistry() {
     const cleanEmailInput = (email || `${formattedName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
     const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
     
-    // Ensure selected value is non-empty array/string
-    const selectedValue = assignedClasses[0] || homeroomGrade || 'Unassigned';
-    const finalClasses = selectedValue === 'Unassigned' ? [] : [selectedValue];
+    // Ensure selected value is non-empty array/string, sanitized by role
+    const selectedValue = isTeachingRole ? (assignedClasses[0] || homeroomGrade || 'Unassigned') : 'Unassigned';
+    const finalClasses = isTeachingRole && selectedValue !== 'Unassigned' ? [selectedValue] : [];
 
     const updatedStaffRecord = {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
@@ -405,14 +408,14 @@ export default function StaffRegistry() {
       status: status || 'Active',
       accessCode: finalCode,
       role: 'teacher',
-      type: 'teaching',
-      subjects: selectedSubjects,
+      type: isTeachingRole ? 'teaching' : 'support',
+      subjects: isTeachingRole ? selectedSubjects : [],
       assignedClass: selectedValue,
       assignedClasses: finalClasses,
       grade: selectedValue,
-      assignedStreams: assignedStreams.length > 0 ? assignedStreams : [],
-      homeroomGrade: homeroomGrade || selectedValue,
-      homeroomStream: homeroomStream || '',
+      assignedStreams: isTeachingRole ? (assignedStreams.length > 0 ? assignedStreams : []) : [],
+      homeroomGrade: isTeachingRole ? (homeroomGrade || selectedValue) : 'Unassigned',
+      homeroomStream: isTeachingRole ? (homeroomStream || '') : '',
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
@@ -1015,37 +1018,49 @@ export default function StaffRegistry() {
               </div>
 
               {/* Class & Stream Assignments Grid FIRST (so grades/streams are chosen before subjects) */}
-              {category !== 'Bursar' && category !== 'Store Master' && (
-                <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Assigned Class / Grade
-                    </h4>
-                    <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
-                      {assignedClasses.length} class(es) selected
-                    </span>
-                  </div>
-                  
-                  {/* Dropdown for Assigned Class */}
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1.5">Select Assigned Class</label>
-                    <select
-                      value={assignedClasses[0] || 'Unassigned'}
-                      onChange={(e) => {
+              <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-emerald-500" /> Assigned Class / Stream
+                  </h4>
+                  <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
+                    {isTeachingRole ? `${assignedClasses.length} class(es) selected` : 'N/A (Support Role)'}
+                  </span>
+                </div>
+                
+                {/* Dropdown for Assigned Class */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Assigned Class / Stream</label>
+                  <select
+                    disabled={!isTeachingRole}
+                    value={isTeachingRole ? (assignedClasses[0] || '') : 'Unassigned'}
+                    onChange={(e) => {
+                      if (isTeachingRole) {
                         const val = e.target.value;
-                        setAssignedClasses(val === 'Unassigned' ? [] : [val]);
-                        setHomeroomGrade(val === 'Unassigned' ? 'Grade 7' : val);
-                      }}
-                      className="w-full p-2.5 border border-slate-200 rounded-lg bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
-                    >
-                      <option value="Unassigned">-- Select Assigned Class --</option>
-                      {availableSchoolClasses.map((cls) => (
-                        <option key={cls} value={cls}>{cls}</option>
-                      ))}
-                    </select>
-                  </div>
+                        setAssignedClasses(val === 'Unassigned' || !val ? [] : [val]);
+                        setHomeroomGrade(val === 'Unassigned' || !val ? 'Grade 7' : val);
+                      }
+                    }}
+                    className={`w-full p-2.5 border rounded-lg text-sm ${!isTeachingRole ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-slate-200' : 'bg-white text-slate-900 border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500'}`}
+                  >
+                    {!isTeachingRole ? (
+                      <option value="Unassigned">N/A - Non-Teaching / Support Staff</option>
+                    ) : (
+                      <>
+                        <option value="">-- Select Assigned Class --</option>
+                        {availableSchoolClasses.map((cls) => (
+                          <option key={cls} value={cls}>{cls}</option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                  {!isTeachingRole && (
+                    <p className="text-xs text-slate-500 mt-1">Class assignment is disabled for support and non-teaching roles.</p>
+                  )}
+                </div>
 
-                  {/* Streams selection */}
+                {/* Streams selection (Only for teaching roles) */}
+                {isTeachingRole && (
                   <div className="border-t border-slate-100 pt-3">
                     <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams</span>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-1">
@@ -1073,11 +1088,11 @@ export default function StaffRegistry() {
                       })}
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Subjects & Learning Area Competencies (Dynamically mapped and bound to selected Grade and Stream) */}
-              {category !== 'Bursar' && category !== 'Store Master' && (
+              {isTeachingRole && (
                 <div className="space-y-3 bg-indigo-50/30 p-4 rounded-xl border border-indigo-100">
                   <div className="flex items-center justify-between">
                     <div>
