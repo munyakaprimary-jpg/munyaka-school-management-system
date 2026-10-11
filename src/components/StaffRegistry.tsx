@@ -164,10 +164,16 @@ export default function StaffRegistry() {
           }).filter(Boolean)
         : [];
 
-      const defaultGrade = cleanClasses[0] || 'Grade 7';
+      const defaultGrade = cleanClasses[0] || '';
       const defaultStream = cleanStreams[0] || '';
 
-      const cleanAllocations = Array.isArray(staff.allocations)
+      const isTeachingRole = ['Class Teacher', 'Subject Teacher', 'ICT Teacher', 'Lab Teacher', 'HOI', 'DHOI', 'Library Teacher'].includes(cat);
+
+      const cleanAssignedClasses = isTeachingRole ? cleanClasses : [];
+      const cleanAssignedClass = isTeachingRole ? (cleanClasses[0] || 'Unassigned') : 'Unassigned';
+      const cleanHomeroomGrade = isTeachingRole ? (staff.homeroomGrade || cleanClasses[0] || '') : 'Unassigned';
+
+      const cleanAllocations = Array.isArray(staff.allocations) && isTeachingRole
         ? staff.allocations
             .filter((a: any) => a && typeof a === 'object' && a.subject)
             .map((a: any) => ({
@@ -175,11 +181,11 @@ export default function StaffRegistry() {
               grade: String(a.grade || defaultGrade),
               stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
             }))
-        : cleanSubjects.map((sub: string) => ({
+        : (isTeachingRole ? cleanSubjects.map((sub: string) => ({
             subject: sub,
             grade: defaultGrade,
             stream: defaultStream
-          }));
+          })) : []);
 
       let code = staff.accessCode;
       if (!code || !code.startsWith('MUN-')) {
@@ -201,11 +207,12 @@ export default function StaffRegistry() {
         tscNumber: staff.tscNumber || 'N/A',
         email: staff.email || '',
         phone: staff.phone || '',
-        subjects: cleanSubjects,
-        assignedClasses: cleanClasses,
-        assignedStreams: cleanStreams,
-        homeroomGrade: staff.homeroomGrade || defaultGrade,
-        homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
+        subjects: isTeachingRole ? cleanSubjects : [],
+        assignedClasses: cleanAssignedClasses,
+        assignedClass: cleanAssignedClass,
+        assignedStreams: isTeachingRole ? cleanStreams : [],
+        homeroomGrade: cleanHomeroomGrade,
+        homeroomStream: isTeachingRole ? (staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream) : '',
         allocations: cleanAllocations,
         accessCode: code,
         status: staff.status || 'Active',
@@ -352,25 +359,23 @@ export default function StaffRegistry() {
     }
   };
 
-  // Standardize staff class data model resolution
-  const resolveClasses = (staff: any): string[] => {
-    if (Array.isArray(staff.assignedClasses) && staff.assignedClasses.length > 0) {
-      return staff.assignedClasses.filter(Boolean);
+  // Standardize staff class data model resolution without Grade 7 fallback for non-teaching
+  const resolveAssignedClass = (staff: any): string => {
+    const TEACHING_ROLES = ['Class Teacher', 'Subject Teacher', 'ICT Teacher', 'Lab Teacher', 'HOI', 'DHOI', 'Library Teacher'];
+    const isTeaching = TEACHING_ROLES.includes(staff.category) || TEACHING_ROLES.includes(staff.role) || TEACHING_ROLES.includes(staff.designation);
+    
+    if (!isTeaching) return 'Unassigned';
+
+    if (Array.isArray(staff.assignedClasses) && staff.assignedClasses.length > 0 && staff.assignedClasses[0]) {
+      return staff.assignedClasses[0];
     }
-    if (Array.isArray(staff.assignedClass) && staff.assignedClass.length > 0) {
-      return staff.assignedClass.filter(Boolean);
+    if (staff.assignedClass && staff.assignedClass !== 'Unassigned') {
+      return staff.assignedClass;
     }
-    if (typeof staff.assignedClass === 'string' && staff.assignedClass.trim()) {
-      return [staff.assignedClass.trim()];
+    if (staff.grade && staff.grade !== 'Unassigned') {
+      return staff.grade;
     }
-    if (typeof staff.assignedClasses === 'string' && staff.assignedClasses.trim()) {
-      return [staff.assignedClasses.trim()];
-    }
-    if (staff.grade) {
-      const combined = `${staff.grade} ${staff.stream || ''}`.trim();
-      return [combined];
-    }
-    return [];
+    return 'Unassigned';
   };
 
   const handleCopyCode = (code: string) => {
@@ -393,8 +398,8 @@ export default function StaffRegistry() {
     const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
     
     // Ensure selected value is non-empty array/string, sanitized by role
-    const selectedValue = isTeachingRole ? (assignedClasses[0] || homeroomGrade || 'Unassigned') : 'Unassigned';
-    const finalClasses = isTeachingRole && selectedValue !== 'Unassigned' ? [selectedValue] : [];
+    const selectedValue = isTeachingRole ? (assignedClasses[0] || '') : 'Unassigned';
+    const finalClasses = isTeachingRole && selectedValue && selectedValue !== 'Unassigned' ? [selectedValue] : [];
 
     const updatedStaffRecord = {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
@@ -767,7 +772,7 @@ export default function StaffRegistry() {
 
                       <td className="py-3.5 px-3">
                         {(() => {
-                          const assignedVal = staff.assignedClass || staff.assignedClasses?.[0] || 'Unassigned';
+                          const assignedVal = resolveAssignedClass(staff);
 
                           if (!assignedVal || assignedVal === 'Unassigned') {
                             return (
