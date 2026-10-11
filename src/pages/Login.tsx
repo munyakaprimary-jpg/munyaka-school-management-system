@@ -365,19 +365,37 @@ const Login: React.FC = () => {
       setUser({ ...userData, role: (userData.role as any) || 'staff' });
     }
 
-    // Determine target route based on role
-    const roleName = (staffMember.role || staffMember.designation || staffMember.category || '').toLowerCase();
-    let targetRoute = '/dashboard';
+    // Determine target route based on role using the requested helper
+    const determineUserRoute = (role: string = '') => {
+      const r = role.toLowerCase();
 
-    if (roleName.includes('bursar') || roleName.includes('finance')) {
-      targetRoute = '/fees';
-    } else if (roleName.includes('teacher') || roleName.includes('subject')) {
-      targetRoute = '/dashboard';
-    } else if (roleName.includes('support') || roleName.includes('store') || roleName.includes('library')) {
-      targetRoute = '/dashboard';
-    } else if (roleName.includes('admin') || roleName.includes('hoi') || roleName.includes('head')) {
-      targetRoute = '/dashboard';
-    }
+      // 1. Full System Access (Admin, HOI, DHOI, ICT Teacher / Tech)
+      if (
+        r.includes('admin') ||
+        r.includes('hoi') ||
+        r.includes('dhoi') ||
+        r.includes('head') ||
+        r.includes('ict') ||
+        r.includes('system')
+      ) {
+        return '/dashboard';
+      }
+
+      // 2. Financial Ledger Access
+      if (r.includes('bursar') || r.includes('finance') || r.includes('accounts')) {
+        return '/fees';
+      }
+
+      // 3. Regular Teaching Staff Access
+      if (r.includes('class teacher') || r.includes('subject teacher') || r.includes('teacher')) {
+        return '/dashboard';
+      }
+
+      // Default fallback route
+      return '/dashboard';
+    };
+
+    const targetRoute = determineUserRoute(staffMember.role || staffMember.designation || staffMember.category);
 
     showSuccess(`Welcome, ${userData.name}!`);
     setIsStaffVerifying(false);
