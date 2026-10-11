@@ -1143,7 +1143,7 @@ export default function StaffRegistry() {
               </button>
               <button
                 type="button"
-                onClick={handleSubmit}
+                onClick={handleSaveStaff}
                 className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 border border-indigo-700 text-white text-sm font-semibold rounded-xl hover:shadow shadow-indigo-100 transition-all"
               >
                 {editingStaff ? "Save Changes" : "Register Staff"}
