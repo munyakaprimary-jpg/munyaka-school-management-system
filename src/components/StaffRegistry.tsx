@@ -346,9 +346,18 @@ export default function StaffRegistry() {
 
   const handleDeleteStaff = (id: string) => {
     if (window.confirm("PERMANENT ACTION: Are you sure you want to permanently delete this record? This cannot be undone.")) {
-      CentralDataService.hardDeleteStaff(id);
+      const existing = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || '[]');
+      const filtered = existing.filter((item: any) => item.id !== id && item.tscNumber !== id && item.tscNo !== id && item.accessCode !== id);
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(filtered));
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(filtered));
+      localStorage.setItem('munyaka_staff', JSON.stringify(filtered));
+      localStorage.setItem('munyaka_staff_db', JSON.stringify(filtered));
+
+      window.dispatchEvent(new Event('munyaka_data_changed'));
+      window.dispatchEvent(new Event('central_db_updated'));
+      window.dispatchEvent(new Event('staff-changed'));
       
-      const updated = staffList.filter((item: any) => item.id !== id && item.tscNo !== id && item.accessCode !== id);
+      const updated = staffList.filter((item: any) => item.id !== id && item.tscNumber !== id && item.tscNo !== id && item.accessCode !== id);
       setStaffList(updated);
       toast.success("Staff member permanently deleted");
     }
