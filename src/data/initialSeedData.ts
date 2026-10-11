@@ -1262,7 +1262,88 @@ export const initialSeedData = {
       "createdAt": "2026-09-29T10:52:20.445Z"
     }
   ],
-  "staff": [],
+  "staff": [
+    {
+      "id": "staff_t001",
+      "staffId": "T001",
+      "name": "Jane Wanjiku",
+      "email": "jane.wanjiku@munyaka.ac.ke",
+      "phone": "+254712345678",
+      "role": "teacher",
+      "designation": "Senior Teacher",
+      "department": "Mathematics",
+      "gender": "Female",
+      "status": "Active",
+      "employmentType": "Permanent",
+      "tscNumber": "TSC123456",
+      "nationalId": "23456789",
+      "dateJoined": "2020-01-15"
+    },
+    {
+      "id": "staff_t002",
+      "staffId": "T002",
+      "name": "John Omondi",
+      "email": "john.omondi@munyaka.ac.ke",
+      "phone": "+254722334455",
+      "role": "teacher",
+      "designation": "Class Teacher",
+      "department": "Science",
+      "gender": "Male",
+      "status": "Active",
+      "employmentType": "Permanent",
+      "tscNumber": "TSC654321",
+      "nationalId": "34567890",
+      "dateJoined": "2021-05-10"
+    },
+    {
+      "id": "staff_t003",
+      "staffId": "T003",
+      "name": "Grace Achieng",
+      "email": "grace.achieng@munyaka.ac.ke",
+      "phone": "+254733445566",
+      "role": "teacher",
+      "designation": "Subject Teacher",
+      "department": "Languages",
+      "gender": "Female",
+      "status": "Active",
+      "employmentType": "Contract",
+      "tscNumber": "TSC789012",
+      "nationalId": "45678901",
+      "dateJoined": "2022-09-01"
+    },
+    {
+      "id": "staff_l001",
+      "staffId": "L001",
+      "name": "Peter Kamau",
+      "email": "peter.kamau@munyaka.ac.ke",
+      "phone": "+254744556677",
+      "role": "librarian",
+      "designation": "Librarian",
+      "department": "Library",
+      "gender": "Male",
+      "status": "Active",
+      "employmentType": "Permanent",
+      "tscNumber": "TSC998877",
+      "nationalId": "56789012",
+      "dateJoined": "2019-03-20"
+    },
+    {
+      "id": "staff_a001",
+      "staffId": "A001",
+      "name": "Alice Mutua",
+      "email": "alice.mutua@munyaka.ac.ke",
+      "phone": "+254755667788",
+      "role": "admin",
+      "designation": "Administrator",
+      "department": "Administration",
+      "gender": "Female",
+      "status": "Active",
+      "employmentType": "Permanent",
+      "tscNumber": "TSC112233",
+      "nationalId": "67890123",
+      "dateJoined": "2018-06-11"
+    }
+  ],
   "fees": [
     {
       "id": "FEE-001",
@@ -1571,7 +1652,7 @@ export const initialExamTypes = (initialSeedData as any).examTypes || (initialSe
 export const initialMarks = (initialSeedData as any).marks || (initialSeedData as any).assessments || (initialSeedData as any).marked_student_submissions || [];
 export const initialQuestions = (initialSeedData as any).questions || (initialSeedData as any).question_bank || [];
 export const initialLearners = initialSeedData.students || [];
-export const initialStaff = [];
+export const initialStaff = initialSeedData.staff || [];
 export const initialReportCards = (initialSeedData as any).reportCards || [];
 export const initialFeeStructures = (initialSeedData as any).feeStructures || (initialSeedData as any).fees_structures || [];
 export const initialFeePayments = (initialSeedData as any).fees || (initialSeedData as any).payments || [];
@@ -1580,7 +1661,7 @@ export const initialLibraryBooks = (initialSeedData as any).libraryBooks || (ini
 export const initialLibraryLogs = (initialSeedData as any).libraryLogs || (initialSeedData as any).library_logs || [];
 export const mockLearners = initialSeedData.students || [];
 export const mockStudents = initialSeedData.students || [];
-export const mockStaff = [];
+export const mockStaff = initialSeedData.staff || [];
 export const initialGrades = (initialSeedData as any).grades || [];
 export const initialStreams = (initialSeedData as any).streams || [];
 export const initialClassAssignments = (initialSeedData as any).classAssignments || [];
