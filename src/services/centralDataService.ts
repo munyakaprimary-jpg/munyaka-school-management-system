@@ -60,6 +60,12 @@ export const CentralDataService = {
   getLearners,
   getStaff,
   getMasterData,
+  getDB: () => ({
+    staff: getStaff(),
+    learners: getLearners(),
+    marks: CentralDataService.getMarks ? CentralDataService.getMarks() : {},
+    roles: safeParse('munyaka_rbac_roles', [])
+  }),
   getData: (key: string, fallback: any = []) => safeParse(key, fallback),
   setData: (key: string, data: any) => {
     try {
