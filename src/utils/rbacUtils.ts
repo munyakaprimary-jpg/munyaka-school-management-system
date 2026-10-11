@@ -1,4 +1,4 @@
-import { User } from '@/context/AuthContext';
+import type { User } from '@/context/AuthContext';
 
 /**
  * Filter data array based on teacher's assigned class/stream scope
