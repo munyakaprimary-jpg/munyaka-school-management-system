@@ -1,4 +1,4 @@
-import CentralDataService from './CentralDataService';
+import CentralDataService from './centralDataService';
 
 export const initializeStaffMaster = () => {
   return CentralDataService.getStaff();
