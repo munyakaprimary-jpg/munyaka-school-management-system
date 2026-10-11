@@ -24,6 +24,10 @@ export const getCategorizedMetrics = () => {
   };
 };
 
+export const getStaffMetrics = () => {
+  return getCategorizedMetrics();
+};
+
 export const staffMasterService = {
   getAllStaff: () => {
     return CentralDataService.getStaff();
