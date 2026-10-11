@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CentralDataService } from '../../services/centralDataService';
-import { calculateStaffMetrics } from '../../utils/staffMetrics';
+import { getStaffCategoryCounts } from '../../utils/staffMetrics';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { useCentralData } from '../../hooks/useCentralData';
@@ -102,7 +102,7 @@ export const AdminDashboardComponent: React.FC = () => {
 
   const allStaff = CentralDataService.getStaff();
   const staffSource = localStaff.length > 0 ? localStaff : allStaff;
-  const staffMetrics = calculateStaffMetrics(staffSource);
+  const staffMetrics = getStaffCategoryCounts(staffSource);
 
   const teachingStaffCount = staffMetrics.teachingCount;
   const nonTeachingStaffCount = staffMetrics.nonTeachingCount;
