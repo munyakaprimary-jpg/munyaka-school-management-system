@@ -681,31 +681,31 @@ export default function StaffRegistry() {
                   </td>
                 </tr>
               ) : (
-                filteredStaff.map((staff, idx) => {
-                  const statusConfig = getStatusBadgeConfig(staff.status);
+                filteredStaff.map((staffMember: any, index: number) => {
+                  const statusConfig = getStatusBadgeConfig(staffMember.status);
                   return (
-                    <tr 
-                      key={staff.id || `staff-${idx}`}
+                    <tr
+                      key={staffMember.id || staffMember.tscNumber || staffMember.tscNo || index}
                       className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors duration-150 group"
                     >
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
-                            {(staff.name || 'S').trim().charAt(0).toUpperCase()}
+                            {(staffMember.name || staffMember.fullName || 'S').trim().charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <span className="font-semibold text-slate-800 block text-sm group-hover:text-indigo-600 transition-colors">
-                              {staff.name ? staff.name.toUpperCase() : ''}
+                              {staffMember.name || staffMember.fullName ? (staffMember.name || staffMember.fullName).toUpperCase() : 'UNKNOWN STAFF'}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
-                                staff.category === 'HOI' || staff.category === 'DHOI'
+                                staffMember.category === 'HOI' || staffMember.category === 'DHOI'
                                   ? 'bg-amber-50 text-amber-700 border-amber-150'
-                                  : staff.category === 'Bursar' || staff.category === 'Store Master'
+                                  : staffMember.category === 'Bursar' || staffMember.category === 'Store Master'
                                     ? 'bg-slate-50 text-slate-700 border-slate-150'
                                     : 'bg-indigo-50 text-indigo-700 border-indigo-150'
                               }`}>
-                                {staff.category || 'Class Teacher'}
+                                {staffMember.category || staffMember.designation || 'Class Teacher'}
                               </span>
                             </div>
                           </div>
@@ -714,30 +714,30 @@ export default function StaffRegistry() {
 
                       <td className="py-3.5 px-3">
                         <span className="text-xs text-slate-700 block flex items-center gap-1">
-                          <Mail className="w-3 h-3 text-slate-400" /> {staff.email}
+                          <Mail className="w-3 h-3 text-slate-400" /> {staffMember.email || '—'}
                         </span>
                       </td>
 
                       <td className="py-3.5 px-3">
                         <span className="text-xs text-slate-600 block flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-slate-400" /> {staff.phone}
+                          <Phone className="w-3 h-3 text-slate-400" /> {staffMember.phone || staffMember.phoneNumber || '—'}
                         </span>
                       </td>
 
                       <td className="py-3.5 px-3">
                         <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100/70 border border-slate-200/50 px-2 py-1 rounded">
-                          {staff.tscNumber || 'N/A'}
+                          {staffMember.tscNumber || staffMember.tscNo || staffMember.idNumber || 'N/A'}
                         </span>
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
+                        {categoryIsTeaching(staffMember.category) && staffMember.subjects && staffMember.subjects.length > 0 ? (
                           <div className="flex flex-wrap gap-1 max-w-[280px]">
-                            {staff.subjects.map((sub, sIdx) => {
+                            {staffMember.subjects.map((sub: any, sIdx: number) => {
                               const subName = typeof sub === 'string'
                                 ? sub
                                 : (sub && typeof sub === 'object'
-                                    ? String((sub as any).name || (sub as any).title || (sub as any).subject || (sub as any).learningArea || JSON.stringify(sub))
+                                    ? String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub))
                                     : String(sub));
                               return (
                                 <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
@@ -752,19 +752,18 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
+                        {staffMember.category === 'Class Teacher' && (staffMember.homeroomGrade || staffMember.homeroomStream) ? (
                           <div className="flex items-center gap-1.5">
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
                               <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
+                              {typeof staffMember.homeroomGrade === 'string' ? staffMember.homeroomGrade : 'Grade 7'} {typeof staffMember.homeroomStream === 'string' ? staffMember.homeroomStream : ''}
                             </span>
                           </div>
-                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
+                        ) : categoryIsTeaching(staffMember.category) && ((staffMember.assignedClasses && staffMember.assignedClasses.length > 0) || (staffMember.assignedStreams && staffMember.assignedStreams.length > 0) || (staffMember.subjects && staffMember.subjects.length > 0)) ? (
                           <div className="flex flex-col gap-1.5 max-w-[220px]">
-                            {/* If assignedClasses contains structured object or string items */}
-                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
+                            {staffMember.assignedClasses && staffMember.assignedClasses.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
+                                {staffMember.assignedClasses.slice(0, 3).map((cls: any, cIdx: number) => {
                                   let formattedCls = '';
                                   if (typeof cls === 'string') {
                                     formattedCls = cls;
@@ -781,18 +780,17 @@ export default function StaffRegistry() {
                                     </span>
                                   );
                                 })}
-                                {staff.assignedClasses.length > 3 && (
+                                {staffMember.assignedClasses.length > 3 && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staff.assignedClasses.length - 3}
+                                    +{staffMember.assignedClasses.length - 3}
                                   </span>
                                 )}
                               </div>
                             )}
 
-                            {/* Stream or combined allocations */}
-                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
+                            {staffMember.assignedStreams && staffMember.assignedStreams.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
+                                {staffMember.assignedStreams.slice(0, 3).map((strm: any, sIdx: number) => {
                                   let formattedStrm = '';
                                   if (typeof strm === 'string') {
                                     formattedStrm = strm;
@@ -809,9 +807,9 @@ export default function StaffRegistry() {
                                     </span>
                                   );
                                 })}
-                                {staff.assignedStreams.length > 3 && (
+                                {staffMember.assignedStreams.length > 3 && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staff.assignedStreams.length - 3}
+                                    +{staffMember.assignedStreams.length - 3}
                                   </span>
                                 )}
                               </div>
@@ -832,11 +830,11 @@ export default function StaffRegistry() {
                       <td className="py-3.5 px-4 text-center">
                         <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-150 px-2 py-1 rounded-lg">
                           <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
-                            {staff.accessCode || '—'}
+                            {staffMember.accessCode || '—'}
                           </span>
-                          {staff.accessCode && (
-                            <button 
-                              onClick={() => handleCopyCode(staff.accessCode)}
+                          {staffMember.accessCode && (
+                            <button
+                              onClick={() => handleCopyCode(staffMember.accessCode)}
                               className="p-1 hover:bg-white rounded hover:text-indigo-600 text-slate-400 border border-transparent hover:border-slate-200 transition-all"
                               title="Copy code to clipboard"
                             >
@@ -849,14 +847,14 @@ export default function StaffRegistry() {
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => handleOpenEditModal(staff)}
+                            onClick={() => handleOpenEditModal(staffMember)}
                             className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg transition-all"
                             title="Edit profile"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteStaff(staff.id)}
+                            onClick={() => handleDeleteStaff(staffMember.id)}
                             className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg transition-all"
                             title="Remove staff"
                           >
