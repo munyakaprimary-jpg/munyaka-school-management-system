@@ -372,9 +372,9 @@ const Login: React.FC = () => {
     if (roleName.includes('bursar') || roleName.includes('finance')) {
       targetRoute = '/fees';
     } else if (roleName.includes('teacher') || roleName.includes('subject')) {
-      targetRoute = '/teacher-portal';
+      targetRoute = '/dashboard';
     } else if (roleName.includes('support') || roleName.includes('store') || roleName.includes('library')) {
-      targetRoute = '/support-portal';
+      targetRoute = '/dashboard';
     } else if (roleName.includes('admin') || roleName.includes('hoi') || roleName.includes('head')) {
       targetRoute = '/dashboard';
     }
