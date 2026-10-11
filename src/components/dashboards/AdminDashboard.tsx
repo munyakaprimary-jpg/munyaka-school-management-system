@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CentralDataService, getMasterData, getLearners, getStaff } from '../../services/centralDataService';
+import { calculateSystemIntegrity } from '../../utils/systemHealth';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon, FileText, ShieldCheck, Database, ArrowRight, Sparkles, Upload } from 'lucide-react';
@@ -31,6 +31,34 @@ export const AdminDashboardComponent: React.FC = () => {
 
   const [localStaff, setLocalStaff] = useState<any[]>([]);
   const [reactiveLearners, setReactiveLearners] = useState<any[]>([]);
+  const [health, setHealth] = useState(calculateSystemIntegrity());
+
+  useEffect(() => {
+    const refreshHealth = () => setHealth(calculateSystemIntegrity());
+
+    refreshHealth();
+    window.addEventListener('munyaka_data_changed', refreshHealth);
+    window.addEventListener('storage', refreshHealth);
+
+    return () => {
+      window.removeEventListener('munyaka_data_changed', refreshHealth);
+      window.removeEventListener('storage', refreshHealth);
+    };
+  }, []);
+  const [health, setHealth] = useState(calculateSystemIntegrity());
+
+  useEffect(() => {
+    const refreshHealth = () => setHealth(calculateSystemIntegrity());
+
+    refreshHealth();
+    window.addEventListener('munyaka_data_changed', refreshHealth);
+    window.addEventListener('storage', refreshHealth);
+
+    return () => {
+      window.removeEventListener('munyaka_data_changed', refreshHealth);
+      window.removeEventListener('storage', refreshHealth);
+    };
+  }, []);
 
   // Re-usable fetch helper to compute and set metrics live
   const refreshDashboardMetrics = useCallback(() => {
