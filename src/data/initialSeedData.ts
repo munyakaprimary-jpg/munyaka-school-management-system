@@ -1312,6 +1312,38 @@ export const initialSeedData = {
       "dateJoined": "2022-09-01"
     },
     {
+      "id": "staff_t004",
+      "staffId": "T004",
+      "name": "David Kiprono",
+      "email": "david.kiprono@munyaka.ac.ke",
+      "phone": "+254755889900",
+      "role": "teacher",
+      "designation": "Class Teacher",
+      "department": "Humanities",
+      "gender": "Male",
+      "status": "Active",
+      "employmentType": "Permanent",
+      "tscNumber": "TSC445566",
+      "nationalId": "33445566",
+      "dateJoined": "2021-01-10"
+    },
+    {
+      "id": "staff_t005",
+      "staffId": "T005",
+      "name": "Esther Nyambura",
+      "email": "esther.nyambura@munyaka.ac.ke",
+      "phone": "+254766990011",
+      "role": "teacher",
+      "designation": "Subject Teacher",
+      "department": "Creative Arts",
+      "gender": "Female",
+      "status": "Active",
+      "employmentType": "Permanent",
+      "tscNumber": "TSC334455",
+      "nationalId": "22334455",
+      "dateJoined": "2022-02-15"
+    },
+    {
       "id": "staff_l001",
       "staffId": "L001",
       "name": "Peter Kamau",
