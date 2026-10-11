@@ -11,7 +11,8 @@ export const filterByTeacherScope = (dataArray: any[], user: User | null): any[]
   if (!user) return dataArray;
 
   const role = String(user.role || '').toUpperCase();
-  const designation = String(user.designation || user.specificRole || '').toUpperCase();
+  const uAny = user as Record<string, any>;
+  const designation = String(uAny.designation || uAny.specificRole || '').toUpperCase();
 
   // Global operational roles see all data
   if (
@@ -87,7 +88,8 @@ export const filterByTeacherScope = (dataArray: any[], user: User | null): any[]
 export const isGlobalRole = (user: User | null): boolean => {
   if (!user) return false;
   const role = String(user.role || '').toUpperCase();
-  const designation = String(user.designation || user.specificRole || '').toUpperCase();
+  const uAny = user as Record<string, any>;
+  const designation = String(uAny.designation || uAny.specificRole || '').toUpperCase();
 
   return (
     role === 'ADMIN' ||

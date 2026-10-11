@@ -226,8 +226,16 @@ const computeStats = (): CentralDataStats => {
     const activeLearners = allLearners.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED');
     const totalStudents = activeLearners.length > 0 ? activeLearners.length : allLearners.length;
 
-    const categorizedMetrics = getCategorizedMetrics(activeSchoolId);
-    const staffMetrics = getStaffMetrics(activeSchoolId);
+    const rawCategorized = getCategorizedMetrics();
+    const categorizedMetrics: CategorizedStaffMetrics = {
+      teachingTotal: rawCategorized.teachingTotal || 0,
+      teachingActive: rawCategorized.teachingActive || 0,
+      teachingPending: rawCategorized.teachingPending || 0,
+      nonTeachingTotal: rawCategorized.nonTeachingTotal || 0,
+      nonTeachingActive: rawCategorized.nonTeachingActive || 0,
+      nonTeachingPending: rawCategorized.nonTeachingPending || 0,
+    };
+    const staffMetrics = getStaffMetrics();
 
     const allTeachers: Teacher[] = getTeachers();
     const teacherRecords = allTeachers.filter((t) => {
@@ -237,9 +245,9 @@ const computeStats = (): CentralDataStats => {
       return isTeacherRecord(t);
     });
 
-    const totalTeachers = staffMetrics.total;
-    const activeTeacherCount = staffMetrics.active;
-    const pendingTeacherCount = staffMetrics.pending;
+    const totalTeachers = staffMetrics.teaching;
+    const activeTeacherCount = staffMetrics.teaching;
+    const pendingTeacherCount = 0;
 
     const todayLogs = getTodayAttendanceLogs();
     const uniquePresentStudents = new Set(

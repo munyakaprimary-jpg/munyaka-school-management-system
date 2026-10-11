@@ -33,7 +33,15 @@ export const getStaffMetrics = () => {
 };
 
 export const getCategorizedMetrics = () => {
-  return getStaffMetrics();
+  const sm = getStaffMetrics();
+  return {
+    teachingTotal: sm.teaching,
+    teachingActive: sm.teaching,
+    teachingPending: 0,
+    nonTeachingTotal: sm.support,
+    nonTeachingActive: sm.support,
+    nonTeachingPending: 0,
+  };
 };
 
 export const getStaffMaster = () => {
