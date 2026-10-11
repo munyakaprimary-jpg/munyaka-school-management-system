@@ -60,6 +60,8 @@ export interface User {
   grade?: string;
   stream?: string;
   department?: string;
+  designation?: string;
+  specificRole?: string;
 }
 
 /**
