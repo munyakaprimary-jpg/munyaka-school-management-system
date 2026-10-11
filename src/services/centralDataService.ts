@@ -60,6 +60,13 @@ export class CentralDataService {
     try {
       if (typeof window === 'undefined' || !window.localStorage) return;
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dbData));
+      
+      // Purge obsolete legacy keys so deleted staff never re-seed
+      localStorage.removeItem('munyaka_master_staff_list');
+      localStorage.removeItem('munyaka_staff');
+      localStorage.removeItem('munyaka_staff_directory');
+      localStorage.removeItem('munyaka_staff_db');
+
       window.dispatchEvent(new Event('munyaka_data_changed'));
     } catch (e) {
       console.error("Central DB Write Exception:", e);

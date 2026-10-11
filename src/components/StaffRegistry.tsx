@@ -350,13 +350,33 @@ export default function StaffRegistry() {
   }
 
   const handleDeleteStaff = (id: string) => {
-    if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone.")) {
-      const updated = staffList.filter(s => s.id !== id);
-      setStaffList(updated);
-      localStorage.setItem('munyaka_staff', JSON.stringify(updated));
-      localStorage.setItem('munyaka_staff_registry', JSON.stringify(updated));
-      toast.success("Staff member removed successfully");
-    }
+    if (!confirm("Are you sure you want to permanently remove this staff member?")) return;
+
+    // 1. Fetch current database from CentralDataService
+    const db = CentralDataService.getDB();
+    
+    // 2. Filter out deleted staff member across all possible identifier keys (id, tscNumber, accessCode, email)
+    const updatedStaff = (db.staff || []).filter((s: any) =>
+      s.id !== id && s.tscNumber !== id && s.accessCode !== id && s.email !== id
+    );
+
+    // 3. Overwrite master database key directly and purge legacy keys
+    db.staff = updatedStaff;
+    CentralDataService.saveDB(db);
+
+    // Also purge legacy keys explicitly
+    localStorage.removeItem('munyaka_master_staff_list');
+    localStorage.removeItem('munyaka_staff');
+    localStorage.removeItem('munyaka_staff_directory');
+    localStorage.removeItem('munyaka_staff_db');
+
+    // 4. Update component state and dispatch broadcast events
+    setStaffList(updatedStaff);
+    toast.success("Staff member removed successfully");
+
+    window.dispatchEvent(new Event('munyaka_data_changed'));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_central_db' } }));
+    window.dispatchEvent(new Event('staff-changed'));
   };
 
   // Standardize staff class data model resolution without Grade 7 fallback for non-teaching
