@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CentralDataService } from '../../services/centralDataService';
-import { calculateStaffMetrics } from '../../utils/staffMetrics';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { useCentralData } from '../../hooks/useCentralData';
@@ -46,7 +45,14 @@ export const AdminDashboardComponent: React.FC = () => {
 
   const [localStaff, setLocalStaff] = useState<any[]>(() => {
     try {
-      return CentralDataService.getStaff();
+      const keys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      }
     } catch {}
     return [];
   });
@@ -78,7 +84,17 @@ export const AdminDashboardComponent: React.FC = () => {
           setReactiveLearners(getStoredLearners());
         }
 
-        setLocalStaff(CentralDataService.getStaff());
+        const sKeys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
+        for (const k of sKeys) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setLocalStaff(parsed);
+              break;
+            }
+          }
+        }
       } catch {}
     };
 
@@ -98,22 +114,21 @@ export const AdminDashboardComponent: React.FC = () => {
     };
   }, []);
 
-  const learners = CentralDataService.getLearners();
+  const sysStats = CentralDataService.getSystemStats();
+  const masterData = CentralDataService.getMasterData();
+  const actualLearners = masterData.learners.length > 0 ? masterData.learners : CentralDataService.getLearners();
+  const learners = actualLearners;
 
-  const allStaff = CentralDataService.getStaff();
-  const staffSource = localStaff.length > 0 ? localStaff : allStaff;
-  const staffMetrics = calculateStaffMetrics(staffSource);
-
-  const teachingStaffCount = staffMetrics.teachingCount;
-  const nonTeachingStaffCount = staffMetrics.nonTeachingCount;
-  const totalStaffCount = staffMetrics.total;
+  const staffSource = localStaff.length > 0 ? localStaff : CentralDataService.getStaff();
+  const teachingStaffCount = staffSource.length > 0 ? staffSource.length : masterData.totalStaff;
+  const nonTeachingStaffCount = sysStats.nonTeachingStaff;
 
   const primary = learners.filter((l: any) => !l.grade?.toLowerCase().includes('junior') && !l.grade?.toLowerCase().includes('grade 7') && !l.grade?.toLowerCase().includes('grade 8') && !l.grade?.toLowerCase().includes('grade 9'));
   const junior = learners.length - primary.length;
 
   const primaryCount = primary.length;
   const juniorCount = junior;
-  const totalStudents = learners.length;
+  const totalStudents = masterData.totalLearners > 0 ? masterData.totalLearners : learners.length;
 
   const [selectedYear, setSelectedYear] = useState('2026');
 
@@ -227,14 +242,11 @@ export const AdminDashboardComponent: React.FC = () => {
         <Card className="border shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">TEACHING STAFF</CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-[10px] bg-purple-50 text-purple-700">Total: {totalStaffCount}</Badge>
-              <GraduationCap className="w-5 h-5 text-purple-600" />
-            </div>
+            <GraduationCap className="w-5 h-5 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{teachingStaffCount}</div>
-            <p className="text-xs text-gray-500 mt-1">Teaching & Academic Staff</p>
+            <p className="text-xs text-gray-500 mt-1">Active: {teachingStaffCount} | Pending: 0</p>
           </CardContent>
         </Card>
 
@@ -242,14 +254,11 @@ export const AdminDashboardComponent: React.FC = () => {
         <Card className="border shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">NON-TEACHING STAFF</CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-[10px] bg-orange-50 text-orange-700">Total: {totalStaffCount}</Badge>
-              <Briefcase className="w-5 h-5 text-orange-600" />
-            </div>
+            <Briefcase className="w-5 h-5 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{nonTeachingStaffCount}</div>
-            <p className="text-xs text-gray-500 mt-1">Support & Administration</p>
+            <p className="text-xs text-gray-500 mt-1">Active: {nonTeachingStaffCount} | Pending: 0</p>
           </CardContent>
         </Card>
 

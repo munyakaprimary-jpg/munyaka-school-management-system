@@ -1,455 +1,1204 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Users, 
-  UserPlus, 
-  Trash2, 
-  Edit, 
-  Search, 
-  Shield, 
-  GraduationCap, 
-  Briefcase, 
-  CheckCircle2,
-  X,
-  Plus
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Check,
+  BookOpen,
+  GraduationCap,
+  User,
+  Mail,
+  Phone,
+  Award,
+  FileSpreadsheet,
+  AlertCircle,
+  Fingerprint,
+  Sparkles,
+  Copy
 } from 'lucide-react';
-import { CentralDataService } from '@/services/centralDataService';
-import { calculateStaffMetrics } from '@/utils/staffMetrics';
 import { toast } from 'sonner';
+import CentralDataService from '../services/centralDataService';
+import { useGradesAndStreams } from '../hooks/useGradesStreams';
 
+export type StaffCategoryRole =
+  | 'Class Teacher'
+  | 'Subject Teacher'
+  | 'ICT Teacher'
+  | 'Lab Teacher'
+  | 'Bursar'
+  | 'Library Teacher'
+  | 'HOI'
+  | 'DHOI'
+  | 'Store Master';
+
+export interface StaffAllocationRecord {
+  subject: string;
+  grade: string;
+  stream: string;
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  category: StaffCategoryRole;
+  tscNumber: string;
+  email: string;
+  phone: string;
+  subjects: string[];
+  assignedClasses?: string[];
+  assignedStreams?: string[];
+  homeroomGrade?: string;
+  homeroomStream?: string;
+  allocations?: StaffAllocationRecord[];
+  accessCode: string;
+  status: 'Active' | 'On Leave' | 'Inactive';
+  createdAt?: string;
+}
+
+const MOCK_STAFF: any[] = [];
+const defaultCbcLearningAreas: any[] = [];
 export default function StaffRegistry() {
-  const [staffList, setStaffList] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<any | null>(null);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    role: 'Subject Teacher',
-    tscNo: '',
-    accessCode: '',
-    assignedClass: 'Grade 7',
-    email: ''
-  });
+  // Form states
+  const [fullName, setFullName] = useState('');
+  const [category, setCategory] = useState<StaffCategoryRole>('Class Teacher');
+  const [tscNumber, setTscNumber] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [status, setStatus] = useState<'Active' | 'On Leave' | 'Inactive'>('Active');
+  const [accessCode, setAccessCode] = useState('');
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
+  const [assignedStreams, setAssignedStreams] = useState<string[]>([]);
+  const [homeroomGrade, setHomeroomGrade] = useState('Grade 7');
+  const [homeroomStream, setHomeroomStream] = useState('');
+  // Structured subject & class allocation records: e.g. { subject: "Mathematics", grade: "Grade 7", stream: "East" }
+  const [allocations, setAllocations] = useState<StaffAllocationRecord[]>([]);
 
-  const loadStaff = () => {
-    try {
-      const list = CentralDataService.getStaff();
-      setStaffList(Array.isArray(list) ? list : []);
-    } catch (e) {
-      console.error("Failed to load staff list:", e);
-      setStaffList([]);
+  // Active subject being configured for grade/stream matrix
+  const [activeSubjectForAllocation, setActiveSubjectForAllocation] = useState<string | null>(null);
+
+  // Grades and streams configuration hook
+  const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams } = useGradesAndStreams();
+
+  // Get relevant streams based on selected grades (or all global streams if none selected)
+  const availableSchoolStreams = useMemo(() => {
+    if (!assignedClasses || assignedClasses.length === 0) {
+      return allGlobalStreams && allGlobalStreams.length > 0 ? allGlobalStreams : [];
     }
+    const streamSet = new Set<string>();
+    assignedClasses.forEach(cls => {
+      const streamsForThisGrade = getStreamsForGrade(cls);
+      if (streamsForThisGrade && streamsForThisGrade.length > 0) {
+        streamsForThisGrade.forEach(s => streamSet.add(s));
+      }
+    });
+    return Array.from(streamSet);
+  }, [assignedClasses, getStreamsForGrade, allGlobalStreams]);
+
+  // Generator for Access Code
+  const generateSecureCode = () => {
+    setAccessCode(generateRandomCode());
   };
 
   useEffect(() => {
-    loadStaff();
+    const loadedStaff = CentralDataService.getStaff();
+    const sourceStaff = loadedStaff && loadedStaff.length > 0 ? loadedStaff : MOCK_STAFF;
+
+    // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and uppercase names
+    const seenIds = new Set<string>();
+    const sanitized: StaffMember[] = sourceStaff.map((staff: any, idx: number) => {
+      let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
+      if (seenIds.has(id)) {
+        id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
+      }
+      seenIds.add(id);
+
+      let cat: StaffCategoryRole = staff.category;
+      if (cat === ('Teaching Staff' as any)) cat = 'Subject Teacher';
+      else if (cat === ('Administration' as any)) cat = 'HOI';
+      else if (cat === ('Support Staff' as any)) cat = 'Store Master';
+      else if (!cat) cat = 'Class Teacher';
+
+      const rawClasses = staff.assignedClasses || staff.classes || [];
+      const cleanClasses = Array.isArray(rawClasses)
+        ? rawClasses.map((c: any) => {
+            if (!c) return '';
+            if (typeof c === 'string') return c;
+            if (typeof c === 'object') {
+              return String(c.grade || c.name || c.className || `${c.subject || ''} ${c.grade || ''}${c.stream || ''}`.trim() || JSON.stringify(c));
+            }
+            return String(c);
+          }).filter(Boolean)
+        : [];
+
+      const rawStreams = staff.assignedStreams || staff.streams || [];
+      const cleanStreams = Array.isArray(rawStreams)
+        ? rawStreams.map((s: any) => {
+            if (!s) return '';
+            if (typeof s === 'string') return s;
+            if (typeof s === 'object') {
+              return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
+            }
+            return String(s);
+          }).filter(s => s && s !== 'Mercury')
+        : [];
+
+      const rawSubjects = staff.subjects || staff.assignedSubjects || [];
+      const cleanSubjects = Array.isArray(rawSubjects)
+        ? rawSubjects.map((sub: any) => {
+            if (!sub) return '';
+            if (typeof sub === 'string') return sub;
+            if (typeof sub === 'object') {
+              return String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub));
+            }
+            return String(sub);
+          }).filter(Boolean)
+        : [];
+
+      const defaultGrade = cleanClasses[0] || 'Grade 7';
+      const defaultStream = cleanStreams[0] || '';
+
+      const cleanAllocations = Array.isArray(staff.allocations)
+        ? staff.allocations
+            .filter((a: any) => a && typeof a === 'object' && a.subject)
+            .map((a: any) => ({
+              subject: String(a.subject),
+              grade: String(a.grade || defaultGrade),
+              stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
+            }))
+        : cleanSubjects.map((sub: string) => ({
+            subject: sub,
+            grade: defaultGrade,
+            stream: defaultStream
+          }));
+
+      let code = staff.accessCode;
+      if (!code || !code.startsWith('MUN-')) {
+        const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+        let randomPart = '';
+        for (let i = 0; i < 4; i++) {
+          randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        code = `MUN-${randomPart}`;
+      }
+
+      const rawName = staff.name || staff.fullName || 'UNNAMED STAFF';
+      const formattedName = String(rawName).trim().toUpperCase();
+
+      return {
+        id,
+        name: formattedName,
+        category: cat,
+        tscNumber: staff.tscNumber || 'N/A',
+        email: staff.email || '',
+        phone: staff.phone || '',
+        subjects: cleanSubjects,
+        assignedClasses: cleanClasses,
+        assignedStreams: cleanStreams,
+        homeroomGrade: staff.homeroomGrade || defaultGrade,
+        homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
+        allocations: cleanAllocations,
+        accessCode: code,
+        status: staff.status || 'Active',
+        createdAt: staff.createdAt || new Date().toISOString()
+      };
+    });
+
+    setStaffList(sanitized);
+    CentralDataService.saveStaff(sanitized);
 
     const handleDataChanged = () => {
-      loadStaff();
+      const refreshed = CentralDataService.getStaff();
+      if (refreshed && refreshed.length > 0) {
+        setStaffList(refreshed);
+      }
     };
-
     window.addEventListener('munyaka_data_changed', handleDataChanged);
-    window.addEventListener('munyaka:data-changed', handleDataChanged);
-
+    window.addEventListener('munyaka:data-changed', handleDataChanged as EventListener);
     return () => {
       window.removeEventListener('munyaka_data_changed', handleDataChanged);
-      window.removeEventListener('munyaka:data-changed', handleDataChanged);
+      window.removeEventListener('munyaka:data-changed', handleDataChanged as EventListener);
     };
   }, []);
 
-  const handleDeleteStaff = (id: string | number) => {
-    if (confirm("Are you sure you want to permanently delete this staff member?")) {
-      try {
-        const currentStaff = CentralDataService.getStaff();
-        const filtered = currentStaff.filter(s => 
-          String(s.id) !== String(id) && 
-          String(s.tscNo) !== String(id) && 
-          String(s.accessCode) !== String(id)
-        );
-        CentralDataService.saveStaff(filtered);
-        setStaffList(filtered);
-        toast.success("Staff member successfully deleted.");
-      } catch (e) {
-        console.error("Error deleting staff:", e);
-        toast.error("Failed to delete staff member.");
+  const handleOpenAddModal = () => {
+    setEditingStaff(null);
+    setFullName('');
+    setCategory('Class Teacher');
+    setTscNumber('');
+    setEmail('');
+    setPhone('');
+    setStatus('Active');
+    setSelectedSubjects([]);
+    setAssignedClasses([]);
+    setAssignedStreams([]);
+    setHomeroomGrade('Grade 7');
+    setHomeroomStream('');
+    setAllocations([]);
+    setActiveSubjectForAllocation(null);
+    generateSecureCode();
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (staff: StaffMember) => {
+    setEditingStaff(staff);
+    setFullName(staff.name ? staff.name.toUpperCase() : '');
+    setCategory(staff.category);
+    setTscNumber(staff.tscNumber);
+    setEmail(staff.email || '');
+    setPhone(staff.phone || '');
+    setStatus(staff.status);
+    setAccessCode(staff.accessCode || generateRandomCode());
+    
+    const loadedSubs = staff.subjects || [];
+    setSelectedSubjects(loadedSubs);
+
+    const loadedClasses = staff.assignedClasses || [];
+    setAssignedClasses(loadedClasses);
+
+    // Validate loaded streams against valid streams for the loaded classes from central configuration
+    const validStreamsSet = new Set<string>();
+    loadedClasses.forEach(cls => {
+      const streamsForGrade = getStreamsForGrade(cls);
+      if (streamsForGrade && streamsForGrade.length > 0) {
+        streamsForGrade.forEach(s => validStreamsSet.add(s));
       }
+    });
+
+    const rawLoadedStreams = staff.assignedStreams || [];
+    const sanitizedStreams = rawLoadedStreams.filter(strm => {
+      // If validStreamsSet is populated, only keep streams that belong to the grade. If empty, keep non-legacy.
+      if (validStreamsSet.size > 0) {
+        return validStreamsSet.has(strm);
+      }
+      return strm && strm !== 'Mercury';
+    });
+
+    setAssignedStreams(sanitizedStreams);
+    setHomeroomGrade(staff.homeroomGrade || loadedClasses[0] || 'Grade 7');
+    setHomeroomStream(staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : (sanitizedStreams[0] || ''));
+    
+    let loadedAllocs: StaffAllocationRecord[] = [];
+    if (Array.isArray(staff.allocations) && staff.allocations.length > 0) {
+      loadedAllocs = staff.allocations.map(a => ({
+        subject: a.subject,
+        grade: a.grade || loadedClasses[0] || 'Grade 7',
+        stream: a.stream && a.stream !== 'Mercury' ? a.stream : (sanitizedStreams[0] || '')
+      }));
+    } else {
+      // Build default allocations if none existed
+      loadedSubs.forEach(sub => {
+        loadedAllocs.push({
+          subject: sub,
+          grade: loadedClasses[0] || 'Grade 4',
+          stream: sanitizedStreams[0] || ''
+        });
+      });
+    }
+    setAllocations(loadedAllocs);
+    setActiveSubjectForAllocation(loadedSubs[0] || null);
+    setIsModalOpen(true);
+  };
+
+  const handleToggleSubject = (subjectName: string) => {
+    if (selectedSubjects.includes(subjectName)) {
+      setSelectedSubjects(selectedSubjects.filter(s => s !== subjectName));
+    } else {
+      setSelectedSubjects([...selectedSubjects, subjectName]);
     }
   };
 
-  const handleOpenAddModal = () => {
-    setEditingStaff(null);
-    setFormData({
-      name: '',
-      role: 'Subject Teacher',
-      tscNo: '',
-      accessCode: '',
-      assignedClass: 'Grade 7',
-      email: ''
-    });
-    setIsModalOpen(true);
+  const handleToggleClass = (className: string) => {
+    if (assignedClasses.includes(className)) {
+      setAssignedClasses(assignedClasses.filter(c => c !== className));
+    } else {
+      setAssignedClasses([...assignedClasses, className]);
+    }
   };
 
-  const handleOpenEditModal = (member: any) => {
-    setEditingStaff(member);
-    setFormData({
-      name: member.name || '',
-      role: member.role || 'Subject Teacher',
-      tscNo: member.tscNo || '',
-      accessCode: member.accessCode || '',
-      assignedClass: member.assignedClass || (isNonTeachingRole(member.role) ? 'Unassigned' : 'Grade 7'),
-      email: member.email || ''
-    });
-    setIsModalOpen(true);
+  const handleToggleStream = (streamName: string) => {
+    if (assignedStreams.includes(streamName)) {
+      setAssignedStreams(assignedStreams.filter(s => s !== streamName));
+    } else {
+      setAssignedStreams([...assignedStreams, streamName]);
+    }
   };
 
-  const isNonTeachingRole = (role: string) => {
-    const r = String(role || '').toLowerCase();
-    return r.includes('bursar') || r.includes('store') || r.includes('support') || r.includes('secretary') || r.includes('cook');
+  function generateRandomCode() {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let code = '';
+    for (let i = 0; i < 4; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `MUN-${code}`;
+  }
+
+  const handleDeleteStaff = (id: string) => {
+    if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone.")) {
+      const updated = staffList.filter(s => s.id !== id);
+      setStaffList(updated);
+      localStorage.setItem('munyaka_staff', JSON.stringify(updated));
+      localStorage.setItem('munyaka_staff_registry', JSON.stringify(updated));
+      toast.success("Staff member removed successfully");
+    }
   };
 
-  const handleRoleChange = (newRole: string) => {
-    const nonTeaching = isNonTeachingRole(newRole);
-    setFormData(prev => ({
-      ...prev,
-      role: newRole,
-      assignedClass: nonTeaching ? 'Unassigned' : (prev.assignedClass === 'Unassigned' ? 'Grade 7' : prev.assignedClass)
-    }));
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success(`Access code ${code} copied to clipboard!`);
   };
 
-  const handleSaveStaff = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      toast.error("Please enter staff name.");
+    if (!fullName.trim()) {
+      toast.error("Full name is required");
       return;
     }
 
-    try {
-      const currentStaff = CentralDataService.getStaff();
-      const nonTeaching = isNonTeachingRole(formData.role);
-      const assignedClassFinal = nonTeaching ? 'Unassigned' : (formData.assignedClass || 'Grade 7');
-      const assignedClassesArray = [assignedClassFinal];
+    const formattedName = fullName.trim().toUpperCase();
+    const cleanEmailInput = (email || `${formattedName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
+    const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
+    
+    const newStaff = {
+      id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
+      name: formattedName,
+      category: category || 'Teacher',
+      designation: category || 'Class Teacher',
+      specificRole: category || 'Class Teacher',
+      email: cleanEmailInput,
+      phone: phone.trim() || '',
+      tscNumber: tscNumber.trim() || '',
+      status: status || 'Active',
+      accessCode: finalCode,
+      role: 'teacher',
+      type: 'teaching',
+      subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : ['Mathematics', 'English'],
+      assignedClasses: assignedClasses.length > 0 ? assignedClasses : ['Grade 9 Venus'],
+      assignedStreams: assignedStreams.length > 0 ? assignedStreams : ['Green'],
+      homeroomGrade: category === 'Class Teacher' || !homeroomGrade ? (homeroomGrade || 'Grade 9 Venus') : homeroomGrade,
+      homeroomStream: category === 'Class Teacher' || !homeroomStream ? (homeroomStream || 'Green') : homeroomStream,
+      assignedClass: 'Grade 9 Venus',
+      createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
+    };
 
-      let updatedList = [];
-      if (editingStaff) {
-        updatedList = currentStaff.map(s => {
-          if (String(s.id) === String(editingStaff.id) || String(s.tscNo) === String(editingStaff.tscNo)) {
-            return {
-              ...s,
-              ...formData,
-              assignedClass: assignedClassFinal,
-              assignedClasses: assignedClassesArray
-            };
-          }
-          return s;
-        });
-      } else {
-        const newMember = {
-          id: 'staff_' + Date.now(),
-          ...formData,
-          assignedClass: assignedClassFinal,
-          assignedClasses: assignedClassesArray
-        };
-        updatedList = [...currentStaff, newMember];
-      }
+    const existingStaff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || '[]');
+    
+    // Deduplicate by email or ID before pushing
+    const isDuplicate = existingStaff.some((s: any) =>
+      s.email?.toLowerCase() === newStaff.email?.toLowerCase() || (editingStaff && s.id === editingStaff.id)
+    );
 
-      CentralDataService.saveStaff(updatedList);
-      setStaffList(updatedList);
-      setIsModalOpen(false);
-      toast.success(editingStaff ? "Staff member updated successfully." : "New staff member added successfully.");
-    } catch (err) {
-      console.error("Error saving staff:", err);
-      toast.error("Failed to save staff member.");
+    let updatedList;
+    if (editingStaff) {
+      updatedList = existingStaff.map((s: any) =>
+        s.id === editingStaff.id || s.email?.toLowerCase() === newStaff.email?.toLowerCase() ? { ...s, ...newStaff } : s
+      );
+      toast.success("Staff profile updated successfully");
+    } else if (isDuplicate) {
+      updatedList = existingStaff.map((s: any) =>
+        s.email?.toLowerCase() === newStaff.email?.toLowerCase() ? { ...s, ...newStaff } : s
+      );
+      toast.success("Staff member updated successfully");
+    } else {
+      updatedList = [...existingStaff, newStaff];
+      toast.success("Staff member registered successfully");
+    }
+
+    // Save updated array to all target master keys
+    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff_db', JSON.stringify(updatedList));
+
+    window.dispatchEvent(new Event('munyaka_data_changed'));
+    window.dispatchEvent(new Event('central_db_updated'));
+
+    setStaffList(updatedList);
+
+    // Dispatch window event so Central Data and Dashboard re-count immediately
+    window.dispatchEvent(new Event('munyaka_data_changed'));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_master_staff_list' } }));
+    window.dispatchEvent(new Event('staff-changed'));
+
+    console.log('--- NEW STAFF SUCCESSFULLY SAVED ---', newStaff);
+
+    setIsModalOpen(false);
+  };
+
+  // Synchronized horizontal scrollbars
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleTopScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
     }
   };
 
-  const metrics = calculateStaffMetrics(staffList);
+  const handleBottomScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
+    }
+  };
 
-  const filteredStaff = staffList.filter(s => 
-    String(s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    String(s.role || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    String(s.tscNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    String(s.assignedClass || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Extract unique learning areas names for subject pill grid
+  const availableLearningAreas = Array.isArray(defaultCbcLearningAreas) && defaultCbcLearningAreas.length > 0
+    ? defaultCbcLearningAreas.map((la: any) => {
+        if (!la) return 'Learning Area';
+        if (typeof la === 'string') return la;
+        if (typeof la === 'object') {
+          return String(la.name || la.title || la.subject || la.label || JSON.stringify(la));
+        }
+        return String(la);
+      })
+    : [
+        'Mathematics',
+        'English Language',
+        'Kiswahili Lugha',
+        'Science and Technology',
+        'Social Studies',
+        'Religious Education (CRE/IRE/HRE)',
+        'Creative Arts',
+        'Physical Education and Sports',
+        'Agriculture and Nutrition',
+        'Pre-Technical Studies'
+      ];
+
+  // Helper function to check if a category is a teaching role
+  const categoryIsTeaching = (cat: string) => {
+    return cat !== 'Bursar' && cat !== 'Store Master';
+  };
+  const filteredLearningAreasForClasses = useMemo(() => {
+    // If no classes selected, show all available learning areas
+    if (!assignedClasses || assignedClasses.length === 0) {
+      return availableLearningAreas;
+    }
+
+    // Determine highest or relevant grade tier
+    let hasPrePrimary = false;
+    let hasLowerPrimary = false;
+    let hasUpperPrimary = false;
+    let hasJuniorSecondary = false;
+
+    assignedClasses.forEach(cls => {
+      const upperCls = cls.toUpperCase();
+      if (upperCls.includes('PP1') || upperCls.includes('PP2') || upperCls.includes('PRE-PRIMARY')) {
+        hasPrePrimary = true;
+      }
+      if (upperCls.includes('GRADE 1') || upperCls.includes('GRADE 2') || upperCls.includes('GRADE 3')) {
+        hasLowerPrimary = true;
+      }
+      if (upperCls.includes('GRADE 4') || upperCls.includes('GRADE 5') || upperCls.includes('GRADE 6')) {
+        hasUpperPrimary = true;
+      }
+      if (upperCls.includes('GRADE 7') || upperCls.includes('GRADE 8') || upperCls.includes('GRADE 9') || upperCls.includes('JUNIOR')) {
+        hasJuniorSecondary = true;
+      }
+    });
+
+    // Fallback if none matched specifically
+    if (!hasPrePrimary && !hasLowerPrimary && !hasUpperPrimary && !hasJuniorSecondary) {
+      return availableLearningAreas;
+    }
+
+    // Filter available learning areas according to CBC curriculum tiers
+    const filtered = availableLearningAreas.filter(area => {
+      const lower = area.toLowerCase();
+
+      // Pre-Primary & Lower Primary focus on foundational activities (Math, Language, Environmental, Creative, Religious)
+      if ((hasPrePrimary || hasLowerPrimary) && !hasUpperPrimary && !hasJuniorSecondary) {
+        return (
+          lower.includes('math') ||
+          lower.includes('english') ||
+          lower.includes('kiswahili') ||
+          lower.includes('language') ||
+          lower.includes('lugha') ||
+          lower.includes('environmental') ||
+          lower.includes('hygiene') ||
+          lower.includes('nutrition') ||
+          lower.includes('religious') ||
+          lower.includes('cre') ||
+          lower.includes('ire') ||
+          lower.includes('hre') ||
+          lower.includes('movement') ||
+          lower.includes('creative') ||
+          lower.includes('music') ||
+          lower.includes('art')
+        );
+      }
+
+      // Upper Primary & Junior Secondary include Science, Social Studies, Agriculture, Pre-Technical, Computer Science
+      if (hasUpperPrimary || hasJuniorSecondary) {
+        return true; // All subjects apply or tailored
+      }
+
+      return true;
+    });
+
+    // If filter was too restrictive, return all to prevent empty states
+    return filtered.length > 0 ? filtered : availableLearningAreas;
+  }, [assignedClasses, availableLearningAreas]);
+
+  // Filters
+  const filteredStaff = useMemo(() => {
+    return staffList.filter(staff => {
+      const matchesSearch = 
+        staff.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        staff.tscNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        staff.email.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesCategory = categoryFilter === 'All' || staff.category === categoryFilter;
+      const matchesStatus = statusFilter === 'All' || staff.status === statusFilter;
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [staffList, searchQuery, categoryFilter, statusFilter]);
+
+  const getStatusBadgeConfig = (statusStr: string) => {
+    switch (statusStr) {
+      case 'Active':
+        return { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: 'Active' };
+      case 'On Leave':
+        return { bg: 'bg-amber-50 text-amber-700 border-amber-200', text: 'On Leave' };
+      case 'Inactive':
+        return { bg: 'bg-rose-50 text-rose-700 border-rose-200', text: 'Inactive' };
+      default:
+        return { bg: 'bg-slate-50 text-slate-700 border-slate-200', text: 'Unknown' };
+    }
+  };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6">
+      {/* Upper Control Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-150 shadow-sm shadow-slate-100/50">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            <Users className="w-6 h-6 text-indigo-600" /> Staff Registry & Role Management
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage school teaching and non-teaching personnel synced directly with <span className="font-mono text-indigo-600">munyaka_central_db</span>.
-          </p>
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <User className="w-5 h-5 text-indigo-600" /> Staff & Teacher Registry
+          </h2>
+          <p className="text-slate-500 text-xs mt-1">Manage teaching assignments, access codes, TSC registration, and system roles.</p>
         </div>
-        <Button
+        <button 
           onClick={handleOpenAddModal}
-          className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-sm"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-semibold rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-sm shadow-indigo-100 border border-indigo-700"
         >
-          <UserPlus className="w-4 h-4" /> Add New Staff
-        </Button>
+          <Plus className="w-4.5 h-4.5" /> Register New Staff
+        </button>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border shadow-sm rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase text-slate-500">Total Staff</CardTitle>
-            <Users className="w-4 h-4 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{metrics.total}</div>
-            <p className="text-xs text-slate-500 mt-1">Active personnel</p>
-          </CardContent>
-        </Card>
+      {/* Filters and Search Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-150">
+        <div className="relative md:col-span-2">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Search by name, TSC number, or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+          />
+        </div>
 
-        <Card className="border shadow-sm rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase text-slate-500">Teaching Staff</CardTitle>
-            <GraduationCap className="w-4 h-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{metrics.teachingCount}</div>
-            <p className="text-xs text-slate-500 mt-1">Teachers & HOI/DHOI</p>
-          </CardContent>
-        </Card>
+        <div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+          >
+            <option value="All">All Roles</option>
+            <option value="Class Teacher">Class Teacher</option>
+            <option value="Subject Teacher">Subject Teacher</option>
+            <option value="ICT Teacher">ICT Teacher</option>
+            <option value="Lab Teacher">Lab Teacher</option>
+            <option value="Bursar">Bursar</option>
+            <option value="Library Teacher">Library Teacher</option>
+            <option value="HOI">HOI</option>
+            <option value="DHOI">DHOI</option>
+            <option value="Store Master">Store Master</option>
+          </select>
+        </div>
 
-        <Card className="border shadow-sm rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase text-slate-500">Non-Teaching Staff</CardTitle>
-            <Briefcase className="w-4 h-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{metrics.nonTeachingCount}</div>
-            <p className="text-xs text-slate-500 mt-1">Support & administration</p>
-          </CardContent>
-        </Card>
+        <div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
+          >
+            <option value="All">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="On Leave">On Leave</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
       </div>
 
-      {/* Search & List */}
-      <Card className="border shadow-sm rounded-3xl overflow-hidden">
-        <CardHeader className="border-b bg-slate-50/50 flex flex-row items-center justify-between">
-          <CardTitle className="text-base font-bold">Staff Directory ({filteredStaff.length})</CardTitle>
-          <div className="relative w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            <Input
-              placeholder="Search staff by name, role, TSC..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-9 rounded-xl text-sm"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b bg-slate-50/80 text-slate-600 font-semibold text-xs uppercase tracking-wider">
-                  <th className="py-3 px-6">Staff Member</th>
-                  <th className="py-3 px-6">Role / Designation</th>
-                  <th className="py-3 px-6">TSC Number</th>
-                  <th className="py-3 px-6">Access Code</th>
-                  <th className="py-3 px-6">Assigned Class</th>
-                  <th className="py-3 px-6 text-right">Actions</th>
+      {/* Table Wrapper with Synchronized Double-Scrollbars */}
+      <div className="bg-white rounded-2xl border border-slate-150 shadow-sm shadow-slate-100 overflow-hidden">
+        {/* Top Scrollbar (Visible only when overflowing) */}
+        <div 
+          ref={topScrollRef}
+          onScroll={handleTopScroll}
+          className="overflow-x-auto border-b border-slate-100 bg-slate-50/50 custom-scrollbar"
+        >
+          <div className="h-2 min-w-[1200px]"></div>
+        </div>
+
+        <div 
+          ref={bottomScrollRef}
+          onScroll={handleBottomScroll}
+          className="overflow-x-auto custom-scrollbar"
+        >
+          <table className="w-full text-left border-collapse min-w-[1200px]">
+            <thead>
+              <tr className="border-b border-slate-150 bg-slate-50/70 text-slate-600 text-xs font-semibold uppercase tracking-wider">
+                <th className="py-3.5 px-4 min-w-[220px]">Staff Member</th>
+                <th className="py-3.5 px-3 min-w-[180px]">EMAIL</th>
+                <th className="py-3.5 px-3 min-w-[150px]">PHONE NUMBER</th>
+                <th className="py-3.5 px-3 min-w-[120px]">TSC No. / ID No.</th>
+                <th className="py-3.5 px-3 min-w-[180px]">Subjects</th>
+                <th className="py-3.5 px-3 min-w-[150px]">Assigned Classes</th>
+                <th className="py-3.5 px-3 text-center">Status</th>
+                <th className="py-3.5 px-4 min-w-[130px] text-center">Access Code</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm text-slate-600">
+              {filteredStaff.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <AlertCircle className="w-8 h-8 text-slate-300" />
+                      <span className="font-medium text-slate-500">No staff members found matching criteria</span>
+                      <span className="text-xs text-slate-400">Try adjusting your keyword searches or filter parameters.</span>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredStaff.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500">
-                      No staff members found matching your search.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredStaff.map(member => {
-                    const nonTeaching = isNonTeachingRole(member.role);
-                    return (
-                      <tr key={member.id || member.tscNo} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="py-4 px-6 font-medium text-slate-900">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
-                              {(member.name || 'S').charAt(0)}
-                            </div>
-                            <div>
-                              <div className="font-semibold text-slate-900">{member.name}</div>
-                              <div className="text-xs text-slate-500">{member.email || 'No email provided'}</div>
+              ) : (
+                filteredStaff.map((staff, idx) => {
+                  const statusConfig = getStatusBadgeConfig(staff.status);
+                  return (
+                    <tr 
+                      key={staff.id || `staff-${idx}`}
+                      className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors duration-150 group"
+                    >
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
+                            {(staff.name || 'S').trim().charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-slate-800 block text-sm group-hover:text-indigo-600 transition-colors">
+                              {staff.name ? staff.name.toUpperCase() : ''}
+                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
+                                staff.category === 'HOI' || staff.category === 'DHOI'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-150'
+                                  : staff.category === 'Bursar' || staff.category === 'Store Master'
+                                    ? 'bg-slate-50 text-slate-700 border-slate-150'
+                                    : 'bg-indigo-50 text-indigo-700 border-indigo-150'
+                              }`}>
+                                {staff.category || 'Class Teacher'}
+                              </span>
                             </div>
                           </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <Badge variant="outline" className={`rounded-lg px-2.5 py-1 text-xs font-medium ${nonTeaching ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-purple-50 text-purple-700 border-purple-200'}`}>
-                            {member.role || 'Staff'}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-6 font-mono text-slate-600 text-xs">{member.tscNo || 'N/A'}</td>
-                        <td className="py-4 px-6 font-mono text-slate-600 text-xs">{member.accessCode || 'N/A'}</td>
-                        <td className="py-4 px-6">
-                          <span className="font-medium text-slate-800 text-xs bg-slate-100 px-2.5 py-1 rounded-lg">
-                            {member.assignedClass || (nonTeaching ? 'Unassigned' : 'Grade 7')}
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        <span className="text-xs text-slate-700 block flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-slate-400" /> {staff.email}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        <span className="text-xs text-slate-600 block flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-slate-400" /> {staff.phone}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100/70 border border-slate-200/50 px-2 py-1 rounded">
+                          {staff.tscNumber || 'N/A'}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 max-w-[280px]">
+                            {staff.subjects.map((sub, sIdx) => {
+                              const subName = typeof sub === 'string'
+                                ? sub
+                                : (sub && typeof sub === 'object'
+                                    ? String((sub as any).name || (sub as any).title || (sub as any).subject || (sub as any).learningArea || JSON.stringify(sub))
+                                    : String(sub));
+                              return (
+                                <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                  {subName}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3">
+                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
+                              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
+                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
+                            </span>
+                          </div>
+                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
+                          <div className="flex flex-col gap-1.5 max-w-[220px]">
+                            {/* If assignedClasses contains structured object or string items */}
+                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
+                                  let formattedCls = '';
+                                  if (typeof cls === 'string') {
+                                    formattedCls = cls;
+                                  } else if (cls && typeof cls === 'object') {
+                                    const item = cls as any;
+                                    formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedCls) formattedCls = JSON.stringify(item);
+                                  } else {
+                                    formattedCls = String(cls);
+                                  }
+                                  return (
+                                    <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                      {formattedCls}
+                                    </span>
+                                  );
+                                })}
+                                {staff.assignedClasses.length > 3 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                    +{staff.assignedClasses.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Stream or combined allocations */}
+                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
+                                  let formattedStrm = '';
+                                  if (typeof strm === 'string') {
+                                    formattedStrm = strm;
+                                  } else if (strm && typeof strm === 'object') {
+                                    const item = strm as any;
+                                    formattedStrm = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedStrm) formattedStrm = JSON.stringify(item);
+                                  } else {
+                                    formattedStrm = String(strm);
+                                  }
+                                  return (
+                                    <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                                      {formattedStrm}
+                                    </span>
+                                  );
+                                })}
+                                {staff.assignedStreams.length > 3 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                    +{staff.assignedStreams.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusConfig.bg}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5"></span>
+                          {statusConfig.text}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-150 px-2 py-1 rounded-lg">
+                          <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
+                            {staff.accessCode || '—'}
                           </span>
-                        </td>
-                        <td className="py-4 px-6 text-right space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenEditModal(member)}
-                            className="h-8 w-8 p-0 rounded-lg text-slate-600 hover:text-indigo-600"
+                          {staff.accessCode && (
+                            <button 
+                              onClick={() => handleCopyCode(staff.accessCode)}
+                              className="p-1 hover:bg-white rounded hover:text-indigo-600 text-slate-400 border border-transparent hover:border-slate-200 transition-all"
+                              title="Copy code to clipboard"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleOpenEditModal(staff)}
+                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg transition-all"
+                            title="Edit profile"
                           >
                             <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteStaff(member.id || member.tscNo)}
-                            className="h-8 w-8 p-0 rounded-lg text-slate-600 hover:text-rose-600"
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStaff(staff.id)}
+                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg transition-all"
+                            title="Remove staff"
                           >
                             <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      {/* Add / Edit Staff Modal */}
+      {/* Register/Edit Staff Dialog Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg overflow-hidden border">
-            <div className="flex items-center justify-between px-6 py-4 border-b bg-slate-50">
-              <h3 className="font-bold text-lg text-slate-900">
-                {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
-              </h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsModalOpen(false)}
-                className="h-8 w-8 p-0 rounded-full"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <form onSubmit={handleSaveStaff} className="p-6 space-y-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-150 w-full max-w-2xl overflow-hidden animate-slide-up my-8 max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">Full Name</label>
-                <Input
-                  placeholder="e.g. Jane Doe"
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                  required
-                  className="rounded-xl"
-                />
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-indigo-500" />
+                  {editingStaff ? "Edit Staff Profile" : "Register New Staff Member"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">Fill in details below to manage system permissions and assignments.</p>
               </div>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-full border border-slate-200 hover:border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-600 bg-white transition-all text-lg font-medium"
+              >
+                &times;
+              </button>
+            </div>
 
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">Role / Designation</label>
-                <select
-                  value={formData.role}
-                  onChange={e => handleRoleChange(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <optgroup label="Teaching & Academic Leadership">
-                    <option value="Head Teacher (HOI)">Head Teacher (HOI)</option>
-                    <option value="Deputy Head Teacher (DHOI)">Deputy Head Teacher (DHOI)</option>
+            {/* Modal Form Scroll Area */}
+            <form onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-5 flex-1 custom-scrollbar">
+              
+              {/* Profile details grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Full Name <span className="text-rose-500">*</span></label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Mrs. Mary Atieno"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      required
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Staff Category / Role <span className="text-rose-500">*</span></label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as StaffCategoryRole)}
+                    className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                  >
                     <option value="Class Teacher">Class Teacher</option>
                     <option value="Subject Teacher">Subject Teacher</option>
                     <option value="ICT Teacher">ICT Teacher</option>
                     <option value="Lab Teacher">Lab Teacher</option>
-                  </optgroup>
-                  <optgroup label="Non-Teaching & Support">
-                    <option value="School Bursar">School Bursar</option>
-                    <option value="Store Keeper">Store Keeper</option>
-                    <option value="Support Staff">Support Staff</option>
-                    <option value="Secretary">Secretary</option>
-                    <option value="Cook">Cook</option>
-                  </optgroup>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">TSC Number</label>
-                  <Input
-                    placeholder="e.g. TSC12345"
-                    value={formData.tscNo}
-                    onChange={e => setFormData({...formData, tscNo: e.target.value})}
-                    className="rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">Access Code</label>
-                  <Input
-                    placeholder="e.g. TEACH001"
-                    value={formData.accessCode}
-                    onChange={e => setFormData({...formData, accessCode: e.target.value})}
-                    className="rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">Assigned Class / Stream</label>
-                {isNonTeachingRole(formData.role) ? (
-                  <div className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-500">
-                    Unassigned (Non-Teaching Role)
-                  </div>
-                ) : (
-                  <select
-                    value={formData.assignedClass}
-                    onChange={e => setFormData({...formData, assignedClass: e.target.value})}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="Grade 7">Grade 7</option>
-                    <option value="Grade 8">Grade 8</option>
-                    <option value="Grade 9">Grade 9</option>
-                    <option value="Administration">Administration</option>
+                    <option value="Bursar">Bursar</option>
+                    <option value="Library Teacher">Library Teacher</option>
+                    <option value="HOI">HOI</option>
+                    <option value="DHOI">DHOI</option>
+                    <option value="Store Master">Store Master</option>
                   </select>
+                </div>
+
+                {/* Conditional Homeroom Grade & Stream Selector for Class Teacher */}
+                {category === 'Class Teacher' && (
+                  <div className="sm:col-span-2 p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl space-y-3">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-emerald-600" />
+                      <div>
+                        <h4 className="text-xs font-bold text-emerald-900">Assigned Homeroom Grade & Stream</h4>
+                        <p className="text-[11px] text-emerald-700">Select the primary homeroom class supervised by this Class Teacher.</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Grade</label>
+                        <select
+                          value={homeroomGrade}
+                          onChange={(e) => setHomeroomGrade(e.target.value)}
+                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                        >
+                          {availableSchoolClasses.map((cls) => (
+                            <option key={cls} value={cls}>{cls}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Stream</label>
+                        <select
+                          value={homeroomStream}
+                          onChange={(e) => setHomeroomStream(e.target.value)}
+                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                        >
+                          {availableSchoolStreams.map((strm) => (
+                            <option key={strm} value={strm}>{strm}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
                 )}
-                <p className="text-xs text-slate-400 mt-1">
-                  {isNonTeachingRole(formData.role) 
-                    ? 'Class assignment is automatically set to Unassigned for non-teaching roles.' 
-                    : 'Saved directly to both assignedClass and assignedClasses.'}
-                </p>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">
+                    National ID / TSC No.
+                  </label>
+                  <div className="relative">
+                    <Award className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="e.g. TSC/984521 or ID 31452981"
+                      value={tscNumber}
+                      onChange={(e) => setTscNumber(e.target.value)}
+                      required={category !== 'Bursar' && category !== 'Store Master'}
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Status</label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as any)}
+                    className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="On Leave">On Leave</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="email"
+                      placeholder="e.g. name@munyaka.sc.ke"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1.5">Phone Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="tel" 
+                      placeholder="e.g. +254 722 890 123"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-1">Email Address</label>
-                <Input
-                  type="email"
-                  placeholder="e.g. staff@munyaka.ac.ke"
-                  value={formData.email}
-                  onChange={e => setFormData({...formData, email: e.target.value})}
-                  className="rounded-xl"
-                />
+              {/* Secure Portal Access Code Row */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                  <Fingerprint className="w-4 h-4 text-indigo-500 animate-pulse" /> Secure Access Code
+                </span>
+                <p className="text-[11px] text-slate-500">Provide this code to the staff member so they can authenticate and record marks under their profile.</p>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text" 
+                    readOnly
+                    value={accessCode}
+                    className="bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-mono font-bold tracking-wider text-slate-800 text-center w-36 select-all focus:outline-none focus:ring-0"
+                  />
+                  <button 
+                    type="button"
+                    onClick={generateSecureCode}
+                    className="px-3 py-2 bg-white hover:bg-slate-100 border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-800 transition-all flex items-center gap-1.5 shadow-sm"
+                  >
+                    Generate New Code
+                  </button>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                  {editingStaff ? 'Save Changes' : 'Add Staff Member'}
-                </Button>
-              </div>
+              {/* Class & Stream Assignments Grid FIRST (so grades/streams are chosen before subjects) */}
+              {category !== 'Bursar' && category !== 'Store Master' && (
+                <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Assigned Grades & Streams
+                    </h4>
+                    <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
+                      {assignedClasses.length} class(es), {assignedStreams.length} stream(s) selected
+                    </span>
+                  </div>
+                  
+                  {/* Classes/Grades selection */}
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Grades / Classes <span className="text-rose-500">*</span></span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
+                      {availableSchoolClasses.map((cls) => {
+                        const isSelected = assignedClasses.includes(cls);
+                        return (
+                          <button
+                            key={cls}
+                            type="button"
+                            onClick={() => handleToggleClass(cls)}
+                            className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
+                              isSelected
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm shadow-emerald-100/50'
+                                : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                              isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span className="truncate">{cls}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Streams selection */}
+                  <div className="border-t border-slate-100 pt-3">
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams <span className="text-rose-500">*</span></span>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-1">
+                      {availableSchoolStreams.map((strm) => {
+                        const isSelected = assignedStreams.includes(strm);
+                        return (
+                          <button
+                            key={strm}
+                            type="button"
+                            onClick={() => handleToggleStream(strm)}
+                            className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
+                              isSelected
+                                ? 'bg-amber-50 border-amber-200 text-amber-700 shadow-sm shadow-amber-100/50'
+                                : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                              isSelected ? 'bg-amber-600 border-amber-600 text-white' : 'border-slate-300'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span className="truncate">{strm}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Subjects & Learning Area Competencies (Dynamically mapped and bound to selected Grade and Stream) */}
+              {category !== 'Bursar' && category !== 'Store Master' && (
+                <div className="space-y-3 bg-indigo-50/30 p-4 rounded-xl border border-indigo-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-indigo-500" /> Subject & Learning Area Competencies (Grade & Stream Bound)
+                      </h4>
+                      <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
+                        {assignedClasses.length > 0 && assignedStreams.length > 0
+                          ? `Allocations bound to: ${assignedClasses.join(', ')} [${assignedStreams.join(', ')}]`
+                          : 'Select at least one Grade and Stream above to bind subject allocations.'}
+                      </p>
+                    </div>
+                    <span className="text-xs text-indigo-700 font-bold bg-indigo-100 px-2 py-1 rounded-full border border-indigo-200">
+                      {selectedSubjects.length} selected
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1 custom-scrollbar">
+                    {filteredLearningAreasForClasses.map((sub) => {
+                      const isSelected = selectedSubjects.includes(sub);
+                      const primaryGrade = assignedClasses[0] || homeroomGrade || 'Grade 7';
+                      const primaryStream = assignedStreams[0] || homeroomStream || availableSchoolStreams[0] || 'Mercury';
+                      return (
+                        <div
+                          key={sub}
+                          onClick={() => handleToggleSubject(sub)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-xs font-medium transition-all duration-200 border ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 truncate">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                              isSelected ? 'bg-white border-white text-indigo-600' : 'border-slate-300 bg-white'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span className="truncate font-semibold">{sub}</span>
+                          </div>
+                          {isSelected && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-700/80 text-indigo-100 border border-indigo-500/50 whitespace-nowrap">
+                              {primaryGrade} {assignedStreams.length > 0 ? assignedStreams.join(', ') : ''}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
             </form>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 hover:border-slate-300 rounded-xl text-sm font-semibold text-slate-600 hover:text-slate-800 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 border border-indigo-700 text-white text-sm font-semibold rounded-xl hover:shadow shadow-indigo-100 transition-all"
+              >
+                {editingStaff ? "Save Changes" : "Register Staff"}
+              </button>
+            </div>
           </div>
         </div>
       )}

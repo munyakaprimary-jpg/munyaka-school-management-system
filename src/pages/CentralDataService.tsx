@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { calculateStaffMetrics } from '../utils/staffMetrics';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
 import { Button } from '@/components/ui/button';
@@ -532,7 +531,7 @@ export default function CentralDataServicePage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground font-medium">Teaching Staff</p>
-              <p className="text-xl font-bold">{calculateStaffMetrics(CentralDataService.getStaff()).teachingCount}</p>
+              <p className="text-xl font-bold">{stats.teachingStaff}</p>
             </div>
           </CardContent>
         </Card>
@@ -544,7 +543,7 @@ export default function CentralDataServicePage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground font-medium">Non-Teaching</p>
-              <p className="text-xl font-bold">{calculateStaffMetrics(CentralDataService.getStaff()).nonTeachingCount}</p>
+              <p className="text-xl font-bold">{stats.nonTeachingStaff}</p>
             </div>
           </CardContent>
         </Card>

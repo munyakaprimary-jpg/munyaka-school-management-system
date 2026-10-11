@@ -1,299 +1,402 @@
-// Central Data Service - Sole Authority Engine for Munyaka Portal
+/**
+ * CentralDataService.ts - Master Storage & Sync Controller
+ * Target single localStorage key: munyaka_central_db
+ */
 
-export interface CentralDB {
+export interface MasterDatabase {
+  schoolInfo: { name: string };
   staff: any[];
   learners: any[];
+  rbacConfig: Record<string, any>;
   attendance: any[];
-  fees: any[];
   marks: any[];
+  fees: any[];
   [key: string]: any;
 }
 
-const CENTRAL_DB_KEY = 'munyaka_central_db';
-
-const DEFAULT_STAFF = [
-  { id: '1', name: 'Dr. John Kamau', role: 'Head Teacher (HOI)', tscNo: 'TSC12345', accessCode: 'ADMIN001', assignedClass: 'Administration', assignedClasses: ['Administration'], email: 'kamau@munyaka.ac.ke' },
-  { id: '2', name: 'Mary Wanjiku', role: 'Deputy Head Teacher (DHOI)', tscNo: 'TSC23456', accessCode: 'ADMIN002', assignedClass: 'Administration', assignedClasses: ['Administration'], email: 'wanjiku@munyaka.ac.ke' },
-  { id: '3', name: 'Peter Ochieng', role: 'Class Teacher', tscNo: 'TSC34567', accessCode: 'TEACH001', assignedClass: 'Grade 7', assignedClasses: ['Grade 7'], email: 'ochieng@munyaka.ac.ke' },
-  { id: '4', name: 'Grace Akinyi', role: 'Subject Teacher', tscNo: 'TSC45678', accessCode: 'TEACH002', assignedClass: 'Grade 8', assignedClasses: ['Grade 8'], email: 'akinyi@munyaka.ac.ke' },
-  { id: '5', name: 'David Kimani', role: 'ICT Teacher', tscNo: 'TSC56789', accessCode: 'TEACH003', assignedClass: 'Grade 9', assignedClasses: ['Grade 9'], email: 'kimani@munyaka.ac.ke' },
-  { id: '6', name: 'Sarah Cheptoo', role: 'School Bursar', tscNo: 'TSC67890', accessCode: 'BURSAR1', assignedClass: 'Unassigned', assignedClasses: ['Unassigned'], email: 'cheptoo@munyaka.ac.ke' },
-  { id: '7', name: 'James Mwangi', role: 'Support Staff', tscNo: 'TSC78901', accessCode: 'SUPPORT1', assignedClass: 'Unassigned', assignedClasses: ['Unassigned'], email: 'mwangi@munyaka.ac.ke' }
-];
-
-const DEFAULT_LEARNERS = [
-  { id: 'l1', name: 'Brian Kiprono', admissionNumber: 'MUN/2024/001', grade: 'Grade 7', gender: 'Male' },
-  { id: 'l2', name: 'Cynthia Mutheu', admissionNumber: 'MUN/2024/002', grade: 'Grade 7', gender: 'Female' },
-  { id: 'l3', name: 'Elijah Juma', admissionNumber: 'MUN/2024/003', grade: 'Grade 8', gender: 'Male' },
-  { id: 'l4', name: 'Faith Wambui', admissionNumber: 'MUN/2024/004', grade: 'Grade 8', gender: 'Female' },
-  { id: 'l5', name: 'George Otieno', admissionNumber: 'MUN/2024/005', grade: 'Grade 9', gender: 'Male' }
-];
-
 export const STORAGE_KEYS = {
-  STAFF: 'munyaka_staff',
-  LEARNERS: 'munyaka_learners',
-  CENTRAL_DB: CENTRAL_DB_KEY
+  MASTER: 'munyaka_central_db',
+  STAFF: 'munyaka_master_staff_list',
+  LEARNERS: 'munyaka_master_learners',
+  ATTENDANCE: 'munyaka_attendance',
+  MARKS: 'munyaka_marks_matrix',
+  FEES: 'munyaka_fees',
+  RBAC: 'munyaka_rbac_config'
 };
 
 export class CentralDataService {
-  /**
-   * Get the entire central database object safely.
-   */
-  public static getDB(): CentralDB {
+  private static STORAGE_KEY = 'munyaka_central_db';
+
+  // Core Reader
+  static getDB(): MasterDatabase {
     try {
-      const raw = localStorage.getItem(CENTRAL_DB_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          return {
-            staff: Array.isArray(parsed.staff) ? parsed.staff : DEFAULT_STAFF,
-            learners: Array.isArray(parsed.learners) ? parsed.learners : DEFAULT_LEARNERS,
-            attendance: Array.isArray(parsed.attendance) ? parsed.attendance : [],
-            fees: Array.isArray(parsed.fees) ? parsed.fees : [],
-            marks: Array.isArray(parsed.marks) ? parsed.marks : [],
-            ...parsed
-          };
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return this.initializeDefaultDB();
+      }
+      const raw = localStorage.getItem(this.STORAGE_KEY);
+      if (!raw) return this.initializeDefaultDB();
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') {
+        return this.initializeDefaultDB();
+      }
+      return {
+        schoolInfo: parsed.schoolInfo || { name: "Munyaka Primary & JS" },
+        staff: Array.isArray(parsed.staff) ? parsed.staff : [],
+        learners: Array.isArray(parsed.learners) ? parsed.learners : [],
+        rbacConfig: parsed.rbacConfig && typeof parsed.rbacConfig === 'object' ? parsed.rbacConfig : {},
+        attendance: Array.isArray(parsed.attendance) ? parsed.attendance : [],
+        marks: Array.isArray(parsed.marks) ? parsed.marks : [],
+        fees: Array.isArray(parsed.fees) ? parsed.fees : [],
+        ...parsed
+      };
+    } catch (e) {
+      console.error("Central DB Read Exception:", e);
+      return this.initializeDefaultDB();
+    }
+  }
+
+  // Core Writer
+  static saveDB(dbData: MasterDatabase) {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) return;
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(dbData));
+      window.dispatchEvent(new Event('munyaka_data_changed'));
+    } catch (e) {
+      console.error("Central DB Write Exception:", e);
+    }
+  }
+
+  // Encapsulated Staff API
+  static getStaff(): any[] {
+    try {
+      const db = this.getDB();
+      return Array.isArray(db.staff) ? db.staff : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveStaff(staffArray: any[]) {
+    try {
+      const db = this.getDB();
+      db.staff = Array.isArray(staffArray) ? staffArray : [];
+      this.saveDB(db);
+    } catch (e) {
+      console.error("saveStaff Exception:", e);
+    }
+  }
+
+  static addStaff(record: any) {
+    try {
+      const db = this.getDB();
+      const newRecord = {
+        ...record,
+        id: record?.id || `staff-${Date.now()}`,
+        staffId: record?.staffId || `MUN-STF-${Math.floor(1000 + Math.random() * 9000)}`,
+        joinedDate: record?.joinedDate || new Date().toISOString().slice(0, 10)
+      };
+      db.staff = [...(Array.isArray(db.staff) ? db.staff : []), newRecord];
+      this.saveDB(db);
+      return newRecord;
+    } catch {
+      return record;
+    }
+  }
+
+  static updateStaff(id: string, updates: any) {
+    try {
+      const db = this.getDB();
+      db.staff = (Array.isArray(db.staff) ? db.staff : []).map((s: any) => s.id === id || s.email === id ? { ...s, ...updates } : s);
+      this.saveDB(db);
+    } catch {}
+  }
+
+  static deleteStaff(id: string) {
+    try {
+      const db = this.getDB();
+      db.staff = (Array.isArray(db.staff) ? db.staff : []).filter((s: any) => s.id !== id && s.email !== id);
+      this.saveDB(db);
+    } catch {}
+  }
+
+  // Encapsulated Learners API
+  static getLearners(): any[] {
+    try {
+      const db = this.getDB();
+      return Array.isArray(db.learners) ? db.learners : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveLearners(learnersArray: any[]) {
+    try {
+      const db = this.getDB();
+      db.learners = Array.isArray(learnersArray) ? learnersArray : [];
+      this.saveDB(db);
+    } catch (e) {
+      console.error("saveLearners Exception:", e);
+    }
+  }
+
+  // Additional Encapsulated APIs
+  static getRBACConfig(): Record<string, any> {
+    try {
+      const db = this.getDB();
+      return db.rbacConfig && typeof db.rbacConfig === 'object' ? db.rbacConfig : {};
+    } catch {
+      return {};
+    }
+  }
+
+  static saveRBACConfig(config: Record<string, any>) {
+    try {
+      const db = this.getDB();
+      db.rbacConfig = config && typeof config === 'object' ? config : {};
+      this.saveDB(db);
+    } catch (e) {
+      console.error("saveRBACConfig Exception:", e);
+    }
+  }
+
+  static getAttendance(): any[] {
+    try {
+      const db = this.getDB();
+      return Array.isArray(db.attendance) ? db.attendance : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveAttendance(attendanceArray: any[]) {
+    try {
+      const db = this.getDB();
+      db.attendance = Array.isArray(attendanceArray) ? attendanceArray : [];
+      this.saveDB(db);
+    } catch (e) {
+      console.error("saveAttendance Exception:", e);
+    }
+  }
+
+  static getMarks(): any[] {
+    try {
+      const db = this.getDB();
+      return Array.isArray(db.marks) ? db.marks : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveMarks(marksArray: any[]) {
+    try {
+      const db = this.getDB();
+      db.marks = Array.isArray(marksArray) ? marksArray : [];
+      this.saveDB(db);
+    } catch (e) {
+      console.error("saveMarks Exception:", e);
+    }
+  }
+
+  static getFees(): any[] {
+    try {
+      const db = this.getDB();
+      return Array.isArray(db.fees) ? db.fees : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static saveFees(feesArray: any[]) {
+    try {
+      const db = this.getDB();
+      db.fees = Array.isArray(feesArray) ? feesArray : [];
+      this.saveDB(db);
+    } catch (e) {
+      console.error("saveFees Exception:", e);
+    }
+  }
+
+  static getData(key?: string, fallback?: any): any {
+    try {
+      if (!key) return this.getDB();
+      const db = this.getDB();
+      if (db[key] !== undefined) return db[key];
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            return JSON.parse(raw);
+          } catch {}
+        }
+      }
+      return fallback !== undefined ? fallback : [];
+    } catch {
+      return fallback !== undefined ? fallback : [];
+    }
+  }
+
+  static setData(keyOrDb: string | MasterDatabase, val?: any) {
+    try {
+      if (typeof keyOrDb === 'object' && keyOrDb !== null) {
+        this.saveDB(keyOrDb as MasterDatabase);
+        return;
+      }
+      const key = keyOrDb as string;
+      const db = this.getDB();
+      db[key] = val;
+      this.saveDB(db);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(key, JSON.stringify(val));
+      }
+    } catch {}
+  }
+
+  static safeParse(val: string, fallback: any) {
+    try {
+      return val ? JSON.parse(val) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  static isTermLocked(termKey?: string) {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) return false;
+      const lockedMap = localStorage.getItem('munyaka_locked_terms_map');
+      if (lockedMap && termKey) {
+        const parsed = JSON.parse(lockedMap);
+        if (parsed && parsed[termKey]) return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  static getMasterData() {
+    try {
+      const db = this.getDB();
+      const learners = Array.isArray(db.learners) ? db.learners : [];
+      const staff = Array.isArray(db.staff) ? db.staff : [];
+      return {
+        learners,
+        totalLearners: learners.length,
+        staff,
+        totalStaff: staff.length
+      };
+    } catch {
+      return { learners: [], totalLearners: 0, staff: [], totalStaff: 0 };
+    }
+  }
+
+  static getSystemStats() {
+    try {
+      const db = this.getDB();
+      const learners = Array.isArray(db.learners) ? db.learners : [];
+      const staff = Array.isArray(db.staff) ? db.staff : [];
+      const attendance = Array.isArray(db.attendance) ? db.attendance : [];
+      const fees = Array.isArray(db.fees) ? db.fees : [];
+      const marks = Array.isArray(db.marks) ? db.marks : [];
+
+      const teachingStaff = staff.length;
+      const nonTeachingStaff = staff.filter((s: any) => s.category === 'Bursar' || s.category === 'Store Master' || s.type === 'non-teaching' || s.role === 'support').length;
+
+      return {
+        learners: learners.length,
+        teachingStaff: teachingStaff > 0 ? teachingStaff : staff.length,
+        nonTeachingStaff,
+        attendance: attendance.length,
+        feeRecords: fees.length,
+        exams: marks.length
+      };
+    } catch {
+      return { learners: 0, teachingStaff: 0, nonTeachingStaff: 0, attendance: 0, feeRecords: 0, exams: 0 };
+    }
+  }
+
+  static getFullStateDump() {
+    return this.getDB();
+  }
+
+  // Legacy Key Cleaner / Migrator
+  static initializeDefaultDB(): MasterDatabase {
+    let legacyStaff: any[] = [];
+    let legacyLearners: any[] = [];
+    let legacyAttendance: any[] = [];
+    let legacyMarks: any[] = [];
+    let legacyFees: any[] = [];
+    let legacyRbac: Record<string, any> = {};
+
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const staffRaw = localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff');
+        if (staffRaw) {
+          const parsed = JSON.parse(staffRaw);
+          if (Array.isArray(parsed)) legacyStaff = parsed;
+        }
+
+        const learnersRaw = localStorage.getItem('munyaka_master_learners') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+        if (learnersRaw) {
+          const parsed = JSON.parse(learnersRaw);
+          if (Array.isArray(parsed)) legacyLearners = parsed;
+        }
+
+        const attendanceRaw = localStorage.getItem('munyaka_attendance');
+        if (attendanceRaw) {
+          const parsed = JSON.parse(attendanceRaw);
+          if (Array.isArray(parsed)) legacyAttendance = parsed;
+        }
+
+        const marksRaw = localStorage.getItem('munyaka_marks_matrix') || localStorage.getItem('munyaka_assessments');
+        if (marksRaw) {
+          const parsed = JSON.parse(marksRaw);
+          if (Array.isArray(parsed)) legacyMarks = parsed;
+        }
+
+        const feesRaw = localStorage.getItem('munyaka_fees');
+        if (feesRaw) {
+          const parsed = JSON.parse(feesRaw);
+          if (Array.isArray(parsed)) legacyFees = parsed;
+        }
+
+        const rbacRaw = localStorage.getItem('munyaka_rbac_config');
+        if (rbacRaw) {
+          const parsed = JSON.parse(rbacRaw);
+          if (parsed && typeof parsed === 'object') legacyRbac = parsed;
         }
       }
     } catch (e) {
-      console.error("Error reading central DB:", e);
+      console.warn("Legacy migration exception:", e);
     }
 
-    const defaultDb: CentralDB = {
-      staff: DEFAULT_STAFF,
-      learners: DEFAULT_LEARNERS,
-      attendance: [],
-      fees: [],
-      marks: []
+    const initialDB: MasterDatabase = {
+      schoolInfo: { name: "Munyaka Primary & JS" },
+      staff: legacyStaff,
+      learners: legacyLearners,
+      rbacConfig: legacyRbac,
+      attendance: legacyAttendance,
+      marks: legacyMarks,
+      fees: legacyFees
     };
+
     try {
-      localStorage.setItem(CENTRAL_DB_KEY, JSON.stringify(defaultDb));
-    } catch (err) {
-      console.error("Error saving default DB:", err);
-    }
-    return defaultDb;
-  }
-
-  /**
-   * Save the entire central database object and purge legacy keys.
-   */
-  public static saveDB(db: CentralDB): void {
-    try {
-      localStorage.setItem(CENTRAL_DB_KEY, JSON.stringify(db));
-      localStorage.removeItem('munyaka_master_staff_list');
-      localStorage.removeItem('munyaka_staff');
-      localStorage.removeItem('munyaka_master_learners');
-      localStorage.removeItem('munyaka_learners');
-
-      window.dispatchEvent(new Event('munyaka_data_changed'));
-    } catch (e) {
-      console.error("Error saving central DB:", e);
-    }
-  }
-
-  /**
-   * Initialize or reset default DB.
-   */
-  public static initializeDefaultDB(): CentralDB {
-    const defaultDb: CentralDB = {
-      staff: DEFAULT_STAFF,
-      learners: DEFAULT_LEARNERS,
-      attendance: [],
-      fees: [],
-      marks: []
-    };
-    CentralDataService.saveDB(defaultDb);
-    return defaultDb;
-  }
-
-  /**
-   * Get staff array from central DB.
-   */
-  public static getStaff(): any[] {
-    try {
-      const db = CentralDataService.getDB();
-      return Array.isArray(db.staff) ? db.staff : DEFAULT_STAFF;
-    } catch (e) {
-      console.error("Error getting staff:", e);
-      return DEFAULT_STAFF;
-    }
-  }
-
-  /**
-   * Save staff array to central DB.
-   */
-  public static saveStaff(staffArray: any[]): void {
-    try {
-      const db = CentralDataService.getDB();
-      db.staff = staffArray;
-      CentralDataService.saveDB(db);
-    } catch (e) {
-      console.error("Error saving staff:", e);
-    }
-  }
-
-  /**
-   * Add a single staff member.
-   */
-  public static addStaff(record: any): any {
-    const staff = CentralDataService.getStaff();
-    const newRecord = { id: 'staff_' + Date.now(), ...record };
-    staff.push(newRecord);
-    CentralDataService.saveStaff(staff);
-    return newRecord;
-  }
-
-  /**
-   * Update a staff member by ID.
-   */
-  public static updateStaff(id: string, updates: any): void {
-    const staff = CentralDataService.getStaff();
-    const index = staff.findIndex(s => String(s.id) === String(id) || String(s.tscNo) === String(id));
-    if (index !== -1) {
-      staff[index] = { ...staff[index], ...updates };
-      CentralDataService.saveStaff(staff);
-    }
-  }
-
-  /**
-   * Delete a staff member by ID.
-   */
-  public static deleteStaff(id: string): void {
-    const staff = CentralDataService.getStaff();
-    const filtered = staff.filter(s => String(s.id) !== String(id) && String(s.tscNo) !== String(id) && String(s.accessCode) !== String(id));
-    CentralDataService.saveStaff(filtered);
-  }
-
-  /**
-   * Get learners array from central DB.
-   */
-  public static getLearners(): any[] {
-    try {
-      const db = CentralDataService.getDB();
-      return Array.isArray(db.learners) ? db.learners : DEFAULT_LEARNERS;
-    } catch (e) {
-      console.error("Error getting learners:", e);
-      return DEFAULT_LEARNERS;
-    }
-  }
-
-  /**
-   * Save learners array to central DB.
-   */
-  public static saveLearners(learnersArray: any[]): void {
-    try {
-      const db = CentralDataService.getDB();
-      db.learners = learnersArray;
-      CentralDataService.saveDB(db);
-    } catch (e) {
-      console.error("Error saving learners:", e);
-    }
-  }
-
-  /**
-   * Generic get data helper for compatibility.
-   */
-  public static getData(key: string, fallback: any = null): any {
-    try {
-      const db = CentralDataService.getDB();
-      if (db[key] !== undefined) return db[key];
-      const raw = localStorage.getItem(key);
-      if (raw) return JSON.parse(raw);
-    } catch (e) {
-      console.error("Error getData for key:", key, e);
-    }
-    return fallback;
-  }
-
-  /**
-   * Generic set data helper for compatibility.
-   */
-  public static setData(key: string, value: any): void {
-    try {
-      const db = CentralDataService.getDB();
-      db[key] = value;
-      CentralDataService.saveDB(db);
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-      console.error("Error setData for key:", key, e);
-    }
-  }
-
-  /**
-   * Safe parse helper.
-   */
-  public static safeParse(key: string, fallback: any = null): any {
-    return CentralDataService.getData(key, fallback);
-  }
-
-  /**
-   * Check if term is locked.
-   */
-  public static isTermLocked(termKey: string): boolean {
-    try {
-      const lockedTerms = CentralDataService.getData('locked_terms', {});
-      if (lockedTerms && typeof lockedTerms === 'object') {
-        return !!lockedTerms[termKey];
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(initialDB));
       }
-    } catch {}
-    return false;
-  }
+    } catch (e) {
+      console.error("Failed to save initial DB:", e);
+    }
 
-  /**
-   * Get marks records.
-   */
-  public static getMarks(): any[] {
-    const db = CentralDataService.getDB();
-    if (Array.isArray(db.marks)) return db.marks;
-    try {
-      const raw = localStorage.getItem('munyaka_marks') || localStorage.getItem('exam_marks');
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    return [];
-  }
-
-  /**
-   * Save marks records.
-   */
-  public static saveMarks(marks: any[]): void {
-    const db = CentralDataService.getDB();
-    db.marks = marks;
-    CentralDataService.saveDB(db);
-    try {
-      localStorage.setItem('munyaka_marks', JSON.stringify(marks));
-    } catch {}
-  }
-
-  /**
-   * Get full state dump for CentralDataService page.
-   */
-  public static getFullStateDump(): CentralDB {
-    return CentralDataService.getDB();
-  }
-
-  /**
-   * Get system stats.
-   */
-  public static getSystemStats(): any {
-    const staff = CentralDataService.getStaff();
-    const learners = CentralDataService.getLearners();
-    return {
-      totalStaff: staff.length,
-      totalLearners: learners.length
-    };
-  }
-
-  /**
-   * Get master data.
-   */
-  public static getMasterData(): any {
-    const db = CentralDataService.getDB();
-    return {
-      staff: db.staff || [],
-      learners: db.learners || [],
-      totalLearners: (db.learners || []).length
-    };
+    return initialDB;
   }
 }
+
+// Standalone functions for backward compatibility with existing imports
+export const getDB = () => CentralDataService.getDB();
+export const saveDB = (dbData: MasterDatabase) => CentralDataService.saveDB(dbData);
+export const getStaff = () => CentralDataService.getStaff();
+export const saveStaff = (staffArray: any[]) => CentralDataService.saveStaff(staffArray);
+export const getLearners = () => CentralDataService.getLearners();
+export const saveLearners = (learnersArray: any[]) => CentralDataService.saveLearners(learnersArray);
 
 export default CentralDataService;
