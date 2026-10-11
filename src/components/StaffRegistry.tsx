@@ -175,8 +175,8 @@ export default function StaffRegistry() {
           }).filter(Boolean)
         : [];
 
-      const defaultGrade = cleanClasses[0] || 'Grade 7';
-      const defaultStream = cleanStreams[0] || '';
+      const defaultGrade = cleanClasses.length > 0 ? cleanClasses[0] : 'Unassigned';
+      const defaultStream = cleanStreams.length > 0 ? cleanStreams[0] : 'Unassigned';
 
       const cleanAllocations = Array.isArray(staff.allocations)
         ? staff.allocations
@@ -242,8 +242,8 @@ export default function StaffRegistry() {
     setSelectedSubjects([]);
     setAssignedClasses([]);
     setAssignedStreams([]);
-    setHomeroomGrade('Grade 7');
-    setHomeroomStream('');
+    setHomeroomGrade('Unassigned');
+    setHomeroomStream('Unassigned');
     setAllocations([]);
     setActiveSubjectForAllocation(null);
     generateSecureCode();
