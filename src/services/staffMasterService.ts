@@ -1,5 +1,7 @@
 import CentralDataService from './centralDataService';
 
+export const STAFF_MASTER_KEY = 'munyaka_master_staff_list';
+
 export const initializeStaffMaster = () => {
   return CentralDataService.getStaff();
 };
