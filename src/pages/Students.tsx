@@ -31,9 +31,6 @@ import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { CentralDataService } from '@/services/centralDataService';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
 import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
-import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
-import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
-import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
 
 const STUDENTS_STORAGE_KEY = 'munyaka_students';
 const API_BASE_URL = '/api';
@@ -131,32 +128,13 @@ const ensureProperAdmissionNumbers = (list: any[]) => {
 };
 
 export default function Students() {
-  const currentUser = (() => {
-    try {
-      const raw = localStorage.getItem('munyaka_current_user');
-      return raw ? JSON.parse(raw) : { role: 'admin' };
-    } catch {
-      return { role: 'admin' };
-    }
-  })();
-
-  const isGlobalUser = isGlobalRole(currentUser);
-  const teacherAssignedClass = currentUser?.assignedClass || currentUser?.gradeStream || 'Grade 9 Venus';
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const isAdmin = user?.role === 'admin';
+  const assignedTeacherGrade = user?.grade || '';
+  const assignedTeacherStream = user?.stream || '';
   const teacherName = user?.name || 'Lawrence Mwangi';
   const teacherRole = user?.role || 'Class Teacher';
-  const currentUser = (() => {
-    try {
-      const raw = localStorage.getItem('munyaka_current_user');
-      return raw ? JSON.parse(raw) : { role: 'admin' };
-    } catch {
-      return { role: 'admin' };
-    }
-  })();
-
-  const isGlobalUser = isGlobalRole(currentUser);
-  const teacherAssignedClass = currentUser?.assignedClass || currentUser?.gradeStream || 'Grade 9 Venus';
 
   const [students, setStudents] = useState<any[]>(() => {
       // Force aggregation across all storage keys for admin & staff
