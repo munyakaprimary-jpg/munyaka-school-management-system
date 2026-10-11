@@ -108,23 +108,23 @@ export default function StaffRegistry() {
   };
 
   useEffect(() => {
-    // Load from local storage or fallback to mock data
+    // Load from local storage without fallback to mock data
     const stored = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory');
     let loadedStaff: any[] = [];
     if (stored) {
       try {
         loadedStaff = JSON.parse(stored);
-        if (!Array.isArray(loadedStaff) || loadedStaff.length === 0) {
-          loadedStaff = MOCK_STAFF;
+        if (!Array.isArray(loadedStaff)) {
+          loadedStaff = [];
         }
       } catch (e) {
-        loadedStaff = MOCK_STAFF;
+        loadedStaff = [];
       }
     } else {
-      loadedStaff = MOCK_STAFF;
+      loadedStaff = [];
     }
 
-    // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and uppercase names
+    // Sanitize loaded list
     const seenIds = new Set<string>();
     const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
       let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
@@ -139,8 +139,10 @@ export default function StaffRegistry() {
       else if (cat === ('Support Staff' as any)) cat = 'Store Master';
       else if (!cat) cat = 'Class Teacher';
 
+      const isNonTeaching = cat === 'Bursar' || cat === 'Store Master';
+
       const rawClasses = staff.assignedClasses || staff.classes || [];
-      const cleanClasses = Array.isArray(rawClasses)
+      const cleanClasses = !isNonTeaching && Array.isArray(rawClasses)
         ? rawClasses.map((c: any) => {
             if (!c) return '';
             if (typeof c === 'string') return c;
@@ -149,10 +151,10 @@ export default function StaffRegistry() {
             }
             return String(c);
           }).filter(Boolean)
-        : [];
+        : ['Unassigned'];
 
       const rawStreams = staff.assignedStreams || staff.streams || [];
-      const cleanStreams = Array.isArray(rawStreams)
+      const cleanStreams = !isNonTeaching && Array.isArray(rawStreams)
         ? rawStreams.map((s: any) => {
             if (!s) return '';
             if (typeof s === 'string') return s;
@@ -161,10 +163,10 @@ export default function StaffRegistry() {
             }
             return String(s);
           }).filter(s => s && s !== 'Mercury')
-        : [];
+        : ['Unassigned'];
 
       const rawSubjects = staff.subjects || staff.assignedSubjects || [];
-      const cleanSubjects = Array.isArray(rawSubjects)
+      const cleanSubjects = !isNonTeaching && Array.isArray(rawSubjects)
         ? rawSubjects.map((sub: any) => {
             if (!sub) return '';
             if (typeof sub === 'string') return sub;
@@ -175,10 +177,10 @@ export default function StaffRegistry() {
           }).filter(Boolean)
         : [];
 
-      const defaultGrade = cleanClasses.length > 0 ? cleanClasses[0] : 'Unassigned';
-      const defaultStream = cleanStreams.length > 0 ? cleanStreams[0] : 'Unassigned';
+      const defaultGrade = cleanClasses[0] || 'Unassigned';
+      const defaultStream = cleanStreams[0] || 'Unassigned';
 
-      const cleanAllocations = Array.isArray(staff.allocations)
+      const cleanAllocations = !isNonTeaching && Array.isArray(staff.allocations)
         ? staff.allocations
             .filter((a: any) => a && typeof a === 'object' && a.subject)
             .map((a: any) => ({
@@ -186,11 +188,7 @@ export default function StaffRegistry() {
               grade: String(a.grade || defaultGrade),
               stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
             }))
-        : cleanSubjects.map((sub: string) => ({
-            subject: sub,
-            grade: defaultGrade,
-            stream: defaultStream
-          }));
+        : [];
 
       let code = staff.accessCode;
       if (!code || !code.startsWith('MUN-')) {
@@ -215,8 +213,8 @@ export default function StaffRegistry() {
         subjects: cleanSubjects,
         assignedClasses: cleanClasses,
         assignedStreams: cleanStreams,
-        homeroomGrade: staff.homeroomGrade || defaultGrade,
-        homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
+        homeroomGrade: !isNonTeaching ? (staff.homeroomGrade || defaultGrade) : 'Unassigned',
+        homeroomStream: !isNonTeaching ? (staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream) : 'Unassigned',
         allocations: cleanAllocations,
         accessCode: code,
         status: staff.status || 'Active',
