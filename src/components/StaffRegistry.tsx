@@ -120,6 +120,48 @@ export default function StaffRegistry() {
       portalAccess: isSupport ? '/fees' : '/dashboard'
     };
   };
+
+  const getGradeStreamsConfig = () => {
+    const db = CentralDataService.getDB() || {};
+    
+    // 1. Check if configured in settings
+    if (db.settings?.gradesAndStreams && typeof db.settings.gradesAndStreams === 'object') {
+      return db.settings.gradesAndStreams;
+    }
+
+    // 2. Build map dynamically from classes / gradeStreams array
+    const map: Record<string, string[]> = {};
+    const rawClasses = db.gradeStreams || db.classes || db.schoolClasses || [];
+    
+    if (Array.isArray(rawClasses) && rawClasses.length > 0) {
+      rawClasses.forEach((item: any) => {
+        const g = (item.grade || item.gradeName || '').toString().trim();
+        const s = (item.stream || item.streamName || '').toString().trim();
+        if (g) {
+          if (!map[g]) map[g] = [];
+          if (s && !map[g].includes(s)) map[g].push(s);
+          if (Array.isArray(item.streams)) {
+            item.streams.forEach((st: any) => {
+              const strName = typeof st === 'string' ? st : st.name;
+              if (strName && !map[g].includes(strName)) map[g].push(strName);
+            });
+          }
+        }
+      });
+    }
+
+    // Default fallback if empty
+    if (Object.keys(map).length === 0) {
+      map['Grade 1'] = ['East', 'West'];
+      map['Grade 2'] = ['East', 'West', 'North', 'South'];
+    }
+
+    return map;
+  };
+
+  const gradeStreamsMap = getGradeStreamsConfig();
+  const availableGrades = Object.keys(gradeStreamsMap);
+  const currentGradeStreams = gradeStreamsMap[homeroomGrade] || [];
   const [fullName, setFullName] = useState('');
   const [category, setCategory] = useState<StaffCategoryRole>('Class Teacher');
   const [tscNumber, setTscNumber] = useState('');
