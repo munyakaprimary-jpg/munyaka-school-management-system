@@ -135,7 +135,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   // Raw nav items mapped to permission keys
   const rawNavItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard, permissionKey: 'dashboard' },
+    { name: 'Library & E-Resources', path: '/', icon: LayoutDashboard, permissionKey: 'dashboard' },
     {
       name: 'LAN Server Config',
       path: '/lan',
@@ -147,7 +147,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, permissionKey: 'assessments' },
     { name: 'Fees & Finance', path: '/fees', icon: Wallet, permissionKey: 'fees' },
     { name: 'Science Lab Inventory', path: '/science-lab', icon: Beaker, permissionKey: 'science_lab' },
-    { name: 'Library & E-Resources', path: '/library', icon: Library, permissionKey: 'library' },
+    { name: 'Dashboard', path: '/library', icon: Library, permissionKey: 'library' },
     { name: 'Tools & Inventory', path: '/inventory', icon: Box, permissionKey: 'stores' },
     { name: 'Admin Dashboard', path: '/system-management', icon: Settings, permissionKey: 'settings' },
     { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck, permissionKey: 'settings' },
