@@ -913,14 +913,31 @@ export default function StaffRegistry() {
                               {staff.name ? staff.name.toUpperCase() : ''}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                {staff.role || staff.designation || 'Class Teacher'}
-                              </span>
-                              {staff.homeroomGrade && staff.homeroomStream && (
-                                <span className="text-[11px] text-slate-500 font-medium">
-                                  🎓 {staff.homeroomGrade} - {staff.homeroomStream}
-                                </span>
-                              )}
+                              {(() => {
+                                const assignedRole = staff.role || staff.designation || staff.position || staff.category || 'Class Teacher';
+                                const lower = assignedRole.toLowerCase();
+
+                                const badgeStyle = lower.includes('bursar') || lower.includes('cook') || lower.includes('security') || lower.includes('master')
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  : lower.includes('ict')
+                                  ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                  : lower.includes('library')
+                                  ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+
+                                return (
+                                  <div className="flex flex-col gap-1">
+                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeStyle}`}>
+                                      {assignedRole}
+                                    </span>
+                                    {staff.homeroomGrade && staff.homeroomStream && (
+                                      <span className="text-[11px] text-slate-500 font-medium">
+                                        🎓 {staff.homeroomGrade} - {staff.homeroomStream}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
