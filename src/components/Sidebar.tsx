@@ -22,17 +22,15 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
   ];
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-100 min-h-screen p-4 flex flex-col justify-between shadow-xl">
-      <div className="space-y-6">
-        {/* Brand Header */}
-        <div className="flex items-center justify-between px-2 pb-4 border-b border-slate-800">
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Governance Portal</span>
-            <h2 className="text-lg font-bold text-white tracking-tight">MUNYAKA OWNER</h2>
-          </div>
-        </div>
+    <aside className="w-64 bg-slate-900 text-slate-100 h-screen max-h-screen p-4 flex flex-col justify-between shadow-xl fixed left-0 top-0 z-50 overflow-hidden">
+      {/* Top Header Section */}
+      <div className="shrink-0 pb-4 border-b border-slate-800">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Governance Portal</span>
+        <h2 className="text-base font-black text-white tracking-tight">MUNYAKA OWNER</h2>
+      </div>
 
-        {/* Navigation List */}
+      {/* Scrollable Navigation Area */}
+      <div className="flex-1 overflow-y-auto min-h-0 space-y-1.5 pr-1 py-4 custom-scrollbar">
         <nav className="space-y-1.5">
           {navItems.map((item) => {
             const isActive = activeTab === item.id || window.location.hash.includes(item.id);
@@ -40,9 +38,9 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
               <button
                 key={item.id}
                 onClick={() => handleNav(item.id, item.path)}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all ${
                   isActive
-                    ? 'bg-emerald-600 text-white shadow-md font-semibold'
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
                 }`}
               >
@@ -56,15 +54,17 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
         </nav>
       </div>
 
-      {/* User Profile Footer */}
-      <div className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/50 space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs">
-            SA
-          </div>
-          <div>
-            <p className="text-xs font-bold text-slate-800">School Owner</p>
-            <p className="text-[10px] font-bold text-indigo-600 tracking-wider uppercase">EXECUTIVE OWNER</p>
+      {/* User Profile Card pinned to bottom */}
+      <div className="mt-auto shrink-0 pt-4 border-t border-slate-800">
+        <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-black flex items-center justify-center text-xs shadow-md">
+              SA
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-100">School Owner</p>
+              <p className="text-[10px] font-bold text-indigo-400 tracking-wider uppercase">EXECUTIVE OWNER</p>
+            </div>
           </div>
         </div>
       </div>
