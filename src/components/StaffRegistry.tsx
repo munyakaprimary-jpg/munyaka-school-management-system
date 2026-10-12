@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
+import { isTeachingStaff, isSupportStaff, getStaffTypeBadge } from '@/utils/staffUtils';
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
 
 export type StaffCategoryRole =
@@ -381,7 +382,8 @@ export default function StaffRegistry() {
     // Read class values directly from form state:
     // - If assignedClass is empty, set it strictly to 'Unassigned'.
     // - If assignedClasses is empty or empty array, set it strictly to ['Unassigned'].
-    const isTeachingRole = category !== 'Bursar' && category !== 'Store Master';
+    const isTeachingRole = isTeachingStaff(category, category);
+    const isSupportRole = isSupportStaff(category, category);
     const finalAssignedClasses = isTeachingRole && assignedClasses && assignedClasses.length > 0 ? assignedClasses : ['Unassigned'];
     const finalAssignedStreams = isTeachingRole && assignedStreams && assignedStreams.length > 0 ? assignedStreams : ['Unassigned'];
     const finalHomeroomGrade = isTeachingRole && homeroomGrade && homeroomGrade.trim() !== '' ? homeroomGrade : 'Unassigned';
@@ -390,17 +392,17 @@ export default function StaffRegistry() {
     const newStaff = {
       id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
       name: formattedName,
-      category: category || 'Teacher',
-      designation: category || 'Class Teacher',
-      specificRole: category || 'Class Teacher',
+      category: category || (isTeachingRole ? 'Teacher' : 'Support Staff'),
+      designation: category || (isTeachingRole ? 'Class Teacher' : 'Support Staff'),
+      specificRole: category || (isTeachingRole ? 'Class Teacher' : 'Support Staff'),
       email: cleanEmailInput,
       phone: phone.trim() || '',
       tscNumber: tscNumber.trim() || '',
       status: status || 'Active',
       accessCode: finalCode,
-      role: 'teacher',
-      type: 'teaching',
-      subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : ['Mathematics', 'English'],
+      role: isTeachingRole ? 'teacher' : 'support',
+      type: isTeachingRole ? 'teaching' : 'support',
+      subjects: isTeachingRole ? selectedSubjects : ['Mathematics', 'English'],
       assignedClasses: finalAssignedClasses,
       assignedStreams: finalAssignedStreams,
       homeroomGrade: finalHomeroomGrade,
@@ -718,15 +720,14 @@ export default function StaffRegistry() {
                               {staff.name ? staff.name.toUpperCase() : ''}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
-                                staff.category === 'HOI' || staff.category === 'DHOI'
-                                  ? 'bg-amber-50 text-amber-700 border-amber-150'
-                                  : staff.category === 'Bursar' || staff.category === 'Store Master'
-                                    ? 'bg-slate-50 text-slate-700 border-slate-150'
-                                    : 'bg-indigo-50 text-indigo-700 border-indigo-150'
-                              }`}>
-                                {staff.category || 'Class Teacher'}
-                              </span>
+                              {(() => {
+                                const badge = getStaffTypeBadge(staff.category, staff.designation);
+                                return (
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${badge.bg}`}>
+                                    {badge.text}
+                                  </span>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>

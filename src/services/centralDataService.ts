@@ -1,3 +1,5 @@
+import { countStaffByType, isTeachingStaff, isSupportStaff } from '@/utils/staffUtils';
+
 export const STORAGE_KEYS = {
   STAFF: 'munyaka_master_staff_list',
   TEACHERS: 'munyaka_master_staff_list',
@@ -203,12 +205,12 @@ export const CentralDataService = {
       const examsCount = Array.isArray(examsList) ? examsList.length : Object.keys(examsList || {}).length;
 
       const teachingStaff = staff.length;
-      const nonTeachingStaff = staff.filter((s: any) => s.category === 'Bursar' || s.category === 'Store Master' || s.type === 'non-teaching' || s.role === 'support').length;
+      const { teaching, support } = countStaffByType(staff);
 
       return {
         learners: learners.length,
-        teachingStaff: teachingStaff > 0 ? teachingStaff : staff.length,
-        nonTeachingStaff,
+        teachingStaff: teaching > 0 ? teaching : staff.length,
+        nonTeachingStaff: support,
         attendance: attendanceCount,
         feeRecords: feeRecordsCount,
         exams: examsCount

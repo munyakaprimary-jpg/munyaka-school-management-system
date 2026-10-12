@@ -7,6 +7,7 @@ import { CentralDataService, getMasterData, getLearners, getStaff } from '../../
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { calculateSystemIntegrity } from '../../utils/systemHealth';
+import { countStaffByType, getStaffCategory, getStaffTypeBadge } from '../../utils/staffUtils';
 import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon, FileText, ShieldCheck, Database, ArrowRight, Sparkles, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -48,11 +49,15 @@ export const AdminDashboardComponent: React.FC = () => {
 
       const metrics = calculateStaffMetrics(staff);
 
+      // Robust staff classification using keyword-based helpers
+      const staffList = db.staff || [];
+      const { teaching: teachingStaffCount, support: supportStaffCount, unknown } = countStaffByType(staffList);
+
       setLocalStaff(staff);
       setReactiveLearners(learners);
       setLearnersCount(learners.length);
-      setTeachingCount(metrics.teachingCount);
-      setNonTeachingCount(metrics.nonTeachingCount);
+      setTeachingCount(teachingStaffCount > 0 ? teachingStaffCount : metrics.teachingCount);
+      setNonTeachingCount(supportStaffCount);
     } catch (e) {
       console.error('Error refreshing dashboard metrics:', e);
     }
