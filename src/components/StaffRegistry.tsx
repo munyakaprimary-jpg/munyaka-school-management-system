@@ -125,38 +125,51 @@ export default function StaffRegistry() {
     const db = (CentralDataService.getDB() || {}) as any;
     const map: Record<string, string[]> = {};
 
-    // A. Check db.classes / db.gradeStreams / db.schoolClasses
+    // Normalize string helper
+    const cleanKey = (str: any) => str ? String(str).toLowerCase().replace(/\s+/g, '') : '';
+
+    // A. Parse from db.gradeStreams, db.classes, or db.schoolClasses
     const classList = db.gradeStreams || db.classes || db.schoolClasses || db.settings?.classes || [];
-    if (Array.isArray(classList) && classList.length > 0) {
+    if (Array.isArray(classList)) {
       classList.forEach((item: any) => {
-        const g = (item.grade || item.gradeName || item.name || '').toString().trim();
-        const s = (item.stream || item.streamName || '').toString().trim();
+        const rawGrade = item.grade || item.gradeName || item.name || item.grade_name || '';
+        const rawStream = item.stream || item.streamName || item.name || item.stream_name || '';
 
-        if (g) {
-          if (!map[g]) map[g] = [];
-          if (s && !map[g].includes(s)) map[g].push(s);
+        if (rawGrade) {
+          const key = cleanKey(rawGrade);
+          if (!map[key]) map[key] = [];
 
+          // Handle string streams or array of streams
+          if (rawStream && typeof rawStream === 'string' && !map[key].includes(rawStream)) {
+            map[key].push(rawStream);
+          }
           if (Array.isArray(item.streams)) {
             item.streams.forEach((st: any) => {
-              const strName = typeof st === 'string' ? st : (st.name || st.streamName || '');
-              if (strName && !map[g].includes(strName)) map[g].push(strName);
+              const sName = typeof st === 'string' ? st : (st.name || st.streamName || st.title || '');
+              if (sName && !map[key].includes(sName)) map[key].push(sName);
             });
           }
         }
       });
     }
 
-    // B. Check standalone db.streams array (global streams)
-    const globalStreams = db.streams || db.settings?.streams || [];
-    if (Array.isArray(globalStreams) && globalStreams.length > 0) {
-      const streamNames = globalStreams.map((st: any) => typeof st === 'string' ? st : (st.name || st.streamName || '')).filter(Boolean);
-      // Attach global streams to any grade that doesn't have specific streams mapped
-      Object.keys(map).forEach(g => {
-        if (map[g].length === 0) map[g] = [...streamNames];
+    // B. Parse from standalone db.streams linked by grade / gradeId
+    const standaloneStreams = db.streams || db.settings?.streams || [];
+    if (Array.isArray(standaloneStreams)) {
+      standaloneStreams.forEach((st: any) => {
+        if (typeof st === 'object' && st !== null) {
+          const targetGrade = st.grade || st.gradeName || st.grade_name || st.gradeId || '';
+          const sName = st.name || st.streamName || st.title || '';
+          if (targetGrade && sName) {
+            const key = cleanKey(targetGrade);
+            if (!map[key]) map[key] = [];
+            if (!map[key].includes(sName)) map[key].push(sName);
+          }
+        }
       });
     }
 
-    return map;
+    return { map, cleanKey };
   };
 
   const [fullName, setFullName] = useState('');
@@ -1162,8 +1175,15 @@ export default function StaffRegistry() {
 
                     {/* Stream Selection */}
                     {(() => {
-                      const configMap = getGradeStreamsConfig();
-                      const currentStreams = (homeroomGrade && configMap[homeroomGrade]) || [];
+                      const { map, cleanKey } = getGradeStreamsConfig();
+                      const selectedKey = cleanKey(homeroomGrade);
+                      
+                      // Fallback search across all keys if exact key match fails
+                      let currentStreams = map[selectedKey] || [];
+                      if (currentStreams.length === 0 && selectedKey) {
+                        const matchingKey = Object.keys(map).find(k => k.includes(selectedKey) || selectedKey.includes(k));
+                        if (matchingKey) currentStreams = map[matchingKey];
+                      }
 
                       return (
                         <div>
