@@ -22,11 +22,22 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
   ];
 
   return (
-    <aside className="w-64 h-screen max-h-screen sticky top-0 flex flex-col justify-between bg-slate-950 text-slate-100 p-4 overflow-hidden z-50">
+    <aside className="absolute inset-y-0 left-0 z-50 w-64 h-full bg-slate-950 text-slate-100 p-4 flex flex-col justify-between shadow-2xl transition-transform duration-300">
       {/* Top Brand Header */}
-      <div className="shrink-0 pb-4 border-b border-slate-800">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Governance Portal</span>
-        <h2 className="text-base font-black text-white tracking-tight">MUNYAKA OWNER</h2>
+      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Governance Portal</span>
+          <h2 className="text-base font-black text-white tracking-tight">MUNYAKA OWNER</h2>
+        </div>
+        {onClose && (
+          <button 
+            onClick={onClose}
+            className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+            aria-label="Close sidebar"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Scrollable Navigation Items */}
