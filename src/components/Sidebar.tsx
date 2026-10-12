@@ -7,19 +7,34 @@ interface SidebarProps {
   isOpen?: boolean;
 }
 
-export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, onClose, isOpen = true }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab = () => {}, onClose, isOpen = true }: SidebarProps) {
+  // Determine current active id from prop or window hash
+  const getActiveId = () => {
+    if (activeTab) return activeTab;
+    const hash = window.location.hash.replace('#/', '').replace('/', '').trim();
+    if (!hash || hash === 'owner' || hash === 'dashboard') return 'owner';
+    if (hash === 'tenants' || hash === 'campuses') return 'tenants';
+    if (hash === 'lan' || hash === 'lan-config') return 'lan';
+    if (hash === 'payments' || hash === 'payment-management') return 'payments';
+    if (hash === 'settings') return 'settings';
+    return 'owner';
+  };
+
+  const currentActive = getActiveId();
+
   const handleNav = (id: string, path: string) => {
     setActiveTab(id);
-    window.location.hash = path.replace('/#', '');
+    window.location.hash = path;
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
     if (onClose) onClose();
   };
 
-  const navItems = [
-    { id: 'owner', label: "Owner's Portal", path: '/#/owner' },
-    { id: 'tenants', label: 'Tenants / Campuses', path: '/#/tenants' },
-    { id: 'lan', label: 'LAN Server Config', path: '/#/lan' },
-    { id: 'payments', label: 'Payment & Subscriptions', path: '/#/payments' },
-    { id: 'settings', label: 'Global Settings', path: '/#/settings' }
+  const ownerNavItems = [
+    { id: 'owner', label: "Owner's Portal", path: '#/owner' },
+    { id: 'tenants', label: 'Tenants / Campuses', path: '#/tenants' },
+    { id: 'lan', label: 'LAN Server Config', path: '#/lan' },
+    { id: 'payments', label: 'Payment & Subscriptions', path: '#/payments' },
+    { id: 'settings', label: 'Global Settings', path: '#/settings' }
   ];
 
   return (
@@ -57,8 +72,8 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
           style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}
         >
           <nav className="space-y-1.5">
-            {navItems.map((item) => {
-              const isActive = activeTab === item.id || window.location.hash.includes(item.id);
+            {ownerNavItems.map((item) => {
+              const isActive = currentActive === item.id;
               return (
                 <button
                   key={item.id}

@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { Menu, Sun, Moon, Home } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 
@@ -8,11 +7,38 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const [activeTab, setActiveTab] = useState('owner');
+  const getInitialTab = () => {
+    const hash = window.location.hash.replace('#/', '').replace('/', '').trim();
+    if (hash === 'tenants' || hash === 'campuses') return 'tenants';
+    if (hash === 'lan' || hash === 'lan-config') return 'lan';
+    if (hash === 'payments' || hash === 'payment-management') return 'payments';
+    if (hash === 'settings') return 'settings';
+    return 'owner';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace('#/', '').replace('/', '').trim();
+      if (hash === 'tenants' || hash === 'campuses') setActiveTab('tenants');
+      else if (hash === 'lan' || hash === 'lan-config') setActiveTab('lan');
+      else if (hash === 'payments' || hash === 'payment-management') setActiveTab('payments');
+      else if (hash === 'settings') setActiveTab('settings');
+      else setActiveTab('owner');
+    };
+
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  const navigateToHome = () => {
+    window.location.hash = '#/owner';
+    setActiveTab('owner');
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  };
 
   return (
     <div className={`relative min-h-screen w-full bg-slate-50 overflow-y-auto ${isDarkMode ? "dark bg-slate-950 text-slate-100" : ""}`}>
@@ -40,7 +66,7 @@ export default function Layout({ children }: LayoutProps) {
               <Menu size={20} />
             </button>
             <button
-              onClick={() => navigate('/')}
+              onClick={navigateToHome}
               className="px-3 py-1.5 text-sm font-medium rounded-lg text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-colors"
             >
               <Home size={16} />
