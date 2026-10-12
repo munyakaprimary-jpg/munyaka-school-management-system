@@ -16,25 +16,16 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className={`relative min-h-screen w-full bg-slate-50 overflow-y-auto ${isDarkMode ? "dark bg-slate-950 text-slate-100" : ""}`}>
-      {/* Sidebar Overlay Backdrop */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 transition-opacity"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Floating Overlay Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <Sidebar 
-          activeTab={activeTab} 
-          setActiveTab={(tab) => {
-            setActiveTab(tab);
-            setIsSidebarOpen(false);
-          }} 
-          onClose={() => setIsSidebarOpen(false)} 
-        />
-      </div>
+      {/* Slide-in Overlay Sidebar with Backdrop */}
+      <Sidebar 
+        isOpen={isSidebarOpen}
+        activeTab={activeTab} 
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          setIsSidebarOpen(false);
+        }} 
+        onClose={() => setIsSidebarOpen(false)} 
+      />
 
       {/* Full-Width Main Content Container */}
       <div className="w-full min-h-screen flex flex-col">
