@@ -142,6 +142,44 @@ export default function StaffRegistry() {
   // Grades and streams configuration hook
   const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams } = useGradesAndStreams();
 
+  // Load configured grade streams map from CentralDataService if available
+  const gradeStreamsMap = useMemo(() => {
+    try {
+      const db = (CentralDataService.getDB() || {}) as any;
+      if (db.settings?.gradesAndStreams) {
+        return db.settings.gradesAndStreams;
+      }
+    } catch {}
+    return {
+      'PP1': ['East', 'West'],
+      'PP2': ['East', 'West'],
+      'Grade 1': ['East', 'West', 'North'],
+      'Grade 2': ['East', 'West', 'North', 'South'],
+      'Grade 3': ['East', 'West'],
+      'Grade 4': ['East', 'West'],
+      'Grade 5': ['East', 'West'],
+      'Grade 6': ['East', 'West'],
+      'Grade 7': ['East', 'West'],
+      'Grade 8': ['East', 'West'],
+      'Grade 9': ['East', 'West']
+    };
+  }, []);
+
+  // Compute available streams for homeroom grade
+  const availableHomeroomStreams = useMemo(() => {
+    const streams = gradeStreamsMap[homeroomGrade] || getStreamsForGrade(homeroomGrade) || allGlobalStreams || ['East', 'West'];
+    return Array.isArray(streams) && streams.length > 0 ? streams : ['East', 'West'];
+  }, [homeroomGrade, gradeStreamsMap, getStreamsForGrade, allGlobalStreams]);
+
+  const handleHomeroomGradeChange = (newGrade: string) => {
+    const streamsForNewGrade = gradeStreamsMap[newGrade] || getStreamsForGrade(newGrade) || allGlobalStreams || ['East', 'West'];
+    const currentStreamValid = Array.isArray(streamsForNewGrade) && streamsForNewGrade.includes(homeroomStream);
+    setHomeroomGrade(newGrade);
+    if (!currentStreamValid && Array.isArray(streamsForNewGrade) && streamsForNewGrade.length > 0) {
+      setHomeroomStream(streamsForNewGrade[0]);
+    }
+  };
+
   // Get relevant streams based on selected grades (or all global streams if none selected)
   const availableSchoolStreams = useMemo(() => {
     if (!assignedClasses || assignedClasses.length === 0) {
@@ -1043,7 +1081,7 @@ export default function StaffRegistry() {
                         <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Grade</label>
                         <select
                           value={homeroomGrade}
-                          onChange={(e) => setHomeroomGrade(e.target.value)}
+                          onChange={(e) => handleHomeroomGradeChange(e.target.value)}
                           className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                         >
                           {availableSchoolClasses.map((cls) => (
@@ -1058,8 +1096,11 @@ export default function StaffRegistry() {
                           onChange={(e) => setHomeroomStream(e.target.value)}
                           className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                         >
-                          {availableSchoolStreams.map((strm) => (
-                            <option key={strm} value={strm}>{strm}</option>
+                          <option value="">-- Select Stream --</option>
+                          {availableHomeroomStreams.map((streamName: string) => (
+                            <option key={streamName} value={streamName}>
+                              {streamName} Stream
+                            </option>
                           ))}
                         </select>
                       </div>
