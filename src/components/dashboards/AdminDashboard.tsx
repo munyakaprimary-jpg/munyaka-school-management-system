@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CentralDataService, getMasterData, getLearners, getStaff } from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
+import { calculateSystemIntegrity } from '../../utils/systemHealth';
 import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon, FileText, ShieldCheck, Database, ArrowRight, Sparkles, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +29,7 @@ export const AdminDashboardComponent: React.FC = () => {
   const [learnersCount, setLearnersCount] = useState<number>(0);
   const [teachingCount, setTeachingCount] = useState<number>(0);
   const [nonTeachingCount, setNonTeachingCount] = useState<number>(0);
+  const [health, setHealth] = useState(calculateSystemIntegrity());
 
   const [localStaff, setLocalStaff] = useState<any[]>([]);
   const [reactiveLearners, setReactiveLearners] = useState<any[]>([]);
@@ -56,9 +58,14 @@ export const AdminDashboardComponent: React.FC = () => {
     }
   }, []);
 
+  const refreshHealth = useCallback(() => {
+    setHealth(calculateSystemIntegrity());
+  }, []);
+
   useEffect(() => {
     // Initial load
     refreshDashboardMetrics();
+    refreshHealth();
 
     // Listen for live global mutations
     window.addEventListener('munyaka_data_changed', refreshDashboardMetrics);
@@ -66,6 +73,8 @@ export const AdminDashboardComponent: React.FC = () => {
     window.addEventListener('munyaka:data-changed', refreshDashboardMetrics);
     window.addEventListener('staff-changed', refreshDashboardMetrics);
     window.addEventListener('munyaka_learners_updated', refreshDashboardMetrics);
+    window.addEventListener('munyaka_data_changed', refreshHealth);
+    window.addEventListener('storage', refreshHealth);
 
     return () => {
       window.removeEventListener('munyaka_data_changed', refreshDashboardMetrics);
@@ -73,8 +82,10 @@ export const AdminDashboardComponent: React.FC = () => {
       window.removeEventListener('munyaka:data-changed', refreshDashboardMetrics);
       window.removeEventListener('staff-changed', refreshDashboardMetrics);
       window.removeEventListener('munyaka_learners_updated', refreshDashboardMetrics);
+      window.removeEventListener('munyaka_data_changed', refreshHealth);
+      window.removeEventListener('storage', refreshHealth);
     };
-  }, [refreshDashboardMetrics]);
+  }, [refreshDashboardMetrics, refreshHealth]);
 
   const masterData = getMasterData();
   const actualLearners = reactiveLearners.length > 0 ? reactiveLearners : (masterData.learners.length > 0 ? masterData.learners : getLearners());
@@ -250,10 +261,14 @@ export const AdminDashboardComponent: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-slate-900">100%</div>
+            <div className="text-3xl font-bold text-slate-900">{health.score}%</div>
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-xs text-teal-600 font-medium">
-              <span>Offline Master DB Synced</span>
-              <span>Secure</span>
+              <span>{health.statusText}</span>
+              {health.isSecure ? (
+                <Badge className="bg-green-100 text-green-800 border-green-200">Secure</Badge>
+              ) : (
+                <Badge className="bg-amber-100 text-amber-800 border-amber-200">Attention Needed</Badge>
+              )}
             </div>
           </CardContent>
         </Card>
