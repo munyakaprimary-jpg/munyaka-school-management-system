@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 interface SidebarProps {
   activeTab?: string;
@@ -8,6 +9,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeTab, setActiveTab = () => {}, onClose, isOpen = true }: SidebarProps) {
+  const { logout } = useAuth();
+
   // Determine current active id from prop or window hash
   const getActiveId = () => {
     if (activeTab) return activeTab;
@@ -36,6 +39,14 @@ export default function Sidebar({ activeTab, setActiveTab = () => {}, onClose, i
     { id: 'payments', label: 'Payment & Subscriptions', path: '#/payments' },
     { id: 'settings', label: 'Global Settings', path: '#/settings' }
   ];
+
+  const handleLogout = () => {
+    try {
+      logout();
+    } catch {}
+    window.location.hash = '#/login';
+    window.location.reload();
+  };
 
   return (
     <>
@@ -69,7 +80,7 @@ export default function Sidebar({ activeTab, setActiveTab = () => {}, onClose, i
         {/* Scrollable Navigation Items */}
         <div 
           className="flex-1 min-h-0 my-3 space-y-2 overflow-y-scroll" 
-          style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}
+          style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' }}
         >
           <nav className="space-y-1.5">
             {ownerNavItems.map((item) => {
@@ -94,19 +105,30 @@ export default function Sidebar({ activeTab, setActiveTab = () => {}, onClose, i
           </nav>
         </div>
 
-        {/* User Profile Card pinned to bottom */}
-        <div className="shrink-0 mt-auto pt-3 border-t border-slate-800">
-          <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-black flex items-center justify-center text-xs shadow-md">
-                SA
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-100">School Owner</p>
-                <p className="text-[10px] font-bold text-indigo-400 tracking-wider uppercase">EXECUTIVE OWNER</p>
-              </div>
+        {/* User Profile Card & Log Out pinned to bottom */}
+        <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 shrink-0 mt-auto space-y-3">
+          {/* Profile Badge Info */}
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs">
+              SA
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white">School Owner</p>
+              <p className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase">EXECUTIVE OWNER</p>
             </div>
           </div>
+
+          {/* Divider */}
+          <div className="border-t border-slate-800/80" />
+
+          {/* Log Out Action */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
+          >
+            <span className="text-sm">🚪</span>
+            <span>Log Out</span>
+          </button>
         </div>
       </aside>
     </>
