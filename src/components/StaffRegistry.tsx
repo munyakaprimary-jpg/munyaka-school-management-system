@@ -60,6 +60,7 @@ export interface StaffMember {
   accessCode: string;
   status: 'Active' | 'On Leave' | 'Inactive';
   createdAt?: string;
+  [key: string]: any;
 }
 
 export default function StaffRegistry() {
