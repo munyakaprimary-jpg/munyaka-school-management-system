@@ -228,11 +228,17 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
           {navItems.map((item, idx) => {
             const Icon = item.icon;
-            const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
+            const isLan = item.path === '/lan';
+            const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path)) || (isLan && (activePath.includes('lan') || window.location.hash.includes('lan')));
             return (
               <NavLink
                 key={idx}
                 to={item.path}
+                onClick={(e) => {
+                  if (isLan) {
+                    window.location.hash = '#/lan';
+                  }
+                }}
                 className={cn(
                   "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
                   isActive
