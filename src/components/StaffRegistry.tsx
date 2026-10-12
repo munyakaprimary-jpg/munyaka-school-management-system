@@ -71,6 +71,43 @@ export default function StaffRegistry() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
+  // Load RBAC settings dynamically from CentralDataService / munyaka_central_db
+  const [rbacSettings, setRbacSettings] = useState<any>(() => {
+    try {
+      const db = CentralDataService.getDB();
+      return db.settings?.rbac || {
+        roles: [
+          { name: 'HOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
+          { name: 'DHOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
+          { name: 'Class Teacher', category: 'Teaching', portalAccess: '/learners', permissions: ['view_learners', 'edit_learners'] },
+          { name: 'Subject Teacher', category: 'Teaching', portalAccess: '/assessments', permissions: ['view_assessments'] },
+          { name: 'ICT Teacher', category: 'Teaching', portalAccess: '/dashboard', permissions: ['manage_ict'] },
+          { name: 'Library Teacher', category: 'Teaching', portalAccess: '/library', permissions: ['manage_library'] },
+          { name: 'Bursar', category: 'Support', portalAccess: '/fees', permissions: ['manage_fees'] },
+          { name: 'Store Master', category: 'Support', portalAccess: '/inventory', permissions: ['manage_inventory'] }
+        ]
+      };
+    } catch {
+      return {
+        roles: [
+          { name: 'HOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
+          { name: 'DHOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
+          { name: 'Class Teacher', category: 'Teaching', portalAccess: '/learners', permissions: ['view_learners', 'edit_learners'] },
+          { name: 'Subject Teacher', category: 'Teaching', portalAccess: '/assessments', permissions: ['view_assessments'] },
+          { name: 'ICT Teacher', category: 'Teaching', portalAccess: '/dashboard', permissions: ['manage_ict'] },
+          { name: 'Library Teacher', category: 'Teaching', portalAccess: '/library', permissions: ['manage_library'] },
+          { name: 'Bursar', category: 'Support', portalAccess: '/fees', permissions: ['manage_fees'] },
+          { name: 'Store Master', category: 'Support', portalAccess: '/inventory', permissions: ['manage_inventory'] }
+        ]
+      };
+    }
+  });
+
+  const getRoleRBAC = (roleName: string) => {
+    const found = rbacSettings.roles?.find((r: any) => r.name.toLowerCase() === roleName?.toLowerCase());
+    return found || { category: 'Teaching', portalAccess: '/portal', permissions: [] };
+  };
+
   // Form states
   const [fullName, setFullName] = useState('');
   const [category, setCategory] = useState<StaffCategoryRole>('Class Teacher');
@@ -115,21 +152,29 @@ export default function StaffRegistry() {
   };
 
   useEffect(() => {
-    // Load from local storage without fallback to mock data
-    const stored = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory');
-    let loadedStaff: any[] = [];
-    if (stored) {
+    const loadData = () => {
       try {
-        loadedStaff = JSON.parse(stored);
-        if (!Array.isArray(loadedStaff)) {
+        const db = CentralDataService.getDB();
+        if (db.settings?.rbac) {
+          setRbacSettings(db.settings.rbac);
+        }
+      } catch {}
+
+      // Load from local storage without fallback to mock data
+      const stored = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory');
+      let loadedStaff: any[] = [];
+      if (stored) {
+        try {
+          loadedStaff = JSON.parse(stored);
+          if (!Array.isArray(loadedStaff)) {
+            loadedStaff = [];
+          }
+        } catch (e) {
           loadedStaff = [];
         }
-      } catch (e) {
+      } else {
         loadedStaff = [];
       }
-    } else {
-      loadedStaff = [];
-    }
 
     // Sanitize loaded list
     const seenIds = new Set<string>();

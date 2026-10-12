@@ -71,7 +71,21 @@ export const CentralDataService = {
           staff: parsed.staff || getStaff(),
           learners: parsed.learners || getLearners(),
           marks: parsed.marks || (CentralDataService.getMarks ? CentralDataService.getMarks() : {}),
-          roles: parsed.roles || safeParse('munyaka_rbac_roles', [])
+          roles: parsed.roles || safeParse('munyaka_rbac_roles', []),
+          settings: parsed.settings || {
+            rbac: {
+              roles: [
+                { name: 'HOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
+                { name: 'DHOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
+                { name: 'Class Teacher', category: 'Teaching', portalAccess: '/learners', permissions: ['view_learners', 'edit_learners'] },
+                { name: 'Subject Teacher', category: 'Teaching', portalAccess: '/assessments', permissions: ['view_assessments'] },
+                { name: 'ICT Teacher', category: 'Teaching', portalAccess: '/dashboard', permissions: ['manage_ict'] },
+                { name: 'Library Teacher', category: 'Teaching', portalAccess: '/library', permissions: ['manage_library'] },
+                { name: 'Bursar', category: 'Support', portalAccess: '/fees', permissions: ['manage_fees'] },
+                { name: 'Store Master', category: 'Support', portalAccess: '/inventory', permissions: ['manage_inventory'] }
+              ]
+            }
+          }
         };
       }
     } catch {}
@@ -79,7 +93,21 @@ export const CentralDataService = {
       staff: getStaff(),
       learners: getLearners(),
       marks: CentralDataService.getMarks ? CentralDataService.getMarks() : {},
-      roles: safeParse('munyaka_rbac_roles', [])
+      roles: safeParse('munyaka_rbac_roles', []),
+      settings: {
+        rbac: {
+          roles: [
+            { name: 'HOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
+            { name: 'DHOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
+            { name: 'Class Teacher', category: 'Teaching', portalAccess: '/learners', permissions: ['view_learners', 'edit_learners'] },
+            { name: 'Subject Teacher', category: 'Teaching', portalAccess: '/assessments', permissions: ['view_assessments'] },
+            { name: 'ICT Teacher', category: 'Teaching', portalAccess: '/dashboard', permissions: ['manage_ict'] },
+            { name: 'Library Teacher', category: 'Teaching', portalAccess: '/library', permissions: ['manage_library'] },
+            { name: 'Bursar', category: 'Support', portalAccess: '/fees', permissions: ['manage_fees'] },
+            { name: 'Store Master', category: 'Support', portalAccess: '/inventory', permissions: ['manage_inventory'] }
+          ]
+        }
+      }
     };
   },
   saveDB: (db: any) => {

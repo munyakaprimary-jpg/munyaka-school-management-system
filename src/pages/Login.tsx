@@ -365,33 +365,43 @@ const Login: React.FC = () => {
       setUser({ ...userData, role: (userData.role as any) || 'staff' });
     }
 
-    // Determine target route based on role using the requested helper
-    const determineUserRoute = (role: string = '') => {
-      const r = role.toLowerCase();
+    // Determine target route based on dynamic rbacSettings from database
+    const determineUserRoute = (roleName: string = '') => {
+      try {
+        const db = CentralDataService.getDB();
+        const rbacSettings = db.settings?.rbac || {
+          roles: [
+            { name: 'HOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
+            { name: 'DHOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
+            { name: 'Class Teacher', category: 'Teaching', portalAccess: '/learners', permissions: ['view_learners', 'edit_learners'] },
+            { name: 'Subject Teacher', category: 'Teaching', portalAccess: '/assessments', permissions: ['view_assessments'] },
+            { name: 'ICT Teacher', category: 'Teaching', portalAccess: '/dashboard', permissions: ['manage_ict'] },
+            { name: 'Library Teacher', category: 'Teaching', portalAccess: '/library', permissions: ['manage_library'] },
+            { name: 'Bursar', category: 'Support', portalAccess: '/fees', permissions: ['manage_fees'] },
+            { name: 'Store Master', category: 'Support', portalAccess: '/inventory', permissions: ['manage_inventory'] }
+          ]
+        };
 
-      // 1. Full System Access (Admin, HOI, DHOI, ICT Teacher / Tech)
-      if (
-        r.includes('admin') ||
-        r.includes('hoi') ||
-        r.includes('dhoi') ||
-        r.includes('head') ||
-        r.includes('ict') ||
-        r.includes('system')
-      ) {
-        return '/dashboard';
-      }
+        const found = rbacSettings.roles?.find((r: any) => r.name.toLowerCase() === roleName.toLowerCase());
+        if (found && found.portalAccess) {
+          return found.portalAccess;
+        }
 
-      // 2. Financial Ledger Access
-      if (r.includes('bursar') || r.includes('finance') || r.includes('accounts')) {
-        return '/fees';
-      }
+        const r = roleName.toLowerCase();
+        if (r.includes('admin') || r.includes('hoi') || r.includes('dhoi') || r.includes('ict')) {
+          return '/dashboard';
+        }
+        if (r.includes('bursar') || r.includes('finance')) {
+          return '/fees';
+        }
+        if (r.includes('library')) {
+          return '/library';
+        }
+        if (r.includes('class') || r.includes('subject') || r.includes('teacher')) {
+          return '/learners';
+        }
+      } catch {}
 
-      // 3. Regular Teaching Staff Access
-      if (r.includes('class teacher') || r.includes('subject teacher') || r.includes('teacher')) {
-        return '/dashboard';
-      }
-
-      // Default fallback route
       return '/dashboard';
     };
 
