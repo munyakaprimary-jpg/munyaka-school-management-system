@@ -138,7 +138,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, permissionKey: 'dashboard' },
     {
       name: 'LAN Server Config',
-      path: '/lan-config',
+      path: '/lan',
       icon: Wifi,
       permissionKey: 'dashboard'
     },
