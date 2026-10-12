@@ -134,12 +134,36 @@ export const CentralDataService = {
       console.error('Error saving learners', e);
     }
   },
-  saveStaff: (staff: any[]) => {
+  saveStaff: (staffData: any) => {
     try {
-      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(staff));
+      const list = getStaff();
+      const existingIndex = list.findIndex((s: any) => s.id === staffData.id || s.email === staffData.email);
+
+      const cleanRecord = {
+        ...staffData,
+        role: staffData.role || 'Teacher',
+        designation: staffData.designation || staffData.role || 'Teacher'
+      };
+
+      let updated;
+      if (existingIndex >= 0) {
+        updated = list.map((s: any, idx: number) => idx === existingIndex ? { ...s, ...cleanRecord } : s);
+      } else {
+        const newRecord = {
+          ...cleanRecord,
+          id: cleanRecord.id || `staff-${Date.now()}`,
+          staffId: cleanRecord.staffId || `MUN-STF-${Math.floor(1000 + Math.random() * 9000)}`,
+          joinedDate: cleanRecord.joinedDate || new Date().toISOString().slice(0, 10)
+        };
+        updated = [...list, newRecord];
+      }
+
+      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updated));
       window.dispatchEvent(new Event('munyaka_data_changed'));
+      return true;
     } catch (e) {
       console.error('Error saving staff', e);
+      return false;
     }
   },
   addStaff: (record: any) => {
