@@ -136,6 +136,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   // Raw nav items mapped to permission keys
   const rawNavItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, permissionKey: 'dashboard' },
+    {
+      name: 'LAN Server Config',
+      path: '/lan-config',
+      icon: Wifi,
+      permissionKey: 'dashboard'
+    },
     { name: 'Students', path: '/students', icon: Users, permissionKey: 'admissions' },
     { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, permissionKey: 'attendance' },
     { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, permissionKey: 'assessments' },
