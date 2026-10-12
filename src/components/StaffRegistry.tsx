@@ -122,7 +122,7 @@ export default function StaffRegistry() {
   };
 
   const getGradeStreamsConfig = () => {
-    const db = CentralDataService.getDB() || {};
+    const db = (CentralDataService.getDB() || {}) as any;
     
     // 1. Check if configured in settings
     if (db.settings?.gradesAndStreams && typeof db.settings.gradesAndStreams === 'object') {
@@ -159,9 +159,6 @@ export default function StaffRegistry() {
     return map;
   };
 
-  const gradeStreamsMap = getGradeStreamsConfig();
-  const availableGrades = Object.keys(gradeStreamsMap);
-  const currentGradeStreams = gradeStreamsMap[homeroomGrade] || [];
   const [fullName, setFullName] = useState('');
   const [category, setCategory] = useState<StaffCategoryRole>('Class Teacher');
   const [tscNumber, setTscNumber] = useState('');
@@ -184,8 +181,12 @@ export default function StaffRegistry() {
   // Grades and streams configuration hook
   const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams } = useGradesAndStreams();
 
+  const gradeStreamsMap = getGradeStreamsConfig();
+  const topAvailableGrades = Object.keys(gradeStreamsMap);
+  const currentGradeStreams = gradeStreamsMap[homeroomGrade] || [];
+
   const getGradeAndStreamData = () => {
-    const db = CentralDataService.getDB() || {};
+    const db = (CentralDataService.getDB() || {}) as any;
     
     // Search across potential database arrays where Grade & Stream menu saves data
     const rawClasses = db.gradeStreams || db.classes || db.schoolClasses || db.settings?.classes || db.settings?.gradesAndStreams || [];
@@ -221,10 +222,12 @@ export default function StaffRegistry() {
     }
 
     const availableGrades = Array.from(gradeSet);
-    return { availableGrades, streamsByGrade };
+    return { availableGrades: availableGrades, streamsByGrade };
   };
 
-  const { availableGrades, streamsByGrade } = getGradeAndStreamData();
+  const gradeAndStreamData = getGradeAndStreamData();
+  const availableGradesList = gradeAndStreamData.availableGrades;
+  const streamsByGrade = gradeAndStreamData.streamsByGrade;
   const selectedGrade = homeroomGrade || '';
   
   // Get streams specifically assigned to the selected grade
@@ -1151,7 +1154,7 @@ export default function StaffRegistry() {
                         className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500"
                       >
                         <option value="">-- Select Grade --</option>
-                        {availableGrades.map((g: string) => (
+                        {availableGradesList.map((g: string) => (
                           <option key={g} value={g}>{g}</option>
                         ))}
                       </select>
