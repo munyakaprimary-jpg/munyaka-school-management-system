@@ -166,34 +166,10 @@ export default function StaffRegistry() {
   }, []);
 
   // Compute available streams for homeroom grade
-  const getDynamicStreamsForGrade = (targetGradeName: string): string[] => {
-    const db = (CentralDataService.getDB() || {}) as any;
-    
-    // 1. Check if streams are nested directly under db.grades
-    if (Array.isArray(db.grades)) {
-      const matchingGrade = db.grades.find((g: any) =>
-        g.name?.toLowerCase().trim() === targetGradeName?.toLowerCase().trim() ||
-        g.id?.toLowerCase().trim() === targetGradeName?.toLowerCase().trim()
-      );
-      if (matchingGrade && Array.isArray(matchingGrade.streams) && matchingGrade.streams.length > 0) {
-        return matchingGrade.streams.map((s: any) => typeof s === 'string' ? s : s.name);
-      }
-    }
-
-    // 2. Check if db.streams exists as a top-level list
-    if (Array.isArray(db.streams) && db.streams.length > 0) {
-      return db.streams.map((s: any) => typeof s === 'string' ? s : s.name);
-    }
-
-    // 3. Check settings object
-    if (db.settings?.streams && Array.isArray(db.settings.streams)) {
-      return db.settings.streams;
-    }
-
-    return [];
-  };
-
-  const availableHomeroomStreams = getDynamicStreamsForGrade(homeroomGrade || '');
+  const availableHomeroomStreams = useMemo(() => {
+    const streams = gradeStreamsMap[homeroomGrade] || getStreamsForGrade(homeroomGrade) || allGlobalStreams || ['East', 'West'];
+    return Array.isArray(streams) && streams.length > 0 ? streams : ['East', 'West'];
+  }, [homeroomGrade, gradeStreamsMap, getStreamsForGrade, allGlobalStreams]);
 
   const handleHomeroomGradeChange = (newGrade: string) => {
     const streamsForNewGrade = gradeStreamsMap[newGrade] || getStreamsForGrade(newGrade) || allGlobalStreams || ['East', 'West'];
@@ -1116,20 +1092,16 @@ export default function StaffRegistry() {
                       <div>
                         <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Stream</label>
                         <select
-                          value={homeroomStream || ''}
+                          value={homeroomStream}
                           onChange={(e) => setHomeroomStream(e.target.value)}
-                          className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                         >
-                          <option value="">-- Select Active Stream --</option>
-                          {availableHomeroomStreams.length > 0 ? (
-                            availableHomeroomStreams.map((streamName: string) => (
-                              <option key={streamName} value={streamName}>
-                                {streamName}
-                              </option>
-                            ))
-                          ) : (
-                            <option value="" disabled>No streams configured for this grade</option>
-                          )}
+                          <option value="">-- Select Stream --</option>
+                          {availableHomeroomStreams.map((streamName: string) => (
+                            <option key={streamName} value={streamName}>
+                              {streamName} Stream
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
