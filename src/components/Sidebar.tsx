@@ -135,8 +135,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   // Raw nav items mapped to permission keys
   const rawNavItems = [
+    { name: "Owner's Portal", path: '/dashboard?tab=owner', icon: Shield, permissionKey: 'dashboard' },
+    { name: 'Admin Dashboard', path: '/dashboard?tab=dashboard', icon: LayoutDashboard, permissionKey: 'dashboard' },
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, permissionKey: 'dashboard' },
-    { name: "Owner's Portal", path: '/dev/tenants', icon: Shield, permissionKey: 'dashboard' },
     {
       name: 'LAN Server Config',
       path: '/lan',
