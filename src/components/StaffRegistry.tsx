@@ -192,9 +192,9 @@ export default function StaffRegistry() {
   const [activeSubjectForAllocation, setActiveSubjectForAllocation] = useState<string | null>(null);
 
   // Grades and streams configuration hook
-  const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams } = useGradesAndStreams();
+  const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams, gradeStreamMap } = useGradesAndStreams();
 
-  const gradeStreamsMap = getGradeStreamsConfig();
+  const gradeStreamsMap = gradeStreamMap;
   const topAvailableGrades = Object.keys(gradeStreamsMap);
   const currentGradeStreams = gradeStreamsMap[homeroomGrade] || [];
 
@@ -1175,15 +1175,8 @@ export default function StaffRegistry() {
 
                     {/* Stream Selection */}
                     {(() => {
-                      const { map, cleanKey } = getGradeStreamsConfig();
-                      const selectedKey = cleanKey(homeroomGrade);
-                      
-                      // Fallback search across all keys if exact key match fails
-                      let currentStreams = map[selectedKey] || [];
-                      if (currentStreams.length === 0 && selectedKey) {
-                        const matchingKey = Object.keys(map).find(k => k.includes(selectedKey) || selectedKey.includes(k));
-                        if (matchingKey) currentStreams = map[matchingKey];
-                      }
+                      const { getStreamsForGrade } = useGradesAndStreams();
+                      const currentStreams = homeroomGrade ? getStreamsForGrade(homeroomGrade) : [];
 
                       return (
                         <div>
