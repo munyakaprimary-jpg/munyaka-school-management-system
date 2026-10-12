@@ -10,8 +10,6 @@ import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "@/components/ui/notification-provider";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PortalRouter from "./components/PortalRouter";
-import Layout from "./components/Layout";
-import AdminLayout from "./components/AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import { ForcePasswordResetModal } from "./components/ForcePasswordResetModal";
 import Login from "./pages/Login";
