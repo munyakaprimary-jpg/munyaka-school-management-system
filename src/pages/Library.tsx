@@ -81,75 +81,58 @@ const Library = () => {
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 font-sans">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 p-8 text-white shadow-2xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 p-8 text-white shadow-2xl space-y-6">
         <div className="absolute right-0 top-0 -mt-10 -mr-10 w-96 h-96 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-bold uppercase tracking-wider text-indigo-200">
-              <ShieldCheck size={14} /> Admin Library Governance & Harmonization Dashboard
-            </div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight">
-              Library & E-Resources Master Oversight
-            </h1>
-            <p className="text-indigo-100 text-sm md:text-base max-w-xl font-medium">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-blue-200 border border-white/10 mb-3">
+              🛡️ ADMIN LIBRARY GOVERNANCE & HARMONIZATION DASHBOARD
+            </span>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight">Library & E-Resources Master Oversight</h1>
+            <p className="text-blue-200/80 text-sm mt-1 max-w-2xl font-medium">
               Administrative master view of all textbook inventory, school-wide circulation rates, and secure audit logs harmonized from librarian terminals.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="px-4 py-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-center">
-              <p className="text-[10px] uppercase font-bold text-indigo-300">Total Catalog</p>
-              <p className="text-2xl font-black">{books.length} Titles</p>
+        </div>
+
+        {/* Consolidated Metric Cards Grid Inside the Banner */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 relative z-10">
+          {/* Card 1: Total Volumes */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-blue-200 uppercase tracking-wider">Total Volumes</p>
+              <p className="text-2xl font-black mt-1 text-white">{totalVolumes}</p>
+              <p className="text-xs text-emerald-300 mt-1 flex items-center gap-1">✓ School-wide physical stock</p>
+            </div>
+            <div className="p-3 bg-white/10 rounded-xl text-white">
+              📖
+            </div>
+          </div>
+
+          {/* Card 2: Circulation Rate */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-blue-200 uppercase tracking-wider">Circulation Rate</p>
+              <p className="text-2xl font-black mt-1 text-white">{circulationRate}%</p>
+              <p className="text-xs text-blue-200/80 mt-1">{totalBorrowed} books currently checked out</p>
+            </div>
+            <div className="p-3 bg-white/10 rounded-xl text-white">
+              📊
+            </div>
+          </div>
+
+          {/* Card 3: Overdue / Lost Incidents */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-blue-200 uppercase tracking-wider">Overdue / Lost</p>
+              <p className="text-2xl font-black mt-1 text-red-300">{lostDamagedCount}</p>
+              <p className="text-xs text-red-200 mt-1">Requires governance review</p>
+            </div>
+            <div className="p-3 bg-red-500/20 rounded-xl text-red-300">
+              ⚠️
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Summary Audit Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Volumes</p>
-              <h3 className="text-3xl font-black text-slate-900">{totalVolumes}</h3>
-              <p className="text-xs font-medium text-emerald-600 flex items-center gap-1 mt-1">
-                <CheckCircle2 size={12} /> School-wide physical stock
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-              <BookIcon size={28} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Circulation Rate</p>
-              <h3 className="text-3xl font-black text-blue-600">{circulationRate}%</h3>
-              <p className="text-xs font-medium text-slate-500 mt-1">
-                {totalBorrowed} books currently checked out
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
-              <BookOpen size={28} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
-          <CardContent className="p-6 flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Overdue / Lost Incidents</p>
-              <h3 className="text-3xl font-black text-rose-600">{lostDamagedCount}</h3>
-              <p className="text-xs font-medium text-rose-500 mt-1">
-                Requires governance review
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-inner">
-              <AlertCircle size={28} />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Search & Filter Bar */}
