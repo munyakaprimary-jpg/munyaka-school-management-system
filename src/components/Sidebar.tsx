@@ -61,8 +61,8 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
             SA
           </div>
           <div>
-            <p className="text-xs font-bold text-white">School Owner</p>
-            <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">EXECUTIVE OWNER</p>
+            <p className="text-xs font-bold text-slate-800">School Owner</p>
+            <p className="text-[10px] font-bold text-indigo-600 tracking-wider uppercase">EXECUTIVE OWNER</p>
           </div>
         </div>
       </div>

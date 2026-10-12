@@ -501,9 +501,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               {!isCollapsed && (
                 <div className="overflow-hidden flex-1">
                   <Link to="/profile" onClick={() => setIsOpen(false)}>
-                    <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p>
+                    <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">School Owner</p>
                   </Link>
-                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p>
+                  <p className="text-[10px] font-bold text-indigo-600 tracking-wider uppercase">EXECUTIVE OWNER</p>
                 </div>
               )}
             </div>
