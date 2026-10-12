@@ -134,15 +134,18 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     'Class Teacher';
 
   // Raw nav items mapped to permission keys
+  const ownerMenuItems = [
+    { id: 'dashboard', label: "Owner's Dashboard", path: '/dashboard', icon: LayoutDashboard },
+    { id: 'tenants', label: 'Tenants / Campuses', path: '/dev/tenants', icon: School },
+    { id: 'lan', label: 'LAN Server Config', path: '/lan', icon: Wifi },
+    { id: 'payments', label: 'Payment & Subscriptions', path: '/payment-management', icon: CreditCard }
+  ];
+
   const rawNavItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, permissionKey: 'dashboard' },
-    { name: "Owner's Portal", path: '/dev/tenants', icon: Shield, permissionKey: 'dashboard' },
-    {
-      name: 'LAN Server Config',
-      path: '/lan',
-      icon: Wifi,
-      permissionKey: 'dashboard'
-    },
+    { name: "Tenants / Campuses", path: '/dev/tenants', icon: School, permissionKey: 'dashboard' },
+    { name: 'LAN Server Config', path: '/lan', icon: Wifi, permissionKey: 'dashboard' },
+    { name: 'Payment & Subscriptions', path: '/payment-management', icon: CreditCard, permissionKey: 'dashboard' },
     { name: 'Students', path: '/students', icon: Users, permissionKey: 'admissions' },
     { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, permissionKey: 'attendance' },
     { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, permissionKey: 'assessments' },
