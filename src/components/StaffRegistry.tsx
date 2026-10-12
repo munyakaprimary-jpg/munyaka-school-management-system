@@ -786,13 +786,18 @@ export default function StaffRegistry() {
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
                               <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                staff.role?.toLowerCase().includes('ict')
+                                (staff.role || '').toLowerCase().includes('bursar') ||
+                                (staff.role || '').toLowerCase().includes('cook') ||
+                                (staff.role || '').toLowerCase().includes('security') ||
+                                (staff.role || '').toLowerCase().includes('master')
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  : (staff.role || '').toLowerCase().includes('ict')
                                   ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                                  : staff.role?.toLowerCase().includes('library')
+                                  : (staff.role || '').toLowerCase().includes('library')
                                   ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
                                   : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                               }`}>
-                                {staff.role || 'Teacher'}
+                                {staff.role || staff.designation || 'Unassigned'}
                               </span>
                             </div>
                           </div>

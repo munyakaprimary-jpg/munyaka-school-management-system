@@ -169,8 +169,8 @@ export const CentralDataService = {
 
       const cleanRecord = {
         ...staffData,
-        role: staffData.role || 'Teacher',
-        designation: staffData.designation || staffData.role || 'Teacher'
+        role: staffData.role,
+        designation: staffData.role
       };
 
       let updated;
