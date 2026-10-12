@@ -7,18 +7,18 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, onClose }: SidebarProps) {
-  const handleNav = (id: string) => {
+  const handleNav = (id: string, path: string) => {
     setActiveTab(id);
-    window.location.hash = `#/${id}`;
+    window.location.hash = path;
     if (onClose) onClose();
   };
 
-  const ownerMenuItems = [
-    { id: 'owner', label: "Owner's Dashboard", icon: "📊" },
-    { id: 'tenants', label: 'Tenants / Campuses', icon: '🏫' },
-    { id: 'lan', label: 'LAN Server Config', icon: '🌐' },
-    { id: 'payments', label: 'Payment & Subscriptions', icon: '💳' },
-    { id: 'settings', label: 'Global Settings', icon: '⚙️' }
+  const ownerNavItems = [
+    { id: 'owner', label: "Owner's Portal", path: '/#/owner', icon: '📊' },
+    { id: 'tenants', label: 'Tenants / Campuses', path: '/#/tenants', icon: '🏫' },
+    { id: 'lan', label: 'LAN Server Config', path: '/#/lan', icon: '🌐' },
+    { id: 'payments', label: 'Payment & Subscriptions', path: '/#/payments', icon: '💳' },
+    { id: 'settings', label: 'Global Settings', path: '/#/settings', icon: '⚙️' }
   ];
 
   return (
@@ -34,12 +34,12 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
 
         {/* Navigation List */}
         <nav className="space-y-1.5">
-          {ownerMenuItems.map((item) => {
+          {ownerNavItems.map((item) => {
             const isActive = activeTab === item.id || window.location.hash.includes(item.id);
             return (
               <button
                 key={item.id}
-                onClick={() => handleNav(item.id)}
+                onClick={() => handleNav(item.id, item.path)}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-emerald-600 text-white shadow-md font-semibold'
@@ -61,8 +61,8 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
             SA
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-800">School Owner</p>
-            <p className="text-[10px] font-bold text-indigo-600 tracking-wider uppercase">EXECUTIVE OWNER</p>
+            <p className="text-xs font-bold text-white">School Owner</p>
+            <p className="text-[10px] font-bold text-indigo-400 tracking-wider uppercase">EXECUTIVE OWNER</p>
           </div>
         </div>
       </div>
