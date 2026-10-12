@@ -7,14 +7,13 @@ export default function PortalRouter({ children }: { children: React.ReactNode }
   const { user } = useAuth();
   const rawRole = (user?.role || '').toLowerCase().trim();
 
-  // Explicit check for owner vs admin/school staff roles
+  // If user role is OWNER or SUPER_ADMIN, render with OwnersPortal Layout (Sidebar with tenants, lan, payments, settings, owner)
   const isOwner = rawRole === 'owner' || rawRole === 'super_admin' || rawRole === 'super';
 
   if (isOwner) {
-    // School Owner Portal Layout (Executive governance, tenants, LAN, payments, settings)
     return <Layout>{children}</Layout>;
   }
 
-  // School Administrator & Staff Operations Portal Layout (Full admin sidebar, students, staff, grades, attendance, etc.)
+  // Otherwise (ADMIN, HEAD_TEACHER, TEACHER, etc.), render with AdminLayout (School Operations sidebar)
   return <AdminLayout>{children}</AdminLayout>;
 }
