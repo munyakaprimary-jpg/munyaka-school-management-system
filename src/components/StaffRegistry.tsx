@@ -105,7 +105,7 @@ export default function StaffRegistry() {
   });
 
   const getStaffRBAC = (roleName: string) => {
-    const db = CentralDataService.getDB() || {};
+    const db = (CentralDataService.getDB() || {}) as any;
     const rbacRoles = db.settings?.rbac?.roles || rbacSettings?.roles || [];
     const lowerRole = (roleName || '').toLowerCase();
 
