@@ -114,17 +114,6 @@ export default function StaffRegistry() {
     const isSupport = ['bursar', 'store master', 'secretary', 'cook', 'security', 'driver', 'groundskeeper']
       .some(k => lowerRole.includes(k));
 
-  const getStaffRBAC = (roleName: string) => {
-    const db = CentralDataService.getDB() || {};
-    const rbacRoles = db.settings?.rbac?.roles || rbacSettings?.roles || [];
-    const lowerRole = (roleName || '').toLowerCase();
-
-    const match = rbacRoles.find((r: any) => r.name?.toLowerCase() === lowerRole);
-    if (match) return match;
-
-    const isSupport = ['bursar', 'store master', 'secretary', 'cook', 'security', 'driver', 'groundskeeper']
-      .some(k => lowerRole.includes(k));
-
     return {
       category: isSupport ? 'Support' : 'Teaching',
       portalAccess: isSupport ? '/fees' : '/dashboard'
