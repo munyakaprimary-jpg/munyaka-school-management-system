@@ -1175,7 +1175,6 @@ export default function StaffRegistry() {
 
                     {/* Stream Selection */}
                     {(() => {
-                      const { getStreamsForGrade } = useGradesAndStreams();
                       const currentStreams = homeroomGrade ? getStreamsForGrade(homeroomGrade) : [];
 
                       return (
