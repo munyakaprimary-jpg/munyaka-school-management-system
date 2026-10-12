@@ -30,8 +30,6 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   // ADMIN has unrestricted access to every navigation item
-  { icon: Shield, label: "Owner Portal", path: '/dashboard?tab=owner', roles: ['admin', 'teacher', 'accountant', 'staff', 'student'] },
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard?tab=dashboard', roles: ['admin', 'teacher', 'accountant', 'staff', 'student'] },
   { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['admin', 'teacher', 'accountant', 'staff', 'student'] },
   { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'teacher', 'accountant'] },
   { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'teacher'] },

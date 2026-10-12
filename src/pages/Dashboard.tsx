@@ -1,19 +1,6 @@
 import React from 'react';
-import AdminDashboard from "@/components/dashboards/AdminDashboard";
 
 export default function Dashboard() {
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const hashString = typeof window !== 'undefined' ? window.location.hash : '';
-  const activeTab = searchParams.get('tab') || (hashString.includes('dashboard') ? 'dashboard' : 'owner');
-
-  if (activeTab === 'dashboard' || hashString.includes('dashboard')) {
-    return (
-      <div className="space-y-6">
-        <AdminDashboard />
-      </div>
-    );
-  }
-
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Executive Owner Banner */}
