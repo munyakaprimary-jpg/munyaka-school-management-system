@@ -136,6 +136,7 @@ import StudyCorner from "./pages/StudyCorner";
 import CentralDataService from "./pages/CentralDataService";
 import PaymentManagement from "./pages/PaymentManagement";
 import OwnersDashboardHome from "./pages/OwnersDashboardHome";
+import OwnersDashboard from "./pages/ownersDashboard";
 import OwnerPortalRouter from "./pages/OwnerPortalRouter";
 import GamesHub from "./pages/GamesHub";
 import AppUnlock from "./components/AppUnlock";

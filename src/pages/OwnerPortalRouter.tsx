@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import OwnersDashboardHome from './OwnersDashboardHome';
 import OwnersDashboard from './ownersDashboard';
 import LANServerConfig from './LANServerConfig';
