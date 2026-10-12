@@ -43,12 +43,17 @@ export interface StaffMember {
   id: string;
   name: string;
   category: StaffCategoryRole;
+  role?: string;
+  designation?: string;
+  specificRole?: string;
+  type?: string;
   tscNumber: string;
   email: string;
   phone: string;
   subjects: string[];
   assignedClasses?: string[];
   assignedStreams?: string[];
+  assignedClass?: string;
   homeroomGrade?: string;
   homeroomStream?: string;
   allocations?: StaffAllocationRecord[];
@@ -400,7 +405,7 @@ export default function StaffRegistry() {
       tscNumber: tscNumber.trim() || '',
       status: status || 'Active',
       accessCode: finalCode,
-      role: isTeachingRole ? 'teacher' : 'support',
+      role: category || (isTeachingRole ? 'Teacher' : 'Support Staff'),
       type: isTeachingRole ? 'teaching' : 'support',
       subjects: isTeachingRole ? selectedSubjects : ['Mathematics', 'English'],
       assignedClasses: finalAssignedClasses,
@@ -720,14 +725,15 @@ export default function StaffRegistry() {
                               {staff.name ? staff.name.toUpperCase() : ''}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
-                              {(() => {
-                                const badge = getStaffTypeBadge(staff.category, staff.designation);
-                                return (
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${badge.bg}`}>
-                                    {badge.text}
-                                  </span>
-                                );
-                              })()}
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                staff.role?.toLowerCase().includes('ict')
+                                  ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                  : staff.role?.toLowerCase().includes('library')
+                                  ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              }`}>
+                                {staff.role || 'Teacher'}
+                              </span>
                             </div>
                           </div>
                         </div>
