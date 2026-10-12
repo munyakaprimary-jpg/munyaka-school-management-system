@@ -139,6 +139,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
     { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
+    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
         { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
         { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher'] },
@@ -332,6 +333,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
             { icon: Gamepad2, label: 'Games', path: '/games', global: true },
                         { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
+                        { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['owner'] },
     ].filter(item => {
           if (!user) return false;
           if (item.global) return true;
@@ -595,7 +597,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                       {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
                     </button>
                     {/* LAN Server Connection Indicator - Visible only for owner; navigates to /lan-config */}
-                    {false && (user?.role ?? '').toLowerCase() === 'owner' ? (
+                    {(user?.role ?? '').toLowerCase() === 'owner' ? (
                       <Link
                         to="/lan-config"
                         className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
