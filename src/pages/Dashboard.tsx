@@ -36,21 +36,17 @@ const Dashboard: React.FC = () => {
     return <TeacherDashboard />;
   }
 
-  // 1. Separate Owner's Portal view: activeTab === 'owner' || activeTab === 'owner-portal'
+  // 1. Separate Owner's Portal view: activeTab === 'owner' || activeTab === 'owner-portal' or role === 'owner' / 'super_admin'
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const hashString = typeof window !== 'undefined' ? window.location.hash : '';
-  const isOwnerActive = searchParams.get('tab') === 'owner' || searchParams.get('tab') === 'owner-portal' || hashString.includes('owner') || roleLower === 'owner';
+  const isOwnerMode = searchParams.get('tab') === 'owner' || searchParams.get('tab') === 'owner-portal' || hashString.includes('owner') || roleLower === 'owner' || roleLower === 'super_admin';
 
-  if (isOwnerActive || roleLower === 'owner') {
-    return <OwnerDashboard />;
-  }
-
-  // Check if active tab or route is library / e-resources
-  if (typeof window !== 'undefined' && window.location.hash.includes('library')) {
-    return <Library />;
-  }
-
-  return <AdminDashboard />;
+  return isOwnerMode ? (
+    <OwnerDashboard />
+  ) : (
+    /* Standard School Admin Dashboard */
+    <AdminDashboard />
+  );
 };
 
 export default Dashboard;
