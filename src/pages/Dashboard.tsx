@@ -41,7 +41,7 @@ const Dashboard: React.FC = () => {
   }
 
   // Check if active tab or route is library / e-resources
-  if (typeof window !== 'undefined' && (window.location.hash.includes('library') || window.location.hash.includes('e-resources'))) {
+  if (typeof window !== 'undefined' && window.location.hash.includes('library')) {
     return <Library />;
   }
 
