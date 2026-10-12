@@ -123,26 +123,22 @@ export default function StaffRegistry() {
 
   const getGradeStreamsConfig = () => {
     const db = (CentralDataService.getDB() || {}) as any;
-    
-    // 1. Check if configured in settings
-    if (db.settings?.gradesAndStreams && typeof db.settings.gradesAndStreams === 'object') {
-      return db.settings.gradesAndStreams;
-    }
-
-    // 2. Build map dynamically from classes / gradeStreams array
     const map: Record<string, string[]> = {};
-    const rawClasses = db.gradeStreams || db.classes || db.schoolClasses || [];
-    
-    if (Array.isArray(rawClasses) && rawClasses.length > 0) {
-      rawClasses.forEach((item: any) => {
-        const g = (item.grade || item.gradeName || '').toString().trim();
+
+    // A. Check db.classes / db.gradeStreams / db.schoolClasses
+    const classList = db.gradeStreams || db.classes || db.schoolClasses || db.settings?.classes || [];
+    if (Array.isArray(classList) && classList.length > 0) {
+      classList.forEach((item: any) => {
+        const g = (item.grade || item.gradeName || item.name || '').toString().trim();
         const s = (item.stream || item.streamName || '').toString().trim();
+
         if (g) {
           if (!map[g]) map[g] = [];
           if (s && !map[g].includes(s)) map[g].push(s);
+
           if (Array.isArray(item.streams)) {
             item.streams.forEach((st: any) => {
-              const strName = typeof st === 'string' ? st : st.name;
+              const strName = typeof st === 'string' ? st : (st.name || st.streamName || '');
               if (strName && !map[g].includes(strName)) map[g].push(strName);
             });
           }
@@ -150,10 +146,14 @@ export default function StaffRegistry() {
       });
     }
 
-    // Default fallback if empty
-    if (Object.keys(map).length === 0) {
-      map['Grade 1'] = ['East', 'West'];
-      map['Grade 2'] = ['East', 'West', 'North', 'South'];
+    // B. Check standalone db.streams array (global streams)
+    const globalStreams = db.streams || db.settings?.streams || [];
+    if (Array.isArray(globalStreams) && globalStreams.length > 0) {
+      const streamNames = globalStreams.map((st: any) => typeof st === 'string' ? st : (st.name || st.streamName || '')).filter(Boolean);
+      // Attach global streams to any grade that doesn't have specific streams mapped
+      Object.keys(map).forEach(g => {
+        if (map[g].length === 0) map[g] = [...streamNames];
+      });
     }
 
     return map;
@@ -1161,22 +1161,33 @@ export default function StaffRegistry() {
                     </div>
 
                     {/* Stream Selection */}
-                    <div>
-                      <label className="block text-xs font-semibold text-emerald-800 mb-1">
-                        Stream
-                      </label>
-                      <select
-                        value={homeroomStream || ''}
-                        onChange={(e) => setHomeroomStream(e.target.value)}
-                        className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500"
-                        disabled={!homeroomGrade}
-                      >
-                        <option value="">-- Select Stream --</option>
-                        {activeStreams.map((s: string) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    </div>
+                    {(() => {
+                      const configMap = getGradeStreamsConfig();
+                      const currentStreams = (homeroomGrade && configMap[homeroomGrade]) || [];
+
+                      return (
+                        <div>
+                          <label className="block text-xs font-semibold text-emerald-800 mb-1">Stream</label>
+                          <select
+                            value={homeroomStream || ''}
+                            onChange={(e) => setHomeroomStream(e.target.value)}
+                            className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            disabled={!homeroomGrade}
+                          >
+                            <option value="">-- Select Stream --</option>
+                            {currentStreams.length > 0 ? (
+                              currentStreams.map((streamName: string) => (
+                                <option key={streamName} value={streamName}>
+                                  {streamName}
+                                </option>
+                              ))
+                            ) : (
+                              <option value="" disabled>No streams configured for {homeroomGrade || 'this grade'}</option>
+                            )}
+                          </select>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
