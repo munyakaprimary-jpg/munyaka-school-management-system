@@ -103,15 +103,33 @@ export default function StaffRegistry() {
     }
   });
 
-  const getRoleRBAC = (roleName: string) => {
-    const found = rbacSettings.roles?.find((r: any) => r.name.toLowerCase() === roleName?.toLowerCase());
-    return found || { category: 'Teaching', portalAccess: '/portal', permissions: [] };
-  };
+  const getStaffRBAC = (roleName: string) => {
+    const db = CentralDataService.getDB() || {};
+    const rbacRoles = db.settings?.rbac?.roles || rbacSettings?.roles || [];
+    const lowerRole = (roleName || '').toLowerCase();
 
-  // Form states
-  const [fullName, setFullName] = useState('');
-  const [category, setCategory] = useState<StaffCategoryRole>('Class Teacher');
-  const [tscNumber, setTscNumber] = useState('');
+    const match = rbacRoles.find((r: any) => r.name?.toLowerCase() === lowerRole);
+    if (match) return match;
+
+    const isSupport = ['bursar', 'store master', 'secretary', 'cook', 'security', 'driver', 'groundskeeper']
+      .some(k => lowerRole.includes(k));
+
+  const getStaffRBAC = (roleName: string) => {
+    const db = CentralDataService.getDB() || {};
+    const rbacRoles = db.settings?.rbac?.roles || rbacSettings?.roles || [];
+    const lowerRole = (roleName || '').toLowerCase();
+
+    const match = rbacRoles.find((r: any) => r.name?.toLowerCase() === lowerRole);
+    if (match) return match;
+
+    const isSupport = ['bursar', 'store master', 'secretary', 'cook', 'security', 'driver', 'groundskeeper']
+      .some(k => lowerRole.includes(k));
+
+    return {
+      category: isSupport ? 'Support' : 'Teaching',
+      portalAccess: isSupport ? '/fees' : '/dashboard'
+    };
+  };
   const [email, setEmail] = useState('');
   const [emailPrefix, setEmailPrefix] = useState('');
   const [phone, setPhone] = useState('');
@@ -176,9 +194,9 @@ export default function StaffRegistry() {
         loadedStaff = [];
       }
 
-    // Sanitize loaded list
-    const seenIds = new Set<string>();
-    const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
+      // Sanitize loaded list
+      const seenIds = new Set<string>();
+      const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
       let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
       if (seenIds.has(id)) {
         id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
