@@ -435,29 +435,24 @@ export default function StaffRegistry() {
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (staff: StaffMember) => {
-    setEditingStaff(staff);
-    setFullName(staff.name ? staff.name.toUpperCase() : '');
-    const resolvedCategory = staff.category || staff.role || staff.designation || 'Class Teacher';
-    setCategory(resolvedCategory as StaffCategoryRole);
-    setTscNumber(staff.tscNumber);
-    const loadedEmail = staff.email || '';
-    setEmail(loadedEmail);
-    setPhone(staff.phone || '');
-    setStatus(staff.status);
-    setAccessCode(staff.accessCode || generateRandomCode());
-    
-    const loadedSubs = staff.subjects || [];
-    setSelectedSubjects(loadedSubs);
-
-    const loadedClasses = staff.assignedClasses || [];
-    setAssignedClasses(loadedClasses);
-
-    // Validate loaded streams against valid streams for the loaded classes from central configuration
-    const validStreamsSet = new Set<string>();
-    loadedClasses.forEach(cls => {
-      const streamsForGrade = getStreamsForGrade(cls);
-      if (streamsForGrade && streamsForGrade.length > 0) {
+  const handleEditStaff = (member: any) => {
+    setEditingStaff(member);
+    setFullName(member.name ? member.name.toUpperCase() : '');
+    const resolvedRole = member.role || member.designation || member.position || member.category || 'Class Teacher';
+    setCategory(resolvedRole as StaffCategoryRole);
+    setTscNumber(member.tscNumber || '');
+    setEmail(member.email || '');
+    setPhone(member.phone || '');
+    setStatus(member.status || 'Active');
+    setAccessCode(member.accessCode || generateRandomCode());
+    setSelectedSubjects(member.subjects || []);
+    setAssignedClasses(member.assignedClasses || []);
+    setAssignedStreams(member.assignedStreams || []);
+    setHomeroomGrade(member.homeroomGrade || '');
+    setHomeroomStream(member.homeroomStream || '');
+    setAllocations(member.allocations || []);
+    setIsModalOpen(true);
+  };
         streamsForGrade.forEach(s => validStreamsSet.add(s));
       }
     });
@@ -919,22 +914,28 @@ export default function StaffRegistry() {
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
                               {(() => {
-                                const currentRole = staff.role || staff.designation || staff.position || '';
-                                
+                                const assignedRole = staff.role || staff.designation || staff.position || staff.category || 'Class Teacher';
+                                const lower = assignedRole.toLowerCase();
+
+                                const badgeStyle = lower.includes('bursar') || lower.includes('cook') || lower.includes('security') || lower.includes('master')
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  : lower.includes('ict')
+                                  ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                  : lower.includes('library')
+                                  ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200';
+
                                 return (
-                                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                    currentRole.toLowerCase().includes('bursar') || currentRole.toLowerCase().includes('cook') || currentRole.toLowerCase().includes('security') || currentRole.toLowerCase().includes('master')
-                                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                      : currentRole.toLowerCase().includes('ict')
-                                      ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                                      : currentRole.toLowerCase().includes('library')
-                                      ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                                      : currentRole
-                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                      : 'bg-slate-100 text-slate-600'
-                                  }`}>
-                                    {currentRole || 'Unassigned'}
-                                  </span>
+                                  <div className="flex flex-col gap-1">
+                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badgeStyle}`}>
+                                      {assignedRole}
+                                    </span>
+                                    {staff.homeroomGrade && staff.homeroomStream && (
+                                      <span className="text-[11px] text-slate-500 font-medium">
+                                        🎓 {staff.homeroomGrade} - {staff.homeroomStream}
+                                      </span>
+                                    )}
+                                  </div>
                                 );
                               })()}
                             </div>
@@ -1082,7 +1083,7 @@ export default function StaffRegistry() {
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => handleOpenEditModal(staff)}
+                            onClick={() => handleEditStaff(staff)}
                             className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg transition-all"
                             title="Edit profile"
                           >
