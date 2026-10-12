@@ -1068,42 +1068,51 @@ export default function StaffRegistry() {
 
                 {/* Conditional Homeroom Grade & Stream Selector for Class Teacher */}
                 {category === 'Class Teacher' && (
-                  <div className="sm:col-span-2 p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl space-y-3">
-                    <div className="flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-emerald-600" />
-                      <div>
-                        <h4 className="text-xs font-bold text-emerald-900">Assigned Homeroom Grade & Stream</h4>
-                        <p className="text-[11px] text-emerald-700">Select the primary homeroom class supervised by this Class Teacher.</p>
-                      </div>
+                  <div className="sm:col-span-2 bg-emerald-50/60 p-4 rounded-xl border border-emerald-200/60 space-y-3">
+                    <div className="flex items-center gap-2 text-emerald-900 font-semibold text-sm">
+                      <span className="text-base">🎓</span> Assigned Homeroom Grade & Stream
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Grade</label>
-                        <select
-                          value={homeroomGrade}
-                          onChange={(e) => handleHomeroomGradeChange(e.target.value)}
-                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
-                        >
-                          {availableSchoolClasses.map((cls) => (
-                            <option key={cls} value={cls}>{cls}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Stream</label>
-                        <select
-                          value={homeroomStream}
-                          onChange={(e) => setHomeroomStream(e.target.value)}
-                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
-                        >
-                          <option value="">-- Select Stream --</option>
-                          {availableHomeroomStreams.map((streamName: string) => (
+
+                    {/* Grade Selection */}
+                    <div>
+                      <label className="block text-xs font-semibold text-emerald-800 mb-1">
+                        Grade
+                      </label>
+                      <select
+                        value={homeroomGrade || ''}
+                        onChange={(e) => handleHomeroomGradeChange(e.target.value)}
+                        className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">-- Select Grade --</option>
+                        {availableSchoolClasses.map((grade: string) => (
+                          <option key={grade} value={grade}>
+                            {grade}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Stream Selection */}
+                    <div>
+                      <label className="block text-xs font-semibold text-emerald-800 mb-1">
+                        Stream
+                      </label>
+                      <select
+                        value={homeroomStream || ''}
+                        onChange={(e) => setHomeroomStream(e.target.value)}
+                        className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">-- Select Stream --</option>
+                        {availableHomeroomStreams.length > 0 ? (
+                          availableHomeroomStreams.map((streamName: string) => (
                             <option key={streamName} value={streamName}>
-                              {streamName} Stream
+                              {streamName}
                             </option>
-                          ))}
-                        </select>
-                      </div>
+                          ))
+                        ) : (
+                          <option value="Main">Main Stream</option>
+                        )}
+                      </select>
                     </div>
                   </div>
                 )}
