@@ -4,6 +4,7 @@ import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import TeacherDashboard from "@/components/dashboards/TeacherDashboard";
 import ICTDashboard from "@/pages/ICTDashboard";
 import LibrarianPortalView from "@/pages/LibrarianPortalView";
+import Library from "@/pages/Library";
 import { useAuth } from "@/context/AuthContext";
 import { resolveRole, roleHas } from "@/rbac/permissionMatrix";
 import { isTeacherRole } from "@/utils/roleHelper";
@@ -37,6 +38,11 @@ const Dashboard: React.FC = () => {
 
   if (roleLower === 'owner') {
     return <OwnerDashboard />;
+  }
+
+  // Check if active tab or route is library / e-resources
+  if (typeof window !== 'undefined' && (window.location.hash.includes('library') || window.location.hash.includes('e-resources'))) {
+    return <Library />;
   }
 
   return <AdminDashboard />;
