@@ -166,52 +166,34 @@ export default function StaffRegistry() {
   }, []);
 
   // Compute available streams for homeroom grade
-  const getStreamsForSelectedGrade = (selectedGradeName: string): string[] => {
+  const getDynamicStreamsForGrade = (targetGradeName: string): string[] => {
     const db = (CentralDataService.getDB() || {}) as any;
-    if (!selectedGradeName) return [];
-
-    const cleanGrade = selectedGradeName.trim().toLowerCase();
-    const extractedStreams = new Set<string>();
-
-    // Model A: db.classes or db.schoolClasses (e.g., [{ grade: "Grade 2", stream: "East" }, ...])
-    const classList = db.classes || db.schoolClasses || db.gradeStreams || [];
-    if (Array.isArray(classList) && classList.length > 0) {
-      classList.forEach((c: any) => {
-        const gName = (c.grade || c.gradeName || c.name || '').toString().trim().toLowerCase();
-        if (gName === cleanGrade || gName.includes(cleanGrade)) {
-          if (c.stream) extractedStreams.add(c.stream);
-          if (Array.isArray(c.streams)) c.streams.forEach((s: any) => extractedStreams.add(typeof s === 'string' ? s : s.name));
-        }
-      });
-    }
-
-    // Model B: db.settings.classes or db.settings.gradeStreams
-    const settingsClasses = db.settings?.classes || db.settings?.gradeStreams || db.settings?.gradesAndStreams || [];
-    if (Array.isArray(settingsClasses)) {
-      settingsClasses.forEach((c: any) => {
-        const gName = (c.grade || c.name || '').toString().trim().toLowerCase();
-        if (gName === cleanGrade || gName.includes(cleanGrade)) {
-          if (c.stream) extractedStreams.add(c.stream);
-          if (Array.isArray(c.streams)) c.streams.forEach((s: any) => extractedStreams.add(typeof s === 'string' ? s : s.name));
-        }
-      });
-    }
-
-    // Model C: Global db.streams or db.settings.streams (used across all grades)
-    if (extractedStreams.size === 0) {
-      const globalStreams = db.streams || db.settings?.streams || [];
-      if (Array.isArray(globalStreams) && globalStreams.length > 0) {
-        globalStreams.forEach((s: any) => {
-          const streamName = typeof s === 'string' ? s : (s.name || s.streamName || '');
-          if (streamName) extractedStreams.add(streamName);
-        });
+    
+    // 1. Check if streams are nested directly under db.grades
+    if (Array.isArray(db.grades)) {
+      const matchingGrade = db.grades.find((g: any) =>
+        g.name?.toLowerCase().trim() === targetGradeName?.toLowerCase().trim() ||
+        g.id?.toLowerCase().trim() === targetGradeName?.toLowerCase().trim()
+      );
+      if (matchingGrade && Array.isArray(matchingGrade.streams) && matchingGrade.streams.length > 0) {
+        return matchingGrade.streams.map((s: any) => typeof s === 'string' ? s : s.name);
       }
     }
 
-    return Array.from(extractedStreams);
+    // 2. Check if db.streams exists as a top-level list
+    if (Array.isArray(db.streams) && db.streams.length > 0) {
+      return db.streams.map((s: any) => typeof s === 'string' ? s : s.name);
+    }
+
+    // 3. Check settings object
+    if (db.settings?.streams && Array.isArray(db.settings.streams)) {
+      return db.settings.streams;
+    }
+
+    return [];
   };
 
-  const activeStreams = getStreamsForSelectedGrade(homeroomGrade);
+  const availableHomeroomStreams = getDynamicStreamsForGrade(homeroomGrade || '');
 
   const handleHomeroomGradeChange = (newGrade: string) => {
     const streamsForNewGrade = gradeStreamsMap[newGrade] || getStreamsForGrade(newGrade) || allGlobalStreams || ['East', 'West'];
@@ -1138,13 +1120,15 @@ export default function StaffRegistry() {
                           onChange={(e) => setHomeroomStream(e.target.value)}
                           className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500"
                         >
-                          <option value="">-- Select Stream --</option>
-                          {activeStreams.length > 0 ? (
-                            activeStreams.map((sName: string) => (
-                              <option key={sName} value={sName}>{sName}</option>
+                          <option value="">-- Select Active Stream --</option>
+                          {availableHomeroomStreams.length > 0 ? (
+                            availableHomeroomStreams.map((streamName: string) => (
+                              <option key={streamName} value={streamName}>
+                                {streamName}
+                              </option>
                             ))
                           ) : (
-                            <option value="Main">Main Stream</option>
+                            <option value="" disabled>No streams configured for this grade</option>
                           )}
                         </select>
                       </div>
