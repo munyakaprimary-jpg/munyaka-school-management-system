@@ -9,16 +9,16 @@ interface SidebarProps {
 export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, onClose }: SidebarProps) {
   const handleNav = (id: string, path: string) => {
     setActiveTab(id);
-    window.location.hash = path;
+    window.location.hash = path.replace('/#', '');
     if (onClose) onClose();
   };
 
-  const ownerNavItems = [
-    { id: 'owner', label: "Owner's Portal", path: '/#/owner', icon: '📊' },
-    { id: 'tenants', label: 'Tenants / Campuses', path: '/#/tenants', icon: '🏫' },
-    { id: 'lan', label: 'LAN Server Config', path: '/#/lan', icon: '🌐' },
-    { id: 'payments', label: 'Payment & Subscriptions', path: '/#/payments', icon: '💳' },
-    { id: 'settings', label: 'Global Settings', path: '/#/settings', icon: '⚙️' }
+  const navItems = [
+    { id: 'owner', label: "Owner's Portal", path: '/#/owner' },
+    { id: 'tenants', label: 'Tenants / Campuses', path: '/#/tenants' },
+    { id: 'lan', label: 'LAN Server Config', path: '/#/lan' },
+    { id: 'payments', label: 'Payment & Subscriptions', path: '/#/payments' },
+    { id: 'settings', label: 'Global Settings', path: '/#/settings' }
   ];
 
   return (
@@ -34,7 +34,7 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
 
         {/* Navigation List */}
         <nav className="space-y-1.5">
-          {ownerNavItems.map((item) => {
+          {navItems.map((item) => {
             const isActive = activeTab === item.id || window.location.hash.includes(item.id);
             return (
               <button
@@ -46,7 +46,9 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
                     : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
                 }`}
               >
-                <span className="text-base">{item.icon}</span>
+                <span className="text-base">
+                  {item.id === 'owner' ? '📊' : item.id === 'tenants' ? '🏫' : item.id === 'lan' ? '🌐' : item.id === 'payments' ? '💳' : '⚙️'}
+                </span>
                 <span>{item.label}</span>
               </button>
             );
@@ -61,8 +63,8 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
             SA
           </div>
           <div>
-            <p className="text-xs font-bold text-white">School Owner</p>
-            <p className="text-[10px] font-bold text-indigo-400 tracking-wider uppercase">EXECUTIVE OWNER</p>
+            <p className="text-xs font-bold text-slate-800">School Owner</p>
+            <p className="text-[10px] font-bold text-indigo-600 tracking-wider uppercase">EXECUTIVE OWNER</p>
           </div>
         </div>
       </div>
