@@ -387,10 +387,15 @@ export default function StaffRegistry() {
         const rawName = staff.name || staff.fullName || 'UNNAMED STAFF';
         const formattedName = String(rawName).trim().toUpperCase();
 
+        const resolvedRole = staff.role || staff.designation || staff.position || staff.category || cat;
+
         return {
           id,
           name: formattedName,
           category: cat,
+          role: resolvedRole,
+          designation: resolvedRole,
+          position: resolvedRole,
           tscNumber: staff.tscNumber || 'N/A',
           email: staff.email || '',
           phone: staff.phone || '',
