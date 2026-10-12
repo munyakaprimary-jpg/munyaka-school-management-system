@@ -1,52 +1,37 @@
-import React, { useState } from 'react';
-import OwnersPortal from "@/components/OwnersPortal";
-import AdminDashboard from "@/components/dashboards/AdminDashboard";
-import TeacherDashboard from "@/components/dashboards/TeacherDashboard";
-import ICTDashboard from "@/pages/ICTDashboard";
-import LibrarianPortalView from "@/pages/LibrarianPortalView";
-import Library from "@/pages/Library";
-import { useAuth } from "@/context/AuthContext";
-import { resolveRole, roleHas } from "@/rbac/permissionMatrix";
-import { isTeacherRole } from "@/utils/roleHelper";
+import React from 'react';
 
-const Dashboard: React.FC = () => {
-  const { user } = useAuth();
-  
-  const userRole = user?.role || '';
-  const roleLower = String(userRole).toLowerCase().trim();
-  const resolvedR = resolveRole(userRole);
+export default function Dashboard() {
+  return (
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Executive Owner Banner */}
+      <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 rounded-2xl p-6 text-white shadow-xl">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-500/30 mb-3">
+          🛡️ SCHOOL OWNER & EXECUTIVE CONTROL CENTER
+        </span>
+        <h1 className="text-2xl font-bold tracking-tight">Munyaka Institutional Master Portal</h1>
+        <p className="text-emerald-100/80 text-sm mt-1 max-w-2xl">
+          Manage institutional licensing, central database harmonization, global security policies, and administrative permissions.
+        </p>
+      </div>
 
-  const isLibrarian = roleLower.includes('librarian') || roleLower.includes('library') || resolvedR === 'librarian' || resolvedR === 'library_teacher';
-  if (isLibrarian && !roleLower.includes('admin')) {
-    return <LibrarianPortalView />;
-  }
-
-  const isIctTechnician = roleLower === 'ict_technician' || roleLower === 'ict_teacher' || roleLower.includes('ict') || resolvedR === 'ict_technician' || resolvedR === 'ict_teacher';
-  if (isIctTechnician && !roleLower.includes('admin')) {
-    return <ICTDashboard />;
-  }
-
-  const isTeacher = isTeacherRole(userRole, (user as any)?.staffCategory, (user as any)?.specialties) ||
-    resolvedR === 'teacher' || resolvedR === 'class_teacher' || resolvedR === 'subject_teacher' ||
-    resolvedR === 'senior_teacher' || roleLower.includes('teacher') || roleLower.includes('educator');
-
-  const isAdminOrOwner = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || resolvedR === 'admin';
-
-  if (isTeacher && !isAdminOrOwner) {
-    return <TeacherDashboard />;
-  }
-
-  // 1. Separate Owner's Portal view: activeTab === 'owner' || activeTab === 'owner-portal' or role === 'owner' / 'super_admin'
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const hashString = typeof window !== 'undefined' ? window.location.hash : '';
-  const isOwnerMode = searchParams.get('tab') === 'owner' || searchParams.get('tab') === 'owner-portal' || hashString.includes('owner') || roleLower === 'owner' || roleLower === 'super_admin';
-
-  return isOwnerMode ? (
-    <OwnersPortal />
-  ) : (
-    /* Standard School Admin Dashboard */
-    <AdminDashboard />
+      {/* Owner Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">System License Status</p>
+          <p className="text-2xl font-bold text-emerald-700 mt-2">Active & Valid</p>
+          <p className="text-xs text-slate-600 mt-1">365 Days remaining on current tier</p>
+        </div>
+        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Central Database Nodes</p>
+          <p className="text-2xl font-bold text-slate-800 mt-2">munyaka_central_db</p>
+          <p className="text-xs text-emerald-600 mt-1">✓ Synchronized offline-first</p>
+        </div>
+        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Administrators</p>
+          <p className="text-2xl font-bold text-slate-800 mt-2">3 Staff Members</p>
+          <p className="text-xs text-slate-600 mt-1">All permissions up to date</p>
+        </div>
+      </div>
+    </div>
   );
-};
-
-export default Dashboard;
+}
