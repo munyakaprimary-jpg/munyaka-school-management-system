@@ -167,111 +167,67 @@ export const AdminDashboardComponent: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 animate-fade-in">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden space-y-6">
         <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          {/* Top Header Section */}
           <div>
-            <div className="inline-flex items-center gap-2 bg-emerald-900/60 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-medium text-emerald-200 mb-3 backdrop-blur-sm">
-              <Sparkles size={13} className="text-emerald-400" />
-              CBC Competency-Based Curriculum Admin Control Center
-            </div>
-            <h1 className="text-3xl font-extrabold tracking-tight">Munyaka Primary School Dashboard</h1>
-            <p className="text-emerald-100 text-sm mt-1 max-w-2xl">
-              Real-time administrative overview, learner enrollments, CBC assessments, and staff metrics synced live across all portals.
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-700/60 text-emerald-200 border border-emerald-500/30">
+              ✨ CBC Competency-Based Curriculum Admin Control Center
+            </span>
+            <h1 className="text-2xl md:text-3xl font-bold mt-2">Munyaka Primary School Dashboard</h1>
+            <p className="text-emerald-100/80 text-sm mt-1">
+              Real-time administrative overview, learner enrollments, CBC assessments, and staff metrics.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button 
+          <div className="flex flex-wrap gap-2">
+            <Button
               onClick={() => navigate('/central-data')}
-              className="bg-white text-emerald-900 hover:bg-emerald-50 font-semibold shadow-md transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-white text-emerald-900 font-semibold text-sm rounded-lg shadow hover:bg-emerald-50 transition"
             >
-              <Database size={16} /> Central Master Export & Sync
-              <ArrowRight size={15} />
+              Central Master Export & Sync →
             </Button>
-            <Button 
+            <Button
               onClick={() => navigate('/students')}
-              variant="outline"
-              className="bg-emerald-900/40 text-white border-emerald-500/40 hover:bg-emerald-900/60 font-semibold backdrop-blur-sm"
+              className="px-4 py-2 bg-emerald-700/80 hover:bg-emerald-700 text-white font-semibold text-sm rounded-lg border border-emerald-500/40 transition"
             >
-              <Users size={16} /> Manage Learners ({totalStudents})
+              Manage Learners ({totalStudents})
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-emerald-100 shadow-sm hover:shadow-md transition-shadow bg-white overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-600 group-hover:bg-emerald-700 transition-colors" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Total Enrolled Learners</CardTitle>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <Users size={20} />
+        {/* Integrated 4-Card Compact Grid */}
+        <div className="bg-emerald-900/40 backdrop-blur-md rounded-xl p-4 border border-emerald-500/30">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+            {/* Card 1: Total Learners */}
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/15 text-white">
+              <div className="text-xs text-emerald-200 font-medium">Total Learners</div>
+              <div className="text-2xl font-bold my-1">{totalStudents}</div>
+              <div className="text-[11px] text-emerald-300/80">Primary: {primaryCount} | Junior: {juniorCount}</div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{totalStudents}</div>
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-xs text-slate-500">
-              <span>Primary (PP1-Gr6): <strong className="text-slate-700">{primaryCount}</strong></span>
-              <span>Junior (Gr7-9): <strong className="text-slate-700">{juniorCount}</strong></span>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-blue-100 shadow-sm hover:shadow-md transition-shadow bg-white overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 group-hover:bg-blue-700 transition-colors" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Teaching Staff</CardTitle>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-              <GradingIcon size={20} />
+            {/* Card 2: Teaching Staff */}
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/15 text-white">
+              <div className="text-xs text-emerald-200 font-medium">Teaching Staff</div>
+              <div className="text-2xl font-bold my-1">{teachingCount || staffSource.length}</div>
+              <div className="text-[11px] text-emerald-300/80">CBC Certified Instructors</div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{teachingCount || staffSource.length}</div>
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-xs text-slate-500">
-              <span>Active Instructors</span>
-              <span className="text-blue-600 font-medium">CBC Certified</span>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-amber-100 shadow-sm hover:shadow-md transition-shadow bg-white overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500 group-hover:bg-amber-600 transition-colors" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Support / Non-Teaching</CardTitle>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <Briefcase size={20} />
+            {/* Card 3: Non-Teaching Staff */}
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/15 text-white">
+              <div className="text-xs text-emerald-200 font-medium">Support Staff</div>
+              <div className="text-2xl font-bold my-1">{nonTeachingCount}</div>
+              <div className="text-[11px] text-emerald-300/80">Operational & Admin</div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{nonTeachingCount}</div>
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-xs text-slate-500">
-              <span>Admin & Support Staff</span>
-              <span className="text-amber-600 font-medium">Operational</span>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-teal-100 shadow-sm hover:shadow-md transition-shadow bg-white overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-teal-600 group-hover:bg-teal-700 transition-colors" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">System Integrity</CardTitle>
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
-              <ShieldCheck size={20} />
+            {/* Card 4: System Integrity */}
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/15 text-white">
+              <div className="text-xs text-emerald-200 font-medium">System Integrity</div>
+              <div className="text-2xl font-bold my-1">{health.score}%</div>
+              <div className="text-[11px] text-emerald-300/80">{health.statusText}</div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{health.score}%</div>
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-xs text-teal-600 font-medium">
-              <span>{health.statusText}</span>
-              {health.isSecure ? (
-                <Badge className="bg-green-100 text-green-800 border-green-200">Secure</Badge>
-              ) : (
-                <Badge className="bg-amber-100 text-amber-800 border-amber-200">Attention Needed</Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Enrolment Matrix Section */}
