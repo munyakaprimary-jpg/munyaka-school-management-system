@@ -438,7 +438,8 @@ export default function StaffRegistry() {
   const handleOpenEditModal = (staff: StaffMember) => {
     setEditingStaff(staff);
     setFullName(staff.name ? staff.name.toUpperCase() : '');
-    setCategory(staff.category);
+    const resolvedCategory = staff.category || staff.role || staff.designation || 'Class Teacher';
+    setCategory(resolvedCategory as StaffCategoryRole);
     setTscNumber(staff.tscNumber);
     const loadedEmail = staff.email || '';
     setEmail(loadedEmail);
@@ -596,6 +597,17 @@ export default function StaffRegistry() {
       assignedClass: finalAssignedClasses[0] || 'Unassigned',
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
+
+    const standardizedRecord = {
+      ...newStaff,
+      role: newStaff.role || newStaff.designation || 'Class Teacher',
+      designation: newStaff.role || newStaff.designation || 'Class Teacher',
+      homeroomGrade: newStaff.homeroomGrade || '',
+      homeroomStream: newStaff.homeroomStream || ''
+    };
+
+    CentralDataService.saveStaff(standardizedRecord);
+    window.dispatchEvent(new CustomEvent('munyaka_data_changed'));
 
     const existingStaff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || '[]');
     
@@ -906,20 +918,25 @@ export default function StaffRegistry() {
                               {staff.name ? staff.name.toUpperCase() : ''}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                (staff.role || '').toLowerCase().includes('bursar') ||
-                                (staff.role || '').toLowerCase().includes('cook') ||
-                                (staff.role || '').toLowerCase().includes('security') ||
-                                (staff.role || '').toLowerCase().includes('master')
-                                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                  : (staff.role || '').toLowerCase().includes('ict')
-                                  ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                                  : (staff.role || '').toLowerCase().includes('library')
-                                  ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                              }`}>
-                                {staff.role || staff.designation || 'Unassigned'}
-                              </span>
+                              {(() => {
+                                const currentRole = staff.role || staff.designation || staff.position || '';
+                                
+                                return (
+                                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                    currentRole.toLowerCase().includes('bursar') || currentRole.toLowerCase().includes('cook') || currentRole.toLowerCase().includes('security') || currentRole.toLowerCase().includes('master')
+                                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                      : currentRole.toLowerCase().includes('ict')
+                                      ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                      : currentRole.toLowerCase().includes('library')
+                                      ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                      : currentRole
+                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                      : 'bg-slate-100 text-slate-600'
+                                  }`}>
+                                    {currentRole || 'Unassigned'}
+                                  </span>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
