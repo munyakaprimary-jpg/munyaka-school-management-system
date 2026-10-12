@@ -47,16 +47,19 @@ export const AdminDashboardComponent: React.FC = () => {
       const staff = db.staff.length > 0 ? db.staff : getStaff();
       const learners = db.learners.length > 0 ? db.learners : getLearners();
 
-      const metrics = calculateStaffMetrics(staff);
+      const isSupportRole = (role: string = '') => {
+        const lower = role.toLowerCase();
+        const supportKeywords = ['bursar', 'store master', 'secretary', 'cook', 'security', 'groundskeeper', 'driver', 'cleaner', 'support'];
+        return supportKeywords.some(k => lower.includes(k));
+      };
 
-      // Robust staff classification using keyword-based helpers
-      const staffList = db.staff || [];
-      const { teaching: teachingStaffCount, support: supportStaffCount, unknown } = countStaffByType(staffList);
+      const supportStaffCount = staff.filter((s: any) => isSupportRole(s.role || s.category)).length;
+      const teachingStaffCount = staff.filter((s: any) => !isSupportRole(s.role || s.category)).length;
 
       setLocalStaff(staff);
       setReactiveLearners(learners);
       setLearnersCount(learners.length);
-      setTeachingCount(teachingStaffCount > 0 ? teachingStaffCount : metrics.teachingCount);
+      setTeachingCount(teachingStaffCount);
       setNonTeachingCount(supportStaffCount);
     } catch (e) {
       console.error('Error refreshing dashboard metrics:', e);
