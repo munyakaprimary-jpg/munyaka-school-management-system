@@ -167,12 +167,10 @@ export const CentralDataService = {
       const list = getStaff();
       const existingIndex = list.findIndex((s: any) => s.id === staffData.id || s.email === staffData.email);
 
-      const cleanRole = staffData.role || staffData.designation || staffData.position || 'Class Teacher';
       const cleanRecord = {
         ...staffData,
-        role: cleanRole,
-        designation: cleanRole,
-        position: cleanRole
+        role: staffData.role,
+        designation: staffData.role
       };
 
       let updated;
@@ -198,12 +196,8 @@ export const CentralDataService = {
   },
   addStaff: (record: any) => {
     const list = getStaff();
-    const cleanRole = record.role || record.designation || record.position || 'Class Teacher';
     const newRecord = {
       ...record,
-      role: cleanRole,
-      designation: cleanRole,
-      position: cleanRole,
       id: record.id || `staff-${Date.now()}`,
       staffId: record.staffId || `MUN-STF-${Math.floor(1000 + Math.random() * 9000)}`,
       joinedDate: record.joinedDate || new Date().toISOString().slice(0, 10)
@@ -215,9 +209,7 @@ export const CentralDataService = {
   },
   updateStaff: (id: string, updates: any) => {
     const list = getStaff();
-    const cleanRole = updates.role || updates.designation || updates.position;
-    const cleanUpdates = cleanRole ? { ...updates, role: cleanRole, designation: cleanRole, position: cleanRole } : updates;
-    const updated = list.map((s: any) => s.id === id || s.email === id ? { ...s, ...cleanUpdates } : s);
+    const updated = list.map((s: any) => s.id === id || s.email === id ? { ...s, ...updates } : s);
     localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updated));
     window.dispatchEvent(new Event('munyaka_data_changed'));
   },
