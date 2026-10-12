@@ -36,7 +36,12 @@ const Dashboard: React.FC = () => {
     return <TeacherDashboard />;
   }
 
-  if (roleLower === 'owner') {
+  // 1. Separate Owner's Portal view: activeTab === 'owner' || activeTab === 'owner-portal'
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const hashString = typeof window !== 'undefined' ? window.location.hash : '';
+  const isOwnerActive = searchParams.get('tab') === 'owner' || searchParams.get('tab') === 'owner-portal' || hashString.includes('owner') || roleLower === 'owner';
+
+  if (isOwnerActive || roleLower === 'owner') {
     return <OwnerDashboard />;
   }
 
