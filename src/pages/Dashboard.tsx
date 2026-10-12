@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import OwnerDashboard from "@/components/dashboards/OwnerDashboard";
+import OwnersPortal from "@/components/OwnersPortal";
 import AdminDashboard from "@/components/dashboards/AdminDashboard";
 import TeacherDashboard from "@/components/dashboards/TeacherDashboard";
 import ICTDashboard from "@/pages/ICTDashboard";
@@ -42,7 +42,7 @@ const Dashboard: React.FC = () => {
   const isOwnerMode = searchParams.get('tab') === 'owner' || searchParams.get('tab') === 'owner-portal' || hashString.includes('owner') || roleLower === 'owner' || roleLower === 'super_admin';
 
   return isOwnerMode ? (
-    <OwnerDashboard />
+    <OwnersPortal />
   ) : (
     /* Standard School Admin Dashboard */
     <AdminDashboard />
