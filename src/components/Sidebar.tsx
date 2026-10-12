@@ -22,15 +22,15 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
   ];
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-100 h-screen max-h-screen p-4 flex flex-col justify-between shadow-xl fixed left-0 top-0 z-50 overflow-hidden">
-      {/* Top Header Section */}
+    <aside className="w-64 h-screen max-h-screen sticky top-0 flex flex-col justify-between bg-slate-900 text-slate-100 p-4 overflow-hidden z-40">
+      {/* Top Brand Header */}
       <div className="shrink-0 pb-4 border-b border-slate-800">
         <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Governance Portal</span>
         <h2 className="text-base font-black text-white tracking-tight">MUNYAKA OWNER</h2>
       </div>
 
-      {/* Scrollable Navigation Area */}
-      <div className="flex-1 overflow-y-auto min-h-0 space-y-1.5 pr-1 py-4 custom-scrollbar">
+      {/* Scrollable Navigation Items */}
+      <div className="flex-1 overflow-y-auto min-h-0 py-2 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-700">
         <nav className="space-y-1.5">
           {navItems.map((item) => {
             const isActive = activeTab === item.id || window.location.hash.includes(item.id);
@@ -55,7 +55,7 @@ export default function Sidebar({ activeTab = 'owner', setActiveTab = () => {}, 
       </div>
 
       {/* User Profile Card pinned to bottom */}
-      <div className="mt-auto shrink-0 pt-4 border-t border-slate-800">
+      <div className="mt-auto shrink-0 pt-3 border-t border-slate-800">
         <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700/50 space-y-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-black flex items-center justify-center text-xs shadow-md">
