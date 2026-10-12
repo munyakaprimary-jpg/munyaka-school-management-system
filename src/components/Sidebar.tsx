@@ -134,18 +134,31 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     'Class Teacher';
 
   // Raw nav items mapped to permission keys
-  const ownerMenuItems = [
-    { id: 'dashboard', label: "Owner's Dashboard", path: '/dashboard', icon: LayoutDashboard },
-    { id: 'tenants', label: 'Tenants / Campuses', path: '/dev/tenants', icon: School },
-    { id: 'lan', label: 'LAN Server Config', path: '/lan', icon: Wifi },
-    { id: 'payments', label: 'Payment & Subscriptions', path: '/payment-management', icon: CreditCard }
+  const ownerNavItems = [
+    { name: "Owner's Dashboard", path: '/dashboard?tab=owner', hash: '#/owner', icon: LayoutDashboard, permissionKey: 'dashboard' },
+    { name: "Tenants / Campuses", path: '/dev/tenants', hash: '#/tenants', icon: School, permissionKey: 'dashboard' },
+    { name: 'LAN Server Config', path: '/lan', hash: '#/lan', icon: Wifi, permissionKey: 'dashboard' },
+    { name: 'Payment & Subscriptions', path: '/payment-management', hash: '#/payments', icon: CreditCard, permissionKey: 'dashboard' },
+    { name: 'Global Settings', path: '/settings/profile', hash: '#/settings', icon: Settings, permissionKey: 'dashboard' },
   ];
 
-  const rawNavItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard, permissionKey: 'dashboard' },
-    { name: "Tenants / Campuses", path: '/dev/tenants', icon: School, permissionKey: 'dashboard' },
-    { name: 'LAN Server Config', path: '/lan', icon: Wifi, permissionKey: 'dashboard' },
-    { name: 'Payment & Subscriptions', path: '/payment-management', icon: CreditCard, permissionKey: 'dashboard' },
+  const adminNavItems = [
+    { name: 'Admin Dashboard', path: '/dashboard', hash: '#/dashboard', icon: LayoutDashboard, permissionKey: 'dashboard' },
+    { name: 'Students & Learners', path: '/students', hash: '#/students', icon: Users, permissionKey: 'admissions' },
+    { name: 'Staff Registry', path: '/staff-registry', hash: '#/staff', icon: UserCheck, permissionKey: 'settings' },
+    { name: 'Grades & Streams', path: '/grades', hash: '#/grades', icon: Layers, permissionKey: 'admissions' },
+    { name: 'Learning Areas', path: '/learning-areas', hash: '#/learning-areas', icon: BookOpen, permissionKey: 'assessments' },
+    { name: 'Exam Types', path: '/exam-types', hash: '#/exams', icon: Award, permissionKey: 'assessments' },
+    { name: 'Transferred Archive', path: '/learners/archive', hash: '#/archive', icon: Archive, permissionKey: 'settings' },
+    { name: 'Games Hub', path: '/games', hash: '#/games', icon: Gamepad2, permissionKey: 'dashboard' },
+    { name: 'Library & E-Resources', path: '/library', hash: '#/library', icon: Library, permissionKey: 'library' },
+  ];
+
+  const [activePortalContext, setActivePortalContext] = useState<'OWNER' | 'ADMIN'>(
+    (sessionUser?.role || '').toLowerCase() === 'owner' ? 'OWNER' : 'ADMIN'
+  );
+
+  const rawNavItems = activePortalContext === 'OWNER' ? ownerNavItems : adminNavItems;
     { name: 'Students', path: '/students', icon: Users, permissionKey: 'admissions' },
     { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, permissionKey: 'attendance' },
     { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, permissionKey: 'assessments' },
@@ -207,26 +220,56 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         "hidden md:flex flex-col border-r border-slate-800 bg-slate-900 transition-all duration-300 z-30",
         isCollapsed ? "w-20" : "w-72"
       )}>
-        <div className="p-5 flex items-center justify-between border-b border-slate-800">
+        <div className="p-5 flex flex-col gap-3 border-b border-slate-800">
+          <div className="flex items-center justify-between">
+            {!isCollapsed && (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-500/20">
+                  M
+                </div>
+                <div>
+                  <h1 className="font-black text-white text-sm tracking-wide">MUNYAKA</h1>
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">School Portal</p>
+                </div>
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="text-slate-400 hover:text-white hover:bg-slate-800 ml-auto rounded-xl"
+            >
+              {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            </Button>
+          </div>
+
+          {/* Portal Switcher / Entity Selector */}
           {!isCollapsed && (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-500/20">
-                M
-              </div>
-              <div>
-                <h1 className="font-black text-white text-sm tracking-wide">MUNYAKA</h1>
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">School Portal</p>
-              </div>
+            <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <button
+                onClick={() => setActivePortalContext('OWNER')}
+                className={cn(
+                  "flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all",
+                  activePortalContext === 'OWNER'
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/20"
+                    : "text-slate-400 hover:text-white"
+                )}
+              >
+                Owner Portal
+              </button>
+              <button
+                onClick={() => setActivePortalContext('ADMIN')}
+                className={cn(
+                  "flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all",
+                  activePortalContext === 'ADMIN'
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/20"
+                    : "text-slate-400 hover:text-white"
+                )}
+              >
+                Admin Dashboard
+              </button>
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-slate-400 hover:text-white hover:bg-slate-800 ml-auto rounded-xl"
-          >
-            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </Button>
         </div>
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
@@ -239,8 +282,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 key={idx}
                 to={item.path}
                 onClick={(e) => {
-                  if (isLan) {
-                    window.location.hash = '#/lan';
+                  if (item.hash) {
+                    window.location.hash = item.hash;
                   }
                 }}
                 className={cn(
