@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
 import { isTeachingStaff, isSupportStaff, getStaffTypeBadge } from '@/utils/staffUtils';
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
+import { CentralDataService } from '@/services/centralDataService';
 
 export type StaffCategoryRole =
   | 'Class Teacher'
@@ -119,6 +120,9 @@ export default function StaffRegistry() {
       portalAccess: isSupport ? '/fees' : '/dashboard'
     };
   };
+  const [fullName, setFullName] = useState('');
+  const [category, setCategory] = useState<StaffCategoryRole>('Class Teacher');
+  const [tscNumber, setTscNumber] = useState('');
   const [email, setEmail] = useState('');
   const [emailPrefix, setEmailPrefix] = useState('');
   const [phone, setPhone] = useState('');
