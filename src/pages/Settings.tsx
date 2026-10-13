@@ -166,6 +166,10 @@ export default function Settings() {
         CentralDataService.setData(RBAC_STORAGE_KEY, rbacMatrix);
         localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
         localStorage.setItem(RBAC_STORAGE_KEY, JSON.stringify(rbacMatrix));
+        if (settings.currentTerm) {
+          localStorage.setItem('munyaka_active_term', settings.currentTerm);
+          localStorage.setItem('activeTerm', settings.currentTerm);
+        }
         showSuccess("All system settings and RBAC permissions saved securely!");
       } catch (e) {
         showError("Failed to save settings.");

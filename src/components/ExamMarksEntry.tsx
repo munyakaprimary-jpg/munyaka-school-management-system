@@ -27,11 +27,57 @@ interface ExamMarksEntryProps {
   onSubmit?: (marksData: Record<string, any>) => void;
 }
 
+const getActiveTerm = () => {
+  const saved = localStorage.getItem('munyaka_active_term') || localStorage.getItem('activeTerm');
+  if (saved) return saved;
+  const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
+  if (settingsRaw) {
+    try {
+      const settings = JSON.parse(settingsRaw);
+      const term = settings.academic?.activeTerm || settings.term || settings.currentTerm;
+      if (term) return term;
+    } catch (e) {}
+  }
+  return 'Term 3';
+};
+
 const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
   learners = [],
-  selectedExamPeriod = 'Term 1',
+  selectedExamPeriod,
   onSubmit,
 }) => {
+  const [selectedTerm, setSelectedTerm] = useState(() => selectedExamPeriod || getActiveTerm());
+
+  // Auto-update on mount & storage change / settings update
+  useEffect(() => {
+    if (selectedExamPeriod) {
+      setSelectedTerm(selectedExamPeriod);
+      return;
+    }
+    const active = getActiveTerm();
+    if (active) setSelectedTerm(active);
+
+    const handleStorageChange = () => {
+      if (!selectedExamPeriod) {
+        const activeT = getActiveTerm();
+        if (activeT) setSelectedTerm(activeT);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(() => {
+      if (!selectedExamPeriod) {
+        const activeT = getActiveTerm();
+        if (activeT) setSelectedTerm(activeT);
+      }
+    }, 1000);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [selectedExamPeriod]);
+
+  const effectiveTerm = selectedExamPeriod || selectedTerm;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [marks, setMarks] = useState<Record<string, Record<string, string>>>({});
   const [subjects] = useState<string[]>([
@@ -65,27 +111,30 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
 
   // Determine current academic year & active term for lock check
   let academicYear = new Date().getFullYear().toString();
-  let activeTerm = selectedExamPeriod || 'Term 1';
+  let activeTerm = effectiveTerm;
+  let isTermLocked = false;
   try {
     const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
     if (settingsRaw) {
       const settings = JSON.parse(settingsRaw);
       academicYear = settings.academic?.activeYear || settings.academicYear || academicYear;
       if (!selectedExamPeriod) {
-        activeTerm = settings.academic?.activeTerm || settings.term || 'Term 1';
+        activeTerm = settings.academic?.activeTerm || settings.term || settings.currentTerm || activeTerm;
       }
+      isTermLocked = !!settings.academic?.termLocked;
     }
   } catch { /* ignore */ }
 
   const termKey = `${activeTerm}_${academicYear}`;
   const termKeyLegacy = `${activeTerm} ${academicYear}`;
   const isLocked = Boolean(
+    isTermLocked ||
     lockedTermsMap[termKey] ||
     lockedTermsMap[termKeyLegacy] ||
-    lockedTermsMap[selectedExamPeriod] ||
+    lockedTermsMap[effectiveTerm] ||
     CentralDataService.isTermLocked(termKey) ||
     CentralDataService.isTermLocked(termKeyLegacy) ||
-    CentralDataService.isTermLocked(selectedExamPeriod)
+    CentralDataService.isTermLocked(effectiveTerm)
   );
 
   const handleMarkChange = (learnerId: string, subject: string, value: string) => {
@@ -146,7 +195,22 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-bold text-slate-800">Marks Entry — {selectedExamPeriod}</h2>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-slate-700">Term:</span>
+                  <select
+                    value={effectiveTerm}
+                    onChange={(e) => setSelectedTerm(e.target.value)}
+                    disabled={isLocked || !!selectedExamPeriod}
+                    className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="Term 1">Term 1</option>
+                    <option value="Term 2">Term 2</option>
+                    <option value="Term 3">Term 3</option>
+                  </select>
+                </div>
+                <h2 className="text-lg font-bold text-slate-800">Marks Entry — {effectiveTerm}</h2>
+              </div>
               {isLocked && (
                 <span className="bg-slate-100 text-slate-600 border border-slate-200 text-xs font-black px-2.5 py-0.5 rounded-lg flex items-center gap-1 shadow-xs" data-testid="header-locked-badge">
                   <Lock size={11} /> Locked / Read-Only
