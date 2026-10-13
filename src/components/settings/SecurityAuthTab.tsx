@@ -7,14 +7,16 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
-import { 
-  Shield, 
-  Key, 
-  History, 
-  UserCheck, 
+import {
+  Shield,
+  Key,
+  History,
+  UserCheck,
   AlertTriangle,
   Navigation,
-  Radio
+  Radio,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 import L from 'leaflet';
@@ -76,9 +78,11 @@ export default function SecurityAuthTab() {
 
   // Admin Credentials state
   const [adminUsername, setAdminUsername] = useState("admin@munyaka.ac.ke");
-  const [adminPassword, setAdminPassword] = useState("••••••••");
+  const [adminPassword, setAdminPassword] = useState("admin123");
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [ownerUsername, setOwnerUsername] = useState("director@munyaka.ac.ke");
-  const [ownerPassword, setOwnerPassword] = useState("••••••••");
+  const [ownerPassword, setOwnerPassword] = useState("owner123");
+  const [showOwnerPassword, setShowOwnerPassword] = useState(false);
 
   // Real Audit Logs state
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
@@ -316,7 +320,21 @@ export default function SecurityAuthTab() {
               </div>
               <div>
                 <Label className="text-xs">Password</Label>
-                <Input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="bg-white" />
+                <div className="relative flex items-center">
+                  <Input
+                    type={showAdminPassword ? "text" : "password"}
+                    value={adminPassword}
+                    onChange={e => setAdminPassword(e.target.value)}
+                    className="bg-white pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                    className="absolute right-3 text-slate-400 hover:text-indigo-600 focus:outline-none"
+                  >
+                    {showAdminPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
               <Button onClick={() => handleSaveCredentials('Admin')} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs h-10">
                 Update Admin Credentials
@@ -339,7 +357,21 @@ export default function SecurityAuthTab() {
               </div>
               <div>
                 <Label className="text-xs">Password</Label>
-                <Input type="password" value={ownerPassword} onChange={e => setOwnerPassword(e.target.value)} className="bg-white" />
+                <div className="relative flex items-center">
+                  <Input
+                    type={showOwnerPassword ? "text" : "password"}
+                    value={ownerPassword}
+                    onChange={e => setOwnerPassword(e.target.value)}
+                    className="bg-white pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOwnerPassword(!showOwnerPassword)}
+                    className="absolute right-3 text-slate-400 hover:text-emerald-600 focus:outline-none"
+                  >
+                    {showOwnerPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
               <Button onClick={() => handleSaveCredentials('Owner')} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-10">
                 Update Owner Credentials
