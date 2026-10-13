@@ -662,9 +662,6 @@ export default function StaffRegistry() {
                               {staff.name}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-[10px] text-slate-400 font-mono">
-                                ID: {staff.id || `STF-${idx + 1}`}
-                              </span>
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
                                 staff.category === 'HOI' || staff.category === 'DHOI'
                                   ? 'bg-amber-50 text-amber-700 border-amber-150'
