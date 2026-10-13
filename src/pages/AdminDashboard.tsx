@@ -28,7 +28,7 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto flex items-center justify-around md:justify-center gap-1 md:gap-4 overflow-x-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentPath === item.path || (item.path === '/admin-dashboard' && currentPath === '/admin');
+            const isActive = currentPath === item.path || (item.path === '/admin-dashboard' && (currentPath === '/admin' || currentPath === '/'));
             return (
               <button
                 key={item.path}
