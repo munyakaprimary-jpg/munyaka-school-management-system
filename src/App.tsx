@@ -48,7 +48,6 @@ function RoleSelectorGateway({ onSelect }: { onSelect: (role: 'ADMIN' | 'OWNER')
 }
 
 export function App() {
-  const [isLoading, setIsLoading] = useState(false);
   const [userRole, setUserRole] = useState<'ADMIN' | 'OWNER' | null>(() => {
     try {
       const saved = localStorage.getItem('munyaka_portal_role') || localStorage.getItem('munyaka_current_role');
@@ -59,19 +58,6 @@ export function App() {
     return null;
   });
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('munyaka_portal_role') || localStorage.getItem('munyaka_current_role');
-      if (saved === 'ADMIN' || saved === 'OWNER') {
-        setUserRole(saved);
-      }
-    } catch (e) {
-      console.error('Failed to read session:', e);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   const handleSelectRole = (role: 'ADMIN' | 'OWNER') => {
     setUserRole(role);
     try {
@@ -81,17 +67,6 @@ export function App() {
       console.error('Failed to persist role:', e);
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-slate-400">Loading Munyaka Portal...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <BrowserRouter>
