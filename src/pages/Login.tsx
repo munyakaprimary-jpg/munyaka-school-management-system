@@ -262,9 +262,17 @@ const Login: React.FC = () => {
     }
 
     // ── Password verification ─────────────────────────────────────────────
-    // Accept the stored PIN and also fall back to the hard-coded default,
-    // so the admin can sign in regardless of which PIN they last set.
-    const isValid = entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD;
+    // Check role-specific localStorage credentials first, falling back to general admin password or defaults
+    let expectedPass = '';
+    if (selectedAdminRole === 'admin') {
+      expectedPass = localStorage.getItem('munyaka_admin_password') || activeStored || DEFAULT_ADMIN_PASSWORD;
+    } else if (selectedAdminRole === 'owner') {
+      expectedPass = localStorage.getItem('munyaka_owner_password') || activeStored || 'owner123';
+    } else {
+      expectedPass = activeStored || DEFAULT_ADMIN_PASSWORD;
+    }
+
+    const isValid = entered === expectedPass || entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD;
 
     if (!isValid) {
       setAdminAuthError(`Invalid password for ${config.label}.`);

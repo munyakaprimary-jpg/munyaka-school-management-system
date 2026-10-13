@@ -77,11 +77,19 @@ export default function SecurityAuthTab() {
   const watchIdRef = useRef<number | null>(null);
 
   // Admin Credentials state
-  const [adminUsername, setAdminUsername] = useState("admin@munyaka.ac.ke");
-  const [adminPassword, setAdminPassword] = useState("admin123");
+  const [adminUsername, setAdminUsername] = useState(() =>
+    localStorage.getItem('munyaka_admin_email') || 'admin@munyaka.ac.ke'
+  );
+  const [adminPassword, setAdminPassword] = useState(() =>
+    localStorage.getItem('munyaka_admin_password') || 'admin123'
+  );
   const [showAdminPassword, setShowAdminPassword] = useState(false);
-  const [ownerUsername, setOwnerUsername] = useState("director@munyaka.ac.ke");
-  const [ownerPassword, setOwnerPassword] = useState("owner123");
+  const [ownerUsername, setOwnerUsername] = useState(() =>
+    localStorage.getItem('munyaka_owner_email') || 'director@munyaka.ac.ke'
+  );
+  const [ownerPassword, setOwnerPassword] = useState(() =>
+    localStorage.getItem('munyaka_owner_password') || 'owner123'
+  );
   const [showOwnerPassword, setShowOwnerPassword] = useState(false);
 
   // Real Audit Logs state
@@ -264,11 +272,18 @@ export default function SecurityAuthTab() {
     }
   };
 
-  const handleSaveCredentials = (role: 'Admin' | 'Owner') => {
-    const roleTitle = role === 'Owner' ? 'School Owner' : 'School Administrator';
-    const name = role === 'Owner' ? ownerUsername : adminUsername;
-    showSuccess(`${role} credentials updated securely in persistent storage!`);
-    logSecurityEvent(roleTitle, name, `${role} Login Credentials Reset`);
+  const handleSaveAdmin = () => {
+    localStorage.setItem('munyaka_admin_email', adminUsername);
+    localStorage.setItem('munyaka_admin_password', adminPassword);
+    showSuccess("Admin credentials updated and saved!");
+    logSecurityEvent('System Administrator', adminUsername, 'Admin Credentials Updated & Saved');
+  };
+
+  const handleSaveOwner = () => {
+    localStorage.setItem('munyaka_owner_email', ownerUsername);
+    localStorage.setItem('munyaka_owner_password', ownerPassword);
+    showSuccess("Owner credentials updated and saved!");
+    logSecurityEvent('School Owner', ownerUsername, 'Owner Credentials Updated & Saved');
   };
 
   const handleRadiusChange = (radius: number) => {
@@ -336,7 +351,7 @@ export default function SecurityAuthTab() {
                   </button>
                 </div>
               </div>
-              <Button onClick={() => handleSaveCredentials('Admin')} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs h-10">
+              <Button onClick={handleSaveAdmin} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs h-10">
                 Update Admin Credentials
               </Button>
             </div>
@@ -373,7 +388,7 @@ export default function SecurityAuthTab() {
                   </button>
                 </div>
               </div>
-              <Button onClick={() => handleSaveCredentials('Owner')} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-10">
+              <Button onClick={handleSaveOwner} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-10">
                 Update Owner Credentials
               </Button>
             </div>
