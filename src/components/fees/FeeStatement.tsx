@@ -14,7 +14,7 @@ interface FeeStatementProps {
 }
 
 const FeeStatement = ({ student, transactions, year, term, gradeName }: FeeStatementProps) => (
-  <div className="space-y-8 p-4 bg-white border border-slate-100 rounded-3xl">
+  <div id="statement-preview-content" className="space-y-8 p-4 bg-white border border-slate-100 rounded-3xl">
     <div className="flex justify-between items-start border-b pb-8">
       <div className="flex gap-4">
         <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white">
