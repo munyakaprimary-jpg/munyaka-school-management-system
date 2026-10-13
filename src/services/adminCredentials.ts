@@ -18,7 +18,7 @@
 export const MUNYAKA_ADMIN_PASSWORD = 'munyaka_admin_password';
 
 /** Hard-coded default — used only as a last-resort fallback. */
-export const DEFAULT_ADMIN_PASSWORD = 'munyaka2026';
+export const DEFAULT_ADMIN_PASSWORD = 'admin123';
 
 
 /**
