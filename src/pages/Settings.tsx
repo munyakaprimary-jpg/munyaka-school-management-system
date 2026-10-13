@@ -38,6 +38,7 @@ interface SystemSettings {
   email: string;
   currentTerm: string;
   academicYear: string;
+  isTermLocked: boolean;
   enableCloudSync: boolean;
   maintenanceMode: boolean;
   autoLockTerms: boolean;
@@ -57,8 +58,9 @@ const DEFAULT_SETTINGS: SystemSettings = {
   address: "P.O. Box 5239-30100, Eldoret",
   phone: "+254 712 345 678",
   email: "info@munyaka.ac.ke",
-  currentTerm: "Term 1",
+  currentTerm: "Term 3",
   academicYear: "2026",
+  isTermLocked: true,
   enableCloudSync: true,
   maintenanceMode: false,
   autoLockTerms: true,
@@ -170,6 +172,7 @@ export default function Settings() {
           localStorage.setItem('munyaka_active_term', settings.currentTerm);
           localStorage.setItem('activeTerm', settings.currentTerm);
         }
+        localStorage.setItem('munyaka_term_locked', String(settings.isTermLocked));
         showSuccess("All system settings and RBAC permissions saved securely!");
       } catch (e) {
         showError("Failed to save settings.");
@@ -267,7 +270,24 @@ export default function Settings() {
             <CardContent className="px-0 pt-6 space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Current Active Term</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Current Active Term</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextLock = !settings.isTermLocked;
+                        setSettings({...settings, isTermLocked: nextLock});
+                        localStorage.setItem('munyaka_term_locked', String(nextLock));
+                      }}
+                      className={`text-xs font-bold px-3 py-1 rounded-full transition-all shadow-sm ${
+                        settings.isTermLocked
+                          ? 'bg-rose-100 text-rose-700 border border-rose-300 hover:bg-rose-200'
+                          : 'bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200'
+                      }`}
+                    >
+                      {settings.isTermLocked ? '🔒 Term Locked' : '🔓 Term Unlocked'}
+                    </button>
+                  </div>
                   <Select value={settings.currentTerm} onValueChange={(val) => setSettings({...settings, currentTerm: val})}>
                     <SelectTrigger className="h-11">
                       <SelectValue placeholder="Select active term..." />

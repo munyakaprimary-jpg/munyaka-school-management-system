@@ -112,16 +112,20 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
   // Determine current academic year & active term for lock check
   let academicYear = new Date().getFullYear().toString();
   let activeTerm = effectiveTerm;
-  let isTermLocked = false;
+  let isTermLocked = localStorage.getItem('munyaka_term_locked') === 'true';
   try {
-    const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
+    const settingsRaw = localStorage.getItem("munyaka_system_settings") || localStorage.getItem("munyaka_system_settings_v3");
     if (settingsRaw) {
       const settings = JSON.parse(settingsRaw);
-      academicYear = settings.academic?.activeYear || settings.academicYear || academicYear;
+      academicYear = settings.academicYear || settings.academic?.activeYear || academicYear;
       if (!selectedExamPeriod) {
-        activeTerm = settings.academic?.activeTerm || settings.term || settings.currentTerm || activeTerm;
+        activeTerm = settings.currentTerm || settings.academic?.activeTerm || settings.term || activeTerm;
       }
-      isTermLocked = !!settings.academic?.termLocked;
+      if (settings.isTermLocked !== undefined) {
+        isTermLocked = Boolean(settings.isTermLocked);
+      } else if (settings.academic?.termLocked !== undefined) {
+        isTermLocked = Boolean(settings.academic?.termLocked);
+      }
     }
   } catch { /* ignore */ }
 
@@ -129,6 +133,7 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
   const termKeyLegacy = `${activeTerm} ${academicYear}`;
   const isLocked = Boolean(
     isTermLocked ||
+    localStorage.getItem('munyaka_term_locked') === 'true' ||
     lockedTermsMap[termKey] ||
     lockedTermsMap[termKeyLegacy] ||
     lockedTermsMap[effectiveTerm] ||
@@ -201,7 +206,7 @@ const ExamMarksEntry: React.FC<ExamMarksEntryProps> = ({
                   <select
                     value={effectiveTerm}
                     onChange={(e) => setSelectedTerm(e.target.value)}
-                    disabled={isLocked || !!selectedExamPeriod}
+                    disabled={isTermLocked || isLocked || !!selectedExamPeriod}
                     className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
                   >
                     <option value="Term 1">Term 1</option>
