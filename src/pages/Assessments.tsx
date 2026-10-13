@@ -128,22 +128,7 @@ const Assessments = () => {
     return 'Term 3';
   };
 
-  const getTermLockFromStorage = (): boolean => {
-    try {
-      const settingsRaw = localStorage.getItem("munyaka_system_settings_v3") || localStorage.getItem("munyaka_system_settings");
-      if (settingsRaw) {
-        const settings = JSON.parse(settingsRaw);
-        if (settings.academic?.termLocked !== undefined) return Boolean(settings.academic.termLocked);
-        if (settings.termLocked !== undefined) return Boolean(settings.termLocked);
-      }
-    } catch {
-      // ignore
-    }
-    return false;
-  };
-
   const [term, setTerm] = useState<string>(() => getActiveTermFromStorage());
-  const [isTermLocked, setIsTermLocked] = useState<boolean>(() => getTermLockFromStorage());
   const [subject, setSubject] = useState<string>("All Subjects");
   const [searchTerm, setSearchTerm] = useState<string>("");
 
@@ -164,13 +149,6 @@ const Assessments = () => {
           if (activeT) {
             setTerm(formatTerm(activeT));
           }
-          setIsTermLocked(
-            settings.academic?.termLocked !== undefined
-              ? Boolean(settings.academic.termLocked)
-              : settings.termLocked !== undefined
-              ? Boolean(settings.termLocked)
-              : false
-          );
         }
         const rawTerm = localStorage.getItem('activeTerm');
         if (rawTerm) {
@@ -190,12 +168,6 @@ const Assessments = () => {
       }
     };
     window.addEventListener("storage", handleStorage);
-    window.addEventListener("settings-updated", syncSettings);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("settings-updated", syncSettings);
-    };
-  }, []);
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
   const [lockedTermsMap, setLockedTermsMap] = useState<Record<string, boolean>>({});
@@ -1135,14 +1107,7 @@ ${filteredStudents.length} learner(s) included.
 
           {/* 5. Term */}
           <div className="flex flex-col">
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">Term</label>
-              {isTermLocked && (
-                <span className="flex items-center gap-0.5 text-[9px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60" title="Locked via School Settings">
-                  🔒 Locked
-                </span>
-              )}
-            </div>
+            <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider mb-1">Term</label>
             {historyMode ? (
               <Select value={historyTerm} onValueChange={setHistoryTerm}>
                 <SelectTrigger className="w-full px-2.5 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm h-9">
@@ -1155,26 +1120,17 @@ ${filteredStudents.length} learner(s) included.
                 </SelectContent>
               </Select>
             ) : (
-              <div className={`relative ${isTermLocked ? 'bg-slate-100/80 rounded-lg cursor-not-allowed' : ''}`}>
-                <Select
-                  value={term}
-                  onValueChange={isTermLocked ? undefined : setTerm}
-                  disabled={isTermLocked}
-                >
+              <div className="relative pointer-events-none select-none">
+                <Select value={term} onValueChange={() => {}}>
                   <SelectTrigger
-                    disabled={isTermLocked}
-                    className={`w-full px-2.5 py-1.5 text-xs rounded-lg shadow-sm h-9 ${
-                      isTermLocked
-                        ? 'bg-slate-100 text-slate-500 cursor-not-allowed opacity-85 border-slate-200'
-                        : 'bg-white border-gray-200'
-                    }`}
+                    disabled={true}
+                    className="w-full px-2.5 py-1.5 text-xs bg-gray-100 border border-gray-200 rounded-lg shadow-sm h-9 opacity-90 pointer-events-none focus:ring-0"
+                    tabIndex={-1}
                   >
                     <SelectValue placeholder={term} />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Term 1">Term 1</SelectItem>
-                    <SelectItem value="Term 2">Term 2</SelectItem>
-                    <SelectItem value="Term 3">Term 3</SelectItem>
+                  <SelectContent className="hidden">
+                    <SelectItem value={term}>{term}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
