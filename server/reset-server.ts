@@ -33,6 +33,7 @@ import bcrypt from 'bcrypt';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..'); // project root (one level up from /server)
 const OVERRIDE_FILE = path.join(ROOT, 'reset-override.json');
+const USERS_FILE = path.join(ROOT, 'data', 'users.json'); // local JSON database of users
 
 // ─── Env ────────────────────────────────────────────────────────────────────────
 
@@ -195,10 +196,48 @@ async function processOverride(): Promise<void> {
     return;
   }
 
-  // ── 8. Users database update (legacy users.json removed) ────────────────
-  logOk(`Password reset validated for role: ${role}`);
-  await deleteFile();
-  return;
+  // ── 8. Load users database ──────────────────────────────────────────────
+  let db: UsersDatabase;
+  if (fs.existsSync(USERS_FILE)) {
+    try {
+      db = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8')) as UsersDatabase;
+    } catch (e) {
+      logError('Could not parse users database:', e);
+      return;
+    }
+  } else {
+    logWarn(`Users database not found at ${USERS_FILE} — no records to update.`);
+    log('Continuing with file cleanup only.');
+    await deleteFile();
+    return;
+  }
+
+  // ── 9. Find user by role ────────────────────────────────────────────────
+  const user = findUserByRole(db, role);
+  if (!user) {
+    logError(`No active user found with role "${role}" — ABORTING. File NOT deleted.`);
+    return;
+  }
+
+  log(`Found user: ${user.email} (${user.id})`);
+
+  // ── 10. Hash the new password ───────────────────────────────────────────
+  log('Hashing new password with bcrypt (cost 12)...');
+  const passwordHash = await hashPassword(newPassword);
+
+  // ── 11. Update user record ──────────────────────────────────────────────
+  user.passwordHash = passwordHash;
+  // Also set the plain-text field so legacy login paths continue to work
+  // during the transition period
+  user.password = newPassword;
+
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(db, null, 2), 'utf-8');
+    logOk(`Updated user record for "${user.email}" in ${USERS_FILE}`);
+  } catch (e) {
+    logError('Failed to write updated users database:', e);
+    return;
+  }
 
   // ── 12. Delete the override file ────────────────────────────────────────
   await deleteFile();

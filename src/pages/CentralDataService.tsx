@@ -103,27 +103,55 @@ export default function CentralDataServicePage() {
   const refreshStats = useCallback(() => {
     try {
       refreshStore();
-      const sysStats = CentralDataService.getSystemStats();
       
       const library = JSON.parse(localStorage.getItem('munyaka_library_books') || '[]');
       const notices = JSON.parse(localStorage.getItem('munyaka_notices') || '[]');
       const ictAssets = JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]');
 
+      // Get highest count staff array across all storage keys
+      const s1 = JSON.parse(localStorage.getItem('munyaka_staff') || '[]');
+      const s2 = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
+      const s3 = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
+      const s4 = JSON.parse(localStorage.getItem('staff') || '[]');
+      const candidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
+      const masterStaff = candidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
+
+      // Learners count sync
+      const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
+      const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
+      const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
+
+      // Check teaching vs non-teaching staff
+      const teachingStaff = masterStaff.filter((s: any) => {
+        const cat = String(s.staffCategory || s.category || s.type || '').toUpperCase();
+        const role = String(s.role || s.systemRole || '').toLowerCase();
+        if (cat.includes('NON') || role.includes('support') || role.includes('bursar') || role.includes('accountant') || role.includes('librarian') || role.includes('ict') || role.includes('store') || role.includes('driver')) {
+          return false;
+        }
+        return true;
+      }).length;
+
+      const nonTeachingStaff = Math.max(0, masterStaff.length - teachingStaff);
+
       const attendanceCount = Array.isArray(attendance)
         ? attendance.length
         : Object.keys(attendance || {}).length;
+
+      const feeRecords = Array.isArray(fees)
+        ? fees.length
+        : Object.keys(fees || {}).length;
 
       const marksCount = Array.isArray(marks)
         ? marks.length
         : Object.keys(marks || {}).length;
 
       setStats({
-        registeredStudents: sysStats.learners,
-        teachingStaff: sysStats.teachingStaff,
-        nonTeachingStaff: sysStats.nonTeachingStaff,
-        attendanceRecords: attendanceCount > 0 ? attendanceCount : sysStats.attendance,
-        feeRecords: sysStats.feeRecords,
-        examsCount: sysStats.exams,
+        registeredStudents: masterLearners.length,
+        teachingStaff,
+        nonTeachingStaff,
+        attendanceRecords: attendanceCount,
+        feeRecords,
+        examsCount: Array.isArray(exams) ? exams.length : 0,
         marksCount,
         timetableCount: Array.isArray(timetable) ? timetable.length : Object.keys(timetable || {}).length,
         libraryCount: Array.isArray(library) ? library.length : 0,
@@ -134,20 +162,16 @@ export default function CentralDataServicePage() {
     } catch (e) {
       console.error('Error refreshing central data stats:', e);
     }
-  }, [refreshStore, attendance, exams, marks, timetable, settings]);
+  }, [refreshStore, learners, staff, fees, attendance, exams, marks, timetable, settings]);
 
   useEffect(() => {
     refreshStats();
     const handleDataChange = () => refreshStats();
     window.addEventListener('munyaka:data-changed', handleDataChange);
-    window.addEventListener('munyaka_data_changed', handleDataChange);
     window.addEventListener('storage', handleDataChange);
-    window.addEventListener('focus', handleDataChange);
     return () => {
       window.removeEventListener('munyaka:data-changed', handleDataChange);
-      window.removeEventListener('munyaka_data_changed', handleDataChange);
       window.removeEventListener('storage', handleDataChange);
-      window.removeEventListener('focus', handleDataChange);
     };
   }, [refreshStats]);
 

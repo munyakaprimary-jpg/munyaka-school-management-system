@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { getStoredLearners } from '@/utils/learnersStore';
-import { filterByTeacherScope, isGlobalRole } from '@/utils/rbacUtils';
 
 interface Learner {
   id?: string;
@@ -59,8 +58,9 @@ export default function Attendance() {
   const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
 
   // Time Lock & Role check helper
-    const { user } = useAuth();
-    const isAdmin = isGlobalRole(user);
+  const { user } = useAuth();
+  const roleStr = String((user as any)?.role || '');
+  const isAdmin = roleStr === 'admin' || roleStr === 'head_teacher' || roleStr === 'owner' || user?.email?.includes('admin');
 
   const checkIsLocked = (session: 'morning' | 'afternoon') => {
     if (session === 'morning' && manualMorningLock) return true;
@@ -240,10 +240,7 @@ export default function Attendance() {
   const getFilteredLearners = () => {
     if (!learners || learners.length === 0) return [];
 
-    // Apply RBAC scope filtering from shared utility (role + assigned class/stream)
-    const scopedLearners = filterByTeacherScope(learners, user);
-
-    const filtered = scopedLearners.filter(l => {
+    const filtered = learners.filter(l => {
       const g = String(l.grade || l.classLevel || '').trim().toUpperCase();
       const s = String(l.stream || '').trim().toLowerCase();
       

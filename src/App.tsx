@@ -1,324 +1,597 @@
-import React, { useState } from 'react';
-import { LayoutDashboard, Users, UserCheck, DollarSign, Server, Settings, Database, ArrowUpCircle } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { initialSeedData } from "@/data/initialSeedData";
+import { ThemeProvider } from "next-themes";
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { NotificationProvider } from "@/components/ui/notification-provider";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Layout from "./components/Layout";
+import Dashboard from "./pages/Dashboard";
+import { ForcePasswordResetModal } from "./components/ForcePasswordResetModal";
+import Login from "./pages/Login";
+import ParentPortal from "./pages/ParentPortal";
+import Index from "./pages/Index";
+import Students from "./pages/Students";
+import TransferredLearnersArchive from "./pages/TransferredLearnersArchive";
+import StudentProfile from "./pages/StudentProfile";
+import Registration from "./pages/Registration";
+import Attendance from "./pages/Attendance";
+import Assessments from "./pages/Assessments";
+import ResultsAnalysis from "./pages/ResultsAnalysis";
+import ReportCards from "./pages/ReportCards";
+import Portfolio from "./pages/Portfolio";
+import Fees from "./pages/Fees";
+import Settings from "./pages/Settings";
+import StaffRegistry from "./components/StaffRegistry";
+import Timetable from "./pages/Timetable";
+import NoticeAndEvents from "./pages/NoticeAndEvents";
+import AdminProfile from "./pages/AdminProfile";
+import { ExportSuccessShareModal } from "@/components/teacher/ExportSuccessShareModal";
 
-export default function App() {
-  const [role, setRole] = useState<'ADMIN' | 'OWNER' | null>(() => {
-    return (localStorage.getItem('munyaka_portal_role') as 'ADMIN' | 'OWNER') || null;
+function GlobalExportListener() {
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    filename: string;
+    data: string;
+    mimeType: string;
+    nativeUri?: string;
+    title: string;
+  }>({
+    isOpen: false,
+    filename: '',
+    data: '',
+    mimeType: 'application/json',
+    nativeUri: undefined,
+    title: ''
   });
-  const [selectedYear, setSelectedYear] = useState('2026');
-  const [adminTab, setAdminTab] = useState<'dashboard' | 'learners' | 'attendance' | 'fees' | 'server' | 'settings' | 'central' | 'promote'>('dashboard');
 
-  const handleSelectRole = (selectedRole: 'ADMIN' | 'OWNER') => {
-    localStorage.setItem('munyaka_portal_role', selectedRole);
-    setRole(selectedRole);
-  };
+  useEffect(() => {
+    const handleExportEvent = (e: any) => {
+      const { filename, data, mimeType, nativeUri, title } = e.detail || {};
+      if (filename) {
+        setModalState({
+          isOpen: true,
+          filename,
+          data: data || '',
+          mimeType: mimeType || 'application/json',
+          nativeUri,
+          title: title || 'File Successfully Generated & Downloaded'
+        });
+      }
+    };
 
-  const handleLogout = () => {
-    localStorage.removeItem('munyaka_portal_role');
-    setRole(null);
-  };
-
-  const enrolmentRows = [
-    { grade: 'PP1', boys: 0, girls: 0, total: 0 },
-    { grade: 'PP2', boys: 0, girls: 0, total: 0 },
-    { grade: 'Grade 1', boys: 1, girls: 0, total: 1 },
-    { grade: 'Grade 2', boys: 2, girls: 1, total: 3 },
-    { grade: 'Grade 3', boys: 2, girls: 2, total: 4 },
-    { grade: 'Grade 4', boys: 2, girls: 1, total: 3 },
-    { grade: 'Grade 5', boys: 2, girls: 2, total: 4 },
-    { grade: 'Grade 6', boys: 3, girls: 3, total: 6 },
-    { grade: 'Grade 7', boys: 1, girls: 0, total: 1 },
-    { grade: 'Grade 8', boys: 1, girls: 0, total: 1 },
-    { grade: 'Grade 9', boys: 1, girls: 0, total: 1 },
-  ];
-
-  const totalBoys = enrolmentRows.reduce((acc, r) => acc + r.boys, 0);
-  const totalGirls = enrolmentRows.reduce((acc, r) => acc + r.girls, 0);
-  const totalEnrolmentSum = enrolmentRows.reduce((acc, r) => acc + r.total, 0);
-
-  const streamsList = [
-    { name: 'Grade 7 - Mercury', morning: '14/15', afternoon: '13/15', present: 14, total: 15, rate: '93%' },
-    { name: 'Grade 7 - Neptune', morning: '12/12', afternoon: '11/12', present: 12, total: 12, rate: '95%' },
-    { name: 'Grade 8 - Jupiter', morning: '15/16', afternoon: '14/16', present: 15, total: 16, rate: '92%' },
-    { name: 'Grade 9 - Zenith', morning: '10/10', afternoon: '10/10', present: 10, total: 10, rate: '100%' },
-    { name: 'Grade 6 - North', morning: '18/18', afternoon: '17/18', present: 18, total: 18, rate: '97%' },
-    { name: 'Grade 5 - South', morning: '19/20', afternoon: '19/20', present: 19, total: 20, rate: '96%' },
-    { name: 'Grade 4 - East', morning: '16/16', afternoon: '15/16', present: 16, total: 16, rate: '95%' },
-  ];
-
-  const adminNavItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'learners', label: 'Learners', icon: Users },
-    { id: 'attendance', label: 'Roll Call', icon: UserCheck },
-    { id: 'fees', label: 'Fees', icon: DollarSign },
-    { id: 'server', label: 'Server', icon: Server },
-    { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'central', label: 'Central', icon: Database },
-    { id: 'promote', label: 'Promote', icon: ArrowUpCircle },
-  ];
-
-  if (role === 'ADMIN') {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col pb-24">
-        {/* Top Header */}
-        <header className="bg-indigo-950 text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-40">
-          <div className="flex items-center gap-3">
-            <span className="px-2.5 py-1 bg-indigo-800 text-indigo-200 rounded text-xs font-bold uppercase tracking-wider">Operational</span>
-            <h1 className="font-bold text-lg">Munyaka Primary School - Admin Dashboard</h1>
-          </div>
-          <button onClick={handleLogout} className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 rounded text-sm font-semibold text-white transition cursor-pointer">
-            Log Out
-          </button>
-        </header>
-
-        {/* Main Content Area */}
-        <main className="p-6 max-w-7xl mx-auto w-full space-y-6 flex-1">
-          {adminTab === 'dashboard' && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Top Banner & Status Badges */}
-              <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden space-y-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-800/90 text-emerald-200 border border-emerald-500/30">
-                    🛡️ LICENSED - 365D LEFT
-                  </span>
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-teal-800/90 text-teal-200 border border-teal-500/30">
-                    ✓ LIVE FACTUAL SYNC
-                  </span>
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight">School Administration Control Center</h2>
-                  <p className="text-emerald-100/80 text-sm mt-1">Manage learners, staff, dual-session roll call, and fee collections.</p>
-                </div>
-
-                {/* Metric Summary Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-3 pt-2">
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/15 text-white">
-                    <div className="text-[11px] text-emerald-200 font-medium">TOTAL STUDENTS</div>
-                    <div className="text-2xl font-bold my-1">24</div>
-                    <div className="text-[10px] text-emerald-300/80">Active registered learners</div>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/15 text-white">
-                    <div className="text-[11px] text-emerald-200 font-medium">TEACHING STAFF</div>
-                    <div className="text-2xl font-bold my-1">3</div>
-                    <div className="text-[10px] text-emerald-300/80">Active: 3 | Pending: 0</div>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/15 text-white">
-                    <div className="text-[11px] text-emerald-200 font-medium">NON-TEACHING</div>
-                    <div className="text-2xl font-bold my-1">0</div>
-                    <div className="text-[10px] text-emerald-300/80">Support & Administration</div>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/15 text-white">
-                    <div className="text-[11px] text-emerald-200 font-medium">PRIMARY SCHOOL</div>
-                    <div className="text-2xl font-bold my-1">21</div>
-                    <div className="text-[10px] text-emerald-300/80">Grades 1 to 6 learners</div>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/15 text-white">
-                    <div className="text-[11px] text-emerald-200 font-medium">JUNIOR SCHOOL</div>
-                    <div className="text-2xl font-bold my-1">3</div>
-                    <div className="text-[10px] text-emerald-300/80">Grades 7 to 9 learners</div>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-3.5 border border-white/15 text-white">
-                    <div className="text-[11px] text-emerald-200 font-medium">SYSTEM STATUS</div>
-                    <div className="text-2xl font-bold my-1">100%</div>
-                    <div className="text-[10px] text-emerald-300/80">Active & Synchronized</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* School Enrolment Matrix Table */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800">School Enrolment Matrix ({selectedYear})</h3>
-                    <p className="text-slate-500 text-xs mt-0.5">Grade-by-grade gender breakdown across PP1 through Grade 9</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-600">ACADEMIC YEAR:</span>
-                    <select
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(e.target.value)}
-                      className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800"
-                    >
-                      <option value="2024">2024</option>
-                      <option value="2025">2025</option>
-                      <option value="2026">2026</option>
-                      <option value="2027">2027</option>
-                      <option value="2028">2028</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-xs text-slate-600 font-bold">
-                        <th className="py-3 px-4">GRADE</th>
-                        <th className="py-3 px-4 text-right">BOYS</th>
-                        <th className="py-3 px-4 text-right">GIRLS</th>
-                        <th className="py-3 px-4 text-right">TOTAL</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
-                      {enrolmentRows.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/50">
-                          <td className="py-3 px-4 font-semibold text-slate-800">{row.grade}</td>
-                          <td className="py-3 px-4 text-right text-slate-600">{row.boys}</td>
-                          <td className="py-3 px-4 text-right text-slate-600">{row.girls}</td>
-                          <td className="py-3 px-4 text-right font-bold text-emerald-700">{row.total}</td>
-                        </tr>
-                      ))}
-                      <tr className="bg-emerald-50/60 font-bold border-t-2 border-emerald-100">
-                        <td className="py-3.5 px-4 text-slate-900">TOTAL ENROLMENT</td>
-                        <td className="py-3.5 px-4 text-right text-slate-900">{totalBoys}</td>
-                        <td className="py-3.5 px-4 text-right text-slate-900">{totalGirls}</td>
-                        <td className="py-3.5 px-4 text-right text-emerald-800 text-base">{totalEnrolmentSum}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Stream Attendance Trends */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-4 sm:p-6 border-b border-slate-100">
-                  <h3 className="text-lg font-bold text-slate-800">Dynamic Stream-by-Stream Dual-Session Attendance Trends</h3>
-                  <p className="text-slate-500 text-xs mt-0.5">Live morning & afternoon attendance rates by class</p>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-xs text-slate-600 font-bold">
-                        <th className="py-3 px-4">STREAM / CLASS</th>
-                        <th className="py-3 px-4 text-center">MORNING ROLL CALL</th>
-                        <th className="py-3 px-4 text-center">AFTERNOON ROLL CALL</th>
-                        <th className="py-3 px-4 text-right">PRESENT / TOTAL</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
-                      {streamsList.map((stream, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/50">
-                          <td className="py-3 px-4 font-semibold text-slate-800 flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                            {stream.name}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className="inline-block px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md font-semibold text-xs">
-                              {stream.morning} ({stream.rate})
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className="inline-block px-2.5 py-1 bg-teal-50 text-teal-700 border border-teal-200 rounded-md font-semibold text-xs">
-                              {stream.afternoon}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-right font-bold text-slate-700">
-                            {stream.present} / {stream.total}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {adminTab !== 'dashboard' && (
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center space-y-4">
-              <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold">
-                {adminTab.toUpperCase().slice(0, 3)}
-              </div>
-              <h2 className="text-2xl font-bold text-slate-800 capitalize">{adminTab} Management Module</h2>
-              <p className="text-slate-500 text-sm max-w-md mx-auto">
-                Operational module for {adminTab} is active and fully isolated within the School Admin Portal.
-              </p>
-              <button
-                onClick={() => setAdminTab('dashboard')}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold text-sm transition cursor-pointer"
-              >
-                ← Return to Dashboard
-              </button>
-            </div>
-          )}
-        </main>
-
-        {/* Bottom Operational Navigation Bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl px-2 py-2">
-          <div className="max-w-7xl mx-auto flex items-center justify-around md:justify-center gap-1 md:gap-4 overflow-x-auto">
-            {adminNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = adminTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setAdminTab(item.id as any)}
-                  className={`flex flex-col items-center justify-center px-3 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
-                    isActive
-                      ? 'bg-emerald-600 text-white shadow-md font-bold'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'
-                  }`}
-                >
-                  <Icon size={18} className="mb-0.5" />
-                  <span className="text-[10px] md:text-xs">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (role === 'OWNER') {
-    return (
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col">
-        <header className="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-xs font-bold uppercase tracking-wider">Governance Hub</span>
-            <h1 className="font-bold text-lg text-emerald-400">Executive Owner Portal</h1>
-          </div>
-          <button onClick={handleLogout} className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 rounded text-sm font-semibold text-white transition cursor-pointer">
-            Log Out
-          </button>
-        </header>
-        <main className="p-6 max-w-7xl mx-auto w-full space-y-6 flex-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl">
-              <p className="text-xs font-bold text-emerald-400 uppercase">License Status</p>
-              <p className="text-2xl font-extrabold text-white mt-2">LICENSED - 365D LEFT</p>
-            </div>
-            <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl">
-              <p className="text-xs font-bold text-slate-400 uppercase">Active Campuses / Tenants</p>
-              <p className="text-2xl font-extrabold text-white mt-2">Munyaka Primary & Junior</p>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
+    window.addEventListener('munyaka_file_exported', handleExportEvent);
+    return () => {
+      window.removeEventListener('munyaka_file_exported', handleExportEvent);
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
-      <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black text-2xl mb-4 border border-emerald-500/30 shadow-lg">
-        MP
-      </div>
-      <h1 className="text-3xl font-bold mb-2">Munyaka Portal Gateway</h1>
-      <p className="text-slate-400 mb-8 text-center max-w-md">
-        Select your authorized access level below to enter strictly isolated operational or governance dashboards.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-        <button
-          onClick={() => handleSelectRole('ADMIN')}
-          className="flex-1 px-6 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-2xl font-bold shadow-lg text-base transition-all text-center cursor-pointer"
-        >
-          Enter School Admin Portal
-        </button>
-        <button
-          onClick={() => handleSelectRole('OWNER')}
-          className="flex-1 px-6 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl font-bold shadow-lg text-base transition-all text-center cursor-pointer"
-        >
-          Enter Executive Owner Portal
-        </button>
-      </div>
-    </div>
+    <ExportSuccessShareModal
+      isOpen={modalState.isOpen}
+      onClose={() => setModalState(prev => ({ ...prev, isOpen: false }))}
+      filename={modalState.filename}
+      data={modalState.data}
+      mimeType={modalState.mimeType}
+      nativeUri={modalState.nativeUri}
+      title={modalState.title}
+      description="File generated & downloaded successfully! Instantly beam this file via Quick Share to the Admin Harmonization Hub or WhatsApp."
+    />
   );
 }
+import GradesStreams from "./pages/GradesStreams";
+import LearningAreas from "./pages/LearningAreas";
+import ExamTypes from "./pages/ExamTypes";
+import NotFound from "./pages/NotFound";
+import Promote from "./pages/Promote";
+import StaffAttendancePage from "./pages/StaffAttendance";
+import StaffCheckIn from "./pages/StaffCheckIn";
+import StaffCheckInSelector from "./pages/StaffCheckInSelector";
+import AttendanceMonitor from "./pages/AttendanceMonitor";
+import DigitalHub from "./pages/DigitalHub";
+import DigitalLiteracyVideos from "./pages/DigitalLiteracyVideos";
+import ICTLabManagement from "./pages/ICTLabManagement";
+import SystemAndAccountManagement from "./pages/SystemAndAccountManagement";
+import DigitalSkillsAssessment from "./pages/DigitalSkillsAssessment";
+import PracticalCompetencies from "./pages/PracticalCompetencies";
+import { safeWrite } from "@/utils/storageUtils";
+import ScienceLab from "./pages/ScienceLab";
+import StudyCorner from "./pages/StudyCorner";
+import CentralDataService from "./pages/CentralDataService";
+import PaymentManagement from "./pages/PaymentManagement";
+import OwnersDashboard from "./pages/ownersDashboard";
+import GamesHub from "./pages/GamesHub";
+import AppUnlock from "./components/AppUnlock";
+import ProfileSettings from "./pages/ProfileSettings";
+import AdminControlCenter from "./pages/AdminControlCenter";
+import MobileSettings from "./pages/MobileSettings";
+import LANServerConfig from "./pages/LANServerConfig";
+import TeacherLanConfig from "./pages/TeacherLanConfig";
+import AdminHarmonizationHub from "./components/admin/AdminHarmonizationHub";
+import TeacherExportView from "./pages/TeacherExportView";
+import LibrarianPortalView from "./pages/LibrarianPortalView";
+import ICTTechnicalPortalView from "./pages/ICTTechnicalPortalView";
+import BursarPortalView from "./pages/BursarPortalView";
+import HeadteacherPortalView from "./pages/HeadteacherPortalView";
+import SupportStaffPortalView from "./pages/SupportStaffPortalView";
+import SecurityPortalView from "./pages/SecurityPortalView";
+import AssessmentSettings from "./pages/AssessmentSettings";
+import QuestionCreator from "./pages/QuestionCreator";
+import StudentAssessment from "./pages/StudentAssessment";
+import GradingReview from "./pages/GradingReview";
+import AssessmentImport from "./pages/AssessmentImport";
+import StudentAssessmentPage from "./pages/StudentAssessmentPage";
+import TeacherGradingPage from "./pages/TeacherGradingPage";
+import ExamCreatorPage from "./pages/ExamCreatorPage";
+import SetExamsListPage from "./pages/SetExamsListPage";
+import MarkedScriptsPage from "./pages/MarkedScriptsPage";
+import Communication from "./pages/Communication";
+import TeacherCommunication from "./pages/TeacherCommunication";
+import Library from "./pages/Library";
+import Inventory from "./pages/Inventory";
+import { SchoolProvider } from "./context/SchoolContext";
+import { LearnerProvider } from './context/LearnerContext';
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
+import AuthGate from "./components/AuthGate";
+import { startHeartbeatService, stopHeartbeatService } from "./services/deviceHeartbeat";
+import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
+import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
+import { initializeCentralStorage } from "./utils/centralDbInit";
+import { runBillingAutoLockCheck } from "./utils/billingAutoLock";
+
+// Execute unified central storage initialization on application load
+initializeCentralStorage();
+
+// Execute billing auto-lock check on application boot
+if (typeof window !== 'undefined') {
+  try {
+    runBillingAutoLockCheck();
+    // Set up daily interval for background auto-lock check
+    setInterval(() => {
+      runBillingAutoLockCheck();
+    }, 24 * 60 * 60 * 1000); // 24 hours
+  } catch (err) {
+    console.error('Failed to run billing auto-lock check on boot:', err);
+  }
+
+  // Start background device heartbeat service on app boot/mount
+  try {
+    const serverUrl = localStorage.getItem('lan_server_url') || 'http://10.53.221.196:5000';
+    startHeartbeatService(serverUrl);
+  } catch (err) {
+    console.error('Failed to start device heartbeat service on boot:', err);
+  }
+}
+
+// ── Critical Central Database Initialization ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// Initialize and hydrate state from remote central DB on boot
+
+// ── Legacy Key Auto-Migration (One-time safe migration) ──────────────────
+const MIGRATION_DONE_FLAG = 'munyaka_legacy_migration_v2_done';
+
+const migrateStorageKey = (oldKey: string, newKey: string) => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const oldData = localStorage.getItem(oldKey);
+    const newData = localStorage.getItem(newKey);
+    
+    // If new key is empty but old key has valid data, preserve and copy over
+    if ((!newData || newData === '[]') && oldData && oldData !== '[]') {
+      localStorage.setItem(newKey, oldData);
+      // Remove old redundant key to reclaim localStorage quota
+      localStorage.removeItem(oldKey);
+    }
+  } catch (err) {
+    console.warn(`[migrateStorageKey] Skipped migrating ${oldKey} to ${newKey} to protect quota:`, err);
+  }
+};
+
+// Run migrations for all modules on boot exactly once
+export function runLegacyKeyMigrations() {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    if (localStorage.getItem(MIGRATION_DONE_FLAG)) return;
+    
+    migrateStorageKey('learners', 'munyaka_learners');
+    migrateStorageKey('students', 'munyaka_learners');
+    migrateStorageKey('staff', 'munyaka_staff');
+    migrateStorageKey('assessments', 'munyaka_assessments');
+    migrateStorageKey('marks', 'munyaka_assessments');
+
+    localStorage.setItem(MIGRATION_DONE_FLAG, 'true');
+  } catch (err) {
+    console.warn('[runLegacyKeyMigrations] Protected from storage quota error:', err);
+  }
+}
+
+// Run immediately on module evaluation / boot
+runLegacyKeyMigrations();
+
+// ── LocalStorage keys that hold active learner rows ────────────────────────
+const LEARNER_STORAGE_KEYS = [
+  'munyaka_students',
+  'munyaka_master_learner_list'
+];
+const FEE_LEDGER_KEYS = [
+  'munyaka_fees_records',
+  'munyaka_student_fees',
+  'munyaka_payment_records',
+  'munyaka_transactions',
+];
+
+// ── One-time fee sanitizer ────────────────────────────────────────────────
+// Gated by a localStorage flag so it runs at most once per browser.
+// Resets all hardcoded fee fields on every stored learner to 0 and
+// clears any pre-seeded fee ledger so the app starts from a clean slate.
+const FEE_SANITIZER_FLAG = 'munyaka_fee_sanitizer_v1';
+
+// ── One-time learner purge ────────────────────────────────────────────────
+// Forces the active learners array to an empty `[]` state on first
+// launch. Also writes the empty list to every legacy learner storage
+// key so any subsequent hydrate cannot fall back to a seed file. This
+// is the last migration in the chain; after it runs the table renders
+// its proper "no learners" empty state.
+const LEARNER_PURGE_FLAG = 'munyaka_learner_purge_v1';
+function runOneTimeLearnerPurge(): void {
+  // Disabled permanently to prevent registered learners from disappearing during system changes
+}
+
+function runOneTimeFeeSanitizer(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  if (window.localStorage.getItem(FEE_SANITIZER_FLAG) === 'done') return;
+
+  try {
+    // 1. Reset all hardcoded fee fields on every stored learner row.
+    for (const key of LEARNER_STORAGE_KEYS) {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) continue;
+      let parsed: unknown;
+      try { parsed = JSON.parse(raw); } catch { continue; }
+      if (!Array.isArray(parsed) || parsed.length === 0) continue;
+
+      let mutated = false;
+      const cleaned = parsed.map((row) => {
+        if (!row || typeof row !== 'object') return row;
+        const r = row as Record<string, unknown>;
+        const next = { ...r };
+        let changed = false;
+        // The fields the brief asked us to normalize. They collapse to 0
+        // when the row has no custom ledger entries.
+        const feeFields: Array<keyof typeof r> = [
+          'totalBilled', 'totalPaid', 'balance', 'feeBalance',
+          'total', 'paid', 'amountOwed', 'outstandingBalance', 'arrears',
+        ];
+        for (const f of feeFields) {
+          if (f in next) {
+            const v = next[f];
+            if (typeof v === 'number' && v !== 0) {
+              next[f] = 0;
+              changed = true;
+            } else if (v !== 0 && v !== undefined) {
+              next[f] = 0;
+              changed = true;
+            }
+          }
+        }
+        // Always start with an empty fee history.
+        if ('feeHistory' in next) {
+          if (!Array.isArray(next.feeHistory) || (next.feeHistory as unknown[]).length > 0) {
+            next.feeHistory = [];
+            changed = true;
+          }
+        }
+        if (changed) mutated = true;
+        return next;
+      });
+
+      if (mutated) {
+        try {
+          window.localStorage.setItem(key, JSON.stringify(cleaned));
+        } catch (err) {
+          console.error(`[fee-sanitizer] Failed to persist "${key}":`, err);
+        }
+      }
+    }
+
+    // 2. Clear pre-seeded fee ledgers so the app boots with empty ledgers.
+    // Real fee records are only ever written through the Fees page.
+    for (const key of FEE_LEDGER_KEYS) {
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) continue;
+        let parsed: unknown;
+        try { parsed = JSON.parse(raw); } catch { continue; }
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Keep payment records / transactions intact if they exist as
+          // user-entered data — only clear the legacy `fees_records` shape
+          // that pre-seeded per-student ledgers into the store.
+          if (key === 'munyaka_fees_records' || key === 'munyaka_student_fees') {
+            window.localStorage.setItem(key, JSON.stringify({}));
+          }
+        } else if (key === 'munyaka_fees_records' || key === 'munyaka_student_fees') {
+          // Force-write {} so the next hydrate cannot fall back to seed.
+          window.localStorage.setItem(key, JSON.stringify({}));
+        }
+      } catch {
+        /* no-op */
+      }
+    }
+
+    // 3. Hard purge — remove any pre-seeded mock transaction entries that
+    //    reference the legacy hardcoded amounts (45000, 52000, 38000, 68000,
+    //    72000, 55000, 89000, 95000, 61000). These were used to fake the
+    //    school-wide fee trend chart and must be wiped so the chart shows
+    //    real data only.
+    const LEGACY_MOCK_AMOUNTS = new Set([
+      45000, 52000, 38000, 68000, 72000, 55000, 89000, 95000, 61000,
+      12000, 8000, 4000, 15000, 18000, 20000,
+    ]);
+    for (const key of FEE_LEDGER_KEYS) {
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) continue;
+        let parsed: unknown;
+        try { parsed = JSON.parse(raw); } catch { continue; }
+        if (!Array.isArray(parsed) || parsed.length === 0) continue;
+        // Keep only entries that are NOT pre-seeded mock values.
+        const cleaned = parsed.filter((row: any) => {
+          if (!row || typeof row !== 'object') return true;
+          const amt = typeof row.amount === 'number' ? row.amount : null;
+          if (amt === null) return true;
+          // Drop rows whose only evidence of being a mock is the exact
+          // legacy amount AND a REF-style reference.
+          const isLegacyRef = typeof row.ref === 'string' && /^REF00\d$/.test(row.ref);
+          if (LEGACY_MOCK_AMOUNTS.has(amt) && isLegacyRef) return false;
+          return true;
+        });
+        if (cleaned.length !== parsed.length) {
+          window.localStorage.setItem(key, JSON.stringify(cleaned));
+        }
+      } catch {
+        /* no-op */
+      }
+    }
+
+    window.localStorage.setItem(FEE_SANITIZER_FLAG, 'done');
+    console.info('[fee-sanitizer] Reset hardcoded fee fields on stored learners.');
+  } catch (err) {
+    console.error('[fee-sanitizer] Unexpected failure:', err);
+  }
+}
+
+const queryClient = new QueryClient();
+
+const App = () => {
+  useEffect(() => {
+    try {
+      const existingDb = localStorage.getItem('munyaka_central_db');
+      if (!existingDb) {
+              const initialDb = {
+                students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
+                staff: initialSeedData.staff || [],
+              };
+              const ok = safeWrite('munyaka_central_db', initialDb, { operation: 'seed' });
+              if (!ok) {
+                console.error('Storage quota exceeded during initial seed. Please clear old records.');
+              } else {
+                window.dispatchEvent(new Event('central_db_updated'));
+              }
+            } else {
+              const parsed = JSON.parse(existingDb);
+              if (!parsed.students || parsed.students.length === 0) {
+                parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
+                const ok = safeWrite('munyaka_central_db', parsed, { operation: 're-seed' });
+                if (!ok) {
+                  console.error('Storage quota exceeded while re-seeding munyaka_central_db. Please clear old records.');
+                } else {
+                  window.dispatchEvent(new Event('central_db_updated'));
+                }
+              }
+            }
+    } catch (err) {
+      console.error("Failed to seed munyaka_central_db:", err);
+    }
+  }, []);
+
+  // ── One-time learner-data migrations ───────────────────────────────────
+    // Sequential, independently-gated migrations run on first launch:
+    //
+    //   1. Assessment-number cleanup — removes fake MUN-XXX values that
+    //      may have leaked into the `assessment` (KNEC/NEMIS) field.
+    //
+    //   2. Legacy admNo → admissionNo — copies the old-school admission
+    //      number from `admNo` into `admissionNo` for pre-column records.
+    //
+    //   3. Admission-number backfill (v6) — generates `MUN-{family}-{seq}/{year}`
+    //      for any learner still missing `admissionNo`. Supports PP1/PP2.
+    //
+    //   4. Fee sanitizer (v1) — resets all hardcoded fee fields on stored
+    //      learners to 0 and clears pre-seeded fee ledgers.
+    //
+    // Each is idempotent and gated by its own localStorage flag.
+    useEffect(() => {
+      // Re-seed canonical storage keys on mount to ensure data persistence
+      // after any migrations or clean installs.
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const seedKeys: [string, unknown][] = [
+            ['munyaka_students', (initialSeedData as any).students || (initialSeedData as any).learners || []],
+            ['munyaka_fees_records', (initialSeedData as any).fees || []],
+            ['munyaka_student_fees', (initialSeedData as any).fees || []],
+            ['munyaka_fees', (initialSeedData as any).fees || []],
+            ['munyaka_payments', (initialSeedData as any).payments || (initialSeedData as any).fees || []],
+            ['munyaka_transactions', (initialSeedData as any).transactions || (initialSeedData as any).payments || []],
+            ['munyaka_attendance', (initialSeedData as any).attendance || []],
+            ['munyaka_grades', (initialSeedData as any).grades || []],
+            ['munyaka_exam_types', (initialSeedData as any).examTypes || []],
+            ['munyaka_library_books', (initialSeedData as any).libraryBooks || []],
+            ['munyaka_fee_structures', (initialSeedData as any).feeStructures || []],
+            ['munyaka_notices', (initialSeedData as any).notices || []],
+            ['munyaka_system_settings_v3', (initialSeedData as any).settings || {}],
+          ];
+  
+          let anySeeded = false;
+          for (const [key, value] of seedKeys) {
+            const existing = localStorage.getItem(key);
+            if (!existing) {
+              localStorage.setItem(key, JSON.stringify(value));
+              anySeeded = true;
+            } else {
+              // If the existing data is an empty array and seed has data, re-seed it.
+              try {
+                const parsed = JSON.parse(existing);
+                if ((Array.isArray(parsed) && parsed.length === 0) && Array.isArray(value) && value.length > 0) {
+                  localStorage.setItem(key, JSON.stringify(value));
+                  anySeeded = true;
+                }
+              } catch {
+                // Keep existing data on parse error
+              }
+            }
+          }
+  
+          // Also ensure munyaka_central_db is populated (used by CentralDataService)
+          const existingDb = localStorage.getItem('munyaka_central_db');
+          if (!existingDb) {
+            const initialDb = {
+              students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
+              staff: initialSeedData.staff || [],
+            };
+            localStorage.setItem('munyaka_central_db', JSON.stringify(initialDb));
+          } else {
+            const parsed = JSON.parse(existingDb);
+            if (!parsed.students || parsed.students.length === 0) {
+              parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
+              localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
+            }
+          }
+  
+          if (anySeeded) {
+            console.log('[App Mount] Re-seeded canonical storage keys from initialSeedData.');
+          }
+        } catch (err) {
+          console.error("Failed to re-seed storage keys:", err);
+        }
+      }
+  
+      runOneTimeAssessmentCleanup();
+      runOneTimeLegacyAdmNoMigration();
+      runOneTimeAdmissionNoBackfill();
+      runOneTimeFeeSanitizer();
+      runOneTimeLearnerPurge();
+    }, []);
+
+  return (
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <HashRouter>
+          <AuthProvider>
+            <AuthGate>
+              <NotificationProvider>
+                <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+                  <TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <GlobalExportListener />
+                    <SchoolProvider>
+                      <LearnerProvider>
+                      <Routes>
+                        {/* Public Routes */}
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/portal" element={<ParentPortal />} />
+
+                      {/* Protected Routes */}
+                      <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/learners/archive" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/students/:id" element={<ProtectedRoute><AppUnlock><Layout><StudentProfile /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/grades" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><GradesStreams /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/learning-areas" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><LearningAreas /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/exam-types" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ExamTypes /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher']}><AppUnlock><Layout><div className="p-12 text-center font-bold text-slate-500">Staff Management Disabled</div></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff/attendance" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><StaffAttendancePage /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff/check-in" element={<ProtectedRoute><AppUnlock><Layout><StaffCheckInSelector /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff-checkin" element={<ProtectedRoute><AppUnlock><Layout><StaffCheckIn /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff/attendance-monitor" element={<ProtectedRoute><AppUnlock><Layout><AttendanceMonitor /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff/:id" element={<ProtectedRoute><AppUnlock><Layout><div className="p-12 text-center font-bold text-slate-500">Staff Profile Disabled</div></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/communication" element={<ProtectedRoute><AppUnlock><Layout><Communication /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/teacher-communication" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher']}><AppUnlock><Layout><TeacherCommunication /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/notices" element={<ProtectedRoute><AppUnlock><Layout><NoticeAndEvents defaultTab="announcements" /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/timetable" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><Timetable /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/registration" element={<ProtectedRoute><AppUnlock><Layout><Registration /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/attendance" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><Attendance /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/assessments" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><Assessments /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/assessment-settings" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><AssessmentSettings /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/admin/harmonization" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminHarmonizationHub /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/admin-harmonization-hub" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminHarmonizationHub /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/teacher/export" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'admin']}><AppUnlock><Layout><TeacherExportView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/teacher-export" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'admin']}><AppUnlock><Layout><TeacherExportView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/librarian/portal" element={<ProtectedRoute allowedRoles={['librarian', 'library_teacher', 'admin']}><AppUnlock><Layout><LibrarianPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/ict/portal" element={<ProtectedRoute allowedRoles={['ict_teacher', 'ict_technician', 'admin']}><AppUnlock><Layout><ICTTechnicalPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/bursar/portal" element={<ProtectedRoute allowedRoles={['bursar', 'admin']}><AppUnlock><Layout><BursarPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/headteacher/portal" element={<ProtectedRoute allowedRoles={['head_teacher', 'senior_teacher', 'admin']}><AppUnlock><Layout><HeadteacherPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/support/portal" element={<ProtectedRoute allowedRoles={['support', 'maintenance', 'admin']}><AppUnlock><Layout><SupportStaffPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/security/portal" element={<ProtectedRoute allowedRoles={['security', 'guard', 'admin']}><AppUnlock><Layout><SecurityPortalView /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/question-creator" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><QuestionCreator /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/student-assessment" element={<ProtectedRoute><AppUnlock><Layout><StudentAssessment /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/grading" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><GradingReview /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/assessments/import" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><AssessmentImport /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/assessments/student" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher', 'teacher', 'student']}><AppUnlock><Layout><StudentAssessmentPage /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/assessments/grading" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><TeacherGradingPage /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/assessments/create" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ExamCreatorPage /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/assessments/list" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher', 'student']}><AppUnlock><Layout><SetExamsListPage /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/assessments/marked-scripts" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><MarkedScriptsPage /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/analysis" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><ResultsAnalysis /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/portfolio" element={<ProtectedRoute><AppUnlock><Layout><Portfolio /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff-registry" element={<ProtectedRoute><AppUnlock><Layout><StaffRegistry /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/library" element={<ProtectedRoute><AppUnlock><Layout><Library /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/inventory" element={<ProtectedRoute><AppUnlock><Layout><Inventory /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/fees" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><Fees /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/central-data" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><CentralDataService /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ReportCards /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/settings" element={<ProtectedRoute><AppUnlock><Layout><Settings /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/profile" element={<ProtectedRoute><AppUnlock><Layout><AdminProfile /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/promote" element={<ProtectedRoute><AppUnlock><Layout><Promote /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/digital-hub" element={<ProtectedRoute><AppUnlock><Layout><DigitalHub /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/digital-literacy-videos" element={<ProtectedRoute><AppUnlock><Layout><DigitalLiteracyVideos /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/ict-lab" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher', 'ICT_TEACHER', 'ICT_TECHNICIAN']}><AppUnlock><Layout><ICTLabManagement /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/system-management" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher']}><AppUnlock><Layout><SystemAndAccountManagement /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/owner/subscriptions" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><PaymentManagement /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/subscriptions" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><PaymentManagement /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/payment-management" element={<ProtectedRoute><AppUnlock><Layout><PaymentManagement /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/dev/tenants" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><OwnersDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/digital-skills" element={<ProtectedRoute><AppUnlock><Layout><DigitalSkillsAssessment /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/practical-competencies" element={<ProtectedRoute><AppUnlock><Layout><PracticalCompetencies /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/science-lab" element={<ProtectedRoute><AppUnlock><Layout><ScienceLab /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/study-corner" element={<ProtectedRoute><AppUnlock><Layout><StudyCorner /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/games" element={<ProtectedRoute><AppUnlock><Layout><GamesHub /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/settings/profile" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><ProfileSettings /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/admin/control-center" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner', 'bursar', 'parent', 'student']}><AppUnlock><Layout><AdminControlCenter /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/mobile/settings" element={<ProtectedRoute><AppUnlock><Layout><MobileSettings /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/lan-config" element={<ProtectedRoute allowedRoles={['owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'admin', 'bursar', 'support_staff', 'librarian']}><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/lan-server-config" element={<ProtectedRoute allowedRoles={['owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'admin', 'bursar', 'support_staff', 'librarian']}><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/teacher-lan-config" element={<ProtectedRoute allowedRoles={['owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'admin', 'bursar', 'support_staff', 'librarian']}><AppUnlock><Layout><TeacherLanConfig /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/server" element={<ProtectedRoute allowedRoles={['owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'admin', 'bursar', 'support_staff', 'librarian']}><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                    </LearnerProvider>
+                  </SchoolProvider>
+                  </TooltipProvider>
+                </ThemeProvider>
+              </NotificationProvider>
+            </AuthGate>
+          </AuthProvider>
+        </HashRouter>
+      </QueryClientProvider>
+    </AppErrorBoundary>
+  );
+};
+
+export default App;

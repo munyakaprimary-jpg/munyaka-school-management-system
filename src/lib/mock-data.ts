@@ -10,34 +10,26 @@ export interface Student {
   assessmentScores?: Record<string, number>; // subject -> marks
 }
 
-export interface StreamInfo {
-  id: string;
-  name: string;
-  teacher?: string;
-  studentsCount: number;
-}
-
 export interface GradeInfo {
   id: string;
   name: string;
-  category?: 'Pre-Primary' | 'Primary' | 'Junior School';
-  streams: StreamInfo[];
+  streams: string[];
   studentsCount: number;
   streamCount: number;
 }
 
 export const GRADES_DATA: GradeInfo[] = [
-  { id: 'pp1', name: 'PP1', category: 'Pre-Primary', streams: [{ id: 's1', name: 'Blue', teacher: 'Unassigned', studentsCount: 21 }, { id: 's2', name: 'Red', teacher: 'Unassigned', studentsCount: 21 }], studentsCount: 42, streamCount: 2 },
-  { id: 'pp2', name: 'PP2', category: 'Pre-Primary', streams: [{ id: 's3', name: 'Blue', teacher: 'Unassigned', studentsCount: 22 }, { id: 's4', name: 'Red', teacher: 'Unassigned', studentsCount: 23 }], studentsCount: 45, streamCount: 2 },
-  { id: 'grade-1', name: 'Grade 1', category: 'Primary', streams: [{ id: 's5', name: 'Blue', teacher: 'Unassigned', studentsCount: 18 }, { id: 's6', name: 'Red', teacher: 'Unassigned', studentsCount: 18 }, { id: 's7', name: 'Green', teacher: 'Unassigned', studentsCount: 18 }], studentsCount: 54, streamCount: 3 },
-  { id: 'grade-2', name: 'Grade 2', category: 'Primary', streams: [{ id: 's8', name: 'Blue', teacher: 'Unassigned', studentsCount: 16 }, { id: 's9', name: 'Red', teacher: 'Unassigned', studentsCount: 16 }, { id: 's10', name: 'Green', teacher: 'Unassigned', studentsCount: 16 }], studentsCount: 48, streamCount: 3 },
-  { id: 'grade-3', name: 'Grade 3', category: 'Primary', streams: [{ id: 's11', name: 'Blue', teacher: 'Unassigned', studentsCount: 17 }, { id: 's12', name: 'Red', teacher: 'Unassigned', studentsCount: 17 }, { id: 's13', name: 'Green', teacher: 'Unassigned', studentsCount: 18 }], studentsCount: 52, streamCount: 3 },
-  { id: 'grade-4', name: 'Grade 4', category: 'Primary', streams: [{ id: 's14', name: 'Blue', teacher: 'Unassigned', studentsCount: 17 }, { id: 's15', name: 'Red', teacher: 'Unassigned', studentsCount: 16 }, { id: 's16', name: 'Green', teacher: 'Unassigned', studentsCount: 17 }], studentsCount: 50, streamCount: 3 },
-  { id: 'grade-5', name: 'Grade 5', category: 'Primary', streams: [{ id: 's17', name: 'Blue', teacher: 'Unassigned', studentsCount: 15 }, { id: 's18', name: 'Red', teacher: 'Unassigned', studentsCount: 15 }, { id: 's19', name: 'Green', teacher: 'Unassigned', studentsCount: 16 }], studentsCount: 46, streamCount: 3 },
-  { id: 'grade-6', name: 'Grade 6', category: 'Primary', streams: [{ id: 's20', name: 'Blue', teacher: 'Unassigned', studentsCount: 18 }, { id: 's21', name: 'Red', teacher: 'Unassigned', studentsCount: 18 }, { id: 's22', name: 'Green', teacher: 'Unassigned', studentsCount: 19 }], studentsCount: 55, streamCount: 3 },
-  { id: 'grade-7', name: 'Grade 7', category: 'Junior School', streams: [{ id: 's23', name: 'Blue', teacher: 'Unassigned', studentsCount: 16 }, { id: 's24', name: 'Red', teacher: 'Unassigned', studentsCount: 16 }, { id: 's25', name: 'Green', teacher: 'Unassigned', studentsCount: 16 }], studentsCount: 48, streamCount: 3 },
-  { id: 'grade-8', name: 'Grade 8', category: 'Junior School', streams: [{ id: 's26', name: 'Blue', teacher: 'Unassigned', studentsCount: 14 }, { id: 's27', name: 'Red', teacher: 'Unassigned', studentsCount: 14 }, { id: 's28', name: 'Green', teacher: 'Unassigned', studentsCount: 14 }], studentsCount: 42, streamCount: 3 },
-  { id: 'grade-9', name: 'Grade 9', category: 'Junior School', streams: [{ id: 's29', name: 'Blue', teacher: 'Unassigned', studentsCount: 19 }, { id: 's30', name: 'Red', teacher: 'Unassigned', studentsCount: 19 }], studentsCount: 38, streamCount: 2 }
+  { id: 'pp1', name: 'PP1', streams: ['Blue', 'Red'], studentsCount: 42, streamCount: 2 },
+  { id: 'pp2', name: 'PP2', streams: ['Blue', 'Red'], studentsCount: 45, streamCount: 2 },
+  { id: 'grade-1', name: 'Grade 1', streams: ['Blue', 'Red', 'Green'], studentsCount: 54, streamCount: 3 },
+  { id: 'grade-2', name: 'Grade 2', streams: ['Blue', 'Red', 'Green'], studentsCount: 48, streamCount: 3 },
+  { id: 'grade-3', name: 'Grade 3', streams: ['Blue', 'Red', 'Green'], studentsCount: 52, streamCount: 3 },
+  { id: 'grade-4', name: 'Grade 4', streams: ['Blue', 'Red', 'Green'], studentsCount: 50, streamCount: 3 },
+  { id: 'grade-5', name: 'Grade 5', streams: ['Blue', 'Red', 'Green'], studentsCount: 46, streamCount: 3 },
+  { id: 'grade-6', name: 'Grade 6', streams: ['Blue', 'Red', 'Green'], studentsCount: 55, streamCount: 3 },
+  { id: 'grade-7', name: 'Grade 7', streams: ['Blue', 'Red', 'Green'], studentsCount: 48, streamCount: 3 },
+  { id: 'grade-8', name: 'Grade 8', streams: ['Blue', 'Red', 'Green'], studentsCount: 42, streamCount: 3 },
+  { id: 'grade-9', name: 'Grade 9', streams: ['Blue', 'Red'], studentsCount: 38, streamCount: 2 }
 ];
 
 export const STREAM_NAMES = ['Blue', 'Red', 'Green', 'East', 'West'];
@@ -72,130 +64,70 @@ export const defaultSchoolSubjects = [
 
 export const defaultMockStaff = [
   {
-    id: "staff_t001",
-    staffId: "T001",
-    name: "JANE WANJIKU",
-    email: "jane.wanjiku@munyaka.ac.ke",
-    phone: "+254712345678",
-    role: "teacher",
-    category: "Subject Teacher",
-    designation: "Senior Teacher",
-    department: "Mathematics",
-    gender: "Female",
-    status: "Active",
-    employmentType: "Permanent",
-    tscNumber: "TSC123456",
-    nationalId: "23456789",
-    dateJoined: "2020-01-15",
-    accessCode: "MUN-1234"
+    id: 'staff_1',
+    name: 'Mrs. Mary Atieno',
+    category: 'Teaching Staff',
+    tscNumber: 'TSC-884920',
+    email: 'mary.atieno@school.ac.ke',
+    phone: '+254 722 890 123',
+    subjects: ['Mathematics', 'Science and Technology'],
+    assignedClasses: ['Grade 4', 'Grade 5'],
+    assignedStreams: ['Blue', 'Red'],
+    accessCode: '7A9K2',
+    status: 'Active',
+    createdAt: '2023-01-15T08:00:00.000Z'
   },
   {
-    id: "staff_t002",
-    staffId: "T002",
-    name: "JOHN OMONDI",
-    email: "john.omondi@munyaka.ac.ke",
-    phone: "+254722334455",
-    role: "teacher",
-    category: "Class Teacher",
-    designation: "Class Teacher",
-    department: "Science",
-    gender: "Male",
-    status: "Active",
-    employmentType: "Permanent",
-    tscNumber: "TSC654321",
-    nationalId: "34567890",
-    dateJoined: "2021-05-10",
-    accessCode: "MUN-5678"
+    id: 'staff_2',
+    name: 'Mr. John Kiprop',
+    category: 'Teaching Staff',
+    tscNumber: 'TSC-910432',
+    email: 'john.kiprop@school.ac.ke',
+    phone: '+254 733 456 789',
+    subjects: ['English Language', 'Social Studies'],
+    assignedClasses: ['Grade 6'],
+    assignedStreams: ['Green'],
+    accessCode: '3H5M8',
+    status: 'Active',
+    createdAt: '2023-02-10T09:15:00.000Z'
   },
   {
-    id: "staff_t003",
-    staffId: "T003",
-    name: "GRACE ACHIENG",
-    email: "grace.achieng@munyaka.ac.ke",
-    phone: "+254733445566",
-    role: "teacher",
-    category: "Subject Teacher",
-    designation: "Subject Teacher",
-    department: "Languages",
-    gender: "Female",
-    status: "Active",
-    employmentType: "Contract",
-    tscNumber: "TSC789012",
-    nationalId: "45678901",
-    dateJoined: "2022-09-01",
-    accessCode: "MUN-9012"
+    id: 'staff_3',
+    name: 'Sister Clara Nafula',
+    category: 'Administration',
+    tscNumber: 'TSC-551209',
+    email: 'clara.nafula@school.ac.ke',
+    phone: '+254 701 112 233',
+    subjects: [],
+    accessCode: '5A1X9',
+    status: 'Active',
+    createdAt: '2022-11-01T10:00:00.000Z'
   },
   {
-    id: "staff_t004",
-    staffId: "T004",
-    name: "DAVID KIPRONO",
-    email: "david.kiprono@munyaka.ac.ke",
-    phone: "+254755889900",
-    role: "teacher",
-    category: "Class Teacher",
-    designation: "Class Teacher",
-    department: "Humanities",
-    gender: "Male",
-    status: "Active",
-    employmentType: "Permanent",
-    tscNumber: "TSC445566",
-    nationalId: "33445566",
-    dateJoined: "2021-01-10",
-    accessCode: "MUN-3456"
+    id: 'staff_4',
+    name: 'Mr. David Owino',
+    category: 'Teaching Staff',
+    tscNumber: 'TSC-775612',
+    email: 'david.owino@school.ac.ke',
+    phone: '+254 711 223 344',
+    subjects: ['Kiswahili Lugha', 'Religious Education (CRE/IRE/HRE)'],
+    assignedClasses: ['Grade 7', 'Grade 8'],
+    assignedStreams: ['Blue'],
+    accessCode: '4P9X1',
+    status: 'Active',
+    createdAt: '2023-03-22T14:20:00.000Z'
   },
   {
-    id: "staff_t005",
-    staffId: "T005",
-    name: "ESTHER NYAMBURA",
-    email: "esther.nyambura@munyaka.ac.ke",
-    phone: "+254766990011",
-    role: "teacher",
-    category: "Subject Teacher",
-    designation: "Subject Teacher",
-    department: "Creative Arts",
-    gender: "Female",
-    status: "Active",
-    employmentType: "Permanent",
-    tscNumber: "TSC334455",
-    nationalId: "22334455",
-    dateJoined: "2022-02-15",
-    accessCode: "MUN-7890"
-  },
-  {
-    id: "staff_l001",
-    staffId: "L001",
-    name: "PETER KAMAU",
-    email: "peter.kamau@munyaka.ac.ke",
-    phone: "+254744556677",
-    role: "librarian",
-    category: "Store Master",
-    designation: "Librarian",
-    department: "Library",
-    gender: "Male",
-    status: "Active",
-    employmentType: "Permanent",
-    tscNumber: "TSC998877",
-    nationalId: "56789012",
-    dateJoined: "2019-03-20",
-    accessCode: "MUN-1122"
-  },
-  {
-    id: "staff_a001",
-    staffId: "A001",
-    name: "ALICE MUTUA",
-    email: "alice.mutua@munyaka.ac.ke",
-    phone: "+254755667788",
-    role: "admin",
-    category: "HOI",
-    designation: "Administrator",
-    department: "Administration",
-    gender: "Female",
-    status: "Active",
-    employmentType: "Permanent",
-    tscNumber: "TSC112233",
-    nationalId: "67890123",
-    dateJoined: "2018-06-11",
-    accessCode: "MUN-3344"
+    id: 'staff_5',
+    name: 'Mrs. Jane Koech',
+    category: 'Support Staff',
+    tscNumber: 'N/A',
+    email: 'jane.koech@school.ac.ke',
+    phone: '+254 755 667 788',
+    subjects: [],
+    accessCode: '9K2J5',
+    status: 'Active',
+    createdAt: '2023-04-05T11:05:00.000Z'
   }
 ];
 

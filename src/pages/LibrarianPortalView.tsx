@@ -453,7 +453,7 @@ export const LibrarianPortalView: React.FC = () => {
             id: `book-${Date.now()}`,
             title: bookData.title || 'Untitled Book',
             author: bookData.author || 'KLB',
-            isbn: bookData.isbn || `ISBN-${Math.floor(1000 + Math.random() * 9000)}`,
+            isbn: bookData.isbn || `ISBN-${Math.floor(100000 + Math.random() * 900000)}`,
             category: bookData.category || 'Textbooks',
             totalCopies: bookData.stock || 30,
             availableCopies: bookData.stock || 30,

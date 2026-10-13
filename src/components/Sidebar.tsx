@@ -1,136 +1,214 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import {
+  LayoutDashboard,
+  Users,
+  Layers,
+  BookOpen,
+  Award,
+  Contact2,
+  Key,
+  School,
+  CreditCard,
+  User,
+  MessageSquare,
+  Bell,
+  Clock,
+  CheckSquare,
+  ClipboardCheck,
+  LogIn,
+  Fingerprint,
+  FileSpreadsheet,
+  FileText,
+  BarChart3,
+  Laptop,
+  Monitor,
+  Keyboard,
+  Target,
+  FolderHeart,
+  Library,
+  Box,
+  Wallet,
+  Shield,
+  ShieldCheck,
+  UserCheck,
+  Archive,
+  ArrowUpCircle,
+  Settings,
+  Gamepad2,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  ChevronDown,
+  Database,
+  Server,
+  Wifi
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/components/ui/NotificationBell';
+import { useMobileBackButton } from '@/hooks/useMobileBackButton';
 
-interface SidebarProps {
-  activeTab?: string;
-  setActiveTab?: (tab: string) => void;
-  onClose?: () => void;
-  isOpen?: boolean;
-}
+const Sidebar = ({ children }: { children: React.ReactNode }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-export default function Sidebar({ activeTab, setActiveTab = () => {}, onClose, isOpen = true }: SidebarProps) {
-  const { logout } = useAuth();
+  useMobileBackButton(false, () => {});
 
-  // Determine current active id from prop or window hash
-  const getActiveId = () => {
-    if (activeTab) return activeTab;
-    const hash = window.location.hash.replace('#/', '').replace('/', '').trim();
-    if (!hash || hash === 'owner' || hash === 'dashboard') return 'owner';
-    if (hash === 'tenants' || hash === 'campuses') return 'tenants';
-    if (hash === 'lan' || hash === 'lan-config') return 'lan';
-    if (hash === 'payments' || hash === 'payment-management') return 'payments';
-    if (hash === 'settings') return 'settings';
-    return 'owner';
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
-  const currentActive = getActiveId();
+  const navItems = [
+      { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard },
+      { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck },
+      { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+      { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi },
+      { name: 'Students', path: '/students', icon: Users },
+      { name: 'Staff Registry', path: '/staff-registry', icon: UserCheck },
+      { name: 'Games Hub', path: '/games', icon: Gamepad2 },
+      { name: 'Grades & Streams', path: '/grades', icon: Layers },
+      { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen },
+      { name: 'Exam Types', path: '/exam-types', icon: Award },
+      { name: 'Timetable', path: '/timetable', icon: Clock },
+      { name: 'Attendance Management', path: '/attendance', icon: CheckSquare },
+      { name: 'Student Attendance', path: '/attendance/students', icon: ClipboardCheck },
+      { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn },
+      { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet },
+      { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText },
+      { name: 'Results Analysis', path: '/analysis', icon: BarChart3 },
+      { name: 'Digital Hub', path: '/digital-hub', icon: Laptop },
+      { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor },
+      { name: 'Library & E-Resources', path: '/library', icon: Library },
+      { name: 'Tools & Inventory', path: '/inventory', icon: Box },
+      { name: 'Fees & Finance', path: '/fees', icon: Wallet },
+      { name: 'Report Cards', path: '/reports', icon: FileText },
+      { name: 'Settings', path: '/settings', icon: Settings },
+    ];
 
-  const handleNav = (id: string, path: string) => {
-    setActiveTab(id);
-    window.location.hash = path;
-    window.dispatchEvent(new HashChangeEvent('hashchange'));
-    if (onClose) onClose();
-  };
-
-  const ownerNavItems = [
-    { id: 'owner', label: "Owner's Portal", path: '#/owner' },
-    { id: 'tenants', label: 'Tenants / Campuses', path: '#/tenants' },
-    { id: 'lan', label: 'LAN Server Config', path: '#/lan' },
-    { id: 'payments', label: 'Payment & Subscriptions', path: '#/payments' },
-    { id: 'settings', label: 'Global Settings', path: '#/settings' }
-  ];
-
-  const handleLogout = () => {
-    try {
-      logout();
-    } catch {}
-    window.location.hash = '#/login';
-    window.location.reload();
-  };
+  const activePath = location.pathname;
 
   return (
-    <>
-      {/* Semi-transparent Backdrop Overlay */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden" 
-          onClick={onClose}
-        />
-      )}
+    <div className="flex h-screen bg-slate-950 overflow-hidden font-sans">
+      <aside className={cn(
+        "hidden md:flex flex-col border-r border-slate-800 bg-slate-900 transition-all duration-300 z-30",
+        isCollapsed ? "w-20" : "w-72"
+      )}>
+        <div className="p-5 flex items-center justify-between border-b border-slate-800">
+          {!isCollapsed && (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-500/20">
+                M
+              </div>
+              <div>
+                <h1 className="font-black text-white text-sm tracking-wide">MUNYAKA</h1>
+                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">School Portal</p>
+              </div>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="text-slate-400 hover:text-white hover:bg-slate-800 ml-auto rounded-xl"
+          >
+            {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </Button>
+        </div>
 
-      {/* Slide-in Sidebar Drawer */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-950 text-slate-100 p-4 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out transform ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        {/* Top Brand Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Governance Portal</span>
-            <h2 className="text-base font-black text-white tracking-tight">MUNYAKA OWNER</h2>
-          </div>
-          {onClose && (
-            <button 
-              onClick={onClose}
-              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
-              aria-label="Close sidebar"
-            >
-              ✕
-            </button>
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
+          {navItems.map((item, idx) => {
+            const Icon = item.icon;
+            const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
+            return (
+              <NavLink
+                key={idx}
+                to={item.path}
+                className={cn(
+                  "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
+                  isActive
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
+                    : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
+                )}
+                title={isCollapsed ? item.name : undefined}
+              >
+                <Icon size={20} className={cn("transition-transform group-hover:scale-110 shrink-0", isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200")} />
+                {!isCollapsed && <span className="truncate flex-1">{item.name}</span>}
+                {isActive && !isCollapsed && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0" />
+                )}
+              </NavLink>
+            );
+          })}
+        </div>
+
+        <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+          {!isCollapsed ? (
+            <div className="flex items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-700 flex items-center justify-center text-white font-bold text-sm shrink-0 border border-slate-700">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-200 truncate">{user?.name || 'User'}</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider truncate">{user?.role || 'Staff'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <NotificationBell />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl h-8 w-8"
+                  title="Logout"
+                >
+                  <LogOut size={16} />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              <NotificationBell />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl h-9 w-9"
+                title="Logout"
+              >
+                <LogOut size={16} />
+              </Button>
+            </div>
           )}
         </div>
-
-        {/* Scrollable Navigation Items */}
-        <div 
-          className="flex-1 min-h-0 my-3 space-y-2 overflow-y-scroll" 
-          style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' }}
-        >
-          <nav className="space-y-1.5">
-            {ownerNavItems.map((item) => {
-              const isActive = currentActive === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleNav(item.id, item.path)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all ${
-                    isActive
-                      ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <span className="text-base">
-                    {item.id === 'owner' ? '📊' : item.id === 'tenants' ? '🏫' : item.id === 'lan' ? '🌐' : item.id === 'payments' ? '💳' : '⚙️'}
-                  </span>
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* User Profile Card & Log Out pinned to bottom */}
-        <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 shrink-0 mt-auto space-y-3">
-          {/* Profile Badge Info */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs">
-              SA
-            </div>
-            <div>
-              <p className="text-xs font-bold text-white">School Owner</p>
-              <p className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase">EXECUTIVE OWNER</p>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-slate-800/80" />
-
-          {/* Log Out Action */}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
-          >
-            <span className="text-sm">🚪</span>
-            <span>Log Out</span>
-          </button>
-        </div>
       </aside>
-    </>
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md px-6 flex items-center justify-between md:hidden z-20">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-sm">
+              M
+            </div>
+            <h1 className="font-black text-white text-sm">MUNYAKA</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto bg-slate-950">
+          {children}
+        </main>
+      </div>
+    </div>
   );
-}
+};
+
+export default Sidebar;

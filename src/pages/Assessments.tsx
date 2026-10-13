@@ -14,7 +14,6 @@ import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
 import { saveTeacherInputResult } from "@/utils/assessmentResults";
-import { filterByTeacherScope, isGlobalRole } from "@/utils/rbacUtils";
 import { cn } from "@/lib/utils";
 import { useBackToAssessmentsMenu } from "@/hooks/useBackToAssessmentsMenu";
 

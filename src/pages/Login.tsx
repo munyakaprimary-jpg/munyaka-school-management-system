@@ -35,8 +35,10 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { teacherLogin, checkServerHealth } from '@/services/mobileAuthService';
+import { getApiBaseUrl } from '@/lib/apiBase';
+import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { verifyStaffLogin } from '@/services/staffMasterService';
-import { CentralDataService } from '@/services/centralDataService';
 import {
   MUNYAKA_ADMIN_PASSWORD,
   DEFAULT_ADMIN_PASSWORD,
@@ -292,140 +294,196 @@ const Login: React.FC = () => {
 
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    setIsStaffVerifying(true);
-    setStaffAuthError('');
-
-    const identifier = (staffId || '').trim();
-    const inputCode = (staffPassword || '').trim().replace(/\s+/g, '').toUpperCase();
-
-    const db = CentralDataService.getDB();
-    const staffList = db.staff || [];
-    const masterList = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || '[]');
-    const directoryList = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
-    const combinedStaff = [...staffList, ...masterList, ...directoryList];
-
-    // Find staff member by Access Code, TSC No, Phone, or Email
-    const staffMember = combinedStaff.find((s: any) => {
-      const sEmail = (s.email || '').trim().toLowerCase();
-      const sTsc = (s.tscNo || s.tscNumber || '').trim().toLowerCase();
-      const sPhone = (s.phone || '').trim();
-      const sCode = (s.accessCode || s.code || '').trim().replace(/\s+/g, '').toUpperCase();
-      const sId = (s.id || s.staffId || '').trim();
-
-      const cleanInput = identifier.toLowerCase();
-
-      return sEmail === cleanInput ||
-             sTsc === cleanInput ||
-             sPhone === identifier ||
-             sId.toLowerCase() === cleanInput ||
-             sCode === inputCode;
-    });
-
-    if (!staffMember) {
-      const err = "Staff account not found or invalid credentials.";
-      setStaffAuthError(err);
-      showError(err);
-      setIsStaffVerifying(false);
-      return;
-    }
-
-    const validCode = (staffMember.accessCode || staffMember.code || '').trim().replace(/\s+/g, '').toUpperCase();
-
-    // If inputCode is provided, verify it if set
-    if (validCode && inputCode && inputCode !== validCode) {
-      const err = "Invalid access code.";
-      setStaffAuthError(err);
-      showError(err);
-      setIsStaffVerifying(false);
-      return;
-    }
-
-    const designationTitle = staffMember.designation || staffMember.specificRole || staffMember.roleTitle || staffMember.category || 'Class Teacher';
-    const userData = {
-      id: staffMember.id || `staff-${Date.now()}`,
-      name: staffMember.name || 'Staff Member',
-      email: staffMember.email || identifier,
-      phone: staffMember.phone || '',
-      role: staffMember.role || 'staff',
-      specificRole: designationTitle,
-      designation: designationTitle,
-      staff_id: staffMember.staffId || staffMember.id || '',
-      assignedClass: staffMember.assignedClass || (staffMember.homeroomGrade && staffMember.homeroomStream ? `${staffMember.homeroomGrade} ${staffMember.homeroomStream}` : 'Grade 2 Blue'),
-      grade: staffMember.homeroomGrade || 'Grade 2',
-      stream: staffMember.homeroomStream || 'Blue',
-      accessCode: validCode,
-      is_active: true
-    };
-
-    localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
-    localStorage.setItem('munyaka_session', JSON.stringify(userData));
-    if (setUser) {
-      setUser({ ...userData, role: (userData.role as any) || 'staff' });
-    }
-
-    // Determine target route based on dynamic rbacSettings from database
-    const determineUserRoute = (roleName: string = '') => {
+      e.preventDefault();
+      
+      const trimmedId = String(staffId || '').trim();
+      const trimmedPass = String(staffPassword || '').trim();
+  
+      if (!trimmedId) {
+        setStaffAuthError('Please enter your Email Address, TSC Number, or Staff ID.');
+        return;
+      }
+      // Accept email, TSC number (digits/hyphens), or staff ID (alphanumeric)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const isEmail = emailRegex.test(trimmedId);
+      const isStaffId = /^[a-z0-9_-]+$/i.test(trimmedId);
+      const isTscNumber = /^[0-9/-]+$/.test(trimmedId);
+      if (!isEmail && !isStaffId && !isTscNumber) {
+        setStaffAuthError('Please enter a valid email address, TSC Number, or Staff ID.');
+        return;
+      }
+      if (!trimmedPass) {
+        setStaffAuthError('Please enter your Password.');
+        return;
+      }
+  
+      setIsStaffVerifying(true);
+      setStaffAuthError('');
+  
+      console.log(`[Login] Staff login attempt — server: ${getApiBaseUrl()}, identifier: ${trimmedId}`);
+  
+      // ── Try LAN server login with 3-second timeout ───────────────────────────────────
+      let serverLoginSuccess = false;
+      let serverLoginResult: LoginSuccess | null = null;
+      
       try {
-        const db = CentralDataService.getDB();
-        const rbacSettings = db.settings?.rbac || {
-          roles: [
-            { name: 'HOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
-            { name: 'DHOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
-            { name: 'Class Teacher', category: 'Teaching', portalAccess: '/learners', permissions: ['view_learners', 'edit_learners'] },
-            { name: 'Subject Teacher', category: 'Teaching', portalAccess: '/assessments', permissions: ['view_assessments'] },
-            { name: 'ICT Teacher', category: 'Teaching', portalAccess: '/dashboard', permissions: ['manage_ict'] },
-            { name: 'Library Teacher', category: 'Teaching', portalAccess: '/library', permissions: ['manage_library'] },
-            { name: 'Bursar', category: 'Support', portalAccess: '/fees', permissions: ['manage_fees'] },
-            { name: 'Store Master', category: 'Support', portalAccess: '/inventory', permissions: ['manage_inventory'] }
-          ]
+        // Create a promise with 3-second timeout
+        const serverLoginPromise = teacherLogin(trimmedId, trimmedPass);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Server timeout')), 3000)
+        );
+        
+        const result = await Promise.race([serverLoginPromise, timeoutPromise]);
+        
+        if (result.success) {
+          serverLoginSuccess = true;
+          serverLoginResult = result;
+          console.log('[Login] LAN auth succeeded:', result.user);
+        }
+      } catch (error) {
+        // Server login failed or timed out - proceed to offline authentication
+        console.log('[Login] LAN auth failed or timed out, proceeding to offline authentication:', error);
+      }
+  
+      // ── If server login succeeded, use it ───────────────────────────────────────────
+      if (serverLoginSuccess && serverLoginResult) {
+        const userData = {
+          id: serverLoginResult.user.id,
+          name: serverLoginResult.user.name,
+          email: serverLoginResult.user.email || trimmedId,
+          phone: serverLoginResult.user.phone || '',
+          role: serverLoginResult.user.role || 'teacher',
+          staff_id: serverLoginResult.user.staff_id,
+          tsc_number: serverLoginResult.user.tsc_number,
+          avatar: serverLoginResult.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
         };
 
-        const found = rbacSettings.roles?.find((r: any) => r.name.toLowerCase() === roleName.toLowerCase());
-        if (found && found.portalAccess) {
-          return found.portalAccess;
+        try {
+          localStorage.setItem('munyaka_session', JSON.stringify(userData));
+        } catch { /* ignore */ }
+
+        // Update AuthContext state synchronously so ProtectedRoute
+                // recognizes the authenticated state immediately and does not
+                // redirect back to /login (which caused the redirect loop).
+                if (setUser) {
+                  setUser({ ...userData, role: (userData.role as any) || 'teacher' });
+                }
+        
+                showSuccess(`Welcome, ${serverLoginResult.user.name}!`);
+        navigate(getStaffRedirectPath(serverLoginResult.user.role || 'subject_teacher'), { replace: true });
+        setIsStaffVerifying(false);
+        return;
+      }
+  
+      // ── Offline authentication (localStorage lookup) against master staff ledger exclusively ─────────────────────────────────
+      console.log('[Login] Attempting offline authentication against master staff ledger (munyaka_master_staff_list)...');
+
+      // Use the selected support role for role filtering (normalized)
+      const normalizedSelectedRole = selectedSupportRole ? selectedSupportRole.toLowerCase().trim() : null;
+
+      // Delegate exclusively to the robust verifyStaffLogin service which checks the
+      // canonical `munyaka_master_staff_list` ledger with case-insensitive
+      // identifier matching (email / staffId / tscNumber) and MUNYAKA-xxxx access keys.
+      const offlineResult = verifyStaffLogin(trimmedId, trimmedPass);
+
+      if (offlineResult.success && offlineResult.user) {
+        const matchedStaff = offlineResult.user;
+
+        // ── Role validation ────────────────────────────────────────────────
+        if (normalizedSelectedRole) {
+          const staffSystemRole = (matchedStaff.systemRole || '').toLowerCase().trim();
+          const roleCompatible =
+            staffSystemRole === normalizedSelectedRole ||
+            (normalizedSelectedRole === 'librarian' && staffSystemRole.includes('librar')) ||
+            staffSystemRole === 'staff' ||
+            staffSystemRole === 'support_staff' ||
+            staffSystemRole === 'support_admin' ||
+            staffSystemRole === 'bursar' ||
+            staffSystemRole === 'non_teaching' ||
+            staffSystemRole === 'support';
+
+          if (!roleCompatible) {
+            console.error(
+              `[Login] Offline auth: role mismatch — selected "${normalizedSelectedRole}" ` +
+              `but staff "${matchedStaff.name}" (${matchedStaff.staffId}) has systemRole "${matchedStaff.systemRole}".`
+            );
+            setStaffAuthError(
+              `This account is not registered under the "${normalizedSelectedRole}" role. ` +
+              `Please select the correct role or contact your administrator.`
+            );
+            showError('Role mismatch — please select the correct role.');
+            setIsStaffVerifying(false);
+            return;
+          }
         }
 
-        const r = roleName.toLowerCase();
-        if (r.includes('admin') || r.includes('hoi') || r.includes('dhoi') || r.includes('ict')) {
-          return '/dashboard';
-        }
-        if (r.includes('bursar') || r.includes('finance')) {
-          return '/fees';
-        }
-        if (r.includes('library')) {
-          return '/library';
-        }
-        if (r.includes('class') || r.includes('subject') || r.includes('teacher')) {
-          return '/learners';
-        }
-      } catch {}
+        const userData = {
+          id: matchedStaff.id || matchedStaff.staffId || `offline-${Date.now()}`,
+          name: matchedStaff.name || 'Staff Member',
+          email: matchedStaff.email || '',
+          phone: matchedStaff.phone || '',
+          role: matchedStaff.systemRole || matchedStaff.role || 'staff',
+          staff_id: matchedStaff.staffId || '',
+          avatar: (matchedStaff.name || 'U')
+            .split(' ')
+            .map(n => n[0] || '')
+            .join('')
+            .substring(0, 2)
+            .toUpperCase(),
+        };
 
-      return '/dashboard';
+        try {
+          localStorage.setItem('munyaka_session', JSON.stringify(userData));
+          localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
+        } catch { /* ignore */ }
+
+        // Update AuthContext state synchronously so ProtectedRoute
+                // recognizes the authenticated state immediately and does not
+                // redirect back to /login (which caused the redirect loop).
+                if (setUser) {
+                  setUser({ ...userData, role: (userData.role as any) || 'staff' });
+                }
+        
+                console.log('[Login] Master staff ledger offline authentication successful:', {
+          name: userData.name,
+          role: userData.role,
+          staffId: userData.staff_id,
+        });
+
+        showSuccess(`Welcome, ${userData.name}!`);
+        navigate(getStaffRedirectPath(userData.role), { replace: true });
+        setIsStaffVerifying(false);
+        return;
+      }
+
+      // ── Offline authentication failed against master staff ledger ───────────────────
+      console.error(
+        `[Login] Master staff ledger offline authentication failed — error: ${offlineResult.error || 'UNKNOWN'}`
+      );
+
+      const errorMessage = offlineResult.error || 'Invalid credentials or account not found in master staff ledger.';
+
+      setStaffAuthError(errorMessage);
+      showError(errorMessage);
+      setIsStaffVerifying(false);
     };
 
-    const targetRoute = determineUserRoute(staffMember.role || staffMember.designation || staffMember.category);
-
-    showSuccess(`Welcome, ${userData.name}!`);
-    setIsStaffVerifying(false);
-
-    window.location.hash = targetRoute;
-    window.dispatchEvent(new Event('munyaka_auth_changed'));
-    navigate(targetRoute, { replace: true });
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      const cleanEmail = String(staffId || '').trim().toLowerCase();
-      if (cleanEmail) {
-        handleStaffLogin(e);
+  // ── Lightweight server reachability check on mount ──────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    checkServerHealth().then((status) => {
+      if (cancelled) return;
+      if (!status.reachable) {
+        // Soft warning — the user can still try to log in, the service
+        // will surface the network error in the form if the server is
+        // genuinely unreachable. We just log it for diagnostics.
+        console.warn(`[Login] Health check: ${status.error} — server may be offline`);
+      } else {
+        console.log(`[Login] Health check: server reachable in ${status.latencyMs}ms`);
       }
-    }
-  };
-
-  // ── Lightweight server reachability check on mount (Disabled) ──────────────────────
-  // (checkServerHealth removed for pure local authentication)
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // ─────────────────────────────────────────────────────────────────────────
     //  Render — only shown when user is NOT authenticated
@@ -649,24 +707,19 @@ const Login: React.FC = () => {
                   <form onSubmit={handleStaffLogin} className="space-y-5">
                     {/* Email Address */}
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                          Staff Email / ID
-                        </Label>
-                        <span className="text-[10px] font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                          Official Path: Email + Access Code
-                        </span>
-                      </div>
+                      <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                        Email Address
+                      </Label>
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <Input
                           id="staff-id"
-                          type="text"
+                          type="email"
+                          inputMode="email"
                           autoCapitalize="none"
                           value={staffId}
                           onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          onKeyDown={handleKeyDown}
-                          placeholder="e.g. name@munyaka.sc.ke"
+                          placeholder="e.g. teacher@school.com"
                           autoComplete="username"
                           className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                           autoFocus
@@ -674,16 +727,11 @@ const Login: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Access Code */}
+                    {/* Password / Access Code */}
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                                                  Access Code (MUN-XXXX / MUNYAKA-XXXX)
-                                                </Label>
-                        <span className="text-[10px] font-mono text-slate-400">
-                          from Staff Registry
-                        </span>
-                      </div>
+                      <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                        Access Code / Password
+                      </Label>
                       <div className="relative">
                         <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <Input
@@ -691,10 +739,9 @@ const Login: React.FC = () => {
                           type={showStaffPassword ? 'text' : 'password'}
                           value={staffPassword}
                           onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          onKeyDown={handleKeyDown}
-                          placeholder="e.g. MUN-X7K9"
+                          placeholder="Enter your password"
                           autoComplete="current-password"
-                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200 font-mono tracking-wider"
+                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                         />
                         <button
                           type="button"

@@ -28,7 +28,7 @@ interface TeacherMessage {
 const STORAGE_KEY = 'munyaka_teacher_portal_messages_v1';
 
 const getInitialMessages = (): TeacherMessage[] => {
-  const saved = CentralDataService.getData(STORAGE_KEY, []);
+  const saved = CentralDataService.getData<TeacherMessage[]>(STORAGE_KEY, []);
   if (saved && saved.length > 0) return saved;
   return [
     {

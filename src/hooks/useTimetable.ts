@@ -79,8 +79,8 @@ const isTeachingStaffRecord = (record: any): boolean => {
 
 export const getTeachingStaffFromLocalStorage = (): TeachingStaffMember[] => {
   try {
-      const raw = CentralDataService.getData('munyaka_staff', []);
-      if (Array.isArray(raw) && raw.length > 0) {
+    const raw = CentralDataService.getData<any[]>('munyaka_staff', []);
+    if (Array.isArray(raw) && raw.length > 0) {
       const filtered = raw.filter(isTeachingStaffRecord).filter((s: any) => s.id && s.name);
       if (filtered.length > 0) {
         return filtered.map((s: any) => ({ id: String(s.id), name: String(s.name) }));
@@ -205,10 +205,10 @@ export function useTimetable() {
 
   const [timetables, setTimetables] = useState<Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>>(() => {
     try {
-          const central = CentralDataService.getData(STORAGE_KEY, {});
-          if (central && Object.keys(central).length > 0) return central;
-          const centralExport = CentralDataService.getData(EXPORT_STORAGE_KEY, {});
-          if (centralExport && Object.keys(centralExport).length > 0) return centralExport;
+      const central = CentralDataService.getData<Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>>(STORAGE_KEY, {});
+      if (central && Object.keys(central).length > 0) return central;
+      const centralExport = CentralDataService.getData<Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>>(EXPORT_STORAGE_KEY, {});
+      if (centralExport && Object.keys(centralExport).length > 0) return centralExport;
 
       const ls = window.localStorage;
       const stored = ls?.getItem(STORAGE_KEY);

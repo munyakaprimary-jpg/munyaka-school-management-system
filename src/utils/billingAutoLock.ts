@@ -49,13 +49,13 @@ export async function getAuthoritativeTime(): Promise<Date> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
     
-    const response = await fetch(serverTimeEndpoint, {
+    const response = await fetch(serverTimeEndpoint, { 
       signal: controller.signal,
       headers: { 'Cache-Control': 'no-cache' }
-    }).catch(() => null);
+    });
     clearTimeout(timeoutId);
     
-    if (response && response.ok) {
+    if (response.ok) {
       const data = await response.json();
       if (data && data.timestamp) {
         const serverTimestamp = Number(data.timestamp);
@@ -263,7 +263,7 @@ export function recordPaymentAndUnlock(paymentData: {
       date: getAuthoritativeTimeSync().toISOString().split('T')[0],
       campus: paymentData.campus,
       method: paymentData.method,
-      ref: paymentData.ref || `REF-${Math.floor(1000 + Math.random() * 9000)}`,
+      ref: paymentData.ref || `REF-${Math.floor(100000 + Math.random() * 900000)}`,
       amount: paymentData.amount,
       period: paymentData.period,
       notes: paymentData.notes,

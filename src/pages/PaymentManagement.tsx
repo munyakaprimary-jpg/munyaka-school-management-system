@@ -947,7 +947,7 @@ export default function PaymentManagement() {
                   date: paymentDate,
                   campus: paymentCampus,
                   method: paymentMethod,
-                  ref: paymentRef || `REF-${Math.floor(1000 + Math.random() * 9000)}`,
+                  ref: paymentRef || `REF-${Math.floor(100000 + Math.random() * 900000)}`,
                   amount: `KES ${amtNum.toLocaleString()}`,
                   period: paymentPeriod,
                   notes: paymentNotes

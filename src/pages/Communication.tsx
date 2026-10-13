@@ -25,8 +25,8 @@ interface MessageRecord {
 const COMMUNICATION_STORAGE_KEY = 'munyaka_communication_logs';
 const loadLocalMessages = (): MessageRecord[] => {
   try {
-      const raw = CentralDataService.getData(COMMUNICATION_STORAGE_KEY, []);
-      if (raw && raw.length > 0) return raw;
+    const raw = CentralDataService.getData<MessageRecord[]>(COMMUNICATION_STORAGE_KEY, []);
+    if (raw && raw.length > 0) return raw;
     return [
       { id: 'msg-1', recipient: 'All Parents', subject: 'Welcome to Term 1 Academic Year', type: 'Email', date: 'Yesterday', status: 'Opened' },
       { id: 'msg-2', recipient: 'Grade 8 Parents', subject: 'KCPE / Junior Secondary Assessment Prep', type: 'SMS', date: '3 days ago', status: 'Delivered' }

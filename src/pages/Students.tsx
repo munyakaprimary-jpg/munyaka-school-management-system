@@ -30,7 +30,6 @@ import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { CentralDataService } from '@/services/centralDataService';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
-import { filterByTeacherScope, isGlobalRole, getTeacherAssignedClass, getTeacherAssignedStream } from '@/utils/rbacUtils';
 
 const STUDENTS_STORAGE_KEY = 'munyaka_students';
 const API_BASE_URL = '/api';
@@ -128,67 +127,68 @@ const ensureProperAdmissionNumbers = (list: any[]) => {
 };
 
 export default function Students() {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = user?.role === 'admin';
-  const assignedTeacherGrade = getTeacherAssignedClass(user);
-  const assignedTeacherStream = getTeacherAssignedStream(user);
+  const { user } = useAuth();
   const teacherName = user?.name || 'Lawrence Mwangi';
   const teacherRole = user?.role || 'Class Teacher';
+  const roleLower = String(teacherRole || (typeof window !== 'undefined' ? localStorage.getItem('current_user_role') : '') || '').toLowerCase();
+  const isAdmin = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'owner' || roleLower.includes('admin') || roleLower === 'administrator';
+
+  // Dynamically resolve assigned grade/stream from munyaka_staff_db if user is a teacher
+  const staffDbRaw = typeof window !== 'undefined' ? (localStorage.getItem('munyaka_staff_db') || localStorage.getItem('school_staff_data') || '') : '';
+  let resolvedGrade = (user as any)?.grade || (user as any)?.assignedClass || (user as any)?.assignedGrade || '';
+  let resolvedStream = (user as any)?.stream || (user as any)?.assignedStream || '';
+
+  if (!resolvedGrade || !resolvedStream) {
+    try {
+      if (staffDbRaw) {
+        const staffList = JSON.parse(staffDbRaw);
+        if (Array.isArray(staffList)) {
+          const found = staffList.find((s: any) =>
+            (user?.email && s.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
+            (user?.name && s.name && s.name.toLowerCase() === user.name.toLowerCase())
+          );
+          if (found) {
+            resolvedGrade = found.assignedGrade || found.grade || found.assignedClass || resolvedGrade;
+            resolvedStream = found.assignedStream || found.stream || resolvedStream;
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const assignedTeacherGrade = !isAdmin ? (resolvedGrade || 'Grade 1') : 'all';
+  const assignedTeacherStream = !isAdmin ? (resolvedStream || 'BLUE') : 'all';
 
   const [students, setStudents] = useState<any[]>(() => {
-      // Force aggregation across all storage keys for admin & staff
-      const p1 = JSON.parse(localStorage.getItem('munyaka_learners_db') || localStorage.getItem('school_learners_master') || localStorage.getItem('school_learners_data') || '[]');
-      const p2 = JSON.parse(localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners') || localStorage.getItem('students') || '[]');
-      const p3 = CentralDataService.getLearners() || [];
-
-      const map = new Map<string, any>();
-      [...p3, ...p1, ...p2].forEach(s => {
-        if (s && (s.id || s.admissionNumber || s.admNo || s.name)) {
-          const key = String(s.id || s.admissionNumber || s.admNo || s.name).trim().toLowerCase();
-          if (!map.has(key)) {
-            map.set(key, s);
-          }
-        }
-      });
-      const combined = Array.from(map.values());
-      return ensureProperAdmissionNumbers(combined);
+      // Load from centralized master data service (aggregates across all storage keys)
+      const loaded = CentralDataService.getLearners();
+      return ensureProperAdmissionNumbers(loaded);
     });
   
-  // Keep localStorage & state in sync when central data changes
+    // Keep localStorage in sync when central data changes
     useEffect(() => {
-      const loadAll = () => {
-        const p1 = JSON.parse(localStorage.getItem('munyaka_learners_db') || localStorage.getItem('school_learners_master') || localStorage.getItem('school_learners_data') || '[]');
-        const p2 = JSON.parse(localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners') || localStorage.getItem('students') || '[]');
-        const p3 = CentralDataService.getLearners() || [];
-
-        const map = new Map<string, any>();
-        [...p3, ...p1, ...p2].forEach(s => {
-          if (s && (s.id || s.admissionNumber || s.admNo || s.name)) {
-            const key = String(s.id || s.admissionNumber || s.admNo || s.name).trim().toLowerCase();
-            if (!map.has(key)) {
-              map.set(key, s);
-            }
-          }
-        });
-        const combined = Array.from(map.values());
-        if (combined.length > 0) {
-          setStudents(ensureProperAdmissionNumbers(combined));
-        }
+      const handleStudentsUpdated = () => {
+        const loaded = CentralDataService.getLearners();
+        setStudents(ensureProperAdmissionNumbers(loaded));
       };
-
-      loadAll();
-
-      window.addEventListener('students-updated', loadAll);
-      window.addEventListener('learners-updated', loadAll);
-      window.addEventListener('munyaka:data-changed', loadAll);
-      window.addEventListener('munyaka_learners_updated', loadAll);
-
+      const handleLearnersUpdated = () => {
+        const loaded = CentralDataService.getLearners();
+        setStudents(ensureProperAdmissionNumbers(loaded));
+      };
+      const handleDataChanged = () => {
+        const loaded = CentralDataService.getLearners();
+        setStudents(ensureProperAdmissionNumbers(loaded));
+      };
+  
+      window.addEventListener('students-updated', handleStudentsUpdated);
+      window.addEventListener('learners-updated', handleLearnersUpdated);
+      window.addEventListener('munyaka:data-changed', handleDataChanged);
+  
       return () => {
-        window.removeEventListener('students-updated', loadAll);
-        window.removeEventListener('learners-updated', loadAll);
-        window.removeEventListener('munyaka:data-changed', loadAll);
-        window.removeEventListener('munyaka_learners_updated', loadAll);
+        window.removeEventListener('students-updated', handleStudentsUpdated);
+        window.removeEventListener('learners-updated', handleLearnersUpdated);
+        window.removeEventListener('munyaka:data-changed', handleDataChanged);
       };
     }, []);
 
@@ -474,15 +474,11 @@ export default function Students() {
 
       setStudents(updated);
       
-      try {
-        localStorage.setItem('munyaka_master_learners', JSON.stringify(updated));
-        localStorage.setItem('munyaka_learners', JSON.stringify(updated));
-        localStorage.setItem('munyaka_students', JSON.stringify(updated));
-        window.dispatchEvent(new Event('munyaka_data_changed'));
-        window.dispatchEvent(new Event('central_db_updated'));
-      } catch {}
+            try {
+              CentralDataService.saveLearners(updated);
+            } catch {}
       
-      setIsModalOpen(false);
+            setIsModalOpen(false);
       resetForm();
     } catch (err) {
       showError("Failed to save learner record.");
@@ -528,32 +524,36 @@ export default function Students() {
   };
 
   const filteredStudents = useMemo(() => {
-      // 1. Apply RBAC scope filtering from shared utility (role + assigned class/stream)
-      const scopedList = filterByTeacherScope(students, user);
-
-      // 2. Apply UI-level filters: search, grade, stream, gender
-      return scopedList.filter(s => {
+      return students.filter(s => {
         const name = (s.name || s.fullName || '').toLowerCase();
         const adm = (s.admissionNumber || s.admNo || '').toLowerCase();
         const ass = (s.assessmentNo || s.assessmentNumber || '').toLowerCase();
-
+        
         const sGrade = s.grade || s.class || '';
         const sStream = s.stream || '';
-
+        
         const sGradeNorm = normalizeGradeStr(sGrade);
-        const filterGradeNorm = normalizeGradeStr(gradeFilter);
-
+        const assignedNorm = normalizeGradeStr(assignedTeacherGrade);
+        
+        // If user is a teacher (non-admin), restrict strictly to assigned grade & stream
+        if (!isAdmin) {
+          const gradeMatch = sGradeNorm === assignedNorm || sGrade.toLowerCase().includes(assignedTeacherGrade.toLowerCase()) || assignedTeacherGrade.toLowerCase().includes(sGrade.toLowerCase());
+          const streamMatch = !assignedTeacherStream || sStream.toLowerCase() === assignedTeacherStream.toLowerCase() || sStream.toLowerCase().includes(assignedTeacherStream.toLowerCase());
+          if (!gradeMatch || !streamMatch) return false;
+        }
+        
         const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase());
-
+        
+        const filterGradeNorm = normalizeGradeStr(gradeFilter);
         const matchesGrade = gradeFilter === 'all' || sGradeNorm === filterGradeNorm || sGrade.toLowerCase() === gradeFilter.toLowerCase();
         const matchesStream = streamFilter === 'all' || sStream.toLowerCase() === streamFilter.toLowerCase();
-
+        
         const sGender = s.gender || '';
         const matchesGender = genderFilter === 'all' || sGender.toLowerCase() === genderFilter.toLowerCase();
-
+        
         return matchesSearch && matchesGrade && matchesStream && matchesGender;
       });
-    }, [students, searchTerm, gradeFilter, streamFilter, genderFilter, user]);
+    }, [students, searchTerm, gradeFilter, streamFilter, genderFilter, isAdmin, assignedTeacherGrade, assignedTeacherStream]);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">

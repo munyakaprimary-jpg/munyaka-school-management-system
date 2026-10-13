@@ -33,7 +33,7 @@ import {
   X,
   Download
 } from 'lucide-react';
-import { GRADES_DATA, GradeInfo as Grade } from '@/lib/mock-data';
+import { GRADES_DATA, Grade } from '@/lib/mock-data';
 import { getStudents } from '@/services/persistentStore';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -168,7 +168,7 @@ const ResultsAnalysis = () => {
     let clusterId = 'lower-primary';
     if (gradeName.includes("grade 4") || gradeName.includes("grade 5") || gradeName.includes("grade 6")) clusterId = 'upper-primary';
     else if (gradeName.includes("pp")) clusterId = 'pre-primary';
-    else if (currentGrade.name.toLowerCase().includes('grade 7') || currentGrade.name.toLowerCase().includes('grade 8') || currentGrade.name.toLowerCase().includes('grade 9')) clusterId = 'junior-school';
+    else if (currentGrade.category === 'Junior School') clusterId = 'junior-school';
     
     // Use hardcoded subjects based on cluster
     const subjectMap: Record<string, string[]> = {
@@ -196,9 +196,9 @@ const ResultsAnalysis = () => {
 
       let matchesStream = true;
       if (selectedStreamId !== "all") {
-        const streamObj = availableStreams.find((sItem: any) => (sItem.id || sItem.name) === selectedStreamId || sItem.name === selectedStreamId);
+        const streamObj = availableStreams.find(sItem => sItem.id === selectedStreamId);
         if (streamObj) {
-          matchesStream = String(s.stream ?? "").toLowerCase() === (typeof streamObj === 'string' ? streamObj : streamObj.name).toLowerCase();
+          matchesStream = String(s.stream ?? "").toLowerCase() === streamObj.name.toLowerCase();
         }
       }
 
@@ -322,9 +322,8 @@ const ResultsAnalysis = () => {
   // Selected Stream Name for Labels
   const selectedStreamName = useMemo(() => {
     if (selectedStreamId === "all") return "Combined (All Streams)";
-    const strObj = availableStreams.find((s: any) => (s.id || s.name) === selectedStreamId || s.name === selectedStreamId);
-    const sName = typeof strObj === 'string' ? strObj : (strObj?.name || '');
-    return sName ? `${sName} Stream` : "Selected Stream";
+    const strObj = availableStreams.find(s => s.id === selectedStreamId);
+    return strObj ? `${strObj.name} Stream` : "Selected Stream";
   }, [selectedStreamId, availableStreams]);
 
   // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
@@ -468,7 +467,7 @@ const ResultsAnalysis = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {sortedGrades.map(g => <SelectItem key={g.id} value={g.id}>{g.name} ({g.category || 'Primary'})</SelectItem>)}
+                {sortedGrades.map(g => <SelectItem key={g.id} value={g.id}>{g.name} ({g.category})</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -481,8 +480,8 @@ const ResultsAnalysis = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Combined (All Streams)</SelectItem>
-                {availableStreams.map((s: any) => (
-                  <SelectItem key={s.id || s.name} value={s.id || s.name}>{typeof s === 'string' ? s : s.name} Stream ({s.studentsCount || 0} Students)</SelectItem>
+                {availableStreams.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.name} Stream ({s.studentsCount} Students)</SelectItem>
                 ))}
               </SelectContent>
             </Select>

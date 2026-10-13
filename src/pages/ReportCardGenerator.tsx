@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GRADES_DATA, GradeInfo as Grade } from '@/lib/mock-data';
+import { GRADES_DATA, Grade } from '@/lib/mock-data';
 
 interface RecordCardData {
   fullName: string;
@@ -83,19 +83,19 @@ const ReportCardGenerator = () => {
     if (!formData.grade || formData.grade === 'all') {
       const streamNames = new Set<string>();
       storedGrades.forEach((g: Grade) => {
-        (g.streams || []).forEach((s: any) => streamNames.add(typeof s === 'string' ? s : s.name));
+        g.streams?.forEach((s) => streamNames.add(s.name));
       });
       return Array.from(streamNames).sort().map(name => ({ name }));
     }
 
-    const gradeObj = storedGrades.find((g: Grade) =>
-      g.name === `Grade ${formData.grade}` ||
-      g.name === formData.grade ||
+    const gradeObj = storedGrades.find((g: Grade) => 
+      g.name === `Grade ${formData.grade}` || 
+      g.name === formData.grade || 
       g.name.replace(/[^0-9]/g, '') === formData.grade
     );
 
-    return gradeObj && Array.isArray(gradeObj.streams)
-      ? gradeObj.streams.map((s: any) => ({ name: typeof s === 'string' ? s : s.name }))
+    return gradeObj && Array.isArray(gradeObj.streams) 
+      ? gradeObj.streams.map((s) => ({ name: s.name }))
       : [];
   }, [storedGrades, formData.grade]);
 

@@ -1,27 +1,24 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  Search,
-  Plus,
-  Edit,
-  Trash2,
-  Check,
-  BookOpen,
-  GraduationCap,
-  User,
-  Mail,
-  Phone,
-  Award,
-  FileSpreadsheet,
-  AlertCircle,
-  Fingerprint,
+import { 
+  Search, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Check, 
+  BookOpen, 
+  GraduationCap, 
+  User, 
+  Mail, 
+  Phone, 
+  Award, 
+  FileSpreadsheet, 
+  AlertCircle, 
+  Fingerprint, 
   Sparkles,
   Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
-import { isTeachingStaff, isSupportStaff, getStaffTypeBadge } from '@/utils/staffUtils';
-import { useGradesAndStreams } from '../hooks/useGradesStreams';
-import { CentralDataService } from '@/services/centralDataService';
 
 export type StaffCategoryRole =
   | 'Class Teacher'
@@ -34,34 +31,19 @@ export type StaffCategoryRole =
   | 'DHOI'
   | 'Store Master';
 
-export interface StaffAllocationRecord {
-  subject: string;
-  grade: string;
-  stream: string;
-}
-
 export interface StaffMember {
   id: string;
   name: string;
   category: StaffCategoryRole;
-  role?: string;
-  designation?: string;
-  specificRole?: string;
-  type?: string;
   tscNumber: string;
   email: string;
   phone: string;
   subjects: string[];
   assignedClasses?: string[];
   assignedStreams?: string[];
-  assignedClass?: string;
-  homeroomGrade?: string;
-  homeroomStream?: string;
-  allocations?: StaffAllocationRecord[];
   accessCode: string;
   status: 'Active' | 'On Leave' | 'Inactive';
   createdAt?: string;
-  [key: string]: any;
 }
 
 export default function StaffRegistry() {
@@ -72,211 +54,17 @@ export default function StaffRegistry() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
-  // Load RBAC settings dynamically from CentralDataService / munyaka_central_db
-  const [rbacSettings, setRbacSettings] = useState<any>(() => {
-    try {
-      const db = CentralDataService.getDB();
-      return db.settings?.rbac || {
-        roles: [
-          { name: 'HOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
-          { name: 'DHOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
-          { name: 'Class Teacher', category: 'Teaching', portalAccess: '/learners', permissions: ['view_learners', 'edit_learners'] },
-          { name: 'Subject Teacher', category: 'Teaching', portalAccess: '/assessments', permissions: ['view_assessments'] },
-          { name: 'ICT Teacher', category: 'Teaching', portalAccess: '/dashboard', permissions: ['manage_ict'] },
-          { name: 'Library Teacher', category: 'Teaching', portalAccess: '/library', permissions: ['manage_library'] },
-          { name: 'Bursar', category: 'Support', portalAccess: '/fees', permissions: ['manage_fees'] },
-          { name: 'Store Master', category: 'Support', portalAccess: '/inventory', permissions: ['manage_inventory'] }
-        ]
-      };
-    } catch {
-      return {
-        roles: [
-          { name: 'HOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
-          { name: 'DHOI', category: 'Teaching', portalAccess: '/dashboard', permissions: ['all'] },
-          { name: 'Class Teacher', category: 'Teaching', portalAccess: '/learners', permissions: ['view_learners', 'edit_learners'] },
-          { name: 'Subject Teacher', category: 'Teaching', portalAccess: '/assessments', permissions: ['view_assessments'] },
-          { name: 'ICT Teacher', category: 'Teaching', portalAccess: '/dashboard', permissions: ['manage_ict'] },
-          { name: 'Library Teacher', category: 'Teaching', portalAccess: '/library', permissions: ['manage_library'] },
-          { name: 'Bursar', category: 'Support', portalAccess: '/fees', permissions: ['manage_fees'] },
-          { name: 'Store Master', category: 'Support', portalAccess: '/inventory', permissions: ['manage_inventory'] }
-        ]
-      };
-    }
-  });
-
-  const getStaffRBAC = (roleName: string) => {
-    const db = (CentralDataService.getDB() || {}) as any;
-    const rbacRoles = db.settings?.rbac?.roles || rbacSettings?.roles || [];
-    const lowerRole = (roleName || '').toLowerCase();
-
-    const match = rbacRoles.find((r: any) => r.name?.toLowerCase() === lowerRole);
-    if (match) return match;
-
-    const isSupport = ['bursar', 'store master', 'secretary', 'cook', 'security', 'driver', 'groundskeeper']
-      .some(k => lowerRole.includes(k));
-
-    return {
-      category: isSupport ? 'Support' : 'Teaching',
-      portalAccess: isSupport ? '/fees' : '/dashboard'
-    };
-  };
-
-  const getGradeStreamsConfig = () => {
-    const db = (CentralDataService.getDB() || {}) as any;
-    const map: Record<string, string[]> = {};
-
-    // Normalize string helper
-    const cleanKey = (str: any) => str ? String(str).toLowerCase().replace(/\s+/g, '') : '';
-
-    // A. Parse from db.gradeStreams, db.classes, or db.schoolClasses
-    const classList = db.gradeStreams || db.classes || db.schoolClasses || db.settings?.classes || [];
-    if (Array.isArray(classList)) {
-      classList.forEach((item: any) => {
-        const rawGrade = item.grade || item.gradeName || item.name || item.grade_name || '';
-        const rawStream = item.stream || item.streamName || item.name || item.stream_name || '';
-
-        if (rawGrade) {
-          const key = cleanKey(rawGrade);
-          if (!map[key]) map[key] = [];
-
-          // Handle string streams or array of streams
-          if (rawStream && typeof rawStream === 'string' && !map[key].includes(rawStream)) {
-            map[key].push(rawStream);
-          }
-          if (Array.isArray(item.streams)) {
-            item.streams.forEach((st: any) => {
-              const sName = typeof st === 'string' ? st : (st.name || st.streamName || st.title || '');
-              if (sName && !map[key].includes(sName)) map[key].push(sName);
-            });
-          }
-        }
-      });
-    }
-
-    // B. Parse from standalone db.streams linked by grade / gradeId
-    const standaloneStreams = db.streams || db.settings?.streams || [];
-    if (Array.isArray(standaloneStreams)) {
-      standaloneStreams.forEach((st: any) => {
-        if (typeof st === 'object' && st !== null) {
-          const targetGrade = st.grade || st.gradeName || st.grade_name || st.gradeId || '';
-          const sName = st.name || st.streamName || st.title || '';
-          if (targetGrade && sName) {
-            const key = cleanKey(targetGrade);
-            if (!map[key]) map[key] = [];
-            if (!map[key].includes(sName)) map[key].push(sName);
-          }
-        }
-      });
-    }
-
-    return { map, cleanKey };
-  };
-
+  // Form states
   const [fullName, setFullName] = useState('');
   const [category, setCategory] = useState<StaffCategoryRole>('Class Teacher');
   const [tscNumber, setTscNumber] = useState('');
   const [email, setEmail] = useState('');
-  const [emailPrefix, setEmailPrefix] = useState('');
   const [phone, setPhone] = useState('');
   const [status, setStatus] = useState<'Active' | 'On Leave' | 'Inactive'>('Active');
   const [accessCode, setAccessCode] = useState('');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
   const [assignedStreams, setAssignedStreams] = useState<string[]>([]);
-  const [homeroomGrade, setHomeroomGrade] = useState('Grade 7');
-  const [homeroomStream, setHomeroomStream] = useState('');
-  // Structured subject & class allocation records: e.g. { subject: "Mathematics", grade: "Grade 7", stream: "East" }
-  const [allocations, setAllocations] = useState<StaffAllocationRecord[]>([]);
-
-  // Active subject being configured for grade/stream matrix
-  const [activeSubjectForAllocation, setActiveSubjectForAllocation] = useState<string | null>(null);
-
-  // Grades and streams configuration hook
-  const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams, gradeStreamMap } = useGradesAndStreams();
-
-  const gradeStreamsMap = gradeStreamMap;
-  const topAvailableGrades = Object.keys(gradeStreamsMap);
-  const currentGradeStreams = gradeStreamsMap[homeroomGrade] || [];
-
-  const getGradeAndStreamData = () => {
-    const db = (CentralDataService.getDB() || {}) as any;
-    
-    // Search across potential database arrays where Grade & Stream menu saves data
-    const rawClasses = db.gradeStreams || db.classes || db.schoolClasses || db.settings?.classes || db.settings?.gradesAndStreams || [];
-
-    // Extract unique grade names
-    const gradeSet = new Set<string>();
-    const streamsByGrade: Record<string, Set<string>> = {};
-
-    if (Array.isArray(rawClasses) && rawClasses.length > 0) {
-      rawClasses.forEach((item: any) => {
-        const gName = (item.grade || item.gradeName || item.name || '').toString().trim();
-        const sName = (item.stream || item.streamName || '').toString().trim();
-
-        if (gName) {
-          gradeSet.add(gName);
-          if (!streamsByGrade[gName]) {
-            streamsByGrade[gName] = new Set<string>();
-          }
-          if (sName) streamsByGrade[gName].add(sName);
-          if (Array.isArray(item.streams)) {
-            item.streams.forEach((s: any) => {
-              const str = typeof s === 'string' ? s : s.name;
-              if (str) streamsByGrade[gName].add(str);
-            });
-          }
-        }
-      });
-    }
-
-    // Also include grades from availableSchoolClasses and gradeStreamsMap as fallbacks
-    if (availableSchoolClasses && availableSchoolClasses.length > 0) {
-      availableSchoolClasses.forEach(g => gradeSet.add(g));
-    }
-
-    const availableGrades = Array.from(gradeSet);
-    return { availableGrades: availableGrades, streamsByGrade };
-  };
-
-  const gradeAndStreamData = getGradeAndStreamData();
-  const availableGradesList = gradeAndStreamData.availableGrades;
-  const streamsByGrade = gradeAndStreamData.streamsByGrade;
-  const selectedGrade = homeroomGrade || '';
-  
-  // Get streams specifically assigned to the selected grade
-  const activeStreams = selectedGrade && streamsByGrade[selectedGrade] && streamsByGrade[selectedGrade].size > 0
-    ? Array.from(streamsByGrade[selectedGrade])
-    : (gradeStreamsMap[selectedGrade] || getStreamsForGrade(selectedGrade) || allGlobalStreams || ['East', 'West']);
-
-  // Load configured grade streams map from CentralDataService if available
-
-  const handleHomeroomGradeChange = (newGrade: string) => {
-    const newGradeStreams = streamsByGrade[newGrade] && streamsByGrade[newGrade].size > 0
-      ? Array.from(streamsByGrade[newGrade])
-      : (gradeStreamsMap[newGrade] || getStreamsForGrade(newGrade) || allGlobalStreams || ['East', 'West']);
-    const currentStreamValid = Array.isArray(newGradeStreams) && newGradeStreams.includes(homeroomStream);
-    setHomeroomGrade(newGrade);
-    if (!currentStreamValid && Array.isArray(newGradeStreams) && newGradeStreams.length > 0) {
-      setHomeroomStream(newGradeStreams[0]);
-    } else if (!currentStreamValid) {
-      setHomeroomStream('');
-    }
-  };
-
-  // Get relevant streams based on selected grades (or all global streams if none selected)
-  const availableSchoolStreams = useMemo(() => {
-    if (!assignedClasses || assignedClasses.length === 0) {
-      return allGlobalStreams && allGlobalStreams.length > 0 ? allGlobalStreams : [];
-    }
-    const streamSet = new Set<string>();
-    assignedClasses.forEach(cls => {
-      const streamsForThisGrade = getStreamsForGrade(cls);
-      if (streamsForThisGrade && streamsForThisGrade.length > 0) {
-        streamsForThisGrade.forEach(s => streamSet.add(s));
-      }
-    });
-    return Array.from(streamSet);
-  }, [assignedClasses, getStreamsForGrade, allGlobalStreams]);
 
   // Generator for Access Code
   const generateSecureCode = () => {
@@ -284,141 +72,52 @@ export default function StaffRegistry() {
   };
 
   useEffect(() => {
-    const loadData = () => {
+    // Load from local storage or fallback to mock data
+    const stored = localStorage.getItem('munyaka_staff');
+    let loadedStaff: any[] = [];
+    if (stored) {
       try {
-        const db = CentralDataService.getDB();
-        if (db.settings?.rbac) {
-          setRbacSettings(db.settings.rbac);
-        }
-      } catch {}
-
-      // Load from local storage without fallback to mock data
-      const stored = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff_directory');
-      let loadedStaff: any[] = [];
-      if (stored) {
-        try {
-          loadedStaff = JSON.parse(stored);
-          if (!Array.isArray(loadedStaff)) {
-            loadedStaff = [];
-          }
-        } catch (e) {
-          loadedStaff = [];
-        }
-      } else {
-        loadedStaff = [];
+        loadedStaff = JSON.parse(stored);
+      } catch (e) {
+        loadedStaff = MOCK_STAFF;
       }
+    } else {
+      loadedStaff = MOCK_STAFF;
+    }
 
-      // Sanitize loaded list
-      const seenIds = new Set<string>();
-      const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
-        let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
-        if (seenIds.has(id)) {
-          id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
-        }
-        seenIds.add(id);
+    // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove duplicates/dashes
+    const seenIds = new Set<string>();
+    const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
+      let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
+      if (seenIds.has(id)) {
+        id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
+      }
+      seenIds.add(id);
 
-        let cat: StaffCategoryRole = staff.category;
-        if (cat === ('Teaching Staff' as any)) cat = 'Subject Teacher';
-        else if (cat === ('Administration' as any)) cat = 'HOI';
-        else if (cat === ('Support Staff' as any)) cat = 'Store Master';
-        else if (!cat) cat = 'Class Teacher';
+      let cat: StaffCategoryRole = staff.category;
+      if (cat === 'Teaching Staff' as any) cat = 'Subject Teacher';
+      else if (cat === 'Administration' as any) cat = 'HOI';
+      else if (cat === 'Support Staff' as any) cat = 'Store Master';
+      else if (!cat) cat = 'Class Teacher';
 
-        const isNonTeaching = cat === 'Bursar' || cat === 'Store Master';
+      return {
+        id,
+        name: staff.name || 'Unnamed Staff',
+        category: cat,
+        tscNumber: staff.tscNumber || 'N/A',
+        email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
+        phone: staff.phone || '+254 712 345 678',
+        subjects: staff.subjects || [],
+        assignedClasses: staff.assignedClasses || [],
+        assignedStreams: staff.assignedStreams || [],
+        accessCode: staff.accessCode || Math.random().toString(36).substring(2, 7).toUpperCase(),
+        status: staff.status || 'Active',
+        createdAt: staff.createdAt || new Date().toISOString()
+      };
+    });
 
-        const rawClasses = staff.assignedClasses || staff.classes || [];
-        const cleanClasses = !isNonTeaching && Array.isArray(rawClasses)
-          ? rawClasses.map((c: any) => {
-              if (!c) return '';
-              if (typeof c === 'string') return c;
-              if (typeof c === 'object') {
-                return String(c.grade || c.name || c.className || `${c.subject || ''} ${c.grade || ''}${c.stream || ''}`.trim() || JSON.stringify(c));
-              }
-              return String(c);
-            }).filter(Boolean)
-          : ['Unassigned'];
-
-        const rawStreams = staff.assignedStreams || staff.streams || [];
-        const cleanStreams = !isNonTeaching && Array.isArray(rawStreams)
-          ? rawStreams.map((s: any) => {
-              if (!s) return '';
-              if (typeof s === 'string') return s;
-              if (typeof s === 'object') {
-                return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
-              }
-              return String(s);
-            }).filter(s => s && s !== 'Mercury')
-          : ['Unassigned'];
-
-        const rawSubjects = staff.subjects || staff.assignedSubjects || [];
-        const cleanSubjects = !isNonTeaching && Array.isArray(rawSubjects)
-          ? rawSubjects.map((sub: any) => {
-              if (!sub) return '';
-              if (typeof sub === 'string') return sub;
-              if (typeof sub === 'object') {
-                return String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub));
-              }
-              return String(sub);
-            }).filter(Boolean)
-          : [];
-
-        const defaultGrade = cleanClasses[0] || 'Unassigned';
-        const defaultStream = cleanStreams[0] || 'Unassigned';
-
-        const cleanAllocations = !isNonTeaching && Array.isArray(staff.allocations)
-          ? staff.allocations
-              .filter((a: any) => a && typeof a === 'object' && a.subject)
-              .map((a: any) => ({
-                subject: String(a.subject),
-                grade: String(a.grade || defaultGrade),
-                stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
-              }))
-          : [];
-
-        let code = staff.accessCode;
-        if (!code || !code.startsWith('MUN-')) {
-          const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-          let randomPart = '';
-          for (let i = 0; i < 4; i++) {
-            randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-          }
-          code = `MUN-${randomPart}`;
-        }
-
-        const rawName = staff.name || staff.fullName || 'UNNAMED STAFF';
-        const formattedName = String(rawName).trim().toUpperCase();
-
-        const resolvedRole = staff.role || staff.designation || staff.position || staff.category || cat;
-
-        return {
-          id,
-          name: formattedName,
-          category: cat,
-          role: resolvedRole,
-          designation: resolvedRole,
-          position: resolvedRole,
-          tscNumber: staff.tscNumber || 'N/A',
-          email: staff.email || '',
-          phone: staff.phone || '',
-          subjects: cleanSubjects,
-          assignedClasses: cleanClasses,
-          assignedStreams: cleanStreams,
-          homeroomGrade: !isNonTeaching ? (staff.homeroomGrade || defaultGrade) : 'Unassigned',
-          homeroomStream: !isNonTeaching ? (staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream) : 'Unassigned',
-          allocations: cleanAllocations,
-          accessCode: code,
-          status: staff.status || 'Active',
-          createdAt: staff.createdAt || new Date().toISOString()
-        };
-      });
-
-      setStaffList(sanitized);
-      localStorage.setItem('munyaka_staff', JSON.stringify(sanitized));
-      localStorage.setItem('munyaka_staff_registry', JSON.stringify(sanitized));
-      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(sanitized));
-      localStorage.setItem('munyaka_staff_directory', JSON.stringify(sanitized));
-    };
-
-    loadData();
+    setStaffList(sanitized);
+    localStorage.setItem('munyaka_staff', JSON.stringify(sanitized));
   }, []);
 
   const handleOpenAddModal = () => {
@@ -432,73 +131,27 @@ export default function StaffRegistry() {
     setSelectedSubjects([]);
     setAssignedClasses([]);
     setAssignedStreams([]);
-    setHomeroomGrade('Unassigned');
-    setHomeroomStream('Unassigned');
-    setAllocations([]);
-    setActiveSubjectForAllocation(null);
     generateSecureCode();
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (staff: StaffMember) => {
     setEditingStaff(staff);
-    setFullName(staff.name ? staff.name.toUpperCase() : '');
-    const resolvedCategory = staff.category || staff.role || staff.designation || 'Class Teacher';
-    setCategory(resolvedCategory as StaffCategoryRole);
+    setFullName(staff.name);
+    setCategory(staff.category);
     setTscNumber(staff.tscNumber);
-    const loadedEmail = staff.email || '';
-    setEmail(loadedEmail);
-    setPhone(staff.phone || '');
+    // Strip @munyaka.sc.ke or @school.ac.ke domain if present for username-only input
+    let rawEmail = staff.email || '';
+    if (rawEmail.includes('@')) {
+      rawEmail = rawEmail.split('@')[0];
+    }
+    setEmail(rawEmail);
+    setPhone(staff.phone);
     setStatus(staff.status);
     setAccessCode(staff.accessCode || generateRandomCode());
-    
-    const loadedSubs = staff.subjects || [];
-    setSelectedSubjects(loadedSubs);
-
-    const loadedClasses = staff.assignedClasses || [];
-    setAssignedClasses(loadedClasses);
-
-    // Validate loaded streams against valid streams for the loaded classes from central configuration
-    const validStreamsSet = new Set<string>();
-    loadedClasses.forEach(cls => {
-      const streamsForGrade = getStreamsForGrade(cls);
-      if (streamsForGrade && streamsForGrade.length > 0) {
-        streamsForGrade.forEach(s => validStreamsSet.add(s));
-      }
-    });
-
-    const rawLoadedStreams = staff.assignedStreams || [];
-    const sanitizedStreams = rawLoadedStreams.filter(strm => {
-      // If validStreamsSet is populated, only keep streams that belong to the grade. If empty, keep non-legacy.
-      if (validStreamsSet.size > 0) {
-        return validStreamsSet.has(strm);
-      }
-      return strm && strm !== 'Mercury';
-    });
-
-    setAssignedStreams(sanitizedStreams);
-    setHomeroomGrade(staff.homeroomGrade || loadedClasses[0] || 'Grade 7');
-    setHomeroomStream(staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : (sanitizedStreams[0] || ''));
-    
-    let loadedAllocs: StaffAllocationRecord[] = [];
-    if (Array.isArray(staff.allocations) && staff.allocations.length > 0) {
-      loadedAllocs = staff.allocations.map(a => ({
-        subject: a.subject,
-        grade: a.grade || loadedClasses[0] || 'Grade 7',
-        stream: a.stream && a.stream !== 'Mercury' ? a.stream : (sanitizedStreams[0] || '')
-      }));
-    } else {
-      // Build default allocations if none existed
-      loadedSubs.forEach(sub => {
-        loadedAllocs.push({
-          subject: sub,
-          grade: loadedClasses[0] || 'Grade 4',
-          stream: sanitizedStreams[0] || ''
-        });
-      });
-    }
-    setAllocations(loadedAllocs);
-    setActiveSubjectForAllocation(loadedSubs[0] || null);
+    setSelectedSubjects(staff.subjects || []);
+    setAssignedClasses(staff.assignedClasses || []);
+    setAssignedStreams(staff.assignedStreams || []);
     setIsModalOpen(true);
   };
 
@@ -529,28 +182,18 @@ export default function StaffRegistry() {
   function generateRandomCode() {
     const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
     let code = '';
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return `MUN-${code}`;
+    return code;
   }
 
   const handleDeleteStaff = (id: string) => {
-    if (window.confirm("PERMANENT ACTION: Are you sure you want to permanently delete this record? This cannot be undone.")) {
-      const existing = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || '[]');
-      const filtered = existing.filter((item: any) => item.id !== id && item.tscNumber !== id && item.tscNo !== id && item.accessCode !== id);
-      localStorage.setItem('munyaka_master_staff_list', JSON.stringify(filtered));
-      localStorage.setItem('munyaka_staff_directory', JSON.stringify(filtered));
-      localStorage.setItem('munyaka_staff', JSON.stringify(filtered));
-      localStorage.setItem('munyaka_staff_db', JSON.stringify(filtered));
-
-      window.dispatchEvent(new Event('munyaka_data_changed'));
-      window.dispatchEvent(new Event('central_db_updated'));
-      window.dispatchEvent(new Event('staff-changed'));
-      
-      const updated = staffList.filter((item: any) => item.id !== id && item.tscNumber !== id && item.tscNo !== id && item.accessCode !== id);
+    if (confirm("Are you sure you want to remove this staff member from the system? This action cannot be undone.")) {
+      const updated = staffList.filter(s => s.id !== id);
       setStaffList(updated);
-      toast.success("Staff member permanently deleted");
+      localStorage.setItem('munyaka_staff', JSON.stringify(updated));
+      toast.success("Staff member removed successfully");
     }
   };
 
@@ -565,96 +208,41 @@ export default function StaffRegistry() {
       toast.error("Full name is required");
       return;
     }
+    if (category !== 'Bursar' && category !== 'Store Master' && !tscNumber.trim()) {
+      toast.error("TSC Registration Number is required for this staff role");
+      return;
+    }
 
-    const formattedName = fullName.trim().toUpperCase();
-    const cleanEmailInput = (email || `${formattedName.toLowerCase().replace(/\s+/g, '')}@munyaka.sc.ke`).trim().toLowerCase();
-    const finalCode = (accessCode || generateRandomCode()).trim().replace(/\s+/g, '').toUpperCase();
-    
-    // SAFE CLEAN IMPLEMENTATION FOR UNASSIGNED CLASSES:
-    // Read class values directly from form state:
-    // - If assignedClass is empty, set it strictly to 'Unassigned'.
-    // - If assignedClasses is empty or empty array, set it strictly to ['Unassigned'].
-    const isTeachingRole = isTeachingStaff(category, category);
-    const isSupportRole = isSupportStaff(category, category);
-    const finalAssignedClasses = isTeachingRole && assignedClasses && assignedClasses.length > 0 ? assignedClasses : ['Unassigned'];
-    const finalAssignedStreams = isTeachingRole && assignedStreams && assignedStreams.length > 0 ? assignedStreams : ['Unassigned'];
-    const finalHomeroomGrade = isTeachingRole && homeroomGrade && homeroomGrade.trim() !== '' ? homeroomGrade : 'Unassigned';
-    const finalHomeroomStream = isTeachingRole && homeroomStream && homeroomStream.trim() !== '' ? homeroomStream : 'Unassigned';
+    const fullEmail = email.trim()
+      ? (email.includes('@') ? email.trim() : `${email.trim()}@munyaka.sc.ke`)
+      : `${fullName.toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`;
 
-    const newStaff = {
-      id: editingStaff ? editingStaff.id : `STF-${Date.now()}`,
-      name: formattedName,
-      category: category || (isTeachingRole ? 'Teacher' : 'Support Staff'),
-      designation: category || (isTeachingRole ? 'Class Teacher' : 'Support Staff'),
-      specificRole: category || (isTeachingRole ? 'Class Teacher' : 'Support Staff'),
-      email: cleanEmailInput,
-      phone: phone.trim() || '',
-      tscNumber: tscNumber.trim() || '',
-      status: status || 'Active',
-      accessCode: finalCode,
-      role: category || (isTeachingRole ? 'Teacher' : 'Support Staff'),
-      type: isTeachingRole ? 'teaching' : 'support',
-      subjects: isTeachingRole ? selectedSubjects : ['Mathematics', 'English'],
-      assignedClasses: finalAssignedClasses,
-      assignedStreams: finalAssignedStreams,
-      homeroomGrade: finalHomeroomGrade,
-      homeroomStream: finalHomeroomStream,
-      assignedClass: finalAssignedClasses[0] || 'Unassigned',
+    const staffRecord: StaffMember = {
+      id: editingStaff ? editingStaff.id : `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      name: fullName.trim(),
+      category,
+      email: fullEmail,
+      phone: phone.trim() || '+254 712 345 678',
+      tscNumber: tscNumber.trim(),
+      status,
+      accessCode: accessCode || generateRandomCode(),
+      subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : [],
+      assignedClasses: category !== 'Bursar' && category !== 'Store Master' ? assignedClasses : [],
+      assignedStreams: category !== 'Bursar' && category !== 'Store Master' ? assignedStreams : [],
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
-    const standardizedRecord = {
-      ...newStaff,
-      role: newStaff.role || newStaff.designation || 'Class Teacher',
-      designation: newStaff.role || newStaff.designation || 'Class Teacher',
-      homeroomGrade: newStaff.homeroomGrade || '',
-      homeroomStream: newStaff.homeroomStream || ''
-    };
-
-    CentralDataService.saveStaff(standardizedRecord);
-    window.dispatchEvent(new CustomEvent('munyaka_data_changed'));
-
-    const existingStaff = JSON.parse(localStorage.getItem('munyaka_master_staff_list') || localStorage.getItem('munyaka_staff') || '[]');
-    
-    // Deduplicate by email or ID before pushing
-    const isDuplicate = existingStaff.some((s: any) =>
-      s.email?.toLowerCase() === newStaff.email?.toLowerCase() || (editingStaff && s.id === editingStaff.id)
-    );
-
-    let updatedList;
+    let updatedList: StaffMember[];
     if (editingStaff) {
-      updatedList = existingStaff.map((s: any) =>
-        s.id === editingStaff.id || s.email?.toLowerCase() === newStaff.email?.toLowerCase() ? { ...s, ...newStaff } : s
-      );
+      updatedList = staffList.map(s => s.id === editingStaff.id ? staffRecord : s);
       toast.success("Staff profile updated successfully");
-    } else if (isDuplicate) {
-      updatedList = existingStaff.map((s: any) =>
-        s.email?.toLowerCase() === newStaff.email?.toLowerCase() ? { ...s, ...newStaff } : s
-      );
-      toast.success("Staff member updated successfully");
     } else {
-      updatedList = [...existingStaff, newStaff];
+      updatedList = [staffRecord, ...staffList];
       toast.success("Staff member registered successfully");
     }
 
-    // Save updated array to all target master keys
-    localStorage.setItem('munyaka_master_staff_list', JSON.stringify(updatedList));
-    localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
-    localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
-    localStorage.setItem('munyaka_staff_db', JSON.stringify(updatedList));
-
-    window.dispatchEvent(new Event('munyaka_data_changed'));
-    window.dispatchEvent(new Event('central_db_updated'));
-
     setStaffList(updatedList);
-
-    // Dispatch window event so Central Data and Dashboard re-count immediately
-    window.dispatchEvent(new Event('munyaka_data_changed'));
-    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_master_staff_list' } }));
-    window.dispatchEvent(new Event('staff-changed'));
-
-    console.log('--- NEW STAFF SUCCESSFULLY SAVED ---', newStaff);
-
+    localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
     setIsModalOpen(false);
   };
 
@@ -696,6 +284,17 @@ export default function StaffRegistry() {
         'Agriculture and Nutrition',
         'Pre-Technical Studies'
       ];
+
+  const availableSchoolClasses = [
+    'PP1', 'PP2',
+    'Grade 1', 'Grade 2', 'Grade 3',
+    'Grade 4', 'Grade 5', 'Grade 6',
+    'Grade 7', 'Grade 8', 'Grade 9'
+  ];
+
+  const availableSchoolStreams = [
+    'Blue', 'Red', 'Green', 'East', 'West'
+  ];
 
   // Helper function to check if a category is a teaching role
   const categoryIsTeaching = (cat: string) => {
@@ -884,8 +483,7 @@ export default function StaffRegistry() {
             <thead>
               <tr className="border-b border-slate-150 bg-slate-50/70 text-slate-600 text-xs font-semibold uppercase tracking-wider">
                 <th className="py-3.5 px-4 min-w-[220px]">Staff Member</th>
-                <th className="py-3.5 px-3 min-w-[180px]">EMAIL</th>
-                <th className="py-3.5 px-3 min-w-[150px]">PHONE NUMBER</th>
+                <th className="py-3.5 px-3 min-w-[150px]">Contact Info</th>
                 <th className="py-3.5 px-3 min-w-[120px]">TSC No. / ID No.</th>
                 <th className="py-3.5 px-3 min-w-[180px]">Subjects</th>
                 <th className="py-3.5 px-3 min-w-[150px]">Assigned Classes</th>
@@ -897,7 +495,7 @@ export default function StaffRegistry() {
             <tbody className="divide-y divide-slate-100 text-sm text-slate-600">
               {filteredStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <AlertCircle className="w-8 h-8 text-slate-300" />
                       <span className="font-medium text-slate-500">No staff members found matching criteria</span>
@@ -916,47 +514,39 @@ export default function StaffRegistry() {
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
-                            {(staff.name || 'S').trim().charAt(0).toUpperCase()}
+                            {staff.name ? staff.name.split(' ').pop()?.charAt(0) : 'S'}
                           </div>
                           <div>
                             <span className="font-semibold text-slate-800 block text-sm group-hover:text-indigo-600 transition-colors">
-                              {staff.name ? staff.name.toUpperCase() : ''}
+                              {staff.name}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
-                              {(() => {
-                                const currentRole = staff.role || staff.designation || staff.position || '';
-                                
-                                return (
-                                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                                    currentRole.toLowerCase().includes('bursar') || currentRole.toLowerCase().includes('cook') || currentRole.toLowerCase().includes('security') || currentRole.toLowerCase().includes('master')
-                                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                      : currentRole.toLowerCase().includes('ict')
-                                      ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                                      : currentRole.toLowerCase().includes('library')
-                                      ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                                      : currentRole
-                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                      : 'bg-slate-100 text-slate-600'
-                                  }`}>
-                                    {currentRole || 'Unassigned'}
-                                  </span>
-                                );
-                              })()}
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                ID: {staff.id || `STF-${idx + 1}`}
+                              </span>
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
+                                staff.category === 'HOI' || staff.category === 'DHOI'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-150'
+                                  : staff.category === 'Bursar' || staff.category === 'Store Master'
+                                    ? 'bg-slate-50 text-slate-700 border-slate-150'
+                                    : 'bg-indigo-50 text-indigo-700 border-indigo-150'
+                              }`}>
+                                {staff.category || 'Class Teacher'}
+                              </span>
                             </div>
                           </div>
                         </div>
                       </td>
 
                       <td className="py-3.5 px-3">
-                        <span className="text-xs text-slate-700 block flex items-center gap-1">
-                          <Mail className="w-3 h-3 text-slate-400" /> {staff.email}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-3">
-                        <span className="text-xs text-slate-600 block flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-slate-400" /> {staff.phone}
-                        </span>
+                        <div className="space-y-0.5">
+                          <span className="text-xs text-slate-700 block flex items-center gap-1">
+                            <Mail className="w-3 h-3 text-slate-400" /> {staff.email}
+                          </span>
+                          <span className="text-xs text-slate-500 block flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-slate-400" /> {staff.phone}
+                          </span>
+                        </div>
                       </td>
 
                       <td className="py-3.5 px-3">
@@ -967,19 +557,20 @@ export default function StaffRegistry() {
 
                       <td className="py-3.5 px-3">
                         {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 max-w-[280px]">
-                            {staff.subjects.map((sub, sIdx) => {
-                              const subName = typeof sub === 'string'
-                                ? sub
-                                : (sub && typeof sub === 'object'
-                                    ? String((sub as any).name || (sub as any).title || (sub as any).subject || (sub as any).learningArea || JSON.stringify(sub))
-                                    : String(sub));
+                          <div className="flex flex-wrap gap-1 max-w-[220px]">
+                            {staff.subjects.slice(0, 2).map((sub, sIdx) => {
+                              const subName = typeof sub === 'string' ? sub : (sub && typeof sub === 'object' ? String((sub as any).name || (sub as any).title || (sub as any).subject || JSON.stringify(sub)) : String(sub));
                               return (
                                 <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
                                   {subName}
                                 </span>
                               );
                             })}
+                            {staff.subjects.length > 2 && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                +{staff.subjects.length - 2}
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <span className="text-slate-400 text-xs">—</span>
@@ -987,38 +578,21 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
-                          <div className="flex items-center gap-1.5">
-                            {(() => {
-                              const hasValidGrade = staff.homeroomGrade && staff.homeroomGrade !== 'Unassigned';
-                              const hasValidStream = staff.homeroomStream && staff.homeroomStream !== 'Unassigned';
-                              if (hasValidGrade || hasValidStream) {
-                                return (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
-                                    <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                                    {hasValidGrade ? staff.homeroomGrade : ''} {hasValidStream ? staff.homeroomStream : ''}
-                                  </span>
-                                );
-                              }
-                              return (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                  Unassigned
-                                </span>
-                              );
-                            })()}
-                          </div>
-                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0 && staff.assignedClasses[0] !== 'Unassigned') || (staff.assignedStreams && staff.assignedStreams.length > 0 && staff.assignedStreams[0] !== 'Unassigned') || (staff.subjects && staff.subjects.length > 0)) ? (
+                        {categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
                           <div className="flex flex-col gap-1.5 max-w-[220px]">
-                            {staff.assignedClasses && staff.assignedClasses.length > 0 && staff.assignedClasses[0] !== 'Unassigned' && (
+                            {/* If assignedClasses contains structured object or string items */}
+                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
                                   let formattedCls = '';
                                   if (typeof cls === 'string') {
                                     formattedCls = cls;
                                   } else if (cls && typeof cls === 'object') {
-                                    const item = cls as any;
-                                    formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
-                                    if (!formattedCls) formattedCls = JSON.stringify(item);
+                                    const g = (cls as any).grade || (cls as any).name || (cls as any).className || '';
+                                    const s = (cls as any).stream || (cls as any).streamName || '';
+                                    const subj = (cls as any).subject || (cls as any).learningArea || '';
+                                    formattedCls = [g, s, subj ? `- ${subj}` : ''].filter(Boolean).join(' ');
+                                    if (!formattedCls) formattedCls = JSON.stringify(cls);
                                   } else {
                                     formattedCls = String(cls);
                                   }
@@ -1028,19 +602,26 @@ export default function StaffRegistry() {
                                     </span>
                                   );
                                 })}
+                                {staff.assignedClasses.length > 3 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                    +{staff.assignedClasses.length - 3}
+                                  </span>
+                                )}
                               </div>
                             )}
 
-                            {staff.assignedStreams && staff.assignedStreams.length > 0 && staff.assignedStreams[0] !== 'Unassigned' && (
+                            {/* Stream or combined allocations */}
+                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
                                   let formattedStrm = '';
                                   if (typeof strm === 'string') {
                                     formattedStrm = strm;
                                   } else if (strm && typeof strm === 'object') {
-                                    const item = strm as any;
-                                    formattedStrm = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
-                                    if (!formattedStrm) formattedStrm = JSON.stringify(item);
+                                    const g = (strm as any).grade || (strm as any).name || '';
+                                    const s = (strm as any).stream || (strm as any).streamName || '';
+                                    formattedStrm = [g, s].filter(Boolean).join(' ');
+                                    if (!formattedStrm) formattedStrm = JSON.stringify(strm);
                                   } else {
                                     formattedStrm = String(strm);
                                   }
@@ -1050,13 +631,16 @@ export default function StaffRegistry() {
                                     </span>
                                   );
                                 })}
+                                {staff.assignedStreams.length > 3 && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                    +{staff.assignedStreams.length - 3}
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                            Unassigned
-                          </span>
+                          <span className="text-slate-400 text-xs">—</span>
                         )}
                       </td>
 
@@ -1171,60 +755,6 @@ export default function StaffRegistry() {
                   </select>
                 </div>
 
-                {/* Conditional Homeroom Grade & Stream Selector for Class Teacher */}
-                {category === 'Class Teacher' && (
-                  <div className="sm:col-span-2 bg-emerald-50/60 p-4 rounded-xl border border-emerald-200/60 space-y-3">
-                    <div className="flex items-center gap-2 text-emerald-900 font-semibold text-sm">
-                      <span className="text-base">🎓</span> Assigned Homeroom Grade & Stream
-                    </div>
-
-                    {/* Grade Selection */}
-                    <div>
-                      <label className="block text-xs font-semibold text-emerald-800 mb-1">
-                        Grade
-                      </label>
-                      <select
-                        value={homeroomGrade || ''}
-                        onChange={(e) => handleHomeroomGradeChange(e.target.value)}
-                        className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500"
-                      >
-                        <option value="">-- Select Grade --</option>
-                        {availableGradesList.map((g: string) => (
-                          <option key={g} value={g}>{g}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Stream Selection */}
-                    {(() => {
-                      const currentStreams = homeroomGrade ? getStreamsForGrade(homeroomGrade) : [];
-
-                      return (
-                        <div>
-                          <label className="block text-xs font-semibold text-emerald-800 mb-1">Stream</label>
-                          <select
-                            value={homeroomStream || ''}
-                            onChange={(e) => setHomeroomStream(e.target.value)}
-                            className="w-full p-2.5 bg-white border border-emerald-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-emerald-500"
-                            disabled={!homeroomGrade}
-                          >
-                            <option value="">-- Select Stream --</option>
-                            {currentStreams.length > 0 ? (
-                              currentStreams.map((streamName: string) => (
-                                <option key={streamName} value={streamName}>
-                                  {streamName}
-                                </option>
-                              ))
-                            ) : (
-                              <option value="" disabled>No streams configured for {homeroomGrade || 'this grade'}</option>
-                            )}
-                          </select>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">
                     National ID / TSC No.
@@ -1257,19 +787,23 @@ export default function StaffRegistry() {
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">Email Address</label>
-                  <div className="flex rounded-xl shadow-sm border border-slate-200 overflow-hidden bg-white">
+                  <div className="relative flex items-center">
+                    <Mail className="absolute left-3 w-4 h-4 text-slate-400 z-10 pointer-events-none" />
                     <input
                       type="text"
-                      placeholder="e.g. jndiki"
-                      value={email.includes('@') ? email.split('@')[0] : email}
+                      placeholder="e.g. mary.atieno"
+                      value={email}
                       onChange={(e) => {
-                        const rawVal = e.target.value.trim().split('@')[0];
-                        const fullEmail = rawVal ? `${rawVal}@munyaka.sc.ke` : '';
-                        setEmail(fullEmail);
+                        // Remove any accidental @munyaka.sc.ke typed by user so we don't duplicate domain
+                        let val = e.target.value;
+                        if (val.includes('@')) {
+                          val = val.split('@')[0];
+                        }
+                        setEmail(val);
                       }}
-                      className="flex-1 p-2.5 border-0 focus:ring-0 focus:outline-none text-sm text-slate-700 bg-transparent"
+                      className="w-full bg-white border border-slate-200 rounded-l-xl py-2 pl-9 pr-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
                     />
-                    <span className="inline-flex items-center px-3 bg-slate-50 text-slate-500 text-xs font-medium border-l border-slate-200">
+                    <span className="bg-slate-100 border border-l-0 border-slate-200 rounded-r-xl px-3 py-2 text-xs font-semibold text-slate-500 select-none whitespace-nowrap">
                       @munyaka.sc.ke
                     </span>
                   </div>
@@ -1313,12 +847,58 @@ export default function StaffRegistry() {
                 </div>
               </div>
 
-              {/* Class & Stream Assignments Grid FIRST (so grades/streams are chosen before subjects) */}
+              {/* Subjects Grid (Conditionally shown or optional for Teaching Staff) */}
+              {category !== 'Bursar' && category !== 'Store Master' && (
+                <div className="space-y-3 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-indigo-400" /> Subject & Learning Area Competencies
+                      </h4>
+                      {assignedClasses.length > 0 && (
+                        <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
+                          Filtered for selected grade(s): {assignedClasses.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
+                      {selectedSubjects.length} selected
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
+                    {filteredLearningAreasForClasses.map((sub) => {
+                      const isSelected = selectedSubjects.includes(sub);
+                      return (
+                        <button
+                          key={sub}
+                          type="button"
+                          onClick={() => handleToggleSubject(sub)}
+                          className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
+                            isSelected
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm shadow-indigo-100/50'
+                              : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                            isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'
+                          }`}>
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </div>
+                          <span className="truncate">{sub}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Class & Stream Assignments Grid (Conditionally shown or optional for Teaching Staff) */}
               {category !== 'Bursar' && category !== 'Store Master' && (
                 <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Assigned Grades & Streams
+                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Class & Stream Assignments
                     </h4>
                     <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
                       {assignedClasses.length} class(es), {assignedStreams.length} stream(s) selected
@@ -1327,7 +907,7 @@ export default function StaffRegistry() {
                   
                   {/* Classes/Grades selection */}
                   <div>
-                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Grades / Classes <span className="text-rose-500">*</span></span>
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Grades / Classes</span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
                       {availableSchoolClasses.map((cls) => {
                         const isSelected = assignedClasses.includes(cls);
@@ -1356,7 +936,7 @@ export default function StaffRegistry() {
 
                   {/* Streams selection */}
                   <div className="border-t border-slate-100 pt-3">
-                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams <span className="text-rose-500">*</span></span>
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams</span>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-1">
                       {availableSchoolStreams.map((strm) => {
                         const isSelected = assignedStreams.includes(strm);
@@ -1381,60 +961,6 @@ export default function StaffRegistry() {
                         );
                       })}
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Subjects & Learning Area Competencies (Dynamically mapped and bound to selected Grade and Stream) */}
-              {category !== 'Bursar' && category !== 'Store Master' && (
-                <div className="space-y-3 bg-indigo-50/30 p-4 rounded-xl border border-indigo-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-indigo-500" /> Subject & Learning Area Competencies (Grade & Stream Bound)
-                      </h4>
-                      <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
-                        {assignedClasses.length > 0 && assignedStreams.length > 0
-                          ? `Allocations bound to: ${assignedClasses.join(', ')} [${assignedStreams.join(', ')}]`
-                          : 'Select at least one Grade and Stream above to bind subject allocations.'}
-                      </p>
-                    </div>
-                    <span className="text-xs text-indigo-700 font-bold bg-indigo-100 px-2 py-1 rounded-full border border-indigo-200">
-                      {selectedSubjects.length} selected
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1 custom-scrollbar">
-                    {filteredLearningAreasForClasses.map((sub) => {
-                      const isSelected = selectedSubjects.includes(sub);
-                      const primaryGrade = assignedClasses[0] || homeroomGrade || 'Grade 7';
-                      const primaryStream = assignedStreams[0] || homeroomStream || availableSchoolStreams[0] || 'Mercury';
-                      return (
-                        <div
-                          key={sub}
-                          onClick={() => handleToggleSubject(sub)}
-                          className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-xs font-medium transition-all duration-200 border ${
-                            isSelected
-                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200'
-                              : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 truncate">
-                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
-                              isSelected ? 'bg-white border-white text-indigo-600' : 'border-slate-300 bg-white'
-                            }`}>
-                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                            </div>
-                            <span className="truncate font-semibold">{sub}</span>
-                          </div>
-                          {isSelected && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-700/80 text-indigo-100 border border-indigo-500/50 whitespace-nowrap">
-                              {primaryGrade} {assignedStreams.length > 0 ? assignedStreams.join(', ') : ''}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
               )}

@@ -97,8 +97,8 @@ const getServerUrl = () => localStorage.getItem(LAN_SERVER_KEY) || 'http://10.53
 /** Load admin users from central persistent storage / localStorage. Falls back to default admin. */
 const loadLocalUsers = (): User[] => {
   try {
-      const raw = CentralDataService.getData(ADMIN_USERS_KEY, []);
-      if (raw && raw.length > 0) return raw;
+    const raw = CentralDataService.getData<User[]>(ADMIN_USERS_KEY, []);
+    if (raw && raw.length > 0) return raw;
     const legacy = localStorage.getItem(ADMIN_USERS_KEY);
     if (legacy) {
       const parsed = JSON.parse(legacy);
