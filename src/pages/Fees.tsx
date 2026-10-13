@@ -15,6 +15,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useFileDownload } from '@/utils/fileDownloader';
 import { notifyDataChanged, readStorage } from '@/utils/storage';
+import AdminAuthModal, { verifyAdminPassword } from "@/components/common/AdminAuthModal";
 
 // Dynamic data hooks
 import { useStudentsStore, useTransactionsStore } from '@/hooks/usePersistentStorage';
@@ -629,36 +630,12 @@ const Fees = () => {
   };
 
   const handleOpenAuthModal = () => {
-    setAuthPassword("");
-    setAuthError("");
     setIsAuthOpen(true);
   };
 
-  const handleVerifyAuth = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!String(authPassword || '').trim()) {
-      setAuthError("Admin password is required");
-      return;
-    }
-
-    setIsVerifying(true);
-    setAuthError("");
-
-    await new Promise(resolve => setTimeout(resolve, 700));
-
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-
-    if (authPassword === currentAdminPass) {
-      setIsAuthOpen(false);
-      setAuthPassword("");
-      handleOpenConfigModal();
-      showSuccess("Admin verified. Opening term fee configuration...");
-    } else {
-      setAuthError("Invalid admin password");
-      showError("Authorization failed");
-      setAuthPassword("");
-    }
-    setIsVerifying(false);
+  const handleAuthSuccess = () => {
+    handleOpenConfigModal();
+    showSuccess("Admin verified. Opening term fee configuration...");
   };
 
   const handleOpenConfigModal = () => {
@@ -1313,50 +1290,13 @@ const Fees = () => {
       </Tabs>
 
       {/* Admin Verification Modal */}
-      <Modal
+      <AdminAuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
+        onSuccess={handleAuthSuccess}
         title="Admin Authorization Required"
         description="Enter your admin password to configure term fees."
-        footer={
-          <div className="flex gap-2 justify-end w-full">
-            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold h-11 px-6">
-              Cancel
-            </Button>
-            <Button 
-              type="button"
-              onClick={handleVerifyAuth}
-              disabled={isVerifying}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11 px-8 shadow-lg shadow-indigo-100 gap-2"
-            >
-              {isVerifying ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
-              Authorize
-            </Button>
-          </div>
-        }
-      >
-        <form onSubmit={handleVerifyAuth} className="space-y-4">
-          {authError && (
-            <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-              <AlertCircle size={16} /> {authError}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <Input 
-                type="password" 
-                value={authPassword} 
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
-                placeholder="••••••••" 
-                className="pl-11 rounded-xl h-12 bg-slate-50 border-none font-bold text-lg"
-                autoFocus
-              />
-            </div>
-          </div>
-        </form>
-      </Modal>
+      />
 
       {/* Set Term Fees Modal */}
       <Modal 

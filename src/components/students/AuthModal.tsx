@@ -1,11 +1,10 @@
-"use client";
-
-import React from 'react';
+import React, { useState } from 'react';
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { Lock, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { verifyAdminPassword } from "@/components/common/AdminAuthModal";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -32,6 +31,17 @@ const AuthModal: React.FC<AuthModalProps> = ({
   studentToDelete,
   onVerify
 }) => {
+  const [showPass, setShowPass] = useState(false);
+
+  const handleAuthorizeClick = () => {
+    if (!verifyAdminPassword(authPassword)) {
+      setAuthError("Invalid admin password");
+      return;
+    }
+    setAuthError("");
+    onVerify();
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -41,9 +51,9 @@ const AuthModal: React.FC<AuthModalProps> = ({
       footer={
         <>
           <Button variant="ghost" onClick={onClose} className="rounded-xl font-bold">Cancel</Button>
-          <Button 
-            className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
-            onClick={onVerify}
+          <Button
+            className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8"
+            onClick={handleAuthorizeClick}
             disabled={isVerifying}
           >
             {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
@@ -62,14 +72,21 @@ const AuthModal: React.FC<AuthModalProps> = ({
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <Input 
-              type="password" 
-              value={authPassword} 
-              onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
-              placeholder="••••••••" 
-              className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
+            <Input
+              type={showPass ? "text" : "password"}
+              value={authPassword}
+              onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }}
+              placeholder="••••••••"
+              className="pl-10 pr-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
               autoFocus
             />
+            <button
+              type="button"
+              onClick={() => setShowPass(!showPass)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+            >
+              {showPass ? <EyeOff className="w-5 h-5 text-slate-400" /> : <Eye className="w-5 h-5 text-slate-400" />}
+            </button>
           </div>
         </div>
       </div>

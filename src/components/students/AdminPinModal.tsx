@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ShieldAlert, KeyRound, Eye, EyeOff } from "lucide-react";
-import { getActiveAdminPassword, DEFAULT_ADMIN_PASSWORD } from "@/services/adminCredentials";
+import { verifyAdminPassword } from "@/components/common/AdminAuthModal";
 
 interface AdminPinModalProps {
   open: boolean;
@@ -35,16 +35,13 @@ export default function AdminPinModal({
       return;
     }
 
-    const activePass = localStorage.getItem('munyaka_admin_password') || getActiveAdminPassword() || DEFAULT_ADMIN_PASSWORD;
-    const ownerPass = localStorage.getItem('munyaka_owner_password') || 'owner123';
-
-    if (entered === activePass || entered === ownerPass || entered === DEFAULT_ADMIN_PASSWORD || entered === 'munyaka5239') {
+    if (verifyAdminPassword(entered)) {
       setError("");
       setPin("");
       onSuccess();
       onClose();
     } else {
-      setError("Incorrect admin password. Please try again.");
+      setError("Invalid admin password");
     }
   };
 
