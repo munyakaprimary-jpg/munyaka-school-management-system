@@ -10,7 +10,6 @@ import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "@/components/ui/notification-provider";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
-import Dashboard from "./pages/Dashboard";
 import { ForcePasswordResetModal } from "./components/ForcePasswordResetModal";
 import Login from "./pages/Login";
 import ParentPortal from "./pages/ParentPortal";
@@ -146,6 +145,9 @@ import MobileSettings from "./pages/MobileSettings";
 import LANServerConfig from "./pages/LANServerConfig";
 import TeacherLanConfig from "./pages/TeacherLanConfig";
 import AdminHarmonizationHub from "./components/admin/AdminHarmonizationHub";
+import AdminLayout from "./components/AdminLayout";
+import AdminPortalRouter from "./pages/AdminPortalRouter";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import TeacherExportView from "./pages/TeacherExportView";
 import LibrarianPortalView from "./pages/LibrarianPortalView";
 import ICTTechnicalPortalView from "./pages/ICTTechnicalPortalView";
@@ -539,7 +541,7 @@ const App = () => {
                       {/* Protected Routes */}
                       <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><AdminLayout><AdminDashboardPage /></AdminLayout></AppUnlock></ProtectedRoute>} />
                       <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/learners/archive" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
@@ -596,10 +598,11 @@ const App = () => {
                       <Route path="/ict-lab" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher', 'ICT_TEACHER', 'ICT_TECHNICIAN']}><AppUnlock><Layout><ICTLabManagement /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/system-management" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher']}><AppUnlock><Layout><SystemAndAccountManagement /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/owner" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/tenants" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/lan" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/payments" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/settings" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/tenants" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/lan" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/payments" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/settings" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
+                                            <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><AdminLayout><AdminPortalRouter /></AdminLayout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/subscriptions" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><PaymentManagement /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/payment-management" element={<ProtectedRoute><AppUnlock><Layout><PaymentManagement /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dev/tenants" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><OwnersDashboard /></Layout></AppUnlock></ProtectedRoute>} />
