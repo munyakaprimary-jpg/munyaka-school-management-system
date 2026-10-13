@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom";
 import AdminPortal from "./pages/admin/AdminPortal";
 import OwnersPortal from "./components/OwnersPortal";
 
@@ -22,7 +22,7 @@ function RoleSelectorGateway({ onSelect }: { onSelect: (role: 'ADMIN' | 'OWNER')
         <div className="grid grid-cols-1 gap-4 pt-2">
           <button
             onClick={() => onSelect('ADMIN')}
-            className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-2xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-between group"
+            className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-2xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-between group cursor-pointer"
           >
             <div className="text-left">
               <div className="text-base">School Admin Portal</div>
@@ -33,7 +33,7 @@ function RoleSelectorGateway({ onSelect }: { onSelect: (role: 'ADMIN' | 'OWNER')
 
           <button
             onClick={() => onSelect('OWNER')}
-            className="w-full py-4 px-6 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm rounded-2xl border border-slate-700 transition flex items-center justify-between group"
+            className="w-full py-4 px-6 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm rounded-2xl border border-slate-700 transition flex items-center justify-between group cursor-pointer"
           >
             <div className="text-left">
               <div className="text-base">School Owner Portal</div>
@@ -48,27 +48,50 @@ function RoleSelectorGateway({ onSelect }: { onSelect: (role: 'ADMIN' | 'OWNER')
 }
 
 export function App() {
+  const [isLoading, setIsLoading] = useState(false);
   const [userRole, setUserRole] = useState<'ADMIN' | 'OWNER' | null>(() => {
-    const saved = localStorage.getItem('munyaka_current_role');
-    if (saved === 'ADMIN' || saved === 'OWNER') return saved;
+    try {
+      const saved = localStorage.getItem('munyaka_portal_role') || localStorage.getItem('munyaka_current_role');
+      if (saved === 'ADMIN' || saved === 'OWNER') return saved;
+    } catch (e) {
+      console.error('Failed to read saved role:', e);
+    }
     return null;
   });
 
-  const handleSelectRole = (role: 'ADMIN' | 'OWNER') => {
-    setUserRole(role);
-    localStorage.setItem('munyaka_current_role', role);
-  };
-
   useEffect(() => {
-    const handleStorage = () => {
-      const saved = localStorage.getItem('munyaka_current_role');
+    try {
+      const saved = localStorage.getItem('munyaka_portal_role') || localStorage.getItem('munyaka_current_role');
       if (saved === 'ADMIN' || saved === 'OWNER') {
         setUserRole(saved);
       }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    } catch (e) {
+      console.error('Failed to read session:', e);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  const handleSelectRole = (role: 'ADMIN' | 'OWNER') => {
+    setUserRole(role);
+    try {
+      localStorage.setItem('munyaka_portal_role', role);
+      localStorage.setItem('munyaka_current_role', role);
+    } catch (e) {
+      console.error('Failed to persist role:', e);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-slate-400">Loading Munyaka Portal...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>
