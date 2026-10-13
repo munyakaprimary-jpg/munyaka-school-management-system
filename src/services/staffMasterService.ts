@@ -1,7 +1,7 @@
+import { readStorage, writeStorage } from './persistentStore';
 import { CentralDataService } from './centralDataService';
-import { STORAGE_KEYS } from './persistentStore';
 
-export const STAFF_MASTER_KEY = STORAGE_KEYS.STAFF;
+export const STAFF_MASTER_KEY = 'munyaka_staff_master_list';
 
 export interface StaffMember {
   id: string;
