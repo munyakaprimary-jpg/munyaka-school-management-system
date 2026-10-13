@@ -335,7 +335,7 @@ const Login: React.FC = () => {
         return;
       }
 
-      const storedCode = ((matched as any).tempAccessCode || (matched as any).accessCode || '').trim();
+      const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
       const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
       const normalizedInputCode = trimmedPass.toLowerCase().replace(/[^a-z0-9]/g, '');
 
