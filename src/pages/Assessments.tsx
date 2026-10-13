@@ -954,22 +954,12 @@ ${filteredStudents.length} learner(s) included.
           <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={handleBackToParent}
-              className="p-2.5 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors shadow-sm rounded-xl flex items-center justify-center shrink-0"
+              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center justify-center shrink-0"
               title="Back to Assessments Menu"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900 whitespace-normal break-words">Marks Entry & CBC Assessment</h1>
-                <span className="px-3 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full text-xs font-bold uppercase tracking-wide">
-                  CBC ASSESSMENT ACTIVE
-                </span>
-              </div>
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full text-xs font-bold uppercase tracking-wide">
-                CBC ASSESSMENT ACTIVE
-              </span>
-            </div>
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900 whitespace-normal break-words">Marks Entry & CBC Assessment</h1>
             {showSavedBadge && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
                 <CheckCircle2 size={12} /> Saved to LocalStorage
