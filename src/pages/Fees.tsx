@@ -597,36 +597,82 @@ const Fees = () => {
   // ── Event Handlers ─────────────────────────────────────────────────────────
   
   const handleDownloadFeeStatement = async () => {
-    const activeGradeLabel = GRADE_LEVEL_OPTIONS.find(o => o.value === tabGradeFilter)?.label || "Selected Grade";
-    const filename = `fee_statement_${activeGradeLabel.replace(/\s+/g, '_')}_${selectedTerm}_${new Date().toISOString().slice(0, 10)}.csv`;
-    
-    const headers = [
-      "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-      `Active Filter: ${activeGradeLabel} | ${selectedTerm} | ${selectedYear}`,
-      `Total Students: ${filteredCalculatedFees.length} | Generated: ${new Date().toLocaleString()}`,
-      "",
-      ["Adm No", "Student Name", "Grade", "Stream", "Term Fee (KES)", "Fee Paid (KES)", "Balance (KES)", "Status"].join(","),
-    ];
-    const rows = filteredCalculatedFees.map((fee) => [
-      fee.admNo || "",
-      `"${fee.student}"`,
-      fee.grade,
-      fee.stream,
-      fee.total,
-      fee.paid,
-      fee.balance,
-      fee.status,
-    ].join(","));
-    const csv = [headers.join("\n"), ...rows].join("\n");
+    const printContent = document.getElementById('statement-preview-content');
+    if (!printContent) {
+      // Fallback CSV download if modal content not open
+      const activeGradeLabel = GRADE_LEVEL_OPTIONS.find(o => o.value === tabGradeFilter)?.label || "Selected Grade";
+      const filename = `fee_statement_${activeGradeLabel.replace(/\s+/g, '_')}_${selectedTerm}_${new Date().toISOString().slice(0, 10)}.csv`;
+      
+      const headers = [
+        "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+        `Active Filter: ${activeGradeLabel} | ${selectedTerm} | ${selectedYear}`,
+        `Total Students: ${filteredCalculatedFees.length} | Generated: ${new Date().toLocaleString()}`,
+        "",
+        ["Adm No", "Student Name", "Grade", "Stream", "Term Fee (KES)", "Fee Paid (KES)", "Balance (KES)", "Status"].join(","),
+      ];
+      const rows = filteredCalculatedFees.map((fee) => [
+        fee.admNo || "",
+        `"${fee.student}"`,
+        fee.grade,
+        fee.stream,
+        fee.total,
+        fee.paid,
+        fee.balance,
+        fee.status,
+      ].join(","));
+      const csv = [headers.join("\n"), ...rows].join("\n");
 
-    await statementExport.download({
-      filename,
-      data: csv,
-      mimeType: 'text/csv;charset=utf-8;',
-      fileType: 'csv',
-      successMessage: `Fee statement for ${activeGradeLabel} downloaded successfully.`,
-      errorMessage: "Download failed. Please check app permissions.",
-    });
+      await statementExport.download({
+        filename,
+        data: csv,
+        mimeType: 'text/csv;charset=utf-8;',
+        fileType: 'csv',
+        successMessage: `Fee statement for ${activeGradeLabel} downloaded successfully.`,
+        errorMessage: "Download failed. Please check app permissions.",
+      });
+      return;
+    }
+
+    showSuccess("Generating PDF Statement...");
+    
+    setTimeout(() => {
+      const windowUrl = 'about:blank';
+      const uniqueName = 'Statement_Preview';
+      const printWindow = window.open(windowUrl, uniqueName, 'left=50,top=50,width=850,height=950');
+      
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Official_Fee_Statement_${selectedTerm}_${selectedYear}</title>
+              <style>
+                body { font-family: system-ui, -apple-system, sans-serif; padding: 30px; color: #1e293b; background: #ffffff; }
+                .header { margin-bottom: 25px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                th, td { border: 1px solid #cbd5e1; padding: 12px; text-align: left; }
+                th { background-color: #f1f5f9; font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }
+                td { font-size: 13px; font-weight: 600; }
+                tfoot tr { background-color: #f8fafc; font-weight: 900; }
+              </style>
+            </head>
+            <body>
+              ${printContent.innerHTML}
+              <script>
+                window.onload = function() {
+                  window.print();
+                  setTimeout(function() { window.close(); }, 500);
+                };
+              </script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        showSuccess("✅ Download Complete! Statement PDF ready.");
+      } else {
+        showError("Popup blocked. Please allow popups to download PDF statement.");
+      }
+    }, 400);
   };
 
   const handleOpenAuthModal = () => {
