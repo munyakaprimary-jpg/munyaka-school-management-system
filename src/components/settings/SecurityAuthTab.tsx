@@ -265,10 +265,17 @@ export default function SecurityAuthTab() {
   };
 
   const handleSaveCredentials = (role: 'Admin' | 'Owner') => {
-    const roleTitle = role === 'Owner' ? 'School Owner' : 'School Administrator';
-    const name = role === 'Owner' ? ownerUsername : adminUsername;
-    showSuccess(`${role} credentials updated securely in persistent storage!`);
-    logSecurityEvent(roleTitle, name, `${role} Login Credentials Reset`);
+    if (role === 'Admin') {
+      localStorage.setItem('munyaka_admin_email', adminEmail);
+      localStorage.setItem('munyaka_admin_password', adminPassword);
+      showSuccess("Admin credentials saved successfully!");
+      logSecurityEvent('School Administrator', adminEmail, 'Admin Login Credentials Reset');
+    } else {
+      localStorage.setItem('munyaka_owner_email', ownerEmail);
+      localStorage.setItem('munyaka_owner_password', ownerPassword);
+      showSuccess("Owner credentials saved successfully!");
+      logSecurityEvent('School Owner', ownerEmail, 'Owner Login Credentials Reset');
+    }
   };
 
   const handleRadiusChange = (radius: number) => {
@@ -316,7 +323,7 @@ export default function SecurityAuthTab() {
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Username / Email</Label>
-                <Input value={adminUsername} onChange={e => setAdminUsername(e.target.value)} className="bg-white" />
+                <Input value={adminEmail} onChange={e => setAdminEmail(e.target.value)} className="bg-white" />
               </div>
               <div>
                 <Label className="text-xs">Password</Label>
@@ -353,11 +360,30 @@ export default function SecurityAuthTab() {
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Username / Email</Label>
-                <Input value={ownerUsername} onChange={e => setOwnerUsername(e.target.value)} className="bg-white" />
+                <Input value={ownerEmail} onChange={e => setOwnerEmail(e.target.value)} className="bg-white" />
               </div>
               <div>
                 <Label className="text-xs">Password</Label>
                 <div className="relative flex items-center">
+                  <Input
+                    type={showOwnerPassword ? "text" : "password"}
+                    value={ownerPassword}
+                    onChange={e => setOwnerPassword(e.target.value)}
+                    className="bg-white pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOwnerPassword(!showOwnerPassword)}
+                    className="absolute right-3 text-slate-400 hover:text-emerald-600 focus:outline-none"
+                  >
+                    {showOwnerPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+              <Button onClick={() => handleSaveCredentials('Owner')} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs h-10">
+                Update Owner Credentials
+              </Button>
+            </div>
                   <Input
                     type={showOwnerPassword ? "text" : "password"}
                     value={ownerPassword}
