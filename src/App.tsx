@@ -1,80 +1,38 @@
-import React, { useState, useEffect } from "react";
-import { BrowserRouter } from "react-router-dom";
-import AdminPortal from "./pages/admin/AdminPortal";
-import OwnersPortal from "./components/OwnersPortal";
+import React, { useState } from 'react';
+import AdminPortal from './pages/admin/AdminPortal';
+import OwnersPortalDashboard from './pages/owner/OwnersPortalDashboard';
 
-// Role Selector Gateway Component
-function RoleSelectorGateway({ onSelect }: { onSelect: (role: 'ADMIN' | 'OWNER') => void }) {
+export default function App() {
+  const [role, setRole] = useState<'ADMIN' | 'OWNER' | null>(() => {
+    return (localStorage.getItem('munyaka_portal_role') as 'ADMIN' | 'OWNER') || null;
+  });
+
+  if (role === 'ADMIN') {
+    return <AdminPortal onLogout={() => { localStorage.removeItem('munyaka_portal_role'); setRole(null); }} />;
+  }
+
+  if (role === 'OWNER') {
+    return <OwnersPortalDashboard onLogout={() => { localStorage.removeItem('munyaka_portal_role'); setRole(null); }} />;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6">
-        <div className="w-16 h-16 bg-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-emerald-600/30">
-          MP
-        </div>
-        <div>
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            Munyaka Primary School
-          </span>
-          <h1 className="text-2xl font-bold text-white mt-3">Select Portal Access</h1>
-          <p className="text-slate-400 text-xs mt-1">Choose your role to access the correct operational portal.</p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 pt-2">
-          <button
-            onClick={() => onSelect('ADMIN')}
-            className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-2xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-between group cursor-pointer"
-          >
-            <div className="text-left">
-              <div className="text-base">School Admin Portal</div>
-              <div className="text-xs font-normal text-emerald-100/80">Manage learners, roll call, fees & staff</div>
-            </div>
-            <span className="text-xl group-hover:translate-x-1 transition">→</span>
-          </button>
-
-          <button
-            onClick={() => onSelect('OWNER')}
-            className="w-full py-4 px-6 bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm rounded-2xl border border-slate-700 transition flex items-center justify-between group cursor-pointer"
-          >
-            <div className="text-left">
-              <div className="text-base">School Owner Portal</div>
-              <div className="text-xs font-normal text-slate-400">Multi-tenant overview & master control</div>
-            </div>
-            <span className="text-xl group-hover:translate-x-1 transition">→</span>
-          </button>
-        </div>
+    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+      <h1 className="text-3xl font-bold mb-2">Munyaka Portal Gateway</h1>
+      <p className="text-slate-400 mb-8">Select your portal workspace below</p>
+      <div className="flex gap-4">
+        <button
+          onClick={() => { localStorage.setItem('munyaka_portal_role', 'ADMIN'); setRole('ADMIN'); }}
+          className="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold shadow-lg text-lg cursor-pointer"
+        >
+          Enter School Admin Portal
+        </button>
+        <button
+          onClick={() => { localStorage.setItem('munyaka_portal_role', 'OWNER'); setRole('OWNER'); }}
+          className="px-6 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold shadow-lg text-lg cursor-pointer"
+        >
+          Enter Executive Owner Portal
+        </button>
       </div>
     </div>
   );
 }
-
-export function App() {
-  const [userRole, setUserRole] = useState<'ADMIN' | 'OWNER' | null>(() => {
-    try {
-      const saved = localStorage.getItem('munyaka_portal_role') || localStorage.getItem('munyaka_current_role');
-      if (saved === 'ADMIN' || saved === 'OWNER') return saved;
-    } catch (e) {
-      console.error('Failed to read saved role:', e);
-    }
-    return null;
-  });
-
-  const handleSelectRole = (role: 'ADMIN' | 'OWNER') => {
-    setUserRole(role);
-    try {
-      localStorage.setItem('munyaka_portal_role', role);
-      localStorage.setItem('munyaka_current_role', role);
-    } catch (e) {
-      console.error('Failed to persist role:', e);
-    }
-  };
-
-  return (
-    <BrowserRouter>
-      {userRole === 'ADMIN' && <AdminPortal />}
-      {userRole === 'OWNER' && <OwnersPortal />}
-      {!userRole && <RoleSelectorGateway onSelect={handleSelectRole} />}
-    </BrowserRouter>
-  );
-}
-
-export default App;
