@@ -289,37 +289,30 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
   const staffList = getStaffMaster();
   const trimmedId = (identifier || '').trim().toLowerCase();
   const trimmedPass = (pass || '').trim();
+  const normalizedPass = trimmedPass.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const matched = staffList.find(s => {
-    const sId = (s.staffId || '').toLowerCase();
     const sEmail = (s.email || '').toLowerCase();
-    const sTsc = (s.tscNumber || '').toLowerCase();
-    const sCode = (s.tempAccessCode || '').toLowerCase();
-    const sNatId = (s.nationalId || '').toLowerCase();
-
-    const matchesId =
-      sId === trimmedId ||
-      sEmail === trimmedId ||
-      sTsc === trimmedId ||
-      sCode === trimmedId ||
-      sNatId === trimmedId;
-
-    return matchesId;
+    return sEmail === trimmedId || sEmail === `${trimmedId}@munyaka.sc.ke`;
   });
 
   if (!matched) {
-    return { success: false, error: 'Staff account not found.' };
+    return { success: false, error: 'Staff account not found. Please enter your full school email ending with @munyaka.sc.ke.' };
   }
 
-  // If tempAccessCode or nationalId matches the password
-  const validPass =
-    trimmedPass === 'munyaka2026' ||
-    trimmedPass === 'admin123' ||
-    trimmedPass === matched.tempAccessCode ||
-    trimmedPass === matched.nationalId;
+  const storedCode = (matched.tempAccessCode || (matched as any).accessCode || '').trim();
+  const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // Exclusively enforce school email and MUN-XXXX format matching stored registry code
+  const isEmailValid = trimmedId.endsWith('@munyaka.sc.ke');
+  const validPass = storedCode !== '' && (normalizedStoredCode !== '' && normalizedStoredCode === normalizedPass);
+
+  if (!isEmailValid) {
+    return { success: false, error: 'Please enter your full school email ending with @munyaka.sc.ke.' };
+  }
 
   if (!validPass) {
-    return { success: false, error: 'Invalid password or access key.' };
+    return { success: false, error: 'Invalid MUN-XXXX access code. Please check your assigned staff access code.' };
   }
 
   return { success: true, user: matched };

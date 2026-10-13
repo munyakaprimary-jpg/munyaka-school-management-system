@@ -1,24 +1,25 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  Search, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Check, 
-  BookOpen, 
-  GraduationCap, 
-  User, 
-  Mail, 
-  Phone, 
-  Award, 
-  FileSpreadsheet, 
-  AlertCircle, 
-  Fingerprint, 
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Check,
+  BookOpen,
+  GraduationCap,
+  User,
+  Mail,
+  Phone,
+  Award,
+  FileSpreadsheet,
+  AlertCircle,
+  Fingerprint,
   Sparkles,
   Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
+import { useGradesAndStreams } from '../hooks/useGradesStreams';
 
 export type StaffCategoryRole =
   | 'Class Teacher'
@@ -31,6 +32,12 @@ export type StaffCategoryRole =
   | 'DHOI'
   | 'Store Master';
 
+export interface StaffAllocationRecord {
+  subject: string;
+  grade: string;
+  stream: string;
+}
+
 export interface StaffMember {
   id: string;
   name: string;
@@ -41,6 +48,9 @@ export interface StaffMember {
   subjects: string[];
   assignedClasses?: string[];
   assignedStreams?: string[];
+  homeroomGrade?: string;
+  homeroomStream?: string;
+  allocations?: StaffAllocationRecord[];
   accessCode: string;
   status: 'Active' | 'On Leave' | 'Inactive';
   createdAt?: string;
@@ -65,6 +75,31 @@ export default function StaffRegistry() {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
   const [assignedStreams, setAssignedStreams] = useState<string[]>([]);
+  const [homeroomGrade, setHomeroomGrade] = useState('Grade 7');
+  const [homeroomStream, setHomeroomStream] = useState('');
+  // Structured subject & class allocation records: e.g. { subject: "Mathematics", grade: "Grade 7", stream: "East" }
+  const [allocations, setAllocations] = useState<StaffAllocationRecord[]>([]);
+
+  // Active subject being configured for grade/stream matrix
+  const [activeSubjectForAllocation, setActiveSubjectForAllocation] = useState<string | null>(null);
+
+  // Grades and streams configuration hook
+  const { grades: availableSchoolClasses, getStreamsForGrade, streams: allGlobalStreams } = useGradesAndStreams();
+
+  // Get relevant streams based on selected grades (or all global streams if none selected)
+  const availableSchoolStreams = useMemo(() => {
+    if (!assignedClasses || assignedClasses.length === 0) {
+      return allGlobalStreams && allGlobalStreams.length > 0 ? allGlobalStreams : [];
+    }
+    const streamSet = new Set<string>();
+    assignedClasses.forEach(cls => {
+      const streamsForThisGrade = getStreamsForGrade(cls);
+      if (streamsForThisGrade && streamsForThisGrade.length > 0) {
+        streamsForThisGrade.forEach(s => streamSet.add(s));
+      }
+    });
+    return Array.from(streamSet);
+  }, [assignedClasses, getStreamsForGrade, allGlobalStreams]);
 
   // Generator for Access Code
   const generateSecureCode = () => {
@@ -85,7 +120,7 @@ export default function StaffRegistry() {
       loadedStaff = MOCK_STAFF;
     }
 
-    // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove duplicates/dashes
+    // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove legacy streams
     const seenIds = new Set<string>();
     const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
       let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
@@ -95,10 +130,73 @@ export default function StaffRegistry() {
       seenIds.add(id);
 
       let cat: StaffCategoryRole = staff.category;
-      if (cat === 'Teaching Staff' as any) cat = 'Subject Teacher';
-      else if (cat === 'Administration' as any) cat = 'HOI';
-      else if (cat === 'Support Staff' as any) cat = 'Store Master';
+      if (cat === ('Teaching Staff' as any)) cat = 'Subject Teacher';
+      else if (cat === ('Administration' as any)) cat = 'HOI';
+      else if (cat === ('Support Staff' as any)) cat = 'Store Master';
       else if (!cat) cat = 'Class Teacher';
+
+      const rawClasses = staff.assignedClasses || staff.classes || [];
+      const cleanClasses = Array.isArray(rawClasses)
+        ? rawClasses.map((c: any) => {
+            if (!c) return '';
+            if (typeof c === 'string') return c;
+            if (typeof c === 'object') {
+              return String(c.grade || c.name || c.className || `${c.subject || ''} ${c.grade || ''}${c.stream || ''}`.trim() || JSON.stringify(c));
+            }
+            return String(c);
+          }).filter(Boolean)
+        : [];
+
+      const rawStreams = staff.assignedStreams || staff.streams || [];
+      const cleanStreams = Array.isArray(rawStreams)
+        ? rawStreams.map((s: any) => {
+            if (!s) return '';
+            if (typeof s === 'string') return s;
+            if (typeof s === 'object') {
+              return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
+            }
+            return String(s);
+          }).filter(s => s && s !== 'Mercury')
+        : [];
+
+      const rawSubjects = staff.subjects || staff.assignedSubjects || [];
+      const cleanSubjects = Array.isArray(rawSubjects)
+        ? rawSubjects.map((sub: any) => {
+            if (!sub) return '';
+            if (typeof sub === 'string') return sub;
+            if (typeof sub === 'object') {
+              return String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub));
+            }
+            return String(sub);
+          }).filter(Boolean)
+        : [];
+
+      const defaultGrade = cleanClasses[0] || 'Grade 7';
+      const defaultStream = cleanStreams[0] || '';
+
+      const cleanAllocations = Array.isArray(staff.allocations)
+        ? staff.allocations
+            .filter((a: any) => a && typeof a === 'object' && a.subject)
+            .map((a: any) => ({
+              subject: String(a.subject),
+              grade: String(a.grade || defaultGrade),
+              stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
+            }))
+        : cleanSubjects.map((sub: string) => ({
+            subject: sub,
+            grade: defaultGrade,
+            stream: defaultStream
+          }));
+
+      let code = staff.accessCode;
+      if (!code || !code.startsWith('MUN-')) {
+        const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+        let randomPart = '';
+        for (let i = 0; i < 4; i++) {
+          randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        code = `MUN-${randomPart}`;
+      }
 
       return {
         id,
@@ -107,10 +205,13 @@ export default function StaffRegistry() {
         tscNumber: staff.tscNumber || 'N/A',
         email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
         phone: staff.phone || '+254 712 345 678',
-        subjects: staff.subjects || [],
-        assignedClasses: staff.assignedClasses || [],
-        assignedStreams: staff.assignedStreams || [],
-        accessCode: staff.accessCode || Math.random().toString(36).substring(2, 7).toUpperCase(),
+        subjects: cleanSubjects,
+        assignedClasses: cleanClasses,
+        assignedStreams: cleanStreams,
+        homeroomGrade: staff.homeroomGrade || defaultGrade,
+        homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
+        allocations: cleanAllocations,
+        accessCode: code,
         status: staff.status || 'Active',
         createdAt: staff.createdAt || new Date().toISOString()
       };
@@ -131,6 +232,10 @@ export default function StaffRegistry() {
     setSelectedSubjects([]);
     setAssignedClasses([]);
     setAssignedStreams([]);
+    setHomeroomGrade('Grade 7');
+    setHomeroomStream('');
+    setAllocations([]);
+    setActiveSubjectForAllocation(null);
     generateSecureCode();
     setIsModalOpen(true);
   };
@@ -149,9 +254,54 @@ export default function StaffRegistry() {
     setPhone(staff.phone);
     setStatus(staff.status);
     setAccessCode(staff.accessCode || generateRandomCode());
-    setSelectedSubjects(staff.subjects || []);
-    setAssignedClasses(staff.assignedClasses || []);
-    setAssignedStreams(staff.assignedStreams || []);
+    
+    const loadedSubs = staff.subjects || [];
+    setSelectedSubjects(loadedSubs);
+
+    const loadedClasses = staff.assignedClasses || [];
+    setAssignedClasses(loadedClasses);
+
+    // Validate loaded streams against valid streams for the loaded classes from central configuration
+    const validStreamsSet = new Set<string>();
+    loadedClasses.forEach(cls => {
+      const streamsForGrade = getStreamsForGrade(cls);
+      if (streamsForGrade && streamsForGrade.length > 0) {
+        streamsForGrade.forEach(s => validStreamsSet.add(s));
+      }
+    });
+
+    const rawLoadedStreams = staff.assignedStreams || [];
+    const sanitizedStreams = rawLoadedStreams.filter(strm => {
+      // If validStreamsSet is populated, only keep streams that belong to the grade. If empty, keep non-legacy.
+      if (validStreamsSet.size > 0) {
+        return validStreamsSet.has(strm);
+      }
+      return strm && strm !== 'Mercury';
+    });
+
+    setAssignedStreams(sanitizedStreams);
+    setHomeroomGrade(staff.homeroomGrade || loadedClasses[0] || 'Grade 7');
+    setHomeroomStream(staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : (sanitizedStreams[0] || ''));
+    
+    let loadedAllocs: StaffAllocationRecord[] = [];
+    if (Array.isArray(staff.allocations) && staff.allocations.length > 0) {
+      loadedAllocs = staff.allocations.map(a => ({
+        subject: a.subject,
+        grade: a.grade || loadedClasses[0] || 'Grade 7',
+        stream: a.stream && a.stream !== 'Mercury' ? a.stream : (sanitizedStreams[0] || '')
+      }));
+    } else {
+      // Build default allocations if none existed
+      loadedSubs.forEach(sub => {
+        loadedAllocs.push({
+          subject: sub,
+          grade: loadedClasses[0] || 'Grade 4',
+          stream: sanitizedStreams[0] || ''
+        });
+      });
+    }
+    setAllocations(loadedAllocs);
+    setActiveSubjectForAllocation(loadedSubs[0] || null);
     setIsModalOpen(true);
   };
 
@@ -182,10 +332,10 @@ export default function StaffRegistry() {
   function generateRandomCode() {
     const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
     let code = '';
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 4; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return code;
+    return `MUN-${code}`;
   }
 
   const handleDeleteStaff = (id: string) => {
@@ -229,6 +379,8 @@ export default function StaffRegistry() {
       subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : [],
       assignedClasses: category !== 'Bursar' && category !== 'Store Master' ? assignedClasses : [],
       assignedStreams: category !== 'Bursar' && category !== 'Store Master' ? assignedStreams : [],
+      homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
+      homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
     };
 
@@ -284,17 +436,6 @@ export default function StaffRegistry() {
         'Agriculture and Nutrition',
         'Pre-Technical Studies'
       ];
-
-  const availableSchoolClasses = [
-    'PP1', 'PP2',
-    'Grade 1', 'Grade 2', 'Grade 3',
-    'Grade 4', 'Grade 5', 'Grade 6',
-    'Grade 7', 'Grade 8', 'Grade 9'
-  ];
-
-  const availableSchoolStreams = [
-    'Blue', 'Red', 'Green', 'East', 'West'
-  ];
 
   // Helper function to check if a category is a teaching role
   const categoryIsTeaching = (cat: string) => {
@@ -557,20 +698,19 @@ export default function StaffRegistry() {
 
                       <td className="py-3.5 px-3">
                         {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 max-w-[220px]">
-                            {staff.subjects.slice(0, 2).map((sub, sIdx) => {
-                              const subName = typeof sub === 'string' ? sub : (sub && typeof sub === 'object' ? String((sub as any).name || (sub as any).title || (sub as any).subject || JSON.stringify(sub)) : String(sub));
+                          <div className="flex flex-wrap gap-1 max-w-[280px]">
+                            {staff.subjects.map((sub, sIdx) => {
+                              const subName = typeof sub === 'string'
+                                ? sub
+                                : (sub && typeof sub === 'object'
+                                    ? String((sub as any).name || (sub as any).title || (sub as any).subject || (sub as any).learningArea || JSON.stringify(sub))
+                                    : String(sub));
                               return (
                                 <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
                                   {subName}
                                 </span>
                               );
                             })}
-                            {staff.subjects.length > 2 && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                +{staff.subjects.length - 2}
-                              </span>
-                            )}
                           </div>
                         ) : (
                           <span className="text-slate-400 text-xs">—</span>
@@ -578,7 +718,14 @@ export default function StaffRegistry() {
                       </td>
 
                       <td className="py-3.5 px-3">
-                        {categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
+                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
+                              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
+                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
+                            </span>
+                          </div>
+                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
                           <div className="flex flex-col gap-1.5 max-w-[220px]">
                             {/* If assignedClasses contains structured object or string items */}
                             {staff.assignedClasses && staff.assignedClasses.length > 0 && (
@@ -588,11 +735,9 @@ export default function StaffRegistry() {
                                   if (typeof cls === 'string') {
                                     formattedCls = cls;
                                   } else if (cls && typeof cls === 'object') {
-                                    const g = (cls as any).grade || (cls as any).name || (cls as any).className || '';
-                                    const s = (cls as any).stream || (cls as any).streamName || '';
-                                    const subj = (cls as any).subject || (cls as any).learningArea || '';
-                                    formattedCls = [g, s, subj ? `- ${subj}` : ''].filter(Boolean).join(' ');
-                                    if (!formattedCls) formattedCls = JSON.stringify(cls);
+                                    const item = cls as any;
+                                    formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedCls) formattedCls = JSON.stringify(item);
                                   } else {
                                     formattedCls = String(cls);
                                   }
@@ -618,10 +763,9 @@ export default function StaffRegistry() {
                                   if (typeof strm === 'string') {
                                     formattedStrm = strm;
                                   } else if (strm && typeof strm === 'object') {
-                                    const g = (strm as any).grade || (strm as any).name || '';
-                                    const s = (strm as any).stream || (strm as any).streamName || '';
-                                    formattedStrm = [g, s].filter(Boolean).join(' ');
-                                    if (!formattedStrm) formattedStrm = JSON.stringify(strm);
+                                    const item = strm as any;
+                                    formattedStrm = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                    if (!formattedStrm) formattedStrm = JSON.stringify(item);
                                   } else {
                                     formattedStrm = String(strm);
                                   }
@@ -755,6 +899,45 @@ export default function StaffRegistry() {
                   </select>
                 </div>
 
+                {/* Conditional Homeroom Grade & Stream Selector for Class Teacher */}
+                {category === 'Class Teacher' && (
+                  <div className="sm:col-span-2 p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl space-y-3">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-emerald-600" />
+                      <div>
+                        <h4 className="text-xs font-bold text-emerald-900">Assigned Homeroom Grade & Stream</h4>
+                        <p className="text-[11px] text-emerald-700">Select the primary homeroom class supervised by this Class Teacher.</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Grade</label>
+                        <select
+                          value={homeroomGrade}
+                          onChange={(e) => setHomeroomGrade(e.target.value)}
+                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                        >
+                          {availableSchoolClasses.map((cls) => (
+                            <option key={cls} value={cls}>{cls}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Stream</label>
+                        <select
+                          value={homeroomStream}
+                          onChange={(e) => setHomeroomStream(e.target.value)}
+                          className="w-full bg-white border border-emerald-300 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                        >
+                          {availableSchoolStreams.map((strm) => (
+                            <option key={strm} value={strm}>{strm}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">
                     National ID / TSC No.
@@ -847,58 +1030,12 @@ export default function StaffRegistry() {
                 </div>
               </div>
 
-              {/* Subjects Grid (Conditionally shown or optional for Teaching Staff) */}
-              {category !== 'Bursar' && category !== 'Store Master' && (
-                <div className="space-y-3 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-indigo-400" /> Subject & Learning Area Competencies
-                      </h4>
-                      {assignedClasses.length > 0 && (
-                        <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
-                          Filtered for selected grade(s): {assignedClasses.join(', ')}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
-                      {selectedSubjects.length} selected
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 custom-scrollbar">
-                    {filteredLearningAreasForClasses.map((sub) => {
-                      const isSelected = selectedSubjects.includes(sub);
-                      return (
-                        <button
-                          key={sub}
-                          type="button"
-                          onClick={() => handleToggleSubject(sub)}
-                          className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all duration-200 border ${
-                            isSelected
-                              ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm shadow-indigo-100/50'
-                              : 'bg-white border-slate-150 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
-                            isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'
-                          }`}>
-                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                          </div>
-                          <span className="truncate">{sub}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Class & Stream Assignments Grid (Conditionally shown or optional for Teaching Staff) */}
+              {/* Class & Stream Assignments Grid FIRST (so grades/streams are chosen before subjects) */}
               {category !== 'Bursar' && category !== 'Store Master' && (
                 <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Class & Stream Assignments
+                      <GraduationCap className="w-4 h-4 text-emerald-500" /> Assigned Grades & Streams
                     </h4>
                     <span className="text-xs text-slate-500 font-medium bg-white px-2 py-1 rounded-full border border-slate-100">
                       {assignedClasses.length} class(es), {assignedStreams.length} stream(s) selected
@@ -907,7 +1044,7 @@ export default function StaffRegistry() {
                   
                   {/* Classes/Grades selection */}
                   <div>
-                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Grades / Classes</span>
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Grades / Classes <span className="text-rose-500">*</span></span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
                       {availableSchoolClasses.map((cls) => {
                         const isSelected = assignedClasses.includes(cls);
@@ -936,7 +1073,7 @@ export default function StaffRegistry() {
 
                   {/* Streams selection */}
                   <div className="border-t border-slate-100 pt-3">
-                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams</span>
+                    <span className="text-xs font-semibold text-slate-500 block mb-2">Select Streams <span className="text-rose-500">*</span></span>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-1">
                       {availableSchoolStreams.map((strm) => {
                         const isSelected = assignedStreams.includes(strm);
@@ -961,6 +1098,60 @@ export default function StaffRegistry() {
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Subjects & Learning Area Competencies (Dynamically mapped and bound to selected Grade and Stream) */}
+              {category !== 'Bursar' && category !== 'Store Master' && (
+                <div className="space-y-3 bg-indigo-50/30 p-4 rounded-xl border border-indigo-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-indigo-500" /> Subject & Learning Area Competencies (Grade & Stream Bound)
+                      </h4>
+                      <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
+                        {assignedClasses.length > 0 && assignedStreams.length > 0
+                          ? `Allocations bound to: ${assignedClasses.join(', ')} [${assignedStreams.join(', ')}]`
+                          : 'Select at least one Grade and Stream above to bind subject allocations.'}
+                      </p>
+                    </div>
+                    <span className="text-xs text-indigo-700 font-bold bg-indigo-100 px-2 py-1 rounded-full border border-indigo-200">
+                      {selectedSubjects.length} selected
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1 custom-scrollbar">
+                    {filteredLearningAreasForClasses.map((sub) => {
+                      const isSelected = selectedSubjects.includes(sub);
+                      const primaryGrade = assignedClasses[0] || homeroomGrade || 'Grade 7';
+                      const primaryStream = assignedStreams[0] || homeroomStream || availableSchoolStreams[0] || 'Mercury';
+                      return (
+                        <div
+                          key={sub}
+                          onClick={() => handleToggleSubject(sub)}
+                          className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer text-xs font-medium transition-all duration-200 border ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 truncate">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
+                              isSelected ? 'bg-white border-white text-indigo-600' : 'border-slate-300 bg-white'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            </div>
+                            <span className="truncate font-semibold">{sub}</span>
+                          </div>
+                          {isSelected && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-700/80 text-indigo-100 border border-indigo-500/50 whitespace-nowrap">
+                              {primaryGrade} {assignedStreams.length > 0 ? assignedStreams.join(', ') : ''}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -263,7 +263,7 @@ export function recordPaymentAndUnlock(paymentData: {
       date: getAuthoritativeTimeSync().toISOString().split('T')[0],
       campus: paymentData.campus,
       method: paymentData.method,
-      ref: paymentData.ref || `REF-${Math.floor(100000 + Math.random() * 900000)}`,
+      ref: paymentData.ref || `REF-${Math.floor(1000 + Math.random() * 9000)}`,
       amount: paymentData.amount,
       period: paymentData.period,
       notes: paymentData.notes,

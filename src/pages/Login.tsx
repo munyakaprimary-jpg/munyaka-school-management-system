@@ -36,6 +36,7 @@ import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { teacherLogin, checkServerHealth } from '@/services/mobileAuthService';
+import { getStaffMaster } from '@/services/staffMasterService';
 import { getApiBaseUrl } from '@/lib/apiBase';
 import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { verifyStaffLogin } from '@/services/staffMasterService';
@@ -300,173 +301,80 @@ const Login: React.FC = () => {
       const trimmedPass = String(staffPassword || '').trim();
   
       if (!trimmedId) {
-        setStaffAuthError('Please enter your Email Address, TSC Number, or Staff ID.');
+        setStaffAuthError('Please enter your full school email ending with @munyaka.sc.ke.');
         return;
       }
-      // Accept email, TSC number (digits/hyphens), or staff ID (alphanumeric)
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      
+      const emailRegex = /^[^\s@]+@munyaka\.sc\.ke$/i;
       const isEmail = emailRegex.test(trimmedId);
-      const isStaffId = /^[a-z0-9_-]+$/i.test(trimmedId);
-      const isTscNumber = /^[0-9/-]+$/.test(trimmedId);
-      if (!isEmail && !isStaffId && !isTscNumber) {
-        setStaffAuthError('Please enter a valid email address, TSC Number, or Staff ID.');
+      if (!isEmail) {
+        setStaffAuthError('Staff login requires your full school email address ending with @munyaka.sc.ke.');
         return;
       }
+
       if (!trimmedPass) {
-        setStaffAuthError('Please enter your Password.');
+        setStaffAuthError('Please enter your assigned MUN-XXXX access code.');
         return;
       }
   
       setIsStaffVerifying(true);
       setStaffAuthError('');
+
+      const staffList = getStaffMaster();
+      const cleanInput = trimmedId.toLowerCase().trim();
+      const cleanEmail = cleanInput.includes('@') ? cleanInput : `${cleanInput}@munyaka.sc.ke`;
   
-      console.log(`[Login] Staff login attempt — server: ${getApiBaseUrl()}, identifier: ${trimmedId}`);
-  
-      // ── Try LAN server login with 3-second timeout ───────────────────────────────────
-      let serverLoginSuccess = false;
-      let serverLoginResult: LoginSuccess | null = null;
-      
+      const matched = staffList.find(s => {
+        const sEmail = (s.email || '').toLowerCase().trim();
+        return sEmail === cleanEmail || sEmail === cleanInput;
+      });
+
+      if (!matched) {
+        setStaffAuthError("Staff account not found. Please enter your full school email ending with @munyaka.sc.ke.");
+        setIsStaffVerifying(false);
+        return;
+      }
+
+      const storedCode = (matched.tempAccessCode || matched.accessCode || '').trim();
+      const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const normalizedInputCode = trimmedPass.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      const validPass = storedCode !== '' && normalizedStoredCode === normalizedInputCode;
+
+      if (!validPass) {
+        setStaffAuthError("Invalid MUN-XXXX access code. Please check your assigned staff access code.");
+        setIsStaffVerifying(false);
+        return;
+      }
+
+      const userData = {
+        id: matched.id || matched.staffId || `staff-${Date.now()}`,
+        name: matched.name || 'Staff Member',
+        email: matched.email || trimmedId,
+        phone: matched.phone || '',
+        role: matched.systemRole || matched.role || 'staff',
+        staff_id: matched.staffId || '',
+        avatar: (matched.name || 'U')
+          .split(' ')
+          .map(n => n[0] || '')
+          .join('')
+          .substring(0, 2)
+          .toUpperCase(),
+      };
+
       try {
-        // Create a promise with 3-second timeout
-        const serverLoginPromise = teacherLogin(trimmedId, trimmedPass);
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Server timeout')), 3000)
-        );
-        
-        const result = await Promise.race([serverLoginPromise, timeoutPromise]);
-        
-        if (result.success) {
-          serverLoginSuccess = true;
-          serverLoginResult = result;
-          console.log('[Login] LAN auth succeeded:', result.user);
-        }
-      } catch (error) {
-        // Server login failed or timed out - proceed to offline authentication
-        console.log('[Login] LAN auth failed or timed out, proceeding to offline authentication:', error);
-      }
-  
-      // ── If server login succeeded, use it ───────────────────────────────────────────
-      if (serverLoginSuccess && serverLoginResult) {
-        const userData = {
-          id: serverLoginResult.user.id,
-          name: serverLoginResult.user.name,
-          email: serverLoginResult.user.email || trimmedId,
-          phone: serverLoginResult.user.phone || '',
-          role: serverLoginResult.user.role || 'teacher',
-          staff_id: serverLoginResult.user.staff_id,
-          tsc_number: serverLoginResult.user.tsc_number,
-          avatar: serverLoginResult.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
-        };
+        localStorage.setItem('munyaka_session', JSON.stringify(userData));
+        localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
+      } catch { /* ignore */ }
 
-        try {
-          localStorage.setItem('munyaka_session', JSON.stringify(userData));
-        } catch { /* ignore */ }
-
-        // Update AuthContext state synchronously so ProtectedRoute
-                // recognizes the authenticated state immediately and does not
-                // redirect back to /login (which caused the redirect loop).
-                if (setUser) {
-                  setUser({ ...userData, role: (userData.role as any) || 'teacher' });
-                }
-        
-                showSuccess(`Welcome, ${serverLoginResult.user.name}!`);
-        navigate(getStaffRedirectPath(serverLoginResult.user.role || 'subject_teacher'), { replace: true });
-        setIsStaffVerifying(false);
-        return;
-      }
-  
-      // ── Offline authentication (localStorage lookup) against master staff ledger exclusively ─────────────────────────────────
-      console.log('[Login] Attempting offline authentication against master staff ledger (munyaka_master_staff_list)...');
-
-      // Use the selected support role for role filtering (normalized)
-      const normalizedSelectedRole = selectedSupportRole ? selectedSupportRole.toLowerCase().trim() : null;
-
-      // Delegate exclusively to the robust verifyStaffLogin service which checks the
-      // canonical `munyaka_master_staff_list` ledger with case-insensitive
-      // identifier matching (email / staffId / tscNumber) and MUNYAKA-xxxx access keys.
-      const offlineResult = verifyStaffLogin(trimmedId, trimmedPass);
-
-      if (offlineResult.success && offlineResult.user) {
-        const matchedStaff = offlineResult.user;
-
-        // ── Role validation ────────────────────────────────────────────────
-        if (normalizedSelectedRole) {
-          const staffSystemRole = (matchedStaff.systemRole || '').toLowerCase().trim();
-          const roleCompatible =
-            staffSystemRole === normalizedSelectedRole ||
-            (normalizedSelectedRole === 'librarian' && staffSystemRole.includes('librar')) ||
-            staffSystemRole === 'staff' ||
-            staffSystemRole === 'support_staff' ||
-            staffSystemRole === 'support_admin' ||
-            staffSystemRole === 'bursar' ||
-            staffSystemRole === 'non_teaching' ||
-            staffSystemRole === 'support';
-
-          if (!roleCompatible) {
-            console.error(
-              `[Login] Offline auth: role mismatch — selected "${normalizedSelectedRole}" ` +
-              `but staff "${matchedStaff.name}" (${matchedStaff.staffId}) has systemRole "${matchedStaff.systemRole}".`
-            );
-            setStaffAuthError(
-              `This account is not registered under the "${normalizedSelectedRole}" role. ` +
-              `Please select the correct role or contact your administrator.`
-            );
-            showError('Role mismatch — please select the correct role.');
-            setIsStaffVerifying(false);
-            return;
-          }
-        }
-
-        const userData = {
-          id: matchedStaff.id || matchedStaff.staffId || `offline-${Date.now()}`,
-          name: matchedStaff.name || 'Staff Member',
-          email: matchedStaff.email || '',
-          phone: matchedStaff.phone || '',
-          role: matchedStaff.systemRole || matchedStaff.role || 'staff',
-          staff_id: matchedStaff.staffId || '',
-          avatar: (matchedStaff.name || 'U')
-            .split(' ')
-            .map(n => n[0] || '')
-            .join('')
-            .substring(0, 2)
-            .toUpperCase(),
-        };
-
-        try {
-          localStorage.setItem('munyaka_session', JSON.stringify(userData));
-          localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
-        } catch { /* ignore */ }
-
-        // Update AuthContext state synchronously so ProtectedRoute
-                // recognizes the authenticated state immediately and does not
-                // redirect back to /login (which caused the redirect loop).
-                if (setUser) {
-                  setUser({ ...userData, role: (userData.role as any) || 'staff' });
-                }
-        
-                console.log('[Login] Master staff ledger offline authentication successful:', {
-          name: userData.name,
-          role: userData.role,
-          staffId: userData.staff_id,
-        });
-
-        showSuccess(`Welcome, ${userData.name}!`);
-        navigate(getStaffRedirectPath(userData.role), { replace: true });
-        setIsStaffVerifying(false);
-        return;
+      if (setUser) {
+        setUser({ ...userData, role: (userData.role as any) || 'staff' });
       }
 
-      // ── Offline authentication failed against master staff ledger ───────────────────
-      console.error(
-        `[Login] Master staff ledger offline authentication failed — error: ${offlineResult.error || 'UNKNOWN'}`
-      );
-
-      const errorMessage = offlineResult.error || 'Invalid credentials or account not found in master staff ledger.';
-
-      setStaffAuthError(errorMessage);
-      showError(errorMessage);
+      showSuccess(`Welcome, ${userData.name}!`);
+      navigate('/dashboard', { replace: true });
       setIsStaffVerifying(false);
-    };
+  };
 
   // ── Lightweight server reachability check on mount ──────────────────────
   useEffect(() => {
@@ -708,7 +616,7 @@ const Login: React.FC = () => {
                     {/* Email Address */}
                     <div className="space-y-2">
                       <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Email Address
+                        School Email Address (@munyaka.sc.ke)
                       </Label>
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -719,7 +627,7 @@ const Login: React.FC = () => {
                           autoCapitalize="none"
                           value={staffId}
                           onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. teacher@school.com"
+                          placeholder="e.g. teacher@munyaka.sc.ke"
                           autoComplete="username"
                           className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                           autoFocus
@@ -727,10 +635,10 @@ const Login: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Password / Access Code */}
+                    {/* Access Code */}
                     <div className="space-y-2">
                       <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Access Code / Password
+                        Access Code (MUN-XXXX)
                       </Label>
                       <div className="relative">
                         <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -739,7 +647,7 @@ const Login: React.FC = () => {
                           type={showStaffPassword ? 'text' : 'password'}
                           value={staffPassword}
                           onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="Enter your password"
+                          placeholder="e.g. MUN-6ZGC"
                           autoComplete="current-password"
                           className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                         />

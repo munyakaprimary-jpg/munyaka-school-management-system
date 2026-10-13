@@ -179,7 +179,14 @@ export const UnifiedDataStorage = {
     const staff = UnifiedDataStorage.getStaff();
     const id = record.id || `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const staffId = record.staffId || record.staff_id || `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
-    const tempAccessCode = record.tempAccessCode || record.access_key || record.ref || String(Math.floor(100000 + Math.random() * 900000));
+    const tempAccessCode = record.tempAccessCode || record.access_key || record.ref || (() => {
+      const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+      let randomPart = '';
+      for (let i = 0; i < 4; i++) {
+        randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return `MUN-${randomPart}`;
+    })();
     const joined = record.joined || record.joinedDate || new Date().toISOString().slice(0, 10);
     const name = record.name || record.full_name || 'New Staff';
     const role = record.role || 'Subject Teacher';
