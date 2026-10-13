@@ -135,7 +135,7 @@ import StudyCorner from "./pages/StudyCorner";
 import CentralDataService from "./pages/CentralDataService";
 import PaymentManagement from "./pages/PaymentManagement";
 import OwnersDashboardHome from "./pages/OwnersDashboardHome";
-import OwnersDashboard from "./pages/ownersDashboard";
+import OwnersDashboard from "@/components/owner/OwnerDashboard";
 import OwnerPortalRouter from "./pages/OwnerPortalRouter";
 import GamesHub from "./pages/GamesHub";
 import AppUnlock from "./components/AppUnlock";
@@ -147,7 +147,7 @@ import TeacherLanConfig from "./pages/TeacherLanConfig";
 import AdminHarmonizationHub from "./components/admin/AdminHarmonizationHub";
 import AdminLayout from "./components/AdminLayout";
 import AdminPortalRouter from "./pages/AdminPortalRouter";
-import AdminDashboardPage from "./pages/AdminDashboardPage";
+import AdminDashboard from "./components/admin/AdminDashboard";
 import TeacherExportView from "./pages/TeacherExportView";
 import LibrarianPortalView from "./pages/LibrarianPortalView";
 import ICTTechnicalPortalView from "./pages/ICTTechnicalPortalView";
@@ -541,7 +541,7 @@ const App = () => {
                       {/* Protected Routes */}
                       <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><OwnerPortalRouter /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><AdminLayout><AdminDashboardPage /></AdminLayout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><AdminLayout><AdminDashboard /></AdminLayout></AppUnlock></ProtectedRoute>} />
                       <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/learners/archive" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
