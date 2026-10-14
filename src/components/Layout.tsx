@@ -585,7 +585,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                           };
                           check();
                           const t = setInterval(check, 2000);
-                          return () => clearInterval(t);
+                          const handleQueueEvent = () => check();
+                          window.addEventListener('sync-queue-updated', handleQueueEvent);
+                          window.addEventListener('storage', handleQueueEvent);
+                          return () => {
+                            clearInterval(t);
+                            window.removeEventListener('sync-queue-updated', handleQueueEvent);
+                            window.removeEventListener('storage', handleQueueEvent);
+                          };
                         }, []);
                         return { pendingCount: count, isSyncing: syncing, triggerSync: async () => {
                           setSyncing(true);

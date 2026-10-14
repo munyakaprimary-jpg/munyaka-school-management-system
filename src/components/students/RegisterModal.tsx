@@ -182,6 +182,30 @@ export default function RegisterModal({
   const isGradeDisabled = isTeacherRestricted && allowedGrades.length <= 1;
   const isStreamDisabled = isTeacherRestricted && allowedStreamsForGrade.length <= 1;
 
+  const handleSubmit = (e: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (onRegister) {
+      onRegister(e);
+    }
+    // Push sync queue notification
+    try {
+      const queue = JSON.parse(localStorage.getItem('munyaka_sync_queue') || '[]');
+      queue.push({
+        id: crypto.randomUUID?.() || `sync-${Date.now()}`,
+        table_name: 'learners',
+        action: 'INSERT',
+        payload: { admissionNumber, fullName, regGrade, regStream, phone },
+        synced: false,
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem('munyaka_sync_queue', JSON.stringify(queue));
+      window.dispatchEvent(new Event('sync-queue-updated'));
+      window.dispatchEvent(new Event('storage'));
+    } catch (err) {
+      console.warn('RegisterModal sync queue enqueue note:', err);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -210,7 +234,7 @@ export default function RegisterModal({
         }
         maxWidth="max-w-xl"
       >
-        <form id="register-student-form" onSubmit={onRegister} className="space-y-6">
+        <form id="register-student-form" onSubmit={handleSubmit} className="space-y-6">
               {formError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2 animate-in slide-in-from-top-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
