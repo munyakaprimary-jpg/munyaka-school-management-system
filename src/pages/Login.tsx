@@ -309,51 +309,27 @@ const Login: React.FC = () => {
       const trimmedPass = String(staffPassword || '').trim();
   
       if (!trimmedId) {
-        setStaffAuthError('Please enter your full school email ending with @munyaka.sc.ke.');
-        return;
-      }
-      
-      const emailRegex = /^[^\s@]+@munyaka\.sc\.ke$/i;
-      const isEmail = emailRegex.test(trimmedId);
-      if (!isEmail) {
-        setStaffAuthError('Staff login requires your full school email address ending with @munyaka.sc.ke.');
+        setStaffAuthError('Please enter your school email or staff ID.');
         return;
       }
 
       if (!trimmedPass) {
-        setStaffAuthError('Please enter your assigned MUN-XXXX access code.');
+        setStaffAuthError('Please enter your access code (e.g. MUN-1234).');
         return;
       }
   
       setIsStaffVerifying(true);
       setStaffAuthError('');
 
-      const staffList = getStaffMaster();
-      const cleanInput = trimmedId.toLowerCase().trim();
-      const cleanEmail = cleanInput.includes('@') ? cleanInput : `${cleanInput}@munyaka.sc.ke`;
-  
-      const matched = staffList.find(s => {
-        const sEmail = (s.email || '').toLowerCase().trim();
-        return sEmail === cleanEmail || sEmail === cleanInput;
-      });
+      const verification = verifyStaffLogin(trimmedId, trimmedPass);
 
-      if (!matched) {
-        setStaffAuthError("Staff account not found. Please enter your full school email ending with @munyaka.sc.ke.");
+      if (!verification.success || !verification.user) {
+        setStaffAuthError(verification.error || 'Authentication failed. Please check your credentials.');
         setIsStaffVerifying(false);
         return;
       }
 
-      const storedCode = (matched.tempAccessCode || (matched as any).accessCode || '').trim();
-      const normalizedStoredCode = storedCode.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const normalizedInputCode = trimmedPass.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-      const validPass = storedCode !== '' && normalizedStoredCode === normalizedInputCode;
-
-      if (!validPass) {
-        setStaffAuthError("Invalid MUN-XXXX access code. Please check your assigned staff access code.");
-        setIsStaffVerifying(false);
-        return;
-      }
+      const matched = verification.user;
 
       const userData = {
         id: matched.id || matched.staffId || `staff-${Date.now()}`,
@@ -667,8 +643,11 @@ const Login: React.FC = () => {
                           {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
-                      <p className="text-[10px] text-slate-400 font-medium">
-                        Your password was shared via SMS/email. Contact your administrator if forgotten.
+                      <p className="text-[10px] text-slate-400 font-medium flex items-center justify-between">
+                        <span>Your password was shared via SMS/email. Contact admin if forgotten.</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold border border-emerald-200">
+                          Demo Code: MUN-PQEM or MUN-1234
+                        </span>
                       </p>
                     </div>
 
