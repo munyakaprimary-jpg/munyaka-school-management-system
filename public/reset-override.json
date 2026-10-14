@@ -1,6 +1,7 @@
-{
+
+  {
   "action": "reset_password",
-  "secretKey": "Munyaka-Offline-Master-Key-5239!",
-  "role": "superadmin",
-  "newPassword": "jemo69"
+  "secretKey": "YOUR_EMERGENCY_SECRET_HERE",
+  "role": "admin",
+  "newPassword": "munyaka5239"
 }
