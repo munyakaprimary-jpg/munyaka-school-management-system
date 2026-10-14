@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,10 +7,14 @@ import CentralDataService from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
 import { getStoredLearners } from '../../utils/learnersStore';
 import { useCentralData } from '../../hooks/useCentralData';
-import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon, FileText, ShieldCheck, Database, ArrowRight, Sparkles, Upload } from 'lucide-react';
+import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon, FileText, ShieldCheck, Database, ArrowRight, Sparkles, Upload, QrCode, Camera, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { showSuccess, showError } from '@/utils/toast';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+
+const SCHOOL_CENTRE_CODE = '26534178';
 
 export const AdminDashboardComponent: React.FC = () => {
   const navigate = useNavigate();
@@ -225,6 +229,122 @@ export const AdminDashboardComponent: React.FC = () => {
     total: sumBoys + sumGirls
   };
 
+  // QR Scan Modal State for Admin Hub
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [scannedResultText, setScannedResultText] = useState<string | null>(null);
+  const [isScanningActive, setIsScanningActive] = useState(false);
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+
+  useEffect(() => {
+    if (!showScanModal) {
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(() => {});
+        scannerRef.current = null;
+      }
+      setIsScanningActive(false);
+      return;
+    }
+
+    // Initialize html5-qrcode scanner after modal opens
+    const timer = setTimeout(() => {
+      try {
+        const scanner = new Html5QrcodeScanner(
+          "admin-qr-reader",
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          false
+        );
+        scannerRef.current = scanner;
+        scanner.render(
+          (decodedText) => {
+            handleSuccessfulScan(decodedText);
+          },
+          (error) => {
+            // ignore scan frame errors
+          }
+        );
+        setIsScanningActive(true);
+      } catch (err) {
+        console.error('Failed to init scanner', err);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(() => {});
+        scannerRef.current = null;
+      }
+    };
+  }, [showScanModal]);
+
+  const handleSuccessfulScan = (rawText: string) => {
+    try {
+      let parsed: any;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch {
+        // Might be a chunk envelope
+        parsed = JSON.parse(rawText);
+      }
+
+      // Validate school centre code
+      const centreCode = parsed.centreCode;
+      if (centreCode !== SCHOOL_CENTRE_CODE) {
+        showError(`Invalid School Centre Code! Expected ${SCHOOL_CENTRE_CODE}, got ${centreCode || 'unknown'}.`);
+        return;
+      }
+
+      // Stop scanner
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(() => {});
+        scannerRef.current = null;
+      }
+
+      // Merge records into Admin master database
+      const attendanceRecords = parsed.data?.attendance || [];
+      const marksRecords = parsed.data?.marks || [];
+      const checkInRecords = parsed.data?.checkIns || [];
+      const streamName = parsed.metadata?.assignedStream || parsed.metadata?.departmentOrStream || 'Green';
+      const gradeName = parsed.metadata?.assignedClass || 'Grade 5';
+
+      // Merge attendance
+      if (attendanceRecords.length > 0) {
+        const existingAtt = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
+        const mergedAtt = [...attendanceRecords, ...existingAtt];
+        localStorage.setItem('munyaka_attendance_records', JSON.stringify(mergedAtt));
+      }
+
+      // Merge marks
+      if (marksRecords.length > 0) {
+        const existingMarks = JSON.parse(localStorage.getItem('marked_student_submissions') || '[]');
+        const mergedMarks = [...marksRecords, ...existingMarks];
+        localStorage.setItem('marked_student_submissions', JSON.stringify(mergedMarks));
+      }
+
+      // Merge check-ins
+      if (checkInRecords.length > 0) {
+        const existingCheckIns = JSON.parse(localStorage.getItem('munyaka_teacher_checkins') || '[]');
+        const mergedCheckIns = [...checkInRecords, ...existingCheckIns];
+        localStorage.setItem('munyaka_teacher_checkins', JSON.stringify(mergedCheckIns));
+      }
+
+      // Trigger sync signal to teacher
+      localStorage.setItem('munyaka_sync_queue_cleared', Date.now().toString());
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+
+      const totalCount = attendanceRecords.length + marksRecords.length + checkInRecords.length;
+      showSuccess(`Successfully synced ${attendanceCountText(attendanceRecords.length, gradeName, streamName)}!`);
+      setShowScanModal(false);
+    } catch (err: any) {
+      showError(err?.message || 'Failed to parse teacher sync QR package.');
+    }
+  };
+
+  const attendanceCountText = (count: number, grade: string, stream: string) => {
+    return `${count} records (${grade} ${stream})`;
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -232,10 +352,19 @@ export const AdminDashboardComponent: React.FC = () => {
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Admin Dashboard</h1>
           <p className="text-sm text-gray-500">Live operational metrics synchronized with the master database.</p>
         </div>
-        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 px-3 py-1 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          LIVE FACTUAL SYNC
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => setShowScanModal(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs px-4 py-2.5 rounded-2xl shadow-md transition-all active:scale-95"
+          >
+            <QrCode className="w-4 h-4 shrink-0" />
+            <span>Scan Teacher Sync QR</span>
+          </Button>
+          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 px-3 py-1 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            Centre Code: {SCHOOL_CENTRE_CODE}
+          </Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -516,6 +645,76 @@ export const AdminDashboardComponent: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Scan Teacher Sync QR Modal for Admin */}
+      {showScanModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <Badge className="bg-emerald-100 text-emerald-800 font-bold uppercase tracking-wider text-[10px]">
+                  Centre Code: {SCHOOL_CENTRE_CODE}
+                </Badge>
+                <h3 className="text-lg font-black text-slate-900 mt-1">Scan Teacher Sync QR Code</h3>
+              </div>
+              <button
+                onClick={() => setShowScanModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-xs text-emerald-800 flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                <span>
+                  Point the camera at the teacher's generated sync QR code. Records will be validated against centre code <strong>{SCHOOL_CENTRE_CODE}</strong> and merged directly into the master database.
+                </span>
+              </div>
+
+              {/* QR Reader Container */}
+              <div id="admin-qr-reader" className="w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 min-h-[280px]"></div>
+
+              {/* Manual fallback JSON paste for testing */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Or paste payload string for testing:</span>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="manual-qr-payload-input"
+                    placeholder="Paste QR JSON payload..."
+                    className="flex-1 h-10 px-3 rounded-xl border border-slate-200 text-xs font-mono"
+                  />
+                  <Button
+                    onClick={() => {
+                      const input = document.getElementById('manual-qr-payload-input') as HTMLInputElement;
+                      if (input && input.value) {
+                        handleSuccessfulScan(input.value);
+                      } else {
+                        showError('Please paste valid payload JSON string');
+                      }
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 rounded-xl"
+                  >
+                    Import
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <Button
+                onClick={() => setShowScanModal(false)}
+                variant="outline"
+                className="rounded-xl text-xs font-bold"
+              >
+                Close Scanner
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
