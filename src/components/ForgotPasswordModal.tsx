@@ -42,7 +42,12 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
       setSuccess(true);
     } catch (err: any) {
       console.error('Password reset error:', err);
-      setError(err?.message || 'Failed to send password reset email. Please try again.');
+      const msg = err?.message || String(err || '');
+      if (msg.includes('Failed to fetch') || msg.includes('network') || msg.includes('fetch')) {
+        setError('Unable to reach authentication server. Please check your internet connection or configure Supabase keys.');
+      } else {
+        setError(msg || 'Failed to send password reset email. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
