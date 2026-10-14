@@ -10,6 +10,7 @@ import {
   Calendar,
   AlertCircle,
   Check,
+  Cloud,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { CENTRAL_DB_KEY } from "@/components/AddMaterialModal";
@@ -199,22 +200,35 @@ export function StaffAttendanceRegister() {
             </div>
           </div>
 
-          <button
-            onClick={handleSaveAttendance}
-            disabled={isSaving}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm transition-all ${
-              savedSuccess ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {isSaving ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : savedSuccess ? (
-              <CheckCircle2 size={15} />
-            ) : (
-              <Save size={15} />
-            )}
-            {savedSuccess ? "Attendance Saved!" : "Save Rollcall"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSaveAttendance}
+              disabled={isSaving}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm transition-all ${
+                savedSuccess ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              {isSaving ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : savedSuccess ? (
+                <CheckCircle2 size={15} />
+              ) : (
+                <Save size={15} />
+              )}
+              {savedSuccess ? "Attendance Saved!" : "Save Rollcall"}
+            </button>
+
+            <button
+              onClick={async () => {
+                const { processBatchSyncExport } = await import('@/hooks/useSyncQueue');
+                await processBatchSyncExport();
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm transition-all active:scale-95"
+            >
+              <Cloud className="w-4 h-4 shrink-0" />
+              <span>Sync Now</span>
+            </button>
+          </div>
         </div>
 
         {/* Filters and Date */}

@@ -565,6 +565,24 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   </div>
         
                   <div className="flex items-center gap-2">
+                    {/* Sticky Sync Button in Header */}
+                    {(() => {
+                      const att = (() => { try { return JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]').length; } catch { return 0; } })();
+                      const marks = (() => { try { return JSON.parse(localStorage.getItem('marked_student_submissions') || '[]').length; } catch { return 0; } })();
+                      const totalQueue = att + marks;
+                      return (
+                        <button
+                          onClick={async () => {
+                            const { processBatchSyncExport } = await import('@/hooks/useSyncQueue');
+                            await processBatchSyncExport();
+                          }}
+                          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                        >
+                          <Cloud className="w-3.5 h-3.5 shrink-0" />
+                          <span>Sync ({totalQueue})</span>
+                        </button>
+                      );
+                    })()}
                     <NotificationBell />
                     {(() => {
                       const hour = new Date().getHours();
