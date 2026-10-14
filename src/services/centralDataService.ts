@@ -430,22 +430,85 @@ export const CentralDataService = {
     return null;
   },
 
-  async syncBatchToRemote(batchPayload: Record<string, any>): Promise<boolean> {
-    const serverUrl = getStoredServerUrl();
+  // Offline queuing and backoff state
+  offlineQueue: [] as any[],
+  lastServerFailTime: 0,
+  backoffIntervalMs: 60000, // 60 seconds pause when unreachable
+
+  queueForLaterSync(batchData: any) {
     try {
-      const res = await fetch(`${serverUrl}/api/central-db/sync`, {
+      this.offlineQueue.push({ timestamp: Date.now(), data: batchData });
+      // Also persist to localStorage for persistence across reloads
+      localStorage.setItem('munyaka_offline_sync_queue', JSON.stringify(this.offlineQueue));
+    } catch {}
+  },
+
+  async syncBatchToRemote(batchPayload: Record<string, any>): Promise<any> {
+    const now = Date.now();
+    // Check if we are in exponential backoff / paused state for 60 seconds after failure
+    if (now - this.lastServerFailTime < this.backoffIntervalMs) {
+      return { success: false, offlineMode: true, paused: true };
+    }
+
+    const serverUrl = getStoredServerUrl() || 'http://localhost:5000';
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
+
+      const response = await fetch(`${serverUrl}/api/central-db/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(batchPayload)
+        body: JSON.stringify(batchPayload),
+        signal: controller.signal,
       });
-      if (res.ok) {
-        const json = await res.json();
-        return json && json.success === true;
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
       }
-    } catch (err) {
-      console.error('[CentralDataService] Failed to sync batch to remote server:', err);
+
+      const json = await response.json();
+      // If we successfully synced, attempt to sync any queued offline items
+      if (json && json.success === true && this.offlineQueue.length > 0) {
+        this.processOfflineQueue();
+      }
+      return json;
+    } catch (error: any) {
+      this.lastServerFailTime = Date.now();
+      // Silently log offline status and queue items locally in IndexedDB / localStorage
+      console.warn('[CentralDataService] Server offline. Data queued locally for later sync.');
+      this.queueForLaterSync(batchPayload);
+      return { success: false, offlineMode: true };
     }
-    return false;
+  },
+
+  async processOfflineQueue() {
+    if (this.offlineQueue.length === 0) return;
+    const serverUrl = getStoredServerUrl() || 'http://localhost:5000';
+    const queueSnapshot = [...this.offlineQueue];
+    for (const item of queueSnapshot) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(`${serverUrl}/api/central-db/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(item.data),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          // Remove from queue
+          this.offlineQueue = this.offlineQueue.filter(q => q.timestamp !== item.timestamp);
+          localStorage.setItem('munyaka_offline_sync_queue', JSON.stringify(this.offlineQueue));
+        } else {
+          break; // Stop flushing if server responds with error again
+        }
+      } catch {
+        break; // Stop flushing if offline
+      }
+    }
   },
 
   async initializeAndHydrate(): Promise<void> {
