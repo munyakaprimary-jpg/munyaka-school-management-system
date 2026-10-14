@@ -573,7 +573,7 @@ export default function Attendance() {
   )}
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1rem', width: '100%' }}>
         <Card className="border-emerald-100 shadow-sm bg-gradient-to-br from-white to-emerald-50/30">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
