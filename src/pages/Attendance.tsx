@@ -573,89 +573,89 @@ export default function Attendance() {
   )}
 
       {/* Stats Overview */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1rem', width: '100%' }}>
-              <Card className="border-emerald-100 shadow-sm bg-gradient-to-br from-white to-emerald-50/30">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Learners</p>
-                    <h3 className="text-xl font-bold text-slate-800 mt-1">{totalLearnersCount}</h3>
-                    <p className="text-[10px] text-emerald-600 font-medium mt-1">Master DB: {masterTotalCount}</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
-                    <Users className="w-5 h-5" />
-                  </div>
-                </CardContent>
-              </Card>
-      
-              <Card className="border-emerald-100 shadow-sm bg-gradient-to-br from-white to-emerald-50/30">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Present (Morning)</p>
-                    <h3 className="text-xl font-bold text-emerald-600 mt-1">{presentMorningCount}</h3>
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      {totalLearnersCount > 0 ? `${Math.round((presentMorningCount / totalLearnersCount) * 100)}% rate` : '0%'}
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                </CardContent>
-              </Card>
-      
-              <Card className="border-amber-100 shadow-sm bg-gradient-to-br from-white to-amber-50/30">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Absent (Morning)</p>
-                    <h3 className="text-xl font-bold text-amber-600 mt-1">{absentMorningCount}</h3>
-                    <p className="text-[10px] text-amber-600 font-medium mt-1">Follow-up needed</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-inner">
-                    <XCircle className="w-5 h-5" />
-                  </div>
-                </CardContent>
-              </Card>
-      
-              <Card className="border-indigo-100 shadow-sm bg-gradient-to-br from-white to-indigo-50/30">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Present (Afternoon)</p>
-                    <h3 className="text-xl font-bold text-indigo-600 mt-1">{presentAfternoonCount}</h3>
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      {totalLearnersCount > 0 ? `${Math.round((presentAfternoonCount / totalLearnersCount) * 100)}% rate` : '0%'}
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                </CardContent>
-              </Card>
-      
-              <Card className="border-orange-100 shadow-sm bg-gradient-to-br from-white to-orange-50/30">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Absent (Afternoon)</p>
-                    <h3 className="text-xl font-bold text-orange-600 mt-1">{absentAfternoonCount}</h3>
-                    <p className="text-[10px] text-orange-600 font-medium mt-1">Follow-up needed</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 shadow-inner">
-                    <XCircle className="w-5 h-5" />
-                  </div>
-                </CardContent>
-              </Card>
-      
-              <Card className="border-cyan-100 shadow-sm bg-gradient-to-br from-white to-cyan-50/30">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Roll Storage</p>
-                    <h3 className="text-sm font-bold text-cyan-700 mt-1 truncate">roll_call</h3>
-                    <p className="text-[10px] text-cyan-600 font-medium mt-1">Synced</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-700 shadow-inner">
-                    <ShieldCheck className="w-5 h-5" />
-                  </div>
-                </CardContent>
-              </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <Card className="border-emerald-100 shadow-sm bg-gradient-to-br from-white to-emerald-50/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Learners</p>
+              <h3 className="text-xl font-bold text-slate-800 mt-1">{totalLearnersCount}</h3>
+              <p className="text-[10px] text-emerald-600 font-medium mt-1">Master DB: {masterTotalCount}</p>
             </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
+              <Users className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-emerald-100 shadow-sm bg-gradient-to-br from-white to-emerald-50/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Present (Morning)</p>
+              <h3 className="text-xl font-bold text-emerald-600 mt-1">{presentMorningCount}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {totalLearnersCount > 0 ? `${Math.round((presentMorningCount / totalLearnersCount) * 100)}% rate` : '0%'}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-inner">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-100 shadow-sm bg-gradient-to-br from-white to-amber-50/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Absent (Morning)</p>
+              <h3 className="text-xl font-bold text-amber-600 mt-1">{absentMorningCount}</h3>
+              <p className="text-[10px] text-amber-600 font-medium mt-1">Follow-up needed</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-inner">
+              <XCircle className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-indigo-100 shadow-sm bg-gradient-to-br from-white to-indigo-50/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Present (Afternoon)</p>
+              <h3 className="text-xl font-bold text-indigo-600 mt-1">{presentAfternoonCount}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {totalLearnersCount > 0 ? `${Math.round((presentAfternoonCount / totalLearnersCount) * 100)}% rate` : '0%'}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-orange-100 shadow-sm bg-gradient-to-br from-white to-orange-50/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Absent (Afternoon)</p>
+              <h3 className="text-xl font-bold text-orange-600 mt-1">{absentAfternoonCount}</h3>
+              <p className="text-[10px] text-orange-600 font-medium mt-1">Follow-up needed</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 shadow-inner">
+              <XCircle className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-cyan-100 shadow-sm bg-gradient-to-br from-white to-cyan-50/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Roll Storage</p>
+              <h3 className="text-sm font-bold text-cyan-700 mt-1 truncate">roll_call</h3>
+              <p className="text-[10px] text-cyan-600 font-medium mt-1">Synced</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-700 shadow-inner">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Main Content Card */}
       <Card className="border-slate-200/80 shadow-lg rounded-2xl overflow-hidden">
@@ -684,62 +684,63 @@ export default function Attendance() {
           </div>
 
           {/* Filter Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-200/60">
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Grade / Class</label>
-                        <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                          <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
-                            <SelectValue placeholder="Select Grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Grades</SelectItem>
-                            {grades.map(g => (
-                              <SelectItem key={g} value={g}>{g}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-          
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Stream</label>
-                        <Select value={selectedStream} onValueChange={setSelectedStream}>
-                          <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
-                            <SelectValue placeholder="Select Stream" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Streams</SelectItem>
-                            {streams.map(s => (
-                              <SelectItem key={s} value={s}>{s}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-          
-                      <div>
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Attendance Date</label>
-                        <div className="relative">
-                          <Input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="bg-white border-slate-200 h-9 text-xs pl-8"
-                          />
-                          <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-                        </div>
-                      </div>
-                    </div>
-          
-                    <div className="mt-3">
-                      <div className="relative">
-                        <Input
-                          placeholder="Search Learner by name or admission number..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="bg-white border-slate-200 h-9 text-xs pl-8"
-                        />
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-                      </div>
-                    </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-200/60">
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Grade / Class</label>
+              <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
+                  <SelectValue placeholder="Select Grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  {grades.map(g => (
+                    <SelectItem key={g} value={g}>{g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Stream</label>
+              <Select value={selectedStream} onValueChange={setSelectedStream}>
+                <SelectTrigger className="bg-white border-slate-200 h-9 text-xs">
+                  <SelectValue placeholder="Select Stream" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Streams</SelectItem>
+                  {streams.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Attendance Date</label>
+              <div className="relative">
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-white border-slate-200 h-9 text-xs pl-8"
+                />
+                <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Search Learner</label>
+              <div className="relative">
+                <Input
+                  placeholder="Name or Admission No..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-white border-slate-200 h-9 text-xs pl-8"
+                />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              </div>
+            </div>
+          </div>
         </CardHeader>
 
         <CardContent className="p-0">
