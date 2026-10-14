@@ -21,16 +21,8 @@ interface Props {
  */
 const AuthGate: React.FC<Props> = ({ children }) => {
   const { isLoading } = useAuth();
-  const [forceReady, setForceReady] = React.useState(false);
 
-  React.useEffect(() => {
-    const t = setTimeout(() => {
-      setForceReady(true);
-    }, 1500);
-    return () => clearTimeout(t);
-  }, []);
-
-  if (isLoading && !forceReady) {
+  if (isLoading) {
     return <AuthLoadingFallback />;
   }
 
