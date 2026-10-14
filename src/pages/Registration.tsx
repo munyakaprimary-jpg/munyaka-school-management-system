@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { X, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { logActivity } from '@/services/activityLog';
 import { notifyDataChanged } from '@/hooks/useDashboardData';
+import { RegistrationConfirmationSlip, RegistrationSlipData } from '@/components/students/RegistrationConfirmationSlip';
 
 const Registration = () => {
   const { toast } = useToast();
@@ -25,30 +26,28 @@ const Registration = () => {
     guardian: '',
     phone: '',
     address: '',
+    specialNeeds: 'None / Regular',
   });
 
   const [formError, setFormError] = useState('');
+  const [createdSlipData, setCreatedSlipData] = useState<RegistrationSlipData | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ─── Required fields: full name and guardian ────────────────────
     if (!String(formData.fullName || '').trim() || !String(formData.guardian || '').trim()) {
-          setFormError('Please enter the learner\'s Full Name and Parent / Guardian name.');
-          return;
-        }
+      setFormError('Please enter the learner\'s Full Name and Parent / Guardian name.');
+      return;
+    }
     
-        // ─── Identifier validation: at least one of Assessment No or ─────
-        // Birth Certificate No must be supplied.
-        const admNo = String(formData.admNo || '').trim();
-        const bcNo = String(formData.birthCertificateNo || '').trim();
+    const admNo = String(formData.admNo || '').trim();
+    const bcNo = String(formData.birthCertificateNo || '').trim();
 
     if (!admNo && !bcNo) {
       setFormError('Please provide at least one identifier — either an Assessment Number or a Birth Certificate Number.');
       return;
     }
 
-    // If Assessment Number is supplied, it must start with a letter.
     if (admNo) {
       const assessmentRegex = /^[A-Za-z].*/;
       if (!assessmentRegex.test(admNo)) {
@@ -57,37 +56,56 @@ const Registration = () => {
       }
     }
 
-    // Persist the new learner — include whichever identifier was supplied
+    const generatedAdmNumber = `MUN-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+    const generatedAssessmentNumber = admNo || `B${Math.floor(100000000 + Math.random() * 900000000)}`;
+
     try {
       const saved = localStorage.getItem('school_learners_data');
       const learners: any[] = saved ? JSON.parse(saved) : [];
       learners.unshift({
         id: Date.now().toString(),
-        admNo,
+        admNo: generatedAdmNumber,
+        assessmentNo: generatedAssessmentNumber,
         birthCertificateNo: bcNo || undefined,
         name: String(formData.fullName || '').trim(),
-                grade: formData.grade,
-                stream: formData.stream,
-                gender: formData.gender,
-                guardian: String(formData.guardian || '').trim(),
-                phone: String(formData.phone || '').trim(),
-                address: String(formData.address || '').trim(),
+        grade: formData.grade,
+        stream: formData.stream,
+        gender: formData.gender,
+        guardian: String(formData.guardian || '').trim(),
+        phone: String(formData.phone || '').trim(),
+        address: String(formData.address || '').trim(),
       });
       localStorage.setItem('school_learners_data', JSON.stringify(learners));
       notifyDataChanged('school_learners_data');
       logActivity({
         type: 'student_registration',
-        title: `New student registered: ${String(formData.fullName || '').trim()} (${formData.gender}, ${formData.grade})`,
+        title: `New student registered: ${String(formData.fullName || '').trim()} (${formData.gender}, Grade ${formData.grade})`,
       });
     } catch (err) {
       console.error('Failed to persist learner:', err);
     }
 
+    setCreatedSlipData({
+      admissionNo: generatedAdmNumber,
+      assessmentNo: generatedAssessmentNumber,
+      fullName: String(formData.fullName || '').trim(),
+      gender: formData.gender,
+      dateOfBirth: '2015-05-14',
+      nationality: 'Kenyan',
+      birthCertificateNo: bcNo || 'BC-998822',
+      specialNeeds: formData.specialNeeds,
+      gradeLevel: `Grade ${formData.grade}`,
+      assignedStream: formData.stream,
+      registrationDate: new Date().toLocaleString(),
+      registrationOfficer: 'School Registrar / Admin',
+      schoolAddress: 'P.O. BOX 5239-30100 ELDORET',
+      centreCode: '26534178',
+    });
+
     toast({
       title: 'Success',
       description: 'Student has been registered successfully.',
     });
-    navigate('/students');
   };
 
   return (
@@ -106,7 +124,6 @@ const Registration = () => {
             <CardTitle>Basic Information</CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
-            {/* Validation error message */}
             {formError && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700 flex items-center gap-2 animate-in slide-in-from-top-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -114,7 +131,6 @@ const Registration = () => {
               </div>
             )}
 
-            {/* Full Name — always required */}
             <div className="space-y-2">
               <Label htmlFor="full-name" className="text-xs font-semibold text-slate-600">
                 Full Name <span className="text-rose-500">*</span>
@@ -129,8 +145,6 @@ const Registration = () => {
               />
             </div>
 
-            {/* Identifier row: Assessment No. + Birth Certificate No.
-                Either one is sufficient. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="assessment-no" className="text-xs font-semibold text-slate-600">
@@ -247,24 +261,20 @@ const Registration = () => {
             </div>
           </CardContent>
           <div className="p-6 pt-0 flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl gap-2 text-slate-600 border-slate-200"
-              onClick={() => navigate('/students')}
-            >
-              <X size={16} /> Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="lg"
-              className="rounded-xl px-8 h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
-            >
-              Register Student
+            <Button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-8 h-12 rounded-xl shadow-md">
+              Register Student & Generate Slip
             </Button>
           </div>
         </Card>
       </form>
+
+      {createdSlipData && (
+        <RegistrationConfirmationSlip
+          data={createdSlipData}
+          isOpen={true}
+          onClose={() => navigate('/students')}
+        />
+      )}
     </div>
   );
 };
