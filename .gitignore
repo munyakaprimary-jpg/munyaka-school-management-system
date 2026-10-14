@@ -44,3 +44,5 @@ server/data/
 
 # Playwright test artifacts
 /e2e-tests/fixtures/dyad/preview-dns.cjs
+
+.vercel
