@@ -20,7 +20,7 @@ const AttendanceStats = ({ students, markedStudents }: AttendanceStatsProps) => 
   const storedCount = Object.keys(markedStudents).length;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mb-6">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1rem', width: '100%' }}>
       {/* Card 1: Total Learners */}
       <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
         <div>
