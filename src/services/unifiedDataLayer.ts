@@ -287,6 +287,29 @@ async function _idbWriteThru(key: string, value: unknown): Promise<void> {
   } else if (value !== null && typeof value === 'object') {
     await idbStore.put(storeName, value as Record<string, unknown>);
   }
+
+  // Automatically enqueue record writes into munyaka_sync_queue for cloud sync
+  if (['munyaka_attendance_records', 'school_learners_data', 'munyaka_students', 'munyaka_marks_records', 'marked_student_submissions'].includes(key)) {
+    try {
+      const queue = JSON.parse(localStorage.getItem('munyaka_sync_queue') || '[]');
+      const newItems = Array.isArray(value) ? value : [value];
+      for (const item of newItems) {
+        if (item && typeof item === 'object') {
+          queue.push({
+            id: (item as any).id || crypto.randomUUID?.() || `sync-${Date.now()}-${Math.random()}`,
+            table: key.includes('attendance') ? 'attendance' : key.includes('learner') ? 'learners' : 'assessment_marks',
+            payload: item,
+            synced: false,
+            created_at: new Date().toISOString()
+          });
+        }
+      }
+      localStorage.setItem('munyaka_sync_queue', JSON.stringify(queue));
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {
+      console.warn('Sync queue enqueue note:', e);
+    }
+  }
 }
 
 // ─── Adapter selection ────────────────────────────────────────────────
