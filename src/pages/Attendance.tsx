@@ -33,6 +33,7 @@ export default function Attendance() {
   const [selectedGrade, setSelectedGrade] = useState<string>('all');
   const [selectedStream, setSelectedStream] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [activeSession, setActiveSession] = useState<'morning' | 'afternoon'>('morning');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [bypassCutoff, setBypassCutoff] = useState<boolean>(true);
   
@@ -320,31 +321,6 @@ export default function Attendance() {
     try {
       const targetLearners = getFilteredLearners();
       const activeKey = `${selectedDate}_${selectedGrade}_${selectedStream}`;
-      
-      const recordPayload = {
-        date: selectedDate,
-        grade: selectedGrade,
-        stream: selectedStream,
-        updatedAt: new Date().toISOString(),
-        markedBy: 'Teacher Portal',
-        bypassCutoffUsed: bypassCutoff,
-        students: Object.fromEntries(
-          targetLearners.map(l => {
-            const id = l.id || l.admissionNo || l.admissionNumber || '';
-            const data = attendanceMap[id] || { morning: 'Present', afternoon: 'Present', remarks: '' };
-            const cleanAdm = cleanAdmissionNo(l.admissionNo || l.admissionNumber || id);
-            return [id, {
-              id,
-              admissionNo: cleanAdm,
-              name: l.name || l.fullName || l.learnerName || 'Unknown Learner',
-              morning: data.morning,
-              afternoon: data.afternoon,
-              status: data.morning,
-              remarks: data.remarks
-            }];
-          })
-        )
-      };
 
       const rawMaster = localStorage.getItem('roll_call_records') || '{}';
       let masterParsed: any = {};
@@ -361,10 +337,56 @@ export default function Attendance() {
         masterParsed = {};
       }
 
+      const existingRecord = masterParsed[activeKey] || masterParsed[`${selectedGrade}_${selectedStream}_${selectedDate}`] || {};
+      const existingStudents = existingRecord.students || existingRecord.learners || {};
+
+      const updatedStudents = Object.fromEntries(
+        targetLearners.map(l => {
+          const id = l.id || l.admissionNo || l.admissionNumber || '';
+          const currentData = attendanceMap[id] || { morning: '', afternoon: '', remarks: '' };
+          const existingStudent = existingStudents[id] || {};
+          const cleanAdm = cleanAdmissionNo(l.admissionNo || l.admissionNumber || id);
+
+          if (activeSession === 'morning') {
+            return [id, {
+              id,
+              admissionNo: cleanAdm,
+              name: l.name || l.fullName || l.learnerName || 'Unknown Learner',
+              morning: currentData.morning,
+              afternoon: existingStudent.afternoon || '',
+              status: currentData.morning,
+              remarks: currentData.remarks || existingStudent.remarks || ''
+            }];
+          } else {
+            return [id, {
+              id,
+              admissionNo: cleanAdm,
+              name: l.name || l.fullName || l.learnerName || 'Unknown Learner',
+              morning: existingStudent.morning || '',
+              afternoon: currentData.afternoon,
+              status: existingStudent.status || existingStudent.morning || '',
+              remarks: currentData.remarks || existingStudent.remarks || ''
+            }];
+          }
+        })
+      );
+
+      const recordPayload = {
+        date: selectedDate,
+        grade: selectedGrade,
+        stream: selectedStream,
+        updatedAt: new Date().toISOString(),
+        markedBy: `Teacher Portal (${activeSession.toUpperCase()} Session)`,
+        bypassCutoffUsed: bypassCutoff,
+        activeSessionSaved: activeSession,
+        students: updatedStudents
+      };
+
       masterParsed[activeKey] = recordPayload;
       masterParsed[`${selectedGrade}_${selectedStream}_${selectedDate}`] = recordPayload;
 
       localStorage.setItem('roll_call_records', JSON.stringify(masterParsed));
+      localStorage.setItem('munyaka_roll_call', JSON.stringify(masterParsed));
 
       const munyakaRaw = localStorage.getItem('munyaka_attendance_records') || '[]';
       let munyakaList = [];
@@ -377,7 +399,7 @@ export default function Attendance() {
 
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
-      toast.success('Roll call saved successfully and synchronized with Admin Attendance records!');
+      toast.success(`${activeSession === 'morning' ? 'Morning' : 'Afternoon'} roll call saved successfully!`);
       loadRollCallRecords();
     } catch (e) {
       console.error('Error saving attendance:', e);
@@ -716,15 +738,32 @@ export default function Attendance() {
             </div>
 
             <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Attendance Date</label>
-              <div className="relative">
-                <Input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-white border-slate-200 h-9 text-xs pl-8"
-                />
-                <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1 block">Active Session</label>
+              <div className="inline-flex rounded-lg p-1 bg-slate-200/80 border border-slate-300 w-full h-9">
+                <button
+                  type="button"
+                  onClick={() => setActiveSession('morning')}
+                  className={`flex-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    activeSession === 'morning'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  Morning Roll Call
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSession('afternoon')}
+                  className={`flex-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    activeSession === 'afternoon'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  Afternoon Roll Call
+                </button>
               </div>
             </div>
 
@@ -748,16 +787,13 @@ export default function Attendance() {
           <div className="bg-emerald-50/50 px-6 py-3 border-b border-emerald-100 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-emerald-800 font-medium">
               <AlertCircle className="w-4 h-4 text-emerald-600" />
-              <span>Showing <strong>{totalLearnersCount}</strong> learners ({getFilterBannerDescription()}) — Master DB Total: <strong>{masterTotalCount}</strong></span>
+              <span>Showing <strong>{totalLearnersCount}</strong> learners — Active Session: <strong className="uppercase text-emerald-900 bg-emerald-100 px-1.5 py-0.5 rounded">{activeSession}</strong></span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-slate-500 font-medium">Quick Mark All:</span>
-              <Button size="sm" variant="outline" className="h-7 text-xs bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-100" onClick={() => markAll('morning', 'Present')}>
-                All Morning Present
-              </Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-100" onClick={() => markAll('afternoon', 'Present')}>
-                All Afternoon Present
+              <span className="text-slate-500 font-medium">Quick Mark All ({activeSession}):</span>
+              <Button size="sm" variant="outline" className="h-7 text-xs bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-100" onClick={() => markAll(activeSession, 'Present')}>
+                All {activeSession} Present
               </Button>
             </div>
           </div>
@@ -771,8 +807,16 @@ export default function Attendance() {
                   <th className="py-3 px-4">Admission No</th>
                   <th className="py-3 px-4">Learner Name</th>
                   <th className="py-3 px-4">Grade / Stream</th>
-                  <th className="py-3 px-4 text-center">Morning Roll Call</th>
-                  <th className="py-3 px-4 text-center">Afternoon Roll Call</th>
+                  <th className="py-3 px-4 text-center">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${activeSession === 'morning' ? 'bg-emerald-600 text-white shadow' : 'bg-slate-200 text-slate-700'}`}>
+                      Morning Roll Call {activeSession === 'morning' && '• Active'}
+                    </span>
+                  </th>
+                  <th className="py-3 px-4 text-center">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${activeSession === 'afternoon' ? 'bg-indigo-600 text-white shadow' : 'bg-slate-200 text-slate-700'}`}>
+                      Afternoon Roll Call {activeSession === 'afternoon' && '• Active'}
+                    </span>
+                  </th>
                   <th className="py-3 px-4">Remarks</th>
                 </tr>
               </thead>
