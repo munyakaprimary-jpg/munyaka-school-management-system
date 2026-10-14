@@ -102,26 +102,6 @@ export async function idbRead<T>(storeName: string, key: string): Promise<T | un
  * Always fires `notifyDataChanged` so React hooks re-subscribe correctly.
  */
 export function writeStorage<T>(key: string, value: T): boolean {
-  // Guard clause: ignore null or undefined writes to avoid IDB errors and log spam
-  if (value === null || value === undefined) {
-    return false;
-  }
-
-  // Prevent writing empty arrays if existing storage has records
-  if (Array.isArray(value) && value.length === 0) {
-    const existing = localStorage.getItem(key);
-    if (existing) {
-      try {
-        const parsed = JSON.parse(existing);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return false;
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }
-
   const serialized = JSON.stringify(value);
 
   // 1. localStorage (source of truth for synchronous reads)
@@ -302,27 +282,6 @@ const IDB_STORE_TO_LS_KEY: Record<string, string> = Object.fromEntries(
 // ─── Internal IndexedDB write-through ───────────────────────────────────────
 
 async function _idbWriteThru(key: string, value: unknown): Promise<void> {
-  // Guard clause: ignore null or undefined writes to avoid IDB errors and log spam
-  if (value === null || value === undefined) {
-    return;
-  }
-
-  // Prevent writing empty arrays or null/undefined initial states that overwrite valid data
-  if (Array.isArray(value) && value.length === 0) {
-    // Check if we already have data in localStorage for this key to prevent wiping out valid store data
-    const existing = localStorage.getItem(key);
-    if (existing) {
-      try {
-        const parsed = JSON.parse(existing);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return; // Do not overwrite existing non-empty storage with empty state
-        }
-      } catch {
-        // ignore JSON parse error
-      }
-    }
-  }
-
   const storeName = LS_KEY_TO_IDB_STORE[key];
   if (!storeName) return;
 
@@ -332,9 +291,7 @@ async function _idbWriteThru(key: string, value: unknown): Promise<void> {
     const records = value.filter((item): item is Record<string, unknown> =>
       item !== null && typeof item === 'object'
     );
-    if (records.length > 0) {
-      await idbStore.putMany(storeName, records);
-    }
+    await idbStore.putMany(storeName, records);
   } else if (value !== null && typeof value === 'object') {
     // Single object with a keyPath field
     await idbStore.put(storeName, value as Record<string, unknown>);
