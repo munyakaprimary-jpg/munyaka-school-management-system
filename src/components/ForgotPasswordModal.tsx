@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, KeyRound, Mail, CheckCircle2, AlertCircle, ArrowRight, Loader2, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 
 interface ForgotPasswordModalProps {
   open: boolean;
