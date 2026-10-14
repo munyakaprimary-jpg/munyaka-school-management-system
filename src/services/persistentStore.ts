@@ -147,8 +147,7 @@ export function writeStorage<T>(key: string, value: T): boolean {
   //    The store name is derived from the key pattern so we can retrieve
   //    it later in idbRead / idbWriteMany without extra mapping.
   _idbWriteThru(key, value).catch((err) => {
-    // Silently handle IDB write errors without console error spam
-  });
+    console.error(`[persistentStore] IDB write-through failed for "${key}":`, err);
   });
 
   // 4. Notify React subscribers
@@ -308,25 +307,37 @@ async function _idbWriteThru(key: string, value: unknown): Promise<void> {
     return;
   }
 
+  // Prevent writing empty arrays or null/undefined initial states that overwrite valid data
+  if (Array.isArray(value) && value.length === 0) {
+    // Check if we already have data in localStorage for this key to prevent wiping out valid store data
+    const existing = localStorage.getItem(key);
+    if (existing) {
+      try {
+        const parsed = JSON.parse(existing);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return; // Do not overwrite existing non-empty storage with empty state
+        }
+      } catch {
+        // ignore JSON parse error
+      }
+    }
+  }
+
   const storeName = LS_KEY_TO_IDB_STORE[key];
   if (!storeName) return;
 
-  try {
-    // value can be an array, object, or primitive
-    if (Array.isArray(value)) {
-      // Bulk-write each item individually so IDB's keyPath works correctly
-      const records = value.filter((item): item is Record<string, unknown> =>
-        item !== null && typeof item === 'object'
-      );
-      if (records.length > 0) {
-        await idbStore.putMany(storeName, records);
-      }
-    } else if (value !== null && typeof value === 'object') {
-      // Single object with a keyPath field
-      await idbStore.put(storeName, value as Record<string, unknown>);
+  // value can be an array, object, or primitive
+  if (Array.isArray(value)) {
+    // Bulk-write each item individually so IDB's keyPath works correctly
+    const records = value.filter((item): item is Record<string, unknown> =>
+      item !== null && typeof item === 'object'
+    );
+    if (records.length > 0) {
+      await idbStore.putMany(storeName, records);
     }
-  } catch {
-    // Silently ignore IDB write-through failures to prevent console error spam
+  } else if (value !== null && typeof value === 'object') {
+    // Single object with a keyPath field
+    await idbStore.put(storeName, value as Record<string, unknown>);
   }
 }
 
