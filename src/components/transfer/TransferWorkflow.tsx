@@ -458,20 +458,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   // and the transfer has succeeded. This prevents double-generation and ensures
   // the modal only closes after the download is complete.
 
-  useEffect(() => {
-    console.log("FULL LEARNER OBJECT:", student);
-  }, [student]);
-
   const [assessmentNoState, setAssessmentNoState] = useState<string>(
-    (student as any)?.assessment_no || (student as any)?.assessment_number || (student as any)?.cba_number || (student as any)?.upi || ''
+    (student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment || ''
   );
 
   useEffect(() => {
-    const directAssessment =
-      (student as any)?.assessment_no ||
-      (student as any)?.assessment_number ||
-      (student as any)?.cba_number ||
-      (student as any)?.upi;
+    const directAssessment = (student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment;
     if (directAssessment) {
       setAssessmentNoState(directAssessment);
     } else if (student?.id) {
@@ -483,8 +475,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             .eq('id', student.id)
             .single()
             .then(({ data }) => {
-              if (data?.assessment_no || data?.assessment_number || data?.cba_number || data?.upi) {
-                setAssessmentNoState(data.assessment_no || data.assessment_number || data.cba_number || data.upi);
+              if (data?.assessment_no) {
+                setAssessmentNoState(data.assessment_no);
               }
             })
             .catch(() => {
@@ -494,9 +486,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                 if (raw) {
                   const parsed = JSON.parse(raw);
                   const found = parsed.find((l: any) => l.id === student.id);
-                  const foundAss = found?.assessment_no || found?.assessment_number || found?.cba_number || found?.upi;
-                  if (foundAss) {
-                    setAssessmentNoState(foundAss);
+                  if (found?.assessment_no) {
+                    setAssessmentNoState(found.assessment_no);
                   }
                 }
               } catch {}
@@ -513,12 +504,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setCertificateNumber(certNum);
     const learnerName = student?.name || '';
     const admissionNo = (student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A';
-    const realAssessmentNo =
-      assessmentNoState ||
-      (student as any)?.assessment_no ||
-      (student as any)?.assessment_number ||
-      (student as any)?.cba_number ||
-      (student as any)?.upi;
+    const assessmentNo = assessmentNoState || (student as any)?.assessment_no || (student as any)?.assessmentNo || 'N/A';
     const grade = student?.grade || 'N/A';
     const stream = student?.stream || 'N/A';
     const exitDate = transferData.dateOfExit ? new Date(transferData.dateOfExit).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
@@ -582,7 +568,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           <div class="bio-grid">
             <div class="bio-row"><span class="label">Full Name:</span> <span class="value">${learnerName}</span></div>
             <div class="bio-row"><span class="label">Admission Number:</span> <span class="value">${admissionNo}</span></div>
-            <div class="bio-row"><span class="label">Assessment Number:</span> <span class="value">${realAssessmentNo ? realAssessmentNo : 'N/A'}</span></div>
+            <div class="bio-row"><span class="label">Assessment Number:</span> <span class="value">${assessmentNo}</span></div>
             <div class="bio-row"><span class="label">Grade / Level:</span> <span class="value">${grade}</span></div>
             <div class="bio-row"><span class="label">Stream:</span> <span class="value">${stream}</span></div>
             <div class="bio-row"><span class="label">Date of Exit:</span> <span class="value">${exitDate}</span></div>
@@ -981,17 +967,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   Adm No: {(student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A'}
                 </Badge>
                 <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-medium">
-                  Assessment Number: {
-                    (() => {
-                      const realAssessmentNo =
-                        (student as any)?.assessment_no ||
-                        (student as any)?.assessment_number ||
-                        (student as any)?.cba_number ||
-                        (student as any)?.upi ||
-                        assessmentNoState;
-                      return `Assessment Number: ${realAssessmentNo ? realAssessmentNo : 'N/A'}`;
-                    })()
-                  }
+                  Assessment Number: {assessmentNoState || 'N/A'}
                 </Badge>
               </div>
             </div>
