@@ -557,15 +557,33 @@ export default function Students() {
 
   // Calculate stream enrollment breakdown grouped by Grade and Stream Name
   const streamBreakdown = useMemo(() => {
-    const map = new Map<string, { grade: string; stream: string; count: number }>();
+    const map = new Map<string, { grade: string; stream: string; maleCount: number; femaleCount: number; total: number }>();
     students.forEach(s => {
       const grade = String(s.grade || s.class || 'Unassigned');
       const stream = String(s.stream || s.stream_name || 'Unassigned Stream');
+      const gender = String(s.gender || '').trim().toLowerCase();
+      const isMale = gender === 'm' || gender === 'male' || gender === 'boy';
+      const isFemale = gender === 'f' || gender === 'female' || gender === 'girl';
+
       const key = `${grade}___${stream}`;
       if (!map.has(key)) {
-        map.set(key, { grade, stream, count: 0 });
+        map.set(key, { grade, stream, maleCount: 0, femaleCount: 0, total: 0 });
       }
-      map.get(key)!.count += 1;
+      const entry = map.get(key)!;
+      if (isMale) {
+        entry.maleCount += 1;
+      } else if (isFemale) {
+        entry.femaleCount += 1;
+      } else {
+        // Fallback for unspecified or other gender: count towards male or general total? Let's check gender string or put in male/female or count towards total. If gender is unspecified, let's treat male as fallback or add an 'other' or count as male. Usually in schools it's Male/Female. Let's count non-female as male or add to total. Let's check if gender contains 'm'.
+        if (gender.includes('m')) {
+          entry.maleCount += 1;
+        } else {
+          // Default unassigned gender to female or male? Let's default to male or count in total. Let's check if gender is empty.
+          entry.maleCount += 1;
+        }
+      }
+      entry.total = entry.maleCount + entry.femaleCount;
     });
 
     const result = Array.from(map.values());
@@ -580,8 +598,16 @@ export default function Students() {
     return result;
   }, [students]);
 
-  const totalEnrollmentCount = useMemo(() => {
-    return streamBreakdown.reduce((acc, curr) => acc + curr.count, 0);
+  const streamTotals = useMemo(() => {
+    let totalMale = 0;
+    let totalFemale = 0;
+    let totalAll = 0;
+    streamBreakdown.forEach(item => {
+      totalMale += item.maleCount;
+      totalFemale += item.femaleCount;
+      totalAll += item.total;
+    });
+    return { totalMale, totalFemale, totalAll };
   }, [streamBreakdown]);
 
   return (
@@ -633,7 +659,7 @@ export default function Students() {
             </div>
           </div>
           <div className="text-xs font-bold px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700">
-            Total Learners: {totalEnrollmentCount}
+            Total Learners: {streamTotals.totalAll}
           </div>
         </div>
 
@@ -642,15 +668,17 @@ export default function Students() {
             <table className="w-full text-left border-collapse text-xs">
               <thead className="bg-slate-100/80 sticky top-0 z-10 text-slate-700 font-bold uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="py-1.5 px-3">Grade</th>
-                  <th className="py-1.5 px-3">Stream Name</th>
-                  <th className="py-1.5 px-3 text-right">Total Learners Registered</th>
+                  <th className="py-1.5 px-3">GRADE</th>
+                  <th className="py-1.5 px-3">STREAM</th>
+                  <th className="py-1.5 px-3 text-right">MALE</th>
+                  <th className="py-1.5 px-3 text-right">FEMALE</th>
+                  <th className="py-1.5 px-3 text-right">TOTAL</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-700">
                 {streamBreakdown.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="py-4 text-center text-slate-400 font-normal">
+                    <td colSpan={5} className="py-4 text-center text-slate-400 font-normal">
                       No learner records found.
                     </td>
                   </tr>
@@ -663,15 +691,19 @@ export default function Students() {
                           {item.stream}
                         </span>
                       </td>
-                      <td className="py-1.5 px-3 text-right font-bold text-slate-900">{item.count}</td>
+                      <td className="py-1.5 px-3 text-right text-slate-700">{item.maleCount}</td>
+                      <td className="py-1.5 px-3 text-right text-slate-700">{item.femaleCount}</td>
+                      <td className="py-1.5 px-3 text-right font-bold text-slate-900">{item.total}</td>
                     </tr>
                   ))
                 )}
               </tbody>
               <tfoot className="bg-slate-50 font-bold text-slate-900 border-t border-slate-200 sticky bottom-0">
                 <tr>
-                  <td colSpan={2} className="py-2 px-3 text-slate-800 text-xs">Total Learners</td>
-                  <td className="py-2 px-3 text-right text-indigo-600 text-xs sm:text-sm">{totalEnrollmentCount}</td>
+                  <td colSpan={2} className="py-2 px-3 text-slate-800 text-xs">Total</td>
+                  <td className="py-2 px-3 text-right text-slate-900 text-xs">{streamTotals.totalMale}</td>
+                  <td className="py-2 px-3 text-right text-slate-900 text-xs">{streamTotals.totalFemale}</td>
+                  <td className="py-2 px-3 text-right text-indigo-600 text-xs sm:text-sm">{streamTotals.totalAll}</td>
                 </tr>
               </tfoot>
             </table>
