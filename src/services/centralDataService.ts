@@ -245,12 +245,11 @@ export const UnifiedDataStorage = {
 
   getLearners: (): any[] => {
     const primary = readStorage<any[]>('school_learners_data', []);
-    const master = readStorage<any[]>('munyaka_master_learner_list', []);
     const legacy = readStorage<any[]>('munyaka_students', []);
     const schoolV1 = readStorage<any[]>('school_learners_v1', []);
     const studentsKey = readStorage<any[]>('students', []);
 
-    const combined = [...master, ...primary, ...legacy, ...schoolV1, ...studentsKey];
+    const combined = [...primary, ...legacy, ...schoolV1, ...studentsKey];
     if (combined.length === 0) {
       return (initialSeedData as any).students || (initialSeedData as any).learners || [
         { id: 'st-1', name: 'Mary Wanjiku', admissionNumber: 'ADM-2024-001', grade: 'Grade 6', stream: 'Mercury', gender: 'Female' },
@@ -275,9 +274,17 @@ export const UnifiedDataStorage = {
   },
 
   saveLearners: (learners: any[]): boolean => {
-    writeStorage('school_learners_data', learners);
-    writeStorage('munyaka_students', learners);
-    writeStorage('munyaka_master_learner_list', learners);
+    try {
+      localStorage.setItem('school_learners_data', JSON.stringify(learners));
+      localStorage.setItem('munyaka_students', JSON.stringify(learners));
+      localStorage.removeItem('munyaka_master_learner_list'); // Omit redundant master duplicate to prevent quota exhaustion
+    } catch (err: any) {
+      if (err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014)) {
+        console.warn('[CentralDataService] Storage quota exceeded when saving learners. Cloud Supabase sync active.');
+      } else {
+        console.error('[CentralDataService] Failed to save learners:', err);
+      }
+    }
 
     CentralDataService.persistAndSyncMutation('students', learners);
 
