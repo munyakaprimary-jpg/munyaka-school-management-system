@@ -29,7 +29,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
 
     try {
       // Build absolute callback URL for password reset
-      const redirectTo = new URL('/login', window.location.origin).href;
+      const redirectTo = new URL('/reset-password', window.location.origin).href;
       
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo,

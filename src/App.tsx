@@ -12,6 +12,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import { ForcePasswordResetModal } from "./components/ForcePasswordResetModal";
+import PasswordResetCallback from "./components/PasswordResetCallback";
 import Login from "./pages/Login";
 import ParentPortal from "./pages/ParentPortal";
 import Index from "./pages/Index";
@@ -503,6 +504,7 @@ const App = () => {
                         {/* Public Routes */}
                       <Route path="/login" element={<Login />} />
                       <Route path="/portal" element={<ParentPortal />} />
+                      <Route path="/reset-password" element={<PasswordResetCallback />} />
 
                       {/* Protected Routes */}
                       <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
