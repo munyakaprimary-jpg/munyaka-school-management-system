@@ -559,8 +559,8 @@ export default function Students() {
   const streamBreakdown = useMemo(() => {
     const map = new Map<string, { grade: string; stream: string; count: number }>();
     students.forEach(s => {
-      const grade = s.grade || s.class || 'Unassigned';
-      const stream = s.stream || s.stream_name || 'Unassigned Stream';
+      const grade = String(s.grade || s.class || 'Unassigned');
+      const stream = String(s.stream || s.stream_name || 'Unassigned Stream');
       const key = `${grade}___${stream}`;
       if (!map.has(key)) {
         map.set(key, { grade, stream, count: 0 });
@@ -570,10 +570,12 @@ export default function Students() {
 
     const result = Array.from(map.values());
     result.sort((a, b) => {
-      if (a.grade !== b.grade) {
-        return a.grade.locale(b.grade, undefined, { numeric: true });
+      const gradeA = String(a.grade || '');
+      const gradeB = String(b.grade || '');
+      if (gradeA !== gradeB) {
+        return gradeA.localeCompare(gradeB, undefined, { numeric: true });
       }
-      return a.stream.locale(b.stream);
+      return String(a.stream || '').localeCompare(String(b.stream || ''));
     });
     return result;
   }, [students]);
