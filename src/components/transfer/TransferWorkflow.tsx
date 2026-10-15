@@ -458,8 +458,43 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   // and the transfer has succeeded. This prevents double-generation and ensures
   // the modal only closes after the download is complete.
 
+  const [assessmentNoState, setAssessmentNoState] = useState<string>(
+    (student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment || ''
+  );
+
   useEffect(() => {
-    console.log("Transfer Modal Learner Object:", student);
+    const directAssessment = (student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment;
+    if (directAssessment) {
+      setAssessmentNoState(directAssessment);
+    } else if (student?.id) {
+      import('@/lib/supabase').then(({ supabase }) => {
+        if (supabase) {
+          supabase
+            .from('learners')
+            .select('assessment_no')
+            .eq('id', student.id)
+            .single()
+            .then(({ data }) => {
+              if (data?.assessment_no) {
+                setAssessmentNoState(data.assessment_no);
+              }
+            })
+            .catch(() => {
+              // fallback to students table or local storage if needed
+              try {
+                const raw = window.localStorage.getItem('school_learners_data');
+                if (raw) {
+                  const parsed = JSON.parse(raw);
+                  const found = parsed.find((l: any) => l.id === student.id);
+                  if (found?.assessment_no) {
+                    setAssessmentNoState(found.assessment_no);
+                  }
+                }
+              } catch {}
+            });
+        }
+      });
+    }
   }, [student]);
 
   const handleExecuteTransfer = async (e: React.FormEvent) => {
@@ -469,7 +504,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setCertificateNumber(certNum);
     const learnerName = student?.name || '';
     const admissionNo = (student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A';
-    const assessmentNo = (student as any)?.assessment_no ? (student as any).assessment_no : 'N/A';
+    const assessmentNo = assessmentNoState || (student as any)?.assessment_no || (student as any)?.assessmentNo || 'N/A';
     const grade = student?.grade || 'N/A';
     const stream = student?.stream || 'N/A';
     const exitDate = transferData.dateOfExit ? new Date(transferData.dateOfExit).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
@@ -932,7 +967,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   Adm No: {(student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A'}
                 </Badge>
                 <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-medium">
-                  Assessment Number: {(student as any)?.assessment_no ? (student as any).assessment_no : 'N/A'}
+                  Assessment Number: {assessmentNoState || 'N/A'}
                 </Badge>
               </div>
             </div>

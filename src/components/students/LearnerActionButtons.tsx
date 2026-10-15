@@ -13,7 +13,11 @@ const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => 
   const [selectedStudent, setSelectedStudent] = useState(student);
 
   const handleTransferStudent = (learner: StudentTransferInfo) => {
-    setSelectedStudent(learner);
+    setSelectedStudent({
+      ...learner,
+      assessment_no: (learner as any).assessment_no || (learner as any).assessmentNo || (learner as any).assessment || null,
+      admission_no: (learner as any).admission_no || (learner as any).admissionNo || (learner as any).admNo || null
+    });
     setIsTransferOpen(true);
   };
 
