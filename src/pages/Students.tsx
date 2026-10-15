@@ -879,7 +879,7 @@ export default function Students() {
                         <td className="px-2.5 py-2 font-mono text-slate-600 whitespace-nowrap">{sDob}</td>
                         <td className="px-2.5 py-2 text-slate-700 truncate max-w-[130px]" title={sParent}>{sParent}</td>
                         <td className="px-2.5 py-2 font-mono text-slate-700 whitespace-nowrap">{sPhone}</td>
-                        <td className="px-3.5 py-2 text-right whitespace-nowrap min-w-[160px]">
+                        <td className="px-3.5 py-2 text-right whitespace-nowrap min-w-[140px]">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={() => navigate(`/students/${sId}`)}
@@ -887,16 +887,6 @@ export default function Students() {
                               title="View Profile"
                             >
                               <Eye size={16} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedStudentForTransfer(student);
-                                setIsTransferModalOpen(true);
-                              }}
-                              className="p-1.5 hover:bg-amber-50 rounded-lg text-amber-600 transition-colors"
-                              title="Transfer Learner"
-                            >
-                              <ArrowRightLeft size={16} />
                             </button>
                             <button
                               onClick={() => handleEditClick(student)}
