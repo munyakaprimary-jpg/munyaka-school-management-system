@@ -510,27 +510,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         return;
       }
 
-      if (!String(adminPassword || '').trim()) {
-        const msg = "Admin password is required to authorize this transfer.";
-        setAuthError(msg);
-        showError(msg);
-        return;
-      }
-
       setIsExecuting(true);
       setAuthError("");
-
-      // ── Step 1: Authorize ────────────────────────────────────────────────
-      const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      if (adminPassword !== storedAdminPass) {
-        const msg = "Invalid admin password. Authorization required to transfer learner.";
-        setAuthError(msg);
-        showError(msg);
-        setIsExecuting(false);
-        return;
-      }
 
       // ── Step 1.5: Update student status in Supabase if client/configured ──
       try {
@@ -798,7 +779,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           <Button
             type="submit"
             form="transfer-form"
-            disabled={isExecuting || !String(adminPassword || '').trim()}
+            disabled={isExecuting}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
           >
             {isExecuting ? <Loader2 className="animate-spin mr-2" size={16} /> : <UserCheck size={16} />}
@@ -1015,47 +996,6 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   className="rounded-xl bg-slate-50 border-none min-h-[70px]"
                   rows={2}
                 />
-              </div>
-            </div>
-
-            {/* ADMIN AUTHORIZATION LOCK */}
-            <div className="space-y-4 pt-2 border-t border-slate-100 bg-amber-50/60 rounded-2xl p-5 border border-amber-100">
-              <div className="flex items-center gap-3 mb-2">
-                <Lock className="text-amber-600 shrink-0" size={20} />
-                <div>
-                  <h4 className="font-bold text-amber-900 text-sm">ADMIN AUTHORIZATION LOCK</h4>
-                  <p className="text-xs text-amber-700">Enter admin password to authorize clearance and transfer certificate generation.</p>
-                </div>
-              </div>
-              
-              <div className="space-y-1.5">
-                <Label className="text-xs font-black uppercase text-amber-800 tracking-widest">ADMIN PASSWORD</Label>
-                <div className="relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    value={adminPassword}
-                    onChange={(e) => {
-                      const trimmed = String(e.target.value || '').trim();
-                      setAdminPassword(trimmed);
-                      if (authError) setAuthError("");
-                    }}
-                    placeholder="Enter admin password..."
-                    className="rounded-xl h-12 bg-white border-amber-200 font-bold pr-12 text-slate-900"
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {authError && (
-                  <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                    <AlertCircle size={14} /> {authError}
-                  </div>
-                )}
               </div>
             </div>
           </div>
