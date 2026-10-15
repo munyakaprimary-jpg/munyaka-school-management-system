@@ -91,6 +91,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   });
   const [certificateNumber, setCertificateNumber] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const downloadCallbackRef = useRef<(() => DownloadPdfResult) | null>(null);
   
   const certificateRef = useRef<HTMLDivElement | null>(null);
   const [isCertificateMounted, setIsCertificateMounted] = useState(false);
