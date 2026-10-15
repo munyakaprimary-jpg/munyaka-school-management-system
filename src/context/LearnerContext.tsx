@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CentralDataService } from '../services/centralDataService';
 import { useAuth } from './AuthContext';
+import { useSupabaseSync } from '../hooks/useSupabaseSync';
 
 interface LearnerContextType {
   learners: any[];
   setLearners: React.Dispatch<React.SetStateAction<any[]>>;
-  addLearner: (newLearner: any) => void;
+  addLearner: (newLearner: any) => Promise<void> | void;
+  deleteLearner: (admissionNumber: string) => Promise<void> | void;
   resetToSeedData: () => void;
 }
 
@@ -13,6 +15,7 @@ const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const { saveLearnerToCloud, deleteLearnerFromCloud } = useSupabaseSync();
   const allLearners = CentralDataService.getLearners();
 
   // If user is a teacher, filter learners strictly to their assigned grade and stream
@@ -41,9 +44,36 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setLearners(filteredLearners);
   }, [JSON.stringify(filteredLearners)]);
 
-  const addLearner = (newLearner: any) => {
+  const addLearner = async (newLearner: any) => {
+    // 1. Immediate cloud push via Supabase
+    await saveLearnerToCloud(newLearner);
+
+    // 2. Local state & storage update
     setLearners((prev) => {
-      const updated = [...prev, newLearner];
+      const existingIndex = prev.findIndex(
+        (l) => (l.admissionNumber || l.admission_number) === (newLearner.admissionNumber || newLearner.admission_number)
+      );
+      let updated;
+      if (existingIndex >= 0) {
+        updated = [...prev];
+        updated[existingIndex] = { ...updated[existingIndex], ...newLearner };
+      } else {
+        updated = [...prev, newLearner];
+      }
+      CentralDataService.saveLearners(updated);
+      return updated;
+    });
+  };
+
+  const deleteLearner = async (admissionNumber: string) => {
+    // 1. Immediate cloud delete via Supabase
+    await deleteLearnerFromCloud(admissionNumber);
+
+    // 2. Local state & storage update
+    setLearners((prev) => {
+      const updated = prev.filter(
+        (l) => (l.admissionNumber || l.admission_number) !== admissionNumber
+      );
       CentralDataService.saveLearners(updated);
       return updated;
     });
@@ -57,7 +87,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   return (
-    <LearnerContext.Provider value={{ learners, setLearners, addLearner, resetToSeedData }}>
+    <LearnerContext.Provider value={{ learners, setLearners, addLearner, deleteLearner, resetToSeedData }}>
       {children}
     </LearnerContext.Provider>
   );

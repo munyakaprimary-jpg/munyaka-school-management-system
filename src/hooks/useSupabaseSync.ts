@@ -170,25 +170,42 @@ export function useSupabaseSync() {
   const saveLearnerToCloud = async (learner: any) => {
     try {
       const payload = {
-        admission_number: learner.admissionNumber || learner.admNo || `ADM-${Date.now()}`,
-        name: learner.name,
+        admission_number: learner.admissionNumber || learner.admNo || learner.admission_number || `ADM-${Date.now()}`,
+        name: learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`.trim(),
+        first_name: learner.firstName || learner.first_name || '',
+        last_name: learner.lastName || learner.last_name || '',
         grade: learner.grade,
         stream: learner.stream,
         gender: learner.gender,
-        guardian_phone: learner.guardianPhone,
-        guardian_name: learner.guardianName,
-        assessment_number: learner.assessmentNumber,
-        upi_number: learner.upiNumber,
+        guardian_phone: learner.guardianPhone || learner.parentPhone || '',
+        guardian_name: learner.guardianName || learner.parentName || '',
+        assessment_number: learner.assessmentNumber || '',
+        upi_number: learner.upiNumber || learner.upi || '',
         status: learner.status || 'Active',
-        photo_url: learner.photoUrl,
-        date_of_birth: learner.dateOfBirth,
+        photo_url: learner.photoUrl || '',
+        date_of_birth: learner.dateOfBirth || '',
+        updated_at: new Date().toISOString()
       };
 
       const { error } = await supabase.from('learners').upsert(payload, { onConflict: 'admission_number' });
       if (error) throw error;
       window.dispatchEvent(new Event('students-updated'));
+      return true;
     } catch (err: any) {
       console.error('Error saving learner to Supabase:', err.message);
+      return false;
+    }
+  };
+
+  const deleteLearnerFromCloud = async (admissionNumber: string) => {
+    try {
+      const { error } = await supabase.from('learners').delete().eq('admission_number', admissionNumber);
+      if (error) throw error;
+      window.dispatchEvent(new Event('students-updated'));
+      return true;
+    } catch (err: any) {
+      console.error('Error deleting learner from Supabase:', err.message);
+      return false;
     }
   };
 
@@ -198,17 +215,32 @@ export function useSupabaseSync() {
       const payload = {
         name: staff.name,
         email: staff.email,
-        phone: staff.phone,
-        role: staff.role,
-        tsc_number: staff.tscNumber,
-        assigned_class: staff.assignedClass,
+        phone: staff.phone || '',
+        role: staff.role || 'Teacher',
+        tsc_number: staff.tscNumber || staff.tsc_number || '',
+        assigned_class: staff.assignedClass || staff.assigned_class || '',
         status: staff.status || 'Active',
+        updated_at: new Date().toISOString()
       };
       const { error } = await supabase.from('staff_members').upsert(payload, { onConflict: 'email' });
       if (error) throw error;
       window.dispatchEvent(new Event('staff-updated'));
+      return true;
     } catch (err: any) {
       console.error('Error saving staff to Supabase:', err.message);
+      return false;
+    }
+  };
+
+  const deleteStaffFromCloud = async (email: string) => {
+    try {
+      const { error } = await supabase.from('staff_members').delete().eq('email', email);
+      if (error) throw error;
+      window.dispatchEvent(new Event('staff-updated'));
+      return true;
+    } catch (err: any) {
+      console.error('Error deleting staff from Supabase:', err.message);
+      return false;
     }
   };
 
@@ -216,23 +248,39 @@ export function useSupabaseSync() {
   const saveAssessmentMarkToCloud = async (markRecord: any) => {
     try {
       const payload = {
-        learner_id: markRecord.learnerId,
-        admission_number: markRecord.admissionNumber,
-        learner_name: markRecord.learnerName,
-        grade: markRecord.grade,
-        stream: markRecord.stream,
-        learning_area: markRecord.learningArea,
-        score: markRecord.score,
-        max_score: markRecord.maxScore || 100,
+        learner_id: markRecord.learnerId || markRecord.learner_id,
+        admission_number: markRecord.admissionNumber || markRecord.admission_number,
+        learner_name: markRecord.learnerName || markRecord.learner_name || '',
+        grade: markRecord.grade || '',
+        stream: markRecord.stream || '',
+        learning_area: markRecord.learningArea || markRecord.learning_area || markRecord.subject || '',
+        score: markRecord.score ?? markRecord.marks ?? 0,
+        max_score: markRecord.maxScore || markRecord.max_score || 100,
         term: markRecord.term || 'Term 3',
-        academic_year: markRecord.academicYear || '2026',
-        remarks: markRecord.remarks,
+        academic_year: markRecord.academicYear || markRecord.academic_year || '2026',
+        remarks: markRecord.remarks || '',
+        updated_at: new Date().toISOString()
       };
 
-      const { error } = await supabase.from('assessment_marks').insert(payload);
+      const { error } = await supabase.from('assessment_marks').upsert(payload, { onConflict: 'admission_number,learning_area,term,academic_year' });
       if (error) throw error;
+      window.dispatchEvent(new Event('assessment-marks-updated'));
+      return true;
     } catch (err: any) {
       console.error('Error saving assessment mark to Supabase:', err.message);
+      return false;
+    }
+  };
+
+  const deleteAssessmentMarkFromCloud = async (id: string) => {
+    try {
+      const { error } = await supabase.from('assessment_marks').delete().eq('id', id);
+      if (error) throw error;
+      window.dispatchEvent(new Event('assessment-marks-updated'));
+      return true;
+    } catch (err: any) {
+      console.error('Error deleting assessment mark from Supabase:', err.message);
+      return false;
     }
   };
 
@@ -240,17 +288,33 @@ export function useSupabaseSync() {
   const saveAttendanceToCloud = async (attRecord: any) => {
     try {
       const payload = {
-        learner_id: attRecord.learnerId,
-        admission_number: attRecord.admissionNumber,
+        learner_id: attRecord.learnerId || attRecord.learner_id,
+        admission_number: attRecord.admissionNumber || attRecord.admission_number,
         date: attRecord.date,
         status: attRecord.status,
-        grade: attRecord.grade,
-        stream: attRecord.stream,
+        grade: attRecord.grade || '',
+        stream: attRecord.stream || '',
+        updated_at: new Date().toISOString()
       };
       const { error } = await supabase.from('attendance').upsert(payload, { onConflict: 'admission_number,date' });
       if (error) throw error;
+      window.dispatchEvent(new Event('attendance-updated'));
+      return true;
     } catch (err: any) {
       console.error('Error saving attendance to Supabase:', err.message);
+      return false;
+    }
+  };
+
+  const deleteAttendanceFromCloud = async (admissionNumber: string, date: string) => {
+    try {
+      const { error } = await supabase.from('attendance').delete().match({ admission_number: admissionNumber, date });
+      if (error) throw error;
+      window.dispatchEvent(new Event('attendance-updated'));
+      return true;
+    } catch (err: any) {
+      console.error('Error deleting attendance from Supabase:', err.message);
+      return false;
     }
   };
 
@@ -315,9 +379,13 @@ export function useSupabaseSync() {
     syncError,
     syncWithCloud,
     saveLearnerToCloud,
+    deleteLearnerFromCloud,
     saveStaffToCloud,
+    deleteStaffFromCloud,
     saveAssessmentMarkToCloud,
+    deleteAssessmentMarkFromCloud,
     saveAttendanceToCloud,
+    deleteAttendanceFromCloud,
     saveFeeSettingsToCloud,
   };
 }
