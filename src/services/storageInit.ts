@@ -21,6 +21,9 @@ const CANONICAL_KEYS = {
 } as const;
 
 export const initializeApplicationStorage = (): void => {
+  const gradesData = (initialSeedData as any).grades || [];
+  const configuredStreamsData = (initialSeedData as any).configured_streams || gradesData;
+
   const seedMappings: Array<{ key: string; data: unknown }> = [
     { key: CANONICAL_KEYS.LEARNERS, data: (initialSeedData as any).students || (initialSeedData as any).learners || [] },
     { key: CANONICAL_KEYS.STUDENTS, data: (initialSeedData as any).students || (initialSeedData as any).learners || [] },
@@ -32,12 +35,15 @@ export const initializeApplicationStorage = (): void => {
     { key: CANONICAL_KEYS.FEES_RECORDS, data: (initialSeedData as any).fees || [] },
     { key: CANONICAL_KEYS.FEE_STRUCTURES, data: (initialSeedData as any).feeStructures || [] },
     { key: CANONICAL_KEYS.ATTENDANCE, data: (initialSeedData as any).attendance || [] },
-    { key: CANONICAL_KEYS.GRADES, data: [] },
+    { key: CANONICAL_KEYS.GRADES, data: gradesData },
     { key: CANONICAL_KEYS.LEARNING_AREAS, data: (initialSeedData as any).learningAreas || [] },
     { key: CANONICAL_KEYS.ASSESSMENT_SCORES, data: (initialSeedData as any).assessmentScores || [] },
     { key: CANONICAL_KEYS.ICT_ASSETS, data: (initialSeedData as any).ictAssets || [] },
     { key: CANONICAL_KEYS.NOTICES, data: (initialSeedData as any).notices || [] },
     { key: CANONICAL_KEYS.SYSTEM_SETTINGS, data: (initialSeedData as any).settings || {} },
+    { key: 'configured_streams', data: configuredStreamsData },
+    { key: 'grades_and_streams', data: gradesData },
+    { key: 'munyaka_grades_streams', data: gradesData },
   ];
 
   seedMappings.forEach(({ key, data }) => {

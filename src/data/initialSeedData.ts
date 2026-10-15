@@ -28,6 +28,33 @@ export const DEFAULT_CBC_CLUSTERS = [
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
 export const initialSeedData = {
+  "grades": [
+    { "id": "g_pp1", "name": "PP1", "streams": ["BLUE", "GREEN", "RED"] },
+    { "id": "g_pp2", "name": "PP2", "streams": ["BLUE", "GREEN", "RED"] },
+    { "id": "g_1", "name": "Grade 1", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_2", "name": "Grade 2", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_3", "name": "Grade 3", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_4", "name": "Grade 4", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_5", "name": "Grade 5", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_6", "name": "Grade 6", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_7", "name": "Grade 7", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] },
+    { "id": "g_8", "name": "Grade 8", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] },
+    { "id": "g_9", "name": "Grade 9", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] }
+  ],
+  "streams": ["BLUE", "GREEN", "RED", "YELLOW", "MERCURY", "NEPTUNE", "VENUS", "EARTH"],
+  "configured_streams": [
+    { "id": "g_pp1", "name": "PP1", "streams": ["BLUE", "GREEN", "RED"] },
+    { "id": "g_pp2", "name": "PP2", "streams": ["BLUE", "GREEN", "RED"] },
+    { "id": "g_1", "name": "Grade 1", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_2", "name": "Grade 2", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_3", "name": "Grade 3", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_4", "name": "Grade 4", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_5", "name": "Grade 5", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_6", "name": "Grade 6", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
+    { "id": "g_7", "name": "Grade 7", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] },
+    { "id": "g_8", "name": "Grade 8", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] },
+    { "id": "g_9", "name": "Grade 9", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] }
+  ],
   "learners": [
     {
       "id": "1790673553858",
@@ -1515,7 +1542,16 @@ export const initialSeedData = {
       ]
     }
   },
-  "settings": {},
+  "settings": {
+    "schoolName": "Munyaka Primary & Junior School",
+    "schoolCode": "MUNYAKA-001",
+    "motto": "Discipline and Excellence",
+    "address": "P.O. Box 123-00100, Nairobi, Kenya",
+    "phone": "+254 712 345678",
+    "email": "info@munyakaprimary.ac.ke",
+    "currentTerm": "Term 1, 2026",
+    "academicYear": "2026"
+  },
   "notices": [],
   "events": [],
   "campuses": [
@@ -1583,6 +1619,7 @@ export const mockStudents = initialSeedData.students || [];
 export const mockStaff = [];
 export const initialGrades = (initialSeedData as any).grades || [];
 export const initialStreams = (initialSeedData as any).streams || [];
+export const initialConfiguredStreams = (initialSeedData as any).configured_streams || [];
 export const initialClassAssignments = (initialSeedData as any).classAssignments || [];
 export const mockExams = (initialSeedData as any).exams || [];
 export const mockLibrary = (initialSeedData as any).libraryBooks || [];
