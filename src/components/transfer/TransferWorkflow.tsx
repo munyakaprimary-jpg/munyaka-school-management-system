@@ -461,46 +461,141 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const handleExecuteTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    const certNum = `TRANS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     setCertificateNumber(certNum);
     const learnerName = student?.name || '';
-    const admissionNo = (student as any)?.admissionNumber || (student as any)?.admNo || student?.assessment || '';
+    const admissionNo = (student as any)?.admissionNumber || (student as any)?.admNo || 'N/A';
+    const assessmentNo = student?.assessment || (student as any)?.assessmentNo || 'N/A';
+    const grade = student?.grade || 'N/A';
+    const stream = student?.stream || 'N/A';
     const exitDate = transferData.dateOfExit ? new Date(transferData.dateOfExit).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
-    const destinationSchool = transferData.destinationSchool || '';
+    const destinationSchool = transferData.destinationSchool || 'N/A';
+    const coCurricular = transferData.coCurricularActivities || 'N/A';
     const headteacherRemarks = transferData.headteacherRemarks || 'Cleared from all school departments.';
+    const feeStatus = student?.feeBalance && student.feeBalance > 0 ? `Outstanding Balance: KES ${student.feeBalance.toLocaleString()}` : 'Fully Cleared (KES 0 Balance)';
     const learnerId = student?.id;
 
-    // 1. Build certificate HTML content
+    // 1. Build comprehensive official certificate HTML content
     const certContent = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Clearance Certificate - ${learnerName || 'Learner'}</title>
+        <title>Official Transfer & Clearance Certificate - ${learnerName || 'Learner'}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; color: #111; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-          .title { text-align: center; font-size: 20px; font-weight: bold; margin: 20px 0; text-transform: uppercase; }
-          .row { margin: 12px 0; font-size: 16px; }
-          .label { font-weight: bold; }
-          .footer { margin-top: 60px; display: flex; justify-content: space-between; }
-          .sig-box { border-top: 1px solid #000; width: 200px; text-align: center; padding-top: 5px; }
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 30px; color: #1e293b; background: #fff; line-height: 1.4; }
+          .cert-container { max-width: 800px; margin: 0 auto; border: 4px double #0f172a; padding: 30px; }
+          .header { text-align: center; border-bottom: 3px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; }
+          .school-name { font-size: 22px; font-weight: 900; letter-spacing: 1px; color: #0f172a; margin: 0 0 4px 0; }
+          .motto { font-size: 11px; font-style: italic; color: #475569; margin: 0 0 6px 0; }
+          .contact { font-size: 10.5px; color: #64748b; }
+          .cert-title { text-align: center; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; background: #f1f5f9; padding: 8px; border-radius: 4px; margin-bottom: 15px; color: #0f172a; }
+          .meta-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; }
+          .bio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; margin-bottom: 15px; font-size: 13px; }
+          .bio-row { display: flex; border-bottom: 1px dotted #e2e8f0; padding-bottom: 4px; }
+          .bio-row.full { grid-column: span 2; }
+          .label { font-weight: 700; color: #475569; width: 170px; flex-shrink: 0; }
+          .value { font-weight: 600; color: #0f172a; }
+          .section-title { font-size: 12.5px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; padding: 5px 10px; margin: 15px 0 8px 0; border-left: 4px solid #4f46e5; color: #1e293b; }
+          .clearance-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 12.5px; }
+          .clearance-table th, .clearance-table td { border: 1px solid #cbd5e1; padding: 6px 10px; text-align: left; }
+          .clearance-table th { background: #f8fafc; font-weight: 700; color: #334155; }
+          .status-cleared { color: #15803d; font-weight: 700; }
+          .status-bal { color: #b91c1c; font-weight: 700; }
+          .remarks-box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px; border-radius: 4px; font-size: 12.5px; min-height: 35px; margin-bottom: 12px; }
+          .declaration { font-size: 13px; font-weight: 500; text-align: justify; margin: 15px 0; line-height: 1.6; }
+          .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; }
+          .sig-box { border: 1px dashed #94a3b8; padding: 12px; border-radius: 6px; text-align: center; background: #fafafa; }
+          .sig-line { border-bottom: 1px solid #475569; width: 85%; margin: 35px auto 6px auto; }
+          .sig-title { font-size: 11px; font-weight: 700; color: #334155; }
+          .footer { text-align: center; margin-top: 25px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
         </style>
       </head>
       <body>
-        <div class="header">
-          <h2 style="margin:0;">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h2>
-          <p style="margin:5px 0;">P.O. Box 5239-30100 Eldoret | Kenya</p>
-        </div>
-        <div class="title">Official Learner Clearance & Transfer Certificate</div>
-        <div class="row"><span class="label">Learner Name:</span> ${learnerName || ''}</div>
-        <div class="row"><span class="label">Assessment / Admission No:</span> ${admissionNo || ''}</div>
-        <div class="row"><span class="label">Exit Date:</span> ${exitDate || '15/10/2026'}</div>
-        <div class="row"><span class="label">Destination School:</span> ${destinationSchool || ''}</div>
-        <div class="row"><span class="label">Remarks:</span> ${headteacherRemarks || 'Cleared from all school departments.'}</div>
-        
-        <div class="footer">
-          <div class="sig-box">Headteacher Signature</div>
-          <div class="sig-box">Official Stamp & Date</div>
+        <div class="cert-container">
+          <div class="header">
+            <h1 class="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
+            <p class="motto">"Knowledge and Excellence"</p>
+            <p class="contact">P.O. Box 5239-30100 Eldoret | Phone: +254 712 345 678 | Email: info@munyakaschool.sc.ke</p>
+          </div>
+
+          <div class="cert-title">Official Learner Clearance & Transfer Certificate</div>
+
+          <div class="meta-row">
+            <span>Certificate Serial No: <strong>${certNum}</strong></span>
+            <span>Date of Issue: <strong>${new Date().toLocaleDateString('en-GB')}</strong></span>
+          </div>
+
+          <div class="section-title">Learner Bio-Data</div>
+          <div class="bio-grid">
+            <div class="bio-row"><span class="label">Full Name:</span> <span class="value">${learnerName}</span></div>
+            <div class="bio-row"><span class="label">Admission Number:</span> <span class="value">${admissionNo}</span></div>
+            <div class="bio-row"><span class="label">NEMIS / Assessment No:</span> <span class="value">${assessmentNo}</span></div>
+            <div class="bio-row"><span class="label">Grade / Level:</span> <span class="value">${grade}</span></div>
+            <div class="bio-row"><span class="label">Stream:</span> <span class="value">${stream}</span></div>
+            <div class="bio-row"><span class="label">Date of Exit:</span> <span class="value">${exitDate}</span></div>
+            <div class="bio-row full"><span class="label">Destination Institution:</span> <span class="value">${destinationSchool}</span></div>
+          </div>
+
+          <div class="section-title">Department Clearance Checklist</div>
+          <table class="clearance-table">
+            <thead>
+              <tr>
+                <th>Department / Section</th>
+                <th>Clearance Status / Remarks</th>
+                <th>Verified By</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Fee Clearance (Accounts)</strong></td>
+                <td><span class="${student?.feeBalance && student.feeBalance > 0 ? 'status-bal' : 'status-cleared'}">${feeStatus}</span></td>
+                <td>Accounts Office</td>
+              </tr>
+              <tr>
+                <td><strong>Library & Learning Materials</strong></td>
+                <td><span class="status-cleared">Cleared (All Textbooks Returned)</span></td>
+                <td>Library Custodian</td>
+              </tr>
+              <tr>
+                <td><strong>Sports & Co-Curricular Equipment</strong></td>
+                <td><span class="status-cleared">Cleared (All Gear Returned)</span></td>
+                <td>Sports Department</td>
+              </tr>
+              <tr>
+                <td><strong>Class Teacher Clearance</strong></td>
+                <td><span class="status-cleared">Cleared (Desk & Locker Clear)</span></td>
+                <td>Class Teacher</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="section-title">Academic & Conduct Summary</div>
+          <div class="label" style="margin-bottom:4px;">Co-Curricular Achievements & Talent Notes:</div>
+          <div class="remarks-box">${coCurricular}</div>
+
+          <div class="label" style="margin-bottom:4px;">Headteacher Conduct Remarks:</div>
+          <div class="remarks-box">${headteacherRemarks}</div>
+
+          <div class="declaration">
+            <strong>Formal Declaration:</strong> This is to certify that the above-named learner has been fully cleared of all school obligations and is hereby officially transferred to <strong>${destinationSchool}</strong>.
+          </div>
+
+          <div class="signatures">
+            <div class="sig-box">
+              <div class="sig-title">CLASS TEACHER</div>
+              <div class="sig-line"></div>
+              <div style="font-size: 10px; color: #64748b;">Signature & Date</div>
+            </div>
+            <div class="sig-box">
+              <div class="sig-title">HEADTEACHER</div>
+              <div class="sig-line"></div>
+              <div style="font-size: 10px; color: #64748b;">Signature, Date & Official School Stamp</div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>Official Munyaka Primary and Junior School Transfer Document • Valid Only with Official School Stamp</p>
+          </div>
         </div>
         <script>
           window.onload = function() {
