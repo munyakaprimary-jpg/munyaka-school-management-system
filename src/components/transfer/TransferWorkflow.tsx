@@ -468,7 +468,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
       // ── Step 1.5: Update student status in Supabase if client/configured ──
       try {
-        const { supabase } = await import('@/lib/supabaseClient');
+        const { supabase } = await import('@/lib/supabase');
         if (supabase && student?.id) {
           const { error: updateError } = await supabase
             .from('students')
@@ -484,6 +484,126 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
       const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
       setCertificateNumber(certNum);
+
+      // Immediately create and open a printable window using window.open('', '_blank')
+      try {
+        const studentName = student?.name || 'Learner';
+        const assessmentNo = student?.assessment || (student as any).admissionNumber || (student as any).admNo || 'N/A';
+        const grade = student?.grade || '—';
+        const stream = student?.stream || '—';
+        const gender = student?.gender === 'M' ? 'Male' : student?.gender === 'F' ? 'Female' : 'Other';
+        const dob = student?.dob ? new Date(student.dob).toLocaleDateString('en-GB') : '—';
+        const doa = student?.dateOfAdmission ? new Date(student.dateOfAdmission).toLocaleDateString('en-GB') : '—';
+        const exitDate = transferData.dateOfExit ? new Date(transferData.dateOfExit).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+        const destSchool = transferData.destinationSchool || 'Not specified';
+        const feeText = (student?.feeBalance ?? 0) <= 0 ? 'Fully Cleared (0 KES Balance)' : `Outstanding Balance: KES ${student.feeBalance.toLocaleString()}`;
+        const coCurr = transferData.coCurricularActivities || 'No co-curricular activities recorded.';
+        const remarks = transferData.headteacherRemarks || 'No additional remarks provided.';
+
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>OFFICIAL LEARNER CLEARANCE & TRANSFER CERTIFICATE - ${certNum}</title>
+            <style>
+              @page { size: A4 portrait; margin: 15mm; }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: #ffffff; padding: 20px; line-height: 1.5; }
+              .cert-card { max-width: 800px; margin: 0 auto; border: 3px double #0f172a; padding: 35px; background: #fff; position: relative; }
+              .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
+              .school-title { font-size: 22px; font-weight: 900; letter-spacing: 1px; color: #0f172a; margin-bottom: 4px; }
+              .motto { font-size: 12px; font-style: italic; color: #475569; margin-bottom: 6px; }
+              .address { font-size: 11px; color: #64748b; }
+              .doc-title { text-align: center; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; background: #f1f5f9; padding: 8px; border-radius: 6px; margin-bottom: 15px; color: #1e293b; }
+              .meta-bar { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 20px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 20px; font-size: 13px; }
+              .row-full { grid-column: span 2; }
+              .label { font-weight: 700; color: #475569; display: inline-block; width: 180px; }
+              .value { font-weight: 600; color: #0f172a; }
+              .section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; padding: 6px 10px; margin: 15px 0 8px 0; border-left: 4px solid #4f46e5; color: #1e293b; }
+              .box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 6px; font-size: 12.5px; min-height: 45px; }
+              .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 35px; }
+              .sig-box { border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; text-align: center; background: #fafafa; }
+              .sig-line { border-bottom: 1px solid #94a3b8; width: 80%; margin: 30px auto 8px auto; }
+              .sig-title { font-size: 11px; font-weight: 700; color: #475569; }
+              .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="cert-card">
+              <div class="header">
+                <h1 class="school-title">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
+                <p class="motto">"Knowledge is Power"</p>
+                <p class="address">P.O. Box 5239-30100 Eldoret | Tel: +254 738 873 359 | Email: munyakaprimary@gmail.com</p>
+              </div>
+
+              <div class="doc-title">OFFICIAL LEARNER CLEARANCE & TRANSFER CERTIFICATE</div>
+
+              <div class="meta-bar">
+                <span>Certificate No: <strong>${certNum}</strong></span>
+                <span>Exit Date: <strong>${exitDate}</strong></span>
+              </div>
+
+              <div class="grid">
+                <div><span class="label">Student Name:</span> <span class="value">${studentName}</span></div>
+                <div><span class="label">Assessment Number / UPI:</span> <span class="value">${assessmentNo}</span></div>
+                <div><span class="label">Gender:</span> <span class="value">${gender}</span></div>
+                <div><span class="label">Date of Birth:</span> <span class="value">${dob}</span></div>
+                <div><span class="label">Grade:</span> <span class="value">${grade}</span></div>
+                <div><span class="label">Stream:</span> <span class="value">${stream}</span></div>
+                <div><span class="label">Date of Admission:</span> <span class="value">${doa}</span></div>
+                <div><span class="label">Fee Clearance:</span> <span class="value">${feeText}</span></div>
+                <div class="row-full"><span class="label">Destination School:</span> <span class="value">${destSchool}</span></div>
+              </div>
+
+              <div class="section-title">Conduct & Co-Curricular Remarks</div>
+              <div class="box">${coCurr}</div>
+
+              <div class="section-title">Headteacher Remarks & Achievements</div>
+              <div class="box">${remarks}</div>
+
+              <div class="signatures">
+                <div class="sig-box">
+                  <div class="sig-title">INSTITUTION STAMP & BURSAR</div>
+                  <div class="sig-line"></div>
+                  <div style="font-size: 10px; color: #64748b;">Official Stamp & Date</div>
+                </div>
+                <div class="sig-box">
+                  <div class="sig-title">OFFICIAL HEADTEACHER SIGNATURE</div>
+                  <div class="sig-line"></div>
+                  <div style="font-size: 10px; color: #64748b;">Official Headteacher Signature & Stamp</div>
+                </div>
+              </div>
+
+              <div class="footer">
+                <p>Official Munyaka Primary and Junior School Clearance Document • P.O. Box 5239-30100 Eldoret</p>
+              </div>
+            </div>
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.focus();
+                  window.print();
+                }, 300);
+              };
+            </script>
+          </body>
+          </html>
+        `;
+
+        const certWindow = window.open('', '_blank');
+        if (certWindow) {
+          certWindow.document.open();
+          certWindow.document.write(htmlContent);
+          certWindow.document.close();
+          certWindow.print();
+        } else {
+          console.warn('[TransferWorkflow] Popup blocked by browser');
+        }
+      } catch (printEx) {
+        console.warn('[TransferWorkflow] Direct print window creation error:', printEx);
+      }
 
       const transferDate = transferData.dateOfExit || new Date().toISOString().split('T')[0];
       const archiveRecord: TransferredLearnerArchive = {
