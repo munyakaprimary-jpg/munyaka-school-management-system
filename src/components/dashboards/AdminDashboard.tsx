@@ -346,13 +346,13 @@ export const AdminDashboardComponent: React.FC = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="w-full max-w-none">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900">Admin Dashboard</h1>
-          <p className="text-sm text-gray-500">Live operational metrics synchronized with the master database.</p>
+    <div className="p-3 sm:p-6 space-y-6 w-full max-w-full overflow-hidden">
+      <div className="flex flex-row flex-wrap justify-between items-start sm:items-center gap-4 w-full">
+        <div className="w-full sm:w-auto flex-1 min-w-[200px]">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 whitespace-normal break-words">Admin Dashboard</h1>
+          <p className="text-xs sm:text-sm text-gray-500 whitespace-normal break-words">Live operational metrics synchronized with the master database.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-start sm:justify-end">
           <Button
             onClick={() => setShowScanModal(true)}
             className="flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs px-4 py-2.5 rounded-2xl shadow-md transition-all active:scale-95"
