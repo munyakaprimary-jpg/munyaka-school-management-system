@@ -471,49 +471,49 @@ const GradesStreams = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {grade.streams.map((stream) => (
                     <div
                       key={stream.id}
-                      className="p-6 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all relative group/stream"
+                      className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all relative group/stream"
                     >
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h4 className="text-lg font-bold text-slate-900">{stream.name} Stream</h4>
+                          <h4 className="text-base font-bold text-slate-900">{stream.name} Stream</h4>
                         </div>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="rounded-full text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 h-8 w-8"
+                            className="rounded-full text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 h-7 w-7"
                             onClick={() => handleOpenEditStream(grade.id, stream)}
                             title="Edit stream"
                           >
-                            <Edit2 size={14} />
+                            <Edit2 size={13} />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 h-8 w-8"
+                            className="rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 h-7 w-7"
                             onClick={() => requestDelete('stream', grade.id, stream.id)}
                             title="Delete stream"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </Button>
                         </div>
                       </div>
                       <div
                         onClick={() => handleOpenEditStream(grade.id, stream)}
-                        className="space-y-3 pt-4 border-t border-slate-100 cursor-pointer group-hover/stream:bg-indigo-50/20 transition-colors rounded-xl p-2 -mx-2"
+                        className="space-y-2 pt-3 border-t border-slate-100 cursor-pointer group-hover/stream:bg-indigo-50/20 transition-colors rounded-xl p-1.5 -mx-1.5 text-xs"
                       >
-                        <div className="flex items-center gap-2.5 text-sm text-slate-600">
-                          <User size={16} className="text-slate-400" />
-                          <span className="font-medium">
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <User size={14} className="text-slate-400 shrink-0" />
+                          <span className="font-medium truncate">
                             Teacher: <strong className="text-slate-800">{stream.teacher}</strong>
                           </span>
                         </div>
-                        <div className="flex items-center gap-2.5 text-sm text-slate-600">
-                          <Users size={16} className="text-slate-400" />
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Users size={14} className="text-slate-400 shrink-0" />
                           <span className="font-medium">
                             Students: <strong className="text-slate-800">{stream.studentsCount} Learners</strong>
                           </span>
