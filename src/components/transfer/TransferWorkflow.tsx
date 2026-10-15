@@ -621,67 +621,119 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     if (isPrinting) return;
     setIsPrinting(true);
     try {
-      // Render the certificate node to a canvas and use that image as the
-      // print payload — this reliably avoids blank output and never depends on
-      // copying live DOM markup into another document.
-      const canvas = await captureCertificateCanvas();
-      const dataUrl = canvas.toDataURL('image/png');
+      const studentName = student?.name || 'Learner';
+      const assessmentNo = student?.assessment || 'N/A';
+      const grade = student?.grade || '—';
+      const stream = student?.stream || '—';
+      const gender = student?.gender === 'M' ? 'Male' : student?.gender === 'F' ? 'Female' : 'Other';
+      const dob = student?.dob ? new Date(student.dob).toLocaleDateString('en-GB') : '—';
+      const doa = student?.dateOfAdmission ? new Date(student.dateOfAdmission).toLocaleDateString('en-GB') : '—';
+      const exitDate = transferData.dateOfExit ? new Date(transferData.dateOfExit).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+      const destSchool = transferData.destinationSchool || 'Not specified';
+      const feeText = (student?.feeBalance ?? 0) <= 0 ? 'Fully Cleared (0 KES Balance)' : `Outstanding Balance: KES ${student.feeBalance.toLocaleString()}`;
+      const coCurr = transferData.coCurricularActivities || 'No co-curricular activities recorded.';
+      const remarks = transferData.headteacherRemarks || 'No additional remarks provided.';
 
-      // Create a temporary hidden iframe to print from — this avoids opening
-      // new browser tabs and never trips pop-up blockers. The iframe is
-      // removed from the DOM once printing is done.
-      const iframe = document.createElement('iframe');
-      iframe.setAttribute('aria-hidden', 'true');
-      iframe.setAttribute('title', 'Certificate print frame');
-      iframe.style.position = 'absolute';
-      iframe.style.left = '-9999px';
-      iframe.style.top = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.style.visibility = 'hidden';
-      document.body.appendChild(iframe);
-
-      const iframeDoc = iframe?.contentDocument || iframe?.contentWindow?.document;
-      if (!iframeDoc) {
-        showError('Unable to prepare the certificate for printing. Please try again.');
-        iframe?.remove();
-        return;
-      }
-
-      iframeDoc.open();
-      iframeDoc.write(`
+      const htmlContent = `
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Transfer Clearance Certificate - ${certificateNumber}</title>
+          <title>Official Clearance & Transfer Certificate - ${certificateNumber}</title>
           <style>
-            @page { size: A4; margin: 0; }
+            @page { size: A4 portrait; margin: 15mm; }
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            img { width: 100%; height: auto; display: block; }
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: #ffffff; padding: 20px; line-height: 1.5; }
+            .cert-card { max-width: 800px; margin: 0 auto; border: 3px double #0f172a; padding: 35px; background: #fff; position: relative; }
+            .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
+            .school-title { font-size: 22px; font-weight: 900; letter-spacing: 1px; color: #0f172a; margin-bottom: 4px; }
+            .motto { font-size: 12px; font-style: italic; color: #475569; margin-bottom: 6px; }
+            .address { font-size: 11px; color: #64748b; }
+            .doc-title { text-align: center; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; background: #f1f5f9; padding: 8px; border-radius: 6px; margin-bottom: 15px; color: #1e293b; }
+            .meta-bar { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 20px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 20px; font-size: 13px; }
+            .row-full { grid-column: span 2; }
+            .label { font-weight: 700; color: #475569; display: inline-block; width: 180px; }
+            .value { font-weight: 600; color: #0f172a; }
+            .section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; padding: 6px 10px; margin: 15px 0 8px 0; border-left: 4px solid #4f46e5; color: #1e293b; }
+            .box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 6px; font-size: 12.5px; min-height: 45px; }
+            .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 35px; }
+            .sig-box { border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; text-align: center; background: #fafafa; }
+            .sig-line { border-bottom: 1px solid #94a3b8; width: 80%; margin: 30px auto 8px auto; }
+            .sig-title { font-size: 11px; font-weight: 700; color: #475569; }
+            .footer { text-align: center; margin-top: 30px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
           </style>
         </head>
         <body>
-          <img src="${dataUrl}" alt="Transfer Clearance Certificate" />
+          <div class="cert-card">
+            <div class="header">
+              <h1 class="school-title">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
+              <p class="motto">"Knowledge is Power"</p>
+              <p class="address">P.O. Box 5239-30100, Eldoret | Tel: +254 738 873 359 | Email: munyakaprimary@gmail.com</p>
+            </div>
+
+            <div class="doc-title">Official Learner Clearance & Transfer Certificate</div>
+
+            <div class="meta-bar">
+              <span>Certificate No: <strong>${certificateNumber}</strong></span>
+              <span>Date Issued: <strong>${exitDate}</strong></span>
+            </div>
+
+            <div class="grid">
+              <div><span class="label">Full Name:</span> <span class="value">${studentName}</span></div>
+              <div><span class="label">Assessment / UPI No:</span> <span class="value">${assessmentNo}</span></div>
+              <div><span class="label">Gender:</span> <span class="value">${gender}</span></div>
+              <div><span class="label">Date of Birth:</span> <span class="value">${dob}</span></div>
+              <div><span class="label">Date of Admission:</span> <span class="value">${doa}</span></div>
+              <div><span class="label">Date of Exit:</span> <span class="value">${exitDate}</span></div>
+              <div><span class="label">Grade & Stream:</span> <span class="value">Grade ${grade} — ${stream}</span></div>
+              <div><span class="label">Fee Clearance:</span> <span class="value">${feeText}</span></div>
+              <div class="row-full"><span class="label">Destination School:</span> <span class="value">${destSchool}</span></div>
+            </div>
+
+            <div class="section-title">Co-Curricular Activities & Achievements</div>
+            <div class="box">${coCurr}</div>
+
+            <div class="section-title">Headteacher Remarks & Character Reference</div>
+            <div class="box">${remarks}</div>
+
+            <div class="signatures">
+              <div class="sig-box">
+                <div class="sig-title">BURSAR / FINANCE CLEARANCE</div>
+                <div class="sig-line"></div>
+                <div style="font-size: 10px; color: #64748b;">Signature & Date | Official Stamp</div>
+              </div>
+              <div class="sig-box">
+                <div class="sig-title">HEADTEACHER SIGNATURE & STAMP</div>
+                <div class="sig-line"></div>
+                <div style="font-size: 10px; color: #64748b;">Signature & Date | Official School Stamp</div>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>This certificate is issued without erasure or alteration. Munyaka Primary and Junior School • P.O. Box 5239-30100, Eldoret</p>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.focus();
+              window.print();
+            };
+          </script>
         </body>
         </html>
-      `);
-      iframeDoc.close();
+      `;
 
-      // Remove the iframe from the DOM once the print dialog is dismissed
-      iframe?.contentWindow?.addEventListener('afterprint', () => {
-        setTimeout(() => iframe?.remove(), 100);
-      });
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        throw new Error('Popup blocker prevented the clearance certificate window from opening. Please allow popups for this site or use the Download PDF button.');
+      }
 
-      // Wait for the image inside the iframe to load before triggering the dialog
-      setTimeout(() => {
-        iframe?.contentWindow?.focus();
-        iframe?.contentWindow?.print();
-      }, 300);
+      printWindow.document.open();
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
     } catch (err) {
-      console.error('Print error:', err);
-      showError(err instanceof Error ? err.message : 'Failed to prepare the certificate for printing.');
+      console.error('Print window error:', err);
+      showError(err instanceof Error ? err.message : 'Failed to open printable clearance certificate window.');
     } finally {
       setIsPrinting(false);
     }
