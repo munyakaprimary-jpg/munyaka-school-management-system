@@ -504,184 +504,176 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const handleExecuteTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!transferData.destinationSchool?.trim()) {
-      showError("Please enter the destination school or reason for transfer.");
-      return;
-    }
-
-    if (!String(adminPassword || '').trim()) {
-          const msg = "Admin password is required to authorize this transfer.";
-      setAuthError(msg);
-      showError(msg);
-      return;
-    }
-
-    setIsExecuting(true);
-    setAuthError("");
-
-    // ── Step 1: Authorize ────────────────────────────────────────────────
-    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    if (adminPassword !== storedAdminPass) {
-      const msg = "Invalid admin password. Authorization required to transfer learner.";
-      setAuthError(msg);
-      showError(msg);
-      setIsExecuting(false);
-      return;
-    }
-
-    // ── Step 2: Archive record MUST be written BEFORE onTransferComplete ─
-        // Writing to the archive first guarantees the record survives even if
-        // the parent's onTransferComplete throws (e.g., localStorage write
-        // failure). If we called onTransferComplete first and it failed, the
-        // archive entry would never be saved and the learner would vanish.
-        const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
-        setCertificateNumber(certNum);
-    
-        const transferDate = transferData.dateOfExit || new Date().toISOString().split('T')[0];
-        const archiveRecord: TransferredLearnerArchive = {
-          id: student.id,
-          admNo: (student as any).admissionNumber || (student as any).admNo || student.assessment || '',
-          name: student.name,
-          grade: student.grade,
-          stream: student.stream,
-          gender: (student.gender === 'M'
-            ? 'Male'
-            : student.gender === 'F'
-            ? 'Female'
-            : 'Other') as 'Male' | 'Female' | 'Other',
-          guardian: student.guardian || '',
-          phone: student.phone || '',
-          email: student.email || '',
-          dob: student.dob || '',
-          dateOfAdmission: student.dateOfAdmission || '',
-          birthCertificateNo: (student as any).birthCertificateNo || '',
-          transferDate,
-          transferYear: new Date(transferDate).getFullYear(),
-          destinationSchool: transferData.destinationSchool || '—',
-          reason: transferData.reason || '—',
-          reasonNotes: transferData.reason || '',
-          headteacherRemarks: transferData.headteacherRemarks || '—',
-          coCurricularActivities: transferData.coCurricularActivities || '',
-          certificateNumber: certNum,
-          feeBalanceAtExit: student.feeBalance ?? 0,
-          isFeeCleared: (student.feeBalance ?? 0) <= 0,
-          // Central Storage Sync clearance fields as requested
-                    feesStatus: (transferData.feesStatus || 'Fully Cleared') as any,
-                    feesBalance: transferData.feesBalance || 'KES 0',
-          textbookStatus: transferData.textbookStatus || 'Accounted',
-          textbookDetails: transferData.textbookDetails || '',
-          propertyNotes: transferData.propertyNotes || '',
-          audit: {
-            executedBy: user?.name || user?.email || 'Admin',
-            executedAt: new Date().toISOString(),
-            authorizedVia: 'admin_password',
-          },
-        };
-        // Persist to archive — emitArchiveUpdated() is called inside here so
-        // the archive page refreshes immediately without a page reload.
-        saveArchivedLearner(archiveRecord);
-    
-        // Now notify the parent: the archive row is already safely written, so
-        // even if the parent's state update fails the record is not lost.
-        onTransferComplete(student.id, certNum);
-
-    // ── Step 3: Show certificate & wait for it to mount ─────────────────
-    setCurrentStep('CERTIFICATE');
-
-    // Poll until the certificate DOM node is mounted and ready
-    let retries = 20;
-    while (!certificateRef.current && retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      retries--;
-    }
-    // Extra delay for React flush + browser paint
-    await new Promise(resolve => setTimeout(resolve, 400));
-
-    // ── Step 4: Generate PDF and trigger auto-download ──────────────────
-    //
-    // Strategy:
-    //  1. Try the DOM-based generator (screenshots the visual certificate).
-    //  2. If that fails (DOM not ready, html2canvas error, etc.), fall back to
-    //     the pure jsPDF text generator — which never depends on the DOM.
-    //  This ensures the user ALWAYS gets a PDF regardless of rendering state.
-    //
-    // The jsPDF doc instance is kept in a ref so the toast action button can
-    // re-trigger the download without re-building the document.
-    let pdfResult: ReturnType<typeof generateCertificatePdf> extends Promise<infer T> ? T : never = { success: false };
-    let pdfDoc: jsPDF | null = null;
-
     try {
-      pdfResult = await generateCertificatePdf();
-    } catch {
-      pdfResult = { success: false };
-    }
+      if (!transferData.destinationSchool?.trim()) {
+        showError("Please enter the destination school or reason for transfer.");
+        return;
+      }
 
-    // Fall back to pure jsPDF if the DOM-based generator failed
-    if (!pdfResult.success) {
+      if (!String(adminPassword || '').trim()) {
+        const msg = "Admin password is required to authorize this transfer.";
+        setAuthError(msg);
+        showError(msg);
+        return;
+      }
+
+      setIsExecuting(true);
+      setAuthError("");
+
+      // ── Step 1: Authorize ────────────────────────────────────────────────
+      const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      if (adminPassword !== storedAdminPass) {
+        const msg = "Invalid admin password. Authorization required to transfer learner.";
+        setAuthError(msg);
+        showError(msg);
+        setIsExecuting(false);
+        return;
+      }
+
+      // ── Step 1.5: Update student status in Supabase if client/configured ──
       try {
-        pdfDoc = generateClearanceCertificatePDF();
-        const filename = buildCertificateFilename(student?.name, certificateNumber);
-        const blob = jsPdfToBlob(pdfDoc);
-        const dlResult = downloadPdfBlob(blob, filename);
-        pdfResult = dlResult;
-      } catch (err) {
-        console.error('[TransferWorkflow] Pure jsPDF fallback also failed:', err);
-        pdfResult = { success: false, error: err instanceof Error ? err.message : 'PDF generation failed' };
-      }
-    }
-
-    // ── Wire the download closure into the ref so the toast action button
-    //    can re-trigger the download without re-building the document ──────
-    downloadCallbackRef.current = () => {
-      if (pdfDoc) {
-        const filename = buildCertificateFilename(student?.name, certificateNumber);
-        const blob = jsPdfToBlob(pdfDoc);
-        return downloadPdfBlob(blob, filename);
-      }
-      return { success: false, error: 'PDF document not available' };
-    };
-
-    // Persist the certificate reference to localStorage so the profile page's
-    // "Download Clearance Certificate" button works even after the session ends.
-    saveCertificateRef(student.id, {
-      certificateNumber: certNum,
-      filename: buildCertificateFilename(student?.name, certNum),
-      issuedAt: new Date().toISOString(),
-      // Store the raw jsPDF output as a data URL for reliable re-downloads
-      pdfDataUrl: pdfDoc ? pdfDoc.output('datauristring') : undefined,
-    });
-
-    setIsExecuting(false);
-
-    if (!pdfResult.success) {
-      // Transfer already succeeded — show error but keep the modal open
-      showError(pdfResult.error ?? 'Certificate download failed. Please use the Download button above.');
-      return;
-    }
-
-    // ── Step 5: All done — close modal and notify with download action ──
-    const studentName = student?.name ?? 'The learner';
-    showSuccessWithAction(
-      `${studentName} has been transferred successfully. Certificate ${certNum} downloaded.`,
-      'Download Certificate PDF',
-      () => {
-        if (downloadCallbackRef.current) {
-          const retry = downloadCallbackRef.current();
-          if (!retry.success) {
-            showError(retry.error ?? 'Download failed. Please try again.');
-          } else {
-            showSuccess('Certificate re-downloaded.');
+        const { supabase } = await import('@/lib/supabaseClient');
+        if (supabase && student?.id) {
+          const { error: updateError } = await supabase
+            .from('students')
+            .update({ status: 'Transferred Out' })
+            .eq('id', student.id);
+          if (updateError) {
+            console.warn('[TransferWorkflow] Supabase status update note:', updateError.message);
           }
-        } else {
-          showError('Download unavailable. Please re-open the transfer modal.');
         }
-      },
-      'Re-download the transfer clearance certificate'
-    );
+      } catch (sbErr) {
+        console.warn('[TransferWorkflow] Supabase client import/update error:', sbErr);
+      }
 
-    onClose();
+      const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+      setCertificateNumber(certNum);
+
+      const transferDate = transferData.dateOfExit || new Date().toISOString().split('T')[0];
+      const archiveRecord: TransferredLearnerArchive = {
+        id: student.id,
+        admNo: (student as any).admissionNumber || (student as any).admNo || student.assessment || '',
+        name: student.name,
+        grade: student.grade,
+        stream: student.stream,
+        gender: (student.gender === 'M'
+          ? 'Male'
+          : student.gender === 'F'
+          ? 'Female'
+          : 'Other') as 'Male' | 'Female' | 'Other',
+        guardian: student.guardian || '',
+        phone: student.phone || '',
+        email: student.email || '',
+        dob: student.dob || '',
+        dateOfAdmission: student.dateOfAdmission || '',
+        birthCertificateNo: (student as any).birthCertificateNo || '',
+        transferDate,
+        transferYear: new Date(transferDate).getFullYear(),
+        destinationSchool: transferData.destinationSchool || '—',
+        reason: transferData.reason || '—',
+        reasonNotes: transferData.reason || '',
+        headteacherRemarks: transferData.headteacherRemarks || '—',
+        coCurricularActivities: transferData.coCurricularActivities || '',
+        certificateNumber: certNum,
+        feeBalanceAtExit: student.feeBalance ?? 0,
+        isFeeCleared: (student.feeBalance ?? 0) <= 0,
+        feesStatus: (transferData.feesStatus || 'Fully Cleared') as any,
+        feesBalance: transferData.feesBalance || 'KES 0',
+        textbookStatus: transferData.textbookStatus || 'Accounted',
+        textbookDetails: transferData.textbookDetails || '',
+        propertyNotes: transferData.propertyNotes || '',
+        audit: {
+          executedBy: user?.name || user?.email || 'Admin',
+          executedAt: new Date().toISOString(),
+          authorizedVia: 'admin_password',
+        },
+      };
+      saveArchivedLearner(archiveRecord);
+      onTransferComplete(student.id, certNum);
+
+      // ── Step 3: Show certificate & wait for it to mount ─────────────────
+      setCurrentStep('CERTIFICATE');
+
+      let retries = 20;
+      while (!certificateRef.current && retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries--;
+      }
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      // ── Step 4: Generate PDF and trigger auto-download ──────────────────
+      let pdfResult: ReturnType<typeof generateCertificatePdf> extends Promise<infer T> ? T : never = { success: false };
+      let pdfDoc: jsPDF | null = null;
+
+      try {
+        pdfResult = await generateCertificatePdf();
+      } catch {
+        pdfResult = { success: false };
+      }
+
+      if (!pdfResult.success) {
+        try {
+          pdfDoc = generateClearanceCertificatePDF();
+          const filename = buildCertificateFilename(student?.name, certNum);
+          const blob = jsPdfToBlob(pdfDoc);
+          const dlResult = downloadPdfBlob(blob, filename);
+          pdfResult = dlResult;
+        } catch (err) {
+          console.error('[TransferWorkflow] Pure jsPDF fallback also failed:', err);
+          pdfResult = { success: false, error: err instanceof Error ? err.message : 'PDF generation failed' };
+        }
+      }
+
+      downloadCallbackRef.current = () => {
+        if (pdfDoc) {
+          const filename = buildCertificateFilename(student?.name, certNum);
+          const blob = jsPdfToBlob(pdfDoc);
+          return downloadPdfBlob(blob, filename);
+        }
+        return { success: false, error: 'PDF document not available' };
+      };
+
+      saveCertificateRef(student.id, {
+        certificateNumber: certNum,
+        filename: buildCertificateFilename(student?.name, certNum),
+        issuedAt: new Date().toISOString(),
+        pdfDataUrl: pdfDoc ? pdfDoc.output('datauristring') : undefined,
+      });
+
+      setIsExecuting(false);
+
+      if (!pdfResult.success) {
+        showError(pdfResult.error ?? 'Certificate download failed. Please use the Download button above.');
+        return;
+      }
+
+      const studentName = student?.name ?? 'The learner';
+      showSuccessWithAction(
+        `${studentName} has been transferred successfully. Certificate ${certNum} downloaded.`,
+        'Download Certificate PDF',
+        () => {
+          if (downloadCallbackRef.current) {
+            const retry = downloadCallbackRef.current();
+            if (!retry.success) {
+              showError(retry.error ?? 'Download failed. Please try again.');
+            } else {
+              showSuccess('Certificate re-downloaded.');
+            }
+          } else {
+            showError('Download unavailable. Please re-open the transfer modal.');
+          }
+        },
+        'Re-download the transfer clearance certificate'
+      );
+
+      onClose();
+    } catch (err) {
+      console.error('[TransferWorkflow] Execution error:', err);
+      setIsExecuting(false);
+      showError(err instanceof Error ? err.message : 'An unexpected error occurred during transfer execution.');
+    }
   };
 
   const handlePrintCertificate = async () => {
