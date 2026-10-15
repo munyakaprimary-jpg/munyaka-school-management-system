@@ -10,25 +10,25 @@ import { supabase } from '@/integrations/supabase/client';
 export default function SupabaseSyncTab() {
   const { isSyncing, lastSynced, syncError, syncWithCloud } = useSupabaseSync();
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [tableCounts, setTableCounts] = useState<{ learners: number; grades: number; streams: number } | null>(null);
+  const [tableCounts, setTableCounts] = useState<{ learners: number; assessment_marks: number; staff_members: number } | null>(null);
 
   const testConnection = async () => {
     setTestStatus('testing');
     try {
-      const [lRes, gRes, sRes] = await Promise.all([
+      const [lRes, mRes, sRes] = await Promise.all([
         supabase.from('learners').select('*', { count: 'exact', head: true }),
-        supabase.from('grades').select('*', { count: 'exact', head: true }),
-        supabase.from('grades_streams').select('*', { count: 'exact', head: true }),
+        supabase.from('assessment_marks').select('*', { count: 'exact', head: true }),
+        supabase.from('staff_members').select('*', { count: 'exact', head: true }),
       ]);
 
       if (lRes.error) throw lRes.error;
-      if (gRes.error) throw gRes.error;
+      if (mRes.error) throw mRes.error;
       if (sRes.error) throw sRes.error;
 
       setTableCounts({
         learners: lRes.count || 0,
-        grades: gRes.count || 0,
-        streams: sRes.count || 0,
+        assessment_marks: mRes.count || 0,
+        staff_members: sRes.count || 0,
       });
 
       setTestStatus('success');
@@ -53,7 +53,7 @@ export default function SupabaseSyncTab() {
             </Badge>
           </div>
           <CardDescription>
-            Synchronize learners, grades, and streams in real-time across all connected devices using Supabase PostgreSQL cloud database.
+            Synchronize learners, assessment marks, staff members, attendance, and fee settings in real-time across all connected devices using Supabase PostgreSQL cloud database.
           </CardDescription>
         </CardHeader>
 
@@ -90,7 +90,7 @@ export default function SupabaseSyncTab() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-semibold">Database Schema</p>
-                <p className="text-sm font-bold text-slate-900">learners, grades, streams</p>
+                <p className="text-sm font-bold text-slate-900">learners, assessment_marks, staff_members</p>
               </div>
             </div>
           </div>
@@ -139,12 +139,12 @@ export default function SupabaseSyncTab() {
                   <p className="text-lg font-extrabold text-emerald-900">{tableCounts.learners} records</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Grades / Marks Table</p>
-                  <p className="text-lg font-extrabold text-emerald-900">{tableCounts.grades} records</p>
+                  <p className="text-xs text-muted-foreground">Assessment Marks Table</p>
+                  <p className="text-lg font-extrabold text-emerald-900">{tableCounts.assessment_marks} records</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Streams Table</p>
-                  <p className="text-lg font-extrabold text-emerald-900">{tableCounts.streams} records</p>
+                  <p className="text-xs text-muted-foreground">Staff Members Table</p>
+                  <p className="text-lg font-extrabold text-emerald-900">{tableCounts.staff_members} records</p>
                 </div>
               </div>
             </div>
