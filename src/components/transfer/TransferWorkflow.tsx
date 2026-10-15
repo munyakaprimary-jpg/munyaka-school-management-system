@@ -924,8 +924,11 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                 <Badge className="bg-emerald-100 text-emerald-700 font-medium px-3 py-1">
                   {student?.gender === 'M' ? 'Male' : 'Female'}
                 </Badge>
-                <Badge variant="outline" className="border-slate-200 text-slate-600 font-medium">
-                  UPI: {student?.assessment}
+                <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700 font-medium">
+                  Adm No: {(student as any)?.admissionNumber || (student as any)?.admNo || student?.assessment || 'N/A'}
+                </Badge>
+                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-medium">
+                  Assessment No: {student?.assessment || (student as any)?.assessmentNo || 'N/A'}
                 </Badge>
               </div>
             </div>
