@@ -91,11 +91,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   });
   const [certificateNumber, setCertificateNumber] = useState('');
   
-  // Ref for the certificate container - explicitly targeting the certificate node
-  const certificateRef = useRef<HTMLDivElement>(null);
-  
-  // Track if certificate is mounted and ready for PDF generation
-  const [isCertificateMounted, setIsCertificateMounted] = useState(false);
+  const certificateRefCallback = useCallback((node: HTMLDivElement | null) => {
+    certificateRef.current = node;
+    setIsCertificateMounted(!!node);
+  }, []);
 
   // Admin password verification state
   const [adminPassword, setAdminPassword] = useState('');
