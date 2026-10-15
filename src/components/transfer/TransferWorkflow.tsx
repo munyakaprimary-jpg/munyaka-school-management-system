@@ -463,9 +463,66 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
     const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     setCertificateNumber(certNum);
+    const learnerName = student?.name || '';
+    const admissionNo = (student as any)?.admissionNumber || (student as any)?.admNo || student?.assessment || '';
+    const exitDate = transferData.dateOfExit ? new Date(transferData.dateOfExit).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+    const destinationSchool = transferData.destinationSchool || '';
+    const headteacherRemarks = transferData.headteacherRemarks || 'Cleared from all school departments.';
     const learnerId = student?.id;
 
-    // 1. Update Supabase status asynchronously in background
+    // 1. Build certificate HTML content
+    const certContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Clearance Certificate - ${learnerName || 'Learner'}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; color: #111; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+          .title { text-align: center; font-size: 20px; font-weight: bold; margin: 20px 0; text-transform: uppercase; }
+          .row { margin: 12px 0; font-size: 16px; }
+          .label { font-weight: bold; }
+          .footer { margin-top: 60px; display: flex; justify-content: space-between; }
+          .sig-box { border-top: 1px solid #000; width: 200px; text-align: center; padding-top: 5px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2 style="margin:0;">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h2>
+          <p style="margin:5px 0;">P.O. Box 5239-30100 Eldoret | Kenya</p>
+        </div>
+        <div class="title">Official Learner Clearance & Transfer Certificate</div>
+        <div class="row"><span class="label">Learner Name:</span> ${learnerName || ''}</div>
+        <div class="row"><span class="label">Assessment / Admission No:</span> ${admissionNo || ''}</div>
+        <div class="row"><span class="label">Exit Date:</span> ${exitDate || '15/10/2026'}</div>
+        <div class="row"><span class="label">Destination School:</span> ${destinationSchool || ''}</div>
+        <div class="row"><span class="label">Remarks:</span> ${headteacherRemarks || 'Cleared from all school departments.'}</div>
+        
+        <div class="footer">
+          <div class="sig-box">Headteacher Signature</div>
+          <div class="sig-box">Official Stamp & Date</div>
+        </div>
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    // 2. Create Blob and trigger immediate download/print
+    const blob = new Blob([certContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Clearance_Certificate_${learnerName || 'Student'}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // 3. Update Supabase status asynchronously
     try {
       const { supabase } = await import('@/lib/supabase');
       if (supabase && learnerId) {
@@ -475,10 +532,9 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       console.error("Supabase update error:", err);
     }
 
-    // 2. Complete the workflow state internally so the certificate is displayed
+    // Also complete workflow state internally
     if (student) {
       const transferDate = transferData.dateOfExit || new Date().toISOString().split('T')[0];
-      const admissionNo = (student as any)?.admissionNumber || (student as any)?.admNo || student?.assessment || '';
       const archiveRecord: TransferredLearnerArchive = {
         id: student.id,
         admNo: admissionNo,
@@ -520,11 +576,6 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       saveArchivedLearner(archiveRecord);
       onTransferComplete(student.id, certNum);
       setCurrentStep('CERTIFICATE');
-
-      // 3. Automatically trigger window.print() after a brief render delay
-      setTimeout(() => {
-        window.print();
-      }, 500);
     }
   };
 
