@@ -274,17 +274,31 @@ const initializeUsersStorage = () => {
     };
 
     // Also make the staffId (e.g. "T001") a valid login key
-    if (staff.staffId) {
-      const staffIdKey = String(staff.staffId || '').toLowerCase();
-      if (!users[staffIdKey]) {
-        users[staffIdKey] = { ...users[emailKey] };
+        if (staff.staffId) {
+          const staffIdKey = String(staff.staffId || '').toLowerCase();
+          if (!users[staffIdKey]) {
+            users[staffIdKey] = { ...users[emailKey] };
+          }
+        }
+      });
+    
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+      notifyDataChanged(USERS_STORAGE_KEY);
+    
+      // ── Seed the unified admin password key on fresh installs ─────────────────
+      // On a fresh browser environment (e.g. first load on Vercel), the
+      // `MUNYAKA_ADMIN_PASSWORD` key does not exist yet. Without this, the
+      // login flow falls back to the hard-coded default inside
+      // `getActiveAdminPassword()`, which is correct — but we still seed it
+      // explicitly so the value is consistent across all code paths.
+      try {
+        if (localStorage.getItem(MUNYAKA_ADMIN_PASSWORD) === null) {
+          localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, DEFAULT_ADMIN_PASSWORD);
+        }
+      } catch {
+        /* localStorage unavailable — non-fatal */
       }
-    }
-  });
-
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-  notifyDataChanged(USERS_STORAGE_KEY);
-};
+    };
 
 /**
  * Persist the role of the *currently signed-in* user to localStorage
