@@ -797,34 +797,36 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     } else {
       // Post-execution state: Download PDF, Print, Close
       return (
-        <>
-          <Button
-            onClick={handlePrintCertificate}
-            disabled={isPrinting || isGeneratingPdf}
-            data-html2canvas-ignore="true"
-            className="no-print rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
-          >
-            {isPrinting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Printer size={16} />}
-            Print Certificate
-          </Button>
-          <Button
-            onClick={handleDownloadPdf}
-            disabled={isGeneratingPdf}
-            data-html2canvas-ignore="true"
-            className="no-print rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
-          >
-            {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
-            Download Certificate (PDF)
-          </Button>
+        <div className="flex items-center justify-between w-full gap-3">
           <Button
             variant="outline"
             onClick={onClose}
             data-html2canvas-ignore="true"
-            className="no-print rounded-xl border-slate-200 bg-white font-bold px-8 shadow-sm"
+            className="no-print rounded-xl border-slate-200 bg-white font-bold px-6 shadow-sm"
           >
-            <FileCheck size={16} className="mr-2" /> Close
+            Close
           </Button>
-        </>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handlePrintCertificate}
+              disabled={isPrinting || isGeneratingPdf}
+              data-html2canvas-ignore="true"
+              className="no-print rounded-xl bg-slate-700 hover:bg-slate-800 font-bold px-6 shadow-md gap-2 text-white"
+            >
+              {isPrinting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Printer size={16} />}
+              Print Certificate
+            </Button>
+            <Button
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              data-html2canvas-ignore="true"
+              className="no-print rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-6 shadow-lg shadow-indigo-100 gap-2 text-white"
+            >
+              {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
+              {isGeneratingPdf ? 'Generating PDF…' : 'Download Clearance PDF'}
+            </Button>
+          </div>
+        </div>
       );
     }
   };
