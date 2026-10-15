@@ -91,60 +91,13 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   });
   const [certificateNumber, setCertificateNumber] = useState('');
   
-  const certificateRefCallback = useCallback((node: HTMLDivElement | null) => {
-    certificateRef.current = node;
-    setIsCertificateMounted(!!node);
-  }, []);
-
-  // Admin password verification state
-  const [adminPassword, setAdminPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [authError, setAuthError] = useState('');
-
-  // PDF generation state
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false);
-  const [pdfError, setPdfError] = useState<string | null>(null);
-
-  // Stable download callback passed back to the parent via onTransferComplete
-  // so the toast action button can re-trigger the download without re-rendering
-  const downloadCallbackRef = useRef<(() => DownloadPdfResult) | null>(null);
-
-  // Reset when modal opens/closes
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentStep('FORM');
-      setTransferData({
-        dateOfExit: new Date().toISOString().split('T')[0],
-        destinationSchool: '',
-        reason: '',
-        coCurricularActivities: student?.coCurricularActivities || '',
-        headteacherRemarks: '',
-        feesStatus: student?.feeBalance && student.feeBalance > 0 ? 'Outstanding Balance' : 'Fully Cleared (KES 0 Balance)',
-        feesBalance: student?.feeBalance ? `KES ${student.feeBalance.toLocaleString()}` : 'KES 0',
-        textbookStatus: 'All Textbooks Returned & Accounted For',
-        textbookDetails: 'All Grade CBC textbooks returned in good condition',
-        propertyNotes: 'Sports kit returned, desk and locker cleared',
-      });
-      setCertificateNumber('');
-      setAdminPassword('');
-      setAuthError('');
-      setShowPassword(false);
-      setPdfError(null);
-      setIsCertificateMounted(false);
-    } else {
-      setIsCertificateMounted(false);
-    }
-  }, [isOpen, student]);
+  const certificateRef = useRef<HTMLDivElement | null>(null);
+  const [isCertificateMounted, setIsCertificateMounted] = useState(false);
 
   // Callback ref to detect when certificate DOM node is mounted
   const certificateRefCallback = useCallback((node: HTMLDivElement | null) => {
     certificateRef.current = node;
-    if (node) {
-      setIsCertificateMounted(true);
-    } else {
-      setIsCertificateMounted(false);
-    }
+    setIsCertificateMounted(!!node);
   }, []);
 
   // Wait until web fonts and any image assets inside the certificate are fully
