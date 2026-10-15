@@ -10,25 +10,31 @@ import { supabase } from '@/integrations/supabase/client';
 export default function SupabaseSyncTab() {
   const { isSyncing, lastSynced, syncError, syncWithCloud } = useSupabaseSync();
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [tableCounts, setTableCounts] = useState<{ learners: number; assessment_marks: number; staff_members: number } | null>(null);
+  const [tableCounts, setTableCounts] = useState<{ learners: number; assessment_marks: number; staff_members: number; attendance: number; fee_settings: number } | null>(null);
 
   const testConnection = async () => {
     setTestStatus('testing');
     try {
-      const [lRes, mRes, sRes] = await Promise.all([
+      const [lRes, mRes, sRes, aRes, fRes] = await Promise.all([
         supabase.from('learners').select('*', { count: 'exact', head: true }),
         supabase.from('assessment_marks').select('*', { count: 'exact', head: true }),
         supabase.from('staff_members').select('*', { count: 'exact', head: true }),
+        supabase.from('attendance').select('*', { count: 'exact', head: true }),
+        supabase.from('fee_settings').select('*', { count: 'exact', head: true }),
       ]);
 
       if (lRes.error) throw lRes.error;
       if (mRes.error) throw mRes.error;
       if (sRes.error) throw sRes.error;
+      if (aRes.error) throw aRes.error;
+      if (fRes.error) throw fRes.error;
 
       setTableCounts({
         learners: lRes.count || 0,
         assessment_marks: mRes.count || 0,
         staff_members: sRes.count || 0,
+        attendance: aRes.count || 0,
+        fee_settings: fRes.count || 0,
       });
 
       setTestStatus('success');
@@ -90,7 +96,7 @@ export default function SupabaseSyncTab() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-semibold">Database Schema</p>
-                <p className="text-sm font-bold text-slate-900">learners, assessment_marks, staff_members</p>
+                <p className="text-sm font-bold text-slate-900">learners, assessment_marks, staff_members, attendance, fee_settings</p>
               </div>
             </div>
           </div>
@@ -133,18 +139,26 @@ export default function SupabaseSyncTab() {
                 <CheckCircle2 size={18} className="text-emerald-600" />
                 Cloud Database Tables Verified Successfully!
               </div>
-              <div className="grid grid-cols-3 gap-3 text-center pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center pt-2">
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Learners Table</p>
-                  <p className="text-lg font-extrabold text-emerald-900">{tableCounts.learners} records</p>
+                  <p className="text-xs text-muted-foreground">Learners</p>
+                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.learners}</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Assessment Marks Table</p>
-                  <p className="text-lg font-extrabold text-emerald-900">{tableCounts.assessment_marks} records</p>
+                  <p className="text-xs text-muted-foreground">Marks</p>
+                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.assessment_marks}</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Staff Members Table</p>
-                  <p className="text-lg font-extrabold text-emerald-900">{tableCounts.staff_members} records</p>
+                  <p className="text-xs text-muted-foreground">Staff</p>
+                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.staff_members}</p>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-emerald-100">
+                  <p className="text-xs text-muted-foreground">Attendance</p>
+                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.attendance}</p>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-emerald-100">
+                  <p className="text-xs text-muted-foreground">Fee Settings</p>
+                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.fee_settings}</p>
                 </div>
               </div>
             </div>

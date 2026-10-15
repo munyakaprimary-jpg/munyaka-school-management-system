@@ -7,13 +7,12 @@ export function useSupabaseSync() {
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
 
-  // Sync Learners from Supabase
+  // Sync Learners from Supabase directly into state/storage on load
   const fetchLearnersFromSupabase = useCallback(async () => {
     try {
       const { data, error } = await supabase.from('learners').select('*');
       if (error) throw error;
-      if (data && data.length > 0) {
-        // Map database schema back to app Student format
+      if (data) {
         const mapped = data.map((item: any) => ({
           id: item.id,
           admissionNumber: item.admission_number,
@@ -41,28 +40,40 @@ export function useSupabaseSync() {
     return null;
   }, []);
 
-  // Sync Grades & Streams from Supabase
-  const fetchStreamsFromSupabase = useCallback(async () => {
+  // Sync Staff Members from Supabase
+  const fetchStaffFromSupabase = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('grades_streams').select('*');
+      const { data, error } = await supabase.from('staff_members').select('*');
       if (error) throw error;
-      if (data && data.length > 0) {
-        localStorage.setItem('configured_streams', JSON.stringify(data));
-        window.dispatchEvent(new Event('munyaka_grades_updated'));
-        return data;
+      if (data) {
+        const mapped = data.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          email: item.email,
+          phone: item.phone,
+          role: item.role,
+          tscNumber: item.tsc_number,
+          assignedClass: item.assigned_class,
+          status: item.status || 'Active',
+        }));
+        localStorage.setItem('munyaka_staff_members', JSON.stringify(mapped));
+        localStorage.setItem('school_staff_data', JSON.stringify(mapped));
+        window.dispatchEvent(new Event('staff-updated'));
+        window.dispatchEvent(new Event('storage'));
+        return mapped;
       }
     } catch (err: any) {
-      console.warn('Failed to fetch grades/streams from Supabase:', err.message);
+      console.warn('Failed to fetch staff members from Supabase:', err.message);
     }
     return null;
   }, []);
 
-  // Sync Grades / Marks from Supabase
-  const fetchGradesFromSupabase = useCallback(async () => {
+  // Sync Assessment Marks from Supabase
+  const fetchAssessmentMarksFromSupabase = useCallback(async () => {
     try {
-      const { data, error } = await supabase.from('grades').select('*');
+      const { data, error } = await supabase.from('assessment_marks').select('*');
       if (error) throw error;
-      if (data && data.length > 0) {
+      if (data) {
         const mapped = data.map((item: any) => ({
           id: item.id,
           learnerId: item.learner_id,
@@ -78,11 +89,53 @@ export function useSupabaseSync() {
           remarks: item.remarks,
         }));
         localStorage.setItem('munyaka_marks_records', JSON.stringify(mapped));
+        localStorage.setItem('assessment_marks_data', JSON.stringify(mapped));
         window.dispatchEvent(new Event('storage'));
         return mapped;
       }
     } catch (err: any) {
-      console.warn('Failed to fetch grades from Supabase:', err.message);
+      console.warn('Failed to fetch assessment marks from Supabase:', err.message);
+    }
+    return null;
+  }, []);
+
+  // Sync Attendance from Supabase
+  const fetchAttendanceFromSupabase = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('attendance').select('*');
+      if (error) throw error;
+      if (data) {
+        const mapped = data.map((item: any) => ({
+          id: item.id,
+          learnerId: item.learner_id,
+          admissionNumber: item.admission_number,
+          date: item.date,
+          status: item.status,
+          grade: item.grade,
+          stream: item.stream,
+        }));
+        localStorage.setItem('munyaka_attendance_records', JSON.stringify(mapped));
+        window.dispatchEvent(new Event('storage'));
+        return mapped;
+      }
+    } catch (err: any) {
+      console.warn('Failed to fetch attendance from Supabase:', err.message);
+    }
+    return null;
+  }, []);
+
+  // Sync Fee Settings & Payments from Supabase
+  const fetchFeeSettingsFromSupabase = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('fee_settings').select('*');
+      if (error) throw error;
+      if (data) {
+        localStorage.setItem('munyaka_fee_settings', JSON.stringify(data));
+        window.dispatchEvent(new Event('storage'));
+        return data;
+      }
+    } catch (err: any) {
+      console.warn('Failed to fetch fee settings from Supabase:', err.message);
     }
     return null;
   }, []);
@@ -94,20 +147,26 @@ export function useSupabaseSync() {
     try {
       await Promise.all([
         fetchLearnersFromSupabase(),
-        fetchStreamsFromSupabase(),
-        fetchGradesFromSupabase(),
+        fetchStaffFromSupabase(),
+        fetchAssessmentMarksFromSupabase(),
+        fetchAttendanceFromSupabase(),
+        fetchFeeSettingsFromSupabase(),
       ]);
       setLastSynced(new Date());
-      showSuccess('Cloud synchronized successfully with Supabase!');
     } catch (err: any) {
       setSyncError(err.message || 'Sync failed');
-      showError('Cloud sync warning: running on local cache.');
     } finally {
       setIsSyncing(false);
     }
-  }, [fetchLearnersFromSupabase, fetchStreamsFromSupabase, fetchGradesFromSupabase]);
+  }, [
+    fetchLearnersFromSupabase,
+    fetchStaffFromSupabase,
+    fetchAssessmentMarksFromSupabase,
+    fetchAttendanceFromSupabase,
+    fetchFeeSettingsFromSupabase,
+  ]);
 
-  // Push local learner to Supabase
+  // Push learner to Supabase
   const saveLearnerToCloud = async (learner: any) => {
     try {
       const payload = {
@@ -133,77 +192,122 @@ export function useSupabaseSync() {
     }
   };
 
-  // Push grade/mark to Supabase
-  const saveGradeToCloud = async (gradeRecord: any) => {
+  // Push staff member to Supabase
+  const saveStaffToCloud = async (staff: any) => {
     try {
       const payload = {
-        learner_id: gradeRecord.learnerId,
-        admission_number: gradeRecord.admissionNumber,
-        learner_name: gradeRecord.learnerName,
-        grade: gradeRecord.grade,
-        stream: gradeRecord.stream,
-        learning_area: gradeRecord.learningArea,
-        score: gradeRecord.score,
-        max_score: gradeRecord.maxScore || 100,
-        term: gradeRecord.term || 'Term 3',
-        academic_year: gradeRecord.academicYear || '2026',
-        remarks: gradeRecord.remarks,
+        name: staff.name,
+        email: staff.email,
+        phone: staff.phone,
+        role: staff.role,
+        tsc_number: staff.tscNumber,
+        assigned_class: staff.assignedClass,
+        status: staff.status || 'Active',
       };
-
-      const { error } = await supabase.from('grades').insert(payload);
+      const { error } = await supabase.from('staff_members').upsert(payload, { onConflict: 'email' });
       if (error) throw error;
+      window.dispatchEvent(new Event('staff-updated'));
     } catch (err: any) {
-      console.error('Error saving grade to Supabase:', err.message);
+      console.error('Error saving staff to Supabase:', err.message);
     }
   };
 
-  // Push stream to Supabase
-  const saveStreamToCloud = async (streamName: string, gradeName: string) => {
+  // Push assessment mark to Supabase
+  const saveAssessmentMarkToCloud = async (markRecord: any) => {
     try {
       const payload = {
-        stream_name: streamName,
-        grade_name: gradeName,
+        learner_id: markRecord.learnerId,
+        admission_number: markRecord.admissionNumber,
+        learner_name: markRecord.learnerName,
+        grade: markRecord.grade,
+        stream: markRecord.stream,
+        learning_area: markRecord.learningArea,
+        score: markRecord.score,
+        max_score: markRecord.maxScore || 100,
+        term: markRecord.term || 'Term 3',
+        academic_year: markRecord.academicYear || '2026',
+        remarks: markRecord.remarks,
       };
-      const { error } = await supabase.from('grades_streams').upsert(payload, { onConflict: 'stream_name,grade_name' });
+
+      const { error } = await supabase.from('assessment_marks').insert(payload);
       if (error) throw error;
     } catch (err: any) {
-      console.error('Error saving stream to Supabase:', err.message);
+      console.error('Error saving assessment mark to Supabase:', err.message);
     }
   };
 
-  // Real-time subscriptions setup
+  // Push attendance record to Supabase
+  const saveAttendanceToCloud = async (attRecord: any) => {
+    try {
+      const payload = {
+        learner_id: attRecord.learnerId,
+        admission_number: attRecord.admissionNumber,
+        date: attRecord.date,
+        status: attRecord.status,
+        grade: attRecord.grade,
+        stream: attRecord.stream,
+      };
+      const { error } = await supabase.from('attendance').upsert(payload, { onConflict: 'admission_number,date' });
+      if (error) throw error;
+    } catch (err: any) {
+      console.error('Error saving attendance to Supabase:', err.message);
+    }
+  };
+
+  // Push fee settings to Supabase
+  const saveFeeSettingsToCloud = async (feeSetting: any) => {
+    try {
+      const { error } = await supabase.from('fee_settings').upsert(feeSetting);
+      if (error) throw error;
+    } catch (err: any) {
+      console.error('Error saving fee settings to Supabase:', err.message);
+    }
+  };
+
+  // Real-time subscriptions setup across all tables
   useEffect(() => {
     syncWithCloud();
 
     const channel = supabase
-      .channel('public-db-changes')
+      .channel('public-db-realtime-sync')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'learners' },
-        () => {
-          fetchLearnersFromSupabase();
-        }
+        () => fetchLearnersFromSupabase()
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'grades' },
-        () => {
-          fetchGradesFromSupabase();
-        }
+        { event: '*', schema: 'public', table: 'staff_members' },
+        () => fetchStaffFromSupabase()
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'grades_streams' },
-        () => {
-          fetchStreamsFromSupabase();
-        }
+        { event: '*', schema: 'public', table: 'assessment_marks' },
+        () => fetchAssessmentMarksFromSupabase()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'attendance' },
+        () => fetchAttendanceFromSupabase()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fee_settings' },
+        () => fetchFeeSettingsFromSupabase()
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchLearnersFromSupabase, fetchGradesFromSupabase, fetchStreamsFromSupabase, syncWithCloud]);
+  }, [
+    fetchLearnersFromSupabase,
+    fetchStaffFromSupabase,
+    fetchAssessmentMarksFromSupabase,
+    fetchAttendanceFromSupabase,
+    fetchFeeSettingsFromSupabase,
+    syncWithCloud,
+  ]);
 
   return {
     isSyncing,
@@ -211,7 +315,9 @@ export function useSupabaseSync() {
     syncError,
     syncWithCloud,
     saveLearnerToCloud,
-    saveGradeToCloud,
-    saveStreamToCloud,
+    saveStaffToCloud,
+    saveAssessmentMarkToCloud,
+    saveAttendanceToCloud,
+    saveFeeSettingsToCloud,
   };
 }
