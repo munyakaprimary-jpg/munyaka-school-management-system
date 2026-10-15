@@ -648,9 +648,9 @@ export const AdminDashboardComponent: React.FC = () => {
 
       {/* Scan Teacher Sync QR Modal for Admin */}
       {showScanModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="fixed inset-0 z-[9999] bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-100 my-auto animate-in fade-in zoom-in duration-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <div>
                 <Badge className="bg-emerald-100 text-emerald-800 font-bold uppercase tracking-wider text-[10px]">
                   Centre Code: {SCHOOL_CENTRE_CODE}
@@ -659,14 +659,14 @@ export const AdminDashboardComponent: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowScanModal(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold"
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold transition-colors"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-xs text-emerald-800 flex items-start gap-2">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100 text-xs text-emerald-800 flex items-start gap-2 shrink-0">
                 <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
                 <span>
                   Point the camera at the teacher's generated sync QR code. Records will be validated against centre code <strong>{SCHOOL_CENTRE_CODE}</strong> and merged directly into the master database.
@@ -674,10 +674,10 @@ export const AdminDashboardComponent: React.FC = () => {
               </div>
 
               {/* QR Reader Container */}
-              <div id="admin-qr-reader" className="w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 min-h-[280px]"></div>
+              <div id="admin-qr-reader" className="w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 min-h-[260px] max-h-[320px]"></div>
 
               {/* Manual fallback JSON paste for testing */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
+              <div className="space-y-2 pt-2 border-t border-slate-100 shrink-0">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Or paste payload string for testing:</span>
                 <div className="flex gap-2">
                   <input
@@ -695,21 +695,21 @@ export const AdminDashboardComponent: React.FC = () => {
                         showError('Please paste valid payload JSON string');
                       }
                     }}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 rounded-xl"
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs h-10 px-4 rounded-xl shrink-0"
                   >
-                    Import
+                    Process
                   </Button>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-slate-100">
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end shrink-0">
               <Button
-                onClick={() => setShowScanModal(false)}
                 variant="outline"
-                className="rounded-xl text-xs font-bold"
+                onClick={() => setShowScanModal(false)}
+                className="rounded-xl font-bold text-xs"
               >
-                Close Scanner
+                Close Modal
               </Button>
             </div>
           </div>
