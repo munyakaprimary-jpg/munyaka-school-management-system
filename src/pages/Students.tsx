@@ -555,6 +555,33 @@ export default function Students() {
       });
     }, [students, searchTerm, gradeFilter, streamFilter, genderFilter, isAdmin, assignedTeacherGrade, assignedTeacherStream]);
 
+  // Calculate stream enrollment breakdown grouped by Grade and Stream Name
+  const streamBreakdown = useMemo(() => {
+    const map = new Map<string, { grade: string; stream: string; count: number }>();
+    students.forEach(s => {
+      const grade = s.grade || s.class || 'Unassigned';
+      const stream = s.stream || s.stream_name || 'Unassigned Stream';
+      const key = `${grade}___${stream}`;
+      if (!map.has(key)) {
+        map.set(key, { grade, stream, count: 0 });
+      }
+      map.get(key)!.count += 1;
+    });
+
+    const result = Array.from(map.values());
+    result.sort((a, b) => {
+      if (a.grade !== b.grade) {
+        return a.grade.locale(b.grade, undefined, { numeric: true });
+      }
+      return a.stream.locale(b.stream);
+    });
+    return result;
+  }, [students]);
+
+  const totalEnrollmentCount = useMemo(() => {
+    return streamBreakdown.reduce((acc, curr) => acc + curr.count, 0);
+  }, [streamBreakdown]);
+
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header action bar */}
@@ -590,6 +617,65 @@ export default function Students() {
           </Button>
         </div>
       </div>
+
+      {/* Stream Enrollment Breakdown Summary Table */}
+      <Card className="border-none shadow-sm rounded-2xl bg-white p-4 sm:p-5 overflow-hidden">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+              📊
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Stream Enrollment Breakdown</h2>
+              <p className="text-xs text-slate-500">Overview of registered learners grouped by grade and stream.</p>
+            </div>
+          </div>
+          <div className="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700">
+            Total Learners: {totalEnrollmentCount}
+          </div>
+        </div>
+
+        <div className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/50">
+          <div className="max-h-[260px] overflow-y-auto">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead className="bg-slate-100/80 sticky top-0 z-10 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th className="py-2.5 px-4">Grade</th>
+                  <th className="py-2.5 px-4">Stream Name</th>
+                  <th className="py-2.5 px-4 text-right">Total Learners Registered</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-700">
+                {streamBreakdown.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="py-6 text-center text-slate-400 font-normal">
+                      No learner records found.
+                    </td>
+                  </tr>
+                ) : (
+                  streamBreakdown.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-2.5 px-4 font-bold text-slate-900">{item.grade}</td>
+                      <td className="py-2.5 px-4">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
+                          {item.stream}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-bold text-slate-900">{item.count}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              <tfoot className="bg-slate-50 font-bold text-slate-900 border-t border-slate-200">
+                <tr>
+                  <td colSpan={2} className="py-3 px-4 text-slate-800">Total Learners</td>
+                  <td className="py-3 px-4 text-right text-indigo-600 text-sm sm:text-base">{totalEnrollmentCount}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </Card>
 
       {/* Filters Toolbar */}
       <Card className="border-none shadow-sm rounded-2xl bg-white p-3 sm:p-4">
