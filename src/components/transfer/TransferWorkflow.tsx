@@ -584,7 +584,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       }
       await new Promise(resolve => setTimeout(resolve, 400));
 
-      // ── Step 4: Generate PDF and trigger auto-download ──────────────────
+      // ── Step 4: Generate PDF and trigger auto-download & print popup ────
       let pdfResult: ReturnType<typeof generateCertificatePdf> extends Promise<infer T> ? T : never = { success: false };
       let pdfDoc: jsPDF | null = null;
 
@@ -605,6 +605,13 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           console.error('[TransferWorkflow] Pure jsPDF fallback also failed:', err);
           pdfResult = { success: false, error: err instanceof Error ? err.message : 'PDF generation failed' };
         }
+      }
+
+      // Automatically trigger the printable popup / print window
+      try {
+        await handlePrintCertificate();
+      } catch (printErr) {
+        console.warn('[TransferWorkflow] Auto-print trigger note:', printErr);
       }
 
       downloadCallbackRef.current = () => {
