@@ -90,6 +90,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     propertyNotes: 'Sports kit returned, desk and locker cleared',
   });
   const [certificateNumber, setCertificateNumber] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
   
   const certificateRef = useRef<HTMLDivElement | null>(null);
   const [isCertificateMounted, setIsCertificateMounted] = useState(false);
