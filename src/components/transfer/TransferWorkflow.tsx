@@ -469,7 +469,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setCertificateNumber(certNum);
     const learnerName = student?.name || '';
     const admissionNo = (student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A';
-    const assessmentNo = (student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment_number || (student as any)?.assessmentNumber || 'N/A';
+    const assessmentNo = (student as any)?.assessment_no ? (student as any).assessment_no : 'N/A';
     const grade = student?.grade || 'N/A';
     const stream = student?.stream || 'N/A';
     const exitDate = transferData.dateOfExit ? new Date(transferData.dateOfExit).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
@@ -533,7 +533,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           <div class="bio-grid">
             <div class="bio-row"><span class="label">Full Name:</span> <span class="value">${learnerName}</span></div>
             <div class="bio-row"><span class="label">Admission Number:</span> <span class="value">${admissionNo}</span></div>
-            <div class="bio-row"><span class="label">NEMIS / Assessment No:</span> <span class="value">${assessmentNo}</span></div>
+            <div class="bio-row"><span class="label">Assessment Number:</span> <span class="value">${assessmentNo}</span></div>
             <div class="bio-row"><span class="label">Grade / Level:</span> <span class="value">${grade}</span></div>
             <div class="bio-row"><span class="label">Stream:</span> <span class="value">${stream}</span></div>
             <div class="bio-row"><span class="label">Date of Exit:</span> <span class="value">${exitDate}</span></div>
@@ -932,7 +932,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   Adm No: {(student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A'}
                 </Badge>
                 <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-medium">
-                  Assessment No: {(student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment_number || (student as any)?.assessmentNumber || 'N/A'}
+                  Assessment Number: {(student as any)?.assessment_no ? (student as any).assessment_no : 'N/A'}
                 </Badge>
               </div>
             </div>
