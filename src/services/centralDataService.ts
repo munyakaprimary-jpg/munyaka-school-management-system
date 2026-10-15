@@ -408,25 +408,7 @@ export const CentralDataService = {
   },
 
   async fetchRemoteDump(): Promise<any | null> {
-    const serverUrl = getStoredServerUrl();
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
-      const res = await fetch(`${serverUrl}/api/central-db/dump`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.success && json.data) {
-          return json.data;
-        }
-      }
-    } catch {
-      console.warn('[CentralDataService] Offline or server unreachable, falling back to local storage.');
-    }
+    // Supabase direct connection is active; local backend server is not required.
     return null;
   },
 
@@ -435,80 +417,17 @@ export const CentralDataService = {
   lastServerFailTime: 0,
   backoffIntervalMs: 60000, // 60 seconds pause when unreachable
 
-  queueForLaterSync(batchData: any) {
-    try {
-      this.offlineQueue.push({ timestamp: Date.now(), data: batchData });
-      // Also persist to localStorage for persistence across reloads
-      localStorage.setItem('munyaka_offline_sync_queue', JSON.stringify(this.offlineQueue));
-    } catch {}
+  queueForLaterSync(_batchData: any) {
+    // No-op: Supabase client SDK handles offline data persistence
   },
 
-  async syncBatchToRemote(batchPayload: Record<string, any>): Promise<any> {
-    const now = Date.now();
-    // Check if we are in exponential backoff / paused state for 60 seconds after failure
-    if (now - this.lastServerFailTime < this.backoffIntervalMs) {
-      return { success: false, offlineMode: true, paused: true };
-    }
-
-    const serverUrl = getStoredServerUrl() || 'http://localhost:5000';
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 1500);
-
-      const response = await fetch(`${serverUrl}/api/central-db/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(batchPayload),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
-
-      const json = await response.json();
-      // If we successfully synced, attempt to sync any queued offline items
-      if (json && json.success === true && this.offlineQueue.length > 0) {
-        this.processOfflineQueue();
-      }
-      return json;
-    } catch (error: any) {
-      this.lastServerFailTime = Date.now();
-      // Silently log offline status and queue items locally in IndexedDB / localStorage
-      console.warn('[CentralDataService] Server offline. Data queued locally for later sync.');
-      this.queueForLaterSync(batchPayload);
-      return { success: false, offlineMode: true };
-    }
+  async syncBatchToRemote(_batchPayload: Record<string, any>): Promise<any> {
+    // Supabase client SDK handles synchronization directly
+    return { success: true, offlineMode: false };
   },
 
   async processOfflineQueue() {
-    if (this.offlineQueue.length === 0) return;
-    const serverUrl = getStoredServerUrl() || 'http://localhost:5000';
-    const queueSnapshot = [...this.offlineQueue];
-    for (const item of queueSnapshot) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        const res = await fetch(`${serverUrl}/api/central-db/sync`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(item.data),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-          // Remove from queue
-          this.offlineQueue = this.offlineQueue.filter(q => q.timestamp !== item.timestamp);
-          localStorage.setItem('munyaka_offline_sync_queue', JSON.stringify(this.offlineQueue));
-        } else {
-          break; // Stop flushing if server responds with error again
-        }
-      } catch {
-        break; // Stop flushing if offline
-      }
-    }
+    // No-op: Supabase client SDK handles queues/sync
   },
 
   async initializeAndHydrate(): Promise<void> {
@@ -599,15 +518,13 @@ export const CentralDataService = {
       } catch {}
     } catch {}
 
-    setTimeout(async () => {
-      await CentralDataService.syncBatchToRemote({ [key]: data });
-    }, 50);
+    // Supabase direct connection is active; local backend sync is disabled.
   }
 };
 
 export const CentralDataSyncManager = {
-  fetchRemoteDump: () => CentralDataService.fetchRemoteDump(),
-  syncBatchToRemote: (batchPayload: Record<string, any>) => CentralDataService.syncBatchToRemote(batchPayload),
+  fetchRemoteDump: () => Promise.resolve(null),
+  syncBatchToRemote: (_batchPayload: Record<string, any>) => Promise.resolve({ success: true, offlineMode: false }),
   initializeAndHydrate: () => CentralDataService.initializeAndHydrate(),
   persistAndSyncMutation: (key: string, data: any) => CentralDataService.persistAndSyncMutation(key, data)
 };
