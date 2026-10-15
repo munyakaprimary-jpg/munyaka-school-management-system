@@ -4,16 +4,13 @@ import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import { showSuccess } from '@/utils/toast';
 import { StudentTransferInfo } from '@/types/transfer';
 import { notifyDataChanged } from '@/utils/storage';
+import { Button } from '@/components/ui/button';
+import { ArrowRightLeft } from 'lucide-react';
 
 const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(student);
-
-  const handleViewHistory = (learner: StudentTransferInfo) => {
-    setSelectedStudent(learner);
-    setIsHistoryModalOpen(true);
-  };
 
   const handleTransferStudent = (learner: StudentTransferInfo) => {
     setSelectedStudent(learner);
@@ -78,6 +75,16 @@ const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => 
 
   return (
     <>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 px-2 text-amber-600 hover:text-amber-900 hover:bg-amber-50"
+        onClick={() => handleTransferStudent(student)}
+        title="Transfer Out / Stream Change"
+      >
+        <ArrowRightLeft size={16} /> <span className="text-xs ml-1 hidden sm:inline">Transfer Out</span>
+      </Button>
+
       <AcademicHistoryModal
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
