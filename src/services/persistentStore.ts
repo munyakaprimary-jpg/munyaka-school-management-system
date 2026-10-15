@@ -64,7 +64,7 @@ function cacheSet<T>(key: string, value: T): void {
 export function readStorage<T>(key: string, fallback: T): T {
   // 1. Memory cache hit
   const cached = cacheGet<T>(key);
-  if (cached !== null) return cached;
+  if (cached !== null && cached !== undefined) return cached;
 
   // 2. localStorage
   const ls = getLocalStorage();
@@ -72,14 +72,18 @@ export function readStorage<T>(key: string, fallback: T): T {
     const raw = ls.getItem(key);
     if (raw != null) {
       const parsed = safeParse<T>(raw, fallback);
-      if (parsed !== null) {
+      if (parsed !== null && parsed !== undefined) {
         cacheSet(key, parsed);
         return parsed;
       }
     }
   }
 
-  // 3. Fallback
+  // 3. Fallback (ensure array keys like school_learners_data and munyaka_students never return null)
+  if ((key === 'school_learners_data' || key === 'munyaka_students' || key === 'munyaka_learners_db') && Array.isArray(fallback) && fallback.length === 0) {
+    return [] as unknown as T;
+  }
+
   return fallback;
 }
 
@@ -102,7 +106,19 @@ export async function idbRead<T>(storeName: string, key: string): Promise<T | un
  * Always fires `notifyDataChanged` so React hooks re-subscribe correctly.
  */
 export function writeStorage<T>(key: string, value: T): boolean {
-  const serialized = JSON.stringify(value);
+  // Prevent writing null or undefined values to persistent store
+  if (value === null || value === undefined) {
+    console.warn(`[persistentStore] Attempted to write null/undefined to "${key}". Ignored.`);
+    return false;
+  }
+
+  // Ensure learner arrays default to [] instead of null
+  let valueToPersist = value;
+  if ((key === 'school_learners_data' || key === 'munyaka_students' || key === 'munyaka_learners_db') && !Array.isArray(value)) {
+    valueToPersist = ([] as unknown) as T;
+  }
+
+  const serialized = JSON.stringify(valueToPersist);
 
   // 1. localStorage (source of truth for synchronous reads)
   const ls = getLocalStorage();
@@ -121,13 +137,12 @@ export function writeStorage<T>(key: string, value: T): boolean {
   }
 
   // 2. Memory cache
-  cacheSet(key, value);
+  cacheSet(key, valueToPersist);
 
-  // 3. IndexedDB write-through (fire-and-forget)
-  //    The store name is derived from the key pattern so we can retrieve
-  //    it later in idbRead / idbWriteMany without extra mapping.
-  _idbWriteThru(key, value).catch((err) => {
-    console.error(`[persistentStore] IDB write-through failed for "${key}":`, err);
+  // 3. IndexedDB write-through (fire-and-forget with robust try/catch)
+  _idbWriteThru(key, valueToPersist).catch((err) => {
+    // Gracefully handle IDB write failures (e.g. locked store, transaction abort)
+    console.debug(`[persistentStore] IDB write-through background task caught error for "${key}":`, err);
   });
 
   // 4. Notify React subscribers
@@ -282,19 +297,27 @@ const IDB_STORE_TO_LS_KEY: Record<string, string> = Object.fromEntries(
 // ─── Internal IndexedDB write-through ───────────────────────────────────────
 
 async function _idbWriteThru(key: string, value: unknown): Promise<void> {
+  if (value === null || value === undefined) return;
   const storeName = LS_KEY_TO_IDB_STORE[key];
   if (!storeName) return;
 
-  // value can be an array, object, or primitive
-  if (Array.isArray(value)) {
-    // Bulk-write each item individually so IDB's keyPath works correctly
-    const records = value.filter((item): item is Record<string, unknown> =>
-      item !== null && typeof item === 'object'
-    );
-    await idbStore.putMany(storeName, records);
-  } else if (value !== null && typeof value === 'object') {
-    // Single object with a keyPath field
-    await idbStore.put(storeName, value as Record<string, unknown>);
+  try {
+    // value can be an array, object, or primitive
+    if (Array.isArray(value)) {
+      // Bulk-write each item individually so IDB's keyPath works correctly
+      const records = value.filter((item): item is Record<string, unknown> =>
+        item !== null && typeof item === 'object'
+      );
+      if (records.length > 0) {
+        await idbStore.putMany(storeName, records);
+      }
+    } else if (typeof value === 'object') {
+      // Single object with a keyPath field
+      await idbStore.put(storeName, value as Record<string, unknown>);
+    }
+  } catch (err) {
+    // Graceful fallback: catch IDB write-through failures (e.g. quota, locked store, transaction abort) without crashing
+    console.debug(`[persistentStore] IDB write-through skipped/failed for "${key}":`, err);
   }
 }
 

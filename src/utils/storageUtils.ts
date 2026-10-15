@@ -91,14 +91,14 @@ export function safeWrite(
 
 /**
  * Wrap JSON.parse with a guaranteed fallback.
- * Returns `fallback` (not null) on any parse error or null input.
+ * Returns `fallback` (not null) on any parse error or null/undefined input.
+ * Ensures arrays default to [] when parsing storage keys like school_learners_data / munyaka_students.
  */
 export function safeParse<T>(raw: string | null | undefined, fallback: T): T {
   if (raw == null) return fallback;
   try {
     const parsed = JSON.parse(raw);
-    // JSON.parse('undefined') returns undefined, which we treat as invalid
-    if (parsed === undefined) return fallback;
+    if (parsed === undefined || parsed === null) return fallback;
     return parsed as T;
   } catch {
     return fallback;
