@@ -98,6 +98,16 @@ export function readGradesAndStreams(): GradesStreamsConfig {
       });
     }
 
+    // If no configuration found or empty in localStorage, seed with standard default streams & grades so fresh browsers get full streams
+    if (gradesSet.size === 0 || Object.keys(gradeStreamMap).length === 0) {
+      const defaultGrades = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+      const defaultStreams = ['BLUE', 'RED', 'GREEN', 'YELLOW'];
+      defaultGrades.forEach(g => {
+        gradesSet.add(g);
+        gradeStreamMap[getGradeMatchKey(g)] = defaultStreams;
+      });
+    }
+
     // Build the global unique streams list from gradeStreamMap
     const streamsSet = new Set<string>();
     Object.values(gradeStreamMap).forEach((s) => s.forEach((st) => streamsSet.add(st)));
@@ -108,7 +118,13 @@ export function readGradesAndStreams(): GradesStreamsConfig {
       gradeStreamMap,
     };
   } catch {
-    return { grades: [], streams: [], gradeStreamMap: {} };
+    const defaultGrades = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+    const defaultStreams = ['BLUE', 'RED', 'GREEN', 'YELLOW'];
+    const gradeStreamMap: Record<string, string[]> = {};
+    defaultGrades.forEach(g => {
+      gradeStreamMap[getGradeMatchKey(g)] = defaultStreams;
+    });
+    return { grades: defaultGrades, streams: defaultStreams, gradeStreamMap };
   }
 }
 
