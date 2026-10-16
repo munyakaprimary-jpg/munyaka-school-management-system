@@ -438,9 +438,20 @@ export default function StaffRegistry() {
       ];
 
   // Helper function to check if a category is a teaching role
-  const categoryIsTeaching = (cat: string) => {
-    return cat !== 'Bursar' && cat !== 'Store Master';
-  };
+    const categoryIsTeaching = (cat: string) => {
+      return cat !== 'Bursar' && cat !== 'Store Master';
+    };
+  
+    // Refined condition to determine if staff member is teaching staff
+        // Includes: Teaching, HOI, DHOI, category === 'Teaching', or has TSC number
+        const isTeachingStaff = (staff: StaffMember) => {
+          return (
+            staff.category === 'Teaching' ||
+            staff.category === 'HOI' ||
+            staff.category === 'DHOI' ||
+            Boolean(staff.tscNumber && staff.tscNumber.trim() !== '' && staff.tscNumber !== 'N/A')
+          );
+        };
   const filteredLearningAreasForClasses = useMemo(() => {
     // If no classes selected, show all available learning areas
     if (!assignedClasses || assignedClasses.length === 0) {
@@ -1028,7 +1039,7 @@ export default function StaffRegistry() {
               </div>
 
               {/* Class & Stream Assignments Grid FIRST (so grades/streams are chosen before subjects) */}
-              {category !== 'Bursar' && category !== 'Store Master' && (
+              {isTeachingStaff({ category, tscNumber } as StaffMember) && (
                 <div className="space-y-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
@@ -1100,12 +1111,12 @@ export default function StaffRegistry() {
               )}
 
               {/* Subjects & Learning Area Competencies (Dynamically mapped and bound to selected Grade and Stream) */}
-              {category !== 'Bursar' && category !== 'Store Master' && (
-                <div className="space-y-3 bg-indigo-50/30 p-4 rounded-xl border border-indigo-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-indigo-500" /> Subject & Learning Area Competencies (Grade & Stream Bound)
+                            {isTeachingStaff({ category, tscNumber } as StaffMember) && (
+                              <div className="space-y-3 bg-indigo-50/30 p-4 rounded-xl border border-indigo-100">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                                      <BookOpen className="w-4 h-4 text-indigo-500" /> Subject & Learning Area Competencies (Grade & Stream Bound)
                       </h4>
                       <p className="text-[11px] text-indigo-600 font-medium mt-0.5">
                         {assignedClasses.length > 0 && assignedStreams.length > 0
