@@ -26,6 +26,13 @@ export const showError = (message: string, duration: number = DEFAULT_DURATION_M
   });
 };
 
+export const showWarning = (message: string, duration: number = DEFAULT_DURATION_MS) => {
+  dismissAllBeforeNew();
+  toast.warning(message, {
+    duration,
+  });
+};
+
 export const showLoading = (message: string) => {
   return toast.loading(message, {
     duration: Infinity, // Loading toasts must be manually dismissed via dismissToast()
