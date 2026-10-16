@@ -538,31 +538,51 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         <title>Official Transfer & Clearance Certificate - ${learnerName || 'Learner'}</title>
         <style>
           body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 30px; color: #1e293b; background: #fff; line-height: 1.4; }
-          .cert-container { max-width: 800px; margin: 0 auto; border: 4px double #0f172a; padding: 30px; }
-          .header { text-align: center; border-bottom: 3px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; }
-          .school-name { font-size: 22px; font-weight: 900; letter-spacing: 1px; color: #0f172a; margin: 0 0 4px 0; }
-          .motto { font-size: 11px; font-style: italic; color: #475569; margin: 0 0 6px 0; }
-          .contact { font-size: 10.5px; color: #64748b; }
-          .cert-title { text-align: center; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; background: #f1f5f9; padding: 8px; border-radius: 4px; margin-bottom: 15px; color: #0f172a; }
-          .meta-row { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; }
-          .bio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; margin-bottom: 15px; font-size: 13px; }
-          .bio-row { display: flex; border-bottom: 1px dotted #e2e8f0; padding-bottom: 4px; }
+          .cert-container { max-width: 800px; margin: 0 auto; border: 4px double #0f172a; padding: 20px 24px; box-sizing: border-box; }
+          .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; }
+          .school-name { font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #0f172a; margin: 0 0 2px 0; }
+          .motto { font-size: 10px; font-style: italic; color: #475569; margin: 0 0 4px 0; }
+          .contact { font-size: 10px; color: #64748b; }
+          .cert-title { text-align: center; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; background: #f1f5f9; padding: 6px; border-radius: 4px; margin-bottom: 10px; color: #0f172a; }
+          .meta-row { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+          .bio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-bottom: 10px; font-size: 12px; }
+          .bio-row { display: flex; border-bottom: 1px dotted #e2e8f0; padding-bottom: 3px; }
           .bio-row.full { grid-column: span 2; }
-          .label { font-weight: 700; color: #475569; width: 170px; flex-shrink: 0; }
+          .label { font-weight: 700; color: #475569; width: 160px; flex-shrink: 0; }
           .value { font-weight: 600; color: #0f172a; }
-          .section-title { font-size: 12.5px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; padding: 5px 10px; margin: 15px 0 8px 0; border-left: 4px solid #4f46e5; color: #1e293b; }
-          .clearance-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 12.5px; }
-          .clearance-table th, .clearance-table td { border: 1px solid #cbd5e1; padding: 6px 10px; text-align: left; }
+          .section-title { font-size: 11.5px; font-weight: 800; text-transform: uppercase; background: #e2e8f0; padding: 4px 8px; margin: 10px 0 6px 0; border-left: 4px solid #4f46e5; color: #1e293b; }
+          .clearance-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 11.5px; }
+          .clearance-table th, .clearance-table td { border: 1px solid #cbd5e1; padding: 4px 8px; text-align: left; }
           .clearance-table th { background: #f8fafc; font-weight: 700; color: #334155; }
           .status-cleared { color: #15803d; font-weight: 700; }
           .status-bal { color: #b91c1c; font-weight: 700; }
-          .remarks-box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px; border-radius: 4px; font-size: 12.5px; min-height: 35px; margin-bottom: 12px; }
-          .declaration { font-size: 13px; font-weight: 500; text-align: justify; margin: 15px 0; line-height: 1.6; }
-          .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px; }
-          .sig-box { border: 1px dashed #94a3b8; padding: 12px; border-radius: 6px; text-align: center; background: #fafafa; }
-          .sig-line { border-bottom: 1px solid #475569; width: 85%; margin: 35px auto 6px auto; }
-          .sig-title { font-size: 11px; font-weight: 700; color: #334155; }
-          .footer { text-align: center; margin-top: 25px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+          .remarks-box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px; border-radius: 4px; font-size: 11.5px; min-height: 28px; margin-bottom: 8px; }
+          .declaration { font-size: 12px; font-weight: 500; text-align: justify; margin: 10px 0; line-height: 1.4; }
+          .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+          .sig-box { border: 1px dashed #94a3b8; padding: 8px; border-radius: 6px; text-align: center; background: #fafafa; }
+          .sig-line { border-bottom: 1px solid #475569; width: 85%; margin: 25px auto 4px auto; }
+          .sig-title { font-size: 10.5px; font-weight: 700; color: #334155; }
+          .footer { text-align: center; margin-top: 15px; font-size: 9.5px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 10mm 12mm 10mm 12mm;
+            }
+            html, body {
+              width: 210mm;
+              height: 297mm;
+              margin: 0;
+              padding: 0;
+              overflow: hidden;
+            }
+            .cert-container, .clearance-certificate-container {
+              max-height: 275mm;
+              box-sizing: border-box;
+              border: 3px double #0f172a !important;
+              padding: 15px 20px !important;
+            }
+          }
         </style>
       </head>
       <body>
