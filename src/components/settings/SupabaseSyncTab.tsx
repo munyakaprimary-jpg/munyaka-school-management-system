@@ -86,64 +86,27 @@ export default function SupabaseSyncTab() {
 
       console.log("SYNC PAYLOAD:", learnersPayload);
 
-      let syncedLearners = 0;
-      let syncedMarks = 0;
-      let syncedAttendance = 0;
-      let syncedStreams = 0;
-
       if (learnersPayload.length > 0) {
         const { data, error } = await supabase
           .from('learners')
           .upsert(learnersPayload, { onConflict: 'id' });
 
         if (error) {
-          console.error("Supabase learners upsert error:", error);
-          window.alert(error.message);
+          alert(`Sync Error: ${error.message}`);
           showError(error.message);
           return;
         } else {
-          syncedLearners = learnersPayload.length;
-          window.alert(`Successfully synced ${learnersPayload.length} learners!`);
-          showSuccess(`Successfully synced ${learnersPayload.length} learners!`);
+          alert(`Successfully synced ${learnersPayload.length} learners!`);
+          handleTestCloudTables();
         }
       } else {
-        window.alert("No local learners found to sync.");
+        alert("No local learners found to sync.");
       }
-
-      const marks = JSON.parse(
-        localStorage.getItem('grades') ||
-        localStorage.getItem('assessment_marks') ||
-        localStorage.getItem('munyaka_marks_records') ||
-        localStorage.getItem('marked_student_submissions') || '[]'
-      );
-      const attendance = JSON.parse(
-        localStorage.getItem('student_attendance') ||
-        localStorage.getItem('attendance') ||
-        localStorage.getItem('munyaka_attendance_records') || '[]'
-      );
-      const streams = JSON.parse(
-        localStorage.getItem('streams') || '[]'
-      );
-
-      if (marks.length) {
-        const { error } = await supabase.from('grades').upsert(marks);
-        if (!error) syncedMarks = marks.length;
-      }
-      if (attendance.length) {
-        const { error } = await supabase.from('student_attendance').upsert(attendance);
-        if (!error) syncedAttendance = attendance.length;
-      }
-      if (streams.length) {
-        const { error } = await supabase.from('streams').upsert(streams);
-        if (!error) syncedStreams = streams.length;
-      }
-
-      await handleTestCloudTables();
     } catch (err: any) {
       const errMsg = err?.message || 'Sync failed due to table schema or RLS policy constraints.';
-      window.alert(errMsg);
+      alert(`Sync Error: ${errMsg}`);
       showError(errMsg);
-      await handleTestCloudTables();
+      handleTestCloudTables();
     }
   }
 
