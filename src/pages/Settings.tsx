@@ -117,11 +117,11 @@ export default function Settings() {
           schoolName: parsed.school_name || parsed.schoolName || DEFAULT_SETTINGS.schoolName,
           schoolCode: parsed.school_code || parsed.schoolCode || DEFAULT_SETTINGS.schoolCode,
           address: parsed.postal_address || parsed.address || DEFAULT_SETTINGS.address,
-          postalAddress: parsed.postal_address || parsed.address || DEFAULT_SETTINGS.postalAddress,
+          postalAddress: parsed.postal_address || parsed.address || (DEFAULT_SETTINGS as any).postalAddress,
           phone: parsed.phone || DEFAULT_SETTINGS.phone,
           email: parsed.email || DEFAULT_SETTINGS.email,
-          emailDomain: parsed.email_domain || DEFAULT_SETTINGS.emailDomain,
-          yearEstablished: parsed.year_established || DEFAULT_SETTINGS.yearEstablished,
+          emailDomain: parsed.email_domain || (DEFAULT_SETTINGS as any).emailDomain,
+          yearEstablished: parsed.year_established || (DEFAULT_SETTINGS as any).yearEstablished,
         };
       } catch {}
     }
@@ -135,7 +135,7 @@ export default function Settings() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('school_profile')
           .select('*')
           .limit(1)
@@ -146,11 +146,11 @@ export default function Settings() {
             schoolName: data.school_name || data.schoolName || settings.schoolName,
             schoolCode: data.school_code || data.schoolCode || settings.schoolCode,
             address: data.postal_address || data.address || settings.address,
-            postalAddress: data.postal_address || data.address || settings.postalAddress,
+            postalAddress: data.postal_address || data.address || (settings as any).postalAddress,
             phone: data.phone || settings.phone,
             email: data.email || settings.email,
-            emailDomain: data.email_domain || settings.emailDomain,
-            yearEstablished: data.year_established || settings.yearEstablished,
+            emailDomain: data.email_domain || (settings as any).emailDomain,
+            yearEstablished: data.year_established || (settings as any).yearEstablished,
           };
           setSettings(prev => ({ ...prev, ...mapped }));
           localStorage.setItem('school_profile', JSON.stringify(data));
@@ -220,8 +220,8 @@ export default function Settings() {
         postal_address: settings.address,
         phone: settings.phone,
         email: settings.email,
-        email_domain: settings.emailDomain,
-        year_established: settings.yearEstablished,
+        email_domain: (settings as any).emailDomain,
+        year_established: (settings as any).yearEstablished,
         updated_at: new Date().toISOString()
       };
 
@@ -229,7 +229,7 @@ export default function Settings() {
 
       // Try updating Supabase
       try {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('school_profile')
           .upsert(profilePayload);
         if (error) {

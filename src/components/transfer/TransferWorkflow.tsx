@@ -994,8 +994,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       onClose={onClose}
       title={currentStep === 'FORM' ? "Student Transfer Workflow" : "Official Clearance Certificate"}
       description={currentStep === 'FORM'
-              ? `Initiate transfer for ${student?.name || 'Unknown'} (${student?.admission_no || (student as any)?.admissionNumber || (student as any)?.admNo || 'MUN-002-2020'})`
-              : `Official Clearance Certificate for ${student?.name || 'Unknown'}`}
+                    ? `Initiate transfer for ${student?.name || 'Unknown'} (${(student as any)?.admission_no || (student as any)?.admissionNumber || (student as any)?.admNo || 'MUN-002-2020'})`
+                    : `Official Clearance Certificate for ${student?.name || 'Unknown'}`}
       maxWidth="max-w-3xl"
       footer={renderFooter()}
     >

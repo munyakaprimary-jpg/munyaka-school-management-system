@@ -24,12 +24,17 @@ import { getFormattedRoleLabel } from '@/utils/staffRoleUtils';
 export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { students, marks, attendance, notices, settings } = useCentralData();
+  const { data: centralData } = useCentralData();
+  const students = (centralData as any)?.students || [];
+  const marks = (centralData as any)?.marks || [];
+  const attendance = (centralData as any)?.attendance || [];
+  const notices = (centralData as any)?.notices || [];
+  const settings = (centralData as any)?.settings || {};
 
-  const teacherName = user?.name || user?.username || 'Teacher';
+  const teacherName = user?.name || (user as any)?.username || 'Teacher';
   const teacherRole = user?.role || 'subject_teacher';
-  const assignedClass = user?.assignedClass || user?.gradeStream || 'Grade 4 Blue';
-  const assignedGrade = user?.assignedGrade || 'Grade 4';
+  const assignedClass = (user as any)?.assignedClass || (user as any)?.gradeStream || 'Grade 4 Blue';
+  const assignedGrade = (user as any)?.assignedGrade || 'Grade 4';
   const assignedStream = user?.assignedStream || 'Blue';
   const fullClassTitle = `${assignedGrade} ${assignedStream}`;
 

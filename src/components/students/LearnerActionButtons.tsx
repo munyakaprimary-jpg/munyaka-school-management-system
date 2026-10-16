@@ -14,8 +14,8 @@ const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => 
 
   const handleTransferStudent = (learner: StudentTransferInfo) => {
     setSelectedStudent({
-      ...learner,
-      assessment_no: (learner as any).assessment_no || null,
+      ...learner as any,
+            assessment_no: (learner as any).assessment_no || null,
       admission_no: (learner as any).admission_no || (learner as any).admissionNo || (learner as any).admNo || null
     });
     setIsTransferOpen(true);

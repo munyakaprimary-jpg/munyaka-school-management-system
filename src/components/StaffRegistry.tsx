@@ -446,8 +446,8 @@ export default function StaffRegistry() {
         // Includes: Teaching, HOI, DHOI, category === 'Teaching', or has TSC number
         const isTeachingStaff = (staff: StaffMember) => {
           return (
-            staff.category === 'Teaching' ||
-            staff.category === 'HOI' ||
+            staff.category === ('Teaching' as any) ||
+              staff.category === 'HOI' ||
             staff.category === 'DHOI' ||
             Boolean(staff.tscNumber && staff.tscNumber.trim() !== '' && staff.tscNumber !== 'N/A')
           );
