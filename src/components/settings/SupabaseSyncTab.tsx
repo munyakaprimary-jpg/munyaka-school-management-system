@@ -8,7 +8,7 @@ import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, AlertCir
 import { supabase } from '@/integrations/supabase/client';
 
 export default function SupabaseSyncTab() {
-  const { isSyncing, lastSynced, syncError, syncWithCloud } = useSupabaseSync();
+  const { isSyncing, lastSynced, syncError } = useSupabaseSync();
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [tableCounts, setTableCounts] = useState<{ learners: number; marks: number; attendance: number; streams: number } | null>(null);
 
@@ -64,7 +64,7 @@ export default function SupabaseSyncTab() {
 
   async function handleSyncToCloud() {
     try {
-      let learners: any[] = [];
+      let rawLearners: any[] = [];
       const learnerKeys = [
         'munyaka_learners',
         'munyaka_students',
@@ -85,16 +85,54 @@ export default function SupabaseSyncTab() {
           try {
             const parsed = JSON.parse(val);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              learners = parsed;
+              rawLearners = parsed;
               break;
             } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.students)) {
-              learners = parsed.students;
+              rawLearners = parsed.students;
               break;
             } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.learners)) {
-              learners = parsed.learners;
+              rawLearners = parsed.learners;
               break;
             }
           } catch {}
+        }
+      }
+
+      const learnersPayload = rawLearners.map((l: any) => ({
+        id: l.id || undefined,
+        admission_number: String(l.admissionNumber || l.admission_number || l.admNo || l.id || '').trim(),
+        name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
+        grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
+        stream: String(l.stream || '').trim(),
+        gender: String(l.gender || 'Unknown').trim(),
+        guardian_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim(),
+        guardian_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
+        assessment_number: String(l.assessmentNumber || l.assessment_number || '').trim(),
+        upi_number: String(l.upiNumber || l.upi || l.upi_number || '').trim(),
+        status: String(l.status || 'Active').trim(),
+        photo_url: String(l.photoUrl || l.photo_url || '').trim(),
+        date_of_birth: l.dateOfBirth || l.date_of_birth || null,
+        updated_at: new Date().toISOString()
+      })).filter(l => Boolean(l.admission_number));
+
+      console.log('Learners Payload:', learnersPayload);
+
+      let syncedLearners = 0;
+      let syncedMarks = 0;
+      let syncedAttendance = 0;
+      let syncedStreams = 0;
+
+      if (learnersPayload.length > 0) {
+        const { data, error: learnerError } = await supabase
+          .from('learners')
+          .upsert(learnersPayload, { onConflict: 'id' });
+
+        if (learnerError) {
+          console.error("Supabase learners upsert error:", learnerError);
+          window.alert(`Supabase learners sync error: ${learnerError.message}`);
+          showError(`Supabase learners sync error: ${learnerError.message}`);
+        } else {
+          syncedLearners = learnersPayload.length;
         }
       }
 
@@ -113,41 +151,6 @@ export default function SupabaseSyncTab() {
         localStorage.getItem('streams') || '[]'
       );
 
-      let syncedLearners = 0;
-      let syncedMarks = 0;
-      let syncedAttendance = 0;
-      let syncedStreams = 0;
-
-      if (learners.length) {
-        const formattedLearners = learners.map((l: any) => ({
-          id: l.id || undefined,
-          admission_number: String(l.admissionNumber || l.admission_number || l.admNo || l.id || '').trim(),
-          name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
-          grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
-          stream: String(l.stream || '').trim(),
-          gender: String(l.gender || 'Unknown').trim(),
-          guardian_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim(),
-          guardian_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
-          assessment_number: String(l.assessmentNumber || l.assessment_number || '').trim(),
-          upi_number: String(l.upiNumber || l.upi || l.upi_number || '').trim(),
-          status: String(l.status || 'Active').trim(),
-          photo_url: String(l.photoUrl || l.photo_url || '').trim(),
-          date_of_birth: l.dateOfBirth || l.date_of_birth || null,
-          updated_at: new Date().toISOString()
-        })).filter(l => Boolean(l.admission_number));
-
-        const { error: learnerError } = await supabase
-          .from('learners')
-          .upsert(formattedLearners, { onConflict: 'admission_number' });
-
-        if (learnerError) {
-          console.error("Supabase learners upsert error:", learnerError);
-          showError(`Supabase learners sync error: ${learnerError.message}`);
-        } else {
-          syncedLearners = formattedLearners.length;
-        }
-      }
-
       if (marks.length) {
         const { error } = await supabase.from('grades').upsert(marks);
         if (!error) syncedMarks = marks.length;
@@ -164,7 +167,9 @@ export default function SupabaseSyncTab() {
       showSuccess(`Successfully synced ${syncedLearners} learners, ${syncedMarks} grades, ${syncedAttendance} attendance records to Supabase!`);
       await handleTestCloudTables();
     } catch (err: any) {
-      showError(err?.message || 'Sync failed due to table schema or RLS policy constraints.');
+      const errMsg = err?.message || 'Sync failed due to table schema or RLS policy constraints.';
+      window.alert(errMsg);
+      showError(errMsg);
       await handleTestCloudTables();
     }
   }
