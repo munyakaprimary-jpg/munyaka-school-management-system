@@ -65,16 +65,44 @@ export default function SupabaseSyncTab() {
 
   async function handleSyncToCloud() {
     try {
-      const learners = JSON.parse(
-        localStorage.getItem('learners') ||
-        localStorage.getItem('munyaka_learners') ||
-        localStorage.getItem('munyaka_students') ||
-        localStorage.getItem('school_learners_data') || '[]'
-      );
+      let learners: any[] = [];
+      const learnerKeys = [
+        'munyaka_students',
+        'school_learners_data',
+        'munyaka_learners_db',
+        'school_learners_master',
+        'munyaka_students_db',
+        'students',
+        'learners',
+        'pupils',
+        'school_students',
+        'registered_students',
+        'munyaka_registered_students'
+      ];
+      for (const k of learnerKeys) {
+        const val = localStorage.getItem(k);
+        if (val) {
+          try {
+            const parsed = JSON.parse(val);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              learners = parsed;
+              break;
+            } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.students)) {
+              learners = parsed.students;
+              break;
+            } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.learners)) {
+              learners = parsed.learners;
+              break;
+            }
+          } catch {}
+        }
+      }
+
       const marks = JSON.parse(
         localStorage.getItem('grades') ||
         localStorage.getItem('assessment_marks') ||
-        localStorage.getItem('munyaka_marks_records') || '[]'
+        localStorage.getItem('munyaka_marks_records') ||
+        localStorage.getItem('marked_student_submissions') || '[]'
       );
       const attendance = JSON.parse(
         localStorage.getItem('student_attendance') ||
