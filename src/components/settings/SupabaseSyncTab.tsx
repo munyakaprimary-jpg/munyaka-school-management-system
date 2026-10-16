@@ -10,36 +10,38 @@ import { supabase } from '@/integrations/supabase/client';
 export default function SupabaseSyncTab() {
   const { isSyncing, lastSynced, syncError, syncWithCloud } = useSupabaseSync();
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [tableCounts, setTableCounts] = useState<{ learners: number; marks: number; staff: number; attendance: number; fee_settings: number } | null>(null);
+  const [tableCounts, setTableCounts] = useState<{ learners: number; marks: number; attendance: number; streams: number } | null>(null);
 
   async function handleTestCloudTables() {
     setTestStatus('testing');
     try {
-      const tables = [
+      const tableMap = [
         { key: 'learners', table: 'learners' },
-        { key: 'marks', table: 'assessment_marks' },
-        { key: 'staff', table: 'staff_members' },
-        { key: 'attendance', table: 'attendance' },
-        { key: 'fee_settings', table: 'fee_settings' },
+        { key: 'marks', table: 'grades' },
+        { key: 'attendance', table: 'student_attendance' },
+        { key: 'streams', table: 'streams' },
       ];
 
-      const counts: Record<string, number> = {};
+      const newCounts: Record<string, number> = {};
 
-      for (const item of tables) {
+      for (const item of tableMap) {
         const { count, error } = await supabase
           .from(item.table)
           .select('*', { count: 'exact', head: true });
-        
-        if (error) console.error(`Error querying ${item.table}:`, error);
-        counts[item.key] = count || 0;
+
+        if (error) {
+          console.error(`Error querying ${item.table}:`, error);
+          newCounts[item.key] = 0;
+        } else {
+          newCounts[item.key] = count || 0;
+        }
       }
 
       setTableCounts({
-        learners: counts['learners'] || 0,
-        marks: counts['marks'] || 0,
-        staff: counts['staff'] || 0,
-        attendance: counts['attendance'] || 0,
-        fee_settings: counts['fee_settings'] || 0,
+        learners: newCounts['learners'] || 0,
+        marks: newCounts['marks'] || 0,
+        attendance: newCounts['attendance'] || 0,
+        streams: newCounts['streams'] || 0,
       });
 
       setTestStatus('success');
@@ -54,16 +56,14 @@ export default function SupabaseSyncTab() {
   async function handleSyncToCloud() {
     try {
       const learners = JSON.parse(localStorage.getItem('learners') || localStorage.getItem('munyaka_students') || '[]');
-      const marks = JSON.parse(localStorage.getItem('assessment_marks') || localStorage.getItem('munyaka_marks_records') || '[]');
-      const staff = JSON.parse(localStorage.getItem('staff_members') || localStorage.getItem('munyaka_staff_members') || '[]');
-      const attendance = JSON.parse(localStorage.getItem('attendance') || localStorage.getItem('munyaka_attendance_records') || '[]');
-      const feeSettings = JSON.parse(localStorage.getItem('fee_settings') || '[]');
+      const marks = JSON.parse(localStorage.getItem('grades') || localStorage.getItem('assessment_marks') || localStorage.getItem('munyaka_marks_records') || '[]');
+      const attendance = JSON.parse(localStorage.getItem('student_attendance') || localStorage.getItem('munyaka_attendance_records') || '[]');
+      const streams = JSON.parse(localStorage.getItem('streams') || '[]');
 
       if (learners.length) await supabase.from('learners').upsert(learners, { onConflict: 'admission_number' });
-      if (marks.length) await supabase.from('assessment_marks').upsert(marks);
-      if (staff.length) await supabase.from('staff_members').upsert(staff, { onConflict: 'email' });
-      if (attendance.length) await supabase.from('attendance').upsert(attendance);
-      if (feeSettings.length) await supabase.from('fee_settings').upsert(feeSettings);
+      if (marks.length) await supabase.from('grades').upsert(marks);
+      if (attendance.length) await supabase.from('student_attendance').upsert(attendance);
+      if (streams.length) await supabase.from('streams').upsert(streams);
 
       showSuccess('Sync completed successfully!');
       await handleTestCloudTables();
@@ -165,26 +165,22 @@ export default function SupabaseSyncTab() {
                 <CheckCircle2 size={18} className="text-emerald-600" />
                 Cloud Database Tables Verified Successfully!
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center pt-2">
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
                   <p className="text-xs text-muted-foreground">Learners</p>
                   <p className="text-base font-extrabold text-emerald-900">{tableCounts.learners}</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Marks</p>
+                  <p className="text-xs text-muted-foreground">Grades / Marks</p>
                   <p className="text-base font-extrabold text-emerald-900">{tableCounts.marks}</p>
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Staff</p>
-                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.staff}</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
                   <p className="text-xs text-muted-foreground">Attendance</p>
                   <p className="text-base font-extrabold text-emerald-900">{tableCounts.attendance}</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Fee Settings</p>
-                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.fee_settings}</p>
+                  <p className="text-xs text-muted-foreground">Streams</p>
+                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.streams}</p>
                 </div>
               </div>
             </div>
