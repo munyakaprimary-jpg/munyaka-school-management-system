@@ -143,12 +143,16 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     // Ensure fonts/assets are fully ready so the captured canvas is not blank.
     await waitForRenderReady();
 
+    // Small delay to ensure all styles and DOM elements are fully committed and painted
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     return html2canvas(element, {
       useCORS: true,
       scale: 2,
       logging: false,
       backgroundColor: '#ffffff',
       scrollY: 0,
+      ignoreElements: (el) => el.getAttribute('data-dyad-ignore') === 'true',
     });
   }, [getCertificateElement, waitForRenderReady]);
 
@@ -823,14 +827,85 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         </html>
       `;
 
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        throw new Error('Popup blocker prevented the clearance certificate window from opening. Please allow popups for this site or use the Download PDF button.');
-      }
+      setTimeout(() => {
+        const printWindow = window.open('', '_blank');
+        if (printWindow && printWindow.document) {
+          printWindow.document.open();
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
+          setTimeout(() => {
+            try {
+              printWindow.focus();
+              printWindow.print();
+            } catch (e) {}
+          }, 300);
+        } else {
+          // Fallback hidden iframe method with safety guard
+          const hiddenFrame = document.createElement('iframe');
+          hiddenFrame.style.position = 'fixed';
+          hiddenFrame.style.right = '0';
+          hiddenFrame.style.bottom = '0';
+          hiddenFrame.style.width = '0';
+          hiddenFrame.style.height = '0';
+          hiddenFrame.style.border = '0';
+          hiddenFrame.setAttribute('data-dyad-ignore', 'true');
+          document.body.appendChild(hiddenFrame);
 
-      printWindow.document.open();
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
+          setTimeout(() => {
+            try {
+              const frameWin = hiddenFrame.contentWindow;
+              const frameDoc = frameWin?.document || hiddenFrame.contentDocument;
+              if (frameDoc && frameWin) {
+                frameDoc.open();
+                frameDoc.write(htmlContent);
+                frameDoc.close();
+                setTimeout(() => {
+                  frameWin.focus();
+                  frameWin.print();
+                }, 300);
+              }
+            } catch (e) {
+              console.error('Hidden frame print error:', e);
+            } finally {
+              setTimeout(() => {
+                try { document.body.removeChild(hiddenFrame); } catch {}
+              }, 2500);
+            }
+          }, 200);
+        }
+      }, 150);
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to open printable clearance certificate window.');
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+        hiddenFrame.style.width = '0';
+        hiddenFrame.style.height = '0';
+        hiddenFrame.style.border = '0';
+        hiddenFrame.setAttribute('data-dyad-ignore', 'true');
+        document.body.appendChild(hiddenFrame);
+
+        setTimeout(() => {
+          try {
+            const frameWin = hiddenFrame.contentWindow;
+            const frameDoc = frameWin?.document || hiddenFrame.contentDocument;
+            if (frameDoc && frameWin) {
+              frameDoc.open();
+              frameDoc.write(htmlContent);
+              frameDoc.close();
+              frameWin.focus();
+              frameWin.print();
+            }
+          } catch (e) {
+            console.error('Hidden frame print error:', e);
+          } finally {
+            setTimeout(() => {
+              try { document.body.removeChild(hiddenFrame); } catch {}
+            }, 2000);
+          }
+        }, 200);
+      }
     } catch (err) {
       console.error('Print window error:', err);
       showError(err instanceof Error ? err.message : 'Failed to open printable clearance certificate window.');
