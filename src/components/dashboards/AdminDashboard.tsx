@@ -233,43 +233,73 @@ export const AdminDashboardComponent: React.FC = () => {
   const [showScanModal, setShowScanModal] = useState(false);
   const [scannedResultText, setScannedResultText] = useState<string | null>(null);
   const [isScanningActive, setIsScanningActive] = useState(false);
+  const [scanMode, setScanMode] = useState<'camera' | 'upload'>('camera');
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
   useEffect(() => {
+    let currentStream: MediaStream | null = null;
+
     if (!showScanModal) {
       if (scannerRef.current) {
         scannerRef.current.clear().catch(() => {});
         scannerRef.current = null;
       }
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        setMediaStream(null);
+      }
       setIsScanningActive(false);
       return;
     }
 
-    // Initialize html5-qrcode scanner after modal opens
-    const timer = setTimeout(() => {
+    // Initialize live camera stream immediately on modal open
+    async function initCamera() {
       try {
-        const scanner = new Html5QrcodeScanner(
-          "admin-qr-reader",
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          false
-        );
-        scannerRef.current = scanner;
-        scanner.render(
-          (decodedText) => {
-            handleSuccessfulScan(decodedText);
-          },
-          (error) => {
-            // ignore scan frame errors
-          }
-        );
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        currentStream = stream;
+        setMediaStream(stream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
         setIsScanningActive(true);
       } catch (err) {
-        console.error('Failed to init scanner', err);
+        console.warn("Camera permission denied or unavailable, showing html5-qrcode fallback:", err);
+        // Fallback to html5-qrcode scanner
+        const timer = setTimeout(() => {
+          try {
+            const scanner = new Html5QrcodeScanner(
+              "admin-qr-reader",
+              { fps: 10, qrbox: { width: 250, height: 250 } },
+              false
+            );
+            scannerRef.current = scanner;
+            scanner.render(
+              (decodedText) => {
+                handleSuccessfulScan(decodedText);
+              },
+              (error) => {}
+            );
+            setIsScanningActive(true);
+          } catch (e) {
+            console.error('Failed to init scanner', e);
+          }
+        }, 300);
+        return () => clearTimeout(timer);
       }
-    }, 300);
+    }
+
+    initCamera();
 
     return () => {
-      clearTimeout(timer);
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+      }
       if (scannerRef.current) {
         scannerRef.current.clear().catch(() => {});
         scannerRef.current = null;
@@ -673,8 +703,80 @@ export const AdminDashboardComponent: React.FC = () => {
                 </span>
               </div>
 
-              {/* QR Reader Container */}
-              <div id="admin-qr-reader" className="w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 min-h-[260px] max-h-[320px]"></div>
+              {/* Tabs / Toggle for Camera vs File Upload */}
+              <div className="flex bg-slate-100 p-1 rounded-2xl">
+                <button
+                  onClick={() => setScanMode('camera')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${scanMode === 'camera' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                >
+                  Live Camera Feed
+                </button>
+                <button
+                  onClick={() => setScanMode('upload')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${scanMode === 'upload' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                >
+                  Upload QR Screenshot
+                </button>
+              </div>
+
+              {scanMode === 'camera' ? (
+                <div className="space-y-3">
+                  <div className="relative w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 min-h-[280px] max-h-[320px] flex items-center justify-center">
+                    <video
+                      ref={videoRef}
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                    <canvas ref={canvasRef} className="hidden" />
+                    {!mediaStream && (
+                      <div id="admin-qr-reader" className="absolute inset-0 w-full h-full bg-slate-50"></div>
+                    )}
+                    <div className="absolute inset-0 border-2 border-dashed border-emerald-400/60 rounded-2xl pointer-events-none m-6 flex items-center justify-center">
+                      <div className="bg-slate-900/70 text-white text-[11px] px-3 py-1.5 rounded-full backdrop-blur-sm">
+                        Align QR code inside box
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 p-6 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50 text-center flex flex-col items-center justify-center min-h-[260px]">
+                  <Upload className="w-10 h-10 text-indigo-500 mb-2" />
+                  <h4 className="font-bold text-slate-900 text-sm">Upload QR Code Image</h4>
+                  <p className="text-xs text-slate-500 max-w-xs">Select a saved screenshot containing the teacher sync QR payload.</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        // Use html5-qrcode file scanning or simple image reading
+                        const html5QrCode = new (window as any).Html5Qrcode("admin-qr-reader-file");
+                        // For simplicity, we can also prompt or use standard reader
+                        const reader = new FileReader();
+                        reader.onload = async (evt) => {
+                          const imgDataUrl = evt.target?.result as string;
+                          // If html5-qrcode is available
+                          try {
+                            const qrCodeScanner = new (window as any).Html5Qrcode("admin-qr-reader");
+                            const decodedText = await qrCodeScanner.scanFile(file, true);
+                            handleSuccessfulScan(decodedText);
+                          } catch (scanErr) {
+                            showError("Could not decode QR code from image. Please try pasting payload text below.");
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      } catch (err) {
+                        showError("Failed to read uploaded image file.");
+                      }
+                    }}
+                    className="mt-4 text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                  />
+                  <div id="admin-qr-reader-file" className="hidden"></div>
+                  <div id="admin-qr-reader" className="hidden"></div>
+                </div>
+              )}
 
               {/* Manual fallback JSON paste for testing */}
               <div className="space-y-2 pt-2 border-t border-slate-100 shrink-0">
