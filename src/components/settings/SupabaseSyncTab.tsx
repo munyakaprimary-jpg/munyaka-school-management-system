@@ -37,13 +37,7 @@ export default function SupabaseSyncTab() {
         }
       }
 
-      setTableCounts({
-        learners: newCounts['learners'] || 0,
-        marks: newCounts['marks'] || 0,
-        attendance: newCounts['attendance'] || 0,
-        streams: newCounts['streams'] || 0,
-      });
-
+      setTableCounts(newCounts);
       setTestStatus('success');
       showSuccess('Successfully connected to Supabase cloud tables!');
     } catch (err: any) {
