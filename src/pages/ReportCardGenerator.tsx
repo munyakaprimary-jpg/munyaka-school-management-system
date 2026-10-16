@@ -42,6 +42,7 @@ const ReportCardGenerator = () => {
   const postalAddress = schoolProfile.postal_address || 'P.O. Box 5239-30100, Eldoret';
   const phone = schoolProfile.phone || schoolProfile.phone_contact || '+254 738873359';
   const email = schoolProfile.email || 'munyakaprimary@gmail.com/munyakajss@gmail.com';
+  const [formData, setFormData] = useState({
     fullName: '',
     studentId: '',
     grade: '',
