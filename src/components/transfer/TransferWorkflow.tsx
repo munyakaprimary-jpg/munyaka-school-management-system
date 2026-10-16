@@ -282,6 +282,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     //  1. SCHOOL INSTITUTIONAL HEADER
     // ════════════════════════════════════════════════════════════════════════
 
+    const schoolProfile = JSON.parse(localStorage.getItem('school_profile') || '{}');
+    const schoolName = schoolProfile.school_name || 'Munyaka Primary and Junior School';
+    const postalAddress = schoolProfile.postal_address || 'P.O. Box 5239-30100, Eldoret';
+    const phone = schoolProfile.phone || schoolProfile.phone_contact || '+254 738873359';
+    const email = schoolProfile.email || 'munyakaprimary@gmail.com/munyakajss@gmail.com';
+
     // School logo placeholder — filled circle
     doc.setFillColor(99, 102, 241); // indigo-600
     doc.circle(pageWidth / 2, y + 10, 10, 'F');
@@ -291,11 +297,11 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     doc.text('M', pageWidth / 2, y + 13.5, { align: 'center' });
 
     y += 24;
-    addCenteredText('MUNYAKA PRIMARY AND JUNIOR SCHOOL', 16, 'bold', [20, 20, 60]);
+    addCenteredText(schoolName, 16, 'bold', [20, 20, 60]);
     y += 7;
-    addCenteredText('P.O. Box 5239-30100, Eldoret | Tel: +254 738 873 359', 8, 'normal', [100, 100, 120], 0);
+    addCenteredText(`${postalAddress} \u2502 Phone:${phone}`, 8, 'normal', [100, 100, 120], 0);
     y += 4;
-    addCenteredText('Email: munyakaprimary@gmail.com', 8, 'normal', [100, 100, 120], 0);
+    addCenteredText(`Email: ${email}`, 8, 'normal', [100, 100, 120], 0);
     y += 4;
     addCenteredText('"Knowledge is Power"', 9, 'italic', [100, 100, 140], 0);
     y += 6;
@@ -445,7 +451,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     doc.setTextColor(140, 140, 160);
     doc.text('This certificate is issued without erasure or alteration.', pageWidth / 2, y, { align: 'center' });
     y += 4;
-    doc.text('Munyaka Primary and Junior School  •  P.O. Box 5239-30100, Eldoret  •  Tel: +254 738 873 359', pageWidth / 2, y, { align: 'center' });
+    doc.text(`${schoolName}  •  ${postalAddress}  •  Tel:${phone}`, pageWidth / 2, y, { align: 'center' });
     y += 4;
     doc.text(`Generated: ${new Date().toLocaleString('en-GB')}  |  Certificate: ${certificateNumber}`, pageWidth / 2, y, { align: 'center' });
 
@@ -504,6 +510,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const handleExecuteTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const schoolProfile = JSON.parse(localStorage.getItem('school_profile') || '{}');
+    const schoolName = schoolProfile.school_name || 'Munyaka Primary and Junior School';
+    const postalAddress = schoolProfile.postal_address || 'P.O. Box 5239-30100, Eldoret';
+    const phone = schoolProfile.phone || schoolProfile.phone_contact || '+254 738873359';
+    const email = schoolProfile.email || 'munyakaprimary@gmail.com/munyakajss@gmail.com';
+
     const certNum = `TRANS-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     setCertificateNumber(certNum);
     const learnerName = student?.name || '';
@@ -555,11 +567,18 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       </head>
       <body>
         <div class="cert-container">
-          <div class="header">
-            <h1 class="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
-            <p class="motto">"Knowledge and Excellence"</p>
-            <p class="contact">P.O. Box 5239-30100 Eldoret | Phone: +254 712 345 678 | Email: info@munyakaschool.sc.ke</p>
+          <div style="text-align: center; margin-bottom: 16px;">
+            <h1 style="font-size: 22px; font-weight: 800; margin: 0; text-transform: uppercase; color: #0f172a;">
+              ${schoolName}
+            </h1>
+            <p style="font-size: 13px; margin: 6px 0; color: #334155; font-weight: 500;">
+              ${postalAddress} &nbsp;&vert;&nbsp; Phone:${phone}
+            </p>
+            <p style="font-size: 12px; margin: 2px 0; color: #475569;">
+              Email: ${email}
+            </p>
           </div>
+          <hr style="border: none; border-top: 2px solid #0f172a; margin-top: 10px; margin-bottom: 20px;" />
 
           <div class="cert-title">Official Learner Clearance & Transfer Certificate</div>
 
@@ -721,6 +740,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     if (isPrinting) return;
     setIsPrinting(true);
     try {
+      const schoolProfile = JSON.parse(localStorage.getItem('school_profile') || '{}');
+      const schoolName = schoolProfile.school_name || 'Munyaka Primary and Junior School';
+      const postalAddress = schoolProfile.postal_address || 'P.O. Box 5239-30100, Eldoret';
+      const phone = schoolProfile.phone || schoolProfile.phone_contact || '+254 738873359';
+      const email = schoolProfile.email || 'munyakaprimary@gmail.com/munyakajss@gmail.com';
+
       const studentName = student?.name || 'Learner';
       const assessmentNoValue = assessmentNo && !assessmentNo.startsWith('MUN') ? assessmentNo : 'B003427929';
       const grade = student?.grade || '—';
@@ -765,11 +790,18 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         </head>
         <body>
           <div class="cert-card">
-            <div class="header">
-              <h1 class="school-title">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
-              <p class="motto">"Knowledge is Power"</p>
-              <p class="address">P.O. Box 5239-30100, Eldoret | Tel: +254 738 873 359 | Email: munyakaprimary@gmail.com</p>
+            <div style="text-align: center; margin-bottom: 16px;">
+              <h1 style="font-size: 22px; font-weight: 800; margin: 0; text-transform: uppercase; color: #0f172a;">
+                ${schoolName}
+              </h1>
+              <p style="font-size: 13px; margin: 6px 0; color: #334155; font-weight: 500;">
+                ${postalAddress} &nbsp;&vert;&nbsp; Phone:${phone}
+              </p>
+              <p style="font-size: 12px; margin: 2px 0; color: #475569;">
+                Email: ${email}
+              </p>
             </div>
+            <hr style="border: none; border-top: 2px solid #0f172a; margin-top: 10px; margin-bottom: 20px;" />
 
             <div class="doc-title">Official Learner Clearance & Transfer Certificate</div>
 
@@ -810,7 +842,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </div>
 
             <div class="footer">
-              <p>This certificate is issued without erasure or alteration. Munyaka Primary and Junior School • P.O. Box 5239-30100, Eldoret</p>
+              <p>This certificate is issued without erasure or alteration. ${schoolName} • ${postalAddress}</p>
             </div>
           </div>
           <script>
@@ -1142,14 +1174,30 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           >
             {/* Institutional Header */}
             <div className="institutional-header">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-slate-300">
-                  <School className="text-slate-600" size={32} />
-                </div>
+              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, textTransform: 'uppercase', color: '#0f172a' }}>
+                  {(() => {
+                    const p = JSON.parse(localStorage.getItem('school_profile') || '{}');
+                    return p.school_name || 'Munyaka Primary and Junior School';
+                  })()}
+                </h1>
+                <p style={{ fontSize: '13px', margin: '6px 0', color: '#334155', fontWeight: 500 }}>
+                  {(() => {
+                    const p = JSON.parse(localStorage.getItem('school_profile') || '{}');
+                    return p.postal_address || 'P.O. Box 5239-30100, Eldoret';
+                  })()} &nbsp;&vert;&nbsp; Phone:{(() => {
+                    const p = JSON.parse(localStorage.getItem('school_profile') || '{}');
+                    return p.phone || p.phone_contact || '+254 738873359';
+                  })()}
+                </p>
+                <p style={{ fontSize: '12px', margin: '2px 0', color: '#475569' }}>
+                  Email: {(() => {
+                    const p = JSON.parse(localStorage.getItem('school_profile') || '{}');
+                    return p.email || 'munyakaprimary@gmail.com/munyakajss@gmail.com';
+                  })()}
+                </p>
               </div>
-              <h1 className="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
-              <p className="school-motto">"Knowledge is Power"</p>
-              <p className="school-address">P.O. Box 5239-30100, Eldoret | Tel: +254 738 873 359 | Email: munyakaprimary@gmail.com</p>
+              <hr style={{ border: 'none', borderTop: '2px solid #0f172a', marginTop: '10px', marginBottom: '20px' }} />
             </div>
 
             {/* Certificate Title */}

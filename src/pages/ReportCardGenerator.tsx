@@ -37,7 +37,11 @@ const getGradeRank = (gradeName: string) => {
 };
 
 const ReportCardGenerator = () => {
-  const [formData, setFormData] = useState<RecordCardData>({
+  const schoolProfile = JSON.parse(localStorage.getItem('school_profile') || '{}');
+  const schoolName = schoolProfile.school_name || 'Munyaka Primary and Junior School';
+  const postalAddress = schoolProfile.postal_address || 'P.O. Box 5239-30100, Eldoret';
+  const phone = schoolProfile.phone || schoolProfile.phone_contact || '+254 738873359';
+  const email = schoolProfile.email || 'munyakaprimary@gmail.com/munyakajss@gmail.com';
     fullName: '',
     studentId: '',
     grade: '',
@@ -278,6 +282,19 @@ const ReportCardGenerator = () => {
               <CardTitle>Preview</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
+              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, textTransform: 'uppercase', color: '#0f172a' }}>
+                  {schoolName}
+                </h1>
+                <p style={{ fontSize: '13px', margin: '6px 0', color: '#334155', fontWeight: 500 }}>
+                  {postalAddress} &nbsp;&vert;&nbsp; Phone:{phone}
+                </p>
+                <p style={{ fontSize: '12px', margin: '2px 0', color: '#475569' }}>
+                  Email: {email}
+                </p>
+              </div>
+              <hr style={{ border: 'none', borderTop: '2px solid #0f172a', marginTop: '10px', marginBottom: '20px' }} />
+
               <div className="flex flex-col items-center space-y-4">
                 {preview.photoUrl ? (
                   <img 
