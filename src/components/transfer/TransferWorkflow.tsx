@@ -717,7 +717,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setIsPrinting(true);
     try {
       const studentName = student?.name || 'Learner';
-      const assessmentNoValue = student?.assessment || 'N/A';
+      const assessmentNoValue = assessmentNo || (student as any)?.assessment_no || (student as any)?.assessmentNo || 'N/A';
       const grade = student?.grade || '—';
       const stream = student?.stream || '—';
       const gender = student?.gender === 'M' ? 'Male' : student?.gender === 'F' ? 'Female' : 'Other';
@@ -936,9 +936,9 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={currentStep === 'FORM' ? "Student Transfer Workflow" : "Official Clearance Certificate"}
-      description={currentStep === 'FORM' 
-        ? `Initiate transfer for ${student?.name || 'Unknown'} (${student?.assessment || 'N/A'})`
-        : `Official Clearance Certificate for ${student?.name || 'Unknown'}`}
+      description={currentStep === 'FORM'
+              ? `Initiate transfer for ${student?.name || 'Unknown'} (${assessmentNo || 'N/A'})`
+              : `Official Clearance Certificate for ${student?.name || 'Unknown'}`}
       maxWidth="max-w-3xl"
       footer={renderFooter()}
     >
@@ -966,7 +966,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   Adm No: {(student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A'}
                 </Badge>
                 <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-medium">
-                                  {assessmentNo}
+                                  Assessment No: {assessmentNo}
                                 </Badge>
               </div>
             </div>
@@ -1162,9 +1162,9 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                 <span className="detail-value font-black text-lg">{student?.name || 'Unknown'}</span>
               </div>
               <div className="detail-row">
-                <span className="detail-label">Assessment UPI Code:</span>
-                <span className="detail-value font-mono font-bold">{student?.assessment || 'N/A'}</span>
-              </div>
+                              <span className="detail-label">Assessment UPI Code:</span>
+                              <span className="detail-value font-mono font-bold">{assessmentNo || 'N/A'}</span>
+                            </div>
               <div className="detail-row">
                 <span className="detail-label">Gender:</span>
                 <span className="detail-value">{student?.gender === 'M' ? 'Male' : 'Female'}</span>
