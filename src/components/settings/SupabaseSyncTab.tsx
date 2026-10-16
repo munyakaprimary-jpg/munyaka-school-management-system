@@ -121,8 +121,32 @@ export default function SupabaseSyncTab() {
       let syncedStreams = 0;
 
       if (learners.length) {
-        const { error } = await supabase.from('learners').upsert(learners, { onConflict: 'admission_number' });
-        if (!error) syncedLearners = learners.length;
+        const formattedLearners = learners.map((l: any) => ({
+          admission_number: String(l.admissionNumber || l.admission_number || l.admNo || l.id || '').trim(),
+          name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
+          grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
+          stream: String(l.stream || '').trim(),
+          gender: String(l.gender || 'Unknown').trim(),
+          guardian_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim(),
+          guardian_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
+          assessment_number: String(l.assessmentNumber || l.assessment_number || '').trim(),
+          upi_number: String(l.upiNumber || l.upi || l.upi_number || '').trim(),
+          status: String(l.status || 'Active').trim(),
+          photo_url: String(l.photoUrl || l.photo_url || '').trim(),
+          date_of_birth: l.dateOfBirth || l.date_of_birth || null,
+          updated_at: new Date().toISOString()
+        })).filter(l => Boolean(l.admission_number));
+
+        const { error: learnerError } = await supabase
+          .from('learners')
+          .upsert(formattedLearners, { onConflict: 'admission_number' });
+
+        if (learnerError) {
+          console.error("Supabase learners upsert error:", learnerError);
+          window.alert(`Supabase learners sync error: ${learnerError.message}`);
+        } else {
+          syncedLearners = formattedLearners.length;
+        }
       }
       if (marks.length) {
         const { error } = await supabase.from('grades').upsert(marks);
