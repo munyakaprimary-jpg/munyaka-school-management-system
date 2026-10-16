@@ -6,6 +6,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { useSupabaseSync } from "@/hooks/useSupabaseSync";
 import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { getStoredLearners } from '@/utils/learnersStore';
 
 export default function SupabaseSyncTab() {
   const { isSyncing, lastSynced, syncError } = useSupabaseSync();
@@ -64,41 +65,9 @@ export default function SupabaseSyncTab() {
 
   async function handleSyncToCloud() {
     try {
-      let rawLearners: any[] = [];
-      const learnerKeys = [
-        'munyaka_learners',
-        'munyaka_students',
-        'school_learners_data',
-        'munyaka_learners_db',
-        'school_learners_master',
-        'munyaka_students_db',
-        'students',
-        'learners',
-        'pupils',
-        'school_students',
-        'registered_students',
-        'munyaka_registered_students'
-      ];
-      for (const k of learnerKeys) {
-        const val = localStorage.getItem(k);
-        if (val) {
-          try {
-            const parsed = JSON.parse(val);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              rawLearners = parsed;
-              break;
-            } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.students)) {
-              rawLearners = parsed.students;
-              break;
-            } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.learners)) {
-              rawLearners = parsed.learners;
-              break;
-            }
-          } catch {}
-        }
-      }
+      const storedStudents = getStoredLearners();
 
-      const learnersPayload = rawLearners.map((l: any) => ({
+      const learnersPayload = storedStudents.map((l: any) => ({
         id: l.id || undefined,
         admission_number: String(l.admissionNumber || l.admission_number || l.admNo || l.id || '').trim(),
         name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
@@ -115,7 +84,7 @@ export default function SupabaseSyncTab() {
         updated_at: new Date().toISOString()
       })).filter(l => Boolean(l.admission_number));
 
-      console.log('Learners Payload:', learnersPayload);
+      console.log("SYNC PAYLOAD:", learnersPayload);
 
       let syncedLearners = 0;
       let syncedMarks = 0;
@@ -123,17 +92,22 @@ export default function SupabaseSyncTab() {
       let syncedStreams = 0;
 
       if (learnersPayload.length > 0) {
-        const { data, error: learnerError } = await supabase
+        const { data, error } = await supabase
           .from('learners')
           .upsert(learnersPayload, { onConflict: 'id' });
 
-        if (learnerError) {
-          console.error("Supabase learners upsert error:", learnerError);
-          window.alert(`Supabase learners sync error: ${learnerError.message}`);
-          showError(`Supabase learners sync error: ${learnerError.message}`);
+        if (error) {
+          console.error("Supabase learners upsert error:", error);
+          window.alert(error.message);
+          showError(error.message);
+          return;
         } else {
           syncedLearners = learnersPayload.length;
+          window.alert(`Successfully synced ${learnersPayload.length} learners!`);
+          showSuccess(`Successfully synced ${learnersPayload.length} learners!`);
         }
+      } else {
+        window.alert("No local learners found to sync.");
       }
 
       const marks = JSON.parse(
@@ -164,7 +138,6 @@ export default function SupabaseSyncTab() {
         if (!error) syncedStreams = streams.length;
       }
 
-      showSuccess(`Successfully synced ${syncedLearners} learners, ${syncedMarks} grades, ${syncedAttendance} attendance records to Supabase!`);
       await handleTestCloudTables();
     } catch (err: any) {
       const errMsg = err?.message || 'Sync failed due to table schema or RLS policy constraints.';
