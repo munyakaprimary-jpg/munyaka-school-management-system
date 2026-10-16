@@ -1,22 +1,22 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { roleHasModulePermission } from "@/rbac/permissionMatrixHelper";
+import { getRoleLandingPage } from "@/rbac/landingPageMapping";
+import { showWarning } from "@/utils/toast";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   allowedRoles?: string[];
   blockedRoles?: string[];
-  // Optional: restrict by assigned class/stream for teacher routes
-  assignedClass?: string;
-  assignedStream?: string;
+  moduleKey?: string; // Optional RBAC module key check
 }
 
 const ProtectedRoute = ({
   children,
   allowedRoles,
   blockedRoles,
-  assignedClass,
-  assignedStream,
+  moduleKey,
 }: ProtectedRouteProps) => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
@@ -26,87 +26,41 @@ const ProtectedRoute = ({
   }
 
   const rawRole = (user.role || '').toLowerCase().trim();
+  const upperRole = rawRole.toUpperCase();
 
-  // Map roles for robust checking
-  const isOwnerOrSuper = rawRole === 'owner' || rawRole === 'super_admin' || rawRole === 'super';
-  const isAdmin = rawRole === 'admin' || rawRole === 'administrator';
-  const isTeacher = rawRole === 'teacher' ||
-                    rawRole === 'head_teacher' ||
-                    rawRole === 'subject_teacher' ||
-                    rawRole === 'class_teacher' ||
-                    rawRole === 'teacher_grade_1' ||
-                    rawRole === 'teacher_grade_2' ||
-                    rawRole === 'teacher_grade_3' ||
-                    rawRole === 'teacher_grade_4' ||
-                    rawRole === 'teacher_grade_5' ||
-                    rawRole === 'teacher_grade_6' ||
-                    rawRole === 'teacher_grade_7' ||
-                    rawRole === 'teacher_grade_8';
-  const isNonTeaching = rawRole === 'librarian' || rawRole === 'ict_technician' || rawRole === 'bursar' || rawRole === 'support_staff' || rawRole === 'store_keeper' || rawRole === 'accountant';
+  const isOwnerOrSuper = upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN' || upperRole === 'SUPER';
+  const isAdmin = upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'DHOI' || upperRole === 'ADMINISTRATOR';
 
-  // CRITICAL SECURITY FIX: Non-teaching staff (like Librarian, ICT Technician) MUST NEVER access Owner Dashboard or Console
-  const isOwnerRoute = location.pathname.startsWith('/owner') ||
-                       location.pathname.startsWith('/dev/') ||
-                       location.pathname === '/tenant-management' ||
-                       location.pathname === '/payment-management';
-
-  if (isOwnerRoute && !isOwnerOrSuper && !isAdmin) {
-    console.warn('[ProtectedRoute] Security Violation: Non-owner/non-admin staff tried to access Owner/Admin console:', { userRole: rawRole, path: location.pathname });
-    return <Navigate to="/dashboard" replace />;
+  // Determine corresponding module key from pathname if not explicitly provided
+  let targetModuleKey = moduleKey;
+  if (!targetModuleKey) {
+    const path = location.pathname;
+    if (path.startsWith('/settings')) targetModuleKey = 'settings';
+    else if (path.startsWith('/fees')) targetModuleKey = 'fees';
+    else if (path.startsWith('/assessments') || path.startsWith('/learning-areas') || path.startsWith('/exam-types')) targetModuleKey = 'assessments';
+    else if (path.startsWith('/students')) targetModuleKey = 'students';
+    else if (path.startsWith('/inventory') || path.startsWith('/ict-lab')) targetModuleKey = 'inventory';
+    else if (path.startsWith('/library')) targetModuleKey = 'library';
+    else if (path.startsWith('/attendance')) targetModuleKey = 'attendance';
+    else if (path.startsWith('/timetable') || path.startsWith('/grades')) targetModuleKey = 'timetable';
+    else if (path.startsWith('/reports') || path.startsWith('/analysis')) targetModuleKey = 'reports';
+    else if (path.startsWith('/staff-registry') || path.startsWith('/staff')) targetModuleKey = 'staff';
+    else if (path.startsWith('/server') || path.startsWith('/system-management') || path.startsWith('/admin/harmonization')) targetModuleKey = 'server';
   }
 
-  // ============================================================
-  // TEACHER STREAM/CLASS GUARD: Restrict teachers to their assigned class/stream
-  // ============================================================
-  const userAssignedClass = user.assignedClass || user.grade || '';
-  const userAssignedStream = user.assignedStream || user.stream || '';
+  // Check RBAC permission matrix for the module
+  const hasRbacPermission = isOwnerOrSuper || isAdmin || !targetModuleKey || roleHasModulePermission(user.role, targetModuleKey);
 
-  // Normalize for comparison
-  const normalizedUserClass = String(userAssignedClass).trim().toUpperCase();
-  const normalizedUserStream = String(userAssignedStream).trim().toUpperCase();
-  const normalizedAssignedClass = String(assignedClass || '').trim().toUpperCase();
-  const normalizedAssignedStream = String(assignedStream || '').trim().toUpperCase();
-
-  // If user is a teacher and route has class/stream restrictions, enforce them
-  const isTeacherWithRestrictions = isTeacher && (normalizedAssignedClass !== '' || normalizedAssignedStream !== '');
-
-  // Check if the current route is a teacher-restricted route that requires class/stream matching
-  const teacherRestrictedRoutes = [
-    '/attendance',
-    '/assessments',
-    '/grades',
-    '/staff/attendance',
-    '/staff/check-in',
-    '/staff-checkin',
-    '/staff/attendance-monitor',
-    '/reports',
-    '/fees',
-    '/profile',
-  ];
-
-  const isTeacherRestrictedRoute = teacherRestrictedRoutes.some(route =>
-    location.pathname === route || location.pathname.startsWith(route + '/')
-  );
-
-  // If teacher is restricted to a specific class/stream and trying to access a restricted route without matching
-  if (isTeacherWithRestrictions && isTeacherRestrictedRoute) {
-    // Get class/stream from route query params or state
-    const routeClass = normalizedAssignedClass || normalizedUserClass;
-    const routeStream = normalizedAssignedStream || normalizedUserStream;
-
-    // If route has explicit class/stream props and user doesn't match, block access
-    if ((routeClass !== '' && normalizedUserClass !== routeClass.toUpperCase()) ||
-        (routeStream !== '' && normalizedUserStream !== routeStream.toUpperCase())) {
-      console.warn('[ProtectedRoute] Teacher Stream/Class Guard: User attempted access to route outside assigned class/stream:', {
-        userRole: rawRole,
-        userClass: normalizedUserClass,
-        userStream: normalizedUserStream,
-        requiredClass: routeClass,
-        requiredStream: routeStream,
-        path: location.pathname
-      });
-      return <Navigate to="/dashboard" replace />;
-    }
+  if (!hasRbacPermission) {
+    const landingPage = getRoleLandingPage(user.role);
+    console.warn('[ProtectedRoute] RBAC Policy Restriction: User attempted access to unauthorized module:', {
+      role: user.role,
+      path: location.pathname,
+      moduleKey: targetModuleKey,
+      redirectingTo: landingPage
+    });
+    showWarning("Access restricted by institutional RBAC policy.");
+    return <Navigate to={landingPage} replace />;
   }
 
   // Check explicit blockedRoles
@@ -116,13 +70,13 @@ const ProtectedRoute = ({
       if (br === rawRole) return true;
       if (br === 'owner' && isOwnerOrSuper) return true;
       if (br === 'admin' && isAdmin) return true;
-      if (br === 'teacher' && isTeacher) return true;
       return false;
     });
 
     if (isBlocked) {
-      console.warn('[ProtectedRoute] Role Restriction: User role is blocked:', { userRole: rawRole, blockedRoles });
-      return <Navigate to="/dashboard" replace />;
+      const landingPage = getRoleLandingPage(user.role);
+      showWarning("Access restricted by institutional RBAC policy.");
+      return <Navigate to={landingPage} replace />;
     }
   }
 
@@ -133,13 +87,14 @@ const ProtectedRoute = ({
       if (ar === rawRole) return true;
       if (ar === 'owner' && isOwnerOrSuper) return true;
       if (ar === 'admin' && (isAdmin || isOwnerOrSuper)) return true;
-      if (ar === 'teacher' && (isTeacher || isAdmin || isOwnerOrSuper)) return true;
+      if (ar === 'teacher' && (rawRole.includes('teacher') || isAdmin || isOwnerOrSuper)) return true;
       return false;
     });
 
     if (!isAllowed) {
-      console.warn('[ProtectedRoute] Role Restriction: User role not allowed for route:', { userRole: rawRole, allowedRoles });
-      return <Navigate to="/dashboard" replace />;
+      const landingPage = getRoleLandingPage(user.role);
+      showWarning("Access restricted by institutional RBAC policy.");
+      return <Navigate to={landingPage} replace />;
     }
   }
 

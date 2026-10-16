@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getRoleLandingPage } from '@/rbac/landingPageMapping';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -282,19 +283,20 @@ const Login: React.FC = () => {
     }
 
     const success = await login(config.email, entered);
-            if (success) {
-              const adminSession = {
-                role: selectedAdminRole,
-                roleLabel: config.label,
-                roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
-                timestamp: Date.now(),
-              };
-          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-          showSuccess(`Welcome, ${config.userName}!`);
-          // Send every authenticated user straight to the main dashboard,
-          // bypassing any role-specific landing screens.
-          navigate('/dashboard', { replace: true });
-        } else {
+          if (success) {
+            const adminSession = {
+              role: selectedAdminRole,
+              roleLabel: config.label,
+              roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+              timestamp: Date.now(),
+            };
+        localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+        showSuccess(`Welcome, ${config.userName}!`);
+        
+        // Redirect user dynamically to their highest-priority accessible landing page based on RBAC
+        const landingPage = getRoleLandingPage(selectedAdminRole);
+        navigate(landingPage, { replace: true });
+      } else {
           setAdminAuthError('Login failed. Please try again.');
           showError('Authentication failed');
         }
@@ -356,7 +358,10 @@ const Login: React.FC = () => {
       }
 
       showSuccess(`Welcome, ${userData.name}!`);
-      navigate('/dashboard', { replace: true });
+      
+      // Redirect user dynamically to their highest-priority accessible landing page based on RBAC
+      const landingPage = getRoleLandingPage(userData.role);
+      navigate(landingPage, { replace: true });
       setIsStaffVerifying(false);
   };
 

@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { roleHasModulePermission } from '@/rbac/permissionMatrixHelper';
 import {
   LayoutDashboard,
   Users,
@@ -50,8 +51,16 @@ import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
 
+interface NavItem {
+  name: string;
+  path: string;
+  icon: any;
+  moduleKey: string;
+}
+
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [, setRefreshCount] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
@@ -60,37 +69,59 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   useMobileBackButton(false, () => {});
 
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      setRefreshCount(c => c + 1);
+    };
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('munyaka_rbac_updated', handleStorageUpdate);
+    return () => {
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('munyaka_rbac_updated', handleStorageUpdate);
+    };
+  }, []);
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  const navItems = [
-      { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard },
-      { name: 'Data Harmonization Hub', path: '/admin/harmonization', icon: ShieldCheck },
-      { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-      { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi },
-      { name: 'Students', path: '/students', icon: Users },
-      { name: 'Staff Registry', path: '/staff-registry', icon: UserCheck },
-      { name: 'Games Hub', path: '/games', icon: Gamepad2 },
-      { name: 'Grades & Streams', path: '/grades', icon: Layers },
-      { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen },
-      { name: 'Exam Types', path: '/exam-types', icon: Award },
-      { name: 'Timetable', path: '/timetable', icon: Clock },
-      { name: 'Attendance Management', path: '/attendance', icon: CheckSquare },
-      { name: 'Student Attendance', path: '/attendance/students', icon: ClipboardCheck },
-      { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn },
-      { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet },
-      { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText },
-      { name: 'Results Analysis', path: '/analysis', icon: BarChart3 },
-      { name: 'Digital Hub', path: '/digital-hub', icon: Laptop },
-      { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor },
-      { name: 'Library & E-Resources', path: '/library', icon: Library },
-      { name: 'Tools & Inventory', path: '/inventory', icon: Box },
-      { name: 'Fees & Finance', path: '/fees', icon: Wallet },
-      { name: 'Report Cards', path: '/reports', icon: FileText },
-      { name: 'Settings', path: '/settings', icon: Settings },
-    ];
+  const allNavItems: NavItem[] = [
+    { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard, moduleKey: 'dashboard' },
+    { name: 'Data Harmonization', path: '/admin/harmonization', icon: ShieldCheck, moduleKey: 'server' },
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard, moduleKey: 'dashboard' },
+    { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi, moduleKey: 'timetable' },
+    { name: 'Students', path: '/students', icon: Users, moduleKey: 'students' },
+    { name: 'Staff Registry', path: '/staff-registry', icon: UserCheck, moduleKey: 'staff' },
+    { name: 'Games Hub', path: '/games', icon: Gamepad2, moduleKey: 'dashboard' },
+    { name: 'Grades & Streams', path: '/grades', icon: Layers, moduleKey: 'timetable' },
+    { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen, moduleKey: 'assessments' },
+    { name: 'Exam Types', path: '/exam-types', icon: Award, moduleKey: 'assessments' },
+    { name: 'Timetable', path: '/timetable', icon: Clock, moduleKey: 'timetable' },
+    { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, moduleKey: 'attendance' },
+    { name: 'Student Attendance', path: '/attendance/students', icon: ClipboardCheck, moduleKey: 'attendance' },
+    { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn, moduleKey: 'attendance' },
+    { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, moduleKey: 'assessments' },
+    { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText, moduleKey: 'assessments' },
+    { name: 'Results Analysis', path: '/analysis', icon: BarChart3, moduleKey: 'reports' },
+    { name: 'Digital Hub', path: '/digital-hub', icon: Laptop, moduleKey: 'library' },
+    { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor, moduleKey: 'inventory' },
+    { name: 'Library & E-Resources', path: '/library', icon: Library, moduleKey: 'library' },
+    { name: 'Tools & Inventory', path: '/inventory', icon: Box, moduleKey: 'inventory' },
+    { name: 'Fees & Finance', path: '/fees', icon: Wallet, moduleKey: 'fees' },
+    { name: 'Report Cards', path: '/reports', icon: FileText, moduleKey: 'reports' },
+    { name: 'Settings', path: '/settings', icon: Settings, moduleKey: 'settings' },
+  ];
+
+  // Filter navigation items based on user role and RBAC permission matrix
+  const userRole = user?.role || 'TEACHER';
+  const navItems = allNavItems.filter(item => {
+    // Admin/Owner always see all
+    if (['ADMIN', 'HOI', 'DHOI', 'SUPER_ADMIN', 'OWNER'].includes(String(userRole).toUpperCase())) {
+      return true;
+    }
+    return roleHasModulePermission(userRole, item.moduleKey);
+  });
 
   const activePath = location.pathname;
 
