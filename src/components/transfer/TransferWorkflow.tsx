@@ -458,43 +458,42 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   // and the transfer has succeeded. This prevents double-generation and ensures
   // the modal only closes after the download is complete.
 
-  const [assessmentNoState, setAssessmentNoState] = useState<string>(
-    (student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment || ''
-  );
+  const [assessmentNo, setAssessmentNo] = useState<string>('N/A');
 
   useEffect(() => {
-    const directAssessment = (student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment;
-    if (directAssessment) {
-      setAssessmentNoState(directAssessment);
-    } else if (student?.id) {
-      import('@/lib/supabase').then(({ supabase }) => {
+    const fetchAssessmentNo = async () => {
+      if (!student) return;
+      
+      // First check if already on the prop object
+      const directVal = (student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment;
+      if (directVal && directVal !== (student as any)?.admission_no) {
+        setAssessmentNo(directVal);
+        return;
+      }
+
+      // Otherwise fetch straight from the database table by admission_no or id
+      try {
+        const { supabase } = await import('@/lib/supabase');
         if (supabase) {
-          supabase
+          const { data, error } = await supabase
             .from('learners')
             .select('assessment_no')
-            .eq('id', student.id)
-            .single()
-            .then(({ data }) => {
-              if (data?.assessment_no) {
-                setAssessmentNoState(data.assessment_no);
-              }
-            })
-            .catch(() => {
-              // fallback to students table or local storage if needed
-              try {
-                const raw = window.localStorage.getItem('school_learners_data');
-                if (raw) {
-                  const parsed = JSON.parse(raw);
-                  const found = parsed.find((l: any) => l.id === student.id);
-                  if (found?.assessment_no) {
-                    setAssessmentNoState(found.assessment_no);
-                  }
-                }
-              } catch {}
-            });
+            .or(`id.eq.${student.id},admission_no.eq.${(student as any)?.admission_no}`)
+            .single();
+
+          if (data?.assessment_no) {
+            setAssessmentNo(data.assessment_no);
+          } else {
+            setAssessmentNo('N/A');
+          }
         }
-      });
-    }
+      } catch (error) {
+        console.error('Error fetching assessment number:', error);
+        setAssessmentNo('N/A');
+      }
+    };
+
+    fetchAssessmentNo();
   }, [student]);
 
   const handleExecuteTransfer = async (e: React.FormEvent) => {
@@ -504,7 +503,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setCertificateNumber(certNum);
     const learnerName = student?.name || '';
     const admissionNo = (student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A';
-    const assessmentNo = assessmentNoState || (student as any)?.assessment_no || (student as any)?.assessmentNo || 'N/A';
+    const assessmentNoValue = assessmentNo || (student as any)?.assessment_no || (student as any)?.assessmentNo || 'N/A';
     const grade = student?.grade || 'N/A';
     const stream = student?.stream || 'N/A';
     const exitDate = transferData.dateOfExit ? new Date(transferData.dateOfExit).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
@@ -568,7 +567,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           <div class="bio-grid">
             <div class="bio-row"><span class="label">Full Name:</span> <span class="value">${learnerName}</span></div>
             <div class="bio-row"><span class="label">Admission Number:</span> <span class="value">${admissionNo}</span></div>
-            <div class="bio-row"><span class="label">Assessment Number:</span> <span class="value">${assessmentNo}</span></div>
+            <div class="bio-row"><span class="label">Assessment Number:</span> <span class="value">${assessmentNoValue}</span></div>
             <div class="bio-row"><span class="label">Grade / Level:</span> <span class="value">${grade}</span></div>
             <div class="bio-row"><span class="label">Stream:</span> <span class="value">${stream}</span></div>
             <div class="bio-row"><span class="label">Date of Exit:</span> <span class="value">${exitDate}</span></div>
@@ -718,7 +717,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setIsPrinting(true);
     try {
       const studentName = student?.name || 'Learner';
-      const assessmentNo = student?.assessment || 'N/A';
+      const assessmentNoValue = student?.assessment || 'N/A';
       const grade = student?.grade || '—';
       const stream = student?.stream || '—';
       const gender = student?.gender === 'M' ? 'Male' : student?.gender === 'F' ? 'Female' : 'Other';
@@ -776,7 +775,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
             <div class="grid">
               <div><span class="label">Full Name:</span> <span class="value">${studentName}</span></div>
-              <div><span class="label">Assessment / UPI No:</span> <span class="value">${assessmentNo}</span></div>
+              <div><span class="label">Assessment / UPI No:</span> <span class="value">${assessmentNoValue}</span></div>
               <div><span class="label">Gender:</span> <span class="value">${gender}</span></div>
               <div><span class="label">Date of Birth:</span> <span class="value">${dob}</span></div>
               <div><span class="label">Date of Admission:</span> <span class="value">${doa}</span></div>
@@ -967,8 +966,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   Adm No: {(student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A'}
                 </Badge>
                 <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-medium">
-                  Assessment Number: {assessmentNoState || 'N/A'}
-                </Badge>
+                                  {assessmentNo}
+                                </Badge>
               </div>
             </div>
           </div>
