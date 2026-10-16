@@ -365,8 +365,6 @@ function runOneTimeFeeSanitizer(): void {
   }
 }
 
-const queryClient = new QueryClient();
-
 const App = () => {
   useGlobalRealtimeSync();
 
