@@ -34,14 +34,14 @@ export default function TeacherDashboard() {
   const fullClassTitle = `${assignedGrade} ${assignedStream}`;
 
   // Filter students matching the teacher's assigned class/stream
-  const classStudents = students.filter(s => {
-    const sGrade = String(s.grade || s.gradeLevel || '').toLowerCase();
-    const sStream = String(s.stream || '').toLowerCase();
+  const classStudents = (students || []).filter(s => {
+    const sGrade = String(s?.grade || s?.gradeLevel || '').toLowerCase();
+    const sStream = String(s?.stream || '').toLowerCase();
     return sGrade.includes(assignedGrade.toLowerCase()) && sStream.includes(assignedStream.toLowerCase());
   });
 
   const totalLearners = classStudents.length > 0 ? classStudents.length : 42;
-  const attendanceToday = attendance.filter(a => a.date === new Date().toISOString().split('T')[0] && a.status === 'Present').length;
+  const attendanceToday = (attendance || []).filter(a => a?.date === new Date().toISOString().split('T')[0] && a?.status === 'Present').length;
   const attendanceRate = totalLearners > 0 ? Math.min(100, Math.round((attendanceToday / totalLearners) * 100)) : 96;
 
   return (
