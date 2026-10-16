@@ -117,9 +117,26 @@ export const ROLE_DEFAULT_LANDING: Record<string, string> = {
   ICT: '/inventory',
 };
 
-export function getDefaultLandingPage(role: string): string {
+export function resolveRole(role: string): string {
   const norm = String(role || '').toUpperCase().trim();
-  return ROLE_DEFAULT_LANDING[norm] || '/dashboard';
+  if (norm.includes('ADMIN') || norm.includes('HOI') || norm.includes('DHOI') || norm.includes('OWNER') || norm.includes('SUPER')) {
+    return 'ADMIN';
+  }
+  if (norm.includes('TEACHER')) return 'TEACHER';
+  if (norm.includes('ACCOUNTANT') || norm.includes('BURSAR')) return 'ACCOUNTANT';
+  if (norm.includes('SECRETARY') || norm.includes('CLERK')) return 'SECRETARY';
+  if (norm.includes('STORE') || norm.includes('INVENTORY')) return 'STORE_MANAGER';
+  if (norm.includes('ICT') || norm.includes('TECHNICIAN')) return 'ICT';
+  return norm || 'TEACHER';
+}
+
+export function roleHas(role: string, permissionKey: string): boolean {
+  const resolved = resolveRole(role);
+  if (resolved === 'ADMIN') return true;
+  const matrix = getPermissionsMatrix();
+  const perms = matrix[resolved] || matrix[role];
+  if (!perms) return true;
+  return !!perms[permissionKey];
 }
 
 const STORAGE_KEY = 'munyaka_rbac_permissions';
