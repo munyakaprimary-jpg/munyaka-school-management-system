@@ -82,30 +82,34 @@ const StudentProfile = () => {
 
   const activeLearner = useMemo(() => {
     try {
-      const stored = getStoredLearners();
+      const stored = getStoredLearners() || [];
       const rawDb = localStorage.getItem('munyaka_central_db');
       const db = rawDb ? JSON.parse(rawDb) : {};
-      const centralStudents = Array.isArray(db.students) ? db.students : [];
+      const centralStudents = Array.isArray(db?.students) ? db.students : [];
 
       const combined = [...stored, ...centralStudents];
       const decodedId = id ? decodeURIComponent(id) : '';
 
-      return combined.find((s: any) =>
-        String(s.id) === String(id) ||
-        String(s.id) === String(decodedId) ||
-        String(s.admNo) === String(id) ||
-        String(s.admNo) === String(decodedId) ||
-        String(s.admissionNo) === String(id) ||
-        String(s.admissionNo) === String(decodedId) ||
-        String(s.admissionNumber) === String(id) ||
-        String(s.admissionNumber) === String(decodedId) ||
-        String(s.assessmentNo) === String(id) ||
-        String(s.assessmentNo) === String(decodedId) ||
-        String(s.assessment) === String(id) ||
-        String(s.assessment) === String(decodedId) ||
-        String(s.name || '').toLowerCase() === String(decodedId).toLowerCase()
-      ) || null;
+      return combined.find((s: any) => {
+        if (!s) return false;
+        return (
+          String(s.id ?? '') === String(id ?? '') ||
+          String(s.id ?? '') === String(decodedId) ||
+          String(s.admNo ?? '') === String(id ?? '') ||
+          String(s.admNo ?? '') === String(decodedId) ||
+          String(s.admissionNo ?? '') === String(id ?? '') ||
+          String(s.admissionNo ?? '') === String(decodedId) ||
+          String(s.admissionNumber ?? '') === String(id ?? '') ||
+          String(s.admissionNumber ?? '') === String(decodedId) ||
+          String(s.assessmentNo ?? '') === String(id ?? '') ||
+          String(s.assessmentNo ?? '') === String(decodedId) ||
+          String(s.assessment ?? '') === String(id ?? '') ||
+          String(s.assessment ?? '') === String(decodedId) ||
+          String(s.name ?? '').toLowerCase() === String(decodedId).toLowerCase()
+        );
+      }) || null;
     } catch (e) {
+      console.error('[StudentProfile] Error loading learner data:', e);
       return null;
     }
   }, [id]);
@@ -481,7 +485,7 @@ const StudentProfile = () => {
         <div className="flex flex-col md:flex-row items-center gap-3 w-full min-w-0">
           <BackButton to="/students" />
           <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-bold text-slate-900 truncate break-words whitespace-nowrap">{student.name}</h1>
+            <h1 className="text-3xl font-bold text-slate-900 truncate break-words whitespace-nowrap">{student?.name ?? 'Learner'}</h1>
             <p className="text-sm font-medium text-slate-600 truncate break-words whitespace-nowrap">
               Detailed learner profile and history
             </p>
@@ -770,24 +774,24 @@ const StudentProfile = () => {
             <div className="w-24 h-24 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-6">
               <UserCircle size={60} strokeWidth={1} />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">{student.name}</h2>
-            <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-6">ID: {student.admNo}</p>
+            <h2 className="text-xl font-bold text-slate-900">{student?.name}</h2>
+            <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-6">ID: {student?.admNo}</p>
             <div className="flex justify-center gap-2 mb-8">
-              <Badge className="bg-indigo-600">Grade {student.grade}</Badge>
-              <Badge variant="outline">{student.stream}</Badge>
+              <Badge className="bg-indigo-600">Grade {student?.grade}</Badge>
+              <Badge variant="outline">{student?.stream}</Badge>
             </div>
             <div className="space-y-4 text-left border-t pt-8">
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Calendar size={16} className="text-slate-400" />
-                <span>Born: {student.dob || '—'}</span>
+                <span>Born: {student?.dob || '—'}</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Phone size={16} className="text-slate-400" />
-                <span>{student.phone}</span>
+                <span>{student?.phone}</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Mail size={16} className="text-slate-400" />
-                <span>{student.email || '—'}</span>
+                <span>{student?.email || '—'}</span>
               </div>
             </div>
           </Card>
