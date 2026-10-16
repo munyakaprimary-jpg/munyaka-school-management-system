@@ -15,26 +15,23 @@ export default function SupabaseSyncTab() {
   const testConnection = async () => {
     setTestStatus('testing');
     try {
-      const [lRes, mRes, sRes, aRes, fRes] = await Promise.all([
-        supabase.from('learners').select('*', { count: 'exact', head: true }),
-        supabase.from('assessment_marks').select('*', { count: 'exact', head: true }),
-        supabase.from('staff_members').select('*', { count: 'exact', head: true }),
-        supabase.from('attendance').select('*', { count: 'exact', head: true }),
-        supabase.from('fee_settings').select('*', { count: 'exact', head: true }),
-      ]);
+      const tables = ['learners', 'staff_members', 'assessment_marks', 'attendance', 'fee_settings'];
+      const counts: Record<string, number> = {};
 
-      if (lRes.error) throw lRes.error;
-      if (mRes.error) throw mRes.error;
-      if (sRes.error) throw sRes.error;
-      if (aRes.error) throw aRes.error;
-      if (fRes.error) throw fRes.error;
+      for (const table of tables) {
+        const { count, error } = await supabase
+          .from(table)
+          .select('*', { count: 'exact', head: true });
+        
+        counts[table] = error ? 0 : (count || 0);
+      }
 
       setTableCounts({
-        learners: lRes.count || 0,
-        assessment_marks: mRes.count || 0,
-        staff_members: sRes.count || 0,
-        attendance: aRes.count || 0,
-        fee_settings: fRes.count || 0,
+        learners: counts['learners'] || 0,
+        assessment_marks: counts['assessment_marks'] || 0,
+        staff_members: counts['staff_members'] || 0,
+        attendance: counts['attendance'] || 0,
+        fee_settings: counts['fee_settings'] || 0,
       });
 
       setTestStatus('success');

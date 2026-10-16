@@ -140,11 +140,48 @@ export function useSupabaseSync() {
     return null;
   }, []);
 
-  // Master sync function
+  // Master sync function: push local offline records to cloud and fetch latest
   const syncWithCloud = useCallback(async () => {
     setIsSyncing(true);
     setSyncError(null);
     try {
+      // 1. Push local records up to cloud first
+      const localLearners = JSON.parse(localStorage.getItem('munyaka_students') || localStorage.getItem('school_learners_data') || '[]');
+      if (Array.isArray(localLearners) && localLearners.length > 0) {
+        for (const l of localLearners) {
+          await saveLearnerToCloud(l);
+        }
+      }
+
+      const localStaff = JSON.parse(localStorage.getItem('munyaka_staff_members') || localStorage.getItem('school_staff_data') || '[]');
+      if (Array.isArray(localStaff) && localStaff.length > 0) {
+        for (const s of localStaff) {
+          await saveStaffToCloud(s);
+        }
+      }
+
+      const localMarks = JSON.parse(localStorage.getItem('munyaka_marks_records') || localStorage.getItem('assessment_marks_data') || '[]');
+      if (Array.isArray(localMarks) && localMarks.length > 0) {
+        for (const m of localMarks) {
+          await saveAssessmentMarkToCloud(m);
+        }
+      }
+
+      const localAttendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '[]');
+      if (Array.isArray(localAttendance) && localAttendance.length > 0) {
+        for (const a of localAttendance) {
+          await saveAttendanceToCloud(a);
+        }
+      }
+
+      const localFeeSettings = JSON.parse(localStorage.getItem('munyaka_fee_settings') || '[]');
+      if (Array.isArray(localFeeSettings) && localFeeSettings.length > 0) {
+        for (const f of localFeeSettings) {
+          await supabase.from('fee_settings').upsert(f, { onConflict: 'id' });
+        }
+      }
+
+      // 2. Fetch latest from cloud
       await Promise.all([
         fetchLearnersFromSupabase(),
         fetchStaffFromSupabase(),
@@ -153,8 +190,10 @@ export function useSupabaseSync() {
         fetchFeeSettingsFromSupabase(),
       ]);
       setLastSynced(new Date());
+      showSuccess('Successfully synchronized local records with Supabase cloud!');
     } catch (err: any) {
       setSyncError(err.message || 'Sync failed');
+      showError(err.message || 'Cloud sync failed');
     } finally {
       setIsSyncing(false);
     }
