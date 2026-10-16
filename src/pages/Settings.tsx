@@ -107,17 +107,61 @@ const DEFAULT_RBAC_MATRIX: Record<string, Record<string, boolean>> = {
 
 export default function Settings() {
   const [settings, setSettings] = useState<SystemSettings>(() => {
+    const cached = localStorage.getItem('school_profile') || localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return {
+          ...DEFAULT_SETTINGS,
+          ...parsed,
+          schoolName: parsed.school_name || parsed.schoolName || DEFAULT_SETTINGS.schoolName,
+          schoolCode: parsed.school_code || parsed.schoolCode || DEFAULT_SETTINGS.schoolCode,
+          address: parsed.postal_address || parsed.address || DEFAULT_SETTINGS.address,
+          postalAddress: parsed.postal_address || parsed.address || DEFAULT_SETTINGS.postalAddress,
+          phone: parsed.phone || DEFAULT_SETTINGS.phone,
+          email: parsed.email || DEFAULT_SETTINGS.email,
+          emailDomain: parsed.email_domain || DEFAULT_SETTINGS.emailDomain,
+          yearEstablished: parsed.year_established || DEFAULT_SETTINGS.yearEstablished,
+        };
+      } catch {}
+    }
     try {
       const central = CentralDataService.getData<SystemSettings>(SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS);
       if (central && typeof central === 'object') return { ...DEFAULT_SETTINGS, ...central };
-      const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') return { ...DEFAULT_SETTINGS, ...parsed };
-      }
     } catch {}
     return DEFAULT_SETTINGS;
   });
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const { data, error } = await supabase
+          .from('school_profile')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        if (data) {
+          const mapped = {
+            schoolName: data.school_name || data.schoolName || settings.schoolName,
+            schoolCode: data.school_code || data.schoolCode || settings.schoolCode,
+            address: data.postal_address || data.address || settings.address,
+            postalAddress: data.postal_address || data.address || settings.postalAddress,
+            phone: data.phone || settings.phone,
+            email: data.email || settings.email,
+            emailDomain: data.email_domain || settings.emailDomain,
+            yearEstablished: data.year_established || settings.yearEstablished,
+          };
+          setSettings(prev => ({ ...prev, ...mapped }));
+          localStorage.setItem('school_profile', JSON.stringify(data));
+          localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ ...settings, ...mapped }));
+        }
+      } catch (err) {
+        // Fallback or network offline
+      }
+    }
+    loadProfile();
+  }, []);
 
   const [rbacMatrix, setRbacMatrix] = useState<Record<string, Record<string, boolean>>>(() => {
     try {
@@ -162,25 +206,49 @@ export default function Settings() {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
+    try {
+      CentralDataService.setData(SETTINGS_STORAGE_KEY, settings);
+      CentralDataService.setData(RBAC_STORAGE_KEY, rbacMatrix);
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      localStorage.setItem(RBAC_STORAGE_KEY, JSON.stringify(rbacMatrix));
+
+      const profilePayload = {
+        school_name: settings.schoolName,
+        school_code: settings.schoolCode,
+        postal_address: settings.address,
+        phone: settings.phone,
+        email: settings.email,
+        email_domain: settings.emailDomain,
+        year_established: settings.yearEstablished,
+        updated_at: new Date().toISOString()
+      };
+
+      localStorage.setItem('school_profile', JSON.stringify(profilePayload));
+
+      // Try updating Supabase
       try {
-        CentralDataService.setData(SETTINGS_STORAGE_KEY, settings);
-        CentralDataService.setData(RBAC_STORAGE_KEY, rbacMatrix);
-        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-        localStorage.setItem(RBAC_STORAGE_KEY, JSON.stringify(rbacMatrix));
-        if (settings.currentTerm) {
-          localStorage.setItem('munyaka_active_term', settings.currentTerm);
-          localStorage.setItem('activeTerm', settings.currentTerm);
+        const { error } = await supabase
+          .from('school_profile')
+          .upsert(profilePayload);
+        if (error) {
+          console.warn("Supabase upsert school_profile warning:", error.message);
         }
-        localStorage.setItem('munyaka_term_locked', String(settings.isTermLocked));
-        showSuccess("All system settings and RBAC permissions saved securely!");
-      } catch (e) {
-        showError("Failed to save settings.");
+      } catch (dbErr) {
+        console.warn("Supabase connection offline, saved locally:", dbErr);
       }
-      setIsSaving(false);
-    }, 600);
+
+      if (settings.currentTerm) {
+        localStorage.setItem('munyaka_active_term', settings.currentTerm);
+        localStorage.setItem('activeTerm', settings.currentTerm);
+      }
+      localStorage.setItem('munyaka_term_locked', String(settings.isTermLocked));
+      showSuccess("All system settings and RBAC permissions saved securely!");
+    } catch (e) {
+      showError("Failed to save settings.");
+    }
+    setIsSaving(false);
   };
 
   return (
@@ -248,11 +316,19 @@ export default function Settings() {
                 </div>
                 <div className="space-y-2">
                   <Label>Postal Address</Label>
-                  <Input value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} />
+                  <Input value={settings.address} onChange={e => setSettings({...settings, address: e.target.value, postalAddress: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <Label>Phone Contact</Label>
                   <Input value={settings.phone} onChange={e => setSettings({...settings, phone: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email Domain</Label>
+                  <Input value={settings.emailDomain || '@munyaka.sc.ke'} onChange={e => setSettings({...settings, emailDomain: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Year Established</Label>
+                  <Input value={settings.yearEstablished || '1991'} onChange={e => setSettings({...settings, yearEstablished: e.target.value})} />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label>Official Email Address</Label>
