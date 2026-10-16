@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://dtuknieivdggjwpqveor.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_TWQ4L8-kmS9zGmZYB19bYw_QlmxgAwO';
+const supabaseUrl = 'https://dtuknieivdggjwpqveor.supabase.co';
+const supabaseKey = 'sb_publishable_TWQ4L8-kmS9zGmZYB19bYw_QlmxgAw0';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: true },
   realtime: { params: { eventsPerSecond: 10 } }
 });
