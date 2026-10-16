@@ -365,6 +365,8 @@ function runOneTimeFeeSanitizer(): void {
   }
 }
 
+const queryClient = new QueryClient();
+
 const App = () => {
   useGlobalRealtimeSync();
 
@@ -489,8 +491,7 @@ const App = () => {
 
   return (
     <AppErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <HashRouter>
+      <HashRouter>
           <AuthProvider>
             <AuthGate>
               <NotificationProvider>
@@ -592,7 +593,6 @@ const App = () => {
             </AuthGate>
           </AuthProvider>
         </HashRouter>
-      </QueryClientProvider>
     </AppErrorBoundary>
   );
 };
