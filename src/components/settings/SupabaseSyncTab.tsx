@@ -113,8 +113,6 @@ export default function SupabaseSyncTab() {
         localStorage.getItem('streams') || '[]'
       );
 
-      window.alert(`Found ${learners.length} learners, ${marks.length} grades locally`);
-
       let syncedLearners = 0;
       let syncedMarks = 0;
       let syncedAttendance = 0;
@@ -143,7 +141,7 @@ export default function SupabaseSyncTab() {
 
         if (learnerError) {
           console.error("Supabase learners upsert error:", learnerError);
-          window.alert(`Supabase learners sync error: ${learnerError.message}`);
+          showError(`Supabase learners sync error: ${learnerError.message}`);
         } else {
           syncedLearners = formattedLearners.length;
         }
