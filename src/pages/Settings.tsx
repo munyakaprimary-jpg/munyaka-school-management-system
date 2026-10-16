@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
+import { supabase } from "@/lib/supabaseClient";
 import SecurityAuthTab from '@/components/settings/SecurityAuthTab';
 import SupabaseSyncTab from '@/components/settings/SupabaseSyncTab';
 import Modal from '@/components/ui/Modal';
@@ -107,6 +108,21 @@ const DEFAULT_RBAC_MATRIX: Record<string, Record<string, boolean>> = {
 
 export default function Settings() {
   const [settings, setSettings] = useState<SystemSettings>(() => {
+    const cached = localStorage.getItem('school_profile');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return {
+          ...DEFAULT_SETTINGS,
+          schoolName: parsed.school_name || parsed.schoolName || DEFAULT_SETTINGS.schoolName,
+          schoolCode: parsed.school_code || parsed.schoolCode || DEFAULT_SETTINGS.schoolCode,
+          address: parsed.postal_address || parsed.address || DEFAULT_SETTINGS.address,
+          phone: parsed.phone || DEFAULT_SETTINGS.phone,
+          email: parsed.email || DEFAULT_SETTINGS.email,
+          academicYear: parsed.year_established || parsed.academicYear || DEFAULT_SETTINGS.academicYear,
+        };
+      } catch {}
+    }
     try {
       const central = CentralDataService.getData<SystemSettings>(SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS);
       if (central && typeof central === 'object') return { ...DEFAULT_SETTINGS, ...central };
@@ -118,6 +134,36 @@ export default function Settings() {
     } catch {}
     return DEFAULT_SETTINGS;
   });
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const { data, error } = await supabase
+          .from('school_profile')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+
+        if (data) {
+          const updated = {
+            ...settings,
+            schoolName: data.school_name || settings.schoolName,
+            schoolCode: data.school_code || settings.schoolCode,
+            address: data.postal_address || settings.address,
+            phone: data.phone || settings.phone,
+            email: data.email || settings.email,
+            academicYear: data.year_established || settings.academicYear,
+          };
+          setSettings(updated);
+          localStorage.setItem('school_profile', JSON.stringify(data));
+          localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
+        }
+      } catch (err) {
+        // Fallback or offline mode
+      }
+    }
+    loadProfile();
+  }, []);
 
   const [rbacMatrix, setRbacMatrix] = useState<Record<string, Record<string, boolean>>>(() => {
     try {
@@ -162,25 +208,39 @@ export default function Settings() {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      try {
-        CentralDataService.setData(SETTINGS_STORAGE_KEY, settings);
-        CentralDataService.setData(RBAC_STORAGE_KEY, rbacMatrix);
-        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-        localStorage.setItem(RBAC_STORAGE_KEY, JSON.stringify(rbacMatrix));
-        if (settings.currentTerm) {
-          localStorage.setItem('munyaka_active_term', settings.currentTerm);
-          localStorage.setItem('activeTerm', settings.currentTerm);
-        }
-        localStorage.setItem('munyaka_term_locked', String(settings.isTermLocked));
-        showSuccess("All system settings and RBAC permissions saved securely!");
-      } catch (e) {
-        showError("Failed to save settings.");
+    try {
+      CentralDataService.setData(SETTINGS_STORAGE_KEY, settings);
+      CentralDataService.setData(RBAC_STORAGE_KEY, rbacMatrix);
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      localStorage.setItem(RBAC_STORAGE_KEY, JSON.stringify(rbacMatrix));
+      if (settings.currentTerm) {
+        localStorage.setItem('munyaka_active_term', settings.currentTerm);
+        localStorage.setItem('activeTerm', settings.currentTerm);
       }
-      setIsSaving(false);
-    }, 600);
+      localStorage.setItem('munyaka_term_locked', String(settings.isTermLocked));
+
+      const schoolProfilePayload = {
+        school_name: settings.schoolName,
+        school_code: settings.schoolCode,
+        postal_address: settings.address,
+        phone: settings.phone,
+        email: settings.email,
+        year_established: settings.academicYear,
+      };
+      localStorage.setItem('school_profile', JSON.stringify(schoolProfilePayload));
+
+      // Attempt to sync to Supabase if table exists
+      try {
+        await supabase.from('school_profile').upsert(schoolProfilePayload);
+      } catch {}
+
+      showSuccess("All system settings and school profile saved successfully!");
+    } catch (e) {
+      showError("Failed to save settings.");
+    }
+    setIsSaving(false);
   };
 
   return (
