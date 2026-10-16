@@ -28,6 +28,7 @@ import {
   Cloud
 } from 'lucide-react';
 import { exportAllData, parseAndImportBackup } from '@/utils/storage';
+import { supabase } from '@/integrations/supabase/client';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
 const RBAC_STORAGE_KEY = 'munyaka_rbac_permissions';
@@ -36,8 +37,11 @@ interface SystemSettings {
   schoolName: string;
   schoolCode: string;
   address: string;
+  postalAddress?: string;
   phone: string;
   email: string;
+  emailDomain?: string;
+  yearEstablished?: string;
   currentTerm: string;
   academicYear: string;
   isTermLocked: boolean;
