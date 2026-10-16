@@ -461,40 +461,35 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const [assessmentNo, setAssessmentNo] = useState<string>('N/A');
 
   useEffect(() => {
-    const fetchAssessmentNo = async () => {
+    let isMounted = true;
+    async function fetchLearnerDetails() {
       if (!student) return;
-      
-      // First check if already on the prop object
-      const directVal = (student as any)?.assessment_no || (student as any)?.assessmentNo || (student as any)?.assessment;
-      if (directVal && directVal !== (student as any)?.admission_no) {
-        setAssessmentNo(directVal);
-        return;
-      }
 
-      // Otherwise fetch straight from the database table by admission_no or id
       try {
         const { supabase } = await import('@/lib/supabase');
         if (supabase) {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('learners')
             .select('assessment_no')
             .or(`id.eq.${student.id},admission_no.eq.${(student as any)?.admission_no}`)
             .single();
 
-          if (data?.assessment_no) {
-            setAssessmentNo(data.assessment_no);
-          } else {
-            setAssessmentNo('N/A');
+          if (isMounted) {
+            if (data?.assessment_no) {
+              setAssessmentNo(data.assessment_no);
+            } else {
+              setAssessmentNo('N/A');
+            }
           }
         }
-      } catch (error) {
-        console.error('Error fetching assessment number:', error);
-        setAssessmentNo('N/A');
+      } catch (err) {
+        if (isMounted) setAssessmentNo('N/A');
       }
-    };
+    }
 
-    fetchAssessmentNo();
-  }, [student]);
+    fetchLearnerDetails();
+    return () => { isMounted = false; };
+  }, [student?.id, (student as any)?.admission_no]);
 
   const handleExecuteTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -503,7 +498,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setCertificateNumber(certNum);
     const learnerName = student?.name || '';
     const admissionNo = (student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A';
-    const assessmentNoValue = assessmentNo || (student as any)?.assessment_no || (student as any)?.assessmentNo || 'N/A';
+    const assessmentNoValue = assessmentNo !== 'N/A' ? assessmentNo : 'N/A';
     const grade = student?.grade || 'N/A';
     const stream = student?.stream || 'N/A';
     const exitDate = transferData.dateOfExit ? new Date(transferData.dateOfExit).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
@@ -717,7 +712,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setIsPrinting(true);
     try {
       const studentName = student?.name || 'Learner';
-      const assessmentNoValue = assessmentNo || (student as any)?.assessment_no || (student as any)?.assessmentNo || 'N/A';
+      const assessmentNoValue = assessmentNo !== 'N/A' ? assessmentNo : 'N/A';
       const grade = student?.grade || '—';
       const stream = student?.stream || '—';
       const gender = student?.gender === 'M' ? 'Male' : student?.gender === 'F' ? 'Female' : 'Other';
