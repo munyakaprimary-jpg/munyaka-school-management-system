@@ -24,7 +24,7 @@ import { getFormattedRoleLabel } from '@/utils/staffRoleUtils';
 export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: centralData } = useCentralData();
+  const centralData = useCentralData();
   const students = (centralData as any)?.students || [];
   const marks = (centralData as any)?.marks || [];
   const attendance = (centralData as any)?.attendance || [];
