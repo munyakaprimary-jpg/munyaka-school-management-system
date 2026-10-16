@@ -328,12 +328,17 @@ export function useSupabaseSync() {
     }
   };
 
-  // Real-time subscriptions setup across all tables
+  // Real-time subscriptions setup across all tables with useRef guard
+  const isSubscribedRef = useRef(false);
+
   useEffect(() => {
+    if (isSubscribedRef.current) return;
+    isSubscribedRef.current = true;
+
     syncWithCloud();
 
     const channel = supabase
-      .channel('public-db-realtime-sync')
+      .channel(`sync-channel-${Date.now()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'learners' },
@@ -362,6 +367,7 @@ export function useSupabaseSync() {
       .subscribe();
 
     return () => {
+      isSubscribedRef.current = false;
       supabase.removeChannel(channel);
     };
   }, [
