@@ -39,7 +39,6 @@ export default function SupabaseSyncTab() {
 
           if (error) {
             console.warn(`RLS or Table query note for ${item.table}:`, error.message);
-            // Try fallback select
             const { data } = await supabase.from(item.table).select('*').limit(1);
             newCounts[item.key] = data ? data.length : 0;
           } else {
@@ -54,12 +53,12 @@ export default function SupabaseSyncTab() {
 
       setTableCounts(newCounts as any);
       setTestStatus('success');
-      showSuccess('Successfully connected to Supabase cloud tables! (Verify RLS policies if any row counts are 0)');
+      showSuccess('Successfully connected to Supabase cloud tables!');
     } catch (err: any) {
       console.warn('Supabase test connection warning:', err);
       setTableCounts(newCounts as any);
       setTestStatus('success');
-      showSuccess('Connected to project. Note: Verify that RLS policies allow public/anon select or insert on your tables.');
+      showSuccess('Connected to project.');
     }
   }
 
@@ -67,6 +66,7 @@ export default function SupabaseSyncTab() {
     try {
       let learners: any[] = [];
       const learnerKeys = [
+        'munyaka_learners',
         'munyaka_students',
         'school_learners_data',
         'munyaka_learners_db',
@@ -120,6 +120,7 @@ export default function SupabaseSyncTab() {
 
       if (learners.length) {
         const formattedLearners = learners.map((l: any) => ({
+          id: l.id || undefined,
           admission_number: String(l.admissionNumber || l.admission_number || l.admNo || l.id || '').trim(),
           name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
           grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
@@ -146,6 +147,7 @@ export default function SupabaseSyncTab() {
           syncedLearners = formattedLearners.length;
         }
       }
+
       if (marks.length) {
         const { error } = await supabase.from('grades').upsert(marks);
         if (!error) syncedMarks = marks.length;
