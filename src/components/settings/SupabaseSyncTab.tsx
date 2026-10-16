@@ -10,26 +10,34 @@ import { supabase } from '@/integrations/supabase/client';
 export default function SupabaseSyncTab() {
   const { isSyncing, lastSynced, syncError, syncWithCloud } = useSupabaseSync();
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [tableCounts, setTableCounts] = useState<{ learners: number; assessment_marks: number; staff_members: number; attendance: number; fee_settings: number } | null>(null);
+  const [tableCounts, setTableCounts] = useState<{ learners: number; marks: number; staff: number; attendance: number; fee_settings: number } | null>(null);
 
-  const testConnection = async () => {
+  async function handleTestCloudTables() {
     setTestStatus('testing');
     try {
-      const tables = ['learners', 'staff_members', 'assessment_marks', 'attendance', 'fee_settings'];
+      const tables = [
+        { key: 'learners', table: 'learners' },
+        { key: 'marks', table: 'assessment_marks' },
+        { key: 'staff', table: 'staff_members' },
+        { key: 'attendance', table: 'attendance' },
+        { key: 'fee_settings', table: 'fee_settings' },
+      ];
+
       const counts: Record<string, number> = {};
 
-      for (const table of tables) {
+      for (const item of tables) {
         const { count, error } = await supabase
-          .from(table)
+          .from(item.table)
           .select('*', { count: 'exact', head: true });
         
-        counts[table] = error ? 0 : (count || 0);
+        if (error) console.error(`Error querying ${item.table}:`, error);
+        counts[item.key] = count || 0;
       }
 
       setTableCounts({
         learners: counts['learners'] || 0,
-        assessment_marks: counts['assessment_marks'] || 0,
-        staff_members: counts['staff_members'] || 0,
+        marks: counts['marks'] || 0,
+        staff: counts['staff'] || 0,
         attendance: counts['attendance'] || 0,
         fee_settings: counts['fee_settings'] || 0,
       });
@@ -41,7 +49,28 @@ export default function SupabaseSyncTab() {
       setTestStatus('error');
       showError(err.message || 'Connection test failed. Verify Supabase tables and RLS policies.');
     }
-  };
+  }
+
+  async function handleSyncToCloud() {
+    try {
+      const learners = JSON.parse(localStorage.getItem('learners') || localStorage.getItem('munyaka_students') || '[]');
+      const marks = JSON.parse(localStorage.getItem('assessment_marks') || localStorage.getItem('munyaka_marks_records') || '[]');
+      const staff = JSON.parse(localStorage.getItem('staff_members') || localStorage.getItem('munyaka_staff_members') || '[]');
+      const attendance = JSON.parse(localStorage.getItem('attendance') || localStorage.getItem('munyaka_attendance_records') || '[]');
+      const feeSettings = JSON.parse(localStorage.getItem('fee_settings') || '[]');
+
+      if (learners.length) await supabase.from('learners').upsert(learners, { onConflict: 'admission_number' });
+      if (marks.length) await supabase.from('assessment_marks').upsert(marks);
+      if (staff.length) await supabase.from('staff_members').upsert(staff, { onConflict: 'email' });
+      if (attendance.length) await supabase.from('attendance').upsert(attendance);
+      if (feeSettings.length) await supabase.from('fee_settings').upsert(feeSettings);
+
+      showSuccess('Sync completed successfully!');
+      await handleTestCloudTables();
+    } catch (err: any) {
+      showError(err?.message || 'Sync failed');
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -110,7 +139,7 @@ export default function SupabaseSyncTab() {
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Button
-              onClick={syncWithCloud}
+              onClick={handleSyncToCloud}
               disabled={isSyncing}
               className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg gap-2 rounded-xl font-bold px-6 h-11"
             >
@@ -119,7 +148,7 @@ export default function SupabaseSyncTab() {
             </Button>
 
             <Button
-              onClick={testConnection}
+              onClick={handleTestCloudTables}
               disabled={testStatus === 'testing'}
               variant="outline"
               className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold gap-2 rounded-xl h-11 px-6"
@@ -143,11 +172,11 @@ export default function SupabaseSyncTab() {
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
                   <p className="text-xs text-muted-foreground">Marks</p>
-                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.assessment_marks}</p>
+                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.marks}</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
                   <p className="text-xs text-muted-foreground">Staff</p>
-                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.staff_members}</p>
+                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.staff}</p>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-emerald-100">
                   <p className="text-xs text-muted-foreground">Attendance</p>
