@@ -840,46 +840,74 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             } catch (e) {}
           }, 300);
         } else {
+          // Fallback hidden iframe method with safety guard
+          const hiddenFrame = document.createElement('iframe');
+          hiddenFrame.style.position = 'fixed';
+          hiddenFrame.style.right = '0';
+          hiddenFrame.style.bottom = '0';
+          hiddenFrame.style.width = '0';
+          hiddenFrame.style.height = '0';
+          hiddenFrame.style.border = '0';
+          hiddenFrame.setAttribute('data-dyad-ignore', 'true');
+          document.body.appendChild(hiddenFrame);
+
           setTimeout(() => {
             try {
-              const hiddenFrame = document.createElement('iframe');
-              hiddenFrame.style.position = 'fixed';
-              hiddenFrame.style.right = '0';
-              hiddenFrame.style.bottom = '0';
-              hiddenFrame.style.width = '0';
-              hiddenFrame.style.height = '0';
-              hiddenFrame.style.border = '0';
-              hiddenFrame.setAttribute('data-dyad-ignore', 'true');
-              document.body.appendChild(hiddenFrame);
-
+              const frameWin = hiddenFrame.contentWindow;
+              const frameDoc = frameWin?.document || hiddenFrame.contentDocument;
+              if (frameDoc && frameWin) {
+                frameDoc.open();
+                frameDoc.write(htmlContent);
+                frameDoc.close();
+                setTimeout(() => {
+                  frameWin.focus();
+                  frameWin.print();
+                }, 300);
+              }
+            } catch (e) {
+              console.error('Hidden frame print error:', e);
+            } finally {
               setTimeout(() => {
-                try {
-                  const frameWin = hiddenFrame.contentWindow;
-                  const frameDoc = frameWin?.document || hiddenFrame.contentDocument;
-                  if (frameDoc && frameWin) {
-                    frameDoc.open();
-                    frameDoc.write(htmlContent);
-                    frameDoc.close();
-                    setTimeout(() => {
-                      frameWin.focus();
-                      frameWin.print();
-                    }, 300);
-                  }
-                } catch (e) {
-                  console.error('Hidden frame print error:', e);
-                } finally {
-                  setTimeout(() => {
-                    try { document.body.removeChild(hiddenFrame); } catch {}
-                  }, 2500);
-                }
-              }, 200);
-            } catch (iframeErr) {
-              console.error('Iframe creation error:', iframeErr);
+                try { document.body.removeChild(hiddenFrame); } catch {}
+              }, 2500);
             }
-          }, 150);
+          }, 200);
         }
       }, 150);
     } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to open printable clearance certificate window.');
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+        hiddenFrame.style.width = '0';
+        hiddenFrame.style.height = '0';
+        hiddenFrame.style.border = '0';
+        hiddenFrame.setAttribute('data-dyad-ignore', 'true');
+        document.body.appendChild(hiddenFrame);
+
+        setTimeout(() => {
+          try {
+            const frameWin = hiddenFrame.contentWindow;
+            const frameDoc = frameWin?.document || hiddenFrame.contentDocument;
+            if (frameDoc && frameWin) {
+              frameDoc.open();
+              frameDoc.write(htmlContent);
+              frameDoc.close();
+              frameWin.focus();
+              frameWin.print();
+            }
+          } catch (e) {
+            console.error('Hidden frame print error:', e);
+          } finally {
+            setTimeout(() => {
+              try { document.body.removeChild(hiddenFrame); } catch {}
+            }, 2000);
+          }
+        }, 200);
+      }
+    } catch (err) {
+      console.error('Print window error:', err);
       showError(err instanceof Error ? err.message : 'Failed to open printable clearance certificate window.');
     } finally {
       setIsPrinting(false);
