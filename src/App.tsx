@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useEffect } from "react";
 import { initialSeedData } from "@/data/initialSeedData";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
@@ -367,6 +368,42 @@ function runOneTimeFeeSanitizer(): void {
 const queryClient = new QueryClient();
 
 const App = () => {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initializeApp = async () => {
+      try {
+        const cachedProfile = localStorage.getItem('school_profile');
+        if (!cachedProfile) {
+          localStorage.setItem('school_profile', JSON.stringify({
+            school_name: "Munyaka Primary and Junior School",
+            school_code: "MUNYAKA-001",
+            postal_address: "P.O. Box 5239-30100, Eldoret",
+            phone: "+254 738873359",
+            email: "munyakaprimary@gmail.com"
+          }));
+        }
+      } catch (err) {
+        console.error("Initialization error:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    initializeApp();
+
+    const timer = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 2000);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, []);
+
   useEffect(() => {
     try {
       const existingDb = localStorage.getItem('munyaka_central_db');
@@ -488,6 +525,13 @@ const App = () => {
 
   return (
     <AppErrorBoundary>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-6">
+          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <h2 className="text-xl font-bold">Loading Munyaka Portal...</h2>
+          <p className="text-sm text-slate-400 mt-1">Please wait while we initialize your workspace.</p>
+        </div>
+      ) : (
       <QueryClientProvider client={queryClient}>
         <HashRouter>
           <AuthProvider>
