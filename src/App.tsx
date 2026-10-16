@@ -138,6 +138,7 @@ import { SchoolProvider } from "./context/SchoolContext";
 import { LearnerProvider } from './context/LearnerContext';
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
+import { useGlobalRealtimeSync } from "./hooks/useGlobalRealtimeSync";
 import { startHeartbeatService, stopHeartbeatService } from "./services/deviceHeartbeat";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
@@ -367,6 +368,8 @@ function runOneTimeFeeSanitizer(): void {
 const queryClient = new QueryClient();
 
 const App = () => {
+  useGlobalRealtimeSync();
+
   useEffect(() => {
     try {
       const existingDb = localStorage.getItem('munyaka_central_db');
