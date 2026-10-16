@@ -117,6 +117,11 @@ export const ROLE_DEFAULT_LANDING: Record<string, string> = {
   ICT: '/inventory',
 };
 
+export function getDefaultLandingPage(role: string): string {
+  const norm = String(role || '').toUpperCase().trim();
+  return ROLE_DEFAULT_LANDING[norm] || '/dashboard';
+}
+
 export function resolveRole(role: string): string {
   const norm = String(role || '').toUpperCase().trim();
   if (norm.includes('ADMIN') || norm.includes('HOI') || norm.includes('DHOI') || norm.includes('OWNER') || norm.includes('SUPER')) {
