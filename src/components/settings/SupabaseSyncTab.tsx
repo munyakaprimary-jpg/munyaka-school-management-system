@@ -13,31 +13,38 @@ export default function SupabaseSyncTab() {
   const [tableCounts, setTableCounts] = useState<{ learners: number; marks: number; attendance: number; streams: number } | null>(null);
 
   async function handleTestCloudTables() {
+    console.log("--- EXECUTING CLOUD TABLE TEST ---");
     setTestStatus('testing');
+    
+    const tablesToTest = [
+      { key: 'learners', table: 'learners' },
+      { key: 'marks', table: 'grades' },
+      { key: 'attendance', table: 'student_attendance' },
+      { key: 'streams', table: 'streams' }
+    ];
+
+    const newCounts: Record<string, number> = {
+      learners: 0,
+      marks: 0,
+      attendance: 0,
+      streams: 0
+    };
+
     try {
-      const tableMap = [
-        { key: 'learners', table: 'learners' },
-        { key: 'marks', table: 'grades' },
-        { key: 'attendance', table: 'student_attendance' },
-        { key: 'streams', table: 'streams' },
-      ];
-
-      const newCounts: Record<string, number> = {};
-
-      for (const item of tableMap) {
+      for (const item of tablesToTest) {
         const { count, error } = await supabase
           .from(item.table)
           .select('*', { count: 'exact', head: true });
 
         if (error) {
-          console.error(`Error querying ${item.table}:`, error);
-          newCounts[item.key] = 0;
+          console.error(`Error fetching table ${item.table}:`, error);
         } else {
+          console.log(`Table ${item.table} count:`, count);
           newCounts[item.key] = count || 0;
         }
       }
 
-      setTableCounts(newCounts);
+      setTableCounts(newCounts as any);
       setTestStatus('success');
       showSuccess('Successfully connected to Supabase cloud tables!');
     } catch (err: any) {
@@ -116,7 +123,7 @@ export default function SupabaseSyncTab() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-semibold">Database Schema</p>
-                <p className="text-sm font-bold text-slate-900">learners, assessment_marks, staff_members, attendance, fee_settings</p>
+                <p className="text-sm font-bold text-slate-900">learners, grades, student_attendance, teacher_attendance, streams, roles</p>
               </div>
             </div>
           </div>
