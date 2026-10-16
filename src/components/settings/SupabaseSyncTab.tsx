@@ -68,41 +68,40 @@ export default function SupabaseSyncTab() {
       const learners = JSON.parse(localStorage.getItem('learners') || localStorage.getItem('munyaka_students') || '[]');
       const marks = JSON.parse(localStorage.getItem('grades') || localStorage.getItem('assessment_marks') || localStorage.getItem('munyaka_marks_records') || '[]');
       const attendance = JSON.parse(localStorage.getItem('student_attendance') || localStorage.getItem('munyaka_attendance_records') || '[]');
-      const streams = JSON.parse(localStorage.getItem('streams') || '[]');
+      const staff = JSON.parse(localStorage.getItem('staff_members') || localStorage.getItem('school_staff_data') || '[]');
+      const feeSettings = JSON.parse(localStorage.getItem('fee_settings') || '[]');
+
+      let syncedLearners = 0;
+      let syncedMarks = 0;
+      let syncedAttendance = 0;
+      let syncedStaff = 0;
+      let syncedFees = 0;
 
       if (learners.length) {
-        try {
-          await supabase.from('learners').upsert(learners, { onConflict: 'admission_number' });
-        } catch (e) {
-          console.warn("Learners upsert warning (RLS/schema):", e);
-        }
+        const { error } = await supabase.from('learners').upsert(learners, { onConflict: 'admission_number' });
+        if (!error) syncedLearners = learners.length;
       }
       if (marks.length) {
-        try {
-          await supabase.from('grades').upsert(marks);
-        } catch (e) {
-          console.warn("Grades upsert warning:", e);
-        }
+        const { error } = await supabase.from('grades').upsert(marks);
+        if (!error) syncedMarks = marks.length;
       }
       if (attendance.length) {
-        try {
-          await supabase.from('student_attendance').upsert(attendance);
-        } catch (e) {
-          console.warn("Attendance upsert warning:", e);
-        }
+        const { error } = await supabase.from('student_attendance').upsert(attendance);
+        if (!error) syncedAttendance = attendance.length;
       }
-      if (streams.length) {
-        try {
-          await supabase.from('streams').upsert(streams);
-        } catch (e) {
-          console.warn("Streams upsert warning:", e);
-        }
+      if (staff.length) {
+        const { error } = await supabase.from('staff_members').upsert(staff, { onConflict: 'email' });
+        if (!error) syncedStaff = staff.length;
+      }
+      if (feeSettings.length) {
+        const { error } = await supabase.from('fee_settings').upsert(feeSettings);
+        if (!error) syncedFees = feeSettings.length;
       }
 
-      showSuccess('Sync completed successfully!');
+      showSuccess(`Successfully synced ${syncedLearners} learners, ${syncedMarks} marks, ${syncedAttendance} attendance, ${syncedStaff} staff to Supabase!`);
       await handleTestCloudTables();
     } catch (err: any) {
-      showError(err?.message || 'Sync completed with warnings.');
+      showError(err?.message || 'Sync failed due to table schema or RLS policy constraints.');
       await handleTestCloudTables();
     }
   }
