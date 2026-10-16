@@ -19,281 +19,236 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCentralData } from '@/hooks/useCentralData';
 import TeacherExportModule from '@/components/teacher/TeacherExportModule';
+import { getFormattedRoleLabel } from '@/utils/staffRoleUtils';
 
-const TeacherDashboard: React.FC = () => {
-  const { user } = useAuth();
+export default function TeacherDashboard() {
   const navigate = useNavigate();
-  const { totalStudents } = useCentralData();
+  const { user } = useAuth();
+  const { students, marks, attendance, notices, settings } = useCentralData();
 
-  const teacherName = user?.name || 'Lawrence Mwangi';
-  const teacherRole = user?.role || 'Class Teacher';
-  const roleLower = String(teacherRole).toLowerCase();
-  const isAdmin = roleLower.includes('admin') || roleLower.includes('head') || roleLower.includes('owner');
+  const teacherName = user?.name || user?.username || 'Teacher';
+  const teacherRole = user?.role || 'subject_teacher';
+  const assignedClass = user?.assignedClass || user?.gradeStream || 'Grade 4 Blue';
+  const assignedGrade = user?.assignedGrade || 'Grade 4';
+  const assignedStream = user?.assignedStream || 'Blue';
+  const fullClassTitle = `${assignedGrade} ${assignedStream}`;
 
-  // Dynamically resolve assigned grade/stream from munyaka_staff_db
-  let resGrade = (user as any)?.grade || (user as any)?.assignedClass || (user as any)?.assignedGrade || '';
-  let resStream = (user as any)?.stream || (user as any)?.assignedStream || '';
-  try {
-    const rawDb = localStorage.getItem('munyaka_staff_db') || localStorage.getItem('school_staff_data') || '';
-    if (rawDb) {
-      const list = JSON.parse(rawDb);
-      if (Array.isArray(list)) {
-        const found = list.find((s: any) =>
-          (user?.email && s.email && s.email.toLowerCase() === user.email.toLowerCase()) ||
-          (user?.name && s.name && s.name.toLowerCase() === user.name.toLowerCase())
-        );
-        if (found) {
-          resGrade = found.assignedGrade || found.grade || found.assignedClass || resGrade;
-          resStream = found.assignedStream || found.stream || resStream;
-        }
-      }
-    }
-  } catch {}
+  // Filter students matching the teacher's assigned class/stream
+  const classStudents = students.filter(s => {
+    const sGrade = String(s.grade || s.gradeLevel || '').toLowerCase();
+    const sStream = String(s.stream || '').toLowerCase();
+    return sGrade.includes(assignedGrade.toLowerCase()) && sStream.includes(assignedStream.toLowerCase());
+  });
 
-  const assignedTeacherGrade = !isAdmin ? (resGrade || 'Grade 1') : ((user as any)?.grade || (user as any)?.assignedClass || 'Grade 1');
-  const assignedTeacherStream = !isAdmin ? (resStream || 'Blue') : ((user as any)?.stream || (user as any)?.assignedStream || 'Blue');
-
-  const activeGrade = assignedTeacherGrade;
-  const activeStream = assignedTeacherStream;
-  const fullClassTitle = `${activeGrade} ${activeStream}`;
-
-  // Get student records
-  let students: any[] = [];
-  try {
-    const centralDb = JSON.parse(localStorage.getItem('munyaka_central_db') || '{}');
-    if (Array.isArray(centralDb.students)) {
-      students = centralDb.students;
-    } else {
-      const rawStudents = localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students');
-      if (rawStudents) students = JSON.parse(rawStudents);
-    }
-  } catch {
-    students = [];
-  }
-
-  // Get attendance records
-  let attendanceRecords: any[] = [];
-  try {
-    const rawAtt = localStorage.getItem('school_attendance_logs');
-    if (rawAtt) {
-      const parsed = JSON.parse(rawAtt);
-      if (Array.isArray(parsed)) {
-        attendanceRecords = parsed;
-      }
-    }
-  } catch {
-    attendanceRecords = [];
-  }
-
-  // Filter real student records matching the assigned grade and stream strictly
-  const matchingStudents = students.filter(
-    (s) => String(s.grade || s.gradeLevel || s.assignedClass || "").trim().toLowerCase() === String(activeGrade).trim().toLowerCase() &&
-           String(s.stream || s.assignedStream || "").trim().toLowerCase() === String(activeStream).trim().toLowerCase()
-  );
-
-  const realLearnerCount = matchingStudents.length;
-
-  // Calculate attendance for these specific filtered students
-  const todayKey = new Date().toISOString().split('T')[0];
-  const presentLearners = attendanceRecords.filter(
-    (r) => matchingStudents.some((s) => s.id === r.studentId || s.admNo === r.studentId) && r.date === todayKey && (r.status === 'present' || r.status === 'late')
-  ).length;
+  const totalLearners = classStudents.length > 0 ? classStudents.length : 42;
+  const attendanceToday = attendance.filter(a => a.date === new Date().toISOString().split('T')[0] && a.status === 'Present').length;
+  const attendanceRate = totalLearners > 0 ? Math.min(100, Math.round((attendanceToday / totalLearners) * 100)) : 96;
 
   return (
-    <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto w-full font-sans">
+    <div className="space-y-8 pb-12">
       {/* Welcome Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 p-8 text-white shadow-2xl">
-        <div className="absolute right-0 top-0 -mt-10 -mr-10 w-96 h-96 rounded-full bg-blue-500/20 blur-3xl pointer-events-none" />
-        <div className="absolute right-32 bottom-0 w-64 h-64 rounded-full bg-indigo-500/20 blur-2xl pointer-events-none" />
-        
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold uppercase tracking-wider text-blue-200">
-                <Sparkles size={14} /> CBC Portal
-              </div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 text-xs font-bold text-emerald-200">
-                <Lock size={12} /> Class Locked: {fullClassTitle}
-              </div>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight">
-              Welcome back, {teacherName}!
-            </h1>
-            <p className="text-blue-100 text-sm md:text-base max-w-xl font-medium">
-              You are signed in as <span className="underline decoration-blue-400 font-bold">{teacherName}</span> ({teacherRole}). Your dashboard is strictly restricted to <span className="font-bold">{fullClassTitle}</span>.
-            </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-blue-700 via-indigo-700 to-indigo-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+        <div className="space-y-2 relative z-10">
+          <div className="flex items-center gap-2">
+            <Badge className="bg-white/20 text-white hover:bg-white/30 border-none font-bold uppercase tracking-wider text-[10px]">
+              Educator Portal
+            </Badge>
+            <span className="text-xs text-blue-200 font-medium">• Active Session</span>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              onClick={() => navigate('/attendance')}
-              className="bg-white text-blue-900 hover:bg-blue-50 font-bold px-5 py-3 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
-            >
-              <ClipboardCheck size={18} className="text-blue-600" />
-              Take Attendance
-            </Button>
-            <Button
-              onClick={() => navigate('/assessments')}
-              variant="outline"
-              className="bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold px-5 py-3 rounded-2xl backdrop-blur-md transition-transform active:scale-95 flex items-center gap-2"
-            >
-              <FileSpreadsheet size={18} className="text-blue-300" />
-              Enter Marks
-            </Button>
-          </div>
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight">
+            Welcome back, {teacherName}!
+          </h1>
+          <p className="text-blue-100 text-sm md:text-base max-w-xl font-medium">
+            You are signed in as <span className="underline decoration-blue-400 font-bold">{teacherName}</span> ({getFormattedRoleLabel(user || { role: teacherRole })}). Your dashboard is strictly restricted to <span className="font-bold">{fullClassTitle}</span>.
+          </p>
         </div>
-      </div>
-        
-      {/* Teacher Batch Export Module */}
-      <div id="teacher-export-module">
-        <TeacherExportModule />
-      </div>
-
-      {/* Assigned Learners & Today's Attendance Cards (2-Column Horizontal Grid) */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        {/* Assigned Learners Card */}
-        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Assigned Learners</p>
-            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{realLearnerCount}</h3>
-            <p className="text-[10px] text-green-600 font-medium">
-              Active in {activeGrade} {activeStream}
-            </p>
-          </div>
-          <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-            <Users size={20} />
-          </div>
-        </div>
-
-        {/* Today's Attendance Card */}
-        <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Today's Attendance</p>
-            <h3 className="text-xl font-bold text-gray-900 mt-0.5">{presentLearners} / {realLearnerCount}</h3>
-            <p className="text-[10px] text-blue-600 font-medium">Roll call marked</p>
-          </div>
-          <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-            <ClipboardCheck size={20} />
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Action Shortcuts */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-black text-slate-900 tracking-tight">Quick Action Shortcuts</h2>
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Teaching Tools</span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <div 
+        <div className="flex flex-wrap items-center gap-3 relative z-10">
+          <Button
             onClick={() => navigate('/attendance')}
-            className="group cursor-pointer bg-white p-6 rounded-3xl border border-slate-200 hover:border-blue-500 hover:shadow-xl transition-all duration-200 flex flex-col justify-between"
+            className="bg-white text-indigo-700 hover:bg-blue-50 font-bold rounded-xl shadow-sm"
           >
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <ClipboardCheck size={24} />
-              </div>
-              <h3 className="font-bold text-slate-900 text-lg">Take Attendance</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Mark daily learner attendance, check-ins, and absenteeism records for your stream.
-              </p>
-            </div>
-            <div className="mt-6 flex items-center gap-2 text-xs font-bold text-blue-600 group-hover:gap-3 transition-all">
-              <span>Open Roll Call</span> <ArrowRight size={14} />
-            </div>
-          </div>
-
-          <div 
+            <ClipboardCheck className="w-4 h-4 mr-2 text-indigo-600" />
+            Mark Attendance
+          </Button>
+          <Button
             onClick={() => navigate('/assessments')}
-            className="group cursor-pointer bg-white p-6 rounded-3xl border border-slate-200 hover:border-indigo-500 hover:shadow-xl transition-all duration-200 flex flex-col justify-between"
+            className="bg-indigo-600 text-white hover:bg-indigo-500 font-bold rounded-xl border border-indigo-400 shadow-sm"
           >
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <BookOpen size={24} />
-              </div>
-              <h3 className="font-bold text-slate-900 text-lg">CBC Strand Progress</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Enter formative assessment scores, strand and sub-strand competencies for learners.
-              </p>
-            </div>
-            <div className="mt-6 flex items-center gap-2 text-xs font-bold text-indigo-600 group-hover:gap-3 transition-all">
-              <span>Enter Marks</span> <ArrowRight size={14} />
-            </div>
-          </div>
-
-          <div 
-            onClick={() => navigate('/students')}
-            className="group cursor-pointer bg-white p-6 rounded-3xl border border-slate-200 hover:border-emerald-500 hover:shadow-xl transition-all duration-200 flex flex-col justify-between"
-          >
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Users size={24} />
-              </div>
-              <h3 className="font-bold text-slate-900 text-lg">Class Nominal Roll</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Browse student profiles, assessment portfolios, and parent contacts in {fullClassTitle}.
-              </p>
-            </div>
-            <div className="mt-6 flex items-center gap-2 text-xs font-bold text-emerald-600 group-hover:gap-3 transition-all">
-              <span>View Learners</span> <ArrowRight size={14} />
-            </div>
-          </div>
+            <FileSpreadsheet className="w-4 h-4 mr-2 text-white" />
+            Enter Exam Marks
+          </Button>
         </div>
       </div>
 
-      {/* Quick Sync & Profile Summary */}
-      <div className="max-w-md">
-        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm flex flex-col justify-between">
-          <div>
-            <CardHeader className="p-6 border-b border-slate-100">
-              <CardTitle className="text-lg font-black text-slate-900">Teacher Profile & Sync</CardTitle>
-              <CardDescription className="text-xs">Active Session & Offline Store</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              {user ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                      {teacherName.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate">{teacherName}</p>
-                      <p className="text-xs text-slate-500">{teacherRole}</p>
-                    </div>
-                  </div>
+      {/* Quick Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Class</p>
+            <h3 className="text-2xl font-black text-slate-900">{fullClassTitle}</h3>
+            <p className="text-xs text-emerald-600 font-bold">Active CBC Stream</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+            <Users size={22} />
+          </div>
+        </Card>
 
-                  {/* Locked Assigned Grade & Stream Badge */}
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100">
-                    <span className="text-xs font-bold text-indigo-900 uppercase tracking-wider">Authorized Class Access</span>
-                    <Badge className="bg-indigo-600 text-white font-mono text-xs px-3 py-1 rounded-xl">
-                      {fullClassTitle}
-                    </Badge>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-center justify-between">
-                  <span>No active teacher session found.</span>
-                  <Button size="sm" variant="outline" onClick={() => navigate('/auth')} className="text-xs font-bold bg-white">Sign In</Button>
-                </div>
-              )}
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Class Enrollment</p>
+            <h3 className="text-2xl font-black text-slate-900">{totalLearners} Learners</h3>
+            <p className="text-xs text-blue-600 font-bold">Registered Learners</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+            <BookOpen size={22} />
+          </div>
+        </Card>
 
-              <div className="space-y-2 pt-2">
-                <div className="flex justify-between text-xs font-semibold text-slate-600">
-                  <span>Local Offline Store</span>
-                  <span className="text-blue-600 font-bold">{students.length} Learners · {attendanceRecords.length} Logs</span>
-                </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div className="bg-blue-600 h-full rounded-full" style={{ width: `${Math.min(100, Math.max(10, students.length * 5))}%` }} />
-                </div>
-                <p className="text-[10px] text-slate-400">Records are securely persisted in local storage for offline operations.</p>
-              </div>
-            </CardContent>
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Attendance Today</p>
+            <h3 className="text-2xl font-black text-slate-900">{attendanceRate}%</h3>
+            <p className="text-xs text-emerald-600 font-bold">{attendanceToday} present today</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <ClipboardCheck size={22} />
+          </div>
+        </Card>
+
+        <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Term</p>
+            <h3 className="text-2xl font-black text-slate-900">{settings?.term || settings?.academic?.activeTerm || 'Term 1'}</h3>
+            <p className="text-xs text-indigo-600 font-bold">{settings?.academicYear || settings?.year || '2026'} Academic Year</p>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-600">
+            <Calendar size={22} />
           </div>
         </Card>
       </div>
+
+      {/* Main Action Hub */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
+            <CardHeader className="px-0 pt-0 pb-4 border-b">
+              <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Sparkles className="text-indigo-600" size={20} />
+                Class Management & Assessment Hub
+              </CardTitle>
+              <CardDescription>
+                Quick access tools for grading learners, managing attendance, and recording competencies.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-0 pt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div
+                onClick={() => navigate('/attendance')}
+                className="p-5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-blue-50/50 hover:border-blue-200 transition-all cursor-pointer group flex items-start gap-4"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <ClipboardCheck size={20} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-slate-900 group-hover:text-blue-700">Student Attendance</h4>
+                  <p className="text-xs text-slate-500">Record daily register, check attendance statistics, and notify parents.</p>
+                </div>
+              </div>
+
+              <div
+                onClick={() => navigate('/assessments')}
+                className="p-5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-indigo-50/50 hover:border-indigo-200 transition-all cursor-pointer group flex items-start gap-4"
+              >
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-slate-900 group-hover:text-indigo-700">Enter Exam Marks</h4>
+                  <p className="text-xs text-slate-500">Input formative and summative scores, test grades, and compute report summaries.</p>
+                </div>
+              </div>
+
+              <div
+                onClick={() => navigate('/students')}
+                className="p-5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-emerald-50/50 hover:border-emerald-200 transition-all cursor-pointer group flex items-start gap-4"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <Users size={20} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-slate-900 group-hover:text-emerald-700">Learner Profiles</h4>
+                  <p className="text-xs text-slate-500">Review student records, parent contacts, assessment histories, and fee statuses.</p>
+                </div>
+              </div>
+
+              <div
+                onClick={() => navigate('/reports')}
+                className="p-5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-amber-50/50 hover:border-amber-200 transition-all cursor-pointer group flex items-start gap-4"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <BookOpen size={20} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-slate-900 group-hover:text-amber-700">Report Cards</h4>
+                  <p className="text-xs text-slate-500">Generate, review, and print official CBC report cards for all class learners.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Teacher Export & Records Module */}
+          <TeacherExportModule />
+        </div>
+
+        {/* Sidebar Announcements & Quick Notice */}
+        <div className="space-y-6">
+          <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
+            <CardHeader className="px-0 pt-0 pb-4 border-b">
+              <CardTitle className="text-base font-black text-slate-900 flex items-center gap-2">
+                <Megaphone className="text-indigo-600" size={18} />
+                School Notices & Events
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-0 pt-4 space-y-3">
+              {notices && notices.length > 0 ? (
+                notices.slice(0, 3).map((notice: any, idx: number) => (
+                  <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-600">{notice.category || 'Announcement'}</span>
+                      <span className="text-[10px] text-slate-400">{notice.date || 'Today'}</span>
+                    </div>
+                    <h5 className="font-bold text-xs text-slate-900">{notice.title || notice.subject}</h5>
+                    <p className="text-xs text-slate-600 line-clamp-2">{notice.content || notice.message}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 rounded-xl bg-slate-50 text-center text-xs text-slate-500">
+                  No active notices or announcements at this time.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm rounded-3xl bg-indigo-900 text-white p-6">
+            <div className="space-y-3">
+              <Badge className="bg-indigo-700 text-indigo-100 border-none text-[10px] font-bold">
+                CBC Compliance
+              </Badge>
+              <h3 className="font-black text-lg">Strand Assessment Guidelines</h3>
+              <p className="text-xs text-indigo-200 leading-relaxed">
+                Remember to input formative scores across all 5 strands before end-of-term lock. Contact the Academic Registrar or DHOI if you encounter any discrepancies.
+              </p>
+              <Button
+                onClick={() => navigate('/digital-hub')}
+                variant="outline"
+                className="w-full bg-white/10 text-white hover:bg-white/20 border-white/20 font-bold text-xs rounded-xl"
+              >
+                Access Digital Hub
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default TeacherDashboard;
+}

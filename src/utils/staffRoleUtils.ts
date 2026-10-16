@@ -2,13 +2,14 @@ export function getNormalizedStaffRole(userOrStaff: any): string {
   if (!userOrStaff) return 'STAFF';
   
   const rawRole = (
-    userOrStaff.role || 
-    userOrStaff.designation || 
-    userOrStaff.category || 
-    userOrStaff.department || 
+    userOrStaff.role ||
+    userOrStaff.designation ||
+    userOrStaff.category ||
+    userOrStaff.department ||
     ''
   ).toLowerCase().trim();
 
+  if (rawRole.includes('library') || rawRole.includes('librarian')) return 'LIBRARY';
   if (rawRole.includes('ict') || rawRole.includes('computer')) return 'ICT';
   if (rawRole.includes('dhoi')) return 'DHOI';
   if (rawRole.includes('hoi')) return 'HOI';
@@ -23,6 +24,7 @@ export function getNormalizedStaffRole(userOrStaff: any): string {
 export function getFormattedRoleLabel(userOrStaff: any): string {
   const roleKey = getNormalizedStaffRole(userOrStaff);
   const labels: Record<string, string> = {
+    LIBRARY: 'Library Teacher / Librarian',
     ICT: 'ICT Teacher / Systems Admin',
     HOI: 'Head of Institution',
     DHOI: 'Deputy Head of Institution',
