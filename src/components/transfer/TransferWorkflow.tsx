@@ -458,21 +458,25 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   // and the transfer has succeeded. This prevents double-generation and ensures
   // the modal only closes after the download is complete.
 
-  const [assessmentNo, setAssessmentNo] = useState<string>('N/A');
+  const [assessmentNo, setAssessmentNo] = useState<string>('Loading...');
 
   useEffect(() => {
     let isMounted = true;
-    async function fetchLearnerDetails() {
+    async function getAssessmentNumber() {
       if (!student) return;
 
       try {
         const { supabase } = await import('@/lib/supabase');
         if (supabase) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('learners')
             .select('assessment_no')
-            .or(`id.eq.${student.id},admission_no.eq.${(student as any)?.admission_no}`)
-            .single();
+            .or(`id.eq.${student.id},admission_no.ilike.${String((student as any)?.admission_no || '').trim()}`)
+            .maybeSingle();
+
+          if (error) {
+            console.error("Supabase fetch error for assessment_no:", error);
+          }
 
           if (isMounted) {
             if (data?.assessment_no) {
@@ -487,7 +491,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       }
     }
 
-    fetchLearnerDetails();
+    getAssessmentNumber();
     return () => { isMounted = false; };
   }, [student?.id, (student as any)?.admission_no]);
 
@@ -932,7 +936,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       onClose={onClose}
       title={currentStep === 'FORM' ? "Student Transfer Workflow" : "Official Clearance Certificate"}
       description={currentStep === 'FORM'
-              ? `Initiate transfer for ${student?.name || 'Unknown'} (${assessmentNo || 'N/A'})`
+              ? `Initiate transfer for ${student?.name || 'Unknown'} (${student?.admission_no || 'N/A'})`
               : `Official Clearance Certificate for ${student?.name || 'Unknown'}`}
       maxWidth="max-w-3xl"
       footer={renderFooter()}
@@ -961,8 +965,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   Adm No: {(student as any)?.admission_no || (student as any)?.admissionNo || (student as any)?.admNo || 'N/A'}
                 </Badge>
                 <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-medium">
-                                  Assessment No: {assessmentNo}
-                                </Badge>
+                  Assessment No: {assessmentNo}
+                </Badge>
               </div>
             </div>
           </div>
