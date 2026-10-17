@@ -56,46 +56,40 @@ export default function FirestoreSyncTab() {
     setErrorMessage(null);
     try {
       // Learners Collection
-      const learnersSnap = await getDocs(collection(db, 'learners'));
-      setCloudLearnersCount(learnersSnap.size);
-      const learnersDocs = learnersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const learnersSnap = await getDocs(collection(db, 'learners')).catch(() => ({ size: 0, docs: [] }));
+      setCloudLearnersCount(learnersSnap?.size || 0);
+      const learnersDocs = (learnersSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudLearnersList(learnersDocs);
-      console.log('Learners Firestore count:', learnersSnap.size);
 
       // Fees Collection (dedicated 'fees' Firestore collection)
-      const feesSnap = await getDocs(collection(db, 'fees'));
-      setCloudFeesCount(feesSnap.size);
-      const feesDocs = feesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const feesSnap = await getDocs(collection(db, 'fees')).catch(() => ({ size: 0, docs: [] }));
+      setCloudFeesCount(feesSnap?.size || 0);
+      const feesDocs = (feesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudFeesList(feesDocs);
-      console.log('Fees Firestore count:', feesSnap.size);
 
       // Assessment Marks Collection
-      const assessmentSnap = await getDocs(collection(db, 'assessment_marks'));
-      setCloudAssessmentCount(assessmentSnap.size);
-      const assessmentDocs = assessmentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const assessmentSnap = await getDocs(collection(db, 'assessment_marks')).catch(() => ({ size: 0, docs: [] }));
+      setCloudAssessmentCount(assessmentSnap?.size || 0);
+      const assessmentDocs = (assessmentSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudAssessmentMarks(assessmentDocs);
-      console.log('Assessment Marks Firestore count:', assessmentSnap.size);
 
       // Grades Collection (11 main grade levels: PP1 through Grade 9)
-      const gradesSnap = await getDocs(collection(db, 'grades'));
-      setCloudGradesCount(gradesSnap.size);
-      const gradesDocs = gradesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const gradesSnap = await getDocs(collection(db, 'grades')).catch(() => ({ size: 0, docs: [] }));
+      setCloudGradesCount(gradesSnap?.size || 0);
+      const gradesDocs = (gradesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudGradesList(gradesDocs);
-      console.log('Grades Firestore count:', gradesSnap.size);
 
       // Streams Collection (37 active classroom streams)
-      const streamsSnap = await getDocs(collection(db, 'streams'));
-      setCloudStreamsCount(streamsSnap.size);
-      const streamsDocs = streamsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const streamsSnap = await getDocs(collection(db, 'streams')).catch(() => ({ size: 0, docs: [] }));
+      setCloudStreamsCount(streamsSnap?.size || 0);
+      const streamsDocs = (streamsSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudStreamsList(streamsDocs);
-      console.log('Streams Firestore count:', streamsSnap.size);
 
       // Attendance Collection
-      const attendanceSnap = await getDocs(collection(db, 'attendance_records'));
-      setCloudAttendanceCount(attendanceSnap.size);
-      const attendanceDocs = attendanceSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const attendanceSnap = await getDocs(collection(db, 'attendance_records')).catch(() => ({ size: 0, docs: [] }));
+      setCloudAttendanceCount(attendanceSnap?.size || 0);
+      const attendanceDocs = (attendanceSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudAttendanceList(attendanceDocs);
-      console.log('Attendance Records Firestore count:', attendanceSnap.size);
 
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
