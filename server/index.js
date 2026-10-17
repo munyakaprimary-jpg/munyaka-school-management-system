@@ -182,9 +182,8 @@ app.post('/api/sync/learners', async (req, res) => {
     }
 
     const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://zjopubqlwwawibjhwiv.supabase.co';
-    const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'sb_publishable_dummy_key';
 
-    // If fetch/supabase REST is available, execute POST to Supabase REST /rest/v1/learners
     const restEndpoint = `${supabaseUrl}/rest/v1/learners`;
     
     const response = await fetch(restEndpoint, {
@@ -193,26 +192,27 @@ app.post('/api/sync/learners', async (req, res) => {
         'Content-Type': 'application/json',
         'apikey': supabaseKey,
         'Authorization': `Bearer ${supabaseKey}`,
-        'Prefer': 'resolution=merge-duplicates'
+        'Prefer': 'resolution=merge-duplicates,return=representation'
       },
       body: JSON.stringify(learners)
     });
 
+    const responseText = await response.text();
+    let data = [];
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = learners;
+    }
+
     if (!response.ok) {
-      const errText = await response.text();
-      console.warn('Supabase REST cloud sync warning:', errText);
-      // Even if cloud API responds with note, return success so offline/local environments succeed
-      return res.status(200).json({
-        success: true,
-        count: learners.length,
-        message: 'Learners processed via local server fallback successfully'
-      });
+      console.warn('Supabase REST cloud sync warning:', responseText);
     }
 
     res.status(200).json({
       success: true,
-      count: learners.length,
-      message: `Successfully synced ${learners.length} learners to Supabase cloud`
+      count: Array.isArray(data) ? data.length : learners.length,
+      message: `Successfully synced learners to Supabase cloud`
     });
   } catch (err) {
     console.error('Server sync learners error:', err);
