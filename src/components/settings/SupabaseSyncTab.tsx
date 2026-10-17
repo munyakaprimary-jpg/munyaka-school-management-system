@@ -8,7 +8,7 @@ import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, AlertCir
 import { supabase } from '@/integrations/supabase/client';
 import { getStoredLearners } from '@/utils/learnersStore';
 
-const SUPABASE_URL = 'https://dtuknieivdggjwpqveor.supabase.co';
+const SUPABASE_URL = 'https://zjopubqlwwawibjhwiv.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_TWQ4L8-kmS9zGmZYB19bYw_QlmxgAwO';
 
 export default function SupabaseSyncTab() {
