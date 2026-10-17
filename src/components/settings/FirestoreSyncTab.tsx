@@ -307,54 +307,50 @@ export default function FirestoreSyncTab() {
     setIsSyncingStreams(true);
 
     try {
-      // Define our school's exact 37 active streams
-      const prePrimaryGrades = ['PP1', 'PP2'];
-      const lowerPrimaryGrades = ['Grade 1', 'Grade 2', 'Grade 3'];
-      const upperPrimaryGrades = ['Grade 4', 'Grade 5', 'Grade 6'];
-      const juniorSchoolGrades = ['Grade 7', 'Grade 8', 'Grade 9'];
-
-      const streamNamesPP = ['East', 'West']; // 2 per grade * 2 grades = 4 streams
-      const streamNamesLower = ['North', 'South', 'East']; // 3 per grade * 3 grades = 9 streams
-      const streamNamesUpper = ['Alpha', 'Beta', 'Gamma', 'Delta']; // 4 per grade * 3 grades = 12 streams
-      const streamNamesJunior = ['North', 'South', 'East', 'West']; // 4 per grade * 3 grades = 12 streams
-      // Total: 4 + 9 + 12 + 12 = 37 streams
-
+      // 1. Read directly from our primary application database / local state (where custom stream names like RED, GREEN, BLUE, etc., are configured)
+      const config = readGradesAndStreams();
       const generatedStreams: any[] = [];
 
-      prePrimaryGrades.forEach(grade => {
-        streamNamesPP.forEach(stream => {
-          generatedStreams.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
+      // If configuration has gradeStreamMap, build stream records from actual configured local state
+      if (config && config.gradeStreamMap) {
+        Object.entries(config.gradeStreamMap).forEach(([matchKey, streams]) => {
+          // Find original grade name or format matchKey
+          const gradeName = config.grades.find(g => g.toLowerCase().replace(/\s+/g, '') === matchKey || g.toLowerCase() === matchKey) || matchKey.toUpperCase();
+          if (Array.isArray(streams)) {
+            streams.forEach(stream => {
+              if (stream) {
+                generatedStreams.push({
+                  grade: gradeName,
+                  name: stream,
+                  stream_name: stream,
+                  class_teacher: 'Unassigned'
+                });
+              }
+            });
+          }
         });
-      });
+      }
 
-      lowerPrimaryGrades.forEach(grade => {
-        streamNamesLower.forEach(stream => {
-          generatedStreams.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
+      // Fallback if no configured streams found in local state: use clean standard class names without any directional fallback mock names
+      if (generatedStreams.length === 0 && config && Array.isArray(config.grades)) {
+        config.grades.forEach(grade => {
+          ['BLUE', 'RED', 'GREEN'].forEach(stream => {
+            generatedStreams.push({
+              grade,
+              name: stream,
+              stream_name: stream,
+              class_teacher: 'Unassigned'
+            });
+          });
         });
-      });
-
-      upperPrimaryGrades.forEach(grade => {
-        streamNamesUpper.forEach(stream => {
-          generatedStreams.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
-        });
-      });
-
-      juniorSchoolGrades.forEach(grade => {
-        streamNamesJunior.forEach(stream => {
-          generatedStreams.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
-        });
-      });
-
-      // Clear any unused default streams from local storage and replace with our exact 37 streams
-      localStorage.setItem('munyaka_streams', JSON.stringify(generatedStreams));
-      localStorage.setItem('streams', JSON.stringify(generatedStreams));
+      }
 
       const batch = writeBatch(db);
       const uniqueDocIds = new Set<string>();
 
       generatedStreams.forEach((stream: any) => {
         const gradeVal = String(stream.grade || 'Grade 1').trim();
-        const streamNameVal = String(stream.name || stream.stream_name || 'East').trim();
+        const streamNameVal = String(stream.name || stream.stream_name || 'Blue').trim();
         const streamDocId = `${gradeVal}_${streamNameVal}`.toLowerCase().replace(/\s+/g, '_');
         
         uniqueDocIds.add(streamDocId);
@@ -378,7 +374,7 @@ export default function FirestoreSyncTab() {
       const uniqueSyncedCount = uniqueDocIds.size;
       const countToReport = streamsSnap.size ?? uniqueSyncedCount;
 
-      showSuccess(`Successfully synced ${countToReport} streams to 'streams' collection!`);
+      showSuccess(`Successfully synced ${countToReport} configured streams to 'streams' collection!`);
 
       await handleTestCloudTables();
 
