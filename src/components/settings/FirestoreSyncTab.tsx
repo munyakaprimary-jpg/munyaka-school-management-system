@@ -161,8 +161,9 @@ export default function FirestoreSyncTab() {
 
       if (transactions.length > 0) {
         transactions.forEach((tx: any, idx: number) => {
-          const studentAdmission = String(tx.admissionNumber || tx.admission_number || tx.studentAdmission || tx.studentId || tx.student || `ADM${idx + 1}`).trim();
-          const txId = String(tx.id || tx.transactionId || tx.ref || tx.receiptNo || `rec_${idx + 1}`).trim();
+          if (!tx) return;
+          const studentAdmission = String(tx?.admissionNumber || tx?.admission_number || tx?.studentAdmission || tx?.studentId || tx?.student || `ADM${idx + 1}`).trim();
+          const txId = String(tx?.id || tx?.transactionId || tx?.ref || tx?.receiptNo || `rec_${idx + 1}`).trim();
           
           // Generate unique document ID using clean composite format: fee_{student_admission_number}_{transaction_id or record_id} (lowercase, spaces replaced by underscores)
           const rawDocId = `fee_${studentAdmission}_${txId}`;
@@ -171,17 +172,17 @@ export default function FirestoreSyncTab() {
           recordsToSync.push({
             id: docId,
             admission_number: studentAdmission,
-            student_name: String(tx.studentName || tx.student || tx.learnerName || '').trim(),
-            grade: String(tx.grade || '').trim(),
-            stream: String(tx.stream || '').trim(),
-            amount: Number(tx.amount || tx.paid || 0),
-            balance: Number(tx.balance || 0),
-            total_fee: Number(tx.total || tx.totalFee || 0),
-            status: String(tx.status || 'Paid').trim(),
-            payment_method: String(tx.method || tx.paymentMethod || 'cash').toLowerCase(),
-            transaction_ref: String(tx.ref || tx.reference || txId).trim(),
-            payment_date: String(tx.date || tx.paidAt || new Date().toISOString().split('T')[0]).trim(),
-            fee_structures: feeStructures,
+            student_name: String(tx?.studentName || tx?.student || tx?.learnerName || '').trim(),
+            grade: String(tx?.grade || '').trim(),
+            stream: String(tx?.stream || '').trim(),
+            amount: Number(tx?.amount || tx?.paid || 0),
+            balance: Number(tx?.balance || 0),
+            total_fee: Number(tx?.total || tx?.totalFee || 0),
+            status: String(tx?.status || 'Paid').trim(),
+            payment_method: String(tx?.method || tx?.paymentMethod || 'cash').toLowerCase(),
+            transaction_ref: String(tx?.ref || tx?.reference || txId).trim(),
+            payment_date: String(tx?.date || tx?.paidAt || new Date().toISOString().split('T')[0]).trim(),
+            fee_structures: feeStructures || [],
             synced_at: new Date().toISOString()
           });
         });
@@ -190,21 +191,22 @@ export default function FirestoreSyncTab() {
       // If transactions array is empty, map learners to create fee records
       if (recordsToSync.length === 0 && learners.length > 0) {
         learners.forEach((l: any, idx: number) => {
-          const studentAdmission = String(l.admissionNumber || l.admission_number || l.id || `adm_${idx + 1}`).trim();
+          if (!l) return;
+          const studentAdmission = String(l?.admissionNumber || l?.admission_number || l?.id || `adm_${idx + 1}`).trim();
           const txId = `bal_${idx + 1}`;
           const rawDocId = `fee_${studentAdmission}_${txId}`;
           const docId = rawDocId.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
 
-          const paidAmount = Number(l.feePaid || l.paid || 0);
-          const totalAmount = Number(l.feeTotal || l.total || 25000);
-          const balanceAmount = Number(l.feeBalance ?? l.balance ?? (totalAmount - paidAmount));
+          const paidAmount = Number(l?.feePaid || l?.paid || 0);
+          const totalAmount = Number(l?.feeTotal || l?.total || 25000);
+          const balanceAmount = Number(l?.feeBalance ?? l?.balance ?? (totalAmount - paidAmount));
 
           recordsToSync.push({
             id: docId,
             admission_number: studentAdmission,
-            student_name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
-            grade: String(l.grade || 'Grade 1').trim(),
-            stream: String(l.stream || '').trim(),
+            student_name: String(l?.name || `${l?.firstName || ''} ${l?.lastName || ''}`).trim() || 'Learner',
+            grade: String(l?.grade || 'Grade 1').trim(),
+            stream: String(l?.stream || '').trim(),
             amount: paidAmount,
             balance: balanceAmount,
             total_fee: totalAmount,
@@ -212,7 +214,7 @@ export default function FirestoreSyncTab() {
             payment_method: 'mpesa',
             transaction_ref: `TXREF_${Math.floor(100000 + Math.random() * 900000)}`,
             payment_date: new Date().toISOString().split('T')[0],
-            fee_structures: feeStructures,
+            fee_structures: feeStructures || [],
             synced_at: new Date().toISOString()
           });
         });
