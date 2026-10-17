@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, AlertCircle } from 'lucide-react';
 import { db } from '@/lib/firebaseClient';
-import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { getStoredLearners } from '@/utils/learnersStore';
 
 export default function SupabaseSyncTab() {
@@ -77,13 +77,18 @@ export default function SupabaseSyncTab() {
       console.log("FIREBASE SYNC PAYLOAD:", learnersPayload);
 
       if (learnersPayload.length > 0) {
-        for (const learner of learnersPayload) {
-          await setDoc(doc(db, 'learners', learner.id), learner, { merge: true });
-        }
+        const batch = writeBatch(db);
+        
+        learnersPayload.forEach((learner) => {
+          const ref = doc(db, 'learners', String(learner.id));
+          batch.set(ref, learner, { merge: true });
+        });
+
+        await batch.commit();
 
         setLastSynced(new Date());
-        alert(`Successfully synced ${learnersPayload.length} learners to Firebase Firestore!`);
-        showSuccess(`Successfully synced ${learnersPayload.length} learners to Firebase Firestore!`);
+        alert(`Successfully batch-synced ${learnersPayload.length} records!`);
+        showSuccess(`Successfully batch-synced ${learnersPayload.length} records to Firebase Firestore!`);
         await handleTestCloudTables();
       } else {
         alert("No local learners found to sync.");
