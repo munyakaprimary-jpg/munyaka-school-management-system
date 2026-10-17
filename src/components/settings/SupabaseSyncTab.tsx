@@ -53,6 +53,7 @@ export default function SupabaseSyncTab() {
   }
 
   async function handleSyncToCloud() {
+    if (isSyncing) return;
     setIsSyncing(true);
     try {
       const storedStudents = getStoredLearners();
@@ -89,15 +90,17 @@ export default function SupabaseSyncTab() {
         setLastSynced(new Date());
         alert(`Successfully batch-synced ${learnersPayload.length} records!`);
         showSuccess(`Successfully batch-synced ${learnersPayload.length} records to Firebase Firestore!`);
-        await handleTestCloudTables();
+        
+        // Trigger collection check without blocking the finally reset
+        handleTestCloudTables().catch(console.error);
       } else {
         alert("No local learners found to sync.");
       }
     } catch (err: any) {
+      console.error('Firestore sync error:', err);
       const errMsg = err?.message || 'Firebase sync failed.';
-      alert(`Sync Error: ${errMsg}`);
+      alert(`Sync failed: ${errMsg}`);
       showError(errMsg);
-      await handleTestCloudTables();
     } finally {
       setIsSyncing(false);
     }
