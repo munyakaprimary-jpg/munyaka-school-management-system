@@ -245,66 +245,55 @@ export default function FirestoreSyncTab() {
     setIsSyncingStreams(true);
 
     try {
-      const rawData = localStorage.getItem('munyaka_streams') || localStorage.getItem('streams') || localStorage.getItem('grades_and_streams') || '[]';
-      let localStreams: any[] = [];
-      try {
-        const parsed = JSON.parse(rawData);
-        if (Array.isArray(parsed)) {
-          localStreams = parsed;
-        } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.streams)) {
-          // Handle { grades: [...], streams: [...] } or grade-stream structure
-          localStreams = parsed.streams;
-        }
-      } catch {}
+      // Define our school's exact 37 active streams
+      const prePrimaryGrades = ['PP1', 'PP2'];
+      const lowerPrimaryGrades = ['Grade 1', 'Grade 2', 'Grade 3'];
+      const upperPrimaryGrades = ['Grade 4', 'Grade 5', 'Grade 6'];
+      const juniorSchoolGrades = ['Grade 7', 'Grade 8', 'Grade 9'];
 
-      // If no explicit streams found or empty, generate all 37 required streams across Pre-Primary, Lower Primary, Upper Primary, and Junior School
-      if (!localStreams || localStreams.length === 0) {
-        const prePrimaryGrades = ['PP1', 'PP2'];
-        const lowerPrimaryGrades = ['Grade 1', 'Grade 2', 'Grade 3'];
-        const upperPrimaryGrades = ['Grade 4', 'Grade 5', 'Grade 6'];
-        const juniorSchoolGrades = ['Grade 7', 'Grade 8', 'Grade 9'];
+      const streamNamesPP = ['East', 'West']; // 2 per grade * 2 grades = 4 streams
+      const streamNamesLower = ['North', 'South', 'East']; // 3 per grade * 3 grades = 9 streams
+      const streamNamesUpper = ['Alpha', 'Beta', 'Gamma', 'Delta']; // 4 per grade * 3 grades = 12 streams
+      const streamNamesJunior = ['North', 'South', 'East', 'West']; // 4 per grade * 3 grades = 12 streams
+      // Total: 4 + 9 + 12 + 12 = 37 streams
 
-        const streamNamesPP = ['East', 'West']; // 2 per grade * 2 grades = 4 streams
-        const streamNamesLower = ['North', 'South', 'East']; // 3 per grade * 3 grades = 9 streams
-        const streamNamesUpper = ['Alpha', 'Beta', 'Gamma', 'Delta']; // 4 per grade * 3 grades = 12 streams
-        const streamNamesJunior = ['North', 'South', 'East', 'West']; // 4 per grade * 3 grades = 12 streams
-        // Total: 4 + 9 + 12 + 12 = 37 streams!
+      const generatedStreams: any[] = [];
 
-        const generated: any[] = [];
-
-        prePrimaryGrades.forEach(grade => {
-          streamNamesPP.forEach(stream => {
-            generated.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
-          });
+      prePrimaryGrades.forEach(grade => {
+        streamNamesPP.forEach(stream => {
+          generatedStreams.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
         });
+      });
 
-        lowerPrimaryGrades.forEach(grade => {
-          streamNamesLower.forEach(stream => {
-            generated.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
-          });
+      lowerPrimaryGrades.forEach(grade => {
+        streamNamesLower.forEach(stream => {
+          generatedStreams.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
         });
+      });
 
-        upperPrimaryGrades.forEach(grade => {
-          streamNamesUpper.forEach(stream => {
-            generated.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
-          });
+      upperPrimaryGrades.forEach(grade => {
+        streamNamesUpper.forEach(stream => {
+          generatedStreams.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
         });
+      });
 
-        juniorSchoolGrades.forEach(grade => {
-          streamNamesJunior.forEach(stream => {
-            generated.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
-          });
+      juniorSchoolGrades.forEach(grade => {
+        streamNamesJunior.forEach(stream => {
+          generatedStreams.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
         });
+      });
 
-        localStreams = generated;
-      }
+      // Clear any unused default streams from local storage and replace with our exact 37 streams
+      localStorage.setItem('munyaka_streams', JSON.stringify(generatedStreams));
+      localStorage.setItem('streams', JSON.stringify(generatedStreams));
+      localStorage.setItem('grades_and_streams', JSON.stringify({ grades: [...prePrimaryGrades, ...lowerPrimaryGrades, ...upperPrimaryGrades, ...juniorSchoolGrades], streams: generatedStreams }));
 
       const batch = writeBatch(db);
       const uniqueDocIds = new Set<string>();
 
-      localStreams.forEach((stream: any, index: number) => {
-        const gradeVal = String(stream.grade || stream.classLevel || 'Grade 1').trim();
-        const streamNameVal = String(stream.name || stream.stream_name || stream.stream || 'East').trim();
+      generatedStreams.forEach((stream: any) => {
+        const gradeVal = String(stream.grade || 'Grade 1').trim();
+        const streamNameVal = String(stream.name || stream.stream_name || 'East').trim();
         const streamDocId = `${gradeVal}_${streamNameVal}`.toLowerCase().replace(/\s+/g, '_');
         
         uniqueDocIds.add(streamDocId);
@@ -314,7 +303,7 @@ export default function FirestoreSyncTab() {
           grade: gradeVal,
           name: streamNameVal,
           stream_name: streamNameVal,
-          class_teacher: String(stream.class_teacher || stream.teacher || 'Unassigned').trim(),
+          class_teacher: String(stream.class_teacher || 'Unassigned').trim(),
           updated_at: new Date().toISOString()
         };
 
