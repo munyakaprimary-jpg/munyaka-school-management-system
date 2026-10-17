@@ -60,7 +60,7 @@ export default function FirestoreSyncTab() {
       } catch {}
 
       try {
-        const streamsSnap = await getDocs(collection(db, 'streams'));
+        const streamsSnap = await getDocs(collection(db, 'streams_classes'));
         newCounts.streams = streamsSnap.size;
         const streamsList = streamsSnap.docs.map(doc => ({
           id: doc.id,
@@ -250,86 +250,69 @@ export default function FirestoreSyncTab() {
     }
   }
 
-  async function handleSyncStreams() {
+  const handleSyncStreams = async () => {
     if (isSyncingStreams) return;
     setIsSyncingStreams(true);
 
     try {
-      // Gather local streams/classes or derive them from stored learners
-      const storedStudents = getStoredLearners();
-      const streamsMap = new Map<string, any>();
+      const rawData = localStorage.getItem('munyaka_streams') || localStorage.getItem('streams') || '[]';
+      let localStreams = [];
+      try {
+        localStreams = JSON.parse(rawData);
+      } catch {}
 
-      // Extract unique grade/stream combinations
-      storedStudents.forEach((l: any) => {
-        const grade = String(l.grade || l.gradeLevel || 'Grade 1').trim();
-        const stream = String(l.stream || 'East').trim();
-        const key = `${grade}_${stream}`;
-        if (!streamsMap.has(key)) {
-          streamsMap.set(key, {
-            id: key.toLowerCase().replace(/\s+/g, '_'),
-            grade,
-            stream_name: stream,
-            class_teacher: l.classTeacher || l.teacher || 'Unassigned',
-            updated_at: new Date().toISOString()
-          });
-        }
-      });
-
-      // Also check if there are explicitly saved streams in localStorage
-      const localStreamsRaw = localStorage.getItem('munyaka_streams') || localStorage.getItem('streams');
-      if (localStreamsRaw) {
-        try {
-          const parsed = JSON.parse(localStreamsRaw);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((s: any) => {
-              const grade = String(s.grade || s.gradeLevel || 'Grade 1').trim();
-              const stream = String(s.stream || s.name || 'East').trim();
-              const key = `${grade}_${stream}`;
-              streamsMap.set(key, {
-                id: s.id || key.toLowerCase().replace(/\s+/g, '_'),
-                grade,
-                stream_name: stream,
-                class_teacher: s.classTeacher || s.teacher || 'Unassigned',
-                updated_at: new Date().toISOString()
-              });
+      if (!localStreams || !Array.isArray(localStreams) || localStreams.length === 0) {
+        // Fallback to derive streams from stored learners if local streams storage is empty
+        const storedStudents = getStoredLearners();
+        const streamsMap = new Map<string, any>();
+        storedStudents.forEach((l: any) => {
+          const grade = String(l.grade || l.gradeLevel || 'Grade 1').trim();
+          const stream = String(l.stream || 'East').trim();
+          const key = `${grade}_${stream}`;
+          if (!streamsMap.has(key)) {
+            streamsMap.set(key, {
+              id: key.toLowerCase().replace(/\s+/g, '_'),
+              grade,
+              stream_name: stream,
+              class_teacher: l.classTeacher || l.teacher || 'Unassigned',
+              updated_at: new Date().toISOString()
             });
           }
-        } catch {}
+        });
+        localStreams = Array.from(streamsMap.values());
       }
 
-      const streamsPayload = Array.from(streamsMap.values());
-      if (streamsPayload.length === 0) {
-        alert('No local streams or classes found to sync.');
+      if (!localStreams || localStreams.length === 0) {
+        alert('No local stream records found to sync.');
         return;
       }
 
       const batch = writeBatch(db);
-      streamsPayload.forEach((streamObj) => {
-        const docRef = doc(db, 'streams', streamObj.id);
-        batch.set(docRef, streamObj, { merge: true });
+      localStreams.forEach((stream: any, index: number) => {
+        const docId = String(stream.id || `${stream.grade || 'grade'}_${stream.stream_name || stream.name || index}`);
+        const docRef = doc(db, 'streams_classes', docId);
+        batch.set(docRef, stream, { merge: true });
       });
 
       await batch.commit();
+      alert(`Successfully synced ${localStreams.length} streams to cloud!`);
+      showSuccess(`Successfully synced ${localStreams.length} streams to cloud!`);
 
-      setLastSynced(new Date());
-      showSuccess(`Successfully synced ${streamsPayload.length} streams & classes to Firestore!`);
-
-      await fetchCloudStreams();
+      // Safely refresh metrics without blocking state reset
+      handleTestCloudTables().catch(console.error);
 
     } catch (err: any) {
-      console.error('Firestore streams sync error:', err);
-      const msg = err.message || 'Unknown error';
-      setErrorMessage(msg);
-      alert(`Streams sync failed: ${msg}`);
-      showError(msg);
+      console.error('Streams sync error:', err);
+      alert(`Sync failed: ${err.message || 'Unknown error'}`);
+      showError(err.message || 'Unknown error');
     } finally {
-      setIsSyncingStreams(false);
+      setIsSyncingStreams(false); // <--- GUARANTEES the button stops spinning!
     }
-  }
+  };
 
   async function fetchCloudStreams() {
     try {
-      const streamsSnap = await getDocs(collection(db, 'streams'));
+      const streamsSnap = await getDocs(collection(db, 'streams_classes'));
       const docsList = streamsSnap.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -523,7 +506,7 @@ export default function FirestoreSyncTab() {
                           <TableCell className="p-2 font-semibold text-slate-900">{s.grade}</TableCell>
                           <TableCell className="p-2">
                             <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                              {s.stream_name || s.stream}
+                              {s.stream_name || s.stream || s.name}
                             </Badge>
                           </TableCell>
                           <TableCell className="p-2 text-muted-foreground text-xs">{s.class_teacher || s.teacher || 'Unassigned'}</TableCell>
