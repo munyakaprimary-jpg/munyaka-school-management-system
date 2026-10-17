@@ -226,7 +226,7 @@ export function useSupabaseSync() {
         updated_at: new Date().toISOString()
       };
 
-      const { error } = await supabase.from('learners').upsert(payload, { onConflict: 'admission_number' });
+      const { error } = await supabase.from('learners').upsert(payload, { onConflict: 'id' });
       if (error) throw error;
       window.dispatchEvent(new Event('students-updated'));
       return true;

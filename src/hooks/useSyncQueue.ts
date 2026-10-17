@@ -67,7 +67,7 @@ export async function processBatchSyncExport() {
         stream: l.stream || l.currentStream || 'North',
         updated_at: new Date().toISOString()
       }));
-      const { error } = await supabase.from('learners').upsert(learnerPayload, { onConflict: 'admission_number' });
+      const { error } = await supabase.from('learners').upsert(learnerPayload, { onConflict: 'id' });
       if (error) {
         console.error('Learners batch upsert error:', error);
       } else {
