@@ -8,9 +8,6 @@ import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, AlertCir
 import { supabase } from '@/integrations/supabase/client';
 import { getStoredLearners } from '@/utils/learnersStore';
 
-const SUPABASE_URL = 'https://dtuknieivdggjwpqveor.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_TWQ4L8-kmS9zGmZYB19bYw_QlmxgAwO';
-
 export default function SupabaseSyncTab() {
   const { isSyncing, lastSynced, syncError } = useSupabaseSync();
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
@@ -90,21 +87,13 @@ export default function SupabaseSyncTab() {
       console.log("SYNC PAYLOAD:", learnersPayload);
 
       if (learnersPayload.length > 0) {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/learners`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Prefer': 'resolution=merge-duplicates'
-          },
-          body: JSON.stringify(learnersPayload)
-        });
+        const { data, error } = await supabase
+          .from('learners')
+          .upsert(learnersPayload, { onConflict: 'id' });
 
-        if (!response.ok) {
-          const errText = await response.text();
-          alert(`Sync Error: ${errText}`);
-          showError(errText);
+        if (error) {
+          alert(`Sync Error: ${error.message}`);
+          showError(error.message);
           return;
         } else {
           alert(`Successfully synced ${learnersPayload.length} learners!`);
