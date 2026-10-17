@@ -259,35 +259,6 @@ export default function FirestoreSyncTab() {
       setIsSyncingFees(false);
     }
   }
-      }
-
-      const batch = writeBatch(db);
-
-      learnersPayload.forEach((learner) => {
-        const docId = String(learner.id || learner.admission_number || Date.now());
-        const docRef = doc(db, 'learners', docId);
-        batch.set(docRef, learner, { merge: true });
-      });
-
-      await batch.commit();
-
-      setLastSynced(new Date());
-      alert(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
-      showSuccess(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
-
-      // Call count test safely without blocking state cleanup
-      handleTestCloudTables().catch(console.error);
-
-    } catch (err: any) {
-      console.error('Learners sync error:', err);
-      const msg = err.message || 'Unknown error';
-      setErrorMessage(msg);
-      alert(`Sync failed: ${msg}`);
-      showError(msg);
-    } finally {
-      setIsSyncing(false); // ALWAYS runs to stop the spinner!
-    }
-  }
 
   async function handleSyncAssessmentMarks() {
     if (isSyncingAssessments) return;
