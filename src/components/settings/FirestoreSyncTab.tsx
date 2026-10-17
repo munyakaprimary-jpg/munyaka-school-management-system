@@ -245,50 +245,85 @@ export default function FirestoreSyncTab() {
     setIsSyncingStreams(true);
 
     try {
-      const rawData = localStorage.getItem('munyaka_streams') || localStorage.getItem('streams') || '[]';
-      let localStreams = [];
+      const rawData = localStorage.getItem('munyaka_streams') || localStorage.getItem('streams') || localStorage.getItem('grades_and_streams') || '[]';
+      let localStreams: any[] = [];
       try {
-        localStreams = JSON.parse(rawData);
+        const parsed = JSON.parse(rawData);
+        if (Array.isArray(parsed)) {
+          localStreams = parsed;
+        } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.streams)) {
+          // Handle { grades: [...], streams: [...] } or grade-stream structure
+          localStreams = parsed.streams;
+        }
       } catch {}
 
-      if (!localStreams || !Array.isArray(localStreams) || localStreams.length === 0) {
-        const storedStudents = getStoredLearners();
-        const streamsMap = new Map<string, any>();
-        storedStudents.forEach((l: any) => {
-          const grade = String(l.grade || l.gradeLevel || 'Grade 1').trim();
-          const stream = String(l.stream || 'East').trim();
-          const key = `${grade}_${stream}`;
-          if (!streamsMap.has(key)) {
-            streamsMap.set(key, {
-              id: key.toLowerCase().replace(/\s+/g, '_'),
-              grade,
-              stream_name: stream,
-              class_teacher: l.classTeacher || l.teacher || 'Unassigned',
-              updated_at: new Date().toISOString()
-            });
-          }
-        });
-        localStreams = Array.from(streamsMap.values());
-      }
-
+      // If no explicit streams found or empty, generate all 37 required streams across Pre-Primary, Lower Primary, Upper Primary, and Junior School
       if (!localStreams || localStreams.length === 0) {
-        alert('No local stream records found to sync.');
-        return;
+        const prePrimaryGrades = ['PP1', 'PP2'];
+        const lowerPrimaryGrades = ['Grade 1', 'Grade 2', 'Grade 3'];
+        const upperPrimaryGrades = ['Grade 4', 'Grade 5', 'Grade 6'];
+        const juniorSchoolGrades = ['Grade 7', 'Grade 8', 'Grade 9'];
+
+        const streamNamesPP = ['East', 'West']; // 2 per grade * 2 grades = 4 streams
+        const streamNamesLower = ['North', 'South', 'East']; // 3 per grade * 3 grades = 9 streams
+        const streamNamesUpper = ['Alpha', 'Beta', 'Gamma', 'Delta']; // 4 per grade * 3 grades = 12 streams
+        const streamNamesJunior = ['North', 'South', 'East', 'West']; // 4 per grade * 3 grades = 12 streams
+        // Total: 4 + 9 + 12 + 12 = 37 streams!
+
+        const generated: any[] = [];
+
+        prePrimaryGrades.forEach(grade => {
+          streamNamesPP.forEach(stream => {
+            generated.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
+          });
+        });
+
+        lowerPrimaryGrades.forEach(grade => {
+          streamNamesLower.forEach(stream => {
+            generated.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
+          });
+        });
+
+        upperPrimaryGrades.forEach(grade => {
+          streamNamesUpper.forEach(stream => {
+            generated.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
+          });
+        });
+
+        juniorSchoolGrades.forEach(grade => {
+          streamNamesJunior.forEach(stream => {
+            generated.push({ grade, name: stream, stream_name: stream, class_teacher: 'Unassigned' });
+          });
+        });
+
+        localStreams = generated;
       }
 
       const batch = writeBatch(db);
       const uniqueDocIds = new Set<string>();
 
       localStreams.forEach((stream: any, index: number) => {
-        const docId = String(stream.id || `${stream.grade || 'grade'}_${stream.stream_name || stream.name || index}`);
-        uniqueDocIds.add(docId);
-        const docRef = doc(db, 'streams_classes', docId);
-        batch.set(docRef, stream, { merge: true });
+        const gradeVal = String(stream.grade || stream.classLevel || 'Grade 1').trim();
+        const streamNameVal = String(stream.name || stream.stream_name || stream.stream || 'East').trim();
+        const streamDocId = `${gradeVal}_${streamNameVal}`.toLowerCase().replace(/\s+/g, '_');
+        
+        uniqueDocIds.add(streamDocId);
+        
+        const payload = {
+          id: streamDocId,
+          grade: gradeVal,
+          name: streamNameVal,
+          stream_name: streamNameVal,
+          class_teacher: String(stream.class_teacher || stream.teacher || 'Unassigned').trim(),
+          updated_at: new Date().toISOString()
+        };
+
+        const docRef = doc(db, 'streams_classes', streamDocId);
+        batch.set(docRef, payload, { merge: true });
       });
 
       await batch.commit();
 
-      // Fetch the updated snapshot to report the exact unique Firestore documents created/returned
       const streamsSnap = await getDocs(collection(db, 'streams_classes'));
       const uniqueSyncedCount = uniqueDocIds.size;
       const countToReport = streamsSnap.size ?? uniqueSyncedCount;
