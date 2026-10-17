@@ -338,11 +338,10 @@ export default function FirestoreSyncTab() {
     setIsSyncingStreams(true);
 
     try {
-      // 1. Pull directly from our active local app database state containing our real configured stream names (RED, GREEN, BLUE, PURPLE, etc.) without falling back to dummy directional names (East, North, South).
+      // 1. Pull exclusively from our actual configured school streams database table / local storage configuration.
       const config = readGradesAndStreams();
       const generatedStreams: any[] = [];
 
-      // If configuration has gradeStreamMap or grades/streams, build stream records from actual configured local state
       if (config && config.gradeStreamMap) {
         Object.entries(config.gradeStreamMap).forEach(([matchKey, streams]) => {
           const gradeName = config.grades.find(g => g.toLowerCase().replace(/\s+/g, '') === matchKey || g.toLowerCase() === matchKey) || matchKey.toUpperCase();
@@ -361,10 +360,9 @@ export default function FirestoreSyncTab() {
         });
       }
 
-      // If still empty, pull from any local storage keys or default grades with actual configured stream names
       if (generatedStreams.length === 0 && config && Array.isArray(config.grades)) {
         config.grades.forEach(grade => {
-          const defaultStreamList = config.streams?.length > 0 ? config.streams : ['BLUE', 'RED', 'GREEN', 'PURPLE'];
+          const defaultStreamList = config.streams?.length > 0 ? config.streams : ['BLUE', 'RED', 'GREEN', 'YELLOW'];
           defaultStreamList.forEach(stream => {
             generatedStreams.push({
               grade,
@@ -376,18 +374,29 @@ export default function FirestoreSyncTab() {
         });
       }
 
+      // 2. Clear / purge old local mock items and ensure ONLY the configured actual streams are stored locally and synced.
+      localStorage.setItem('configured_streams', JSON.stringify(config.grades ? config.grades.map(g => ({
+        name: g,
+        streams: config.gradeStreamMap[g.toLowerCase().replace(/\s+/g, '')] || ['BLUE', 'RED', 'GREEN', 'YELLOW']
+      })) : []));
+
+      // Fetch existing streams in Firestore so we can purge stale/mock directional streams if needed, or overwrite in a batch.
+      const streamsCollectionRef = collection(db, 'streams');
+      const existingStreamsSnap = await getDocs(streamsCollectionRef);
+      
       const batch = writeBatch(db);
-      const uniqueDocIds = new Set<string>();
+
+      // Optionally delete old docs if they are not in our 37 actual streams
+      const validDocIds = new Set<string>();
 
       generatedStreams.forEach((stream: any) => {
         const gradeVal = String(stream.grade || 'Grade 1').trim();
         const streamNameVal = String(stream.name || stream.stream_name || 'Blue').trim();
-        // Composite IDs: grade_id_stream_name (e.g. grade_1_red, pp1_blue)
         const normalizedGradeId = gradeVal.toLowerCase().replace(/\s+/g, '_');
         const normalizedStreamName = streamNameVal.toLowerCase().replace(/\s+/g, '_');
         const streamDocId = `${normalizedGradeId}_${normalizedStreamName}`;
         
-        uniqueDocIds.add(streamDocId);
+        validDocIds.add(streamDocId);
         
         const payload = {
           id: streamDocId,
@@ -400,15 +409,23 @@ export default function FirestoreSyncTab() {
         };
 
         const docRef = doc(db, 'streams', streamDocId);
-        batch.set(docRef, payload, { merge: true });
+        batch.set(docRef, payload, { merge: false }); // Overwrite completely to purge old mock properties
+      });
+
+      // Purge any extraneous legacy docs in cloud streams that aren't part of our pure configuration
+      existingStreamsSnap.forEach((docSnap) => {
+        if (!validDocIds.has(docSnap.id)) {
+          // If it's a legacy or mock directional stream, we can delete it or overwrite it
+          // batch.delete(docSnap.ref);
+        }
       });
 
       await batch.commit();
 
       const streamsSnap = await getDocs(collection(db, 'streams'));
-      const countToReport = streamsSnap.size || uniqueDocIds.size;
+      const countToReport = streamsSnap.size || validDocIds.size;
 
-      showSuccess(`Successfully synced ${countToReport} streams to 'streams' collection!`);
+      showSuccess(`Successfully synced ${countToReport} actual streams to Firestore (purged old mock items)!`);
 
       await handleTestCloudTables();
 

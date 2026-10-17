@@ -31,29 +31,29 @@ export const initialSeedData = {
   "grades": [
     { "id": "g_pp1", "name": "PP1", "streams": ["BLUE", "GREEN", "RED"] },
     { "id": "g_pp2", "name": "PP2", "streams": ["BLUE", "GREEN", "RED"] },
-    { "id": "g_1", "name": "Grade 1", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_2", "name": "Grade 2", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_3", "name": "Grade 3", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_4", "name": "Grade 4", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_5", "name": "Grade 5", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_6", "name": "Grade 6", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_7", "name": "Grade 7", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] },
-    { "id": "g_8", "name": "Grade 8", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] },
-    { "id": "g_9", "name": "Grade 9", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] }
+    { "id": "g_1", "name": "Grade 1", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_2", "name": "Grade 2", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_3", "name": "Grade 3", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_4", "name": "Grade 4", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_5", "name": "Grade 5", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_6", "name": "Grade 6", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_7", "name": "Grade 7", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_8", "name": "Grade 8", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_9", "name": "Grade 9", "streams": ["RED", "GREEN", "YELLOW"] }
   ],
-  "streams": ["BLUE", "GREEN", "RED", "YELLOW", "MERCURY", "NEPTUNE", "VENUS", "EARTH"],
+  "streams": ["BLUE", "RED", "GREEN", "YELLOW"],
   "configured_streams": [
     { "id": "g_pp1", "name": "PP1", "streams": ["BLUE", "GREEN", "RED"] },
     { "id": "g_pp2", "name": "PP2", "streams": ["BLUE", "GREEN", "RED"] },
-    { "id": "g_1", "name": "Grade 1", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_2", "name": "Grade 2", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_3", "name": "Grade 3", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_4", "name": "Grade 4", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_5", "name": "Grade 5", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_6", "name": "Grade 6", "streams": ["BLUE", "GREEN", "RED", "YELLOW"] },
-    { "id": "g_7", "name": "Grade 7", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] },
-    { "id": "g_8", "name": "Grade 8", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] },
-    { "id": "g_9", "name": "Grade 9", "streams": ["MERCURY", "NEPTUNE", "VENUS", "EARTH"] }
+    { "id": "g_1", "name": "Grade 1", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_2", "name": "Grade 2", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_3", "name": "Grade 3", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_4", "name": "Grade 4", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_5", "name": "Grade 5", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_6", "name": "Grade 6", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_7", "name": "Grade 7", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_8", "name": "Grade 8", "streams": ["RED", "GREEN", "YELLOW"] },
+    { "id": "g_9", "name": "Grade 9", "streams": ["RED", "GREEN", "YELLOW"] }
   ],
   "learners": [
     {

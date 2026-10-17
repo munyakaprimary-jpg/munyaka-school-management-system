@@ -4,8 +4,8 @@
  * replacing old compass placeholders.
  */
 
-export const STANDARD_STREAMS = ['BLUE', 'RED', 'GREEN', 'YELLOW', 'Alpha', 'Beta'];
-export const DEFAULT_STREAM = 'BLUE';
+export const STANDARD_STREAMS = ['RED', 'GREEN', 'YELLOW', 'BLUE'];
+export const DEFAULT_STREAM = 'RED';
 
 export function getActiveStreams(): string[] {
   try {
@@ -14,20 +14,26 @@ export function getActiveStreams(): string[] {
       if (custom) {
         const parsed = JSON.parse(custom);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // If it's an array of objects (like grades config)
           if (typeof parsed[0] === 'object' && parsed[0] !== null) {
             const streamsSet = new Set<string>();
             parsed.forEach((item: any) => {
               const rawStreams = item.streams || item.classes || [];
               rawStreams.forEach((s: any) => {
                 const sName = typeof s === 'string' ? s : (s?.name ?? s?.label);
-                if (sName) streamsSet.add(String(sName).toUpperCase());
+                if (sName) {
+                  const upper = String(sName).toUpperCase();
+                  // Exclude directional placeholders (East, West, North, South, Alpha, Beta, Delta, Gamma)
+                  if (!['EAST', 'WEST', 'NORTH', 'SOUTH', 'ALPHA', 'BETA', 'DELTA', 'GAMMA'].includes(upper)) {
+                    streamsSet.add(upper);
+                  }
+                }
               });
             });
             if (streamsSet.size > 0) return Array.from(streamsSet);
           } else {
-            // Array of strings
-            return parsed.map((s: any) => String(s).toUpperCase());
+            return parsed
+              .map((s: any) => String(s).toUpperCase())
+              .filter((s: string) => !['EAST', 'WEST', 'NORTH', 'SOUTH', 'ALPHA', 'BETA', 'DELTA', 'GAMMA'].includes(s));
           }
         }
       }
