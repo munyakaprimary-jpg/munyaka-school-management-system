@@ -17,44 +17,54 @@ export default function SupabaseSyncTab() {
   const [tableCounts, setTableCounts] = useState<{ learners: number; marks: number; attendance: number; streams: number } | null>(null);
   const [cloudLearnersList, setCloudLearnersList] = useState<any[]>([]);
 
+  const [isCheckingCollections, setIsCheckingCollections] = useState(false);
+  const [learnersCount, setLearnersCount] = useState(0);
+
   async function handleTestCloudTables() {
-    console.log("--- EXECUTING FIREBASE FIRESTORE TABLE TEST ---");
-    setTestStatus('testing');
-    
-    const newCounts = {
-      learners: 0,
-      marks: 0,
-      attendance: 0,
-      streams: 0
-    };
-
+    setIsCheckingCollections(true);
     try {
-      const learnersSnap = await getDocs(collection(db, 'learners'));
-      newCounts.learners = learnersSnap.size;
-      const learnersData = learnersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setCloudLearnersList(learnersData);
+      const learnersRef = collection(db, 'learners');
+      const learnersSnap = await getDocs(learnersRef);
+      console.log('Fetched learners count from Firestore:', learnersSnap.size);
+      setLearnersCount(learnersSnap.size);
+      
+      // Convert docs to array for the preview table
+      const docsList = learnersSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCloudLearnersList(docsList);
 
-      const marksSnap = await getDocs(collection(db, 'assessment_marks'));
-      newCounts.marks = marksSnap.size;
+      const newCounts = {
+        learners: learnersSnap.size,
+        marks: 0,
+        attendance: 0,
+        streams: 0
+      };
 
-      const attendanceSnap = await getDocs(collection(db, 'attendance'));
-      newCounts.attendance = attendanceSnap.size;
-
-      const streamsSnap = await getDocs(collection(db, 'streams'));
-      newCounts.streams = streamsSnap.size;
+      try {
+        const marksSnap = await getDocs(collection(db, 'assessment_marks'));
+        newCounts.marks = marksSnap.size;
+        const attendanceSnap = await getDocs(collection(db, 'attendance'));
+        newCounts.attendance = attendanceSnap.size;
+        const streamsSnap = await getDocs(collection(db, 'streams'));
+        newCounts.streams = streamsSnap.size;
+      } catch {}
 
       setTableCounts(newCounts);
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
     } catch (err: any) {
-      console.warn('Firebase test connection note:', err);
+      console.error('Error fetching cloud collections:', err);
+      alert(`Failed to check cloud collections: ${err.message}`);
       // Fallback to local stored count if offline
       const stored = getStoredLearners();
-      newCounts.learners = stored.length;
+      setLearnersCount(stored.length);
       setCloudLearnersList(stored);
-      setTableCounts(newCounts);
-      setTestStatus('success');
-      showSuccess('Connected to Firebase Firestore project.');
+      setTableCounts({ learners: stored.length, marks: 0, attendance: 0, streams: 0 });
+      setTestStatus('error');
+    } finally {
+      setIsCheckingCollections(false);
     }
   }
 
@@ -178,15 +188,15 @@ export default function SupabaseSyncTab() {
               <h3 className="font-bold text-base flex items-center gap-2">
                 <Database className="text-amber-400" size={18} /> Firestore Cloud Collections Status
               </h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleTestCloudTables}
-                disabled={testStatus === 'testing'}
+                disabled={isCheckingCollections}
                 className="bg-slate-800 text-white border-slate-700 hover:bg-slate-700"
               >
-                <RefreshCw size={14} className={`mr-1.5 ${testStatus === 'testing' ? 'animate-spin' : ''}`} />
-                {testStatus === 'testing' ? 'Checking Collections...' : 'Test Cloud Collections'}
+                <RefreshCw size={14} className={`mr-1.5 ${isCheckingCollections ? 'animate-spin' : ''}`} />
+                {isCheckingCollections ? 'Checking Collections...' : 'Test Cloud Collections'}
               </Button>
             </div>
 
@@ -194,7 +204,7 @@ export default function SupabaseSyncTab() {
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <p className="text-xs text-slate-400">Learners Collection</p>
                 <p className="text-2xl font-extrabold text-amber-400 mt-1">
-                  {tableCounts ? tableCounts.learners : getStoredLearners().length}
+                  {learnersCount > 0 ? learnersCount : (tableCounts ? tableCounts.learners : getStoredLearners().length)}
                 </p>
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
@@ -227,14 +237,14 @@ export default function SupabaseSyncTab() {
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">Live view of records synchronized in Firebase Firestore</p>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleTestCloudTables}
-                disabled={testStatus === 'testing'}
+                disabled={isCheckingCollections}
                 className="text-amber-700 border-amber-300 bg-amber-50/50 hover:bg-amber-100 font-semibold"
               >
-                <RefreshCw size={14} className={`mr-1.5 ${testStatus === 'testing' ? 'animate-spin' : ''}`} />
+                <RefreshCw size={14} className={`mr-1.5 ${isCheckingCollections ? 'animate-spin' : ''}`} />
                 Refresh Cloud Preview
               </Button>
             </div>
