@@ -242,7 +242,7 @@ export default function SupabaseSyncTab() {
               <Table>
                 <TableHeader className="bg-slate-50 sticky top-0">
                   <TableRow>
-                    <TableHead className="font-bold text-slate-700">UPI No</TableHead>
+                    <TableHead className="font-bold text-slate-700">Admission No</TableHead>
                     <TableHead className="font-bold text-slate-700">Learner Name</TableHead>
                     <TableHead className="font-bold text-slate-700">Grade / Stream</TableHead>
                     <TableHead className="font-bold text-slate-700">Parent Contact</TableHead>
@@ -253,7 +253,7 @@ export default function SupabaseSyncTab() {
                     cloudLearnersList.map((learner, idx) => (
                       <TableRow key={learner.id || idx} className="hover:bg-slate-50/80">
                         <TableCell className="font-mono text-xs text-slate-600">
-                          {learner.upi_no || learner.upiNumber || 'N/A'}
+                          {learner.admission_number || learner.admissionNo || learner.admNo || learner.admission_no || learner.id || 'N/A'}
                         </TableCell>
                         <TableCell className="font-semibold text-slate-900">
                           {learner.name || 'Unnamed Learner'}
