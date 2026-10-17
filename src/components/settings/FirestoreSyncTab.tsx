@@ -6,7 +6,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, Table as TableIcon } from 'lucide-react';
 import { db } from '@/lib/firebaseClient';
 import { collection, doc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
-import { getStoredLearners } from '@/utils/learnersStore';
+import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -38,7 +38,14 @@ export default function FirestoreSyncTab() {
   const [isSyncingAttendance, setIsSyncingAttendance] = useState(false);
   const [cloudAttendanceList, setCloudAttendanceList] = useState<any[]>([]);
 
-  const localLearners = getStoredLearners();
+  const localLearners = (() => {
+    try {
+      const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  })();
 
   const handleTestCloudTables = async () => {
     setIsCheckingCollections(true);
@@ -109,7 +116,7 @@ export default function FirestoreSyncTab() {
         } catch {}
       }
       if (!Array.isArray(localLearnersList) || localLearnersList.length === 0) {
-        localLearnersList = getStoredLearners();
+        localLearnersList = [];
       }
 
       const learnersPayload = localLearnersList.map((l: any, index: number) => {
@@ -256,20 +263,44 @@ export default function FirestoreSyncTab() {
     setIsSyncingGrades(true);
 
     try {
-      // 11 main grade levels: PP1 through Grade 9
-      const gradesList = [
-        { id: 'pp1', name: 'PP1', level: 1, category: 'Pre-Primary' },
-        { id: 'pp2', name: 'PP2', level: 2, category: 'Pre-Primary' },
-        { id: 'grade_1', name: 'Grade 1', level: 3, category: 'Lower Primary' },
-        { id: 'grade_2', name: 'Grade 2', level: 4, category: 'Lower Primary' },
-        { id: 'grade_3', name: 'Grade 3', level: 5, category: 'Lower Primary' },
-        { id: 'grade_4', name: 'Grade 4', level: 6, category: 'Upper Primary' },
-        { id: 'grade_5', name: 'Grade 5', level: 7, category: 'Upper Primary' },
-        { id: 'grade_6', name: 'Grade 6', level: 8, category: 'Upper Primary' },
-        { id: 'grade_7', name: 'Grade 7', level: 9, category: 'Junior School' },
-        { id: 'grade_8', name: 'Grade 8', level: 10, category: 'Junior School' },
-        { id: 'grade_9', name: 'Grade 9', level: 11, category: 'Junior School' }
-      ];
+      // Pull configured grades from local storage or app state, fallback to the 11 distinct grade levels (PP1 through Grade 9)
+      const config = readGradesAndStreams();
+      let gradesList: any[] = [];
+
+      if (config && Array.isArray(config.grades) && config.grades.length > 0) {
+        gradesList = config.grades.map((gName, idx) => {
+          const lower = gName.toLowerCase();
+          const id = lower.replace(/\s+/g, '_');
+          let category = 'Primary';
+          if (lower.includes('pp')) category = 'Pre-Primary';
+          else if (lower.includes('7') || lower.includes('8') || lower.includes('9') || lower.includes('junior')) category = 'Junior School';
+          else if (lower.includes('1') || lower.includes('2') || lower.includes('3')) category = 'Lower Primary';
+          else if (lower.includes('4') || lower.includes('5') || lower.includes('6')) category = 'Upper Primary';
+
+          return {
+            id,
+            name: gName,
+            level: idx + 1,
+            category
+          };
+        });
+      }
+
+      if (gradesList.length === 0) {
+        gradesList = [
+          { id: 'pp1', name: 'PP1', level: 1, category: 'Pre-Primary' },
+          { id: 'pp2', name: 'PP2', level: 2, category: 'Pre-Primary' },
+          { id: 'grade_1', name: 'Grade 1', level: 3, category: 'Lower Primary' },
+          { id: 'grade_2', name: 'Grade 2', level: 4, category: 'Lower Primary' },
+          { id: 'grade_3', name: 'Grade 3', level: 5, category: 'Lower Primary' },
+          { id: 'grade_4', name: 'Grade 4', level: 6, category: 'Upper Primary' },
+          { id: 'grade_5', name: 'Grade 5', level: 7, category: 'Upper Primary' },
+          { id: 'grade_6', name: 'Grade 6', level: 8, category: 'Upper Primary' },
+          { id: 'grade_7', name: 'Grade 7', level: 9, category: 'Junior School' },
+          { id: 'grade_8', name: 'Grade 8', level: 10, category: 'Junior School' },
+          { id: 'grade_9', name: 'Grade 9', level: 11, category: 'Junior School' }
+        ];
+      }
 
       localStorage.setItem('munyaka_grades', JSON.stringify(gradesList));
       localStorage.setItem('grades', JSON.stringify(gradesList));
@@ -307,14 +338,13 @@ export default function FirestoreSyncTab() {
     setIsSyncingStreams(true);
 
     try {
-      // 1. Read directly from our primary application database / local state (where custom stream names like RED, GREEN, BLUE, etc., are configured)
+      // 1. Pull directly from our active local app database state containing our real configured stream names (RED, GREEN, BLUE, PURPLE, etc.) without falling back to dummy directional names (East, North, South).
       const config = readGradesAndStreams();
       const generatedStreams: any[] = [];
 
-      // If configuration has gradeStreamMap, build stream records from actual configured local state
+      // If configuration has gradeStreamMap or grades/streams, build stream records from actual configured local state
       if (config && config.gradeStreamMap) {
         Object.entries(config.gradeStreamMap).forEach(([matchKey, streams]) => {
-          // Find original grade name or format matchKey
           const gradeName = config.grades.find(g => g.toLowerCase().replace(/\s+/g, '') === matchKey || g.toLowerCase() === matchKey) || matchKey.toUpperCase();
           if (Array.isArray(streams)) {
             streams.forEach(stream => {
@@ -331,10 +361,11 @@ export default function FirestoreSyncTab() {
         });
       }
 
-      // Fallback if no configured streams found in local state: use clean standard class names without any directional fallback mock names
+      // If still empty, pull from any local storage keys or default grades with actual configured stream names
       if (generatedStreams.length === 0 && config && Array.isArray(config.grades)) {
         config.grades.forEach(grade => {
-          ['BLUE', 'RED', 'GREEN'].forEach(stream => {
+          const defaultStreamList = config.streams?.length > 0 ? config.streams : ['BLUE', 'RED', 'GREEN', 'PURPLE'];
+          defaultStreamList.forEach(stream => {
             generatedStreams.push({
               grade,
               name: stream,
@@ -351,12 +382,16 @@ export default function FirestoreSyncTab() {
       generatedStreams.forEach((stream: any) => {
         const gradeVal = String(stream.grade || 'Grade 1').trim();
         const streamNameVal = String(stream.name || stream.stream_name || 'Blue').trim();
-        const streamDocId = `${gradeVal}_${streamNameVal}`.toLowerCase().replace(/\s+/g, '_');
+        // Composite IDs: grade_id_stream_name (e.g. grade_1_red, pp1_blue)
+        const normalizedGradeId = gradeVal.toLowerCase().replace(/\s+/g, '_');
+        const normalizedStreamName = streamNameVal.toLowerCase().replace(/\s+/g, '_');
+        const streamDocId = `${normalizedGradeId}_${normalizedStreamName}`;
         
         uniqueDocIds.add(streamDocId);
         
         const payload = {
           id: streamDocId,
+          grade_id: normalizedGradeId,
           grade: gradeVal,
           name: streamNameVal,
           stream_name: streamNameVal,
@@ -371,10 +406,9 @@ export default function FirestoreSyncTab() {
       await batch.commit();
 
       const streamsSnap = await getDocs(collection(db, 'streams'));
-      const uniqueSyncedCount = uniqueDocIds.size;
-      const countToReport = streamsSnap.size ?? uniqueSyncedCount;
+      const countToReport = streamsSnap.size || uniqueDocIds.size;
 
-      showSuccess(`Successfully synced ${countToReport} configured streams to 'streams' collection!`);
+      showSuccess(`Successfully synced ${countToReport} streams to 'streams' collection!`);
 
       await handleTestCloudTables();
 
