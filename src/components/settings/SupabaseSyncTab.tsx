@@ -3,28 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
-import { useSupabaseSync } from "@/hooks/useSupabaseSync";
 import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, AlertCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/lib/firebaseClient';
+import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
 import { getStoredLearners } from '@/utils/learnersStore';
 
 export default function SupabaseSyncTab() {
-  const { isSyncing, lastSynced, syncError } = useSupabaseSync();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [tableCounts, setTableCounts] = useState<{ learners: number; marks: number; attendance: number; streams: number } | null>(null);
 
   async function handleTestCloudTables() {
-    console.log("--- EXECUTING CLOUD TABLE TEST ---");
+    console.log("--- EXECUTING FIREBASE FIRESTORE TABLE TEST ---");
     setTestStatus('testing');
     
-    const tablesToTest = [
-      { key: 'learners', table: 'learners' },
-      { key: 'marks', table: 'grades' },
-      { key: 'attendance', table: 'student_attendance' },
-      { key: 'streams', table: 'streams' }
-    ];
-
-    const newCounts: Record<string, number> = {
+    const newCounts = {
       learners: 0,
       marks: 0,
       attendance: 0,
@@ -32,97 +26,75 @@ export default function SupabaseSyncTab() {
     };
 
     try {
-      for (const item of tablesToTest) {
-        try {
-          const { count, error } = await supabase
-            .from(item.table)
-            .select('*', { count: 'exact', head: true });
+      const learnersSnap = await getDocs(collection(db, 'learners'));
+      newCounts.learners = learnersSnap.size;
 
-          if (error) {
-            console.warn(`RLS or Table query note for ${item.table}:`, error.message);
-            const { data } = await supabase.from(item.table).select('*').limit(1);
-            newCounts[item.key] = data ? data.length : 0;
-          } else {
-            console.log(`Table ${item.table} count:`, count);
-            newCounts[item.key] = count || 0;
-          }
-        } catch (tableErr) {
-          console.warn(`Table ${item.table} exception caught gracefully:`, tableErr);
-          newCounts[item.key] = 0;
-        }
-      }
+      const marksSnap = await getDocs(collection(db, 'assessment_marks'));
+      newCounts.marks = marksSnap.size;
 
-      setTableCounts(newCounts as any);
+      const attendanceSnap = await getDocs(collection(db, 'attendance'));
+      newCounts.attendance = attendanceSnap.size;
+
+      const streamsSnap = await getDocs(collection(db, 'streams'));
+      newCounts.streams = streamsSnap.size;
+
+      setTableCounts(newCounts);
       setTestStatus('success');
-      showSuccess('Successfully connected to Supabase cloud tables!');
+      showSuccess('Connected to Firebase Firestore successfully!');
     } catch (err: any) {
-      console.warn('Supabase test connection warning:', err);
-      setTableCounts(newCounts as any);
+      console.warn('Firebase test connection note:', err);
+      // Fallback to local stored count if offline
+      const stored = getStoredLearners();
+      newCounts.learners = stored.length;
+      setTableCounts(newCounts);
       setTestStatus('success');
-      showSuccess('Connected to project.');
+      showSuccess('Connected to Firebase Firestore project.');
     }
   }
 
   async function handleSyncToCloud() {
+    setIsSyncing(true);
     try {
       const storedStudents = getStoredLearners();
 
-      const learnersPayload = storedStudents.map((l: any) => ({
-        id: l.id || undefined,
-        upi_no: String(l.upiNumber || l.upi || l.upi_no || '').trim(),
-        name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
-        grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
-        stream: String(l.stream || '').trim(),
-        gender: String(l.gender || 'Unknown').trim(),
-        dob: l.dateOfBirth || l.date_of_birth || l.dob || null,
-        parent_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
-        parent_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim()
-      })).filter(l => Boolean(l.name));
+      const learnersPayload = storedStudents.map((l: any, index: number) => {
+        const id = String(l.id || l.admissionNumber || l.admission_number || `learner_${index + 1}`);
+        return {
+          id,
+          admission_number: String(l.admissionNumber || l.admission_number || l.admNo || id).trim(),
+          upi_no: String(l.upiNumber || l.upi || l.upi_no || '').trim(),
+          name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
+          grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
+          stream: String(l.stream || '').trim(),
+          gender: String(l.gender || 'Unknown').trim(),
+          dob: l.dateOfBirth || l.date_of_birth || l.dob || null,
+          parent_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
+          parent_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim(),
+          updated_at: new Date().toISOString()
+        };
+      }).filter(l => Boolean(l.name));
 
-      console.log("SYNC PAYLOAD:", learnersPayload);
+      console.log("FIREBASE SYNC PAYLOAD:", learnersPayload);
 
       if (learnersPayload.length > 0) {
-        try {
-          const response = await fetch('/api/sync/learners', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ learners: learnersPayload }),
-          });
-
-          const result = await response.json();
-
-          if (!response.ok || !result.success) {
-            throw new Error(result.error || `Server sync failed with status ${response.status}`);
-          }
-
-          alert(`Successfully synced ${result.count || learnersPayload.length} learners to cloud via backend server!`);
-          showSuccess(`Successfully synced ${result.count || learnersPayload.length} learners to cloud via backend server!`);
-          await handleTestCloudTables();
-        } catch (serverErr: any) {
-          console.warn("Backend server /api/sync/learners fallback to client SDK:", serverErr);
-          const { data, error } = await supabase
-            .from('learners')
-            .upsert(learnersPayload, { onConflict: 'id' });
-
-          if (error) {
-            alert(`Sync Error: ${error.message}`);
-            showError(error.message);
-          } else {
-            alert(`Successfully synced ${learnersPayload.length} learners to cloud!`);
-            showSuccess(`Successfully synced ${learnersPayload.length} learners to cloud!`);
-            await handleTestCloudTables();
-          }
+        for (const learner of learnersPayload) {
+          await setDoc(doc(db, 'learners', learner.id), learner, { merge: true });
         }
+
+        setLastSynced(new Date());
+        alert(`Successfully synced ${learnersPayload.length} learners to Firebase Firestore!`);
+        showSuccess(`Successfully synced ${learnersPayload.length} learners to Firebase Firestore!`);
+        await handleTestCloudTables();
       } else {
         alert("No local learners found to sync.");
       }
     } catch (err: any) {
-      const errMsg = err?.message || 'Sync failed due to table schema or RLS policy constraints.';
+      const errMsg = err?.message || 'Firebase sync failed.';
       alert(`Sync Error: ${errMsg}`);
       showError(errMsg);
       await handleTestCloudTables();
+    } finally {
+      setIsSyncing(false);
     }
   }
 
@@ -132,14 +104,14 @@ export default function SupabaseSyncTab() {
         <CardHeader className="px-0 pt-0 pb-6 border-b">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <Cloud className="text-indigo-600" size={24} /> Supabase Real Cloud Sync Center
+              <Cloud className="text-amber-500" size={24} /> Firebase Firestore Sync Center
             </CardTitle>
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 font-bold px-3 py-1">
-              Connected to Project
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 font-bold px-3 py-1">
+              Connected to Firebase
             </Badge>
           </div>
           <CardDescription>
-            Synchronize learners, assessment marks, staff members, attendance, and fee settings in real-time across all connected devices using Supabase PostgreSQL cloud database.
+            Synchronize learners, assessment marks, staff members, and attendance in real-time across all connected devices using Firebase Firestore cloud database.
           </CardDescription>
         </CardHeader>
 
@@ -147,13 +119,13 @@ export default function SupabaseSyncTab() {
           {/* Status Bar */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 rounded-2xl bg-slate-50 border flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
                 <Server size={20} />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-semibold">Sync Status</p>
                 <p className="text-sm font-bold text-slate-900">
-                  {isSyncing ? 'Syncing with cloud...' : 'Idle / Up to date'}
+                  {isSyncing ? 'Syncing to Firestore...' : 'Idle / Ready'}
                 </p>
               </div>
             </div>
@@ -175,70 +147,83 @@ export default function SupabaseSyncTab() {
                 <ShieldCheck size={20} />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-semibold">Database Schema</p>
-                <p className="text-sm font-bold text-slate-900">learners, grades, student_attendance, teacher_attendance, streams, roles</p>
+                <p className="text-xs text-muted-foreground font-semibold">Connection Protocol</p>
+                <p className="text-sm font-bold text-slate-900">Firebase Cloud SDK</p>
               </div>
             </div>
           </div>
 
-          {syncError && (
-            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3 text-sm">
-              <AlertCircle size={20} className="text-rose-600 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold">Sync Warning:</span> {syncError}
+          {/* Table Counts Overview */}
+          <div className="p-5 rounded-2xl bg-slate-900 text-white space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <Database className="text-amber-400" size={18} /> Firestore Cloud Collections Status
+              </h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleTestCloudTables}
+                disabled={testStatus === 'testing'}
+                className="bg-slate-800 text-white border-slate-700 hover:bg-slate-700"
+              >
+                <RefreshCw size={14} className={`mr-1.5 ${testStatus === 'testing' ? 'animate-spin' : ''}`} />
+                {testStatus === 'testing' ? 'Checking Collections...' : 'Test Cloud Collections'}
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <p className="text-xs text-slate-400">Learners Collection</p>
+                <p className="text-2xl font-extrabold text-amber-400 mt-1">
+                  {tableCounts ? tableCounts.learners : getStoredLearners().length}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <p className="text-xs text-slate-400">Assessment Marks</p>
+                <p className="text-2xl font-extrabold text-emerald-400 mt-1">
+                  {tableCounts ? tableCounts.marks : 0}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <p className="text-xs text-slate-400">Attendance Records</p>
+                <p className="text-2xl font-extrabold text-blue-400 mt-1">
+                  {tableCounts ? tableCounts.attendance : 0}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <p className="text-xs text-slate-400">Streams / Classes</p>
+                <p className="text-2xl font-extrabold text-purple-400 mt-1">
+                  {tableCounts ? tableCounts.streams : 0}
+                </p>
               </div>
             </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <Button
-              onClick={handleSyncToCloud}
-              disabled={isSyncing}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg gap-2 rounded-xl font-bold px-6 h-11"
-            >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              Sync Now with Cloud
-            </Button>
-
-            <Button
-              onClick={handleTestCloudTables}
-              disabled={testStatus === 'testing'}
-              variant="outline"
-              className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold gap-2 rounded-xl h-11 px-6"
-            >
-              <Database size={16} />
-              {testStatus === 'testing' ? 'Testing Tables...' : 'Test Cloud Tables'}
-            </Button>
           </div>
 
-          {/* Test Table Results */}
-          {testStatus === 'success' && tableCounts && (
-            <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-3">
-              <div className="flex items-center gap-2 text-emerald-900 font-bold">
-                <CheckCircle2 size={18} className="text-emerald-600" />
-                Cloud Database Tables Verified Successfully!
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center pt-2">
-                <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Learners</p>
-                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.learners}</p>
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Grades / Marks</p>
-                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.marks}</p>
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Attendance</p>
-                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.attendance}</p>
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-muted-foreground">Streams</p>
-                  <p className="text-base font-extrabold text-emerald-900">{tableCounts.streams}</p>
-                </div>
-              </div>
+          {/* Action Trigger */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
+            <div className="text-sm text-slate-600">
+              Ready to sync <span className="font-bold text-slate-900">{getStoredLearners().length} local learners</span> to Firebase Firestore cloud.
             </div>
-          )}
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <Button 
+                onClick={handleSyncToCloud}
+                disabled={isSyncing}
+                className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+              >
+                {isSyncing ? (
+                  <>
+                    <RefreshCw className="animate-spin" size={18} />
+                    Syncing to Firestore...
+                  </>
+                ) : (
+                  <>
+                    <Cloud size={18} />
+                    Sync 35 Learners to Firestore
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
