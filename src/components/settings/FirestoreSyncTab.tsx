@@ -19,6 +19,7 @@ export default function FirestoreSyncTab() {
   // Cloud counts state
   const [cloudLearnersCount, setCloudLearnersCount] = useState(0);
   const [cloudAssessmentCount, setCloudAssessmentCount] = useState(0);
+  const [cloudGradesCount, setCloudGradesCount] = useState(0);
   const [cloudStreamsCount, setCloudStreamsCount] = useState(0);
   const [cloudAttendanceCount, setCloudAttendanceCount] = useState(0);
 
@@ -27,6 +28,9 @@ export default function FirestoreSyncTab() {
 
   const [isSyncingAssessments, setIsSyncingAssessments] = useState(false);
   const [cloudAssessmentMarks, setCloudAssessmentMarks] = useState<any[]>([]);
+
+  const [isSyncingGrades, setIsSyncingGrades] = useState(false);
+  const [cloudGradesList, setCloudGradesList] = useState<any[]>([]);
 
   const [isSyncingStreams, setIsSyncingStreams] = useState(false);
   const [cloudStreamsList, setCloudStreamsList] = useState<any[]>([]);
@@ -54,12 +58,19 @@ export default function FirestoreSyncTab() {
       setCloudAssessmentMarks(assessmentDocs);
       console.log('Assessment Marks Firestore count:', assessmentSnap.size);
 
-      // Streams / Classes Collection
-      const streamsSnap = await getDocs(collection(db, 'streams_classes'));
+      // Grades Collection (11 main grade levels: PP1 through Grade 9)
+      const gradesSnap = await getDocs(collection(db, 'grades'));
+      setCloudGradesCount(gradesSnap.size);
+      const gradesDocs = gradesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCloudGradesList(gradesDocs);
+      console.log('Grades Firestore count:', gradesSnap.size);
+
+      // Streams Collection (37 active classroom streams)
+      const streamsSnap = await getDocs(collection(db, 'streams'));
       setCloudStreamsCount(streamsSnap.size);
       const streamsDocs = streamsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCloudStreamsList(streamsDocs);
-      console.log('Streams Classes Firestore count:', streamsSnap.size);
+      console.log('Streams Firestore count:', streamsSnap.size);
 
       // Attendance Collection
       const attendanceSnap = await getDocs(collection(db, 'attendance_records'));
@@ -240,6 +251,57 @@ export default function FirestoreSyncTab() {
     }
   }
 
+  const handleSyncGrades = async () => {
+    if (isSyncingGrades) return;
+    setIsSyncingGrades(true);
+
+    try {
+      // 11 main grade levels: PP1 through Grade 9
+      const gradesList = [
+        { id: 'pp1', name: 'PP1', level: 1, category: 'Pre-Primary' },
+        { id: 'pp2', name: 'PP2', level: 2, category: 'Pre-Primary' },
+        { id: 'grade_1', name: 'Grade 1', level: 3, category: 'Lower Primary' },
+        { id: 'grade_2', name: 'Grade 2', level: 4, category: 'Lower Primary' },
+        { id: 'grade_3', name: 'Grade 3', level: 5, category: 'Lower Primary' },
+        { id: 'grade_4', name: 'Grade 4', level: 6, category: 'Upper Primary' },
+        { id: 'grade_5', name: 'Grade 5', level: 7, category: 'Upper Primary' },
+        { id: 'grade_6', name: 'Grade 6', level: 8, category: 'Upper Primary' },
+        { id: 'grade_7', name: 'Grade 7', level: 9, category: 'Junior School' },
+        { id: 'grade_8', name: 'Grade 8', level: 10, category: 'Junior School' },
+        { id: 'grade_9', name: 'Grade 9', level: 11, category: 'Junior School' }
+      ];
+
+      localStorage.setItem('munyaka_grades', JSON.stringify(gradesList));
+      localStorage.setItem('grades', JSON.stringify(gradesList));
+
+      const batch = writeBatch(db);
+      gradesList.forEach((g) => {
+        const docRef = doc(db, 'grades', g.id);
+        batch.set(docRef, {
+          ...g,
+          updated_at: new Date().toISOString()
+        }, { merge: true });
+      });
+
+      await batch.commit();
+
+      const gradesSnap = await getDocs(collection(db, 'grades'));
+      const countToReport = gradesSnap.size || gradesList.length;
+
+      showSuccess(`Successfully synced ${countToReport} grades to 'grades' collection!`);
+      await handleTestCloudTables();
+
+    } catch (err: any) {
+      console.error('Grades sync error:', err);
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      alert(`Grades sync failed: ${msg}`);
+      showError(msg);
+    } finally {
+      setIsSyncingGrades(false);
+    }
+  };
+
   const handleSyncStreams = async () => {
     if (isSyncingStreams) return;
     setIsSyncingStreams(true);
@@ -286,7 +348,6 @@ export default function FirestoreSyncTab() {
       // Clear any unused default streams from local storage and replace with our exact 37 streams
       localStorage.setItem('munyaka_streams', JSON.stringify(generatedStreams));
       localStorage.setItem('streams', JSON.stringify(generatedStreams));
-      localStorage.setItem('grades_and_streams', JSON.stringify({ grades: [...prePrimaryGrades, ...lowerPrimaryGrades, ...upperPrimaryGrades, ...juniorSchoolGrades], streams: generatedStreams }));
 
       const batch = writeBatch(db);
       const uniqueDocIds = new Set<string>();
@@ -307,17 +368,17 @@ export default function FirestoreSyncTab() {
           updated_at: new Date().toISOString()
         };
 
-        const docRef = doc(db, 'streams_classes', streamDocId);
+        const docRef = doc(db, 'streams', streamDocId);
         batch.set(docRef, payload, { merge: true });
       });
 
       await batch.commit();
 
-      const streamsSnap = await getDocs(collection(db, 'streams_classes'));
+      const streamsSnap = await getDocs(collection(db, 'streams'));
       const uniqueSyncedCount = uniqueDocIds.size;
       const countToReport = streamsSnap.size ?? uniqueSyncedCount;
 
-      showSuccess(`Successfully synced ${countToReport} streams to cloud!`);
+      showSuccess(`Successfully synced ${countToReport} streams to 'streams' collection!`);
 
       await handleTestCloudTables();
 
@@ -510,7 +571,7 @@ export default function FirestoreSyncTab() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Learners</p>
@@ -535,7 +596,18 @@ export default function FirestoreSyncTab() {
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Streams / Classes</p>
+                  <p className="text-xs text-slate-400">Grades</p>
+                  <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudGradesCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-indigo-400 mt-1">
+                  {cloudGradesCount}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Streams</p>
                   <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudStreamsCount}
                   </span>
@@ -546,7 +618,7 @@ export default function FirestoreSyncTab() {
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Attendance Records</p>
+                  <p className="text-xs text-slate-400">Attendance</p>
                   <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudAttendanceCount}
                   </span>
@@ -615,6 +687,65 @@ export default function FirestoreSyncTab() {
                               }
                             >
                               {a.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Grades Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Grades Collection Cloud Sync</h3>
+              <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300">
+                Cloud Grades: {cloudGradesCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync our 11 main grade levels (PP1 through Grade 9) to the 'grades' collection in Firebase Firestore.
+            </p>
+            <Button
+              onClick={handleSyncGrades}
+              disabled={isSyncingGrades}
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingGrades && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingGrades ? 'Syncing Grades...' : 'Sync 11 Grades to Firestore'}
+            </Button>
+
+            {cloudGradesList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Grades Preview ({cloudGradesList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Grades
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Grade ID</TableHead>
+                        <TableHead className="p-2 font-medium">Grade Name</TableHead>
+                        <TableHead className="p-2 font-medium">Category</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudGradesList.map((g, idx) => (
+                        <TableRow key={g.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-mono text-xs">{g.id}</TableCell>
+                          <TableCell className="p-2 font-semibold text-slate-900">{g.name}</TableCell>
+                          <TableCell className="p-2">
+                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                              {g.category}
                             </Badge>
                           </TableCell>
                         </TableRow>
