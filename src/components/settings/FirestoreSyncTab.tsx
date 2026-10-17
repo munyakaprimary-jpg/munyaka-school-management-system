@@ -15,11 +15,16 @@ export default function FirestoreSyncTab() {
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [tableCounts, setTableCounts] = useState<{ learners: number; marks: number; attendance: number; streams: number } | null>(null);
-  const [cloudLearnersList, setCloudLearnersList] = useState<any[]>([]);
 
+  // Cloud counts state
+  const [cloudLearnersCount, setCloudLearnersCount] = useState(0);
+  const [cloudAssessmentCount, setCloudAssessmentCount] = useState(0);
+  const [cloudStreamsCount, setCloudStreamsCount] = useState(0);
+  const [cloudAttendanceCount, setCloudAttendanceCount] = useState(0);
+
+  const [cloudLearnersList, setCloudLearnersList] = useState<any[]>([]);
   const [isCheckingCollections, setIsCheckingCollections] = useState(false);
-  const [learnersCount, setLearnersCount] = useState(0);
+
   const [isSyncingAssessments, setIsSyncingAssessments] = useState(false);
   const [cloudAssessmentMarks, setCloudAssessmentMarks] = useState<any[]>([]);
 
@@ -28,67 +33,51 @@ export default function FirestoreSyncTab() {
 
   const localLearners = getStoredLearners();
 
-  async function handleTestCloudTables() {
+  const handleTestCloudTables = async () => {
     setIsCheckingCollections(true);
     setErrorMessage(null);
     try {
-      const learnersRef = collection(db, 'learners');
-      const learnersSnap = await getDocs(learnersRef);
-      setLearnersCount(learnersSnap.size);
-      
-      const docsList = learnersSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setCloudLearnersList(docsList);
+      // Learners Collection
+      const learnersSnap = await getDocs(collection(db, 'learners'));
+      setCloudLearnersCount(learnersSnap.size);
+      const learnersDocs = learnersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCloudLearnersList(learnersDocs);
+      console.log('Learners Firestore count:', learnersSnap.size);
 
-      const newCounts = {
-        learners: learnersSnap.size,
-        marks: 0,
-        attendance: 0,
-        streams: 0
-      };
+      // Assessment Marks Collection
+      const assessmentSnap = await getDocs(collection(db, 'assessment_marks'));
+      setCloudAssessmentCount(assessmentSnap.size);
+      const assessmentDocs = assessmentSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCloudAssessmentMarks(assessmentDocs);
+      console.log('Assessment Marks Firestore count:', assessmentSnap.size);
 
-      try {
-        const marksSnap = await getDocs(collection(db, 'assessment_marks'));
-        newCounts.marks = marksSnap.size;
-      } catch {}
+      // Streams / Classes Collection
+      const streamsSnap = await getDocs(collection(db, 'streams_classes'));
+      setCloudStreamsCount(streamsSnap.size);
+      const streamsDocs = streamsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCloudStreamsList(streamsDocs);
+      console.log('Streams Classes Firestore count:', streamsSnap.size);
 
-      try {
-        const attendanceSnap = await getDocs(collection(db, 'attendance'));
-        newCounts.attendance = attendanceSnap.size;
-      } catch {}
+      // Attendance Collection
+      const attendanceSnap = await getDocs(collection(db, 'attendance_records'));
+      setCloudAttendanceCount(attendanceSnap.size);
+      console.log('Attendance Records Firestore count:', attendanceSnap.size);
 
-      try {
-        const streamsSnap = await getDocs(collection(db, 'streams_classes'));
-        newCounts.streams = streamsSnap.size;
-        const streamsList = streamsSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setCloudStreamsList(streamsList);
-      } catch {}
-
-      setTableCounts(newCounts);
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
-    } catch (err: any) {
-      console.error('Error fetching cloud collections:', err);
-      const msg = err.message || 'Unknown Firestore error';
+    } catch (error: any) {
+      console.error('Error fetching cloud collection status:', error);
+      const msg = error.message || 'Unknown Firestore error';
       setErrorMessage(msg);
       setTestStatus('error');
       showError(`Firestore Error: ${msg}`);
-      setCloudLearnersList(localLearners);
-      setTableCounts({ learners: localLearners.length, marks: 0, attendance: 0, streams: 0 });
     } finally {
       setIsCheckingCollections(false);
     }
-  }
+  };
 
   useEffect(() => {
     handleTestCloudTables().catch(console.error);
-    fetchCloudAssessmentMarks().catch(console.error);
-    fetchCloudStreams().catch(console.error);
   }, []);
 
   async function handleSyncToCloud() {
@@ -222,7 +211,7 @@ export default function FirestoreSyncTab() {
       setLastSynced(new Date());
       showSuccess(`Successfully synced ${marksPayload.length} assessment marks to Firestore!`);
 
-      await fetchCloudAssessmentMarks();
+      await handleTestCloudTables();
 
     } catch (err: any) {
       console.error('Firestore assessment marks sync error:', err);
@@ -232,21 +221,6 @@ export default function FirestoreSyncTab() {
       showError(msg);
     } finally {
       setIsSyncingAssessments(false);
-    }
-  }
-
-  async function fetchCloudAssessmentMarks() {
-    try {
-      const marksSnap = await getDocs(collection(db, 'assessment_marks'));
-      const docsList = marksSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setCloudAssessmentMarks(docsList);
-      return docsList;
-    } catch (err: any) {
-      console.error('Error fetching cloud assessment marks:', err.message);
-      return [];
     }
   }
 
@@ -262,7 +236,6 @@ export default function FirestoreSyncTab() {
       } catch {}
 
       if (!localStreams || !Array.isArray(localStreams) || localStreams.length === 0) {
-        // Fallback to derive streams from stored learners if local streams storage is empty
         const storedStudents = getStoredLearners();
         const streamsMap = new Map<string, any>();
         storedStudents.forEach((l: any) => {
@@ -295,35 +268,20 @@ export default function FirestoreSyncTab() {
       });
 
       await batch.commit();
-      alert(`Successfully synced ${localStreams.length} streams to cloud!`);
       showSuccess(`Successfully synced ${localStreams.length} streams to cloud!`);
 
-      // Safely refresh metrics without blocking state reset
-      handleTestCloudTables().catch(console.error);
+      await handleTestCloudTables();
 
     } catch (err: any) {
       console.error('Streams sync error:', err);
-      alert(`Sync failed: ${err.message || 'Unknown error'}`);
-      showError(err.message || 'Unknown error');
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      alert(`Sync failed: ${msg}`);
+      showError(msg);
     } finally {
-      setIsSyncingStreams(false); // <--- GUARANTEES the button stops spinning!
+      setIsSyncingStreams(false);
     }
   };
-
-  async function fetchCloudStreams() {
-    try {
-      const streamsSnap = await getDocs(collection(db, 'streams_classes'));
-      const docsList = streamsSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setCloudStreamsList(docsList);
-      return docsList;
-    } catch (err: any) {
-      console.error('Error fetching cloud streams:', err.message);
-      return [];
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -338,7 +296,7 @@ export default function FirestoreSyncTab() {
                 Connected to Firebase
               </Badge>
               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-bold px-3 py-1">
-                Local: {localLearners.length} | Cloud: {cloudLearnersList.length}
+                Local: {localLearners.length} | Cloud: {cloudLearnersCount}
               </Badge>
             </div>
           </div>
@@ -422,39 +380,44 @@ export default function FirestoreSyncTab() {
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Learners</p>
                   <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
-                    Cloud: {cloudLearnersList.length}
+                    Cloud: {cloudLearnersCount}
                   </span>
                 </div>
                 <p className="text-2xl font-extrabold text-amber-400 mt-1">
-                  {cloudLearnersList.length > 0 ? cloudLearnersList.length : localLearners.length}
+                  {cloudLearnersCount}
                 </p>
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Assessment Marks</p>
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
-                    Cloud: {cloudAssessmentMarks.length}
+                    Cloud: {cloudAssessmentCount}
                   </span>
                 </div>
                 <p className="text-2xl font-extrabold text-emerald-400 mt-1">
-                  {cloudAssessmentMarks.length}
+                  {cloudAssessmentCount}
                 </p>
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Streams / Classes</p>
                   <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
-                    Cloud: {cloudStreamsList.length}
+                    Cloud: {cloudStreamsCount}
                   </span>
                 </div>
                 <p className="text-2xl font-extrabold text-purple-400 mt-1">
-                  {cloudStreamsList.length}
+                  {cloudStreamsCount}
                 </p>
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <p className="text-xs text-slate-400">Attendance Records</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Attendance Records</p>
+                  <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudAttendanceCount}
+                  </span>
+                </div>
                 <p className="text-2xl font-extrabold text-blue-400 mt-1">
-                  {tableCounts ? tableCounts.attendance : 0}
+                  {cloudAttendanceCount}
                 </p>
               </div>
             </div>
@@ -465,7 +428,7 @@ export default function FirestoreSyncTab() {
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold">Streams & Classes Cloud Sync</h3>
               <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
-                Cloud Streams: {cloudStreamsList.length}
+                Cloud Streams: {cloudStreamsCount}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
@@ -485,7 +448,7 @@ export default function FirestoreSyncTab() {
                 <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
                   <span>Synced Streams & Classes Preview ({cloudStreamsList.length})</span>
                   <button 
-                    onClick={fetchCloudStreams}
+                    onClick={handleTestCloudTables}
                     className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
                   >
                     <RefreshCw size={12} /> Refresh Streams
@@ -524,7 +487,7 @@ export default function FirestoreSyncTab() {
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold">Assessment Marks Cloud Sync</h3>
               <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300">
-                Cloud Marks: {cloudAssessmentMarks.length}
+                Cloud Marks: {cloudAssessmentCount}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
@@ -544,7 +507,7 @@ export default function FirestoreSyncTab() {
                 <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
                   <span>Synced Assessment Marks Preview ({cloudAssessmentMarks.length})</span>
                   <button 
-                    onClick={fetchCloudAssessmentMarks}
+                    onClick={handleTestCloudTables}
                     className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
                   >
                     <RefreshCw size={12} /> Refresh Marks
@@ -646,7 +609,7 @@ export default function FirestoreSyncTab() {
             <div className="text-sm text-slate-600 flex items-center gap-2">
               <span>Local: <strong className="text-slate-900">{localLearners.length}</strong></span>
               <span>•</span>
-              <span>Cloud: <strong className="text-slate-900">{cloudLearnersList.length}</strong></span>
+              <span>Cloud: <strong className="text-slate-900">{cloudLearnersCount}</strong></span>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <Button 
