@@ -277,14 +277,23 @@ export default function FirestoreSyncTab() {
       }
 
       const batch = writeBatch(db);
+      const uniqueDocIds = new Set<string>();
+
       localStreams.forEach((stream: any, index: number) => {
         const docId = String(stream.id || `${stream.grade || 'grade'}_${stream.stream_name || stream.name || index}`);
+        uniqueDocIds.add(docId);
         const docRef = doc(db, 'streams_classes', docId);
         batch.set(docRef, stream, { merge: true });
       });
 
       await batch.commit();
-      showSuccess(`Successfully synced ${localStreams.length} streams to cloud!`);
+
+      // Fetch the updated snapshot to report the exact unique Firestore documents created/returned
+      const streamsSnap = await getDocs(collection(db, 'streams_classes'));
+      const uniqueSyncedCount = uniqueDocIds.size;
+      const countToReport = streamsSnap.size ?? uniqueSyncedCount;
+
+      showSuccess(`Successfully synced ${countToReport} streams to cloud!`);
 
       await handleTestCloudTables();
 
