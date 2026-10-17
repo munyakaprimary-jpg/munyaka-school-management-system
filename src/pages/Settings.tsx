@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
 import SecurityAuthTab from '@/components/settings/SecurityAuthTab';
-import SupabaseSyncTab from '@/components/settings/SupabaseSyncTab';
+import FirestoreSyncTab from '@/components/settings/FirestoreSyncTab';
 import Modal from '@/components/ui/Modal';
 import {
   Building,
@@ -291,7 +291,7 @@ export default function Settings() {
               <Shield size={14} /> Security & Auth
             </TabsTrigger>
             <TabsTrigger value="supabase" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
-              <Cloud size={14} /> Cloud DB (Supabase)
+              <Cloud size={14} /> Cloud DB (Firestore)
             </TabsTrigger>
             <TabsTrigger value="storage" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
               <Database size={14} /> Database & Backups
@@ -483,9 +483,9 @@ export default function Settings() {
           <SecurityAuthTab />
         </TabsContent>
 
-        {/* Cloud DB (Supabase) */}
+        {/* Cloud DB (Firestore) */}
         <TabsContent value="supabase" className="space-y-6">
-          <SupabaseSyncTab />
+          <FirestoreSyncTab />
         </TabsContent>
 
         {/* 5. Database & Backups */}
