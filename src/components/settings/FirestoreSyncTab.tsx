@@ -19,6 +19,8 @@ export default function FirestoreSyncTab() {
 
   const [isCheckingCollections, setIsCheckingCollections] = useState(false);
   const [learnersCount, setLearnersCount] = useState(0);
+  const [isSyncingAssessments, setIsSyncingAssessments] = useState(false);
+  const [cloudAssessmentMarks, setCloudAssessmentMarks] = useState<any[]>([]);
 
   async function handleTestCloudTables() {
     setIsCheckingCollections(true);
@@ -73,59 +75,166 @@ export default function FirestoreSyncTab() {
   }, []);
 
   async function handleSyncToCloud() {
-    if (isSyncing) return;
-    setIsSyncing(true);
-    
-    try {
-      const storedStudents = getStoredLearners();
-
-      const learnersPayload = storedStudents.map((l: any, index: number) => {
-        const id = String(l.id || l.admissionNumber || l.admission_number || `learner_${index + 1}`);
-        return {
-          id,
-          admission_number: String(l.admissionNumber || l.admission_number || l.admNo || id).trim(),
-          upi_no: String(l.upiNumber || l.upi || l.upi_no || '').trim(),
-          name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
-          grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
-          stream: String(l.stream || '').trim(),
-          gender: String(l.gender || 'Unknown').trim(),
-          dob: l.dateOfBirth || l.date_of_birth || l.dob || null,
-          parent_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
-          parent_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim(),
-          updated_at: new Date().toISOString()
-        };
-      }).filter(l => Boolean(l.name));
-
-      if (!learnersPayload || learnersPayload.length === 0) {
-        alert('No local learners found to sync.');
-        return;
+      if (isSyncing) return;
+      setIsSyncing(true);
+  
+      try {
+        const storedStudents = getStoredLearners();
+  
+        const learnersPayload = storedStudents.map((l: any, index: number) => {
+          const id = String(l.id || l.admissionNumber || l.admission_number || `learner_${index + 1}`);
+          return {
+            id,
+            admission_number: String(l.admissionNumber || l.admission_number || l.admNo || id).trim(),
+            upi_no: String(l.upiNumber || l.upi || l.upi_no || '').trim(),
+            name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
+            grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
+            stream: String(l.stream || '').trim(),
+            gender: String(l.gender || 'Unknown').trim(),
+            dob: l.dateOfBirth || l.date_of_birth || l.dob || null,
+            parent_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
+            parent_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim(),
+            updated_at: new Date().toISOString()
+          };
+        }).filter(l => Boolean(l.name));
+  
+        if (!learnersPayload || learnersPayload.length === 0) {
+          alert('No local learners found to sync.');
+          return;
+        }
+  
+        const batch = writeBatch(db);
+  
+        learnersPayload.forEach((learner) => {
+          const docId = String(learner.id || learner.admission_number || Date.now());
+          const docRef = doc(db, 'learners', docId);
+          batch.set(docRef, learner, { merge: true });
+        });
+  
+        await batch.commit();
+  
+        setLastSynced(new Date());
+        alert(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
+        showSuccess(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
+  
+        // Refresh table preview safely in the background
+        handleTestCloudTables().catch(console.error);
+  
+      } catch (err: any) {
+        console.error('Firestore sync error:', err);
+        alert(`Sync failed: ${err.message || 'Unknown error'}`);
+        showError(err.message || 'Unknown error');
+      } finally {
+        setIsSyncing(false); // This GUARANTEES the button stops spinning no matter what!
       }
-
-      const batch = writeBatch(db);
-      
-      learnersPayload.forEach((learner) => {
-        const docId = String(learner.id || learner.admission_number || Date.now());
-        const docRef = doc(db, 'learners', docId);
-        batch.set(docRef, learner, { merge: true });
-      });
-
-      await batch.commit();
-
-      setLastSynced(new Date());
-      alert(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
-      showSuccess(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
-      
-      // Refresh table preview safely in the background
-      handleTestCloudTables().catch(console.error);
-      
-    } catch (err: any) {
-      console.error('Firestore sync error:', err);
-      alert(`Sync failed: ${err.message || 'Unknown error'}`);
-      showError(err.message || 'Unknown error');
-    } finally {
-      setIsSyncing(false); // This GUARANTEES the button stops spinning no matter what!
     }
-  }
+  
+    async function handleSyncAssessmentMarks() {
+      if (isSyncingAssessments) return;
+      setIsSyncingAssessments(true);
+  
+      try {
+        // Load assessment marks from multiple possible local storage keys
+        const marksSources = [
+          'marked_student_submissions',
+          'munyaka_marks_records',
+          'assessment_marks_data',
+          'marks',
+          'munyaka_assessments',
+          'munyaka_marks',
+        ];
+  
+        let localMarks: any[] = [];
+        for (const key of marksSources) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                localMarks = [...localMarks, ...parsed];
+              }
+            } catch {}
+          }
+        }
+  
+        // Deduplicate by id or unique composite key
+        const seen = new Set<string>();
+        localMarks = localMarks.filter(m => {
+          if (!m) return false;
+          const key = String(m.id || `${m.admissionNumber || m.admission_number || ''}_${m.learningArea || m.learning_area || m.subject || ''}_${m.term || ''}`);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+  
+        if (localMarks.length === 0) {
+          alert('No local assessment marks found to sync.');
+          return;
+        }
+  
+        // Map to Firestore-compatible assessment_marks collection schema
+        const marksPayload = localMarks.map((m: any) => {
+          const admissionNumber = String(m.admissionNumber || m.admission_number || m.learnerId || m.learner_id || '').trim();
+          return {
+            learner_id: m.learnerId || m.learner_id || admissionNumber,
+            admission_number: admissionNumber,
+            learner_name: String(m.learnerName || m.learner_name || m.name || '').trim(),
+            grade: String(m.grade || '').trim(),
+            stream: String(m.stream || '').trim(),
+            learning_area: String(m.learningArea || m.learning_area || m.subject || m.learningAreaName || '').trim(),
+            score: Number(m.score ?? m.marks ?? m.marksObtained ?? 0),
+            max_score: Number(m.maxScore || m.max_score || m.maxMarks || 100),
+            term: String(m.term || 'Term 3'),
+            academic_year: String(m.academicYear || m.academic_year || '2026'),
+            remarks: String(m.remarks || ''),
+            updated_at: new Date().toISOString()
+          };
+        }).filter(m => Boolean(m.admission_number) && Boolean(m.learning_area));
+  
+        if (marksPayload.length === 0) {
+          alert('No valid assessment marks to sync (missing admission number or learning area).');
+          return;
+        }
+  
+        // Batch write to Firestore
+        const batch = writeBatch(db);
+        marksPayload.forEach((mark) => {
+          const docId = `${mark.admission_number}_${mark.learning_area}_${mark.term}_${mark.academic_year}`;
+          const docRef = doc(db, 'assessment_marks', docId);
+          batch.set(docRef, mark, { merge: true });
+        });
+  
+        await batch.commit();
+  
+        setLastSynced(new Date());
+        showSuccess(`Successfully synced ${marksPayload.length} assessment marks to Firestore!`);
+  
+        // Refresh cloud assessment marks preview
+        fetchCloudAssessmentMarks().catch(console.error);
+  
+      } catch (err: any) {
+        console.error('Firestore assessment marks sync error:', err);
+        alert(`Assessment marks sync failed: ${err.message || 'Unknown error'}`);
+        showError(err.message || 'Unknown error');
+      } finally {
+        setIsSyncingAssessments(false);
+      }
+    }
+  
+    async function fetchCloudAssessmentMarks() {
+      try {
+        const marksSnap = await getDocs(collection(db, 'assessment_marks'));
+        const docsList = marksSnap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setCloudAssessmentMarks(docsList);
+        return docsList;
+      } catch (err: any) {
+        console.error('Error fetching cloud assessment marks:', err.message);
+        return [];
+      }
+    }
 
   return (
     <div className="space-y-6">
