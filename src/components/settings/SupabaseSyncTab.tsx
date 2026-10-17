@@ -87,18 +87,40 @@ export default function SupabaseSyncTab() {
       console.log("SYNC PAYLOAD:", learnersPayload);
 
       if (learnersPayload.length > 0) {
-        const { data, error } = await supabase
-          .from('learners')
-          .upsert(learnersPayload, { onConflict: 'id' });
+        try {
+          const response = await fetch('/api/sync/learners', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ learners: learnersPayload }),
+          });
 
-        if (error) {
-          alert(`Sync Error: ${error.message}`);
-          showError(error.message);
-          return;
-        } else {
-          alert(`Successfully synced ${learnersPayload.length} learners!`);
-          showSuccess(`Successfully synced ${learnersPayload.length} learners!`);
+          const result = await response.json();
+
+          if (!response.ok || !result.success) {
+            throw new Error(result.error || `Server sync failed with status ${response.status}`);
+          }
+
+          alert(`Successfully synced ${result.count || learnersPayload.length} learners via local server backend!`);
+          showSuccess(`Successfully synced ${result.count || learnersPayload.length} learners!`);
           handleTestCloudTables();
+        } catch (serverErr: any) {
+          console.warn("Local backend endpoint /api/sync/learners not available or failed, falling back to direct client SDK upsert:", serverErr);
+          
+          const { data, error } = await supabase
+            .from('learners')
+            .upsert(learnersPayload, { onConflict: 'id' });
+
+          if (error) {
+            alert(`Sync Error: ${error.message}`);
+            showError(error.message);
+            return;
+          } else {
+            alert(`Successfully synced ${learnersPayload.length} learners!`);
+            showSuccess(`Successfully synced ${learnersPayload.length} learners!`);
+            handleTestCloudTables();
+          }
         }
       } else {
         alert("No local learners found to sync.");
