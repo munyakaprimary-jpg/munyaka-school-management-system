@@ -23,6 +23,9 @@ export default function FirestoreSyncTab() {
   const [isSyncingAssessments, setIsSyncingAssessments] = useState(false);
   const [cloudAssessmentMarks, setCloudAssessmentMarks] = useState<any[]>([]);
 
+  const [isSyncingStreams, setIsSyncingStreams] = useState(false);
+  const [cloudStreamsList, setCloudStreamsList] = useState<any[]>([]);
+
   const localLearners = getStoredLearners();
 
   async function handleTestCloudTables() {
@@ -31,7 +34,6 @@ export default function FirestoreSyncTab() {
     try {
       const learnersRef = collection(db, 'learners');
       const learnersSnap = await getDocs(learnersRef);
-      console.log('Fetched learners count from Firestore:', learnersSnap.size);
       setLearnersCount(learnersSnap.size);
       
       const docsList = learnersSnap.docs.map(doc => ({
@@ -50,10 +52,21 @@ export default function FirestoreSyncTab() {
       try {
         const marksSnap = await getDocs(collection(db, 'assessment_marks'));
         newCounts.marks = marksSnap.size;
+      } catch {}
+
+      try {
         const attendanceSnap = await getDocs(collection(db, 'attendance'));
         newCounts.attendance = attendanceSnap.size;
+      } catch {}
+
+      try {
         const streamsSnap = await getDocs(collection(db, 'streams'));
         newCounts.streams = streamsSnap.size;
+        const streamsList = streamsSnap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setCloudStreamsList(streamsList);
       } catch {}
 
       setTableCounts(newCounts);
@@ -65,7 +78,6 @@ export default function FirestoreSyncTab() {
       setErrorMessage(msg);
       setTestStatus('error');
       showError(`Firestore Error: ${msg}`);
-      // Fallback preview
       setCloudLearnersList(localLearners);
       setTableCounts({ learners: localLearners.length, marks: 0, attendance: 0, streams: 0 });
     } finally {
@@ -76,6 +88,7 @@ export default function FirestoreSyncTab() {
   useEffect(() => {
     handleTestCloudTables().catch(console.error);
     fetchCloudAssessmentMarks().catch(console.error);
+    fetchCloudStreams().catch(console.error);
   }, []);
 
   async function handleSyncToCloud() {
@@ -120,7 +133,6 @@ export default function FirestoreSyncTab() {
       setLastSynced(new Date());
       showSuccess(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
 
-      // Immediately re-fetch and update the cloud table preview
       await handleTestCloudTables();
 
     } catch (err: any) {
@@ -194,7 +206,7 @@ export default function FirestoreSyncTab() {
       }).filter(m => Boolean(m.admission_number) && Boolean(m.learning_area));
 
       if (marksPayload.length === 0) {
-        alert('No valid assessment marks to sync (missing admission number or learning area).');
+        alert('No valid assessment marks to sync.');
         return;
       }
 
@@ -238,6 +250,98 @@ export default function FirestoreSyncTab() {
     }
   }
 
+  async function handleSyncStreams() {
+    if (isSyncingStreams) return;
+    setIsSyncingStreams(true);
+
+    try {
+      // Gather local streams/classes or derive them from stored learners
+      const storedStudents = getStoredLearners();
+      const streamsMap = new Map<string, any>();
+
+      // Extract unique grade/stream combinations
+      storedStudents.forEach((l: any) => {
+        const grade = String(l.grade || l.gradeLevel || 'Grade 1').trim();
+        const stream = String(l.stream || 'East').trim();
+        const key = `${grade}_${stream}`;
+        if (!streamsMap.has(key)) {
+          streamsMap.set(key, {
+            id: key.toLowerCase().replace(/\s+/g, '_'),
+            grade,
+            stream_name: stream,
+            class_teacher: l.classTeacher || l.teacher || 'Unassigned',
+            updated_at: new Date().toISOString()
+          });
+        }
+      });
+
+      // Also check if there are explicitly saved streams in localStorage
+      const localStreamsRaw = localStorage.getItem('munyaka_streams') || localStorage.getItem('streams');
+      if (localStreamsRaw) {
+        try {
+          const parsed = JSON.parse(localStreamsRaw);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((s: any) => {
+              const grade = String(s.grade || s.gradeLevel || 'Grade 1').trim();
+              const stream = String(s.stream || s.name || 'East').trim();
+              const key = `${grade}_${stream}`;
+              streamsMap.set(key, {
+                id: s.id || key.toLowerCase().replace(/\s+/g, '_'),
+                grade,
+                stream_name: stream,
+                class_teacher: s.classTeacher || s.teacher || 'Unassigned',
+                updated_at: new Date().toISOString()
+              });
+            });
+          }
+        } catch {}
+      }
+
+      const streamsPayload = Array.from(streamsMap.values());
+      if (streamsPayload.length === 0) {
+        alert('No local streams or classes found to sync.');
+        return;
+      }
+
+      const batch = writeBatch(db);
+      streamsPayload.forEach((streamObj) => {
+        const docRef = doc(db, 'streams', streamObj.id);
+        batch.set(docRef, streamObj, { merge: true });
+      });
+
+      await batch.commit();
+
+      setLastSynced(new Date());
+      showSuccess(`Successfully synced ${streamsPayload.length} streams & classes to Firestore!`);
+
+      await fetchCloudStreams();
+
+    } catch (err: any) {
+      console.error('Firestore streams sync error:', err);
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      alert(`Streams sync failed: ${msg}`);
+      showError(msg);
+    } finally {
+      setIsSyncingStreams(false);
+    }
+  }
+
+  async function fetchCloudStreams() {
+    try {
+      const streamsSnap = await getDocs(collection(db, 'streams'));
+      const docsList = streamsSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCloudStreamsList(docsList);
+      return docsList;
+    } catch (err: any) {
+      console.error('Error fetching cloud streams:', err.message);
+      return [];
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
@@ -246,7 +350,7 @@ export default function FirestoreSyncTab() {
             <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <Cloud className="text-amber-500" size={24} /> Firebase Firestore Sync Center
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 font-bold px-3 py-1">
                 Connected to Firebase
               </Badge>
@@ -333,7 +437,7 @@ export default function FirestoreSyncTab() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Learners Collection</p>
+                  <p className="text-xs text-slate-400">Learners</p>
                   <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudLearnersList.length}
                   </span>
@@ -354,18 +458,82 @@ export default function FirestoreSyncTab() {
                 </p>
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Streams / Classes</p>
+                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudStreamsList.length}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-purple-400 mt-1">
+                  {cloudStreamsList.length}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <p className="text-xs text-slate-400">Attendance Records</p>
                 <p className="text-2xl font-extrabold text-blue-400 mt-1">
                   {tableCounts ? tableCounts.attendance : 0}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <p className="text-xs text-slate-400">Streams / Classes</p>
-                <p className="text-2xl font-extrabold text-purple-400 mt-1">
-                  {tableCounts ? tableCounts.streams : 0}
-                </p>
-              </div>
             </div>
+          </div>
+
+          {/* Streams & Classes Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Streams & Classes Cloud Sync</h3>
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
+                Cloud Streams: {cloudStreamsList.length}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync local grades, streams, and class structures to Firebase Firestore.
+            </p>
+            <Button
+              onClick={handleSyncStreams}
+              disabled={isSyncingStreams}
+              className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingStreams && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingStreams ? 'Syncing Streams...' : 'Sync Streams & Classes to Cloud'}
+            </Button>
+
+            {cloudStreamsList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Streams & Classes Preview ({cloudStreamsList.length})</span>
+                  <button 
+                    onClick={fetchCloudStreams}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Streams
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Grade</TableHead>
+                        <TableHead className="p-2 font-medium">Stream Name</TableHead>
+                        <TableHead className="p-2 font-medium">Class Teacher</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudStreamsList.map((s, idx) => (
+                        <TableRow key={s.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-semibold text-slate-900">{s.grade}</TableCell>
+                          <TableCell className="p-2">
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              {s.stream_name || s.stream}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-muted-foreground text-xs">{s.class_teacher || s.teacher || 'Unassigned'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Assessment Marks Cloud Sync & Preview Section */}
