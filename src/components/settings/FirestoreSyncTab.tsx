@@ -90,13 +90,22 @@ export default function FirestoreSyncTab() {
     setIsSyncing(true);
 
     try {
-      const storedStudents = getStoredLearners();
+      const rawData = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners') || '';
+      let localLearnersList: any[] = [];
+      if (rawData) {
+        try {
+          localLearnersList = JSON.parse(rawData);
+        } catch {}
+      }
+      if (!Array.isArray(localLearnersList) || localLearnersList.length === 0) {
+        localLearnersList = getStoredLearners();
+      }
 
-      const learnersPayload = storedStudents.map((l: any, index: number) => {
-        const id = String(l.id || l.admissionNumber || l.admission_number || `learner_${index + 1}`);
+      const learnersPayload = localLearnersList.map((l: any, index: number) => {
+        const id = String(l.id || l.admissionNumber || l.admission_number || l.admission_no || l.admissionNo || `learner_${index + 1}`);
         return {
           id,
-          admission_number: String(l.admissionNumber || l.admission_number || l.admNo || id).trim(),
+          admission_number: String(l.admissionNumber || l.admission_number || l.admission_no || l.admissionNo || l.admNo || id).trim(),
           upi_no: String(l.upiNumber || l.upi || l.upi_no || '').trim(),
           name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
           grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
@@ -110,7 +119,7 @@ export default function FirestoreSyncTab() {
       }).filter(l => Boolean(l.name));
 
       if (!learnersPayload || learnersPayload.length === 0) {
-        alert('No local learners found to sync.');
+        alert('No local learner records found to sync.');
         return;
       }
 
@@ -125,18 +134,20 @@ export default function FirestoreSyncTab() {
       await batch.commit();
 
       setLastSynced(new Date());
+      alert(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
       showSuccess(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
 
-      await handleTestCloudTables();
+      // Call count test safely without blocking state cleanup
+      handleTestCloudTables().catch(console.error);
 
     } catch (err: any) {
-      console.error('Firestore sync error:', err);
+      console.error('Learners sync error:', err);
       const msg = err.message || 'Unknown error';
       setErrorMessage(msg);
       alert(`Sync failed: ${msg}`);
       showError(msg);
     } finally {
-      setIsSyncing(false);
+      setIsSyncing(false); // ALWAYS runs to stop the spinner!
     }
   }
 
