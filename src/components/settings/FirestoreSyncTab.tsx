@@ -31,6 +31,9 @@ export default function FirestoreSyncTab() {
   const [isSyncingStreams, setIsSyncingStreams] = useState(false);
   const [cloudStreamsList, setCloudStreamsList] = useState<any[]>([]);
 
+  const [isSyncingAttendance, setIsSyncingAttendance] = useState(false);
+  const [cloudAttendanceList, setCloudAttendanceList] = useState<any[]>([]);
+
   const localLearners = getStoredLearners();
 
   const handleTestCloudTables = async () => {
@@ -61,6 +64,8 @@ export default function FirestoreSyncTab() {
       // Attendance Collection
       const attendanceSnap = await getDocs(collection(db, 'attendance_records'));
       setCloudAttendanceCount(attendanceSnap.size);
+      const attendanceDocs = attendanceSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setCloudAttendanceList(attendanceDocs);
       console.log('Attendance Records Firestore count:', attendanceSnap.size);
 
       setTestStatus('success');
@@ -283,6 +288,92 @@ export default function FirestoreSyncTab() {
     }
   };
 
+  const handleSyncAttendance = async () => {
+    if (isSyncingAttendance) return;
+    setIsSyncingAttendance(true);
+
+    try {
+      const attendanceSources = [
+        'munyaka_attendance',
+        'attendance_records',
+        'student_attendance',
+        'attendance',
+        'daily_roll_call'
+      ];
+
+      let localAttendance: any[] = [];
+      for (const key of attendanceSources) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              localAttendance = [...localAttendance, ...parsed];
+            } else if (parsed && typeof parsed === 'object') {
+              // Handle map structures date -> records
+              Object.entries(parsed).forEach(([dateKey, val]: [string, any]) => {
+                if (Array.isArray(val)) {
+                  val.forEach(item => localAttendance.push({ ...item, date: item.date || dateKey }));
+                }
+              });
+            }
+          } catch {}
+        }
+      }
+
+      // Deduplicate records
+      const seen = new Set<string>();
+      localAttendance = localAttendance.filter(a => {
+        if (!a) return false;
+        const key = String(a.id || `${a.learner_id || a.admissionNumber || a.admission_number || ''}_${a.date || ''}`);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      if (localAttendance.length === 0) {
+        alert('No local attendance records found to sync.');
+        return;
+      }
+
+      const attendancePayload = localAttendance.map((a: any, idx: number) => {
+        const admNo = String(a.admissionNumber || a.admission_number || a.learner_id || a.admNo || `ADM${idx}`).trim();
+        const date = String(a.date || new Date().toISOString().split('T')[0]).trim();
+        return {
+          id: a.id || `${admNo}_${date}`,
+          admission_number: admNo,
+          learner_name: String(a.learner_name || a.learnerName || a.name || '').trim(),
+          grade: String(a.grade || '').trim(),
+          stream: String(a.stream || '').trim(),
+          date,
+          status: String(a.status || 'present').toLowerCase(),
+          remarks: String(a.remarks || ''),
+          updated_at: new Date().toISOString()
+        };
+      });
+
+      const batch = writeBatch(db);
+      attendancePayload.forEach((record) => {
+        const docRef = doc(db, 'attendance_records', record.id);
+        batch.set(docRef, record, { merge: true });
+      });
+
+      await batch.commit();
+      showSuccess(`Successfully synced ${attendancePayload.length} attendance records to Firestore!`);
+
+      await handleTestCloudTables();
+
+    } catch (err: any) {
+      console.error('Attendance sync error:', err);
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      alert(`Attendance sync failed: ${msg}`);
+      showError(msg);
+    } finally {
+      setIsSyncingAttendance(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
@@ -421,6 +512,74 @@ export default function FirestoreSyncTab() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Attendance Records Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Attendance Records Cloud Sync</h3>
+              <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2.5 py-1 rounded-full font-medium">
+                Cloud: {cloudAttendanceCount}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync daily roll call check-ins and attendance records to Firebase Firestore.
+            </p>
+            <button
+              onClick={handleSyncAttendance}
+              disabled={isSyncingAttendance}
+              className="w-full py-3 px-4 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingAttendance && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingAttendance ? 'Syncing Attendance...' : 'Sync Attendance Records to Cloud'}
+            </button>
+
+            {cloudAttendanceList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Attendance Records Preview ({cloudAttendanceList.length})</span>
+                  <button 
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Attendance
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Adm No</TableHead>
+                        <TableHead className="p-2 font-medium">Learner</TableHead>
+                        <TableHead className="p-2 font-medium">Date</TableHead>
+                        <TableHead className="p-2 font-medium">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudAttendanceList.map((a, idx) => (
+                        <TableRow key={a.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-mono text-xs">{a.admission_number}</TableCell>
+                          <TableCell className="p-2 font-medium">{a.learner_name || '—'}</TableCell>
+                          <TableCell className="p-2 text-xs text-muted-foreground">{a.date}</TableCell>
+                          <TableCell className="p-2">
+                            <Badge 
+                              variant="outline" 
+                              className={
+                                a.status === 'present' 
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                  : 'bg-red-50 text-red-700 border-red-200'
+                              }
+                            >
+                              {a.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Streams & Classes Cloud Sync & Preview Section */}
