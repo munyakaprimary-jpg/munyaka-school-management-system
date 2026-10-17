@@ -19,7 +19,6 @@ export default function SupabaseSyncTab() {
 
   const [isCheckingCollections, setIsCheckingCollections] = useState(false);
   const [learnersCount, setLearnersCount] = useState(0);
-  const [isSyncingAssessments, setIsSyncingAssessments] = useState(false);
 
   async function handleTestCloudTables() {
     setIsCheckingCollections(true);
@@ -125,51 +124,6 @@ export default function SupabaseSyncTab() {
       showError(err.message || 'Unknown error');
     } finally {
       setIsSyncing(false); // This GUARANTEES the button stops spinning no matter what!
-    }
-  }
-
-  async function handleSyncAssessmentMarks() {
-    if (isSyncingAssessments) return;
-    setIsSyncingAssessments(true);
-
-    try {
-      const localAssessmentMarks = JSON.parse(
-        localStorage.getItem('munyaka_marks_records') ||
-        localStorage.getItem('assessment_marks_data') ||
-        localStorage.getItem('marked_student_submissions') ||
-        localStorage.getItem('marks') ||
-        '[]'
-      );
-
-      if (!Array.isArray(localAssessmentMarks) || localAssessmentMarks.length === 0) {
-        alert('No local assessment marks found to sync.');
-        return;
-      }
-
-      const batch = writeBatch(db);
-
-      localAssessmentMarks.forEach((markRecord) => {
-        const docId = String(
-          markRecord.id ||
-          `${markRecord.admission_no || markRecord.admission_number || markRecord.admissionNumber || 'unknown'}_${markRecord.subject || markRecord.learning_area || 'subject'}_${markRecord.term || 'term'}`
-        );
-        const docRef = doc(db, 'assessment_marks', docId);
-        batch.set(docRef, markRecord, { merge: true });
-      });
-
-      await batch.commit();
-
-      alert(`Successfully synced ${localAssessmentMarks.length} assessment records!`);
-      showSuccess(`Successfully synced ${localAssessmentMarks.length} assessment records to Firestore!`);
-
-      // Refresh table preview safely in the background
-      handleTestCloudTables().catch(console.error);
-    } catch (err: any) {
-      console.error('Assessment sync error:', err);
-      alert(`Sync failed: ${err.message || 'Unknown error'}`);
-      showError(err.message || 'Unknown error');
-    } finally {
-      setIsSyncingAssessments(false);
     }
   }
 
