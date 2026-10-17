@@ -69,58 +69,30 @@ export default function SupabaseSyncTab() {
 
       const learnersPayload = storedStudents.map((l: any) => ({
         id: l.id || undefined,
-        admission_number: String(l.admissionNumber || l.admission_number || l.admNo || l.id || '').trim(),
+        upi_no: String(l.upiNumber || l.upi || l.upi_no || '').trim(),
         name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
         grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
         stream: String(l.stream || '').trim(),
         gender: String(l.gender || 'Unknown').trim(),
-        guardian_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim(),
-        guardian_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
-        assessment_number: String(l.assessmentNumber || l.assessment_number || '').trim(),
-        upi_number: String(l.upiNumber || l.upi || l.upi_number || '').trim(),
-        status: String(l.status || 'Active').trim(),
-        photo_url: String(l.photoUrl || l.photo_url || '').trim(),
-        date_of_birth: l.dateOfBirth || l.date_of_birth || null,
-        updated_at: new Date().toISOString()
-      })).filter(l => Boolean(l.admission_number));
+        dob: l.dateOfBirth || l.date_of_birth || l.dob || null,
+        parent_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
+        parent_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim()
+      })).filter(l => Boolean(l.name));
 
       console.log("SYNC PAYLOAD:", learnersPayload);
 
       if (learnersPayload.length > 0) {
-        try {
-          const response = await fetch('/api/sync/learners', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ learners: learnersPayload }),
-          });
+        const { data, error } = await supabase
+          .from('learners')
+          .upsert(learnersPayload, { onConflict: 'id' });
 
-          const result = await response.json();
-
-          if (!response.ok || !result.success) {
-            throw new Error(result.error || `Server sync failed with status ${response.status}`);
-          }
-
-          alert(`Successfully synced ${result.count || learnersPayload.length} learners via local server backend!`);
-          showSuccess(`Successfully synced ${result.count || learnersPayload.length} learners!`);
-          handleTestCloudTables();
-        } catch (serverErr: any) {
-          console.warn("Local backend endpoint /api/sync/learners not available or failed, falling back to direct client SDK upsert:", serverErr);
-          
-          const { data, error } = await supabase
-            .from('learners')
-            .upsert(learnersPayload, { onConflict: 'id' });
-
-          if (error) {
-            alert(`Sync Error: ${error.message}`);
-            showError(error.message);
-            return;
-          } else {
-            alert(`Successfully synced ${learnersPayload.length} learners!`);
-            showSuccess(`Successfully synced ${learnersPayload.length} learners!`);
-            handleTestCloudTables();
-          }
+        if (error) {
+          alert(`Sync Error: ${error.message}`);
+          showError(error.message);
+        } else {
+          alert(`Successfully synced ${learnersPayload.length} learners to cloud!`);
+          showSuccess(`Successfully synced ${learnersPayload.length} learners to cloud!`);
+          await handleTestCloudTables();
         }
       } else {
         alert("No local learners found to sync.");
@@ -129,7 +101,7 @@ export default function SupabaseSyncTab() {
       const errMsg = err?.message || 'Sync failed due to table schema or RLS policy constraints.';
       alert(`Sync Error: ${errMsg}`);
       showError(errMsg);
-      handleTestCloudTables();
+      await handleTestCloudTables();
     }
   }
 
