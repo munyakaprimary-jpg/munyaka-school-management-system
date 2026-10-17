@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
-import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, AlertCircle } from 'lucide-react';
+import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, Table as TableIcon } from 'lucide-react';
 import { db } from '@/lib/firebaseClient';
 import { collection, doc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { getStoredLearners } from '@/utils/learnersStore';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function SupabaseSyncTab() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [tableCounts, setTableCounts] = useState<{ learners: number; marks: number; attendance: number; streams: number } | null>(null);
+  const [cloudLearnersList, setCloudLearnersList] = useState<any[]>([]);
 
   async function handleTestCloudTables() {
     console.log("--- EXECUTING FIREBASE FIRESTORE TABLE TEST ---");
@@ -28,6 +31,8 @@ export default function SupabaseSyncTab() {
     try {
       const learnersSnap = await getDocs(collection(db, 'learners'));
       newCounts.learners = learnersSnap.size;
+      const learnersData = learnersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setCloudLearnersList(learnersData);
 
       const marksSnap = await getDocs(collection(db, 'assessment_marks'));
       newCounts.marks = marksSnap.size;
@@ -46,11 +51,16 @@ export default function SupabaseSyncTab() {
       // Fallback to local stored count if offline
       const stored = getStoredLearners();
       newCounts.learners = stored.length;
+      setCloudLearnersList(stored);
       setTableCounts(newCounts);
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore project.');
     }
   }
+
+  useEffect(() => {
+    handleTestCloudTables().catch(console.error);
+  }, []);
 
   async function handleSyncToCloud() {
     if (isSyncing) return;
@@ -205,6 +215,69 @@ export default function SupabaseSyncTab() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Cloud Learners Preview Table */}
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <TableIcon className="text-amber-600" size={18} /> Cloud Learners Preview ({cloudLearnersList.length} Records)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Live view of records synchronized in Firebase Firestore</p>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleTestCloudTables}
+                disabled={testStatus === 'testing'}
+                className="text-amber-700 border-amber-300 bg-amber-50/50 hover:bg-amber-100 font-semibold"
+              >
+                <RefreshCw size={14} className={`mr-1.5 ${testStatus === 'testing' ? 'animate-spin' : ''}`} />
+                Refresh Cloud Preview
+              </Button>
+            </div>
+
+            <ScrollArea className="h-[320px] rounded-xl border">
+              <Table>
+                <TableHeader className="bg-slate-50 sticky top-0">
+                  <TableRow>
+                    <TableHead className="font-bold text-slate-700">UPI No</TableHead>
+                    <TableHead className="font-bold text-slate-700">Learner Name</TableHead>
+                    <TableHead className="font-bold text-slate-700">Grade / Stream</TableHead>
+                    <TableHead className="font-bold text-slate-700">Parent Contact</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cloudLearnersList.length > 0 ? (
+                    cloudLearnersList.map((learner, idx) => (
+                      <TableRow key={learner.id || idx} className="hover:bg-slate-50/80">
+                        <TableCell className="font-mono text-xs text-slate-600">
+                          {learner.upi_no || learner.upiNumber || 'N/A'}
+                        </TableCell>
+                        <TableCell className="font-semibold text-slate-900">
+                          {learner.name || 'Unnamed Learner'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-slate-100 text-slate-800 font-medium">
+                            {learner.grade || 'Grade 1'} {learner.stream ? `(${learner.stream})` : ''}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-slate-600 text-xs">
+                          {learner.parent_phone || learner.guardianPhone || 'N/A'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-12 text-slate-400">
+                        No cloud learners loaded yet. Click "Refresh Cloud Preview" or sync records above.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
           </div>
 
           {/* Action Trigger */}
