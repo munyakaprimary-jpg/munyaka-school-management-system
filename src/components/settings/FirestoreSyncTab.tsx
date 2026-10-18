@@ -71,11 +71,6 @@ export default function FirestoreSyncTab() {
   const [cloudLearningAreasCount, setCloudLearningAreasCount] = useState(0);
   const [cloudLearningAreasList, setCloudLearningAreasList] = useState<any[]>([]);
 
-  // Learning Areas Cloud Sync state
-  const [isSyncingLearningAreas, setIsSyncingLearningAreas] = useState(false);
-  const [cloudLearningAreasCount, setCloudLearningAreasCount] = useState(0);
-  const [cloudLearningAreasList, setCloudLearningAreasList] = useState<any[]>([]);
-
   const localLearners = (() => {
     try {
       const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
