@@ -1151,6 +1151,85 @@ export default function FirestoreSyncTab() {
             </div>
           </div>
 
+          {/* Fees & Finance Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Fees &amp; Finance Cloud Sync</h3>
+              <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-300">
+                Cloud Records: {cloudFeesCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync fee structures, payment transactions, student balances, and finance records to Firebase Firestore.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <Button
+                onClick={syncFeesToCloud}
+                disabled={isSyncingFees}
+                className="w-full sm:w-auto py-3 px-6 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isSyncingFees && <RefreshCw className="w-5 h-5 animate-spin"/>}
+                {isSyncingFees ? 'Syncing Fees...' : 'Sync Fees &amp; Finance to Cloud'}
+              </Button>
+            </div>
+
+            {cloudFeesList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Fees &amp; Finance Preview ({cloudFeesList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Fees
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Student / Adm No</TableHead>
+                        <TableHead className="p-2 font-medium">Fee Amount</TableHead>
+                        <TableHead className="p-2 font-medium">Payment Type / Ref</TableHead>
+                        <TableHead className="p-2 font-medium">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudFeesList.map((f, idx) => (
+                        <TableRow key={f.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2">
+                            <div className="font-semibold text-slate-900">{f.student_name || '—'}</div>
+                            <div className="font-mono text-xs text-muted-foreground">{f.admission_number || f.id}</div>
+                          </TableCell>
+                          <TableCell className="p-2 font-semibold text-cyan-700">
+                            KES {Number(f.amount || 0).toLocaleString()}
+                            {f.balance > 0 && <span className="block text-[10px] text-red-500 font-normal">Bal: KES {Number(f.balance).toLocaleString()}</span>}
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <div className="uppercase font-medium text-slate-800">{f.payment_method || 'Cash'}</div>
+                            <div className="text-muted-foreground font-mono">{f.transaction_ref || '—'}</div>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <Badge
+                              variant="outline"
+                              className={
+                                f.status === 'Fully Cleared' || f.status === 'Paid'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }
+                            >
+                              {f.status || 'Paid'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Attendance Records Cloud Sync & Preview Section */}
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
             <div className="flex items-center justify-between mb-2">
