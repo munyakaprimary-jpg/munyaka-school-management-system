@@ -50,6 +50,10 @@ export default function FirestoreSyncTab() {
   const [cloudExamsCount, setCloudExamsCount] = useState(0);
   const [cloudExamsList, setCloudExamsList] = useState<any[]>([]);
 
+  const [isSyncingIctLab, setIsSyncingIctLab] = useState(false);
+  const [cloudIctLabCount, setCloudIctLabCount] = useState(0);
+  const [cloudIctLabList, setCloudIctLabList] = useState<any[]>([]);
+
   const localLearners = (() => {
     try {
       const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
@@ -136,6 +140,12 @@ export default function FirestoreSyncTab() {
       setCloudExamsCount(examsSnap?.size || 0);
       const examsDocs = (examsSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudExamsList(examsDocs);
+
+      // ICT Lab Records Collection
+      const ictSnap = await getDocs(collection(db, 'ict_lab_records')).catch(() => ({ size: 0, docs: [] }));
+      setCloudIctLabCount(ictSnap?.size || 0);
+      const ictDocs = (ictSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudIctLabList(ictDocs);
 
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
@@ -303,6 +313,56 @@ export default function FirestoreSyncTab() {
       showError(msg);
     } finally {
       setIsSyncingFees(false);
+    }
+  }
+
+  async function syncIctLabToCloud() {
+    if (isSyncingIctLab) return;
+    setIsSyncingIctLab(true);
+    setErrorMessage('');
+
+    try {
+      let localItems: any[] = [];
+      try {
+        const raw = localStorage.getItem('munyaka_ict_lab');
+        if (raw) localItems = JSON.parse(raw);
+      } catch (err) {
+        console.error("Error reading munyaka_ict_lab:", err);
+      }
+      if (!localItems.length) {
+        localItems = [
+          { id: 'DEV-1', name: 'Main ICT Lab Server', type: 'Server', status: 'Online', category: 'Infrastructure', used: 32.4, quota: 50 },
+          { id: 'DEV-2', name: 'Student Workstation 01', type: 'Desktop', status: 'Active', category: 'Workstation', used: 12.0, quota: 30 }
+        ];
+      }
+
+      const batch = writeBatch(db);
+      let countSynced = 0;
+
+      for (const item of localItems) {
+        const docId = String(item.id || item.code || `ict_${countSynced + 1}`).toLowerCase().replace(/[^a-z0-9_.-]/g, '_');
+        const ref = doc(db, 'ict_lab_records', docId);
+        batch.set(ref, {
+          ...item,
+          syncedAt: new Date().toISOString(),
+          module: 'ICT Lab & Hardware Inventory'
+        }, { merge: true });
+        countSynced++;
+      }
+
+      await batch.commit();
+      setLastSynced(new Date());
+      showSuccess(`Successfully synchronized ${countSynced} ICT Lab records to 'ict_lab_records' Firestore collection!`);
+
+      await handleTestCloudTables();
+    } catch (err: any) {
+      console.error('ICT Lab Firestore sync error:', err);
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      alert(`ICT Lab sync failed: ${msg}`);
+      showError(`Firestore Error: ${msg}`);
+    } finally {
+      setIsSyncingIctLab(false);
     }
   }
 
@@ -1686,13 +1746,13 @@ export default function FirestoreSyncTab() {
               className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isSyncingLibrary && <RefreshCw className="w-5 h-5 animate-spin"/>}
-              {isSyncingLibrary ? 'Syncing Library...' : 'Sync Library &amp; E-Resources to Cloud'}
+              {isSyncingLibrary ? 'Syncing Library Records...' : 'Sync Library Records to Cloud'}
             </Button>
 
             {cloudLibraryList.length > 0 && (
               <div className="mt-6 border-t border-border pt-4">
                 <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
-                  <span>Synced Library Records Preview ({cloudLibraryList.length})</span>
+                  <span>Synced Library &amp; E-Resources Preview ({cloudLibraryList.length})</span>
                   <button
                     onClick={handleTestCloudTables}
                     className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
@@ -1704,24 +1764,85 @@ export default function FirestoreSyncTab() {
                   <Table>
                     <TableHeader className="bg-muted/50 sticky top-0">
                       <TableRow>
-                        <TableHead className="p-2 font-medium">Doc ID</TableHead>
-                        <TableHead className="p-2 font-medium">Type</TableHead>
-                        <TableHead className="p-2 font-medium">Title</TableHead>
-                        <TableHead className="p-2 font-medium">Details</TableHead>
+                        <TableHead className="p-2 font-medium">Book Title</TableHead>
+                        <TableHead className="p-2 font-medium">Category</TableHead>
+                        <TableHead className="p-2 font-medium">Author / ISBN</TableHead>
+                        <TableHead className="p-2 font-medium">Copies</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {cloudLibraryList.map((r, idx) => (
-                        <TableRow key={r.id || idx} className="hover:bg-muted/20">
-                          <TableCell className="p-2 font-mono text-xs">{r.id || '—'}</TableCell>
-                          <TableCell className="p-2">
+                      {cloudLibraryList.map((lib, idx) => (
+                        <TableRow key={lib.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-semibold text-slate-900">{lib.title || lib.name || '—'}</TableCell>
+                          <TableCell className="p-2 text-xs">
                             <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                              {r.type || '—'}
+                              {lib.category || lib.type || 'Book'}
                             </Badge>
                           </TableCell>
-                          <TableCell className="p-2 font-medium">{r.title || r.book_title || r.name || '—'}</TableCell>
-                          <TableCell className="p-2 text-xs text-muted-foreground">
-                            {r.author || r.student_name || r.category || '—'}
+                          <TableCell className="p-2 text-xs text-muted-foreground">{lib.author || lib.isbn || '—'}</TableCell>
+                          <TableCell className="p-2 text-xs font-semibold">{lib.copies || lib.stock || 1}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ICT Lab & Hardware Inventory Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">ICT Lab &amp; Hardware Inventory Cloud Sync</h3>
+              <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-300">
+                Cloud Records: {cloudIctLabCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync computers, servers, networking gear, and lab inventory to the 'ict_lab_records' Firestore collection.
+            </p>
+            <Button
+              onClick={syncIctLabToCloud}
+              disabled={isSyncingIctLab}
+              className="w-full py-3 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingIctLab && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingIctLab ? 'Syncing ICT Lab Records...' : 'Sync ICT Lab Records'}
+            </Button>
+
+            {cloudIctLabList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced ICT Lab Records Preview ({cloudIctLabList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh ICT Lab
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Asset / Device ID</TableHead>
+                        <TableHead className="p-2 font-medium">Name</TableHead>
+                        <TableHead className="p-2 font-medium">Category</TableHead>
+                        <TableHead className="p-2 font-medium">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudIctLabList.map((item, idx) => (
+                        <TableRow key={item.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-mono text-xs">{item.id || item.code || `DEV-${idx+1}`}</TableCell>
+                          <TableCell className="p-2 font-semibold text-slate-900">{item.name || item.owner || '—'}</TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
+                              {item.category || item.role || 'Hardware'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <span className="text-emerald-600 font-semibold">{item.status || 'Active'}</span>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1840,7 +1961,7 @@ export default function FirestoreSyncTab() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
     </div>
   );
 }
