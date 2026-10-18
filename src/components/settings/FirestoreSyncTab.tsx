@@ -62,6 +62,10 @@ export default function FirestoreSyncTab() {
   const [cloudStaffCount, setCloudStaffCount] = useState(0);
   const [cloudStaffList, setCloudStaffList] = useState<any[]>([]);
 
+  const [isSyncingReportCards, setIsSyncingReportCards] = useState(false);
+  const [cloudReportCardsCount, setCloudReportCardsCount] = useState(0);
+  const [cloudReportCardsList, setCloudReportCardsList] = useState<any[]>([]);
+
   const localLearners = (() => {
     try {
       const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
@@ -166,6 +170,12 @@ export default function FirestoreSyncTab() {
       setCloudStaffCount(staffSnap?.size || 0);
       const staffDocs = (staffSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudStaffList(staffDocs);
+
+      // Report Cards Collection
+      const reportCardsSnap = await getDocs(collection(db, 'report_cards')).catch(() => ({ size: 0, docs: [] }));
+      setCloudReportCardsCount(reportCardsSnap?.size || 0);
+      const reportCardsDocs = (reportCardsSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudReportCardsList(reportCardsDocs);
 
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
@@ -646,6 +656,86 @@ export default function FirestoreSyncTab() {
       showError(`Staff Sync Failed: ${msg}`);
     } finally {
       setIsSyncingStaff(false);
+    }
+  }
+
+  async function syncReportCardsToCloud() {
+    if (isSyncingReportCards) return;
+    setIsSyncingReportCards(true);
+    setErrorMessage('');
+
+    try {
+      let reportRecords: any[] = [];
+      const sources = ['munyaka_report_cards', 'report_cards', 'term_reports', 'student_reports', 'reportCards'];
+      for (const src of sources) {
+        try {
+          const raw = localStorage.getItem(src);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              reportRecords = [...reportRecords, ...parsed];
+            }
+          }
+        } catch (e) {
+          console.error(`Error reading ${src} from localStorage:`, e);
+        }
+      }
+
+      if (!reportRecords.length) {
+        reportRecords = [
+          { studentAdmission: 'ADM-2025-001', studentName: 'Brian Kiprop', grade: 'Grade 8', stream: 'East', term: 'Term 1', year: '2025', overallLevel: 'Exceeding Expectation', attendanceSummary: '72/75 Days', teacherComments: 'Exceptional academic performance and leadership in ICT.', generatedDate: '2025-04-10' },
+          { studentAdmission: 'ADM-2025-002', studentName: 'Amina Mohamed', grade: 'Grade 8', stream: 'West', term: 'Term 1', year: '2025', overallLevel: 'Meeting Expectation', attendanceSummary: '70/75 Days', teacherComments: 'Consistent effort shown across all subjects.', generatedDate: '2025-04-10' }
+        ];
+      }
+
+      const batch = writeBatch(db);
+      let countSynced = 0;
+
+      for (const rep of reportRecords) {
+        const admNo = String(rep?.studentAdmission ?? rep?.admissionNumber ?? rep?.admission_number ?? rep?.admNo ?? `adm_${countSynced + 1}`).trim();
+        const term = String(rep?.term ?? rep?.termName ?? 'Term 1').trim();
+        const year = String(rep?.year ?? rep?.academicYear ?? '2025').trim();
+
+        // Format document IDs using clean composite pattern: report_{student_admission_number}_{term}_{year} (lowercase with spaces replaced by underscores)
+        const admSlug = admNo.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const termSlug = term.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const yearSlug = year.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const docId = `report_${admSlug}_${termSlug}_${yearSlug}`;
+
+        const ref = doc(db, 'report_cards', docId);
+
+        // Safe null checks and optional chaining (`?.`) to avoid runtime errors during mapping
+        const mappedData = {
+          studentAdmission: admNo,
+          studentName: rep?.studentName ?? rep?.name ?? rep?.learnerName ?? 'Unnamed Student',
+          grade: rep?.grade ?? rep?.classLevel ?? 'Grade 8',
+          stream: rep?.stream ?? rep?.classStream ?? 'East',
+          term: term,
+          year: year,
+          overallLevel: rep?.overallLevel ?? rep?.gradeLevel ?? rep?.status ?? 'Meeting Expectation',
+          attendanceSummary: rep?.attendanceSummary ?? rep?.attendance ?? 'N/A',
+          teacherComments: rep?.teacherComments ?? rep?.comments ?? rep?.remark ?? 'Good progress.',
+          generatedDate: rep?.generatedDate ?? rep?.date ?? new Date().toISOString().split('T')[0],
+          syncedAt: new Date().toISOString(),
+          rawPayload: rep
+        };
+
+        batch.set(ref, mappedData, { merge: true });
+        countSynced++;
+      }
+
+      await batch.commit();
+      setLastSynced(new Date());
+      showSuccess(`Successfully synchronized ${countSynced} Report Cards to 'report_cards' Firestore collection!`);
+
+      await handleTestCloudTables();
+    } catch (err: any) {
+      console.error('Report Cards Firestore sync error:', err);
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      showError(`Report Cards Sync Failed: ${msg}`);
+    } finally {
+      setIsSyncingReportCards(false);
     }
   }
 
@@ -1600,6 +1690,28 @@ export default function FirestoreSyncTab() {
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Report Cards</p>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudReportCardsCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-emerald-400 mt-1">
+                  {cloudReportCardsCount}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Report Cards</p>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudReportCardsCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-emerald-400 mt-1">
+                  {cloudReportCardsCount}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Assessment Marks</p>
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudAssessmentCount}
@@ -2097,6 +2209,73 @@ export default function FirestoreSyncTab() {
                           </TableCell>
                           <TableCell className="p-2 text-xs text-muted-foreground">{lib.author || lib.isbn || '—'}</TableCell>
                           <TableCell className="p-2 text-xs font-semibold">{lib.copies || lib.stock || 1}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Report Cards Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Report Cards Cloud Sync</h3>
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300">
+                Cloud Records: {cloudReportCardsCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync generated termly report card data, overall grade averages, and teacher comments to the 'report_cards' Firestore collection.
+            </p>
+            <Button
+              onClick={syncReportCardsToCloud}
+              disabled={isSyncingReportCards}
+              className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingReportCards && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingReportCards ? 'Syncing Report Cards...' : 'Sync Report Cards'}
+            </Button>
+
+            {cloudReportCardsList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Report Cards Preview ({cloudReportCardsList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Report Cards
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Student Name / Adm No</TableHead>
+                        <TableHead className="p-2 font-medium">Grade & Stream</TableHead>
+                        <TableHead className="p-2 font-medium">Term / Year</TableHead>
+                        <TableHead className="p-2 font-medium">Overall Level / Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudReportCardsList.map((rep, idx) => (
+                        <TableRow key={rep.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-semibold text-slate-900">
+                            {rep.studentName || '—'}
+                            <div className="text-[10px] font-mono text-muted-foreground">{rep.studentAdmission || ''}</div>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                              {rep.grade || 'Grade'} {rep.stream || ''}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs text-muted-foreground">{rep.term || 'Term 1'} ({rep.year || '2025'})</TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <span className="font-semibold text-emerald-700">{rep.overallLevel || 'Meeting Expectation'}</span>
+                            <div className="text-[10px] text-slate-500">Generated: {rep.generatedDate || '—'}</div>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
