@@ -1552,8 +1552,60 @@ export const initialSeedData = {
     "currentTerm": "Term 1, 2026",
     "academicYear": "2026"
   },
-  "notices": [],
-  "events": [],
+  "notices": [
+    {
+      "id": "notice-001",
+      "title": "Opening of Term 1, 2026 and Fee Payment Guidelines",
+      "content": "All parents and guardians are reminded that Term 1 officially begins on Monday, 12th January 2026. Please clear outstanding balances before reporting.",
+      "category": "Official Notice",
+      "targetGroup": "All Parents & Guardians",
+      "eventDate": "2026-01-12",
+      "status": "Active",
+      "createdAt": "2026-01-02T08:00:00.000Z"
+    },
+    {
+      "id": "notice-002",
+      "title": "Staff Briefing & Curriculum Alignment Meeting",
+      "content": "Mandatory CBC curriculum alignment meeting for all upper primary and junior secondary teaching staff in the main staffroom.",
+      "category": "Staff Briefing",
+      "targetGroup": "Teaching Staff",
+      "eventDate": "2026-01-10",
+      "status": "Active",
+      "createdAt": "2026-01-03T09:30:00.000Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "event-001",
+      "title": "Term 1 Opening Day & Learner Reporting",
+      "content": "Boarding and day scholars report for the commencement of Term 1 academic activities.",
+      "category": "Term Opening",
+      "targetGroup": "All Learners",
+      "eventDate": "2026-01-12",
+      "status": "Published",
+      "createdAt": "2026-01-02T08:00:00.000Z"
+    },
+    {
+      "id": "event-002",
+      "title": "Inter-House Athletics & Ball Games Trials",
+      "content": "Annual sports selection and trials across Red, Blue, Green, and Yellow houses for Nairobi County zonal competitions.",
+      "category": "Co-Curricular",
+      "targetGroup": "Grade 4 - Grade 9",
+      "eventDate": "2026-02-18",
+      "status": "Upcoming",
+      "createdAt": "2026-01-05T10:00:00.000Z"
+    },
+    {
+      "id": "event-003",
+      "title": "Mid-Term Break & Parents Consultation Day",
+      "content": "School closes for mid-term break. Parents report back for learner progress report collection and consultation.",
+      "category": "Term Closing",
+      "targetGroup": "All Parents & Learners",
+      "eventDate": "2026-03-27",
+      "status": "Scheduled",
+      "createdAt": "2026-01-05T10:30:00.000Z"
+    }
+  ],
   "campuses": [
     {
       "id": "1",

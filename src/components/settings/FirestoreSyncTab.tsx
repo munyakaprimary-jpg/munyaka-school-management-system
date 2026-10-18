@@ -76,6 +76,11 @@ export default function FirestoreSyncTab() {
   const [cloudCommunicationCount, setCloudCommunicationCount] = useState(0);
   const [cloudCommunicationList, setCloudCommunicationList] = useState<any[]>([]);
 
+  // Events & Notices Cloud Sync state
+  const [isSyncingEventsNotices, setIsSyncingEventsNotices] = useState(false);
+  const [cloudEventsNoticesCount, setCloudEventsNoticesCount] = useState(0);
+  const [cloudEventsNoticesList, setCloudEventsNoticesList] = useState<any[]>([]);
+
   // Learning Areas Cloud Sync state
   const [isSyncingLearningAreas, setIsSyncingLearningAreas] = useState(false);
   const [cloudLearningAreasCount, setCloudLearningAreasCount] = useState(0);
@@ -209,6 +214,12 @@ export default function FirestoreSyncTab() {
       setCloudCommunicationCount(commSnap?.size || 0);
       const commDocs = (commSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudCommunicationList(commDocs);
+
+      // Events & Notices Collection
+      const eventsNoticesSnap = await getDocs(collection(db, 'events_notices')).catch(() => ({ size: 0, docs: [] }));
+      setCloudEventsNoticesCount(eventsNoticesSnap?.size || 0);
+      const eventsNoticesDocs = (eventsNoticesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudEventsNoticesList(eventsNoticesDocs);
 
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
@@ -347,6 +358,36 @@ export default function FirestoreSyncTab() {
     } catch (err: any) {
       console.error('Communication Firestore sync error:', err);
       showError(`Communication Sync Error: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsSyncingCommunication(false);
+    }
+  }
+
+  // Sync function for Events & Notices module
+  async function handleSyncEventsNotices() {
+    if (isSyncingEventsNotices) return;
+    setIsSyncingEventsNotices(true);
+    try {
+      const { syncEventsNoticesToCloud } = await import('@/services/SyncEngine');
+      const res = await syncEventsNoticesToCloud();
+      if (!res.success) {
+        throw new Error(res.error || 'Events & Notices sync failed');
+      }
+
+      setCloudEventsNoticesCount(res.count);
+      setLastSynced(new Date());
+
+      const snap = await getDocs(collection(db, 'events_notices'));
+      setCloudEventsNoticesList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      showSuccess(`Successfully synchronized ${res.count} Events & Notices records to 'events_notices' Firestore collection!`);
+    } catch (err: any) {
+      console.error('Events & Notices Firestore sync error:', err);
+      showError(`Events & Notices Sync Error: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsSyncingEventsNotices(false);
+    }
+  }
     } finally {
       setIsSyncingCommunication(false);
     }
@@ -2147,6 +2188,25 @@ export default function FirestoreSyncTab() {
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Events &amp; Notices</p>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudEventsNoticesCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-emerald-400 mt-1">
+                  {cloudEventsNoticesCount}
+                </p>
+              </div>
+                  <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudCommunicationCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-cyan-400 mt-1">
+                  {cloudCommunicationCount}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Assessment Marks</p>
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudAssessmentCount}
@@ -2771,6 +2831,77 @@ export default function FirestoreSyncTab() {
                           <TableCell className="p-2 text-xs">
                             <span className="font-semibold text-emerald-700">{rep.overallLevel || 'Meeting Expectation'}</span>
                             <div className="text-[10px] text-slate-500">Generated: {rep.generatedDate || '—'}</div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Events & Notices Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Events &amp; Notices Cloud Sync</h3>
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300">
+                Cloud Records: {cloudEventsNoticesCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync school events, term opening/closing dates, staff briefings, and official noticeboard entries to the 'events_notices' Firestore collection.
+            </p>
+            <Button
+              onClick={handleSyncEventsNotices}
+              disabled={isSyncingEventsNotices}
+              className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingEventsNotices && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingEventsNotices ? 'Syncing Events & Notices...' : 'Sync Events & Notices'}
+            </Button>
+
+            {cloudEventsNoticesList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Events &amp; Notices Preview ({cloudEventsNoticesList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Events &amp; Notices
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Title</TableHead>
+                        <TableHead className="p-2 font-medium">Event Date</TableHead>
+                        <TableHead className="p-2 font-medium">Target Group / Audience</TableHead>
+                        <TableHead className="p-2 font-medium">Category</TableHead>
+                        <TableHead className="p-2 font-medium">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudEventsNoticesList.map((item, idx) => (
+                        <TableRow key={item.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-semibold text-slate-900">
+                            {item.title || '—'}
+                          </TableCell>
+                          <TableCell className="p-2 text-xs font-mono text-slate-700">
+                            {item.eventDate || '—'}
+                          </TableCell>
+                          <TableCell className="p-2 text-xs text-slate-600">
+                            {item.targetGroup || 'All'}
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                              {item.category || 'General'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <span className="font-semibold text-emerald-700">{item.status || 'Active'}</span>
                           </TableCell>
                         </TableRow>
                       ))}
