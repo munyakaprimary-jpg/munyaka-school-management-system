@@ -66,6 +66,16 @@ export default function FirestoreSyncTab() {
   const [cloudReportCardsCount, setCloudReportCardsCount] = useState(0);
   const [cloudReportCardsList, setCloudReportCardsList] = useState<any[]>([]);
 
+  // Learning Areas Cloud Sync state
+  const [isSyncingLearningAreas, setIsSyncingLearningAreas] = useState(false);
+  const [cloudLearningAreasCount, setCloudLearningAreasCount] = useState(0);
+  const [cloudLearningAreasList, setCloudLearningAreasList] = useState<any[]>([]);
+
+  // Learning Areas Cloud Sync state
+  const [isSyncingLearningAreas, setIsSyncingLearningAreas] = useState(false);
+  const [cloudLearningAreasCount, setCloudLearningAreasCount] = useState(0);
+  const [cloudLearningAreasList, setCloudLearningAreasList] = useState<any[]>([]);
+
   const localLearners = (() => {
     try {
       const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
@@ -177,6 +187,12 @@ export default function FirestoreSyncTab() {
       const reportCardsDocs = (reportCardsSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudReportCardsList(reportCardsDocs);
 
+      // Learning Areas Collection
+      const learningAreasSnap = await getDocs(collection(db, 'learning_areas')).catch(() => ({ size: 0, docs: [] }));
+      setCloudLearningAreasCount(learningAreasSnap?.size || 0);
+      const learningAreasDocs = (learningAreasSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudLearningAreasList(learningAreasDocs);
+
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
     } catch (error: any) {
@@ -193,6 +209,134 @@ export default function FirestoreSyncTab() {
   useEffect(() => {
     handleTestCloudTables().catch(console.error);
   }, []);
+
+  // Sync function for Learning Areas module
+  async function syncLearningAreasToCloud() {
+    if (isSyncingLearningAreas) return;
+    setIsSyncingLearningAreas(true);
+
+    try {
+      // Pull all registered subjects, learning area definitions, sub-strand competencies, and assessment rubrics from local storage/state
+      const sources = ['munyaka_flat_learning_areas_v2', 'munyaka_learning_areas', 'learning_areas', 'cbc_learning_areas'];
+      let rawData: any[] = [];
+      for (const key of sources) {
+        const item = localStorage.getItem(key);
+        if (item) {
+          try {
+            const parsed = JSON.parse(item);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              rawData = [...rawData, ...parsed];
+            }
+          } catch {}
+        }
+      }
+
+      // If nothing found in local storage, check initialSeedData or defaultCbcLearningAreas
+      if (rawData.length === 0) {
+        try {
+          const { defaultCbcLearningAreas } = await import('@/data/defaultCbcLearningAreas');
+          if (Array.isArray(defaultCbcLearningAreas)) {
+            rawData = defaultCbcLearningAreas;
+          }
+        } catch {}
+      }
+
+      // Flatten or map cluster / section records into individual learning area documents
+      const learningAreaRecords: any[] = [];
+      rawData.forEach((clusterOrSection: any) => {
+        if (!clusterOrSection) return;
+        const sectionName = String(clusterOrSection?.name || clusterOrSection?.category || 'General Learning Areas').trim();
+        const sectionId = String(clusterOrSection?.id || sectionName).trim();
+        const areas = clusterOrSection?.learningAreas || clusterOrSection?.subjects || clusterOrSection?.items || (Array.isArray(clusterOrSection) ? clusterOrSection : [clusterOrSection]);
+
+        if (Array.isArray(areas)) {
+          areas.forEach((area: any) => {
+            if (!area) return;
+            const areaName = String(area?.name || area?.title || area?.subjectName || '').trim();
+            if (!areaName) return;
+            const codeOrAbbr = String(area?.code || area?.abbreviation || area?.id || areaName.substring(0, 4)).trim();
+            const targetGradeOrLevel = String(area?.gradeLevel || area?.grade || sectionName).trim();
+            const subStrands = area?.subStrands || area?.sub_strands || area?.strands || [];
+            const assessmentRubrics = area?.assessmentRubrics || area?.rubrics || area?.competencies || [];
+
+            learningAreaRecords.push({
+              ...area,
+              sectionName,
+              sectionId,
+              subjectName: areaName,
+              codeOrAbbreviation: codeOrAbbr,
+              targetGradeLevel: targetGradeOrLevel,
+              learningStrandsCount: Array.isArray(subStrands) ? subStrands.length : (typeof subStrands === 'number' ? subStrands : 0),
+              subStrands,
+              assessmentRubrics,
+              lastSyncedAt: new Date().toISOString()
+            });
+          });
+        }
+      });
+
+      if (learningAreaRecords.length === 0) {
+        // Fallback default sample record if none parsed
+        learningAreaRecords.push({
+          id: 'la_math_pp1',
+          subjectName: 'Mathematical Activities',
+          codeOrAbbreviation: 'MATH_PP1',
+          targetGradeLevel: 'Pre-Primary (PP1)',
+          sectionName: 'Pre-Primary',
+          learningStrandsCount: 4,
+          subStrands: ['Numbers', 'Measurement', 'Geometry', 'Data Handling'],
+          assessmentRubrics: ['Exceeding Expectation', 'Meeting Expectation', 'Approaching Expectation', 'Below Expectation'],
+          lastSyncedAt: new Date().toISOString()
+        });
+      }
+
+      const batch = writeBatch(db);
+      let countSynced = 0;
+
+      for (const area of learningAreaRecords) {
+        const gradeStr = String(area?.targetGradeLevel || area?.sectionName || 'grade').toLowerCase();
+        const codeStr = String(area?.codeOrAbbreviation || area?.subjectName || 'subject').toLowerCase();
+        
+        // Clean composite pattern: learning_area_{grade_level_or_id}_{subject_code_or_name} (converted to lowercase with spaces replaced by underscores)
+        const cleanGrade = gradeStr.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        const cleanCode = codeStr.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        const docId = `learning_area_${cleanGrade}_${cleanCode}`;
+
+        const docRef = doc(db, 'learning_areas', docId);
+        batch.set(docRef, {
+          id: area?.id || docId,
+          subjectName: area?.subjectName || area?.name || '',
+          codeOrAbbreviation: area?.codeOrAbbreviation || area?.code || '',
+          targetGradeLevel: area?.targetGradeLevel || area?.gradeLevel || '',
+          sectionName: area?.sectionName || '',
+          learningStrandsCount: Number(area?.learningStrandsCount || area?.subStrands?.length || 0),
+          subStrands: area?.subStrands || [],
+          assessmentRubrics: area?.assessmentRubrics || [],
+          periodsPerWeek: Number(area?.periodsPerWeek || 4),
+          type: area?.type || 'Core',
+          description: area?.description || '',
+          lastSyncedAt: new Date().toISOString()
+        }, { merge: true });
+
+        countSynced++;
+      }
+
+      await batch.commit();
+      setCloudLearningAreasCount(countSynced);
+      setLastSynced(new Date());
+
+      // Refresh cloud list
+      const snap = await getDocs(collection(db, 'learning_areas'));
+      setCloudLearningAreasList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      showSuccess(`Successfully synchronized ${countSynced} Learning Areas to 'learning_areas' Firestore collection!`);
+    } catch (err: any) {
+      console.error('Learning Areas Firestore sync error:', err);
+      showError(`Learning Areas Sync Error: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsSyncingLearningAreas(false);
+    }
+  }
 
   // Sync function for Fees & Finance records module
   async function syncFeesToCloud() {
@@ -1699,15 +1843,27 @@ export default function FirestoreSyncTab() {
                   {cloudReportCardsCount}
                 </p>
               </div>
+
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Report Cards</p>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
-                    Cloud: {cloudReportCardsCount}
+                  <p className="text-xs text-slate-400">Learning Areas</p>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudLearningAreasCount}
                   </span>
                 </div>
-                <p className="text-2xl font-extrabold text-emerald-400 mt-1">
-                  {cloudReportCardsCount}
+                <p className="text-2xl font-extrabold text-amber-400 mt-1">
+                  {cloudLearningAreasCount}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Learning Areas</p>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudLearningAreasCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-amber-400 mt-1">
+                  {cloudLearningAreasCount}
                 </p>
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
@@ -2336,6 +2492,72 @@ export default function FirestoreSyncTab() {
                           <TableCell className="p-2 text-xs">
                             <span className="font-semibold text-emerald-700">{rep.overallLevel || 'Meeting Expectation'}</span>
                             <div className="text-[10px] text-slate-500">Generated: {rep.generatedDate || '—'}</div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Learning Areas Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Learning Areas Cloud Sync</h3>
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                Cloud Records: {cloudLearningAreasCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync CBC learning areas, subject definitions, grade-level allocations, sub-strand competencies, and assessment rubrics to the 'learning_areas' Firestore collection.
+            </p>
+            <Button
+              onClick={syncLearningAreasToCloud}
+              disabled={isSyncingLearningAreas}
+              className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingLearningAreas && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingLearningAreas ? 'Syncing Learning Areas...' : 'Sync Learning Areas'}
+            </Button>
+
+            {cloudLearningAreasList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Learning Areas Preview ({cloudLearningAreasList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Learning Areas
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Subject Name</TableHead>
+                        <TableHead className="p-2 font-medium">Code / Abbreviation</TableHead>
+                        <TableHead className="p-2 font-medium">Target Grade / Level</TableHead>
+                        <TableHead className="p-2 font-medium">Learning Strands Count</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudLearningAreasList.map((la, idx) => (
+                        <TableRow key={la.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-semibold text-slate-900">
+                            {la.subjectName || la.name || '—'}
+                            <div className="text-[10px] font-mono text-muted-foreground">{la.sectionName || ''}</div>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs font-mono">
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                              {la.codeOrAbbreviation || la.code || 'CODE'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs text-muted-foreground">{la.targetGradeLevel || la.gradeLevel || 'Primary'}</TableCell>
+                          <TableCell className="p-2 text-xs font-semibold text-slate-800">
+                            {la.learningStrandsCount ?? (Array.isArray(la.subStrands) ? la.subStrands.length : 0)} Strands
                           </TableCell>
                         </TableRow>
                       ))}
