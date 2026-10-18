@@ -71,6 +71,11 @@ export default function FirestoreSyncTab() {
   const [cloudExamTypesCount, setCloudExamTypesCount] = useState(0);
   const [cloudExamTypesList, setCloudExamTypesList] = useState<any[]>([]);
 
+  // Communication Cloud Sync state
+  const [isSyncingCommunication, setIsSyncingCommunication] = useState(false);
+  const [cloudCommunicationCount, setCloudCommunicationCount] = useState(0);
+  const [cloudCommunicationList, setCloudCommunicationList] = useState<any[]>([]);
+
   // Learning Areas Cloud Sync state
   const [isSyncingLearningAreas, setIsSyncingLearningAreas] = useState(false);
   const [cloudLearningAreasCount, setCloudLearningAreasCount] = useState(0);
@@ -199,6 +204,12 @@ export default function FirestoreSyncTab() {
       const examTypesDocs = (examTypesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudExamTypesList(examTypesDocs);
 
+      // Communication Collection
+      const commSnap = await getDocs(collection(db, 'communications')).catch(() => ({ size: 0, docs: [] }));
+      setCloudCommunicationCount(commSnap?.size || 0);
+      const commDocs = (commSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudCommunicationList(commDocs);
+
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
     } catch (error: any) {
@@ -215,6 +226,131 @@ export default function FirestoreSyncTab() {
   useEffect(() => {
     handleTestCloudTables().catch(console.error);
   }, []);
+
+  // Sync function for Communication module
+  async function syncCommunicationToCloud() {
+    if (isSyncingCommunication) return;
+    setIsSyncingCommunication(true);
+
+    try {
+      const sources = ['munyaka_communications', 'communications', 'announcements', 'broadcasts'];
+      let rawData: any[] = [];
+      for (const key of sources) {
+        const item = localStorage.getItem(key);
+        if (item) {
+          try {
+            const parsed = JSON.parse(item);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              rawData = [...rawData, ...parsed];
+            }
+          } catch {}
+        }
+      }
+
+      if (rawData.length === 0) {
+        try {
+          const { defaultCommunications } = await import('@/data/defaultCommunications');
+          if (Array.isArray(defaultCommunications)) {
+            rawData = defaultCommunications;
+          }
+        } catch {}
+      }
+
+      const communicationRecords: any[] = [];
+      const seen = new Set<string>();
+
+      rawData.forEach((comm: any, index: number) => {
+        if (!comm) return;
+        const title = String(comm?.title || comm?.subject || comm?.name || 'General Notice').trim();
+        const category = String(comm?.category || comm?.type || 'Circular').trim();
+        const channel = String(comm?.channel || comm?.medium || 'Noticeboard').trim();
+        const recipientAudience = String(comm?.recipientAudience || comm?.audience || comm?.recipients || 'All Parents').trim();
+        const messageContent = String(comm?.messageContent || comm?.content || comm?.message || '').trim();
+        const dateSent = String(comm?.dateSent || comm?.date || comm?.createdAt || new Date().toISOString().split('T')[0]).trim();
+        const status = String(comm?.status || 'Sent').trim();
+        const senderName = String(comm?.senderName || comm?.sender || comm?.author || 'Administration').trim();
+        const timestamp = String(comm?.timestamp || Date.now() + index);
+
+        const dedupeKey = `${title}_${dateSent}`.toLowerCase();
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+
+        communicationRecords.push({
+          ...comm,
+          title,
+          category,
+          channel,
+          recipientAudience,
+          messageContent,
+          dateSent,
+          status,
+          senderName,
+          timestamp,
+          lastSyncedAt: new Date().toISOString()
+        });
+      });
+
+      if (communicationRecords.length === 0) {
+        communicationRecords.push({
+          id: 'comm_default_1',
+          title: 'Opening Day Circular',
+          category: 'Circular',
+          channel: 'Noticeboard',
+          recipientAudience: 'All Parents',
+          messageContent: 'School reopens for Term 2.',
+          dateSent: '2025-05-02',
+          status: 'Sent',
+          senderName: 'Principal Office',
+          timestamp: String(Date.now()),
+          lastSyncedAt: new Date().toISOString()
+        });
+      }
+
+      const batch = writeBatch(db);
+      let countSynced = 0;
+
+      for (const comm of communicationRecords) {
+        const timeStr = String(comm?.timestamp || Date.now());
+        const chanStr = String(comm?.channel || comm?.category || 'noticeboard').toLowerCase();
+
+        // Format document IDs using a clean composite pattern: comm_{timestamp}_{channel_or_category} (converted to lowercase with spaces replaced by underscores)
+        const cleanTime = timeStr.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        const cleanChan = chanStr.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        const docId = `comm_${cleanTime}_${cleanChan}`;
+
+        const docRef = doc(db, 'communications', docId);
+        batch.set(docRef, {
+          id: comm?.id || docId,
+          title: comm?.title || '',
+          category: comm?.category || '',
+          channel: comm?.channel || 'Noticeboard',
+          recipientAudience: comm?.recipientAudience || '',
+          messageContent: comm?.messageContent || '',
+          dateSent: comm?.dateSent || '',
+          status: comm?.status || 'Sent',
+          senderName: comm?.senderName || '',
+          timestamp: comm?.timestamp || cleanTime,
+          lastSyncedAt: new Date().toISOString()
+        }, { merge: true });
+
+        countSynced++;
+      }
+
+      await batch.commit();
+      setCloudCommunicationCount(countSynced);
+      setLastSynced(new Date());
+
+      const snap = await getDocs(collection(db, 'communications'));
+      setCloudCommunicationList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      showSuccess(`Successfully synchronized ${countSynced} Communication records to 'communications' Firestore collection!`);
+    } catch (err: any) {
+      console.error('Communication Firestore sync error:', err);
+      showError(`Communication Sync Error: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsSyncingCommunication(false);
+    }
+  }
 
   // Sync function for Exam Types module
   async function syncExamTypesToCloud() {
@@ -2000,6 +2136,17 @@ export default function FirestoreSyncTab() {
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Communication</p>
+                  <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudCommunicationCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-cyan-400 mt-1">
+                  {cloudCommunicationCount}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Assessment Marks</p>
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudAssessmentCount}
@@ -2701,6 +2848,77 @@ export default function FirestoreSyncTab() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Communication Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Communication & Circulars Cloud Sync</h3>
+              <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-300">
+                Cloud Records: {cloudCommunicationCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync broad messages, general circulars, parent SMS broadcast logs, and staff announcements to the 'communications' Firestore collection.
+            </p>
+            <Button
+              onClick={syncCommunicationToCloud}
+              disabled={isSyncingCommunication}
+              className="w-full py-3 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingCommunication && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingCommunication ? 'Syncing Communication Records...' : 'Sync Communication Records'}
+            </Button>
+
+            {cloudCommunicationList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Communication Preview ({cloudCommunicationList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Communications
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Title / Subject</TableHead>
+                        <TableHead className="p-2 font-medium">Recipient Audience</TableHead>
+                        <TableHead className="p-2 font-medium">Channel</TableHead>
+                        <TableHead className="p-2 font-medium">Date Sent</TableHead>
+                        <TableHead className="p-2 font-medium">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudCommunicationList.map((comm, idx) => (
+                        <TableRow key={comm.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-semibold text-slate-900">
+                            {comm.title || '—'}
+                            <div className="text-[10px] text-muted-foreground">{comm.category || comm.senderName || ''}</div>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs text-slate-700">
+                            {comm.recipientAudience || 'All Parents'}
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
+                              {comm.channel || 'Noticeboard'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs text-muted-foreground">{comm.dateSent || '—'}</TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <span className="font-semibold text-emerald-700">{comm.status || 'Sent'}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
           </div>
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
             <div className="flex items-center justify-between mb-2">
