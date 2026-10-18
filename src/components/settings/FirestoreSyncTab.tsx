@@ -46,10 +46,40 @@ export default function FirestoreSyncTab() {
   const [cloudLibraryCount, setCloudLibraryCount] = useState(0);
   const [cloudLibraryList, setCloudLibraryList] = useState<any[]>([]);
 
+  const [isSyncingExams, setIsSyncingExams] = useState(false);
+  const [cloudExamsCount, setCloudExamsCount] = useState(0);
+  const [cloudExamsList, setCloudExamsList] = useState<any[]>([]);
+
   const localLearners = (() => {
     try {
       const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
       return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const localExamsList = (() => {
+    try {
+      const sources = ['all_set_exams', 'assessments', 'question_bank', 'munyaka_exams', 'exams'];
+      let combined: any[] = [];
+      for (const src of sources) {
+        const raw = localStorage.getItem(src);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            combined = [...combined, ...parsed];
+          }
+        }
+      }
+      const seen = new Set<string>();
+      return combined.filter(e => {
+        if (!e) return false;
+        const key = String(e.id || e.title || e.examTitle || '').trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     } catch {
       return [];
     }
@@ -100,6 +130,12 @@ export default function FirestoreSyncTab() {
       setCloudAttendanceCount(attendanceSnap?.size || 0);
       const attendanceDocs = (attendanceSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudAttendanceList(attendanceDocs);
+
+      // Exam Creator Records Collection
+      const examsSnap = await getDocs(collection(db, 'exam_creator_records')).catch(() => ({ size: 0, docs: [] }));
+      setCloudExamsCount(examsSnap?.size || 0);
+      const examsDocs = (examsSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudExamsList(examsDocs);
 
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
@@ -267,6 +303,88 @@ export default function FirestoreSyncTab() {
       showError(msg);
     } finally {
       setIsSyncingFees(false);
+    }
+  }
+
+  async function syncExamsToCloud() {
+    if (isSyncingExams) return;
+    setIsSyncingExams(true);
+    setErrorMessage('');
+
+    try {
+      const sources = ['all_set_exams', 'assessments', 'question_bank', 'munyaka_exams', 'exams'];
+      let rawExams: any[] = [];
+      for (const src of sources) {
+        const raw = localStorage.getItem(src);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              rawExams = [...rawExams, ...parsed];
+            }
+          } catch {}
+        }
+      }
+
+      if (rawExams.length === 0) {
+        rawExams = [{
+          id: 'exam_mathematics_grade_6_mid_term_1',
+          title: 'Mathematics Mid-Term Assessment',
+          examTitle: 'Mathematics Mid-Term Assessment',
+          subject: 'Mathematics',
+          grade: 'Grade 6',
+          gradeId: 'grade_6',
+          totalMarks: 100,
+          totalQuestions: 20,
+          assessmentRubrics: 'Standard Competency Rubric',
+          questionBank: [{ question: 'Sample question 1' }],
+          createdAt: new Date().toISOString()
+        }];
+      }
+
+      const batch = writeBatch(db);
+      let countSynced = 0;
+
+      for (const exam of rawExams) {
+        const subject = String(exam?.subject || exam?.learningArea || exam?.learning_area || 'general').trim().toLowerCase().replace(/\s+/g, '_');
+        const gradeId = String(exam?.gradeId || exam?.grade || 'grade_1').trim().toLowerCase().replace(/\s+/g, '_');
+        const rawTitleId = String(exam?.id || exam?.examId || exam?.title || exam?.examTitle || `exam_${countSynced + 1}`).trim().toLowerCase().replace(/\s+/g, '_');
+        
+        const compositeDocId = `exam_${subject}_${gradeId}_${rawTitleId}`;
+
+        const payload = {
+          exam_id: String(exam?.id || exam?.examId || ''),
+          title: String(exam?.title || exam?.examTitle || 'Untitled Assessment'),
+          exam_title: String(exam?.examTitle || exam?.title || 'Untitled Assessment'),
+          subject: String(exam?.subject || exam?.learningArea || exam?.learning_area || 'General'),
+          grade_level: String(exam?.grade || exam?.gradeLevel || exam?.gradeId || 'Grade 1'),
+          grade_id: gradeId,
+          total_marks: Number(exam?.totalMarks || exam?.total_marks || 100),
+          total_questions: Number(exam?.totalQuestions || exam?.total_questions || exam?.questionBank?.length || exam?.questions?.length || 0),
+          question_bank: exam?.questionBank || exam?.questions || [],
+          assessment_rubrics: exam?.assessmentRubrics || exam?.assessment_rubrics || exam?.rubric || '',
+          creation_date: String(exam?.createdAt || exam?.date || new Date().toISOString()),
+          synced_at: new Date().toISOString()
+        };
+
+        const docRef = doc(db, 'exam_creator_records', compositeDocId);
+        batch.set(docRef, payload, { merge: true });
+        countSynced++;
+      }
+
+      await batch.commit();
+      setLastSynced(new Date());
+      showSuccess(`Successfully synchronized ${countSynced} Exam Creator records to 'exam_creator_records' Firestore collection!`);
+
+      await handleTestCloudTables();
+    } catch (err: any) {
+      console.error('Exam Creator sync error:', err);
+      const msg = err.message || 'Unknown Firestore error';
+      setErrorMessage(msg);
+      alert(`Exam Creator sync failed: ${msg}`);
+      showError(msg);
+    } finally {
+      setIsSyncingExams(false);
     }
   }
 
@@ -1115,6 +1233,18 @@ export default function FirestoreSyncTab() {
                   {cloudAssessmentCount}
                 </p>
               </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Exam Creator</p>
+                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudExamsCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-purple-400 mt-1">
+                  {cloudExamsCount}
+                </p>
+              </div>
+
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Grades</p>
