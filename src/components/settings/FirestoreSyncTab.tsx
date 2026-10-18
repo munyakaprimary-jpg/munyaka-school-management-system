@@ -1431,6 +1431,70 @@ export default function FirestoreSyncTab() {
           {/* Grades Cloud Sync & Preview Section */}
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
             <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Exam Creator Cloud Sync</h3>
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
+                Cloud Exams: {cloudExamsCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync exams created in the Exam Creator module to the 'exam_creator_records' Firestore collection.
+            </p>
+            <Button
+              onClick={syncExamsToCloud}
+              disabled={isSyncingExams}
+              className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingExams && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingExams ? 'Syncing Exam Records...' : 'Sync Exam Creator Records'}
+            </Button>
+
+            {cloudExamsList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Exam Creator Preview ({cloudExamsList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Exams
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Exam ID / Ref</TableHead>
+                        <TableHead className="p-2 font-medium">Title</TableHead>
+                        <TableHead className="p-2 font-medium">Subject & Grade</TableHead>
+                        <TableHead className="p-2 font-medium">Questions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudExamsList.map((ex, idx) => (
+                        <TableRow key={ex.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-mono text-xs">{ex.exam_id || ex.id || '—'}</TableCell>
+                          <TableCell className="p-2 font-semibold text-slate-900">{ex.title || ex.exam_title || '—'}</TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <div className="font-medium text-slate-800">{ex.subject || '—'}</div>
+                            <div className="text-muted-foreground">{ex.grade_level || ex.grade_id || '—'}</div>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              {Array.isArray(ex.question_bank) ? ex.question_bank.length : (ex.total_questions || 0)} Qs
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Grades Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold">Grades Collection Cloud Sync</h3>
               <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300">
                 Cloud Grades: {cloudGradesCount}
