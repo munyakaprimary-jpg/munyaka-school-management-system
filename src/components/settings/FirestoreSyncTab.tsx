@@ -388,10 +388,6 @@ export default function FirestoreSyncTab() {
       setIsSyncingEventsNotices(false);
     }
   }
-    } finally {
-      setIsSyncingCommunication(false);
-    }
-  }
 
   // Sync function for Exam Types module
   async function syncExamTypesToCloud() {
