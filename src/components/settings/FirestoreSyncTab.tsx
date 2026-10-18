@@ -617,6 +617,73 @@ export default function FirestoreSyncTab() {
     }
   };
 
+  const handleSyncToCloud = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+
+    try {
+      const rawData = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners') || '';
+      let localLearnersList: any[] = [];
+      if (rawData) {
+        try {
+          localLearnersList = JSON.parse(rawData);
+        } catch {}
+      }
+      if (!Array.isArray(localLearnersList) || localLearnersList.length === 0) {
+        localLearnersList = [];
+      }
+
+      const learnersPayload = localLearnersList.map((l: any, index: number) => {
+        if (!l) return null;
+        const id = String(l.id || l.admissionNumber || l.admission_number || l.admission_no || l.admissionNo || `learner_${index + 1}`);
+        return {
+          id,
+          admission_number: String(l.admissionNumber || l.admission_number || l.admission_no || l.admissionNo || l.admNo || id).trim(),
+          upi_no: String(l.upiNumber || l.upi || l.upi_no || '').trim(),
+          name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
+          grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
+          stream: String(l.stream || '').trim(),
+          gender: String(l.gender || 'Unknown').trim(),
+          dob: l.dateOfBirth || l.date_of_birth || l.dob || null,
+          parent_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
+          parent_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim(),
+          updated_at: new Date().toISOString()
+        };
+      }).filter((l): l is any => Boolean(l));
+
+      if (!learnersPayload || learnersPayload.length === 0) {
+        alert('No local learner records found to sync.');
+        return;
+      }
+
+      const batch = writeBatch(db);
+
+      learnersPayload.forEach((learner) => {
+        const docId = String(learner.id || learner.admission_number || Date.now());
+        const docRef = doc(db, 'learners', docId);
+        batch.set(docRef, learner, { merge: true });
+      });
+
+      await batch.commit();
+
+      setLastSynced(new Date());
+      alert(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
+      showSuccess(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
+
+      // Call count test safely without blocking state cleanup
+      handleTestCloudTables().catch(console.error);
+
+    } catch (err: any) {
+      console.error('Learners sync error:', err);
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      alert(`Sync failed: ${msg}`);
+      showError(msg);
+    } finally {
+      setIsSyncing(false); // ALWAYS runs to stop the spinner!
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
