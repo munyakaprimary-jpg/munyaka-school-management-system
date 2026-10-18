@@ -58,6 +58,10 @@ export default function FirestoreSyncTab() {
   const [cloudStoreCount, setCloudStoreCount] = useState(0);
   const [cloudStoreList, setCloudStoreList] = useState<any[]>([]);
 
+  const [isSyncingStaff, setIsSyncingStaff] = useState(false);
+  const [cloudStaffCount, setCloudStaffCount] = useState(0);
+  const [cloudStaffList, setCloudStaffList] = useState<any[]>([]);
+
   const localLearners = (() => {
     try {
       const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
@@ -156,6 +160,12 @@ export default function FirestoreSyncTab() {
       setCloudStoreCount(storeSnap?.size || 0);
       const storeDocs = (storeSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudStoreList(storeDocs);
+
+      // Staff Registry Collection
+      const staffSnap = await getDocs(collection(db, 'staff')).catch(() => ({ size: 0, docs: [] }));
+      setCloudStaffCount(staffSnap?.size || 0);
+      const staffDocs = (staffSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudStaffList(staffDocs);
 
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
@@ -547,6 +557,95 @@ export default function FirestoreSyncTab() {
       showError(`Store Sync Failed: ${msg}`);
     } finally {
       setIsSyncingStore(false);
+    }
+  }
+
+  async function syncStaffToCloud() {
+    if (isSyncingStaff) return;
+    setIsSyncingStaff(true);
+    setErrorMessage('');
+
+    try {
+      let staffMembers: any[] = [];
+      const staffSources = ['munyaka_staff', 'staff_registry', 'staff', 'teachers', 'employees'];
+      for (const src of staffSources) {
+        try {
+          const raw = localStorage.getItem(src);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              staffMembers = [...staffMembers, ...parsed];
+            }
+          }
+        } catch (e) {
+          console.error(`Error reading ${src} from localStorage:`, e);
+        }
+      }
+
+      if (!staffMembers.length) {
+        staffMembers = [
+          { id: 'STF-001', name: 'Dr. Jane Wangari', role: 'Principal', tscNumber: 'TSC-123456', nationalId: '23456789', email: 'j.wangari@munyaka.sc.ke', phone: '0712345678', category: 'Teaching' },
+          { id: 'STF-002', name: 'Mr. David Ochieng', role: 'Senior ICT Tutor', tscNumber: 'TSC-987654', nationalId: '34567890', email: 'd.ochieng@munyaka.sc.ke', phone: '0722334455', category: 'Teaching' },
+          { id: 'STF-003', name: 'Madam Beatrice Naliaka', role: 'Lab Assistant', nationalId: '45678901', email: 'b.naliaka@munyaka.sc.ke', phone: '0733445566', category: 'Non-Teaching' }
+        ];
+      }
+
+      // Deduplicate by ID / National ID / TSC
+      const seenIds = new Set<string>();
+      const uniqueStaff = staffMembers.filter((st: any) => {
+        if (!st) return false;
+        const key = String(st?.id || st?.staffId || st?.nationalId || st?.tscNumber || st?.name || '').trim().toLowerCase();
+        if (!key || seenIds.has(key)) return false;
+        seenIds.add(key);
+        return true;
+      });
+
+      const batch = writeBatch(db);
+      let countSynced = 0;
+
+      for (const st of uniqueStaff) {
+        const identifier = st?.nationalId ?? st?.tscNumber ?? st?.staffId ?? st?.id ?? `staff_${countSynced + 1}`;
+        const cleanIdSlug = String(identifier).toLowerCase().replace(/[^a-z0-9]/g, '_');
+        
+        // Clean composite pattern: staff_{national_id_or_tsc_or_staff_id}
+        const docId = `staff_${cleanIdSlug}`;
+        const ref = doc(db, 'staff', docId);
+
+        const fullName = st?.name ?? st?.fullName ?? st?.staffName ?? 'Unnamed Staff';
+        const role = st?.role ?? st?.designation ?? st?.jobTitle ?? st?.category ?? 'Staff Member';
+        const tscOrId = st?.tscNumber ?? st?.tsc_no ?? st?.nationalId ?? st?.staffId ?? st?.id ?? '';
+        
+        const email = st?.email ?? `${fullName.toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
+
+        const mappedData = {
+          staffId: st?.id ?? st?.staffId ?? identifier,
+          name: fullName,
+          role: role,
+          tscNumber: st?.tscNumber ?? st?.tsc_no ?? null,
+          nationalId: st?.nationalId ?? st?.national_id ?? null,
+          email: email.includes('@') ? email : `${email}@munyaka.sc.ke`,
+          phone: st?.phone ?? st?.phoneNumber ?? st?.tel ?? 'N/A',
+          category: st?.category ?? (st?.tscNumber ? 'Teaching' : 'Non-Teaching'),
+          syncedAt: new Date().toISOString(),
+          rawPayload: st
+        };
+
+        batch.set(ref, mappedData, { merge: true });
+        countSynced++;
+      }
+
+      await batch.commit();
+      setLastSynced(new Date());
+      showSuccess(`Successfully synchronized ${countSynced} staff members to 'staff' Firestore collection!`);
+
+      await handleTestCloudTables();
+    } catch (err: any) {
+      console.error('Staff Firestore sync error:', err);
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      showError(`Staff Sync Failed: ${msg}`);
+    } finally {
+      setIsSyncingStaff(false);
     }
   }
 
@@ -1479,13 +1578,24 @@ export default function FirestoreSyncTab() {
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Store & Inventory</p>
+                  <p className="text-xs text-slate-400">Store &amp; Inventory</p>
                   <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudStoreCount}
                   </span>
                 </div>
                 <p className="text-2xl font-extrabold text-amber-400 mt-1">
                   {cloudStoreCount}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Staff Registry</p>
+                  <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudStaffCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-indigo-400 mt-1">
+                  {cloudStaffCount}
                 </p>
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
