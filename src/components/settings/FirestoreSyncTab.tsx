@@ -2218,6 +2218,67 @@ export default function FirestoreSyncTab() {
             )}
           </div>
 
+          {/* Staff Registry Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Staff Registry Cloud Sync</h3>
+              <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300">
+                Cloud Records: {cloudStaffCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync teaching and non-teaching staff records to the 'staff' Firestore collection.
+            </p>
+            <Button
+              onClick={syncStaffToCloud}
+              disabled={isSyncingStaff}
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingStaff && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingStaff ? 'Syncing Staff Registry...' : 'Sync Staff Registry'}
+            </Button>
+
+            {cloudStaffList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Staff Registry Preview ({cloudStaffList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Staff
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Full Name</TableHead>
+                        <TableHead className="p-2 font-medium">Role / Designation</TableHead>
+                        <TableHead className="p-2 font-medium">TSC / Staff ID</TableHead>
+                        <TableHead className="p-2 font-medium">Domain Email</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudStaffList.map((st, idx) => (
+                        <TableRow key={st.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-semibold text-slate-900">{st.name || st.fullName || '—'}</TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                              {st.role || st.designation || 'Staff'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs font-mono text-muted-foreground">{st.tscNumber || st.staffId || st.nationalId || '—'}</TableCell>
+                          <TableCell className="p-2 text-xs font-mono text-slate-700">{st.email || '—'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Report Cards Cloud Sync & Preview Section */}
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
             <div className="flex items-center justify-between mb-2">
