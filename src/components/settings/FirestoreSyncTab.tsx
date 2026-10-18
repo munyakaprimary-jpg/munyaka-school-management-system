@@ -226,18 +226,19 @@ export default function FirestoreSyncTab() {
         }
       }
 
-      // If nothing found in local storage, check initialSeedData or defaultCbcLearningAreas
-      if (rawData.length === 0) {
-        try {
-          const { defaultCbcLearningAreas } = await import('@/data/defaultCbcLearningAreas');
-          if (Array.isArray(defaultCbcLearningAreas)) {
-            rawData = defaultCbcLearningAreas;
-          }
-        } catch {}
-      }
+      // If nothing found in local storage or incomplete, load comprehensiveCBC learning areas
+      try {
+        const { defaultCbcLearningAreas } = await import('@/data/defaultCbcLearningAreas');
+        if (Array.isArray(defaultCbcLearningAreas) && defaultCbcLearningAreas.length > 0) {
+          // Merge or seed if rawData is missing categories
+          rawData = [...defaultCbcLearningAreas, ...rawData];
+        }
+      } catch {}
 
       // Flatten or map cluster / section records into individual learning area documents
       const learningAreaRecords: any[] = [];
+      const seenKeys = new Set<string>();
+
       rawData.forEach((clusterOrSection: any) => {
         if (!clusterOrSection) return;
         const sectionName = String(clusterOrSection?.name || clusterOrSection?.category || 'General Learning Areas').trim();
@@ -253,6 +254,10 @@ export default function FirestoreSyncTab() {
             const targetGradeOrLevel = String(area?.gradeLevel || area?.grade || sectionName).trim();
             const subStrands = area?.subStrands || area?.sub_strands || area?.strands || [];
             const assessmentRubrics = area?.assessmentRubrics || area?.rubrics || area?.competencies || [];
+
+            const dedupeKey = `${targetGradeOrLevel}_${areaName}`.toLowerCase();
+            if (seenKeys.has(dedupeKey)) return;
+            seenKeys.add(dedupeKey);
 
             learningAreaRecords.push({
               ...area,
@@ -322,7 +327,8 @@ export default function FirestoreSyncTab() {
 
       // Refresh cloud list
       const snap = await getDocs(collection(db, 'learning_areas'));
-      setCloudLearningAreasList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const refreshedDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setCloudLearningAreasList(refreshedDocs);
 
       showSuccess(`Successfully synchronized ${countSynced} Learning Areas to 'learning_areas' Firestore collection!`);
     } catch (err: any) {
