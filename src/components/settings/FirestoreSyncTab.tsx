@@ -2173,17 +2173,6 @@ export default function FirestoreSyncTab() {
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Communication</p>
-                  <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
-                    Cloud: {cloudCommunicationCount}
-                  </span>
-                </div>
-                <p className="text-2xl font-extrabold text-cyan-400 mt-1">
-                  {cloudCommunicationCount}
-                </p>
-              </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Events &amp; Notices</p>
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudEventsNoticesCount}
@@ -2193,6 +2182,9 @@ export default function FirestoreSyncTab() {
                   {cloudEventsNoticesCount}
                 </p>
               </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Communication</p>
                   <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudCommunicationCount}
                   </span>
