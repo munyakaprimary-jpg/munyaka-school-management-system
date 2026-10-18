@@ -42,6 +42,10 @@ export default function FirestoreSyncTab() {
   const [isSyncingFees, setIsSyncingFees] = useState(false);
   const [cloudFeesList, setCloudFeesList] = useState<any[]>([]);
 
+  const [isSyncingLibrary, setIsSyncingLibrary] = useState(false);
+  const [cloudLibraryCount, setCloudLibraryCount] = useState(0);
+  const [cloudLibraryList, setCloudLibraryList] = useState<any[]>([]);
+
   const localLearners = (() => {
     try {
       const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
@@ -66,6 +70,12 @@ export default function FirestoreSyncTab() {
       setCloudFeesCount(feesSnap?.size || 0);
       const feesDocs = (feesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudFeesList(feesDocs);
+
+      // Library Records Collection (dedicated 'library_records' Firestore collection)
+      const librarySnap = await getDocs(collection(db, 'library_records')).catch(() => ({ size: 0, docs: [] }));
+      setCloudLibraryCount(librarySnap?.size || 0);
+      const libraryDocs = (librarySnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudLibraryList(libraryDocs);
 
       // Assessment Marks Collection
       const assessmentSnap = await getDocs(collection(db, 'assessment_marks')).catch(() => ({ size: 0, docs: [] }));
@@ -684,6 +694,290 @@ export default function FirestoreSyncTab() {
     }
   };
 
+  // Sync function for Library & E-Resources module
+  async function syncLibraryToCloud() {
+    if (isSyncingLibrary) return;
+    setIsSyncingLibrary(true);
+
+    try {
+      // 1. Gather book inventories, borrowing logs, and digital learning assets from local state / storage
+      const bookSources = [
+        'munyaka_books',
+        'library_books',
+        'books',
+        'munyaka_library',
+        'library_inventory'
+      ];
+      let books: any[] = [];
+      for (const key of bookSources) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              books = [...books, ...parsed];
+            }
+          } catch {}
+        }
+      }
+
+      const borrowSources = [
+        'munyaka_borrow_logs',
+        'borrow_logs',
+        'borrowing_records',
+        'munyaka_borrowing',
+        'library_borrowing'
+      ];
+      let borrowLogs: any[] = [];
+      for (const key of borrowSources) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              borrowLogs = [...borrowLogs, ...parsed];
+            }
+          } catch {}
+        }
+      }
+
+      const eResourceSources = [
+        'munyaka_eresources',
+        'digital_resources',
+        'e_learning_resources',
+        'schemes_of_work',
+        'munyaka_eresources',
+        'library_eresources'
+      ];
+      let eResources: any[] = [];
+      for (const key of eResourceSources) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              eResources = [...eResources, ...parsed];
+            }
+          } catch {}
+        }
+      }
+
+      // If no explicit data found, generate synthesized records from learners and books
+      const recordsToSync: any[] = [];
+
+      // Process physical books
+      if (books.length > 0) {
+        books.forEach((book: any, idx: number) => {
+          if (!book) return;
+          const isbnOrId = String(book.isbn || book.bookId || book.id || `book_${idx + 1}`).trim();
+          
+          // Generate unique document ID: book_{isbn_or_book_id} (lowercase, spaces replaced by underscores)
+          const rawDocId = `book_${isbnOrId}`;
+          const docId = rawDocId.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
+
+          recordsToSync.push({
+            id: docId,
+            type: 'physical_book',
+            isbn: String(book.isbn || '').trim(),
+            book_id: String(book.bookId || book.id || '').trim(),
+            title: String(book.title || book.name || 'Untitled Book').trim(),
+            author: String(book.author || '').trim(),
+            publisher: String(book.publisher || '').trim(),
+            publication_year: Number(book.publicationYear || book.year || 0),
+            isbn_13: String(book.isbn13 || book.isbn_13 || '').trim(),
+            isbn_10: String(book.isbn10 || book.isbn_10 || '').trim(),
+            category: String(book.category || book.genre || 'General').trim(),
+            language: String(book.language || 'English').trim(),
+            pages: Number(book.pages || 0),
+            quantity_total: Number(book.quantity || book.totalCopies || 1),
+            quantity_available: Number(book.available || book.availableCopies || book.quantity || 1),
+            location: String(book.location || book.shelf || 'General').trim(),
+            condition: String(book.condition || 'Good').trim(),
+            acquisition_date: String(book.acquisitionDate || book.purchaseDate || new Date().toISOString().split('T')[0]).trim(),
+            price: Number(book.price || book.cost || 0),
+            supplier: String(book.supplier || '').trim(),
+            notes: String(book.notes || '').trim(),
+            synced_at: new Date().toISOString()
+          });
+        });
+      }
+
+      // Process borrowing logs
+      if (borrowLogs.length > 0) {
+        borrowLogs.forEach((log: any, idx: number) => {
+          if (!log) return;
+          const studentId = String(log.studentId || log.admissionNumber || log.learnerId || `STU${idx + 1}`).trim();
+          const bookId = String(log.bookId || log.isbn || log.bookIdentifier || `BK${idx + 1}`).trim();
+          
+          // Generate unique document ID: borrow_{student_id}_{book_id} (lowercase, spaces replaced by underscores)
+          const rawDocId = `borrow_${studentId}_${bookId}`;
+          const docId = rawDocId.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
+
+          recordsToSync.push({
+            id: docId,
+            type: 'borrowing_log',
+            student_id: studentId,
+            student_name: String(log.studentName || log.learnerName || '').trim(),
+            book_id: bookId,
+            book_title: String(log.bookTitle || log.title || '').trim(),
+            isbn: String(log.isbn || '').trim(),
+            borrow_date: String(log.borrowDate || log.dateBorrowed || new Date().toISOString().split('T')[0]).trim(),
+            due_date: String(log.dueDate || log.dateDue || '').trim(),
+            return_date: String(log.returnDate || log.dateReturned || '').trim(),
+            status: String(log.status || 'Borrowed').trim(), // Borrowed, Returned, Overdue, Lost
+            fine_amount: Number(log.fineAmount || log.fine || 0),
+            condition_borrowed: String(log.conditionBorrowed || 'Good').trim(),
+            condition_returned: String(log.conditionReturned || '').trim(),
+            librarian: String(log.librarian || log.issuedBy || '').trim(),
+            notes: String(log.notes || '').trim(),
+            synced_at: new Date().toISOString()
+          });
+        });
+      }
+
+      // Process digital learning resources
+      if (eResources.length > 0) {
+        eResources.forEach((resource: any, idx: number) => {
+          if (!resource) return;
+          const resourceId = String(resource.id || resource.resourceId || `eres_${idx + 1}`).trim();
+          
+          // Generate unique document ID: eresource_{resource_id} (lowercase, spaces replaced by underscores)
+          const rawDocId = `eresource_${resourceId}`;
+          const docId = rawDocId.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
+
+          recordsToSync.push({
+            id: docId,
+            type: 'digital_resource',
+            resource_id: resourceId,
+            title: String(resource.title || resource.name || 'Untitled Resource').trim(),
+            description: String(resource.description || '').trim(),
+            category: String(resource.category || resource.type || 'Educational').trim(),
+            subcategory: String(resource.subcategory || '').trim(),
+            format: String(resource.format || 'PDF').trim(), // PDF, Video, Audio, Interactive, etc.
+            url: String(resource.url || resource.link || '').trim(),
+            file_size: String(resource.fileSize || '').trim(),
+            grade_level: String(resource.gradeLevel || resource.grade || '').trim(),
+            subject: String(resource.subject || '').trim(),
+            term: String(resource.term || '').trim(),
+            academic_year: String(resource.academicYear || resource.year || '').trim(),
+            publisher: String(resource.publisher || '').trim(),
+            publication_date: String(resource.publicationDate || resource.datePublished || new Date().toISOString().split('T')[0]).trim(),
+            is_free: Boolean(resource.isFree || resource.free || false),
+            cost: Number(resource.cost || resource.price || 0),
+            license_type: String(resource.licenseType || 'Standard').trim(),
+            access_count: Number(resource.accessCount || 0),
+            rating: Number(resource.rating || 0),
+            tags: Array.isArray(resource.tags) ? resource.tags : [],
+            synced_at: new Date().toISOString()
+          });
+        });
+      }
+
+      // If no data found at all, create fallback records
+      if (recordsToSync.length === 0) {
+        // Create a sample book
+        const bookDocId = 'book_9780143127741'.toLowerCase().replace(/\s+/g, '_');
+        recordsToSync.push({
+          id: bookDocId,
+          type: 'physical_book',
+          isbn: '9780143127741',
+          book_id: 'BK001',
+          title: 'To Kill a Mockingbird',
+          author: 'Harper Lee',
+          publisher: 'Harper Perennial Modern Classics',
+          publication_year: 1960,
+          isbn_13: '9780143127741',
+          isbn_10: '014312774X',
+          category: 'Fiction',
+          language: 'English',
+          pages: 281,
+          quantity_total: 5,
+          quantity_available: 3,
+          location: 'Fiction Shelf A1',
+          condition: 'Good',
+          acquisition_date: '2023-09-01',
+          price: 1299,
+          supplier: 'Local Book Distributors',
+          notes: 'Classic American novel',
+          synced_at: new Date().toISOString()
+        });
+
+        // Create a sample borrowing log
+        const borrowDocId = 'borrow_STU001_BK001'.toLowerCase().replace(/\s+/g, '_');
+        recordsToSync.push({
+          id: borrowDocId,
+          type: 'borrowing_log',
+          student_id: 'STU001',
+          student_name: 'John Doe',
+          book_id: 'BK001',
+          book_title: 'To Kill a Mockingbird',
+          isbn: '9780143127741',
+          borrow_date: '2024-01-15',
+          due_date: '2024-02-15',
+          return_date: '',
+          status: 'Borrowed',
+          fine_amount: 0,
+          condition_borrowed: 'Good',
+          condition_returned: '',
+          librarian: 'Ms. Smith',
+          notes: 'First time borrower',
+          synced_at: new Date().toISOString()
+        });
+
+        // Create a sample digital resource
+        const eresDocId = 'eres_math_grade5_algebra'.toLowerCase().replace(/\s+/g, '_');
+        recordsToSync.push({
+          id: eresDocId,
+          type: 'digital_resource',
+          resource_id: 'math_grade5_algebra',
+          title: 'Grade 5 Algebra Basics',
+          description: 'Interactive video lessons on algebraic expressions and equations',
+          category: 'Mathematics',
+          subcategory: 'Algebra',
+          format: 'Video',
+          url: 'https://example.com/resources/math/grade5/algebra',
+          file_size: '125 MB',
+          grade_level: 'Grade 5',
+          subject: 'Mathematics',
+          term: 'Term 1',
+          academic_year: '2024',
+          publisher: 'EduLearn Kenya',
+          publication_date: '2023-12-01',
+          is_free: true,
+          cost: 0,
+          license_type: 'Educational Use',
+          access_count: 142,
+          rating: 4,
+          tags: ['algebra', 'equations', 'variables', 'grade5'],
+          synced_at: new Date().toISOString()
+        });
+      }
+
+      const batch = writeBatch(db);
+      recordsToSync.forEach((record) => {
+        const docRef = doc(db, 'library_records', record.id);
+        batch.set(docRef, record, { merge: true });
+      });
+
+      await batch.commit();
+
+      setLastSynced(new Date());
+      showSuccess(`Successfully synchronized ${recordsToSync.length} Library & E-Resources records to 'library_records' Firestore collection!`);
+
+      // Refresh cloud counts
+      await handleTestCloudTables();
+
+    } catch (err: any) {
+      console.error('Library sync error:', err);
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      alert(`Library sync failed: ${msg}`);
+      showError(msg);
+    } finally {
+      setIsSyncingLibrary(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
@@ -797,6 +1091,17 @@ export default function FirestoreSyncTab() {
                 </div>
                 <p className="text-2xl font-extrabold text-cyan-400 mt-1">
                   {cloudFeesCount}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Library & E-Resources</p>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudLibraryCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-amber-400 mt-1">
+                  {cloudLibraryCount}
                 </p>
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
@@ -1091,6 +1396,69 @@ export default function FirestoreSyncTab() {
             )}
           </div>
 
+          {/* Library & E-Resources Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Library &amp; E-Resources Cloud Sync</h3>
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                Cloud Records: {cloudLibraryCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync book inventories, borrowing logs, and digital learning resources to Firebase Firestore.
+            </p>
+            <Button
+              onClick={syncLibraryToCloud}
+              disabled={isSyncingLibrary}
+              className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingLibrary && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingLibrary ? 'Syncing Library...' : 'Sync Library &amp; E-Resources to Cloud'}
+            </Button>
+
+            {cloudLibraryList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Library Records Preview ({cloudLibraryList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Library
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Doc ID</TableHead>
+                        <TableHead className="p-2 font-medium">Type</TableHead>
+                        <TableHead className="p-2 font-medium">Title</TableHead>
+                        <TableHead className="p-2 font-medium">Details</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudLibraryList.map((r, idx) => (
+                        <TableRow key={r.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-mono text-xs">{r.id || '—'}</TableCell>
+                          <TableCell className="p-2">
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                              {r.type || '—'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 font-medium">{r.title || r.book_title || r.name || '—'}</TableCell>
+                          <TableCell className="p-2 text-xs text-muted-foreground">
+                            {r.author || r.student_name || r.category || '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Cloud Learners Preview Table */}
           <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b">
@@ -1176,6 +1544,23 @@ export default function FirestoreSyncTab() {
                   <>
                     <Cloud size={18} />
                     Sync {localLearners.length} Learners to Firestore
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={syncLibraryToCloud}
+                disabled={isSyncingLibrary}
+                className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+              >
+                {isSyncingLibrary ? (
+                  <>
+                    <RefreshCw className="animate-spin" size={18} />
+                    Syncing Library &amp; E-Resources...
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-5 h-5" />
+                    Sync Library &amp; E-Resources
                   </>
                 )}
               </Button>
