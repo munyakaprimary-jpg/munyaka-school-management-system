@@ -2919,7 +2919,6 @@ export default function FirestoreSyncTab() {
               </div>
             )}
           </div>
-          </div>
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold">Learning Areas Cloud Sync</h3>
