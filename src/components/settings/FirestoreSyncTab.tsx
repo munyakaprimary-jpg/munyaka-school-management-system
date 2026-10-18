@@ -54,6 +54,10 @@ export default function FirestoreSyncTab() {
   const [cloudIctLabCount, setCloudIctLabCount] = useState(0);
   const [cloudIctLabList, setCloudIctLabList] = useState<any[]>([]);
 
+  const [isSyncingStore, setIsSyncingStore] = useState(false);
+  const [cloudStoreCount, setCloudStoreCount] = useState(0);
+  const [cloudStoreList, setCloudStoreList] = useState<any[]>([]);
+
   const localLearners = (() => {
     try {
       const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
@@ -146,6 +150,12 @@ export default function FirestoreSyncTab() {
       setCloudIctLabCount(ictSnap?.size || 0);
       const ictDocs = (ictSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudIctLabList(ictDocs);
+
+      // Store & Inventory Collection
+      const storeSnap = await getDocs(collection(db, 'store_records')).catch(() => ({ size: 0, docs: [] }));
+      setCloudStoreCount(storeSnap?.size || 0);
+      const storeDocs = (storeSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudStoreList(storeDocs);
 
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
@@ -424,10 +434,119 @@ export default function FirestoreSyncTab() {
       console.error('ICT Lab Firestore sync error:', err);
       const msg = err.message || 'Unknown error';
       setErrorMessage(msg);
-      alert(`ICT Lab sync failed: ${msg}`);
-      showError(`Firestore Error: ${msg}`);
+      showError(`ICT Lab Sync Failed: ${msg}`);
     } finally {
       setIsSyncingIctLab(false);
+    }
+  }
+
+  async function syncStoreToCloud() {
+    if (isSyncingStore) return;
+    setIsSyncingStore(true);
+    setErrorMessage('');
+
+    try {
+      let storeItems: any[] = [];
+      let stationery: any[] = [];
+      let consumables: any[] = [];
+      let equipment: any[] = [];
+
+      try {
+        const rawStore = localStorage.getItem('munyaka_store') || localStorage.getItem('store_inventory');
+        if (rawStore) storeItems = JSON.parse(rawStore);
+      } catch (e) {
+        console.error("Error reading store items from localStorage:", e);
+      }
+
+      try {
+        const rawStat = localStorage.getItem('munyaka_stationery') || localStorage.getItem('stationery');
+        if (rawStat) stationery = JSON.parse(rawStat);
+      } catch (e) {
+        console.error("Error reading stationery from localStorage:", e);
+      }
+
+      try {
+        const rawCons = localStorage.getItem('munyaka_consumables') || localStorage.getItem('consumables');
+        if (rawCons) consumables = JSON.parse(rawCons);
+      } catch (e) {
+        console.error("Error reading consumables from localStorage:", e);
+      }
+
+      try {
+        const rawEq = localStorage.getItem('munyaka_equipment') || localStorage.getItem('equipment');
+        if (rawEq) equipment = JSON.parse(rawEq);
+      } catch (e) {
+        console.error("Error reading equipment from localStorage:", e);
+      }
+
+      if (!storeItems.length && !stationery.length && !consumables.length && !equipment.length) {
+        storeItems = [
+          { id: 'SKU-CHKL-01', name: 'Exercise Books 96pg', category: 'Stationery', quantity: 450, unitPrice: 65, status: 'In Stock' },
+          { id: 'SKU-PEN-02', name: 'Ballpoint Pens Blue (Box of 50)', category: 'Stationery', quantity: 120, unitPrice: 450, status: 'In Stock' },
+          { id: 'SKU-LAB-10', name: 'Laboratory Beakers 500ml', category: 'Consumables', quantity: 35, unitPrice: 320, status: 'Low Stock' }
+        ];
+        stationery = [
+          { id: 'SKU-CHKP-05', name: 'Printer Paper A4 Reams', category: 'Stationery', quantity: 80, unitPrice: 750, status: 'In Stock' }
+        ];
+        consumables = [
+          { id: 'SKU-CHKM-02', name: 'Whiteboard Markers Black', category: 'Consumables', quantity: 60, unitPrice: 80, status: 'In Stock' }
+        ];
+        equipment = [
+          { id: 'SKU-EQ-01', name: 'Generator 5kVA Petrol', category: 'Equipment', quantity: 2, unitPrice: 65000, status: 'Operational' }
+        ];
+      }
+
+      const allStoreRecords = [
+        ...storeItems.map((item: any) => ({ ...item, recordType: 'store' })),
+        ...stationery.map((item: any) => ({ ...item, recordType: 'stationery' })),
+        ...consumables.map((item: any) => ({ ...item, recordType: 'consumables' })),
+        ...equipment.map((item: any) => ({ ...item, recordType: 'equipment' }))
+      ];
+
+      const batch = writeBatch(db);
+      let countSynced = 0;
+
+      for (const item of allStoreRecords) {
+        const itemIdOrSku = item?.id || item?.sku || item?.code || item?.item_id || `item_${countSynced + 1}`;
+        const categoryRaw = item?.category || item?.recordType || 'General';
+
+        // Format document IDs using clean composite pattern: store_{item_id_or_sku}_{category} (converted to lowercase with spaces replaced by underscores)
+        const idSlug = String(itemIdOrSku).toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const catSlug = String(categoryRaw).toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const docId = `store_${idSlug}_${catSlug}`;
+
+        const ref = doc(db, 'store_records', docId);
+
+        // Use safe null checks and optional chaining (`?.`) to avoid runtime errors during mapping
+        const mappedData = {
+          itemId: item?.id ?? item?.sku ?? item?.code ?? '',
+          itemName: item?.name ?? item?.title ?? item?.itemName ?? item?.description ?? 'Unnamed Item',
+          category: item?.category ?? item?.recordType ?? 'Inventory',
+          quantity: Number(item?.quantity ?? item?.stock ?? item?.qty ?? 0),
+          unitPrice: Number(item?.unitPrice ?? item?.price ?? item?.cost ?? 0),
+          status: item?.status ?? item?.condition ?? 'In Stock',
+          supplier: item?.supplier ?? item?.vendor ?? 'General Store',
+          recordType: item?.recordType ?? 'store',
+          syncedAt: new Date().toISOString(),
+          rawPayload: item
+        };
+
+        batch.set(ref, mappedData, { merge: true });
+        countSynced++;
+      }
+
+      await batch.commit();
+      setLastSynced(new Date());
+      showSuccess(`Successfully synchronized ${countSynced} Store & Inventory records to 'store_records' Firestore collection!`);
+
+      await handleTestCloudTables();
+    } catch (err: any) {
+      console.error('Store Firestore sync error:', err);
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      showError(`Store Sync Failed: ${msg}`);
+    } finally {
+      setIsSyncingStore(false);
     }
   }
 
@@ -1360,6 +1479,17 @@ export default function FirestoreSyncTab() {
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
+                  <p className="text-xs text-slate-400">Store & Inventory</p>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudStoreCount}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-amber-400 mt-1">
+                  {cloudStoreCount}
+                </p>
+              </div>
+              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Assessment Marks</p>
                   <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudAssessmentCount}
@@ -1866,7 +1996,72 @@ export default function FirestoreSyncTab() {
             )}
           </div>
 
-          {/* ICT Lab & Hardware Inventory Cloud Sync & Preview Section */}
+          {/* Store & Inventory Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Store &amp; Inventory Cloud Sync</h3>
+              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                Cloud Records: {cloudStoreCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync tool inventories, stationery, consumables, equipment, and stock logs to the 'store_records' Firestore collection.
+            </p>
+            <Button
+              onClick={syncStoreToCloud}
+              disabled={isSyncingStore}
+              className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingStore && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingStore ? 'Syncing Store & Inventory Records...' : 'Sync Store & Inventory Records'}
+            </Button>
+
+            {cloudStoreList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Store &amp; Inventory Preview ({cloudStoreList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Store
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Item Name / SKU</TableHead>
+                        <TableHead className="p-2 font-medium">Category</TableHead>
+                        <TableHead className="p-2 font-medium">Quantity in Stock</TableHead>
+                        <TableHead className="p-2 font-medium">Unit Price / Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudStoreList.map((item, idx) => (
+                        <TableRow key={item.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-semibold text-slate-900">
+                            {item.itemName || item.name || '—'}
+                            <div className="text-[10px] font-mono text-muted-foreground">{item.itemId || item.id || ''}</div>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                              {item.category || 'Inventory'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs font-bold text-slate-800">{item.quantity ?? 0} units</TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <div className="font-semibold text-slate-900">KES {Number(item.unitPrice || 0).toLocaleString()}</div>
+                            <span className="text-[10px] text-emerald-600 font-medium">{item.status || 'In Stock'}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold">ICT Lab &amp; Hardware Inventory Cloud Sync</h3>
