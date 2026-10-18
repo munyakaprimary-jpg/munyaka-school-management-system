@@ -322,31 +322,96 @@ export default function FirestoreSyncTab() {
     setErrorMessage('');
 
     try {
-      let localItems: any[] = [];
+      // 1. Gather hardware inventories, lab accessories, maintenance logs, and student station allocations
+      let hardwareItems: any[] = [];
+      let labAccessories: any[] = [];
+      let maintenanceLogs: any[] = [];
+      let studentAllocations: any[] = [];
+
       try {
-        const raw = localStorage.getItem('munyaka_ict_lab');
-        if (raw) localItems = JSON.parse(raw);
-      } catch (err) {
-        console.error("Error reading munyaka_ict_lab:", err);
+        const rawHw = localStorage.getItem('munyaka_ict_lab') || localStorage.getItem('ict_hardware_inventory');
+        if (rawHw) hardwareItems = JSON.parse(rawHw);
+      } catch (e) {
+        console.error("Error reading ICT hardware from localStorage:", e);
       }
-      if (!localItems.length) {
-        localItems = [
-          { id: 'DEV-1', name: 'Main ICT Lab Server', type: 'Server', status: 'Online', category: 'Infrastructure', used: 32.4, quota: 50 },
-          { id: 'DEV-2', name: 'Student Workstation 01', type: 'Desktop', status: 'Active', category: 'Workstation', used: 12.0, quota: 30 }
+
+      try {
+        const rawAcc = localStorage.getItem('munyaka_lab_accessories') || localStorage.getItem('ict_accessories');
+        if (rawAcc) labAccessories = JSON.parse(rawAcc);
+      } catch (e) {
+        console.error("Error reading lab accessories from localStorage:", e);
+      }
+
+      try {
+        const rawMaint = localStorage.getItem('munyaka_ict_maintenance') || localStorage.getItem('ict_maintenance_logs');
+        if (rawMaint) maintenanceLogs = JSON.parse(rawMaint);
+      } catch (e) {
+        console.error("Error reading ICT maintenance logs from localStorage:", e);
+      }
+
+      try {
+        const rawAlloc = localStorage.getItem('munyaka_station_allocations') || localStorage.getItem('ict_student_stations');
+        if (rawAlloc) studentAllocations = JSON.parse(rawAlloc);
+      } catch (e) {
+        console.error("Error reading student station allocations from localStorage:", e);
+      }
+
+      // Fallback defaults if storage is completely empty so sync demo works out of the box
+      if (!hardwareItems.length && !labAccessories.length && !maintenanceLogs.length && !studentAllocations.length) {
+        hardwareItems = [
+          { id: 'ICT-SRV-01', name: 'Rack Server Alpha', category: 'Servers', status: 'Online', assignedUser: 'Lab Admin (Mr. Juma)', location: 'Server Room A' },
+          { id: 'ICT-PC-102', name: 'Workstation i7 32GB', category: 'Computers', status: 'Active', assignedUser: 'Student: Alex Kiprono (Form 4)', location: 'Station 12' },
+          { id: 'ICT-PRN-05', name: 'Network Laser Printer', category: 'Peripherals', status: 'Maintenance', assignedUser: 'Shared Lab Resource', location: 'Printing Bay' }
+        ];
+        labAccessories = [
+          { id: 'ACC-ETH-40', name: 'Cat6 Ethernet Patch Cable 5m', category: 'Accessories', status: 'Available', assignedUser: 'General Storage' },
+          { id: 'ACC-KEY-12', name: 'Ergonomic Mechanical Keyboard', category: 'Accessories', status: 'Good', assignedUser: 'Station 04' }
+        ];
+        maintenanceLogs = [
+          { id: 'LOG-2025-01', name: 'Quarterly Dust Cleaning & RAM Upgrade', category: 'Maintenance', status: 'Resolved', assignedUser: 'Tech Support Team' }
+        ];
+        studentAllocations = [
+          { id: 'STN-01', name: 'Station 01 Desktop PC', category: 'Student Station', status: 'Allocated', assignedUser: 'Brenda Chebet (Form 3E)' }
         ];
       }
+
+      const allRecords = [
+        ...hardwareItems.map((item: any) => ({ ...item, recordType: 'hardware' })),
+        ...labAccessories.map((item: any) => ({ ...item, recordType: 'accessory' })),
+        ...maintenanceLogs.map((item: any) => ({ ...item, recordType: 'maintenance' })),
+        ...studentAllocations.map((item: any) => ({ ...item, recordType: 'allocation' }))
+      ];
 
       const batch = writeBatch(db);
       let countSynced = 0;
 
-      for (const item of localItems) {
-        const docId = String(item.id || item.code || `ict_${countSynced + 1}`).toLowerCase().replace(/[^a-z0-9_.-]/g, '_');
+      for (const item of allRecords) {
+        const serialOrId = item?.id || item?.serialNumber || item?.code || item?.item_id || `item_${countSynced + 1}`;
+        const categoryRaw = item?.category || item?.recordType || 'General';
+        
+        // Clean composite format: ict_{device_serial_or_item_id}_{category} (converted to lowercase with spaces replaced by underscores)
+        const compositeIdSlug = String(serialOrId).toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const categorySlug = String(categoryRaw).toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const docId = `ict_${compositeIdSlug}_${categorySlug}`;
+
         const ref = doc(db, 'ict_lab_records', docId);
-        batch.set(ref, {
-          ...item,
+        
+        // Proper null checks and optional chaining (`?.`) to prevent runtime errors during mapping
+        const mappedData = {
+          deviceId: item?.id ?? item?.serialNumber ?? item?.code ?? '',
+          deviceName: item?.name ?? item?.title ?? item?.deviceName ?? item?.assetName ?? 'Unnamed Device',
+          category: item?.category ?? item?.recordType ?? 'Hardware',
+          status: item?.status ?? item?.condition ?? item?.state ?? 'Active',
+          assignedUser: item?.assignedUser ?? item?.assignedTo ?? item?.user ?? item?.location ?? 'Unassigned',
+          location: item?.location ?? item?.room ?? 'ICT Laboratory',
+          serialNumber: item?.serialNumber ?? item?.serial ?? item?.id ?? '',
+          recordType: item?.recordType ?? 'hardware',
+          notes: item?.notes ?? item?.description ?? '',
           syncedAt: new Date().toISOString(),
-          module: 'ICT Lab & Hardware Inventory'
-        }, { merge: true });
+          rawPayload: item
+        };
+
+        batch.set(ref, mappedData, { merge: true });
         countSynced++;
       }
 
