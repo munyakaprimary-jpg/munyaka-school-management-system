@@ -66,6 +66,11 @@ export default function FirestoreSyncTab() {
   const [cloudReportCardsCount, setCloudReportCardsCount] = useState(0);
   const [cloudReportCardsList, setCloudReportCardsList] = useState<any[]>([]);
 
+  // Exam Types Cloud Sync state
+  const [isSyncingExamTypes, setIsSyncingExamTypes] = useState(false);
+  const [cloudExamTypesCount, setCloudExamTypesCount] = useState(0);
+  const [cloudExamTypesList, setCloudExamTypesList] = useState<any[]>([]);
+
   // Learning Areas Cloud Sync state
   const [isSyncingLearningAreas, setIsSyncingLearningAreas] = useState(false);
   const [cloudLearningAreasCount, setCloudLearningAreasCount] = useState(0);
@@ -188,6 +193,12 @@ export default function FirestoreSyncTab() {
       const learningAreasDocs = (learningAreasSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudLearningAreasList(learningAreasDocs);
 
+      // Exam Types Collection
+      const examTypesSnap = await getDocs(collection(db, 'exam_types')).catch(() => ({ size: 0, docs: [] }));
+      setCloudExamTypesCount(examTypesSnap?.size || 0);
+      const examTypesDocs = (examTypesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudExamTypesList(examTypesDocs);
+
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
     } catch (error: any) {
@@ -204,6 +215,126 @@ export default function FirestoreSyncTab() {
   useEffect(() => {
     handleTestCloudTables().catch(console.error);
   }, []);
+
+  // Sync function for Exam Types module
+  async function syncExamTypesToCloud() {
+    if (isSyncingExamTypes) return;
+    setIsSyncingExamTypes(true);
+
+    try {
+      const sources = ['munyaka_exam_types', 'exam_types', 'examTypes'];
+      let rawData: any[] = [];
+      for (const key of sources) {
+        const item = localStorage.getItem(key);
+        if (item) {
+          try {
+            const parsed = JSON.parse(item);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              rawData = [...rawData, ...parsed];
+            }
+          } catch {}
+        }
+      }
+
+      if (rawData.length === 0) {
+        try {
+          const { defaultExamTypes } = await import('@/data/defaultExamTypes');
+          if (Array.isArray(defaultExamTypes)) {
+            rawData = defaultExamTypes;
+          }
+        } catch {}
+      }
+
+      const examTypeRecords: any[] = [];
+      const seen = new Set<string>();
+
+      rawData.forEach((et: any) => {
+        if (!et) return;
+        const name = String(et?.name || et?.title || '').trim();
+        if (!name) return;
+        const code = String(et?.code || name.substring(0, 6)).trim();
+        const term = String(et?.term || 'Term 1').trim();
+        const year = Number(et?.year || 2025);
+
+        const dedupeKey = `${code}_${term}_${year}`.toLowerCase();
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+
+        examTypeRecords.push({
+          ...et,
+          name,
+          code,
+          weightPercentage: Number(et?.weightPercentage ?? et?.weight ?? 25),
+          term,
+          year,
+          description: String(et?.description || 'School assessment type').trim(),
+          passingScore: Number(et?.passingScore || 50),
+          totalMarksBaseline: Number(et?.totalMarksBaseline || 100),
+          lastSyncedAt: new Date().toISOString()
+        });
+      });
+
+      if (examTypeRecords.length === 0) {
+        examTypeRecords.push({
+          id: 'et_opener_2025',
+          name: 'Opener Exam',
+          code: 'OPENER',
+          weightPercentage: 20,
+          term: 'Term 1',
+          year: 2025,
+          description: 'Standard opener exam baseline',
+          passingScore: 50,
+          totalMarksBaseline: 100,
+          lastSyncedAt: new Date().toISOString()
+        });
+      }
+
+      const batch = writeBatch(db);
+      let countSynced = 0;
+
+      for (const et of examTypeRecords) {
+        const codeStr = String(et?.code || et?.name || 'exam').toLowerCase();
+        const termStr = String(et?.term || 'term1').toLowerCase();
+        const yearNum = String(et?.year || '2025');
+
+        // Clean composite pattern: exam_type_{exam_code_or_name}_{term}_{year} (converted to lowercase with spaces replaced by underscores)
+        const cleanCode = codeStr.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        const cleanTerm = termStr.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        const cleanYear = yearNum.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        const docId = `exam_type_${cleanCode}_${cleanTerm}_${cleanYear}`;
+
+        const docRef = doc(db, 'exam_types', docId);
+        batch.set(docRef, {
+          id: et?.id || docId,
+          name: et?.name,
+          code: et?.code,
+          weightPercentage: Number(et?.weightPercentage || 25),
+          term: et?.term,
+          year: Number(et?.year || 2025),
+          description: et?.description || '',
+          passingScore: Number(et?.passingScore || 50),
+          totalMarksBaseline: Number(et?.totalMarksBaseline || 100),
+          lastSyncedAt: new Date().toISOString()
+        }, { merge: true });
+
+        countSynced++;
+      }
+
+      await batch.commit();
+      setCloudExamTypesCount(countSynced);
+      setLastSynced(new Date());
+
+      const snap = await getDocs(collection(db, 'exam_types'));
+      setCloudExamTypesList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      showSuccess(`Successfully synchronized ${countSynced} Exam Types to 'exam_types' Firestore collection!`);
+    } catch (err: any) {
+      console.error('Exam Types Firestore sync error:', err);
+      showError(`Exam Types Sync Error: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsSyncingExamTypes(false);
+    }
+  }
 
   // Sync function for Learning Areas module
   async function syncLearningAreasToCloud() {
@@ -1858,13 +1989,13 @@ export default function FirestoreSyncTab() {
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Learning Areas</p>
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
-                    Cloud: {cloudLearningAreasCount}
+                  <p className="text-xs text-slate-400">Exam Types</p>
+                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
+                    Cloud: {cloudExamTypesCount}
                   </span>
                 </div>
-                <p className="text-2xl font-extrabold text-amber-400 mt-1">
-                  {cloudLearningAreasCount}
+                <p className="text-2xl font-extrabold text-purple-400 mt-1">
+                  {cloudExamTypesCount}
                 </p>
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
@@ -2503,7 +2634,74 @@ export default function FirestoreSyncTab() {
             )}
           </div>
 
-          {/* Learning Areas Cloud Sync & Preview Section */}
+          {/* Exam Types Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Exam Types Cloud Sync</h3>
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
+                Cloud Records: {cloudExamTypesCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync school exam types, weighting rules, total mark baselines, and assessment categories to the 'exam_types' Firestore collection.
+            </p>
+            <Button
+              onClick={syncExamTypesToCloud}
+              disabled={isSyncingExamTypes}
+              className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingExamTypes && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingExamTypes ? 'Syncing Exam Types...' : 'Sync Exam Types'}
+            </Button>
+
+            {cloudExamTypesList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Exam Types Preview ({cloudExamTypesList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Exam Types
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Exam Name</TableHead>
+                        <TableHead className="p-2 font-medium">Code</TableHead>
+                        <TableHead className="p-2 font-medium">Weighting %</TableHead>
+                        <TableHead className="p-2 font-medium">Term / Year</TableHead>
+                        <TableHead className="p-2 font-medium">Description</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudExamTypesList.map((et, idx) => (
+                        <TableRow key={et.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-semibold text-slate-900">
+                            {et.name || '—'}
+                          </TableCell>
+                          <TableCell className="p-2 text-xs font-mono">
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              {et.code || 'CODE'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs font-bold text-slate-800">
+                            {et.weightPercentage ?? 25}%
+                          </TableCell>
+                          <TableCell className="p-2 text-xs text-muted-foreground">{et.term || 'Term 1'} ({et.year || '2025'})</TableCell>
+                          <TableCell className="p-2 text-xs text-slate-600 truncate max-w-[200px]" title={et.description}>
+                            {et.description || '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold">Learning Areas Cloud Sync</h3>
