@@ -390,11 +390,45 @@ export default function StaffRegistry() {
       toast.success("Staff profile updated successfully");
     } else {
       updatedList = [staffRecord, ...staffList];
-      toast.success("Staff member registered successfully");
+      toast.success("Staff member registered successfully with auto-generated auth profile");
+    }
+
+    // Auto-create/append corresponding user auth profile in munyaka_users collection/state with default status 'Active'
+    try {
+      const usersRaw = localStorage.getItem('munyaka_users') || '[]';
+      let usersList = [];
+      try { usersList = JSON.parse(usersRaw); } catch { usersList = []; }
+
+      const emailKey = fullEmail.toLowerCase().trim();
+      const existingIdx = usersList.findIndex((u: any) => (u.email || '').toLowerCase().trim() === emailKey);
+
+      const userProfile = {
+        id: staffRecord.id,
+        fullName: staffRecord.name,
+        name: staffRecord.name,
+        email: fullEmail,
+        role: staffRecord.category,
+        designation: staffRecord.category,
+        staffId: staffRecord.tscNumber || staffRecord.id,
+        tscNumber: staffRecord.tscNumber,
+        nationalId: (staffRecord as any).nationalId || null,
+        status: staffRecord.status || 'Active',
+        createdAt: new Date().toISOString()
+      };
+
+      if (existingIdx >= 0) {
+        usersList[existingIdx] = { ...usersList[existingIdx], ...userProfile };
+      } else {
+        usersList.push(userProfile);
+      }
+      localStorage.setItem('munyaka_users', JSON.stringify(usersList));
+    } catch (authErr) {
+      console.error('Error updating munyaka_users auth profile:', authErr);
     }
 
     setStaffList(updatedList);
     localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
+    localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
     setIsModalOpen(false);
   };
 

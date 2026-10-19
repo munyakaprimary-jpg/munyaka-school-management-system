@@ -43,8 +43,10 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => ({
 export const syncUsersToCloud = async (): Promise<{ success: boolean; count: number; error?: string }> => {
   try {
     const rawStaff = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('staff_registry') || localStorage.getItem('staff') || localStorage.getItem('munyaka_staff_master') || '[]';
+    const rawUsers = localStorage.getItem('munyaka_users') || '[]';
     
     let staffList: any[] = [];
+    let existingUsers: any[] = [];
     
     try {
       staffList = JSON.parse(rawStaff);
@@ -52,66 +54,74 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
       staffList = [];
     }
 
-    // Deduplicate staff records
+    try {
+      existingUsers = JSON.parse(rawUsers);
+    } catch {
+      existingUsers = [];
+    }
+
     const combinedMap = new Map<string, any>();
     
-    staffList.forEach((u, idx) => {
+    // Add existing users from munyaka_users
+    existingUsers.forEach((u: any) => {
       if (!u) return;
-      const name = u.fullName || u.name || u.staffName || '';
-      const email = u.domainEmail || u.email || `${String(name).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
-      const key = String(u.id || u.staffId || u.tscNo || u.tscNumber || u.nationalId || email || idx).trim().toLowerCase();
-      if (!combinedMap.has(key)) {
-        combinedMap.set(key, u);
+      const email = (u.email || '').toLowerCase().trim();
+      if (email) combinedMap.set(email, u);
+    });
+
+    // Add registered staff, auto-generating user auth profile if not present
+    staffList.forEach((s: any, idx: number) => {
+      if (!s) return;
+      const fullName = s?.fullName || s?.name || s?.staffName || 'Staff Member';
+      const nameParts = fullName.trim().toLowerCase().split(/\s+/);
+      const firstName = nameParts[0] || 'staff';
+      const lastName = nameParts[nameParts.length - 1] || `${idx + 1}`;
+      const rawEmail = s?.domainEmail || s?.email || `${firstName}.${lastName}@munyaka.sc.ke`;
+      const email = String(rawEmail).includes('@') ? rawEmail : `${rawEmail}@munyaka.sc.ke`;
+      const emailKey = email.toLowerCase().trim();
+
+      if (!combinedMap.has(emailKey)) {
+        const userProfile = {
+          id: s?.id || `user_stf_${Date.now()}_${idx}`,
+          fullName,
+          name: fullName,
+          email,
+          role: s?.role || s?.category || s?.designation || 'Staff',
+          staffId: s?.staffId || s?.tscNumber || s?.id || `STF-${idx + 1}`,
+          tscNumber: s?.tscNo || s?.tscNumber || null,
+          nationalId: s?.nationalId || null,
+          status: 'Active',
+          createdAt: new Date().toISOString()
+        };
+        combinedMap.set(emailKey, userProfile);
       }
     });
 
     const recordsToSync = Array.from(combinedMap.values());
+    localStorage.setItem('munyaka_users', JSON.stringify(recordsToSync));
 
-    const batch = writeBatch(db);
-    const mappedUsers = recordsToSync.map((staff, idx) => {
-      const fullName = staff?.fullName ?? staff?.name ?? staff?.staffName ?? 'Staff Member';
-      const role = staff?.role ?? staff?.designation ?? staff?.category ?? 'Staff';
-      const staffId = staff?.staffId ?? staff?.id ?? `STF-${String(idx + 1).padStart(3, '0')}`;
-      const tscNumber = staff?.tscNo ?? staff?.tscNumber ?? staff?.tsc_no ?? null;
-      const nationalId = staff?.nationalId ?? staff?.national_id ?? null;
-      
-      const rawEmail = staff?.domainEmail ?? staff?.email ?? `${String(fullName).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
-      const email = String(rawEmail).includes('@') ? rawEmail : `${rawEmail}@munyaka.sc.ke`;
-      const permissions = staff?.permissions ?? staff?.accessPermissions ?? ['read', 'write'];
-
-      // Document ID composite pattern: user_{national_id_or_staff_id_or_email} (converted to lowercase with spaces replaced by underscores)
-      const rawIdentifier = nationalId ?? tscNumber ?? staffId ?? email ?? `user_${idx + 1}`;
-      const cleanIdentifier = String(rawIdentifier).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
-      const docId = `user_${cleanIdentifier}`;
-
-      const record = {
-        id: staff?.id ?? docId,
-        fullName,
-        name: fullName,
-        role,
-        email,
-        staffId,
-        tscNumber,
-        nationalId,
-        status: 'Active',
-        permissions: Array.isArray(permissions) ? permissions : [permissions],
-        syncStatus: 'Synced',
-        syncedAt: new Date().toISOString()
-      };
-
-      const docRef = doc(db, 'users', docId);
-      batch.set(docRef, record, { merge: true });
-
-      return record;
-    });
-
-    if (mappedUsers.length > 0) {
-      await batch.commit();
+    try {
+      const { collection, doc, setDoc, getFirestore } = await import('firebase/firestore');
+      const db = getFirestore();
+      if (db) {
+        for (const record of recordsToSync) {
+          const rawIdentifier = record.nationalId || record.tscNumber || record.staffId || record.email || `user_${Math.random()}`;
+          const cleanIdentifier = String(rawIdentifier).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
+          const docId = `user_${cleanIdentifier}`;
+          const docRef = doc(db, 'users', docId);
+          await setDoc(docRef, {
+            ...record,
+            syncedAt: new Date().toISOString()
+          }, { merge: true });
+        }
+      }
+    } catch (fbErr) {
+      console.warn('Firestore sync for users offline/unavailable, saved locally to munyaka_users:', fbErr);
     }
 
-    localStorage.setItem('cloud_users', JSON.stringify(mappedUsers));
+    localStorage.setItem('cloud_users', JSON.stringify(recordsToSync));
 
-    return { success: true, count: mappedUsers.length };
+    return { success: true, count: recordsToSync.length };
   } catch (err: any) {
     return { success: false, count: 0, error: err?.message || 'Users sync failed' };
   }

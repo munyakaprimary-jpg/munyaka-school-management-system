@@ -265,9 +265,54 @@ export default function FirestoreSyncTab() {
 
       // Users Collection (User Management / Auth)
       const usersSnap = await getDocs(collection(db, 'users')).catch(() => ({ size: 0, docs: [] }));
-      setCloudUsersCount(usersSnap?.size || 0);
       const usersDocs = (usersSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
-      setCloudUsersList(usersDocs);
+      
+      // Also combine local registered staff as user accounts directly if cloud collection is empty or to ensure direct mapping
+      const localStaffRaw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || '[]';
+      const localUsersRaw = localStorage.getItem('munyaka_users') || '[]';
+      let localStaffArr = [];
+      let localUsersArr = [];
+      try { localStaffArr = JSON.parse(localStaffRaw); } catch {}
+      try { localUsersArr = JSON.parse(localUsersRaw); } catch {}
+      
+      const userMap = new Map();
+      usersDocs.forEach(u => {
+        const emailKey = (u.email || '').toLowerCase().trim();
+        if (emailKey) userMap.set(emailKey, u);
+      });
+
+      localUsersArr.forEach((u: any) => {
+        const emailKey = (u.email || '').toLowerCase().trim();
+        if (emailKey && !userMap.has(emailKey)) {
+          userMap.set(emailKey, u);
+        }
+      });
+
+      localStaffArr.forEach((s: any, idx: number) => {
+        const fullName = s?.fullName || s?.name || s?.staffName || 'Staff Member';
+        const rawEmail = s?.domainEmail || s?.email || `${String(fullName).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
+        const email = String(rawEmail).includes('@') ? rawEmail : `${rawEmail}@munyaka.sc.ke`;
+        const emailKey = email.toLowerCase().trim();
+        
+        if (!userMap.has(emailKey)) {
+          userMap.set(emailKey, {
+            id: s?.id || `user_stf_${idx+1}`,
+            fullName,
+            name: fullName,
+            email,
+            role: s?.role || s?.designation || 'Staff',
+            staffId: s?.staffId || s?.id || `STF-${idx+1}`,
+            tscNumber: s?.tscNo || s?.tscNumber || null,
+            nationalId: s?.nationalId || null,
+            status: 'Active',
+            syncStatus: 'Active'
+          });
+        }
+      });
+
+      const finalUsersList = Array.from(userMap.values());
+      setCloudUsersCount(finalUsersList.length);
+      setCloudUsersList(finalUsersList);
 
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
