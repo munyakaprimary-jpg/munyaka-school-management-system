@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
 import SecurityAuthTab from '@/components/settings/SecurityAuthTab';
-import eSyncTab from '@/components/settings/eSyncTab';
+import FirestoreSyncTab from '@/components/settings/FirestoreSyncTab';
 import Modal from '@/components/ui/Modal';
 import {
   Building,
@@ -473,7 +473,7 @@ export default function Settings() {
 
         {/* Cloud DB (Firestore) */}
         <TabsContent value="supabase" className="space-y-6">
-          <eSyncTab />
+          <FirestoreSyncTab />
         </TabsContent>
 
         {/* 5. Database & Backups */}

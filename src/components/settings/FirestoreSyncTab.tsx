@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -336,136 +335,6 @@ export default function FirestoreSyncTab() {
   useEffect(() => {
     handleTestCloudTables().catch(console.error);
   }, []);
-
-  const [isSyncingAll, setIsSyncingAll] = useState(false);
-  const [syncProgressText, setSyncProgressText] = useState('');
-
-  const refreshAllCloudCounters = async () => {
-    try {
-      await handleTestCloudTables();
-    } catch (e) {
-      console.error('Error refreshing cloud counters:', e);
-    }
-  };
-
-  const syncAllCollectionsToCloud = async () => {
-    setIsSyncingAll(true);
-    try {
-      setSyncProgressText("Syncing 1 of 13: Staff Registry...");
-      try {
-        await syncStaffToCloud();
-      } catch (err) {
-        console.error("Staff sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 2 of 13: User Management & Auth...");
-      try {
-        const { syncUsersToCloud } = await import('@/services/SyncEngine');
-        await syncUsersToCloud();
-      } catch (err) {
-        console.error("Users sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 3 of 13: Learners Directory...");
-      try {
-        await syncLearnersToCloud();
-      } catch (err) {
-        console.error("Learners sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 4 of 13: Grade & Class Structure...");
-      try {
-        await handleSyncGrades();
-      } catch (err) {
-        console.error("Grades sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 5 of 13: Fee Management & Transactions...");
-      try {
-        await syncFeesToCloud();
-      } catch (err) {
-        console.error("Fees sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 6 of 13: Library & Catalog...");
-      try {
-        await syncLibraryToCloud();
-      } catch (err) {
-        console.error("Library sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 7 of 13: Assessment Marks & Rubrics...");
-      try {
-        await handleSyncAssessmentMarks();
-      } catch (err) {
-        console.error("Assessment marks sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 8 of 13: Exam Creator & Papers...");
-      try {
-        await syncExamsToCloud();
-      } catch (err) {
-        console.error("Exams sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 9 of 13: ICT Lab & Assets...");
-      try {
-        await syncIctLabToCloud();
-      } catch (err) {
-        console.error("ICT Lab sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 10 of 13: CBC Learning Areas...");
-      try {
-        await syncLearningAreasToCloud();
-      } catch (err) {
-        console.error("Learning areas sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 11 of 13: Exam Types & Schedules...");
-      try {
-        await syncExamTypesToCloud();
-      } catch (err) {
-        console.error("Exam types sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 12 of 13: Communication & Messages...");
-      try {
-        await syncCommunicationToCloud();
-      } catch (err) {
-        console.error("Communication sync error in master sequence:", err);
-      }
-
-      setSyncProgressText("Syncing 13 of 13: Events & Notices...");
-      try {
-        const { syncEventsNoticesToCloud } = await import('@/services/SyncEngine');
-        await syncEventsNoticesToCloud();
-      } catch (err) {
-        console.error("Events notices sync error in master sequence:", err);
-      }
-
-      // Auto-refresh all counters
-      await refreshAllCloudCounters();
-
-      toast.success("All 13 modules synchronized successfully to Firestore!");
-    } catch (error) {
-      console.error("Master sync error:", error);
-      toast.error("Sync failed for one or more modules. Check browser console.");
-    } finally {
-      setIsSyncingAll(false);
-      setSyncProgressText("");
-    }
-  };
-
-  async function syncLearnersToCloud() {
-    try {
-      if (typeof handleSyncToCloud === 'function') {
-        await handleSyncToCloud();
-      }
-    } catch (e) {
-      console.error('syncLearnersToCloud error:', e);
-    }
-  }
 
   // Sync function for Communication module
   async function syncCommunicationToCloud() {
@@ -2207,46 +2076,6 @@ export default function FirestoreSyncTab() {
 
   return (
     <div className="space-y-6">
-      {/* Master Sync All Modules Action Card */}
-      <Card className="border-2 border-amber-500/30 shadow-lg rounded-3xl bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-white p-6 sm:p-8">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">
-              <Cloud className="w-3.5 h-3.5" /> Enterprise Master Sync
-            </div>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Sync All 13 Modules to Cloud</h2>
-            <p className="text-sm text-slate-600 max-w-xl">
-              Synchronize all operational modules (Staff, Users, Learners, Grades, Fees, Library, Assessments, Exams, ICT Lab, Learning Areas, Exam Types, Communication, and Events & Notices) sequentially in one click.
-            </p>
-            {syncProgressText && (
-              <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 w-fit animate-pulse">
-                <RefreshCw className="w-4 h-4 animate-spin text-amber-600" />
-                <span>{syncProgressText}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-3 flex-wrap w-full md:w-auto justify-end">
-            <Button
-              onClick={refreshAllCloudCounters}
-              variant="outline"
-              disabled={isSyncingAll}
-              className="rounded-2xl border-slate-300 font-semibold gap-2 hover:bg-slate-100 px-4 py-3 h-12"
-            >
-              <RefreshCw className="w-4 h-4 text-slate-600" />
-              Refresh All Counters
-            </Button>
-            <Button
-              onClick={syncAllCollectionsToCloud}
-              disabled={isSyncingAll}
-              className="rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold shadow-md shadow-amber-500/20 gap-2 px-6 py-3 h-12 transition-all transform hover:scale-[1.02]"
-            >
-              <Cloud className={`w-5 h-5 ${isSyncingAll ? 'animate-spin' : ''}`} />
-              {isSyncingAll ? 'Syncing All Modules...' : 'Sync All Modules to Cloud'}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
       <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
         <CardHeader className="px-0 pt-0 pb-6 border-b">
           <div className="flex items-center justify-between">
