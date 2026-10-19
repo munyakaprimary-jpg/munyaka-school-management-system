@@ -63,8 +63,8 @@ export default function FirestoreSyncTab() {
   const [cloudStaffList, setCloudStaffList] = useState<any[]>([]);
 
   const [isSyncingReportCards, setIsSyncingReportCards] = useState(false);
-  const [cloudReportCardsCount, setCloudReportCardsCount] = useState(0);
-  const [cloudReportCardsList, setCloudReportCardsList] = useState<any[]>([]);
+  const [cloudTimetableCount, setCloudTimetableCount] = useState(0);
+  const [cloudTimetableList, setCloudTimetableList] = useState<any[]>([]);
 
   // Learning Areas Cloud Sync state
   const [isSyncingLearningAreas, setIsSyncingLearningAreas] = useState(false);
@@ -443,10 +443,17 @@ export default function FirestoreSyncTab() {
         console.error("Events notices sync error in master sequence:", err);
       }
 
+      setSyncProgressText("Syncing 14 of 14: Timetable & Schedules...");
+      try {
+        await syncTimetableToCloud();
+      } catch (err) {
+        console.error("Timetable sync error in master sequence:", err);
+      }
+
       // Auto-refresh all counters
       await refreshAllCloudCounters();
 
-      showSuccess("All 13 modules synchronized successfully to Firestore!");
+      showSuccess("All 14 modules synchronized successfully to Firestore!");
     } catch (error) {
       console.error("Master sync error:", error);
       showError("Sync failed for one or more modules. Check browser console.");
