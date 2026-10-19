@@ -108,30 +108,26 @@ export default function FirestoreSyncTab() {
     }
   };
 
-  // Predicate to strictly validate canonical MUN staff records
-  const isMUNRecord = (item: any): boolean => {
-    if (!item) return false;
-    const id = String(item.id || item.staffId || item.userId || '');
-    return /^MUN-\d+$/i.test(id);
-  };
-
   // User Management / Auth Cloud Sync state
   const [isSyncingUsers, setIsSyncingUsers] = useState(false);
   const [cloudUsersCount, setCloudUsersCount] = useState(0);
   const [cloudUsersList, setCloudUsersList] = useState<any[]>(() => {
     try {
-      const raw = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff_directory') || '[]';
+      const raw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('staff_registry') || localStorage.getItem('staff') || '[]';
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed
-          .filter(isMUNRecord)
+          .filter((s: any) => {
+            const sid = String(s?.id || s?.staffId || s?.staff_id || '');
+            return sid.startsWith('MUN-');
+          })
           .map((s, idx) => ({
             id: s.id || s.staffId || `MUN-${1000 + idx}`,
-            fullName: s.fullName || s.name || s.staffName || 'Staff Member',
-            email: s.domainEmail || s.email || 'staff@munyaka.sc.ke',
-            role: s.role || s.designation || s.category || 'Staff',
-            syncStatus: 'Local Staff (SSOT)'
-          }));
+          fullName: s.fullName || s.name || s.staffName || 'Staff Member',
+          email: s.domainEmail || s.email || 'staff@munyaka.sc.ke',
+          role: s.role || s.designation || s.category || 'Staff',
+          syncStatus: 'Local Staff'
+        }));
       }
     } catch {}
     return [];
@@ -1147,11 +1143,12 @@ export default function FirestoreSyncTab() {
         staffMembers = [];
       }
 
-      // Deduplicate by ID and enforce strict isMUNRecord
+      // Deduplicate by ID / National ID / TSC and ensure MUN- prefix
       const seenIds = new Set<string>();
       const uniqueStaff = staffMembers.filter((st: any) => {
-        if (!st || !isMUNRecord(st)) return false;
+        if (!st) return false;
         const sid = String(st?.id || st?.staffId || '');
+        if (!sid.startsWith('MUN-')) return false;
         const key = sid.trim().toLowerCase();
         if (!key || seenIds.has(key)) return false;
         seenIds.add(key);
