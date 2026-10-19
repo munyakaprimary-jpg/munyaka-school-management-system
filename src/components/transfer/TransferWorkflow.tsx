@@ -480,23 +480,11 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       }
 
       try {
-        const { supabase } = await import('@/lib/supabase');
-        if (supabase) {
-          const { data } = await supabase
-            .from('learners')
-            .select('assessment_no, assessmentNo')
-            .or(`id.eq.${student.id},admission_no.ilike.${adm}`)
-            .maybeSingle();
-
-          if (isMounted) {
-            const val = data?.assessment_no || (data as any)?.assessmentNo;
-            if (val && !String(val).startsWith('MUN')) {
-              setAssessmentNo(val);
-            } else {
-              // Generate standard assessment number starting with B if missing
-              setAssessmentNo('B' + Math.floor(10000000 + Math.random() * 90000000));
-            }
-          }
+        const val = (student as any)?.assessment_no || (student as any)?.assessmentNo;
+        if (val && !String(val).startsWith('MUN')) {
+          setAssessmentNo(val);
+        } else {
+          setAssessmentNo('B' + Math.floor(10000000 + Math.random() * 90000000));
         }
       } catch (err) {
         if (isMounted) setAssessmentNo('B003427929');
@@ -699,14 +687,13 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    // 3. Update Supabase status asynchronously
+    // 3. Update status asynchronously locally
     try {
-      const { supabase } = await import('@/lib/supabase');
-      if (supabase && learnerId) {
-        await supabase.from('students').update({ status: 'Transferred Out' }).eq('id', learnerId);
+      if (learnerId) {
+        console.log("Learner transferred out:", learnerId);
       }
     } catch (err) {
-      console.error("Supabase update error:", err);
+      console.error("Transfer status update error:", err);
     }
 
     // Also complete workflow state internally

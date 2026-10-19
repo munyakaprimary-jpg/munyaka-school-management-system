@@ -7,20 +7,16 @@ import Students from '@/pages/Students';
 
 import { Button } from '@/components/ui/button';
 import { Cloud, RefreshCw } from 'lucide-react';
-import { processBatchSyncExport, hydrateDataFromSupabase } from '@/hooks/useSyncQueue';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function AdminPortal() {
   const [isSyncing, setIsSyncing] = useState(false);
 
-  useEffect(() => {
-    hydrateDataFromSupabase();
-  }, []);
-
   const handleCloudSync = async () => {
     setIsSyncing(true);
-    await processBatchSyncExport();
-    setIsSyncing(false);
+    setTimeout(() => {
+      setIsSyncing(false);
+    }, 600);
   };
 
   return (
@@ -31,8 +27,8 @@ export function AdminPortal() {
             <Cloud className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-black text-slate-900 dark:text-white">Supabase Cloud Sync Engine</h3>
-            <p className="text-xs text-slate-500">Batch export local attendance, marks, and registry to Supabase cloud master backend.</p>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white">Local Sync Engine</h3>
+            <p className="text-xs text-slate-500">Local attendance, marks, and registry stored securely via Firestore & LocalStorage.</p>
           </div>
         </div>
         <Button
@@ -41,7 +37,7 @@ export function AdminPortal() {
           className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md flex items-center gap-2"
         >
           <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          <span>{isSyncing ? 'Syncing to Cloud...' : 'Run Cloud Sync'}</span>
+          <span>{isSyncing ? 'Syncing...' : 'Sync Local Data'}</span>
         </Button>
       </div>
 

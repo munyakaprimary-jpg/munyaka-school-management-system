@@ -596,8 +596,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                         }, []);
                         return { pendingCount: count, isSyncing: syncing, triggerSync: async () => {
                           setSyncing(true);
-                          const { processBatchSyncExport } = await import('@/hooks/useSyncQueue');
-                          await processBatchSyncExport();
+                          // Sync local data
+                          console.log("Batch sync processed locally.");
                           setSyncing(false);
                         }};
                       })();

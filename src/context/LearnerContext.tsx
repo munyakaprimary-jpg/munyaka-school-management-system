@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CentralDataService } from '../services/centralDataService';
 import { useAuth } from './AuthContext';
-import { useSupabaseSync } from '../hooks/useSupabaseSync';
 
 interface LearnerContextType {
   learners: any[];
@@ -15,7 +14,6 @@ const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const { saveLearnerToCloud, deleteLearnerFromCloud } = useSupabaseSync();
   const allLearners = CentralDataService.getLearners();
 
   // If user is a teacher, filter learners strictly to their assigned grade and stream
