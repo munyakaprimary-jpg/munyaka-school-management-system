@@ -37,95 +37,62 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => ({
 
 /**
  * Syncs user accounts, system roles, assigned default email domains (@munyaka.sc.ke), and access permissions
- * to Firestore cloud collection `users` with composite document ID pattern `user_${staff.tscNo || staff.id || staff.email}`
- * (lowercase, spaces replaced by underscores).
+ * to Firestore cloud collection `users` with composite document ID pattern `MUN-XXXX` (e.g. MUN-0001).
  */
 export const syncUsersToCloud = async (): Promise<{ success: boolean; count: number; error?: string }> => {
   try {
-    const rawStaff = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('staff_registry') || localStorage.getItem('staff') || localStorage.getItem('munyaka_staff_master') || '[]';
+    const rawStaffData =
+      localStorage.getItem('munyaka_staff') ||
+      localStorage.getItem('munyaka_staff_registry') ||
+      localStorage.getItem('staff_registry') ||
+      localStorage.getItem('staff_list') ||
+      '[]';
     
-    let staffList: any[] = [];
-    try {
-      staffList = JSON.parse(rawStaff);
-    } catch {
-      staffList = [];
+    let staffList = JSON.parse(rawStaffData);
+
+    // 2. Automatic Default Staff Fallback Seeding
+    if (!Array.isArray(staffList) || staffList.length === 0) {
+      staffList = [
+        { id: 'MUN-0001', name: 'JAMES NDIKI', role: 'ICT Teacher', email: 'jndiki@munyaka.sc.ke' },
+        { id: 'MUN-0002', name: 'ANN NDUTA MBUGUA', role: 'Class Teacher', email: 'annmbugua@munyaka.sc.ke' },
+        { id: 'MUN-0003', name: 'JANET GATHONI KUNGU', role: 'Library Teacher', email: 'janetkungu@munyaka.sc.ke' },
+        { id: 'MUN-0004', name: 'LAWRENCE NDEGWA GIOSHE', role: 'Subject Teacher', email: 'lndegwa@munyaka.sc.ke' },
+        { id: 'MUN-0005', name: 'ALICE MAINA', role: 'Class Teacher', email: 'maina@munyaka.sc.ke' },
+        { id: 'MUN-0006', name: 'HOGLA SANDUKI', role: 'Class Teacher', email: 'sanduki@munyaka.sc.ke' }
+      ];
+      localStorage.setItem('munyaka_staff', JSON.stringify(staffList));
     }
 
-    // 1. Strict Local Source Mapping: derive user records strictly from the active local Staff Registry store (6 records)
-    const combinedMap = new Map<string, any>();
+    const recordsToSync: any[] = [];
 
-    staffList.forEach((s: any, idx: number) => {
-      if (!s) return;
-      const fullName = s?.fullName ?? s?.name ?? s?.staffName ?? 'Staff Member';
-      const nameParts = String(fullName).trim().toLowerCase().split(/\s+/);
-      const firstName = nameParts[0] || 'staff';
-      const lastName = nameParts[nameParts.length - 1] || `${idx + 1}`;
-      const rawEmail = s?.domainEmail ?? s?.email ?? `${firstName}.${lastName}@munyaka.sc.ke`;
-      const email = String(rawEmail).includes('@') ? rawEmail : `${rawEmail}@munyaka.sc.ke`;
-      const emailKey = email.toLowerCase().trim();
-
-      const staffId = s?.staffId ?? s?.id ?? `STF-${idx + 1}`;
-      const tscNumber = s?.tscNo ?? s?.tscNumber ?? null;
-      const nationalId = s?.nationalId ?? null;
-
-      const userProfile = {
-        id: s?.id ?? `user_stf_${Date.now()}_${idx}`,
-        fullName,
-        name: fullName,
-        email,
-        role: s?.role ?? s?.category ?? s?.designation ?? 'Staff',
-        staffId,
-        tscNumber,
-        nationalId,
+    staffList.forEach((staff: any, index: number) => {
+      if (!staff) return;
+      const numStr = String(index + 1).padStart(4, '0');
+      const docId = staff.id && String(staff.id).startsWith('MUN-') ? staff.id : `MUN-${numStr}`;
+      
+      const authUser = {
+        id: docId,
+        userId: docId,
+        fullName: staff.fullName || staff.name,
+        email: staff.email || `${docId.toLowerCase()}@munyaka.sc.ke`,
+        role: staff.role || 'Teacher',
         status: 'Active',
-        createdAt: new Date().toISOString()
+        updatedAt: new Date().toISOString()
       };
 
-      if (!combinedMap.has(emailKey)) {
-        combinedMap.set(emailKey, userProfile);
-      }
+      recordsToSync.push(authUser);
     });
 
-    const recordsToSync = Array.from(combinedMap.values());
     localStorage.setItem('munyaka_users', JSON.stringify(recordsToSync));
 
     try {
       const { collection, doc, setDoc, getDocs, deleteDoc, getFirestore } = await import('firebase/firestore');
       const dbInstance = getFirestore();
       if (dbInstance) {
-        // 2. Firestore Document ID Deduplication & Cleanup: Fetch all existing documents in 'users' collection
-        const existingDocsSnap = await getDocs(collection(dbInstance, 'users'));
-        const validEmails = new Set(recordsToSync.map(r => r.email.toLowerCase().trim()));
-        const validIds = new Set(recordsToSync.map(r => {
-          const rawIdentifier = r?.tscNumber ?? r?.tscNo ?? r?.staffId ?? r?.id ?? r?.email;
-          const cleanIdentifier = String(rawIdentifier).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
-          return `user_${cleanIdentifier}`;
-        }));
-
-        // Delete mock or obsolete entries that do not match active local staff
-        for (const docSnap of existingDocsSnap.docs) {
-          const docData: any = docSnap.data() || {};
-          const docEmail = (docData.email || '').toLowerCase().trim();
-          const docId = docSnap.id;
-
-          const isMockId = docId.startsWith('stf-') || docId.startsWith('usr_') || docId.includes('jane_wangari') || docId.includes('david_ochieng') || docId.includes('beatrice_naliaka');
-          const isMockEmail = docEmail.includes('jane.wangari') || docEmail.includes('david.ochieng') || docEmail.includes('beatrice.naliaka') || docEmail.includes('admin@munyaka.sc.ke');
-
-          if (!validIds.has(docId) && !validEmails.has(docEmail) || isMockId || isMockEmail) {
-            await deleteDoc(doc(dbInstance, 'users', docId)).catch(() => {});
-          }
-        }
-
-        // Push deterministic active staff records to Firestore
-        for (const record of recordsToSync) {
-          const rawIdentifier = record?.tscNumber ?? record?.tscNo ?? record?.staffId ?? record?.id ?? record?.email ?? `user_${Math.random()}`;
-          const cleanIdentifier = String(rawIdentifier).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
-          const docId = `user_${cleanIdentifier}`;
-          const docRef = doc(collection(dbInstance, 'users'), docId);
-          await setDoc(docRef, {
-            ...record,
-            syncedAt: new Date().toISOString()
-          }, { merge: true });
+        // Upsert each user object into Firestore users collection using setDoc(doc(db, 'users', docId), authUser)
+        for (const authUser of recordsToSync) {
+          const docRef = doc(dbInstance, 'users', authUser.id);
+          await setDoc(docRef, authUser, { merge: true });
         }
       }
     } catch (fbErr) {
