@@ -43,38 +43,17 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => ({
 export const syncUsersToCloud = async (): Promise<{ success: boolean; count: number; error?: string }> => {
   try {
     const rawStaff = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('staff_registry') || localStorage.getItem('staff') || localStorage.getItem('munyaka_staff_master') || '[]';
-    const rawUsers = localStorage.getItem('munyaka_users') || '[]';
     
     let staffList: any[] = [];
-    let existingUsers: any = [];
-    
     try {
       staffList = JSON.parse(rawStaff);
     } catch {
       staffList = [];
     }
 
-    try {
-      existingUsers = JSON.parse(rawUsers);
-    } catch {
-      existingUsers = [];
-    }
-
-    // 1. Safe Array Defense: Robustly convert existingUsers to array whether it is an array, snapshot, or object map
-    const safeUsers = Array.isArray(existingUsers)
-      ? existingUsers
-      : (existingUsers?.docs || Object.values(existingUsers || {}));
-
+    // 1. Strict Local Source Mapping: derive user records strictly from the active local Staff Registry store (6 records)
     const combinedMap = new Map<string, any>();
-    
-    // Add existing users safely with optional chaining
-    safeUsers.forEach((u: any) => {
-      if (!u) return;
-      const email = (u?.email || u?.data?.()?.email || '').toLowerCase().trim();
-      if (email) combinedMap.set(email, u?.data ? { id: u.id, ...u.data() } : u);
-    });
 
-    // Add registered staff, auto-generating user auth profile if not present
     staffList.forEach((s: any, idx: number) => {
       if (!s) return;
       const fullName = s?.fullName ?? s?.name ?? s?.staffName ?? 'Staff Member';
@@ -85,22 +64,24 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
       const email = String(rawEmail).includes('@') ? rawEmail : `${rawEmail}@munyaka.sc.ke`;
       const emailKey = email.toLowerCase().trim();
 
+      const staffId = s?.staffId ?? s?.id ?? `STF-${idx + 1}`;
+      const tscNumber = s?.tscNo ?? s?.tscNumber ?? null;
+      const nationalId = s?.nationalId ?? null;
+
+      const userProfile = {
+        id: s?.id ?? `user_stf_${Date.now()}_${idx}`,
+        fullName,
+        name: fullName,
+        email,
+        role: s?.role ?? s?.category ?? s?.designation ?? 'Staff',
+        staffId,
+        tscNumber,
+        nationalId,
+        status: 'Active',
+        createdAt: new Date().toISOString()
+      };
+
       if (!combinedMap.has(emailKey)) {
-        const staffId = s?.staffId ?? s?.id ?? `STF-${idx + 1}`;
-        const tscNumber = s?.tscNo ?? s?.tscNumber ?? null;
-        const nationalId = s?.nationalId ?? null;
-        const userProfile = {
-          id: s?.id ?? `user_stf_${Date.now()}_${idx}`,
-          fullName,
-          name: fullName,
-          email,
-          role: s?.role ?? s?.category ?? s?.designation ?? 'Staff',
-          staffId,
-          tscNumber,
-          nationalId,
-          status: 'Active',
-          createdAt: new Date().toISOString()
-        };
         combinedMap.set(emailKey, userProfile);
       }
     });
@@ -109,11 +90,34 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
     localStorage.setItem('munyaka_users', JSON.stringify(recordsToSync));
 
     try {
-      const { collection, doc, setDoc, getFirestore } = await import('firebase/firestore');
+      const { collection, doc, setDoc, getDocs, deleteDoc, getFirestore } = await import('firebase/firestore');
       const dbInstance = getFirestore();
       if (dbInstance) {
+        // 2. Firestore Document ID Deduplication & Cleanup: Fetch all existing documents in 'users' collection
+        const existingDocsSnap = await getDocs(collection(dbInstance, 'users'));
+        const validEmails = new Set(recordsToSync.map(r => r.email.toLowerCase().trim()));
+        const validIds = new Set(recordsToSync.map(r => {
+          const rawIdentifier = r?.tscNumber ?? r?.tscNo ?? r?.staffId ?? r?.id ?? r?.email;
+          const cleanIdentifier = String(rawIdentifier).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
+          return `user_${cleanIdentifier}`;
+        }));
+
+        // Delete mock or obsolete entries that do not match active local staff
+        for (const docSnap of existingDocsSnap.docs) {
+          const docData: any = docSnap.data() || {};
+          const docEmail = (docData.email || '').toLowerCase().trim();
+          const docId = docSnap.id;
+
+          const isMockId = docId.startsWith('stf-') || docId.startsWith('usr_') || docId.includes('jane_wangari') || docId.includes('david_ochieng') || docId.includes('beatrice_naliaka');
+          const isMockEmail = docEmail.includes('jane.wangari') || docEmail.includes('david.ochieng') || docEmail.includes('beatrice.naliaka') || docEmail.includes('admin@munyaka.sc.ke');
+
+          if (!validIds.has(docId) && !validEmails.has(docEmail) || isMockId || isMockEmail) {
+            await deleteDoc(doc(dbInstance, 'users', docId)).catch(() => {});
+          }
+        }
+
+        // Push deterministic active staff records to Firestore
         for (const record of recordsToSync) {
-          // 2. Document ID Sanitization: Composite ID formatted as user_${staff.tscNo || staff.id || staff.email} (lowercase, spaces replaced by underscores)
           const rawIdentifier = record?.tscNumber ?? record?.tscNo ?? record?.staffId ?? record?.id ?? record?.email ?? `user_${Math.random()}`;
           const cleanIdentifier = String(rawIdentifier).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
           const docId = `user_${cleanIdentifier}`;
