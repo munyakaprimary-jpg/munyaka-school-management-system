@@ -91,8 +91,28 @@ function getStoredArray(key: string): any[] {
 // Auto-run on module evaluation for immediate preview pane & browser parity
 if (typeof window !== 'undefined') {
   try {
-    // Nuke any legacy staff IDs starting with staff_179 or missing MUN- prefix across all keys
-    const staffKeys = ['munyaka_staff', 'munyaka_staff_directory', 'munyaka_staff_master', 'staff_registry', 'staff'];
+    const ALLOWED_STAFF_KEY = 'munyaka_staff_registry';
+    const FORBIDDEN_KEYS = [
+      'munyaka_users',
+      'users_list',
+      'staff_list',
+      'mockStaff',
+      'initialUsers',
+      'temp_staff_cache',
+      'supabase_users',
+      'staff_members'
+    ];
+
+    // 1. Wipe all forbidden keys instantly from browser memory
+    FORBIDDEN_KEYS.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      } catch {}
+    });
+
+    // 2. Nuke any legacy staff IDs across all standard staff keys
+    const staffKeys = ['munyaka_staff', 'munyaka_staff_directory', 'munyaka_staff_master', 'munyaka_master_staff_list', 'staff_registry', ALLOWED_STAFF_KEY];
     staffKeys.forEach(k => {
       const raw = localStorage.getItem(k);
       if (raw) {
@@ -100,24 +120,35 @@ if (typeof window !== 'undefined') {
           const arr = JSON.parse(raw);
           if (Array.isArray(arr)) {
             const cleaned = arr.filter((s: any) => {
-              const idStr = String(s?.id || s?.staffId || s?.staff_id || '');
-              if (idStr.includes('staff_179') || idStr.startsWith('staff_')) return false;
-              return /^MUN-\d+$/i.test(idStr) || idStr.length > 0;
-            }).map((s: any) => {
-              let id = String(s?.id || s?.staffId || s?.staff_id || '');
-              if (!id.startsWith('MUN-')) {
-                const num = s?.tscNumber || s?.tsc_no || Math.floor(1000 + Math.random() * 9000);
-                id = `MUN-${num}`;
+              const idStr = String(s?.id || s?.staffId || s?.staff_id || s?.userId || '');
+              if (idStr.includes('staff_') || idStr.startsWith('STF-') || idStr.startsWith('T00') || !idStr.startsWith('MUN-')) {
+                return false;
               }
-              return { ...s, id, staffId: id };
+              return /^MUN-\d+$/i.test(idStr);
+            }).map((s: any) => {
+              const id = String(s.id || s.staffId || s.staff_id || '');
+              return { ...s, id, staffId: id, userId: id };
             });
             localStorage.setItem(k, JSON.stringify(cleaned));
           }
         } catch {}
       }
     });
+
+    // Ensure ALLOWED_STAFF_KEY is populated and sanitized
+    const rawAllowed = localStorage.getItem(ALLOWED_STAFF_KEY) || localStorage.getItem('munyaka_staff_directory') || '[]';
+    try {
+      const parsed = JSON.parse(rawAllowed);
+      const sanitized = Array.isArray(parsed)
+        ? parsed.filter((item: any) => {
+            const id = String(item.id || item.userId || item.staffId || '');
+            return /^MUN-\d+$/i.test(id);
+          })
+        : [];
+      localStorage.setItem(ALLOWED_STAFF_KEY, JSON.stringify(sanitized));
+    } catch {}
   } catch (e) {
-    console.error('Storage nuke migration error:', e);
+    console.error('Storage SSOT nuke migration error:', e);
   }
 
   initializeCentralStorage();
