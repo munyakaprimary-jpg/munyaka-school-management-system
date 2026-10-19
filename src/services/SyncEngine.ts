@@ -42,11 +42,9 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => ({
  */
 export const syncUsersToCloud = async (): Promise<{ success: boolean; count: number; error?: string }> => {
   try {
-    const rawStaff = localStorage.getItem('munyaka_staff') || localStorage.getItem('staff_registry') || localStorage.getItem('staff') || '[]';
-    const rawUsers = localStorage.getItem('munyaka_users') || localStorage.getItem('users') || '[]';
+    const rawStaff = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('staff_registry') || localStorage.getItem('staff') || localStorage.getItem('munyaka_staff_master') || '[]';
     
     let staffList: any[] = [];
-    let userList: any[] = [];
     
     try {
       staffList = JSON.parse(rawStaff);
@@ -54,52 +52,32 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
       staffList = [];
     }
 
-    try {
-      userList = JSON.parse(rawUsers);
-    } catch {
-      userList = [];
-    }
-
-    // Combine users and staff registry sources without duplication
+    // Deduplicate staff records
     const combinedMap = new Map<string, any>();
     
-    [...userList, ...staffList].forEach((u, idx) => {
+    staffList.forEach((u, idx) => {
       if (!u) return;
       const name = u.fullName || u.name || u.staffName || '';
-      const email = u.email || `${String(name).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
-      const key = String(u.id || u.staffId || u.nationalId || u.tscNumber || email || idx).trim().toLowerCase();
+      const email = u.domainEmail || u.email || `${String(name).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
+      const key = String(u.id || u.staffId || u.tscNo || u.tscNumber || u.nationalId || email || idx).trim().toLowerCase();
       if (!combinedMap.has(key)) {
         combinedMap.set(key, u);
       }
     });
 
-    let recordsToSync = Array.from(combinedMap.values());
-
-    if (recordsToSync.length === 0) {
-      recordsToSync = [
-        {
-          id: 'STF-001',
-          fullName: 'Dr. Jane Wangari',
-          role: 'ADMINISTRATOR',
-          email: 'j.wangari@munyaka.sc.ke',
-          staffId: 'STF-001',
-          tscNumber: 'TSC-123456',
-          nationalId: '23456789'
-        }
-      ];
-    }
+    const recordsToSync = Array.from(combinedMap.values());
 
     const batch = writeBatch(db);
-    const mappedUsers = recordsToSync.map((user, idx) => {
-      const name = user?.fullName ?? user?.name ?? user?.staffName ?? 'Staff Member';
-      const role = user?.role ?? user?.designation ?? user?.category ?? 'Staff';
-      const staffId = user?.staffId ?? user?.id ?? `STF_${idx + 1}`;
-      const tscNumber = user?.tscNumber ?? user?.tsc_no ?? null;
-      const nationalId = user?.nationalId ?? user?.national_id ?? null;
+    const mappedUsers = recordsToSync.map((staff, idx) => {
+      const fullName = staff?.fullName ?? staff?.name ?? staff?.staffName ?? 'Staff Member';
+      const role = staff?.role ?? staff?.designation ?? staff?.category ?? 'Staff';
+      const staffId = staff?.staffId ?? staff?.id ?? `STF-${String(idx + 1).padStart(3, '0')}`;
+      const tscNumber = staff?.tscNo ?? staff?.tscNumber ?? staff?.tsc_no ?? null;
+      const nationalId = staff?.nationalId ?? staff?.national_id ?? null;
       
-      const rawEmail = user?.email ?? `${String(name).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
+      const rawEmail = staff?.domainEmail ?? staff?.email ?? `${String(fullName).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
       const email = String(rawEmail).includes('@') ? rawEmail : `${rawEmail}@munyaka.sc.ke`;
-      const permissions = user?.permissions ?? user?.accessPermissions ?? ['read', 'write'];
+      const permissions = staff?.permissions ?? staff?.accessPermissions ?? ['read', 'write'];
 
       // Document ID composite pattern: user_{national_id_or_staff_id_or_email} (converted to lowercase with spaces replaced by underscores)
       const rawIdentifier = nationalId ?? tscNumber ?? staffId ?? email ?? `user_${idx + 1}`;
@@ -107,13 +85,15 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
       const docId = `user_${cleanIdentifier}`;
 
       const record = {
-        id: user?.id ?? docId,
-        fullName: name,
-        role: role,
-        email: email,
-        staffId: staffId,
-        tscNumber: tscNumber,
-        nationalId: nationalId,
+        id: staff?.id ?? docId,
+        fullName,
+        name: fullName,
+        role,
+        email,
+        staffId,
+        tscNumber,
+        nationalId,
+        status: 'Active',
         permissions: Array.isArray(permissions) ? permissions : [permissions],
         syncStatus: 'Synced',
         syncedAt: new Date().toISOString()
@@ -125,7 +105,9 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
       return record;
     });
 
-    await batch.commit();
+    if (mappedUsers.length > 0) {
+      await batch.commit();
+    }
 
     localStorage.setItem('cloud_users', JSON.stringify(mappedUsers));
 

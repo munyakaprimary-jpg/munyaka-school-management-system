@@ -1075,11 +1075,7 @@ export default function FirestoreSyncTab() {
       }
 
       if (!staffMembers.length) {
-        staffMembers = [
-          { id: 'STF-001', name: 'Dr. Jane Wangari', role: 'Principal', tscNumber: 'TSC-123456', nationalId: '23456789', email: 'j.wangari@munyaka.sc.ke', phone: '0712345678', category: 'Teaching' },
-          { id: 'STF-002', name: 'Mr. David Ochieng', role: 'Senior ICT Tutor', tscNumber: 'TSC-987654', nationalId: '34567890', email: 'd.ochieng@munyaka.sc.ke', phone: '0722334455', category: 'Teaching' },
-          { id: 'STF-003', name: 'Madam Beatrice Naliaka', role: 'Lab Assistant', nationalId: '45678901', email: 'b.naliaka@munyaka.sc.ke', phone: '0733445566', category: 'Non-Teaching' }
-        ];
+        staffMembers = [];
       }
 
       // Deduplicate by ID / National ID / TSC
