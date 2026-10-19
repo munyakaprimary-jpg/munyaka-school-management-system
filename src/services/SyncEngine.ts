@@ -42,60 +42,62 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => ({
  */
 export const syncUsersToCloud = async (): Promise<{ success: boolean; count: number; error?: string }> => {
   try {
-    const rawUsers = localStorage.getItem('munyaka_users') || localStorage.getItem('users') || localStorage.getItem('munyaka_staff') || '[]';
+    const rawStaff = localStorage.getItem('munyaka_staff') || localStorage.getItem('staff_registry') || localStorage.getItem('staff') || '[]';
+    const rawUsers = localStorage.getItem('munyaka_users') || localStorage.getItem('users') || '[]';
+    
+    let staffList: any[] = [];
     let userList: any[] = [];
     
+    try {
+      staffList = JSON.parse(rawStaff);
+    } catch {
+      staffList = [];
+    }
+
     try {
       userList = JSON.parse(rawUsers);
     } catch {
       userList = [];
     }
 
-    if (!Array.isArray(userList) || userList.length === 0) {
-      userList = [
+    // Combine users and staff registry sources without duplication
+    const combinedMap = new Map<string, any>();
+    
+    [...userList, ...staffList].forEach((u, idx) => {
+      if (!u) return;
+      const name = u.fullName || u.name || u.staffName || '';
+      const email = u.email || `${String(name).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
+      const key = String(u.id || u.staffId || u.nationalId || u.tscNumber || email || idx).trim().toLowerCase();
+      if (!combinedMap.has(key)) {
+        combinedMap.set(key, u);
+      }
+    });
+
+    let recordsToSync = Array.from(combinedMap.values());
+
+    if (recordsToSync.length === 0) {
+      recordsToSync = [
         {
-          id: 'usr_admin_01',
+          id: 'STF-001',
           fullName: 'Dr. Jane Wangari',
           role: 'ADMINISTRATOR',
-          email: 'admin@munyaka.sc.ke',
+          email: 'j.wangari@munyaka.sc.ke',
           staffId: 'STF-001',
           tscNumber: 'TSC-123456',
-          nationalId: '23456789',
-          permissions: ['all', 'manage_users', 'sync_cloud']
-        },
-        {
-          id: 'usr_teacher_02',
-          fullName: 'Mr. David Ochieng',
-          role: 'Teacher',
-          email: 'd.ochieng@munyaka.sc.ke',
-          staffId: 'STF-002',
-          tscNumber: 'TSC-987654',
-          nationalId: '34567890',
-          permissions: ['grade_students', 'take_attendance']
-        },
-        {
-          id: 'usr_staff_03',
-          fullName: 'Madam Beatrice Naliaka',
-          role: 'Staff',
-          email: 'b.naliaka@munyaka.sc.ke',
-          staffId: 'STF-003',
-          tscNumber: null,
-          nationalId: '45678901',
-          permissions: ['view_inventory', 'library_access']
+          nationalId: '23456789'
         }
       ];
     }
 
     const batch = writeBatch(db);
-    const mappedUsers = userList.map((user, idx) => {
-      // Safe null checks and optional chaining (`?.`) to handle staff without TSC numbers cleanly
-      const name = user?.fullName ?? user?.name ?? user?.userName ?? 'User';
-      const role = user?.role ?? user?.designation ?? user?.systemRole ?? 'Staff';
+    const mappedUsers = recordsToSync.map((user, idx) => {
+      const name = user?.fullName ?? user?.name ?? user?.staffName ?? 'Staff Member';
+      const role = user?.role ?? user?.designation ?? user?.category ?? 'Staff';
       const staffId = user?.staffId ?? user?.id ?? `STF_${idx + 1}`;
       const tscNumber = user?.tscNumber ?? user?.tsc_no ?? null;
       const nationalId = user?.nationalId ?? user?.national_id ?? null;
       
-      const rawEmail = user?.email ?? user?.username ?? `${String(name).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
+      const rawEmail = user?.email ?? `${String(name).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
       const email = String(rawEmail).includes('@') ? rawEmail : `${rawEmail}@munyaka.sc.ke`;
       const permissions = user?.permissions ?? user?.accessPermissions ?? ['read', 'write'];
 
@@ -125,7 +127,6 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
 
     await batch.commit();
 
-    // Store in localStorage cloud simulation mirror for users
     localStorage.setItem('cloud_users', JSON.stringify(mappedUsers));
 
     return { success: true, count: mappedUsers.length };

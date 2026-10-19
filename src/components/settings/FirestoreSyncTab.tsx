@@ -3320,16 +3320,16 @@ export default function FirestoreSyncTab() {
                               <TableBody>
                                 {cloudUsersList.map((u, idx) => (
                                   <TableRow key={u.id || idx} className="hover:bg-muted/20">
-                                    <TableCell className="p-2 font-mono text-xs">{u.id || u.userId || '—'}</TableCell>
-                                    <TableCell className="p-2 font-semibold text-slate-900">{u.name || u.fullName || u.displayName || '—'}</TableCell>
+                                    <TableCell className="p-2 font-mono text-xs">{u.staffId || u.id || '—'}</TableCell>
+                                    <TableCell className="p-2 font-semibold text-slate-900">{u.fullName || u.name || '—'}</TableCell>
                                     <TableCell className="p-2 text-xs font-mono text-slate-700">{u.email || '—'}</TableCell>
                                     <TableCell className="p-2 text-xs">
                                       <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">
-                                        {u.role || u.accessLevel || 'User'}
+                                        {u.role || 'Staff'}
                                       </Badge>
                                     </TableCell>
                                     <TableCell className="p-2 text-xs">
-                                      <span className="font-semibold text-emerald-700">{u.status || 'Active'}</span>
+                                      <span className="font-semibold text-emerald-700">{u.syncStatus || 'Active'}</span>
                                     </TableCell>
                                   </TableRow>
                                 ))}
