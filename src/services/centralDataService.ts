@@ -177,8 +177,8 @@ export const UnifiedDataStorage = {
   addStaff: (record: any): any => {
     localStorage.removeItem('munyaka_staff_cleared_explicitly');
     const staff = UnifiedDataStorage.getStaff();
-    const staffId = record.staffId || record.staff_id || (record.id?.startsWith('MUN-') ? record.id : `MUN-${Math.floor(1000 + Math.random() * 9000)}`);
-    const id = record.id && record.id.startsWith('MUN-') ? record.id : staffId;
+    const id = record.id || `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const staffId = record.staffId || record.staff_id || `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
     const tempAccessCode = record.tempAccessCode || record.access_key || record.ref || (() => {
       const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
       let randomPart = '';

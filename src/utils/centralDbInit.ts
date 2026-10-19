@@ -90,35 +90,5 @@ function getStoredArray(key: string): any[] {
 
 // Auto-run on module evaluation for immediate preview pane & browser parity
 if (typeof window !== 'undefined') {
-  try {
-    // Nuke any legacy staff IDs starting with staff_179 or missing MUN- prefix across all keys
-    const staffKeys = ['munyaka_staff', 'munyaka_staff_directory', 'munyaka_staff_master', 'staff_registry', 'staff'];
-    staffKeys.forEach(k => {
-      const raw = localStorage.getItem(k);
-      if (raw) {
-        try {
-          const arr = JSON.parse(raw);
-          if (Array.isArray(arr)) {
-            const cleaned = arr.filter((s: any) => {
-              const idStr = String(s?.id || s?.staffId || s?.staff_id || '');
-              if (idStr.includes('staff_179') || idStr.startsWith('staff_')) return false;
-              return /^MUN-\d+$/i.test(idStr) || idStr.length > 0;
-            }).map((s: any) => {
-              let id = String(s?.id || s?.staffId || s?.staff_id || '');
-              if (!id.startsWith('MUN-')) {
-                const num = s?.tscNumber || s?.tsc_no || Math.floor(1000 + Math.random() * 9000);
-                id = `MUN-${num}`;
-              }
-              return { ...s, id, staffId: id };
-            });
-            localStorage.setItem(k, JSON.stringify(cleaned));
-          }
-        } catch {}
-      }
-    });
-  } catch (e) {
-    console.error('Storage nuke migration error:', e);
-  }
-
   initializeCentralStorage();
 }

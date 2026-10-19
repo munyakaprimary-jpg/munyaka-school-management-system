@@ -1494,14 +1494,14 @@ export const initialSeedData = {
             "id": "df1c9ab0-612e-481e-8b89-01401f49f7d8",
             "subject": "Agriculture",
             "color": "bg-emerald-100 text-emerald-700 border border-emerald-200",
-            "teacherId": "MUN-4821",
+            "teacherId": "staff_1790157907618_qk42q",
             "teacherName": "ANN NDUTA MBUGUA"
           },
           "Tuesday": {
             "id": "bb2469b5-fd0e-4115-8e75-22132fe04119",
             "subject": "Science",
             "color": "bg-cyan-100 text-cyan-700 border border-cyan-200",
-            "teacherId": "MUN-4822",
+            "teacherId": "staff_1790174007943_xtycd",
             "teacherName": "LAWRENCE NDEGWA GIOSHE"
           }
         },
@@ -1535,7 +1535,7 @@ export const initialSeedData = {
             "id": "af6c7080-8081-459a-a44e-28eb215c217d",
             "subject": "English",
             "color": "bg-emerald-100 text-emerald-700 border border-emerald-200",
-            "teacherId": "MUN-4821",
+            "teacherId": "staff_1790157907618_qk42q",
             "teacherName": "ANN NDUTA MBUGUA"
           }
         }
