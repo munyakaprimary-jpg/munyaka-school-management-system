@@ -111,7 +111,22 @@ export default function FirestoreSyncTab() {
   // User Management / Auth Cloud Sync state
   const [isSyncingUsers, setIsSyncingUsers] = useState(false);
   const [cloudUsersCount, setCloudUsersCount] = useState(0);
-  const [cloudUsersList, setCloudUsersList] = useState<any[]>([]);
+  const [cloudUsersList, setCloudUsersList] = useState<any[]>(() => {
+    try {
+      const raw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('staff_registry') || localStorage.getItem('staff') || '[]';
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((s, idx) => ({
+          id: s.id || s.staffId || `user_${idx + 1}`,
+          fullName: s.fullName || s.name || s.staffName || 'Staff Member',
+          email: s.domainEmail || s.email || 'staff@munyaka.sc.ke',
+          role: s.role || s.designation || s.category || 'Staff',
+          syncStatus: 'Local Staff'
+        }));
+      }
+    } catch {}
+    return [];
+  });
 
   const localLearners = (() => {
     try {
