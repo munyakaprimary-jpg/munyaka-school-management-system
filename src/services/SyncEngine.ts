@@ -37,7 +37,7 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => ({
 
 /**
  * Syncs user accounts, system roles, assigned default email domains (@munyaka.sc.ke), and access permissions
- * to Firestore cloud collection `users` with composite document ID pattern `user_{national_id_or_staff_id_or_email}`
+ * to Firestore cloud collection `users` with composite document ID pattern `user_${staff.tscNo || staff.id || staff.email}`
  * (lowercase, spaces replaced by underscores).
  */
 export const syncUsersToCloud = async (): Promise<{ success: boolean; count: number; error?: string }> => {
@@ -46,7 +46,7 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
     const rawUsers = localStorage.getItem('munyaka_users') || '[]';
     
     let staffList: any[] = [];
-    let existingUsers: any[] = [];
+    let existingUsers: any = [];
     
     try {
       staffList = JSON.parse(rawStaff);
@@ -60,36 +60,44 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
       existingUsers = [];
     }
 
+    // 1. Safe Array Defense: Robustly convert existingUsers to array whether it is an array, snapshot, or object map
+    const safeUsers = Array.isArray(existingUsers)
+      ? existingUsers
+      : (existingUsers?.docs || Object.values(existingUsers || {}));
+
     const combinedMap = new Map<string, any>();
     
-    // Add existing users from munyaka_users
-    existingUsers.forEach((u: any) => {
+    // Add existing users safely with optional chaining
+    safeUsers.forEach((u: any) => {
       if (!u) return;
-      const email = (u.email || '').toLowerCase().trim();
-      if (email) combinedMap.set(email, u);
+      const email = (u?.email || u?.data?.()?.email || '').toLowerCase().trim();
+      if (email) combinedMap.set(email, u?.data ? { id: u.id, ...u.data() } : u);
     });
 
     // Add registered staff, auto-generating user auth profile if not present
     staffList.forEach((s: any, idx: number) => {
       if (!s) return;
-      const fullName = s?.fullName || s?.name || s?.staffName || 'Staff Member';
-      const nameParts = fullName.trim().toLowerCase().split(/\s+/);
+      const fullName = s?.fullName ?? s?.name ?? s?.staffName ?? 'Staff Member';
+      const nameParts = String(fullName).trim().toLowerCase().split(/\s+/);
       const firstName = nameParts[0] || 'staff';
       const lastName = nameParts[nameParts.length - 1] || `${idx + 1}`;
-      const rawEmail = s?.domainEmail || s?.email || `${firstName}.${lastName}@munyaka.sc.ke`;
+      const rawEmail = s?.domainEmail ?? s?.email ?? `${firstName}.${lastName}@munyaka.sc.ke`;
       const email = String(rawEmail).includes('@') ? rawEmail : `${rawEmail}@munyaka.sc.ke`;
       const emailKey = email.toLowerCase().trim();
 
       if (!combinedMap.has(emailKey)) {
+        const staffId = s?.staffId ?? s?.id ?? `STF-${idx + 1}`;
+        const tscNumber = s?.tscNo ?? s?.tscNumber ?? null;
+        const nationalId = s?.nationalId ?? null;
         const userProfile = {
-          id: s?.id || `user_stf_${Date.now()}_${idx}`,
+          id: s?.id ?? `user_stf_${Date.now()}_${idx}`,
           fullName,
           name: fullName,
           email,
-          role: s?.role || s?.category || s?.designation || 'Staff',
-          staffId: s?.staffId || s?.tscNumber || s?.id || `STF-${idx + 1}`,
-          tscNumber: s?.tscNo || s?.tscNumber || null,
-          nationalId: s?.nationalId || null,
+          role: s?.role ?? s?.category ?? s?.designation ?? 'Staff',
+          staffId,
+          tscNumber,
+          nationalId,
           status: 'Active',
           createdAt: new Date().toISOString()
         };
@@ -102,13 +110,14 @@ export const syncUsersToCloud = async (): Promise<{ success: boolean; count: num
 
     try {
       const { collection, doc, setDoc, getFirestore } = await import('firebase/firestore');
-      const db = getFirestore();
-      if (db) {
+      const dbInstance = getFirestore();
+      if (dbInstance) {
         for (const record of recordsToSync) {
-          const rawIdentifier = record.nationalId || record.tscNumber || record.staffId || record.email || `user_${Math.random()}`;
+          // 2. Document ID Sanitization: Composite ID formatted as user_${staff.tscNo || staff.id || staff.email} (lowercase, spaces replaced by underscores)
+          const rawIdentifier = record?.tscNumber ?? record?.tscNo ?? record?.staffId ?? record?.id ?? record?.email ?? `user_${Math.random()}`;
           const cleanIdentifier = String(rawIdentifier).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
           const docId = `user_${cleanIdentifier}`;
-          const docRef = doc(db, 'users', docId);
+          const docRef = doc(collection(dbInstance, 'users'), docId);
           await setDoc(docRef, {
             ...record,
             syncedAt: new Date().toISOString()
@@ -144,73 +153,76 @@ export const syncEventsNoticesToCloud = async (): Promise<{ success: boolean; co
     } catch {
       eventsList = [];
     }
-    
+
     try {
       noticesList = JSON.parse(rawNotices);
     } catch {
       noticesList = [];
     }
 
-    const combined = [
-      ...(Array.isArray(eventsList) ? eventsList : []),
-      ...(Array.isArray(noticesList) ? noticesList : [])
-    ];
+    const combinedMap = new Map<string, any>();
 
-    if (combined.length === 0) {
-      combined.push(
-        {
-          id: 'event-default-1',
-          title: 'Opening of Term 1, 2026',
-          eventDate: '2026-01-12',
-          targetGroup: 'All Learners',
-          category: 'Term Opening',
-          status: 'Published',
-          content: 'School reopens for Term 1 academic calendar.'
-        },
-        {
-          id: 'notice-default-1',
-          title: 'Staff Briefing Meeting',
-          eventDate: '2026-01-10',
-          targetGroup: 'Teaching Staff',
-          category: 'Staff Briefing',
-          status: 'Active',
-          content: 'Mandatory CBC alignment meeting in main staffroom.'
-        }
-      );
-    }
-
-    const batch = writeBatch(db);
-    const mappedRecords = combined.map((item, idx) => {
-      const dateStr = item?.eventDate ?? item?.date ?? item?.createdAt?.split('T')[0] ?? '2026-01-01';
-      const categoryStr = item?.category ?? item?.type ?? 'general';
-      const cleanDate = String(dateStr).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-      const cleanCategory = String(categoryStr).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-      const docId = `event_${cleanDate}_${cleanCategory}_${idx}`;
-
-      const record = {
-        id: item?.id ?? docId,
-        title: item?.title ?? item?.name ?? 'Untitled Event/Notice',
-        eventDate: item?.eventDate ?? item?.date ?? '',
-        targetGroup: item?.targetGroup ?? item?.targetAudience ?? item?.audience ?? 'All',
-        category: item?.category ?? item?.type ?? 'General',
-        status: item?.status ?? 'Active',
-        content: item?.content ?? item?.description ?? '',
-        syncedAt: new Date().toISOString()
-      };
-
-      const docRef = doc(db, 'events_notices', docId);
-      batch.set(docRef, record, { merge: true });
-
-      return record;
+    eventsList.forEach((e: any, idx: number) => {
+      if (!e) return;
+      const title = String(e?.title || e?.eventName || 'School Event').trim();
+      const category = String(e?.category || e?.eventType || 'General').trim();
+      const date = String(e?.date || e?.eventDate || new Date().toISOString().split('T')[0]).trim();
+      const key = `${date}_${title}`.toLowerCase();
+      if (!combinedMap.has(key)) {
+        combinedMap.set(key, {
+          ...e,
+          id: e?.id || `evt_${idx + 1}`,
+          title,
+          category,
+          date,
+          type: 'event'
+        });
+      }
     });
 
-    await batch.commit();
+    noticesList.forEach((n: any, idx: number) => {
+      if (!n) return;
+      const title = String(n?.title || n?.subject || 'Notice').trim();
+      const category = String(n?.category || 'General').trim();
+      const date = String(n?.date || n?.createdAt || new Date().toISOString().split('T')[0]).trim();
+      const key = `${date}_${title}_notice`.toLowerCase();
+      if (!combinedMap.has(key)) {
+        combinedMap.set(key, {
+          ...n,
+          id: n?.id || `not_${idx + 1}`,
+          title,
+          category,
+          date,
+          type: 'notice'
+        });
+      }
+    });
 
-    // Store in localStorage cloud simulation mirror for events_notices
-    localStorage.setItem('cloud_events_notices', JSON.stringify(mappedRecords));
+    const recordsToSync = Array.from(combinedMap.values());
 
-    return { success: true, count: mappedRecords.length };
+    const batch = writeBatch(db);
+    recordsToSync.forEach((item, idx) => {
+      const dateStr = String(item?.date || '2025-05-02').toLowerCase();
+      const catStr = String(item?.category || 'general').toLowerCase();
+      const cleanDate = dateStr.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const cleanCat = catStr.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+      const docId = `event_${cleanDate}_${cleanCat}_${idx}`;
+
+      const docRef = doc(db, 'events_notices', docId);
+      batch.set(docRef, {
+        ...item,
+        syncedAt: new Date().toISOString()
+      }, { merge: true });
+    });
+
+    if (recordsToSync.length > 0) {
+      await batch.commit();
+    }
+
+    localStorage.setItem('cloud_events_notices', JSON.stringify(recordsToSync));
+
+    return { success: true, count: recordsToSync.length };
   } catch (err: any) {
-    return { success: false, count: 0, error: err?.message || 'Sync failed' };
+    return { success: false, count: 0, error: err?.message || 'Events & Notices sync failed' };
   }
 };
