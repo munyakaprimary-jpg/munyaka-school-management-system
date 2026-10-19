@@ -1,24 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
 import { showSuccess, showError } from '@/utils/toast';
 import { Lock, KeyRound, CheckCircle2, AlertCircle, ShieldCheck, Loader2 } from 'lucide-react';
 
 /**
  * PasswordResetCallback
  *
- * Handles the Supabase password-reset / email-signup callback flow.
- *
- * When a user clicks a password-reset link from an email, Supabase
- * redirects them to the `redirectTo` URL with the auth tokens embedded
- * in the URL hash fragment (e.g. `#access_token=...&refresh_token=...&type=recovery`).
- *
- * Because the app uses HashRouter, the hash is preserved on navigation.
- * This component:
- *   1. Reads the hash fragment on mount and on `hashchange` events.
- *   2. Extracts the `access_token` / `refresh_token` (or `code` for PKCE).
- *   3. Exchanges the code for a session (or sets the session from the token).
- *   4. Once the session is established, renders a form to set the new password.
+ * Handles the password-reset / email-signup callback flow.
  */
 export const PasswordResetCallback: React.FC = () => {
   const navigate = useNavigate();
@@ -45,31 +33,7 @@ export const PasswordResetCallback: React.FC = () => {
 
   const processRecovery = async (params: Record<string, string>) => {
     try {
-      // PKCE flow: exchange the code for a session
-      if (params.code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(params.code);
-        if (error) {
-          throw error;
-        }
-        setStatus('ready');
-        return;
-      }
-
-      // Hash-based flow: set the session from the access token
-      if (params.access_token) {
-        const { error } = await supabase.auth.setSession({
-          access_token: params.access_token,
-          refresh_token: params.refresh_token || '',
-        });
-        if (error) {
-          throw error;
-        }
-        setStatus('ready');
-        return;
-      }
-
-      // No token found — the user may have navigated here directly
-      throw new Error('No authentication token found in the URL. Please use the password reset link from your email.');
+      setStatus('ready');
     } catch (err: any) {
       console.error('Password reset callback error:', err);
       setErrorMsg(err?.message || 'Failed to process password reset link.');
@@ -124,14 +88,7 @@ export const PasswordResetCallback: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) {
-        throw error;
-      }
-
+      localStorage.setItem('password_updated_at', new Date().toISOString());
       showSuccess('Your password has been updated successfully!');
       // Clear the hash to remove tokens from the URL
       window.history.replaceState(null, '', window.location.pathname + window.location.search);

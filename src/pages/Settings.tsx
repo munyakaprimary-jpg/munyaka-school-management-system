@@ -28,7 +28,6 @@ import {
   Cloud
 } from 'lucide-react';
 import { exportAllData, parseAndImportBackup } from '@/utils/storage';
-import { supabase } from '@/integrations/supabase/client';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
 const RBAC_STORAGE_KEY = 'munyaka_rbac_permissions';
@@ -139,13 +138,9 @@ export default function Settings() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const { data, error } = await (supabase as any)
-          .from('school_profile')
-          .select('*')
-          .limit(1)
-          .maybeSingle();
-
-        if (data) {
+        const localProf = localStorage.getItem('school_profile');
+        if (localProf) {
+          const data = JSON.parse(localProf);
           const mapped = {
             schoolName: data.school_name || data.schoolName || settings.schoolName,
             schoolCode: data.school_code || data.schoolCode || settings.schoolCode,
@@ -157,11 +152,9 @@ export default function Settings() {
             yearEstablished: data.year_established || (settings as any).yearEstablished,
           };
           setSettings(prev => ({ ...prev, ...mapped }));
-          localStorage.setItem('school_profile', JSON.stringify(data));
-          localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ ...settings, ...mapped }));
         }
       } catch (err) {
-        // Fallback or network offline
+        console.error('Failed to load profile from local storage', err);
       }
     }
     loadProfile();
@@ -231,16 +224,11 @@ export default function Settings() {
 
       localStorage.setItem('school_profile', JSON.stringify(profilePayload));
 
-      // Try updating Supabase
+      // Saved locally
       try {
-        const { error } = await (supabase as any)
-          .from('school_profile')
-          .upsert(profilePayload);
-        if (error) {
-          console.warn("Supabase upsert school_profile warning:", error.message);
-        }
+        console.log("Settings saved locally successfully.");
       } catch (dbErr) {
-        console.warn("Supabase connection offline, saved locally:", dbErr);
+        console.warn("Saved locally:", dbErr);
       }
 
       if (settings.currentTerm) {

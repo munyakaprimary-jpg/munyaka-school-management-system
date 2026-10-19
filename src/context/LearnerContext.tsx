@@ -43,10 +43,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [JSON.stringify(filteredLearners)]);
 
   const addLearner = async (newLearner: any) => {
-    // 1. Immediate cloud push via Supabase
-    await saveLearnerToCloud(newLearner);
-
-    // 2. Local state & storage update
+    // Local state & storage update
     setLearners((prev) => {
       const existingIndex = prev.findIndex(
         (l) => (l.admissionNumber || l.admission_number) === (newLearner.admissionNumber || newLearner.admission_number)
@@ -64,10 +61,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteLearner = async (admissionNumber: string) => {
-    // 1. Immediate cloud delete via Supabase
-    await deleteLearnerFromCloud(admissionNumber);
-
-    // 2. Local state & storage update
+    // Local state & storage update
     setLearners((prev) => {
       const updated = prev.filter(
         (l) => (l.admissionNumber || l.admission_number) !== admissionNumber
