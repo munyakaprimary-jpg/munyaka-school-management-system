@@ -81,10 +81,10 @@ export default function FirestoreSyncTab() {
   const [cloudEventsNoticesCount, setCloudEventsNoticesCount] = useState(0);
   const [cloudEventsNoticesList, setCloudEventsNoticesList] = useState<any[]>([]);
 
-  // Learning Areas Cloud Sync state
-  const [isSyncingLearningAreas, setIsSyncingLearningAreas] = useState(false);
-  const [cloudLearningAreasCount, setCloudLearningAreasCount] = useState(0);
-  const [cloudLearningAreasList, setCloudLearningAreasList] = useState<any[]>([]);
+  // User Management / Auth Cloud Sync state
+  const [isSyncingUsers, setIsSyncingUsers] = useState(false);
+  const [cloudUsersCount, setCloudUsersCount] = useState(0);
+  const [cloudUsersList, setCloudUsersList] = useState<any[]>([]);
 
   const localLearners = (() => {
     try {
@@ -220,6 +220,12 @@ export default function FirestoreSyncTab() {
       setCloudEventsNoticesCount(eventsNoticesSnap?.size || 0);
       const eventsNoticesDocs = (eventsNoticesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudEventsNoticesList(eventsNoticesDocs);
+
+      // Users Collection (User Management / Auth)
+      const usersSnap = await getDocs(collection(db, 'users')).catch(() => ({ size: 0, docs: [] }));
+      setCloudUsersCount(usersSnap?.size || 0);
+      const usersDocs = (usersSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudUsersList(usersDocs);
 
       setTestStatus('success');
       showSuccess('Connected to Firebase Firestore successfully!');
@@ -363,29 +369,29 @@ export default function FirestoreSyncTab() {
     }
   }
 
-  // Sync function for Events & Notices module
-  async function handleSyncEventsNotices() {
-    if (isSyncingEventsNotices) return;
-    setIsSyncingEventsNotices(true);
+  // Sync function for User Management / Auth module
+  async function handleSyncUsers() {
+    if (isSyncingUsers) return;
+    setIsSyncingUsers(true);
     try {
-      const { syncEventsNoticesToCloud } = await import('@/services/SyncEngine');
-      const res = await syncEventsNoticesToCloud();
+      const { syncUsersToCloud } = await import('@/services/SyncEngine');
+      const res = await syncUsersToCloud();
       if (!res.success) {
-        throw new Error(res.error || 'Events & Notices sync failed');
+        throw new Error(res.error || 'User Management / Auth sync failed');
       }
 
-      setCloudEventsNoticesCount(res.count);
+      setCloudUsersCount(res.count);
       setLastSynced(new Date());
 
-      const snap = await getDocs(collection(db, 'events_notices'));
-      setCloudEventsNoticesList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const snap = await getDocs(collection(db, 'users'));
+      setCloudUsersList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      showSuccess(`Successfully synchronized ${res.count} Events & Notices records to 'events_notices' Firestore collection!`);
+      showSuccess(`Successfully synchronized ${res.count} User Management & Auth records to 'users' Firestore collection!`);
     } catch (err: any) {
-      console.error('Events & Notices Firestore sync error:', err);
-      showError(`Events & Notices Sync Error: ${err?.message || 'Unknown error'}`);
+      console.error('User Management / Auth Firestore sync error:', err);
+      showError(`User Management / Auth Sync Error: ${err?.message || 'Unknown error'}`);
     } finally {
-      setIsSyncingEventsNotices(false);
+      setIsSyncingUsers(false);
     }
   }
 
@@ -2239,18 +2245,29 @@ export default function FirestoreSyncTab() {
                 </p>
               </div>
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Attendance</p>
-                  <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded">
-                    Cloud: {cloudAttendanceCount}
-                  </span>
-                </div>
-                <p className="text-2xl font-extrabold text-blue-400 mt-1">
-                  {cloudAttendanceCount}
-                </p>
-              </div>
-            </div>
-          </div>
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-slate-400">Attendance</p>
+                                <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded">
+                                  Cloud: {cloudAttendanceCount}
+                                </span>
+                              </div>
+                              <p className="text-2xl font-extrabold text-blue-400 mt-1">
+                                {cloudAttendanceCount}
+                              </p>
+                            </div>
+                            <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs text-slate-400">User Management / Auth</p>
+                                <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded">
+                                  Cloud: {cloudUsersCount}
+                                </span>
+                              </div>
+                              <p className="text-2xl font-extrabold text-rose-400 mt-1">
+                                {cloudUsersCount}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
 
           {/* Fees & Finance Cloud Sync & Preview Section */}
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
@@ -3231,8 +3248,73 @@ export default function FirestoreSyncTab() {
             )}
           </div>
 
-          {/* Cloud Learners Preview Table */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+          {/* User Management / Auth Cloud Sync & Preview Section */}
+                    <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-semibold">User Management &amp; Auth Cloud Sync</h3>
+                        <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-300">
+                          Cloud Records: {cloudUsersCount}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Sync user accounts, authentication profiles, and access credentials to the 'users' Firestore collection.
+                      </p>
+                      <Button
+                        onClick={handleSyncUsers}
+                        disabled={isSyncingUsers}
+                        className="w-full py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isSyncingUsers && <RefreshCw className="w-5 h-5 animate-spin"/>}
+                        {isSyncingUsers ? 'Syncing User Management...' : 'Sync User Management / Auth'}
+                      </Button>
+          
+                      {cloudUsersList.length > 0 && (
+                        <div className="mt-6 border-t border-border pt-4">
+                          <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                            <span>Synced Users &amp; Auth Preview ({cloudUsersList.length})</span>
+                            <button
+                              onClick={handleTestCloudTables}
+                              className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                            >
+                              <RefreshCw size={12} /> Refresh Users
+                            </button>
+                          </h4>
+                          <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                            <Table>
+                              <TableHeader className="bg-muted/50 sticky top-0">
+                                <TableRow>
+                                  <TableHead className="p-2 font-medium">User ID</TableHead>
+                                  <TableHead className="p-2 font-medium">Full Name</TableHead>
+                                  <TableHead className="p-2 font-medium">Email</TableHead>
+                                  <TableHead className="p-2 font-medium">Role / Access</TableHead>
+                                  <TableHead className="p-2 font-medium">Status</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {cloudUsersList.map((u, idx) => (
+                                  <TableRow key={u.id || idx} className="hover:bg-muted/20">
+                                    <TableCell className="p-2 font-mono text-xs">{u.id || u.userId || '—'}</TableCell>
+                                    <TableCell className="p-2 font-semibold text-slate-900">{u.name || u.fullName || u.displayName || '—'}</TableCell>
+                                    <TableCell className="p-2 text-xs font-mono text-slate-700">{u.email || '—'}</TableCell>
+                                    <TableCell className="p-2 text-xs">
+                                      <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">
+                                        {u.role || u.accessLevel || 'User'}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="p-2 text-xs">
+                                      <span className="font-semibold text-emerald-700">{u.status || 'Active'}</span>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+          
+                    {/* Cloud Learners Preview Table */}
+                    <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b">
               <div>
                 <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">

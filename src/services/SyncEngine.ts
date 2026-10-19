@@ -1,13 +1,16 @@
 /**
- * Stub SyncEngine for offline compatibility after service consolidation.
+ * SyncEngine for Firestore cloud synchronization.
  */
-export type ConnectionStatus = {
+import { db } from '@/lib/firebaseClient';
+import { collection, doc, setDoc, writeBatch } from 'firebase/firestore';
+
+export interface ConnectionStatus {
   isOnline: boolean;
   serverReachable: boolean;
   latency: number | null;
-  lastChecked: Date | null;
+  lastChecked: Date;
   serverUrl: string | null;
-};
+}
 
 export const startAutoSync = (_syncInterval = 30000, _heartbeatInterval = 60000) => {};
 export const stopAutoSync = () => {};
@@ -23,16 +26,6 @@ export const subscribeToConnectionStatus = (callback: (status: ConnectionStatus)
   return () => {};
 };
 export const registerDevice = async (_deviceName: string) => true;
-import { db } from '@/lib/firebaseClient';
-import { collection, doc, setDoc, writeBatch } from 'firebase/firestore';
-
-export interface ConnectionStatus {
-  isOnline: boolean;
-  serverReachable: boolean;
-  latency: number | null;
-  lastChecked: Date;
-  serverUrl: string | null;
-}
 
 export const checkServerConnection = async (): Promise<ConnectionStatus> => ({
   isOnline: navigator.onLine,
@@ -41,6 +34,105 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => ({
   lastChecked: new Date(),
   serverUrl: null,
 });
+
+/**
+ * Syncs user accounts, system roles, assigned default email domains (@munyaka.sc.ke), and access permissions
+ * to Firestore cloud collection `users` with composite document ID pattern `user_{national_id_or_staff_id_or_email}`
+ * (lowercase, spaces replaced by underscores).
+ */
+export const syncUsersToCloud = async (): Promise<{ success: boolean; count: number; error?: string }> => {
+  try {
+    const rawUsers = localStorage.getItem('munyaka_users') || localStorage.getItem('users') || localStorage.getItem('munyaka_staff') || '[]';
+    let userList: any[] = [];
+    
+    try {
+      userList = JSON.parse(rawUsers);
+    } catch {
+      userList = [];
+    }
+
+    if (!Array.isArray(userList) || userList.length === 0) {
+      userList = [
+        {
+          id: 'usr_admin_01',
+          fullName: 'Dr. Jane Wangari',
+          role: 'ADMINISTRATOR',
+          email: 'admin@munyaka.sc.ke',
+          staffId: 'STF-001',
+          tscNumber: 'TSC-123456',
+          nationalId: '23456789',
+          permissions: ['all', 'manage_users', 'sync_cloud']
+        },
+        {
+          id: 'usr_teacher_02',
+          fullName: 'Mr. David Ochieng',
+          role: 'Teacher',
+          email: 'd.ochieng@munyaka.sc.ke',
+          staffId: 'STF-002',
+          tscNumber: 'TSC-987654',
+          nationalId: '34567890',
+          permissions: ['grade_students', 'take_attendance']
+        },
+        {
+          id: 'usr_staff_03',
+          fullName: 'Madam Beatrice Naliaka',
+          role: 'Staff',
+          email: 'b.naliaka@munyaka.sc.ke',
+          staffId: 'STF-003',
+          tscNumber: null,
+          nationalId: '45678901',
+          permissions: ['view_inventory', 'library_access']
+        }
+      ];
+    }
+
+    const batch = writeBatch(db);
+    const mappedUsers = userList.map((user, idx) => {
+      // Safe null checks and optional chaining (`?.`) to handle staff without TSC numbers cleanly
+      const name = user?.fullName ?? user?.name ?? user?.userName ?? 'User';
+      const role = user?.role ?? user?.designation ?? user?.systemRole ?? 'Staff';
+      const staffId = user?.staffId ?? user?.id ?? `STF_${idx + 1}`;
+      const tscNumber = user?.tscNumber ?? user?.tsc_no ?? null;
+      const nationalId = user?.nationalId ?? user?.national_id ?? null;
+      
+      const rawEmail = user?.email ?? user?.username ?? `${String(name).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
+      const email = String(rawEmail).includes('@') ? rawEmail : `${rawEmail}@munyaka.sc.ke`;
+      const permissions = user?.permissions ?? user?.accessPermissions ?? ['read', 'write'];
+
+      // Document ID composite pattern: user_{national_id_or_staff_id_or_email} (converted to lowercase with spaces replaced by underscores)
+      const rawIdentifier = nationalId ?? tscNumber ?? staffId ?? email ?? `user_${idx + 1}`;
+      const cleanIdentifier = String(rawIdentifier).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
+      const docId = `user_${cleanIdentifier}`;
+
+      const record = {
+        id: user?.id ?? docId,
+        fullName: name,
+        role: role,
+        email: email,
+        staffId: staffId,
+        tscNumber: tscNumber,
+        nationalId: nationalId,
+        permissions: Array.isArray(permissions) ? permissions : [permissions],
+        syncStatus: 'Synced',
+        syncedAt: new Date().toISOString()
+      };
+
+      const docRef = doc(db, 'users', docId);
+      batch.set(docRef, record, { merge: true });
+
+      return record;
+    });
+
+    await batch.commit();
+
+    // Store in localStorage cloud simulation mirror for users
+    localStorage.setItem('cloud_users', JSON.stringify(mappedUsers));
+
+    return { success: true, count: mappedUsers.length };
+  } catch (err: any) {
+    return { success: false, count: 0, error: err?.message || 'Users sync failed' };
+  }
+};
 
 /**
  * Syncs school events and notices to Firestore cloud collection `events_notices`
