@@ -273,12 +273,25 @@ export default function FirestoreSyncTab() {
       const usersDocs = (usersSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       
       // Also combine local registered staff as user accounts directly if cloud collection is empty or to ensure direct mapping
+      const rawData = localStorage.getItem('munyaka_staff_registry') || localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_users') || '[]';
+      let parsed = [];
+      try {
+        parsed = JSON.parse(rawData);
+      } catch (e) {
+        parsed = [];
+      }
+      
+      // Guarantee array type regardless of stored payload format
+      const localUsersArr = Array.isArray(parsed)
+        ? parsed
+        : (parsed && typeof parsed === 'object' ? Object.values(parsed) : []);
+
       const localStaffRaw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || '[]';
-      const localUsersRaw = localStorage.getItem('munyaka_users') || '[]';
       let localStaffArr = [];
-      let localUsersArr = [];
       try { localStaffArr = JSON.parse(localStaffRaw); } catch {}
-      try { localUsersArr = JSON.parse(localUsersRaw); } catch {}
+      if (!Array.isArray(localStaffArr)) {
+        localStaffArr = localStaffArr && typeof localStaffArr === 'object' ? Object.values(localStaffArr) : [];
+      }
       
       const userMap = new Map();
       usersDocs.forEach(u => {
@@ -286,14 +299,14 @@ export default function FirestoreSyncTab() {
         if (emailKey) userMap.set(emailKey, u);
       });
 
-      localUsersArr.forEach((u: any) => {
+      Array.isArray(localUsersArr) && localUsersArr.forEach((u: any) => {
         const emailKey = (u.email || '').toLowerCase().trim();
         if (emailKey && !userMap.has(emailKey)) {
           userMap.set(emailKey, u);
         }
       });
 
-      localStaffArr.forEach((s: any, idx: number) => {
+      Array.isArray(localStaffArr) && localStaffArr.forEach((s: any, idx: number) => {
         const fullName = s?.fullName || s?.name || s?.staffName || 'Staff Member';
         const rawEmail = s?.domainEmail || s?.email || `${String(fullName).toLowerCase().replace(/[^a-z]/g, '.')}@munyaka.sc.ke`;
         const email = String(rawEmail).includes('@') ? rawEmail : `${rawEmail}@munyaka.sc.ke`;
@@ -320,6 +333,7 @@ export default function FirestoreSyncTab() {
       setCloudUsersList(finalUsersList);
 
       setTestStatus('success');
+      setErrorMessage(null);
       showSuccess('Connected to Firebase Firestore successfully!');
     } catch (error: any) {
       console.error('Error fetching cloud collection status:', error);
