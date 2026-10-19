@@ -116,8 +116,13 @@ export default function FirestoreSyncTab() {
       const raw = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || localStorage.getItem('staff_registry') || localStorage.getItem('staff') || '[]';
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((s, idx) => ({
-          id: s.id || s.staffId || `user_${idx + 1}`,
+        return parsed
+          .filter((s: any) => {
+            const sid = String(s?.id || s?.staffId || s?.staff_id || '');
+            return sid.startsWith('MUN-');
+          })
+          .map((s, idx) => ({
+            id: s.id || s.staffId || `MUN-${1000 + idx}`,
           fullName: s.fullName || s.name || s.staffName || 'Staff Member',
           email: s.domainEmail || s.email || 'staff@munyaka.sc.ke',
           role: s.role || s.designation || s.category || 'Staff',
@@ -1138,11 +1143,13 @@ export default function FirestoreSyncTab() {
         staffMembers = [];
       }
 
-      // Deduplicate by ID / National ID / TSC
+      // Deduplicate by ID / National ID / TSC and ensure MUN- prefix
       const seenIds = new Set<string>();
       const uniqueStaff = staffMembers.filter((st: any) => {
         if (!st) return false;
-        const key = String(st?.id || st?.staffId || st?.nationalId || st?.tscNumber || st?.name || '').trim().toLowerCase();
+        const sid = String(st?.id || st?.staffId || '');
+        if (!sid.startsWith('MUN-')) return false;
+        const key = sid.trim().toLowerCase();
         if (!key || seenIds.has(key)) return false;
         seenIds.add(key);
         return true;

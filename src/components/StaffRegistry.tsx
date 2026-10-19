@@ -122,22 +122,31 @@ export default function StaffRegistry() {
 
     // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove legacy streams
     const seenIds = new Set<string>();
-    const sanitized: StaffMember[] = loadedStaff.map((staff, idx) => {
-      let id = staff.id || `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
-      if (seenIds.has(id)) {
-        id = `staff_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 5)}`;
-      }
-      seenIds.add(id);
+    const sanitized: StaffMember[] = loadedStaff
+      .filter((staff: any) => {
+        const sid = String(staff?.id || staff?.staffId || staff?.staff_id || '');
+        return sid.startsWith('MUN-');
+      })
+      .map((staff, idx) => {
+        let id = String(staff.id || staff.staffId || staff.staff_id || '');
+        if (!id.startsWith('MUN-')) {
+          const num = staff.tscNumber || staff.tsc_no || Math.floor(1000 + Math.random() * 9000);
+          id = `MUN-${num}`;
+        }
+        if (seenIds.has(id)) {
+          id = `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+        seenIds.add(id);
 
-      let cat: StaffCategoryRole = staff.category;
-      if (cat === ('Teaching Staff' as any)) cat = 'Subject Teacher';
-      else if (cat === ('Administration' as any)) cat = 'HOI';
-      else if (cat === ('Support Staff' as any)) cat = 'Store Master';
-      else if (!cat) cat = 'Class Teacher';
+        let cat: StaffCategoryRole = staff.category;
+        if (cat === ('Teaching Staff' as any)) cat = 'Subject Teacher';
+        else if (cat === ('Administration' as any)) cat = 'HOI';
+        else if (cat === ('Support Staff' as any)) cat = 'Store Master';
+        else if (!cat) cat = 'Class Teacher';
 
-      const rawClasses = staff.assignedClasses || staff.classes || [];
-      const cleanClasses = Array.isArray(rawClasses)
-        ? rawClasses.map((c: any) => {
+        const rawClasses = staff.assignedClasses || staff.classes || [];
+        const cleanClasses = Array.isArray(rawClasses)
+          ? rawClasses.map((c: any) => {
             if (!c) return '';
             if (typeof c === 'string') return c;
             if (typeof c === 'object') {
@@ -367,8 +376,9 @@ export default function StaffRegistry() {
       ? (email.includes('@') ? email.trim() : `${email.trim()}@munyaka.sc.ke`)
       : `${fullName.toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`;
 
+    const generatedMunId = tscNumber.trim() ? `MUN-${tscNumber.trim()}` : `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
     const staffRecord: StaffMember = {
-      id: editingStaff ? editingStaff.id : `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      id: editingStaff ? editingStaff.id : generatedMunId,
       name: fullName.trim(),
       category,
       email: fullEmail,
