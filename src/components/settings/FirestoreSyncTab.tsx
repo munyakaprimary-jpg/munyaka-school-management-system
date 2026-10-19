@@ -66,6 +66,11 @@ export default function FirestoreSyncTab() {
   const [cloudReportCardsCount, setCloudReportCardsCount] = useState(0);
   const [cloudReportCardsList, setCloudReportCardsList] = useState<any[]>([]);
 
+  // Learning Areas Cloud Sync state
+  const [isSyncingLearningAreas, setIsSyncingLearningAreas] = useState(false);
+  const [cloudLearningAreasCount, setCloudLearningAreasCount] = useState(0);
+  const [cloudLearningAreasList, setCloudLearningAreasList] = useState<any[]>([]);
+
   // Exam Types Cloud Sync state
   const [isSyncingExamTypes, setIsSyncingExamTypes] = useState(false);
   const [cloudExamTypesCount, setCloudExamTypesCount] = useState(0);
@@ -81,10 +86,37 @@ export default function FirestoreSyncTab() {
   const [cloudEventsNoticesCount, setCloudEventsNoticesCount] = useState(0);
   const [cloudEventsNoticesList, setCloudEventsNoticesList] = useState<any[]>([]);
 
+  const handleSyncEventsNotices = async () => {
+    if (isSyncingEventsNotices) return;
+    setIsSyncingEventsNotices(true);
+    try {
+      const { syncEventsNoticesToCloud } = await import('@/services/SyncEngine');
+      const res = await syncEventsNoticesToCloud();
+      if (!res.success) {
+        throw new Error(res.error || 'Events & Notices sync failed');
+      }
+      setCloudEventsNoticesCount(res.count);
+      setLastSynced(new Date());
+      const snap = await getDocs(collection(db, 'events_notices'));
+      setCloudEventsNoticesList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      showSuccess(`Successfully synchronized ${res.count} Events & Notices records to 'events_notices' Firestore collection!`);
+    } catch (err: any) {
+      console.error('Events & Notices Firestore sync error:', err);
+      showError(`Events & Notices Sync Error: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsSyncingEventsNotices(false);
+    }
+  };
+
   // User Management / Auth Cloud Sync state
   const [isSyncingUsers, setIsSyncingUsers] = useState(false);
   const [cloudUsersCount, setCloudUsersCount] = useState(0);
   const [cloudUsersList, setCloudUsersList] = useState<any[]>([]);
+
+  // Learning Areas Cloud Sync state
+  const [isSyncingLearningAreas, setIsSyncingLearningAreas] = useState(false);
+  const [cloudLearningAreasCount, setCloudLearningAreasCount] = useState(0);
+  const [cloudLearningAreasList, setCloudLearningAreasList] = useState<any[]>([]);
 
   const localLearners = (() => {
     try {
