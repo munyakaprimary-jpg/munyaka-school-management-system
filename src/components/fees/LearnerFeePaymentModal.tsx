@@ -241,26 +241,26 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
     if (selectedGradeFilter === "all") {
       // Gather all unique streams across all grades
       const allStreamsSet = new Set<string>();
-      gradesData.forEach(g => g.streams.forEach(s => allStreamsSet.add(s.name)));
+      (gradesData || []).forEach(g => (g?.streams || []).forEach(s => s && allStreamsSet.add(s.name)));
       return Array.from(allStreamsSet).map(s => ({ id: s.toLowerCase(), name: s }));
     }
-    const gradeObj = gradesData.find(g => g.id === selectedGradeFilter || normalize(g.name) === normalize(selectedGradeFilter));
-    return gradeObj ? gradeObj.streams : [];
+    const gradeObj = (gradesData || []).find(g => g.id === selectedGradeFilter || normalize(g.name) === normalize(selectedGradeFilter));
+    return gradeObj?.streams || [];
   }, [selectedGradeFilter, gradesData]);
 
   // Filtered learners based on Grade, Stream, and Search Query
   const filteredLearners = useMemo(() => {
-    return learnersList.filter(l => {
+    return (learnersList || []).filter(l => {
       // Grade filter
       if (selectedGradeFilter !== "all") {
-        const gradeObj = gradesData.find(g => g.id === selectedGradeFilter);
+        const gradeObj = (gradesData || []).find(g => g.id === selectedGradeFilter);
         const targetGradeName = gradeObj ? gradeObj.name : selectedGradeFilter;
-        const studentGradeNorm = normalize(l.grade);
+        const studentGradeNorm = normalize(l?.grade);
         const targetGradeNorm = normalize(targetGradeName);
         const gradeIdNorm = normalize(selectedGradeFilter);
 
-        const matchesGrade = 
-          studentGradeNorm === targetGradeNorm || 
+        const matchesGrade =
+          studentGradeNorm === targetGradeNorm ||
           studentGradeNorm === gradeIdNorm ||
           studentGradeNorm.includes(targetGradeNorm) ||
           targetGradeNorm.includes(studentGradeNorm);
@@ -270,12 +270,12 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
 
       // Stream filter
       if (selectedStreamFilter !== "all") {
-        const streamObj = availableStreamsForFilter.find(s => s.id === selectedStreamFilter || normalize(s.name) === normalize(selectedStreamFilter));
+        const streamObj = (availableStreamsForFilter || []).find(s => s.id === selectedStreamFilter || normalize(s.name) === normalize(selectedStreamFilter));
         const targetStreamName = streamObj ? streamObj.name : selectedStreamFilter;
-        const studentStreamNorm = normalize(l.stream);
+        const studentStreamNorm = normalize(l?.stream);
         const targetStreamNorm = normalize(targetStreamName);
 
-        const matchesStream = 
+        const matchesStream =
           studentStreamNorm === targetStreamNorm ||
           studentStreamNorm.includes(targetStreamNorm) ||
           targetStreamNorm.includes(studentStreamNorm);
@@ -284,13 +284,15 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
       }
 
       // Search query filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesQuery = 
-          l.name.toLowerCase().includes(q) ||
-          (l.admNo && l.admNo.toLowerCase().includes(q)) ||
-          (l.grade && l.grade.toLowerCase().includes(q)) ||
-          (l.stream && l.stream.toLowerCase().includes(q));
+      if ((searchQuery || "").trim()) {
+        const q = (searchQuery || "").toLowerCase().trim();
+        const matchesGrade = l?.grade && l.grade.toLowerCase().includes(q);
+        const matchesStream = l?.stream && l.stream.toLowerCase().includes(q);
+        const matchesQuery =
+          (l?.name || "").toLowerCase().includes(q) ||
+          (l?.admNo && l.admNo.toLowerCase().includes(q)) ||
+          matchesGrade ||
+          matchesStream;
         if (!matchesQuery) return false;
       }
 
@@ -299,7 +301,7 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
   }, [learnersList, selectedGradeFilter, selectedStreamFilter, searchQuery, gradesData, availableStreamsForFilter]);
 
   const selectedLearner = useMemo(() => {
-    return learnersList.find(l => l.id === selectedStudentId);
+    return (learnersList || []).find(l => l?.id === selectedStudentId);
   }, [learnersList, selectedStudentId]);
 
   // When grade filter changes, reset stream filter & selected student if not matching
@@ -319,17 +321,17 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
   const handleStudentSelect = (studentId: string) => {
     setSelectedStudentId(studentId);
     setErrorMsg("");
-    const student = learnersList.find(l => l.id === studentId);
+    const student = (learnersList || []).find(l => l?.id === studentId);
     if (student) {
       // Auto-sync grade & stream filters if they were "all" or mismatched
       if (student.grade) {
-        const matchedGrade = gradesData.find(g => normalize(g.name) === normalize(student.grade) || normalize(g.id) === normalize(student.grade));
+        const matchedGrade = (gradesData || []).find(g => normalize(g?.name) === normalize(student.grade) || normalize(g?.id) === normalize(student.grade));
         if (matchedGrade) {
           setSelectedGradeFilter(matchedGrade.id);
         }
       }
       if (student.stream) {
-        const matchedStream = availableStreamsForFilter.find(s => normalize(s.name) === normalize(student.stream));
+        const matchedStream = (availableStreamsForFilter || []).find(s => normalize(s?.name) === normalize(student.stream));
         if (matchedStream) {
           setSelectedStreamFilter(matchedStream.id);
         }
