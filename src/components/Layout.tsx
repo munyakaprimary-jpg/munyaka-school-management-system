@@ -703,9 +703,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         {/* Dynamic Main Viewport - prevent horizontal clipping */}
                 <div
                           ref={scrollContainerRef}
-                          className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-8 pb-36 lg:pb-8 pb-safe custom-scrollbar"
-                        >
-                  <div className="max-w-7xl mx-auto w-full max-w-full overflow-x-hidden px-0 table-scroll-viewport">
+                          className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-3 sm:p-6 lg:p-8 pb-36 lg:pb-8 pb-safe custom-scrollbar"
+                  >
+                    <div className="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-6 overflow-x-hidden">
                     {children}
           </div>
         </div>

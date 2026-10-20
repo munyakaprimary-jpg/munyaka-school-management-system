@@ -489,6 +489,7 @@ const App = () => {
 
   return (
     <AppErrorBoundary>
+      <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-slate-950">
       <HashRouter>
           <AuthProvider>
             <AuthGate>
@@ -591,6 +592,7 @@ const App = () => {
             </AuthGate>
           </AuthProvider>
         </HashRouter>
+      </div>
     </AppErrorBoundary>
   );
 };
