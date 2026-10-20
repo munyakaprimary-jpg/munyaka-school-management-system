@@ -356,7 +356,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       {/* Mobile Sidebar Overlay Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -561,7 +561,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         isCollapsed ? "lg:ml-20" : "lg:ml-72 md:lg:ml-64"
       )}>
         {/* Mobile & Desktop Header Bar - stacks on mobile, row on sm+ */}
-                <header className="min-h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 lg:px-8 py-3 shrink-0 z-50 print:hidden relative">
+                <header className="min-h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 lg:px-8 py-3 shrink-0 z-20 print:hidden relative">
                   <div className="flex items-center gap-3">
                     {/* Hamburger Button for Mobile */}
                     <Button
