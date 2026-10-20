@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { checkForUpdates } from '@/registerServiceWorker';
+import { toast } from 'sonner';
 import {
   LayoutDashboard,
   Users,
@@ -33,6 +35,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sun,
+  RefreshCw,
   Moon,
   X,
   GraduationCap,
@@ -50,7 +53,6 @@ import {
   Server,
   Cloud,
   CloudOff,
-  RefreshCw,
   CheckCircle2,
   Wifi,
   Home,
@@ -514,18 +516,41 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               )}
             </div>
             
-            {!isCollapsed && (
-              <div className="flex gap-2 pt-1 border-t border-slate-200/50 dark:border-slate-700">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={logout}
-                  className="w-full justify-center gap-2 rounded-xl h-9 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                >
-                  <LogOut size={14} /> Log Out
-                </Button>
+            <div className="space-y-2 pt-2 border-t border-slate-200/50 dark:border-slate-700">
+              <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 px-1 font-mono">
+                <span title={new Date(__BUILD_TIME__).toLocaleString()}>
+                  Build: {new Date(__BUILD_TIME__).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Vercel</span>
               </div>
-            )}
+              {!isCollapsed && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      const updated = await checkForUpdates();
+                      if (updated) {
+                        toast.success('New version found! Reloading...');
+                      } else {
+                        toast.success('You are on the latest build.');
+                      }
+                    }}
+                    className="w-full justify-center gap-2 rounded-xl h-8 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                  >
+                    <RefreshCw size={13} /> Check for Updates
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={logout}
+                    className="w-full justify-center gap-2 rounded-xl h-9 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  >
+                    <LogOut size={14} /> Log Out
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </aside>

@@ -3,23 +3,12 @@ import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import './index.css';
+import { registerServiceWorker } from './registerServiceWorker';
 
 // ─── PWA Service Worker Registration ─────────────────────────────────────────
-// Only register the service worker in browser/web environments.
-// Disable SW entirely in Capacitor native WebView to prevent it from intercepting
-// WebView fetch calls (which would cause CORS/network failures on Android).
-if ('serviceWorker' in navigator && !(window as unknown as { Capacitor?: unknown }).Capacitor) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js')
-      .then((registration) => {
-        console.log('[SW] Service Worker registered with scope:', registration.scope);
-      })
-      .catch((err) => {
-        console.warn('[SW] Service Worker registration failed:', err);
-      });
-  });
-}
+// Registers on every page load, forces a newly deployed worker to activate and
+// reloads the page so mobile devices never stay pinned to a stale Vercel build.
+registerServiceWorker();
 
 const queryClient = new QueryClient();
 
