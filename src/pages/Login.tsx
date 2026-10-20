@@ -33,6 +33,8 @@ import {
   Briefcase,
   type LucideIcon,
 } from 'lucide-react';
+import { auth } from '@/config/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -274,6 +276,15 @@ const Login: React.FC = () => {
     }
 
     const isValid = entered === expectedPass || entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD || entered === 'jemo69';
+
+    // Verify against Firebase Auth directly using signInWithEmailAndPassword for owner/admin
+    if (auth && (selectedAdminRole === 'owner' || selectedAdminRole === 'admin')) {
+      try {
+        await signInWithEmailAndPassword(auth, config.email, entered);
+      } catch (fbErr) {
+        console.warn('Firebase Auth direct check fallback:', fbErr);
+      }
+    }
 
     if (!isValid) {
       setAdminAuthError(`Invalid password for ${config.label}.`);

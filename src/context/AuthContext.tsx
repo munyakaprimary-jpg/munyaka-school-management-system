@@ -14,6 +14,8 @@ import {
 } from '@/services/adminCredentials';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 import { startHeartbeatService, stopHeartbeatService } from '@/services/deviceHeartbeat';
+import { auth } from '@/config/firebase';
+import { signOut } from 'firebase/auth';
 
 export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver' | 'owner' | 'parent' | 'support_staff';
 
@@ -886,6 +888,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem('munyaka_session');
+    localStorage.removeItem('munyaka_auth_user');
+    localStorage.removeItem('munyaka_current_user');
+    localStorage.removeItem('munyaka_admin_session');
+    localStorage.removeItem('saved_password');
+    localStorage.removeItem('munyaka_saved_password');
+    localStorage.removeItem('munyaka_remembered_user');
+    try {
+      sessionStorage.clear();
+      if (auth) {
+        signOut(auth).catch(() => {});
+      }
+    } catch {
+      // no-op
+    }
     // Clear the current-auth-role key so the license gate switches
     // back into full-lockout mode for the next sign-in.
     persistCurrentAuthRole(null);
