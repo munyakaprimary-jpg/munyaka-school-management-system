@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { db } from '@/config/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
 
 interface AddLearnerModalProps {
   isOpen: boolean;
@@ -44,10 +44,11 @@ export default function AddLearnerModal({
 
     setIsSaving(true);
     try {
+      const learnerId = `learner_${Date.now()}`;
       const genAdm = admissionNumber.trim() || `MUN-${Math.floor(100 + Math.random() * 900)}-2025`;
 
       const newLearner = {
-        id: genAdm.replace(/[^a-zA-Z0-9_-]/g, '_'),
+        id: learnerId,
         fullName: fullName.trim(),
         name: fullName.trim(),
         admissionNumber: genAdm,
@@ -67,13 +68,9 @@ export default function AddLearnerModal({
         updatedAt: new Date().toISOString()
       };
 
-      const docId = newLearner.admissionNumber 
-        ? newLearner.admissionNumber.replace(/[^a-zA-Z0-9_-]/g, '_')
-        : `learner_${Date.now()}`;
-
-      // 1. Save directly to Firestore collection 'learners' using standardized Document ID
+      // 1. Save directly to Firestore collection 'learners' via addDoc/setDoc
       try {
-        await setDoc(doc(db, "learners", docId), newLearner, { merge: true });
+        await setDoc(doc(db, "learners", learnerId), newLearner);
       } catch (firestoreErr) {
         console.warn("Firestore save fallback:", firestoreErr);
       }
@@ -81,7 +78,7 @@ export default function AddLearnerModal({
       // 2. Simultaneously update local cache ('learners' and 'munyaka_students')
       try {
         const existingLocal = JSON.parse(localStorage.getItem('learners') || localStorage.getItem('munyaka_students') || '[]');
-        const updatedLocal = [newLearner, ...existingLocal.filter((item: any) => (item.admissionNumber || item.id) !== docId)];
+        const updatedLocal = [newLearner, ...existingLocal];
         localStorage.setItem('learners', JSON.stringify(updatedLocal));
         localStorage.setItem('munyaka_students', JSON.stringify(updatedLocal));
       } catch (localErr) {

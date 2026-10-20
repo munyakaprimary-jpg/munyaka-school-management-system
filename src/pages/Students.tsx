@@ -8,8 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import AddLearnerModal from '@/components/students/AddLearnerModal';
-import { learnerService, LearnerRecord } from '@/services/learnerService';
 import {
   Users,
   Plus,
@@ -165,17 +163,26 @@ export default function Students() {
   const assignedTeacherStream = !isAdmin ? (resolvedStream || 'BLUE') : 'all';
 
   const [students, setStudents] = useState<any[]>(() => {
+    // Load from centralized master data service (aggregates across all storage keys)
     const loaded = CentralDataService.getLearners();
     return ensureProperAdmissionNumbers(loaded);
   });
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // Real-Time Firestore Subscription & Deduplicated Local Cache Merge
+  // Real-Time Firestore Subscription & local storage sync
   useEffect(() => {
-    const unsubscribe = learnerService.subscribeLearners((mergedList) => {
-      setStudents(ensureProperAdmissionNumbers(mergedList));
-    });
+    let unsubscribe: (() => void) | undefined;
+    try {
+      unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
+        if (!snapshot.empty) {
+          const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setStudents(ensureProperAdmissionNumbers(list));
+        }
+      }, (err) => {
+        console.warn("Firestore learners snapshot offline or error:", err);
+      });
+    } catch (e) {
+      console.warn("Firestore collection subscription failed:", e);
+    }
 
     const handleStudentsUpdated = () => {
       const loaded = CentralDataService.getLearners();
@@ -296,18 +303,13 @@ export default function Students() {
   };
 
   const handleOpenAdd = () => {
-    setIsAddModalOpen(true);
-  };
-
-  const handleLearnerAdded = (newLearner: any) => {
-    setStudents(prev => {
-      const merged = [newLearner, ...prev.filter(item => (item.admissionNumber || item.id) !== (newLearner.admissionNumber || newLearner.id))];
-      return ensureProperAdmissionNumbers(merged);
-    });
-    // Auto-adjust or reset active Grade Filter to match the newly added learner's grade
-    if (isAdmin && newLearner.grade) {
-      setGradeFilter(newLearner.grade);
-    }
+    resetForm();
+    const initialGrade = !isAdmin ? assignedTeacherGrade : 'Grade 6';
+    const initialStream = !isAdmin ? assignedTeacherStream : 'BLUE';
+    setGrade(initialGrade);
+    setStream(initialStream);
+    setAdmissionNumber(generateAdmissionNumber(initialGrade, students));
+    setIsModalOpen(true);
   };
 
   const handleOpenTransferModal = () => {
@@ -950,14 +952,6 @@ export default function Students() {
       </div>
 
       {/* Add / Edit Learner Modal */}
-      <AddLearnerModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onLearnerAdded={handleLearnerAdded}
-        availableGrades={availableGrades}
-        availableStreams={availableStreams}
-      />
-
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
