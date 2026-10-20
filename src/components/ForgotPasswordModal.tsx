@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { useAuth } from '@/context/AuthContext';
+import { saveAdminPassword } from '@/services/adminCredentials';
 
 interface ForgotPasswordModalProps {
   open: boolean;
@@ -14,6 +16,7 @@ interface ForgotPasswordModalProps {
 const ADMIN_EMAILS = ['munyaka2026', 'admin@munyaka.sc.ke', 'jndiki@munyaka.sc.ke', 'jamesndiki@gmail.com'];
 
 const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose }) => {
+  const { setUser } = useAuth();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<'input' | 'success' | 'admin_bypass'>('input');
@@ -25,9 +28,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
   const handleResetPassword = async (targetEmail: string) => {
     setIsLoading(true);
     try {
-      // Trim and normalize email address
       const cleanEmail = targetEmail.trim().toLowerCase();
-      
       await sendPasswordResetEmail(auth, cleanEmail);
       toast.success(`Password reset email sent to ${cleanEmail}`);
       setStep('success');
@@ -59,23 +60,45 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
 
   const handleAdminPinReset = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPin || newPin.length < 4) {
+    const trimmedPin = newPin.trim();
+    if (!trimmedPin || trimmedPin.length < 4) {
       toast.error('PIN must be at least 4 characters/digits.');
       return;
     }
-    if (newPin !== confirmPin) {
+    if (trimmedPin !== confirmPin.trim()) {
       toast.error('PINs do not match.');
       return;
     }
 
-    // Save admin PIN override to localStorage for local safety guard
+    // Save admin PIN override across all local storage admin keys & central adminCredentials service
     try {
-      const cleanEmail = email.trim().toLowerCase();
-      localStorage.setItem(`admin_pin_${cleanEmail}`, newPin);
-      localStorage.setItem('munyaka_current_pin', newPin);
-      toast.success('Admin PIN successfully reset locally!');
-      setStep('success');
+      saveAdminPassword(trimmedPin);
+      localStorage.setItem('munyaka_admin_pin', trimmedPin);
+      localStorage.setItem('munyaka_owner_pin', trimmedPin);
+      localStorage.setItem('munyaka_custom_pin', trimmedPin);
+      localStorage.setItem('munyaka_admin_password', trimmedPin);
+      localStorage.setItem('munyaka_owner_password', trimmedPin);
+
+      // Automatically log the user in immediately without forcing them back to sign-in
+      const adminUser = {
+        id: 'MUN-0001',
+        name: 'Administrator (James Ndiki)',
+        fullName: 'Administrator (James Ndiki)',
+        role: 'Admin',
+        email: 'jamesndiki@gmail.com',
+        phone: '+254 700 000 000',
+        status: 'Active',
+        avatar: 'AD'
+      } as any;
+
+      localStorage.setItem('munyaka_auth_user', JSON.stringify(adminUser));
+      localStorage.setItem('munyaka_session', JSON.stringify(adminUser));
+      setUser(adminUser);
+
+      toast.success("PIN updated successfully! Logged in as Administrator.");
+      onClose();
     } catch (err: any) {
+      console.error("Failed to save admin PIN:", err);
       toast.error('Failed to save PIN locally.');
     }
   };
@@ -123,13 +146,9 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900">
-                  {ADMIN_EMAILS.some(adm => email.trim().toLowerCase().includes(adm)) ? 'Admin PIN Reset Complete' : 'Check your inbox'}
-                </h3>
+                <h3 className="text-lg font-bold text-slate-900">Check your inbox</h3>
                 <p className="text-sm text-slate-600 max-w-xs mx-auto">
-                  {ADMIN_EMAILS.some(adm => email.trim().toLowerCase().includes(adm))
-                    ? `Your local administrative PIN for ${email} has been updated successfully.`
-                    : `We've sent a password reset email to <span className="font-semibold text-slate-900">${email}</span>.`}
+                  We've sent a password reset link to <span className="font-semibold text-slate-900">{email}</span>.
                 </p>
               </div>
               <div className="pt-2">
@@ -147,7 +166,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
                 <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold block mb-0.5">Admin Safe Guard Detected</span>
-                  Account <span className="font-mono">{email}</span> is recognized as an administrator. You may bypass email delivery and reset your local PIN immediately on screen.
+                  Account <span className="font-mono">{email}</span> is recognized as an administrator. Enter a new PIN to instantly update your credentials and log in.
                 </div>
               </div>
 
@@ -160,7 +179,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
                   required
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value)}
-                  placeholder="Enter new PIN"
+                  placeholder="Enter new PIN (e.g. jemo69)"
                   className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white"
                 />
               </div>
