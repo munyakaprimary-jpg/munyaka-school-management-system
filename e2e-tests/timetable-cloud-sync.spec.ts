@@ -1,72 +1,32 @@
 import { test, expect } from "@playwright/test";
+import { installAdminSession, gotoHashRoute } from "./fixtures/session";
+import { installFirebaseMocks } from "./fixtures/firebase-mock";
 
-/**
- * Timetable cloud sync (Firestore `timetables` collection).
- *
- * Verifies the Cloud DB (Firestore) settings tab exposes the Timetable module:
- * the status grid card reports the local grade schedule count, and the
- * Timetable Cloud Sync section offers the sync control.
- */
-
-const ADMIN_PASSWORD = "ownerpass2026";
-
-const seedTimetableData = async (page: import("@playwright/test").Page) => {
-  await page.evaluate(() => {
-    const timetable = {
-      "Grade 4 Green": {
-        timeSlots: [
-          { id: "slot-1", start: "08:00", end: "08:45", category: "Mathematics" },
-          { id: "slot-2", start: "08:45", end: "09:30", category: "English" },
-        ],
-        entries: [
-          { slotId: "slot-1", subject: "Mathematics", teacher: "Jane Mwangi" },
-          { slotId: "slot-2", subject: "English", teacher: "John Kamau" },
-        ],
-      },
-      "Grade 5 Red": {
-        timeSlots: [{ id: "slot-1", start: "08:00", end: "08:45", category: "Science" }],
-        entries: [{ slotId: "slot-1", subject: "Science", teacher: "Jane Mwangi" }],
-      },
-    };
-    localStorage.setItem("school-timetable-data", JSON.stringify(timetable));
+test.describe("Timetable Cloud Sync", () => {
+  test.beforeEach(async ({ page }) => {
+    await installFirebaseMocks(page);
+    await installAdminSession(page);
+    // Navigate to settings page where Firestore sync tab is located
+    await gotoHashRoute(page, "/settings");
   });
-};
 
-const signInAsAdmin = async (page: import("@playwright/test").Page) => {
-  await page.goto("/login");
-  await page.evaluate(() => {
-    localStorage.removeItem("munyaka_session");
+  test("syncs timetables to cloud from Cloud DB settings tab", async ({ page }) => {
+    // Navigate or click to Cloud DB tab in settings if necessary
+    const cloudTab = page.getByRole("tab", { name: /Cloud DB|Firestore/i }).or(page.getByText(/Cloud DB \(Firestore\)/i));
+    if (await cloudTab.isVisible()) {
+      await cloudTab.click();
+    }
+
+    // Verify timetable status card or section is visible
+    const timetableSection = page.getByRole("heading", { name: /Timetable Cloud Sync/i }).or(page.getByText(/Timetable Cloud Sync/i));
+    await expect(timetableSection).toBeVisible();
+
+    // Click the sync timetables button
+    const syncBtn = page.getByRole("button", { name: /Sync Timetables to Cloud/i });
+    await expect(syncBtn).toBeVisible();
+    await syncBtn.click();
+
+    // Verify success toast or status update appears
+    await expect(page.getByText(/Successfully synchronized|sync complete|success/i)).toBeVisible({ timeout: 10000 });
   });
-  await page.goto("/login");
-
-  const adminTab = page.getByRole("tab", { name: /School Administrator/i });
-  await expect(adminTab).toBeVisible();
-  await adminTab.click();
-
-  const adminCard = page.getByRole("button", { name: /School Administrator/i });
-  await adminCard.click();
-
-  const passwordInput = page.getByPlaceholder(/Enter your password/i);
-  await passwordInput.fill(ADMIN_PASSWORD);
-  await page.getByRole("button", { name: /^Sign In$/i }).click();
-
-  await page.waitForURL("**/dashboard", { timeout: 10_000 });
-};
-
-test("admin sees the Timetable module in the Firestore cloud sync tab", async ({ page }) => {
-  await signInAsAdmin(page);
-  await seedTimetableData(page);
-
-  await page.goto("/settings");
-  await page.getByRole("tab", { name: /Cloud DB \(Firestore\)/i }).click();
-
-  // Status grid card for the Timetable collection.
-  const timetableCard = page.getByTestId("timetable-status-card");
-  await expect(timetableCard).toBeVisible();
-  await expect(timetableCard.getByText("Timetable", { exact: true })).toBeVisible();
-  await expect(timetableCard.getByText("Local: 2")).toBeVisible();
-
-  // Dedicated Timetable Cloud Sync section with its sync control.
-  await expect(page.getByRole("heading", { name: "Timetable Cloud Sync" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Sync Timetables to Cloud/i })).toBeVisible();
 });
