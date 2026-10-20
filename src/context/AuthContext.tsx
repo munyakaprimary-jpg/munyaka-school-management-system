@@ -90,12 +90,12 @@ interface RegisterData {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const DEFAULT_ADMIN = {
-  email: 'munyakaprimary@gmail.com',
+  email: 'jamesndiki@gmail.com',
   password: 'munyaka2026',
   user: {
     id: 'admin-001',
     name: 'School Owner',
-    email: 'munyakaprimary@gmail.com',
+    email: 'jamesndiki@gmail.com',
     phone: '+254 700 000 000',
     role: 'owner' as UserRole,
     avatar: 'OW'
@@ -439,7 +439,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           adminUser = {
             id: 'usr-admin-owner',
             name: 'School Owner',
-            email: 'munyakaprimary@gmail.com',
+            email: 'jamesndiki@gmail.com',
             phone: '+254 700 000 000',
             role: 'admin',
             isActive: true,
@@ -817,7 +817,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       foundUser = {
         id: 'usr-admin-owner',
         name: user.name || 'School Owner',
-        email: user.email || 'munyakaprimary@gmail.com',
+        email: user.email || 'jamesndiki@gmail.com',
         phone: user.phone || '+254 700 000 000',
         role: 'admin',
         isActive: true,

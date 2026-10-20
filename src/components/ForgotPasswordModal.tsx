@@ -11,7 +11,7 @@ interface ForgotPasswordModalProps {
   onClose: () => void;
 }
 
-const ADMIN_EMAILS = ['munyaka2026', 'admin@munyaka.sc.ke', 'jndiki@munyaka.sc.ke'];
+const ADMIN_EMAILS = ['munyaka2026', 'admin@munyaka.sc.ke', 'jndiki@munyaka.sc.ke', 'jamesndiki@gmail.com'];
 
 const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose }) => {
   const [email, setEmail] = useState('');

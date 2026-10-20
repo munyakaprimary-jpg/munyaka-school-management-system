@@ -108,7 +108,7 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     label: 'School Owner',
     description: 'Billing & Subscription Console — Owner Dashboard',
     fullDescription: 'Dedicated access to subscriptions, payment management, financial health, and seat utilization. No access to operational routes (learners, attendance, settings).',
-    email: 'munyakaprimary@gmail.com',
+    email: 'jamesndiki@gmail.com',
     userName: 'School Owner',
     userRole: 'owner',
     redirectPath: '/dashboard',
