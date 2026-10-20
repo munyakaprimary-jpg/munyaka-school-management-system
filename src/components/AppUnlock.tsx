@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Wifi,
 } from 'lucide-react';
+import { LicenseBadge } from '@/components/layout/LicenseBadge';
 import { showSuccess, showError } from '@/utils/toast';
 import {
   activateLicense,
@@ -373,26 +374,7 @@ const AppUnlock = ({ children, forceShow = false, currentRole }: AppUnlockProps)
 
       {/* Floating license indicator (top-right) */}
       <div className="fixed top-3 right-3 z-50">
-        <button
-          onClick={() => {
-            setActiveLicense(getActiveLicense());
-            setStats(getAllLicenses().length);
-            setNow(new Date());
-          }}
-          title={`Active License: ${activeLicense ? activeLicense.activationKey.slice(0, 8) + '...' : 'None'} | ${activeLicense ? daysRemainingUntil(activeLicense.expiresAt) : 0} days remaining`}
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-2xl text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all hover:scale-105",
-            activeLicense && daysRemainingUntil(activeLicense.expiresAt) <= 7
-              ? "bg-amber-500 shadow-amber-500/30 animate-pulse"
-              : "bg-emerald-600 shadow-emerald-600/30"
-          )}
-        >
-          <ShieldCheck size={12} />
-          <span>Licensed</span>
-          <span className="opacity-60">·</span>
-          <span>{activeLicense ? daysRemainingUntil(activeLicense.expiresAt) : 0}d left</span>
-          <RefreshCw size={10} className="opacity-60" />
-        </button>
+        <LicenseBadge />
       </div>
 
       {/* Pass children through */}
