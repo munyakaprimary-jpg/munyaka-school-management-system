@@ -385,7 +385,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       (cleanPass === 'munyaka2026' || cleanPass === 'admin2026' || cleanPass === 'ownerpass2026');
 
     if (isMasterAdmin) {
-      const adminUser: User = {
+      const adminUser = {
         id: 'MUN-0001',
         name: 'Administrator (James Ndiki)',
         email: 'admin@munyaka.sc.ke',
@@ -393,7 +393,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         role: 'Admin' as UserRole,
         status: 'Active',
         avatar: 'AD'
-      };
+      } as unknown as User;
       localStorage.setItem('munyaka_auth_user', JSON.stringify(adminUser));
       localStorage.setItem('munyaka_session', JSON.stringify(adminUser));
       persistCurrentAuthRole(adminUser.role);
