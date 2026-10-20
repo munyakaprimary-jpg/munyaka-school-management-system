@@ -2578,32 +2578,32 @@ export default function FirestoreSyncTab() {
                     <RefreshCw size={12} /> Refresh Fees
                   </button>
                 </h4>
-                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
-                  <Table>
+                <div className="w-full overflow-x-auto min-w-0 scrollbar-thin max-h-60 border border-border rounded-lg">
+                  <Table className="w-full text-left border-collapse min-w-[600px]">
                     <TableHeader className="bg-muted/50 sticky top-0">
                       <TableRow>
-                        <TableHead className="p-2 font-medium">Student / Adm No</TableHead>
-                        <TableHead className="p-2 font-medium">Fee Amount</TableHead>
-                        <TableHead className="p-2 font-medium">Payment Type / Ref</TableHead>
-                        <TableHead className="p-2 font-medium">Status</TableHead>
+                        <TableHead className="p-2 font-medium whitespace-nowrap">Student / Adm No</TableHead>
+                        <TableHead className="p-2 font-medium whitespace-nowrap">Fee Amount</TableHead>
+                        <TableHead className="p-2 font-medium whitespace-nowrap">Payment Type / Ref</TableHead>
+                        <TableHead className="p-2 font-medium whitespace-nowrap">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {cloudFeesList.map((f, idx) => (
                         <TableRow key={f.id || idx} className="hover:bg-muted/20">
-                          <TableCell className="p-2">
-                            <div className="font-semibold text-slate-900">{f.student_name || '—'}</div>
+                          <TableCell className="p-2 whitespace-nowrap truncate max-w-[150px] sm:max-w-none">
+                            <div className="font-semibold text-slate-900 truncate">{f.student_name || '—'}</div>
                             <div className="font-mono text-xs text-muted-foreground">{f.admission_number || f.id}</div>
                           </TableCell>
-                          <TableCell className="p-2 font-semibold text-cyan-700">
+                          <TableCell className="p-2 font-semibold text-cyan-700 whitespace-nowrap">
                             KES {Number(f.amount || 0).toLocaleString()}
                             {f.balance > 0 && <span className="block text-[10px] text-red-500 font-normal">Bal: KES {Number(f.balance).toLocaleString()}</span>}
                           </TableCell>
-                          <TableCell className="p-2 text-xs">
+                          <TableCell className="p-2 text-xs whitespace-nowrap">
                             <div className="uppercase font-medium text-slate-800">{f.payment_method || 'Cash'}</div>
-                            <div className="text-muted-foreground font-mono">{f.transaction_ref || '—'}</div>
+                            <div className="text-muted-foreground font-mono truncate max-w-[150px]">{f.transaction_ref || '—'}</div>
                           </TableCell>
-                          <TableCell className="p-2">
+                          <TableCell className="p-2 whitespace-nowrap">
                             <Badge
                               variant="outline"
                               className={
