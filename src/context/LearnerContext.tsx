@@ -37,10 +37,46 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [learners, setLearners] = useState<any[]>(filteredLearners);
 
-  // Sync state when filteredLearners content actually changes
+  // Sync state when filteredLearners content actually changes or when window events fire
   useEffect(() => {
     setLearners(filteredLearners);
-  }, [JSON.stringify(filteredLearners)]);
+
+    const handleStorageChange = () => {
+      const refreshed = CentralDataService.getLearners();
+      // Apply teacher filtering if needed
+      const userRole = user?.role as string;
+      if (!user || ['admin', 'owner', 'bursar', 'librarian', 'storekeeper', 'head_teacher', 'accountant', 'staff'].includes(userRole)) {
+        setLearners(refreshed);
+        return;
+      }
+      const assignedGrade = (user as any).assignedClass || (user as any).grade || '';
+      const assignedStream = (user as any).assignedStream || (user as any).stream || '';
+      if (!assignedGrade && !assignedStream) {
+        setLearners(refreshed);
+        return;
+      }
+      const filtered = refreshed.filter((l: any) => {
+        const lGrade = l.grade || l.class || l.assignedClass || '';
+        const lStream = l.stream || l.assignedStream || '';
+        const gradeMatch = !assignedGrade || lGrade.toLowerCase().includes(assignedGrade.toLowerCase()) || assignedGrade.toLowerCase().includes(lGrade.toLowerCase());
+        const streamMatch = !assignedStream || lStream.toLowerCase() === assignedStream.toLowerCase();
+        return gradeMatch && streamMatch;
+      });
+      setLearners(filtered);
+    };
+
+    window.addEventListener('students-updated', handleStorageChange);
+    window.addEventListener('learners-updated', handleStorageChange);
+    window.addEventListener('munyaka:data-changed', handleStorageChange);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('students-updated', handleStorageChange);
+      window.removeEventListener('learners-updated', handleStorageChange);
+      window.removeEventListener('munyaka:data-changed', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [filteredLearners, user]);
 
   const addLearner = async (newLearner: any) => {
     // Local state & storage update
