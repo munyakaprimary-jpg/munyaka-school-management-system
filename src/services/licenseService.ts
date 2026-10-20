@@ -351,7 +351,7 @@ export function shouldShowLicenseGate(opts: { currentRole?: string | null } = {}
   try {
     const globalLock = localStorage.getItem('munyaka_global_app_lock');
     const role = opts.currentRole || currentAuthRole() || '';
-    const isOwnerOrAdmin = isExemptRole(role) || role.toLowerCase() === 'admin' || role.toLowerCase() === 'owner';
+    const isOwnerOrAdmin = isExemptRole(role) || String(role || '').toLowerCase() === 'admin' || String(role || '').toLowerCase() === 'owner';
 
     if (globalLock === 'true' && !isOwnerOrAdmin) {
       return true;

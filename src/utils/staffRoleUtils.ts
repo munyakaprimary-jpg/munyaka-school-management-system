@@ -7,7 +7,7 @@ export function getNormalizedStaffRole(userOrStaff: any): string {
     userOrStaff.category ||
     userOrStaff.department ||
     ''
-  ).toLowerCase().trim();
+  ).toString().toLowerCase().trim();
 
   if (rawRole.includes('library') || rawRole.includes('librarian')) return 'LIBRARY';
   if (rawRole.includes('ict') || rawRole.includes('computer')) return 'ICT';

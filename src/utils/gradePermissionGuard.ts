@@ -16,7 +16,7 @@ export interface UserContextType {
  */
 export const normalizeGradeStr = (val: string): string => {
   if (!val) return '';
-  const lower = val.toLowerCase().trim();
+  const lower = String(val || '').toLowerCase().trim();
   const match = lower.match(/(\d+)/);
   if (match) return match[1];
   if (lower.includes('one') || lower.includes('1')) return '1';

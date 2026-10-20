@@ -226,8 +226,8 @@ const Login: React.FC = () => {
     setAdminAuthError('');
   };
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAdminLogin = async (e?: { preventDefault?: () => void }) => {
+    e?.preventDefault?.();
     if (!selectedAdminRole) return;
 
     // Normalise the entered PIN: trim whitespace and strip newlines
@@ -305,7 +305,7 @@ const Login: React.FC = () => {
 
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
-      e.preventDefault();
+      e?.preventDefault?.();
       
       const trimmedId = String(staffId || '').trim();
       const trimmedPass = String(staffPassword || '').trim();
@@ -338,7 +338,7 @@ const Login: React.FC = () => {
         name: matched.name || 'Staff Member',
         email: matched.email || trimmedId,
         phone: matched.phone || '',
-        role: matched.systemRole || matched.role || 'staff',
+        role: String(matched.systemRole || matched.role || 'staff').trim().toLowerCase(),
         staff_id: matched.staffId || '',
         avatar: (matched.name || 'U')
           .split(' ')

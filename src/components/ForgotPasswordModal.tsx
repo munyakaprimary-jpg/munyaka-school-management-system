@@ -40,14 +40,14 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: { preventDefault?: () => void }) => {
+    e?.preventDefault?.();
     if (!email.trim()) {
       toast.error('Please enter your email address.');
       return;
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = (email || '').trim().toLowerCase();
     
     // Check for admin immediate recovery bypass
     if (ADMIN_EMAILS.some(adm => cleanEmail.includes(adm))) {
@@ -58,8 +58,8 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
     await handleResetPassword(cleanEmail);
   };
 
-  const handleAdminPinReset = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAdminPinReset = (e?: { preventDefault?: () => void }) => {
+    e?.preventDefault?.();
     const trimmedPin = newPin.trim();
     if (!trimmedPin || trimmedPin.length < 4) {
       toast.error('PIN must be at least 4 characters/digits.');
