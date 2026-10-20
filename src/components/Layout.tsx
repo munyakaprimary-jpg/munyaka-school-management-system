@@ -352,18 +352,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             });
 
   return (
-      <div className={cn("flex min-h-screen w-full bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
+      <div className={cn("flex min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
       {/* Mobile Sidebar Overlay Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar Drawer */}
       <aside className={cn(
-        "fixed left-0 top-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-[70] transform transition-all duration-300 ease-in-out flex flex-col pt-safe pb-safe shadow-2xl lg:shadow-none",
+        "fixed left-0 top-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 z-50 transform transition-all duration-300 ease-in-out flex flex-col pt-safe pb-safe shadow-2xl lg:shadow-none",
         isCollapsed ? "w-20" : "w-72 md:w-64",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
@@ -557,7 +557,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Main Content Area - Updated with responsive margins to account for fixed sidebar */}
       <main className={cn(
-        "flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300",
+        "flex-1 flex flex-col min-w-0 overflow-x-hidden w-full max-w-full transition-all duration-300",
         isCollapsed ? "lg:ml-20" : "lg:ml-72 md:lg:ml-64"
       )}>
         {/* Mobile & Desktop Header Bar - stacks on mobile, row on sm+ */}

@@ -2351,7 +2351,7 @@ export default function FirestoreSyncTab() {
           )}
 
           {/* Status Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
             <div className="p-4 rounded-2xl bg-slate-50 border flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
                 <Server size={20} />
@@ -2405,7 +2405,7 @@ export default function FirestoreSyncTab() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4 w-full" data-testid="firestore-status-grid">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full" data-testid="firestore-status-grid">
               <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
                 <div className="flex flex-wrap items-center justify-between gap-1">
                   <p className="text-xs text-slate-400 min-w-0 break-words">Learners</p>

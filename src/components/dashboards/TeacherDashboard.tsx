@@ -87,7 +87,7 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Quick Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
         <Card className="border-none shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assigned Class</p>

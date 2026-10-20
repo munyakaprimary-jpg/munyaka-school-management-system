@@ -31,11 +31,11 @@ test.describe("Firestore Status Panel Layout", () => {
     expect(btnBox).not.toBeNull();
     expect(btnBox!.y).toBeGreaterThan(headingBox!.y + headingBox!.height);
 
-    // Grid must be two columns on mobile and hold every status card
+    // Grid must be single-column on mobile (<640px) and hold every status card
     const grid = page.getByTestId("firestore-status-grid");
     await expect(grid).toBeVisible();
     await expect(grid).toHaveComputedStyle({
-      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+      gridTemplateColumns: "repeat(1, minmax(0, 1fr))",
     });
     await expect(grid.locator("> div")).toHaveCount(18);
   });

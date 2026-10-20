@@ -1160,7 +1160,7 @@ const OwnerDashboard: React.FC = () => {
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
 
           {/* Card 1: Active Subscription Plan */}
           <Card className="border-none shadow-sm rounded-2xl bg-white">
