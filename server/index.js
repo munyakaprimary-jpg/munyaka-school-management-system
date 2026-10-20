@@ -173,56 +173,7 @@ app.post('/api/central-db/sync', (req, res) => {
   }
 });
 
-// POST /api/sync/learners - Server-side Supabase sync endpoint
-app.post('/api/sync/learners', async (req, res) => {
-  try {
-    const { learners } = req.body || {};
-    if (!Array.isArray(learners) || learners.length === 0) {
-      return res.status(400).json({ success: false, error: 'No learners array provided in request body' });
-    }
-
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://zjopubqlwwawibjhwiv.supabase.co';
-    const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'sb_publishable_dummy_key';
-
-    const restEndpoint = `${supabaseUrl}/rest/v1/learners`;
-    
-    const response = await fetch(restEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Prefer': 'resolution=merge-duplicates,return=representation'
-      },
-      body: JSON.stringify(learners)
-    });
-
-    const responseText = await response.text();
-    let data = [];
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      data = learners;
-    }
-
-    if (!response.ok) {
-      console.warn('Supabase REST cloud sync warning:', responseText);
-    }
-
-    res.status(200).json({
-      success: true,
-      count: Array.isArray(data) ? data.length : learners.length,
-      message: `Successfully synced learners to Supabase cloud`
-    });
-  } catch (err) {
-    console.error('Server sync learners error:', err);
-    res.status(200).json({
-      success: true,
-      count: req.body?.learners?.length || 0,
-      message: 'Learners processed locally'
-    });
-  }
-});
+// Legacy /api/sync/learners endpoint removed (application uses Firestore client-side sync exclusively)
 const connectedDevicesMap = new Map();
 
 // POST /api/devices/heartbeat
