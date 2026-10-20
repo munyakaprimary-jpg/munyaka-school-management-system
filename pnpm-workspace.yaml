@@ -334,7 +334,7 @@ allowBuilds:
   subrequests: true
   subrequests-express: true
   subrequests-json-merger: true
-  # cleaned up legacy entries
+  supabase: true
   svf-lib: true
   swagger-ui: true
   swiftlint: true
