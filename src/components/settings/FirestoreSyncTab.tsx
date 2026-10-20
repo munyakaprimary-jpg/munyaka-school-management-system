@@ -2390,24 +2390,22 @@ export default function FirestoreSyncTab() {
           </div>
 
           {/* Table Counts Overview */}
-          <div className="p-5 rounded-2xl bg-slate-900 text-white space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-base flex items-center gap-2">
-                <Database className="text-amber-400" size={18} /> Firestore Cloud Collections Status
-              </h3>
-              <Button
-                variant="outline"
-                size="sm"
+          <div className="p-3 sm:p-6 rounded-2xl bg-slate-900 text-white space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-white whitespace-normal break-words leading-tight flex items-center gap-2">
+                <Database className="text-amber-400 shrink-0" size={18} /> Firestore Cloud Collections Status
+              </h2>
+              <button
                 onClick={handleTestCloudTables}
                 disabled={isCheckingCollections}
-                className="bg-slate-800 text-white border-slate-700 hover:bg-slate-700"
+                className="w-full sm:w-auto px-4 py-2 text-sm font-medium whitespace-nowrap bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg flex items-center justify-center gap-2 border border-slate-700 disabled:opacity-50"
               >
-                <RefreshCw size={14} className={`mr-1.5 ${isCheckingCollections ? 'animate-spin' : ''}`} />
+                <RefreshCw size={14} className={`${isCheckingCollections ? 'animate-spin' : ''}`} />
                 {isCheckingCollections ? 'Checking Collections...' : 'Test Cloud Collections'}
-              </Button>
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 pt-2">
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400">Learners</p>
