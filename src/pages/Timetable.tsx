@@ -385,106 +385,106 @@ export default function Timetable() {
   };
 
   return (
-    <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto w-full font-sans">
-      {/* Header Banner */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-wider">
-            <CalendarIcon size={14} /> Timetable & Lesson Allocation
+    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full font-sans">
+          {/* Header Banner */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-wider">
+                <CalendarIcon size={14} /> Timetable & Lesson Allocation
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
+                {isAdmin ? 'Timetable Management' : 'Teacher Timetable (Read-Only)'}
+              </h1>
+              <p className="text-slate-500 text-sm">
+                Showing Timetable for <strong className="text-emerald-700 font-bold">{selectedYear} • {selectedTerm} • {selectedGrade} {selectedStream}</strong>
+              </p>
+            </div>
+    
+            {/* Grade, Stream, Year, Term & Settings Controls */}
+            <div className="flex flex-wrap items-end gap-3 w-full lg:w-auto">
+              <div className="flex flex-col gap-1 flex-1 min-w-[110px] lg:flex-none">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Year</label>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  {YEARS.map(yr => (
+                    <option key={yr} value={yr}>{yr}</option>
+                  ))}
+                </select>
+              </div>
+    
+              <div className="flex flex-col gap-1 flex-1 min-w-[110px] lg:flex-none">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Term</label>
+                <select
+                  value={selectedTerm}
+                  onChange={(e) => setSelectedTerm(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  {TERMS.map(term => (
+                    <option key={term} value={term}>{term}</option>
+                  ))}
+                </select>
+              </div>
+    
+              <div className="flex flex-col gap-1 flex-1 min-w-[110px] lg:flex-none">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Grade</label>
+                <select
+                  value={selectedGrade}
+                  onChange={(e) => setSelectedGrade(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  {GRADES.map(grade => (
+                    <option key={grade} value={grade}>{grade}</option>
+                  ))}
+                </select>
+              </div>
+    
+              <div className="flex flex-col gap-1 flex-1 min-w-[110px] lg:flex-none">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Stream</label>
+                <select
+                  value={selectedStream}
+                  onChange={(e) => setSelectedStream(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  {STREAMS.map(stream => (
+                    <option key={stream} value={stream}>{stream}</option>
+                  ))}
+                </select>
+              </div>
+    
+              <div className="flex items-end gap-2 w-full lg:w-auto">
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    onClick={() => { setTempConfig(config); setIsSettingsOpen(true); }}
+                    className="rounded-xl font-bold border-slate-200 flex items-center justify-center gap-1.5 h-10 text-slate-700 hover:bg-slate-50 flex-1 lg:flex-none"
+                  >
+                    <SlidersHorizontal size={16} /> <span className="truncate">Timetable Settings</span>
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => window.print()}
+                  className="rounded-xl font-bold border-slate-200 flex items-center justify-center gap-2 h-10 flex-1 lg:flex-none"
+                >
+                  <Printer size={16} /> Print
+                </Button>
+              </div>
+            </div>
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900">
-            {isAdmin ? 'Timetable Management' : 'Teacher Timetable (Read-Only)'}
-          </h1>
-          <p className="text-slate-500 text-sm">
-            Showing Timetable for <strong className="text-emerald-700 font-bold">{selectedYear} • {selectedTerm} • {selectedGrade} {selectedStream}</strong>
-          </p>
-        </div>
-
-        {/* Grade, Stream, Year, Term & Settings Controls */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Year</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {YEARS.map(yr => (
-                <option key={yr} value={yr}>{yr}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Term</label>
-            <select
-              value={selectedTerm}
-              onChange={(e) => setSelectedTerm(e.target.value)}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {TERMS.map(term => (
-                <option key={term} value={term}>{term}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Grade</label>
-            <select
-              value={selectedGrade}
-              onChange={(e) => setSelectedGrade(e.target.value)}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {GRADES.map(grade => (
-                <option key={grade} value={grade}>{grade}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Stream</label>
-            <select
-              value={selectedStream}
-              onChange={(e) => setSelectedStream(e.target.value)}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {STREAMS.map(stream => (
-                <option key={stream} value={stream}>{stream}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-end gap-2 pt-5">
-            {isAdmin && (
-              <Button
-                variant="outline"
-                onClick={() => { setTempConfig(config); setIsSettingsOpen(true); }}
-                className="rounded-xl font-bold border-slate-200 flex items-center gap-1.5 h-10 text-slate-700 hover:bg-slate-50"
-              >
-                <SlidersHorizontal size={16} /> Timetable Settings
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => window.print()}
-              className="rounded-xl font-bold border-slate-200 flex items-center gap-2 h-10"
-            >
-              <Printer size={16} /> Print
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Grid Table with Columns = Lesson Slots & Events, Rows = Days */}
-      <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden p-4 space-y-3">
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
-            Active Class Schedule: <span className="text-emerald-700">{selectedYear} • {selectedTerm} • {selectedGrade} {selectedStream}</span>
-          </span>
-          {isAdmin && (
-            <span className="text-xs text-slate-500 font-medium">Click any lesson cell to assign subject & teacher</span>
-          )}
-        </div>
+    
+          {/* Grid Table with Columns = Lesson Slots & Events, Rows = Days */}
+          <Card className="rounded-3xl border-slate-200 bg-white shadow-sm overflow-hidden p-2 sm:p-4 space-y-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 sm:justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                Active Class Schedule: <span className="text-emerald-700">{selectedYear} • {selectedTerm} • {selectedGrade} {selectedStream}</span>
+              </span>
+              {isAdmin && (
+                <span className="text-xs text-slate-500 font-medium">Click any lesson cell to assign subject & teacher</span>
+              )}
+            </div>
 
         <div className="w-full space-y-2">
           {/* TOP HORIZONTAL SCROLLBAR */}
@@ -503,81 +503,81 @@ export default function Timetable() {
             className="w-full overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm"
           >
             <table className="w-full min-w-[1400px] border-collapse text-left">
-            <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-200">
-                <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36">DAY / EVENT</th>
-                {LESSON_SLOTS.map(slot => {
-                  const isSpecial = slot.isBreak;
-                  return (
-                    <th
-                      key={slot.id}
-                      className={`p-4 text-xs font-bold uppercase tracking-wider text-center min-w-[150px] ${
-                        isSpecial ? 'bg-amber-50/70 text-amber-900 border-x border-amber-200/50' : 'text-slate-800'
-                      }`}
-                    >
-                      <div>{slot.name}</div>
-                      <div className={`font-mono font-normal text-[10px] mt-0.5 ${isSpecial ? 'text-amber-700 font-medium' : 'text-slate-400'}`}>
-                        {slot.time}
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {DAYS.map(day => (
-                <tr key={day} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 pl-6 align-middle bg-slate-50/40 font-bold text-slate-900 text-sm">
-                    {day}
-                  </td>
-                  {LESSON_SLOTS.map(slot => {
-                    if (slot.isBreak) {
-                      let badgeColor = 'bg-amber-50 border-amber-200 text-amber-800';
-                      if (slot.breakType === 'assembly') badgeColor = 'bg-blue-50 border-blue-200 text-blue-800';
-                      if (slot.breakType === 'lunch') badgeColor = 'bg-orange-50 border-orange-200 text-orange-800';
-                      if (slot.breakType === 'tea') badgeColor = 'bg-amber-100 border-amber-300 text-amber-900';
-                      if (slot.breakType === 'games') badgeColor = 'bg-indigo-50 border-indigo-200 text-indigo-800';
-
-                      return (
-                        <td key={slot.id} className="p-2 align-middle bg-slate-50/30 text-center">
-                          <span className={`inline-flex px-2 py-1 rounded-lg border font-bold text-[10px] tracking-wide shadow-2xs ${badgeColor}`}>
-                            {slot.name}
-                          </span>
-                        </td>
-                      );
-                    }
-
-                    const assignment = Array.isArray(allocations)
-                      ? allocations.find(a => a.classKey === selectedClassKey && a.day === day && a.slotId === slot.id)
-                      : null;
-
-                    return (
-                      <td key={`${day}-${slot.id}`} className="p-3 align-top border-l border-slate-100">
-                        <div
-                          onClick={() => handleCellClick(day, slot)}
-                          className={`p-3 rounded-2xl border transition-all min-h-[90px] flex flex-col items-center justify-center text-center ${
-                            !isAdmin
-                              ? 'bg-slate-50/50 border-slate-100 cursor-default shadow-none'
-                              : 'bg-white border-slate-200 hover:border-emerald-400 hover:shadow-md cursor-pointer group'
-                          }`}
-                        >
-                          {assignment ? (
-                            <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-emerald-50 border border-emerald-200 w-full animate-in fade-in duration-200">
-                              <span className="font-bold text-sm text-emerald-900">{assignment.subject}</span>
-                              <span className="text-xs text-emerald-700 font-medium mt-0.5">{assignment.teacher}</span>
-                            </div>
-                          ) : isAdmin ? (
-                            <span className="text-xs text-blue-600 font-semibold group-hover:underline">+ Assign Lesson</span>
-                          ) : (
-                            <span className="text-xs text-slate-400 font-medium">Unassigned</span>
-                          )}
-                        </div>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
+                        <thead>
+                          <tr className="bg-slate-50/70 border-b border-slate-200">
+                            <th className="p-4 pl-6 text-xs font-bold uppercase tracking-wider text-slate-500 w-36 whitespace-nowrap">DAY / EVENT</th>
+                            {LESSON_SLOTS.map(slot => {
+                              const isSpecial = slot.isBreak;
+                              return (
+                                <th
+                                  key={slot.id}
+                                  className={`p-4 text-xs font-bold uppercase tracking-wider text-center min-w-[150px] whitespace-nowrap ${
+                                    isSpecial ? 'bg-amber-50/70 text-amber-900 border-x border-amber-200/50' : 'text-slate-800'
+                                  }`}
+                                >
+                                  <div className="truncate">{slot.name}</div>
+                                  <div className={`font-mono font-normal text-[10px] mt-0.5 ${isSpecial ? 'text-amber-700 font-medium' : 'text-slate-400'}`}>
+                                    {slot.time}
+                                  </div>
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {DAYS.map(day => (
+                            <tr key={day} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-4 pl-6 align-middle bg-slate-50/40 font-bold text-slate-900 text-sm whitespace-nowrap">
+                                {day}
+                              </td>
+                              {LESSON_SLOTS.map(slot => {
+                                if (slot.isBreak) {
+                                  let badgeColor = 'bg-amber-50 border-amber-200 text-amber-800';
+                                  if (slot.breakType === 'assembly') badgeColor = 'bg-blue-50 border-blue-200 text-blue-800';
+                                  if (slot.breakType === 'lunch') badgeColor = 'bg-orange-50 border-orange-200 text-orange-800';
+                                  if (slot.breakType === 'tea') badgeColor = 'bg-amber-100 border-amber-300 text-amber-900';
+                                  if (slot.breakType === 'games') badgeColor = 'bg-indigo-50 border-indigo-200 text-indigo-800';
+            
+                                  return (
+                                    <td key={slot.id} className="p-2 align-middle bg-slate-50/30 text-center">
+                                      <span className={`inline-flex px-2 py-1 rounded-lg border font-bold text-[10px] tracking-wide shadow-2xs ${badgeColor} whitespace-nowrap`}>
+                                        {slot.name}
+                                      </span>
+                                    </td>
+                                  );
+                                }
+            
+                                const assignment = Array.isArray(allocations)
+                                  ? allocations.find(a => a.classKey === selectedClassKey && a.day === day && a.slotId === slot.id)
+                                  : null;
+            
+                                return (
+                                  <td key={`${day}-${slot.id}`} className="p-3 align-top border-l border-slate-100">
+                                    <div
+                                      onClick={() => handleCellClick(day, slot)}
+                                      className={`p-3 rounded-2xl border transition-all min-h-[90px] flex flex-col items-center justify-center text-center ${
+                                        !isAdmin
+                                          ? 'bg-slate-50/50 border-slate-100 cursor-default shadow-none'
+                                          : 'bg-white border-slate-200 hover:border-emerald-400 hover:shadow-md cursor-pointer group'
+                                      }`}
+                                    >
+                                      {assignment ? (
+                                                                  <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-emerald-50 border border-emerald-200 w-full animate-in fade-in duration-200">
+                                                                    <span className="font-bold text-sm text-emerald-900 break-words hyphens-auto">{assignment.subject}</span>
+                                                                    <span className="text-xs text-emerald-700 font-medium mt-0.5 break-words hyphens-auto">{assignment.teacher}</span>
+                                                                  </div>
+                                                                ) : isAdmin ? (
+                                                                  <span className="text-xs text-blue-600 font-semibold group-hover:underline whitespace-nowrap">+ Assign Lesson</span>
+                                                                ) : (
+                                                                  <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Unassigned</span>
+                                                                )}
+                                    </div>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
           </table>
           </div>
         </div>

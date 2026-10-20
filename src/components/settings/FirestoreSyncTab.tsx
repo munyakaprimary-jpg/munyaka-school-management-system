@@ -2648,15 +2648,15 @@ export default function FirestoreSyncTab() {
               <div className="mt-6 border-t border-border pt-4">
                 <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
                   <span>Synced Attendance Records Preview ({cloudAttendanceList.length})</span>
-                  <button 
+                  <button
                     onClick={handleTestCloudTables}
                     className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
                   >
                     <RefreshCw size={12} /> Refresh Attendance
                   </button>
                 </h4>
-                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
-                  <Table>
+                <div className="w-full overflow-x-auto min-w-0 scrollbar-thin max-h-60 border border-border rounded-lg">
+                  <Table className="w-full text-left border-collapse min-w-[600px]">
                     <TableHeader className="bg-muted/50 sticky top-0">
                       <TableRow>
                         <TableHead className="p-2 font-medium">Adm No</TableHead>

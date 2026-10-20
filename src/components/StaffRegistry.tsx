@@ -676,18 +676,18 @@ export default function StaffRegistry() {
           className="overflow-x-auto custom-scrollbar"
         >
           <table className="w-full text-left border-collapse min-w-[1200px]">
-            <thead>
-              <tr className="border-b border-slate-150 bg-slate-50/70 text-slate-600 text-xs font-semibold uppercase tracking-wider">
-                <th className="py-3.5 px-4 min-w-[220px]">Staff Member</th>
-                <th className="py-3.5 px-3 min-w-[150px]">Contact Info</th>
-                <th className="py-3.5 px-3 min-w-[120px]">TSC No. / ID No.</th>
-                <th className="py-3.5 px-3 min-w-[180px]">Subjects</th>
-                <th className="py-3.5 px-3 min-w-[150px]">Assigned Classes</th>
-                <th className="py-3.5 px-3 text-center">Status</th>
-                <th className="py-3.5 px-4 min-w-[130px] text-center">Access Code</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
+                      <thead>
+                        <tr className="border-b border-slate-150 bg-slate-50/70 text-slate-600 text-xs font-semibold uppercase tracking-wider">
+                          <th className="py-3.5 px-4 min-w-[220px] whitespace-nowrap">Staff Member</th>
+                          <th className="py-3.5 px-3 min-w-[150px] whitespace-nowrap">Contact Info</th>
+                          <th className="py-3.5 px-3 min-w-[120px] whitespace-nowrap">TSC No. / ID No.</th>
+                          <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">Subjects</th>
+                          <th className="py-3.5 px-3 min-w-[150px] whitespace-nowrap">Assigned Classes</th>
+                          <th className="py-3.5 px-3 text-center whitespace-nowrap">Status</th>
+                          <th className="py-3.5 px-4 min-w-[130px] text-center whitespace-nowrap">Access Code</th>
+                          <th className="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
+                        </tr>
+                      </thead>
             <tbody className="divide-y divide-slate-100 text-sm text-slate-600">
               {filteredStaff.length === 0 ? (
                 <tr>
@@ -707,13 +707,13 @@ export default function StaffRegistry() {
                       key={staff.id || `staff-${idx}`}
                       className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors duration-150 group"
                     >
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 max-w-[220px]">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
                             {staff.name ? staff.name.split(' ').pop()?.charAt(0) : 'S'}
                           </div>
                           <div>
-                            <span className="font-semibold text-slate-800 block text-sm group-hover:text-indigo-600 transition-colors">
+                            <span className="font-semibold text-slate-800 block text-sm group-hover:text-indigo-600 transition-colors truncate" title={staff.name}>
                               {staff.name}
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
@@ -731,157 +731,157 @@ export default function StaffRegistry() {
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-3">
+                      <td className="py-3.5 px-3 max-w-[150px]">
                         <div className="space-y-0.5">
-                          <span className="text-xs text-slate-700 block flex items-center gap-1">
+                          <span className="text-xs text-slate-700 block flex items-center gap-1 truncate" title={`${staff.email} ${staff.phone}`}>
                             <Mail className="w-3 h-3 text-slate-400" /> {staff.email}
                           </span>
-                          <span className="text-xs text-slate-500 block flex items-center gap-1">
+                          <span className="text-xs text-slate-500 block flex items-center gap-1 truncate" title={`${staff.email} ${staff.phone}`}>
                             <Phone className="w-3 h-3 text-slate-400" /> {staff.phone}
                           </span>
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-3">
+                      <td className="py-3.5 px-3 whitespace-nowrap">
                         <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100/70 border border-slate-200/50 px-2 py-1 rounded">
                           {staff.tscNumber || 'N/A'}
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-3">
-                        {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 max-w-[280px]">
-                            {staff.subjects.map((sub, sIdx) => {
-                              const subName = typeof sub === 'string'
-                                ? sub
-                                : (sub && typeof sub === 'object'
-                                    ? String((sub as any).name || (sub as any).title || (sub as any).subject || (sub as any).learningArea || JSON.stringify(sub))
-                                    : String(sub));
-                              return (
-                                <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
-                                  {subName}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-xs">—</span>
-                        )}
-                      </td>
+                      <td className="py-3.5 px-3 max-w-[180px]">
+                                              {categoryIsTeaching(staff.category) && staff.subjects && staff.subjects.length > 0 ? (
+                                                <div className="flex flex-wrap gap-1 max-w-[280px]">
+                                                  {staff.subjects.map((sub, sIdx) => {
+                                                    const subName = typeof sub === 'string'
+                                                      ? sub
+                                                      : (sub && typeof sub === 'object'
+                                                          ? String((sub as any).name || (sub as any).title || (sub as any).subject || (sub as any).learningArea || JSON.stringify(sub))
+                                                          : String(sub));
+                                                    return (
+                                                      <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 break-words hyphens-auto" title={subName}>
+                                                        {subName}
+                                                      </span>
+                                                    );
+                                                  })}
+                                                </div>
+                                              ) : (
+                                                <span className="text-slate-400 text-xs">—</span>
+                                              )}
+                                            </td>
 
-                      <td className="py-3.5 px-3">
-                        {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
-                              <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
-                              {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
-                            </span>
-                          </div>
-                        ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
-                          <div className="flex flex-col gap-1.5 max-w-[220px]">
-                            {/* If assignedClasses contains structured object or string items */}
-                            {staff.assignedClasses && staff.assignedClasses.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
-                                  let formattedCls = '';
-                                  if (typeof cls === 'string') {
-                                    formattedCls = cls;
-                                  } else if (cls && typeof cls === 'object') {
-                                    const item = cls as any;
-                                    formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
-                                    if (!formattedCls) formattedCls = JSON.stringify(item);
-                                  } else {
-                                    formattedCls = String(cls);
-                                  }
-                                  return (
-                                    <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                      {formattedCls}
-                                    </span>
-                                  );
-                                })}
-                                {staff.assignedClasses.length > 3 && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staff.assignedClasses.length - 3}
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                      <td className="py-3.5 px-3 max-w-[150px]">
+                                              {staff.category === 'Class Teacher' && (staff.homeroomGrade || staff.homeroomStream) ? (
+                                                <div className="flex items-center gap-1.5">
+                                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-xs">
+                                                    <GraduationCap className="w-3.5 h-3.5 text-emerald-600" />
+                                                    {typeof staff.homeroomGrade === 'string' ? staff.homeroomGrade : 'Grade 7'} {typeof staff.homeroomStream === 'string' ? staff.homeroomStream : ''}
+                                                  </span>
+                                                </div>
+                                              ) : categoryIsTeaching(staff.category) && ((staff.assignedClasses && staff.assignedClasses.length > 0) || (staff.assignedStreams && staff.assignedStreams.length > 0) || (staff.subjects && staff.subjects.length > 0)) ? (
+                                                <div className="flex flex-col gap-1.5 max-w-[220px]">
+                                                  {/* If assignedClasses contains structured object or string items */}
+                                                  {staff.assignedClasses && staff.assignedClasses.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1">
+                                                      {staff.assignedClasses.slice(0, 3).map((cls, cIdx) => {
+                                                        let formattedCls = '';
+                                                        if (typeof cls === 'string') {
+                                                          formattedCls = cls;
+                                                        } else if (cls && typeof cls === 'object') {
+                                                          const item = cls as any;
+                                                          formattedCls = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                                          if (!formattedCls) formattedCls = JSON.stringify(item);
+                                                        } else {
+                                                          formattedCls = String(cls);
+                                                        }
+                                                        return (
+                                                          <span key={cIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100 break-words hyphens-auto" title={formattedCls}>
+                                                            {formattedCls}
+                                                          </span>
+                                                        );
+                                                      })}
+                                                      {staff.assignedClasses.length > 3 && (
+                                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                          +{staff.assignedClasses.length - 3}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  )}
+                      
+                                                  {/* Stream or combined allocations */}
+                                                  {staff.assignedStreams && staff.assignedStreams.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1">
+                                                      {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
+                                                        let formattedStrm = '';
+                                                        if (typeof strm === 'string') {
+                                                          formattedStrm = strm;
+                                                        } else if (strm && typeof strm === 'object') {
+                                                          const item = strm as any;
+                                                          formattedStrm = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
+                                                          if (!formattedStrm) formattedStrm = JSON.stringify(item);
+                                                        } else {
+                                                          formattedStrm = String(strm);
+                                                        }
+                                                        return (
+                                                          <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100 break-words hyphens-auto" title={formattedStrm}>
+                                                            {formattedStrm}
+                                                          </span>
+                                                        );
+                                                      })}
+                                                      {staff.assignedStreams.length > 3 && (
+                                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                          +{staff.assignedStreams.length - 3}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              ) : (
+                                                <span className="text-slate-400 text-xs">—</span>
+                                              )}
+                                            </td>
 
-                            {/* Stream or combined allocations */}
-                            {staff.assignedStreams && staff.assignedStreams.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {staff.assignedStreams.slice(0, 3).map((strm, sIdx) => {
-                                  let formattedStrm = '';
-                                  if (typeof strm === 'string') {
-                                    formattedStrm = strm;
-                                  } else if (strm && typeof strm === 'object') {
-                                    const item = strm as any;
-                                    formattedStrm = typeof item === 'object' ? `${item.subject || ''} (${item.grade || ''}${item.stream || ''})`.trim() : String(item);
-                                    if (!formattedStrm) formattedStrm = JSON.stringify(item);
-                                  } else {
-                                    formattedStrm = String(strm);
-                                  }
-                                  return (
-                                    <span key={sIdx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
-                                      {formattedStrm}
-                                    </span>
-                                  );
-                                })}
-                                {staff.assignedStreams.length > 3 && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                    +{staff.assignedStreams.length - 3}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-xs">—</span>
-                        )}
-                      </td>
+                      <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusConfig.bg}`}>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5"></span>
+                                                {statusConfig.text}
+                                              </span>
+                                            </td>
 
-                      <td className="py-3.5 px-3 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusConfig.bg}`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5"></span>
-                          {statusConfig.text}
-                        </span>
-                      </td>
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                                              <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-150 px-2 py-1 rounded-lg">
+                                                <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
+                                                  {staff.accessCode || '—'}
+                                                </span>
+                                                {staff.accessCode && (
+                                                  <button
+                                                    onClick={() => handleCopyCode(staff.accessCode)}
+                                                    className="p-1 hover:bg-white rounded hover:text-indigo-600 text-slate-400 border border-transparent hover:border-slate-200 transition-all"
+                                                    title="Copy code to clipboard"
+                                                  >
+                                                    <Copy className="w-3 h-3" />
+                                                  </button>
+                                                )}
+                                              </div>
+                                            </td>
 
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-150 px-2 py-1 rounded-lg">
-                          <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
-                            {staff.accessCode || '—'}
-                          </span>
-                          {staff.accessCode && (
-                            <button 
-                              onClick={() => handleCopyCode(staff.accessCode)}
-                              className="p-1 hover:bg-white rounded hover:text-indigo-600 text-slate-400 border border-transparent hover:border-slate-200 transition-all"
-                              title="Copy code to clipboard"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleOpenEditModal(staff)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg transition-all"
-                            title="Edit profile"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteStaff(staff.id)}
-                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg transition-all"
-                            title="Remove staff"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                                              <div className="flex items-center justify-end gap-1">
+                                                <button
+                                                  onClick={() => handleOpenEditModal(staff)}
+                                                  className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg transition-all"
+                                                  title="Edit profile"
+                                                >
+                                                  <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                  onClick={() => handleDeleteStaff(staff.id)}
+                                                  className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-lg transition-all"
+                                                  title="Remove staff"
+                                                >
+                                                  <Trash2 className="w-4 h-4" />
+                                                </button>
+                                              </div>
+                                            </td>
                     </tr>
                   );
                 })

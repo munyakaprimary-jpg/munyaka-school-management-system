@@ -310,39 +310,41 @@ const SystemAndAccountManagement = () => {
           </Card>
 
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-sm text-left min-w-[800px]">
-                  <thead className="text-slate-500 border-b bg-slate-50/50">
-                    <tr>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">User Identity</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Role</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Username / Email</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Last Login</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
-                    </tr>
-                  </thead>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto custom-scrollbar">
+                          <table className="w-full text-sm text-left min-w-[800px]">
+                            <thead className="text-slate-500 border-b bg-slate-50/50">
+                              <tr>
+                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">User Identity</th>
+                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Role</th>
+                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Username / Email</th>
+                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Last Login</th>
+                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center whitespace-nowrap">Status</th>
+                                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right whitespace-nowrap">Actions</th>
+                              </tr>
+                            </thead>
                   <tbody className="divide-y divide-slate-100">
                     {users.map((user) => (
                       <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-8 py-5">
-                          <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{user.name}</p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">ID: {user.id}</p>
+                        <td className="px-8 py-5 max-w-[200px]">
+                          <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">{user.name}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter truncate">ID: {user.id}</p>
                         </td>
-                        <td className="px-8 py-5">
+                        <td className="px-8 py-5 whitespace-nowrap">
                           <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-600 font-bold px-2.5 py-0.5">{user.role}</Badge>
                         </td>
-                        <td className="px-8 py-5 font-medium text-slate-600">{user.username}</td>
-                        <td className="px-8 py-5 font-medium text-slate-400 italic">{user.lastLogin}</td>
-                        <td className="px-8 py-5 text-center">
-                          <Badge className={cn("rounded-xl border-none font-bold text-[10px] uppercase px-3 py-1", 
+                        <td className="px-8 py-5 font-medium text-slate-600 max-w-[220px]">
+                          <span className="block truncate" title={user.username}>{user.username}</span>
+                        </td>
+                        <td className="px-8 py-5 font-medium text-slate-400 italic whitespace-nowrap">{user.lastLogin}</td>
+                        <td className="px-8 py-5 text-center whitespace-nowrap">
+                          <Badge className={cn("rounded-xl border-none font-bold text-[10px] uppercase px-3 py-1",
                             user.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600")}>
                             {user.status}
                           </Badge>
                         </td>
-                        <td className="px-8 py-5 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <td className="px-8 py-5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                             <Button 
                               variant="ghost" 
                               size="sm" 
@@ -411,11 +413,11 @@ const SystemAndAccountManagement = () => {
                 <table className="w-full text-sm text-left min-w-[900px]">
                   <thead className="text-slate-500 border-b bg-slate-50/50">
                     <tr>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">MAC / IP Address</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Owner & Role</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Data Usage (Current vs Quota)</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">MAC / IP Address</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Owner & Role</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Data Usage (Current vs Quota)</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center whitespace-nowrap">Status</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -423,38 +425,38 @@ const SystemAndAccountManagement = () => {
                       const usagePct = (dev.used / dev.quota) * 100;
                       return (
                         <tr key={dev.id} className="hover:bg-slate-50/50 transition-colors group">
-                          <td className="px-8 py-6">
-                            <p className="font-mono font-bold text-slate-700">{dev.mac}</p>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">IP: 192.168.1.{Math.floor(Math.random() * 254)}</p>
-                          </td>
-                          <td className="px-8 py-6">
-                            <p className="font-bold text-slate-900">{dev.owner}</p>
-                            <p className="text-xs font-medium text-slate-400">{dev.role}</p>
-                          </td>
-                          <td className="px-8 py-6">
-                            <div className="space-y-1.5 max-w-[200px]">
-                              <div className="flex justify-between text-[10px] font-black uppercase text-slate-400">
-                                <span>{dev.used.toFixed(1)} GB / {dev.quota.toFixed(1)} GB</span>
-                                <span className={cn(usagePct > 90 ? "text-rose-600" : "text-indigo-600")}>{Math.round(usagePct)}%</span>
-                              </div>
-                              <Progress value={usagePct} className={cn("h-1.5", usagePct > 90 && "[&>div]:bg-rose-500")} />
-                            </div>
-                          </td>
-                          <td className="px-8 py-6 text-center">
-                            <Badge className={cn("rounded-full h-2.5 w-2.5 p-0 border-none", dev.status === 'Online' ? "bg-emerald-500 animate-pulse" : "bg-slate-300")} title={dev.status} />
-                            <span className="text-[10px] font-bold text-slate-400 uppercase ml-2">{dev.status}</span>
-                          </td>
-                          <td className="px-8 py-6 text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="rounded-xl h-9 px-4 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
-                              onClick={() => handleAdjustQuota(dev.owner)}
-                            >
-                              Adjust Quota
-                            </Button>
-                          </td>
-                        </tr>
+                                                  <td className="px-8 py-6 max-w-[180px]">
+                                                    <p className="font-mono font-bold text-slate-700 truncate">{dev.mac}</p>
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter truncate">IP: 192.168.1.{Math.floor(Math.random() * 254)}</p>
+                                                  </td>
+                                                  <td className="px-8 py-6 max-w-[180px]">
+                                                    <p className="font-bold text-slate-900 truncate">{dev.owner}</p>
+                                                    <p className="text-xs font-medium text-slate-400 truncate">{dev.role}</p>
+                                                  </td>
+                                                  <td className="px-8 py-6 max-w-[200px]">
+                                                    <div className="space-y-1.5">
+                                                      <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">
+                                                        <span>{dev.used.toFixed(1)} GB / {dev.quota.toFixed(1)} GB</span>
+                                                        <span className={cn(usagePct > 90 ? "text-rose-600" : "text-indigo-600")}>{Math.round(usagePct)}%</span>
+                                                      </div>
+                                                      <Progress value={usagePct} className={cn("h-1.5", usagePct > 90 && "[&>div]:bg-rose-500")} />
+                                                    </div>
+                                                  </td>
+                                                  <td className="px-8 py-6 text-center whitespace-nowrap">
+                                                    <Badge className={cn("rounded-full h-2.5 w-2.5 p-0 border-none", dev.status === 'Online' ? "bg-emerald-500 animate-pulse" : "bg-slate-300")} title={dev.status} />
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase ml-2">{dev.status}</span>
+                                                  </td>
+                                                  <td className="px-8 py-6 text-right whitespace-nowrap">
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      className="rounded-xl h-9 px-4 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
+                                                      onClick={() => handleAdjustQuota(dev.owner)}
+                                                    >
+                                                      Adjust Quota
+                                                    </Button>
+                                                  </td>
+                                                </tr>
                       );
                     })}
                   </tbody>
@@ -486,16 +488,16 @@ const SystemAndAccountManagement = () => {
             <CardContent className="p-0">
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-sm text-left min-w-[800px]">
-                  <thead className="text-slate-500 border-b bg-slate-50/50">
-                    <tr>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Day & Time Slot</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Class / Subject</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Teacher in Charge</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Location</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
-                    </tr>
-                  </thead>
+                                  <thead className="text-slate-500 border-b bg-slate-50/50">
+                                    <tr>
+                                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Day & Time Slot</th>
+                                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Class / Subject</th>
+                                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Teacher in Charge</th>
+                                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 whitespace-nowrap">Location</th>
+                                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center whitespace-nowrap">Status</th>
+                                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right whitespace-nowrap">Actions</th>
+                                    </tr>
+                                  </thead>
                   <tbody className="divide-y divide-slate-100">
                     {reservations.map((res) => (
                       <tr key={res.id} className="hover:bg-slate-50/50 transition-colors group">
