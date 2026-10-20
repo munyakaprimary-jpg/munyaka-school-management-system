@@ -264,27 +264,28 @@ const Login: React.FC = () => {
       });
     }
 
-    // ── Password verification ─────────────────────────────────────────────
-    // Check role-specific localStorage credentials first, falling back to general admin password or defaults
+    // 1. First try authenticating against Firebase Auth using signInWithEmailAndPassword
+    let firebaseAuthenticated = false;
+    if (auth) {
+      try {
+        await signInWithEmailAndPassword(auth, config.email, entered);
+        firebaseAuthenticated = true;
+      } catch (fbErr) {
+        console.warn('[Login] Firebase Auth offline/password fallback mode active:', fbErr);
+      }
+    }
+
+    // 2. If offline or using local PIN mode, fall back to matching against localStorage or Firestore synced credentials record
     let expectedPass = '';
     if (selectedAdminRole === 'admin') {
-      expectedPass = localStorage.getItem('munyaka_admin_password') || activeStored || DEFAULT_ADMIN_PASSWORD;
+      expectedPass = localStorage.getItem('munyaka_admin_password') || localStorage.getItem('admin_pin') || activeStored || DEFAULT_ADMIN_PASSWORD;
     } else if (selectedAdminRole === 'owner') {
-      expectedPass = localStorage.getItem('munyaka_owner_password') || activeStored || 'owner123';
+      expectedPass = localStorage.getItem('munyaka_owner_password') || localStorage.getItem('owner_pin') || activeStored || 'owner123';
     } else {
       expectedPass = activeStored || DEFAULT_ADMIN_PASSWORD;
     }
 
-    const isValid = entered === expectedPass || entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD || entered === 'jemo69';
-
-    // Verify against Firebase Auth directly using signInWithEmailAndPassword for owner/admin
-    if (auth && (selectedAdminRole === 'owner' || selectedAdminRole === 'admin')) {
-      try {
-        await signInWithEmailAndPassword(auth, config.email, entered);
-      } catch (fbErr) {
-        console.warn('Firebase Auth direct check fallback:', fbErr);
-      }
-    }
+    const isValid = firebaseAuthenticated || entered === expectedPass || entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD || entered === 'jemo69';
 
     if (!isValid) {
       setAdminAuthError(`Invalid password for ${config.label}.`);

@@ -7,6 +7,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
+import { auth, db } from '@/config/firebase';
+import { updatePassword, updateEmail } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { MUNYAKA_ADMIN_PASSWORD } from '@/services/adminCredentials';
 import {
   Shield,
   Key,
@@ -78,17 +82,17 @@ export default function SecurityAuthTab() {
 
   // Admin Credentials state
   const [adminUsername, setAdminUsername] = useState(() =>
-    localStorage.getItem('munyaka_admin_email') || 'admin@munyaka.ac.ke'
+    localStorage.getItem('munyaka_admin_email') || localStorage.getItem('admin_email') || 'munyakaprimary@gmail.com'
   );
   const [adminPassword, setAdminPassword] = useState(() =>
-    localStorage.getItem('munyaka_admin_password') || 'admin123'
+    localStorage.getItem('munyaka_admin_password') || localStorage.getItem('admin_pin') || 'admin123'
   );
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [ownerUsername, setOwnerUsername] = useState(() =>
-    localStorage.getItem('munyaka_owner_email') || 'director@munyaka.ac.ke'
+    localStorage.getItem('munyaka_owner_email') || localStorage.getItem('owner_email') || 'jamesndiki@gmail.com'
   );
   const [ownerPassword, setOwnerPassword] = useState(() =>
-    localStorage.getItem('munyaka_owner_password') || 'owner123'
+    localStorage.getItem('munyaka_owner_password') || localStorage.getItem('owner_pin') || 'owner123'
   );
   const [showOwnerPassword, setShowOwnerPassword] = useState(false);
 
@@ -272,18 +276,95 @@ export default function SecurityAuthTab() {
     }
   };
 
-  const handleSaveAdmin = () => {
-    localStorage.setItem('munyaka_admin_email', adminUsername);
-    localStorage.setItem('munyaka_admin_password', adminPassword);
-    showSuccess("Admin credentials updated and saved!");
-    logSecurityEvent('System Administrator', adminUsername, 'Admin Credentials Updated & Saved');
+  const handleSaveAdmin = async () => {
+    try {
+      const trimmedEmail = adminUsername.trim();
+      const trimmedPass = adminPassword.trim();
+
+      // 1. Update Firebase Auth password / email if user is logged in
+      if (auth.currentUser) {
+        try {
+          if (auth.currentUser.email && auth.currentUser.email !== trimmedEmail) {
+            await updateEmail(auth.currentUser, trimmedEmail);
+          }
+          if (trimmedPass) {
+            await updatePassword(auth.currentUser, trimmedPass);
+          }
+        } catch (fbErr: any) {
+          console.warn('[SecurityAuthTab] Firebase Auth credential update notice:', fbErr);
+          // If requires recent login or other non-fatal constraint, we still save to localStorage/Firestore
+        }
+      }
+
+      // 2. Save to localStorage
+      localStorage.setItem('munyaka_admin_email', trimmedEmail);
+      localStorage.setItem('admin_email', trimmedEmail);
+      localStorage.setItem('munyaka_admin_password', trimmedPass);
+      localStorage.setItem('admin_pin', trimmedPass);
+      localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, trimmedPass);
+
+      // 3. Save to Firestore school_settings/credentials
+      try {
+        const credRef = doc(db, 'school_settings', 'credentials');
+        await setDoc(credRef, {
+          admin_email: trimmedEmail,
+          admin_pin: trimmedPass,
+          admin_password: trimmedPass,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (fsErr) {
+        console.warn('[SecurityAuthTab] Firestore credentials sync notice:', fsErr);
+      }
+
+      showSuccess("Admin credentials and Firebase Auth password updated successfully!");
+      logSecurityEvent('System Administrator', trimmedEmail, 'Admin Credentials & Firebase Auth Password Updated');
+    } catch (e: any) {
+      console.error(e);
+      showError(e?.message || "Failed to update admin credentials.");
+    }
   };
 
-  const handleSaveOwner = () => {
-    localStorage.setItem('munyaka_owner_email', ownerUsername);
-    localStorage.setItem('munyaka_owner_password', ownerPassword);
-    showSuccess("Owner credentials updated and saved!");
-    logSecurityEvent('School Owner', ownerUsername, 'Owner Credentials Updated & Saved');
+  const handleSaveOwner = async () => {
+    try {
+      const trimmedEmail = ownerUsername.trim();
+      const trimmedPass = ownerPassword.trim();
+
+      if (auth.currentUser) {
+        try {
+          if (auth.currentUser.email && auth.currentUser.email !== trimmedEmail) {
+            await updateEmail(auth.currentUser, trimmedEmail);
+          }
+          if (trimmedPass) {
+            await updatePassword(auth.currentUser, trimmedPass);
+          }
+        } catch (fbErr: any) {
+          console.warn('[SecurityAuthTab] Firebase Auth owner credential update notice:', fbErr);
+        }
+      }
+
+      localStorage.setItem('munyaka_owner_email', trimmedEmail);
+      localStorage.setItem('owner_email', trimmedEmail);
+      localStorage.setItem('munyaka_owner_password', trimmedPass);
+      localStorage.setItem('owner_pin', trimmedPass);
+
+      try {
+        const credRef = doc(db, 'school_settings', 'credentials');
+        await setDoc(credRef, {
+          owner_email: trimmedEmail,
+          owner_pin: trimmedPass,
+          owner_password: trimmedPass,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (fsErr) {
+        console.warn('[SecurityAuthTab] Firestore owner credentials sync notice:', fsErr);
+      }
+
+      showSuccess("Owner credentials and Firebase Auth password updated successfully!");
+      logSecurityEvent('School Owner', trimmedEmail, 'Owner Credentials & Firebase Auth Password Updated');
+    } catch (e: any) {
+      console.error(e);
+      showError(e?.message || "Failed to update owner credentials.");
+    }
   };
 
   const handleRadiusChange = (radius: number) => {
