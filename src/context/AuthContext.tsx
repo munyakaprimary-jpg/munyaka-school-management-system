@@ -375,6 +375,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     console.log('[AuthContext.login] Login attempt started for identifier:', cleanInput);
 
+    // 1. Universal Master Admin Auth Fallback (munyaka2026)
+    const isMasterAdmin =
+      (cleanInput === 'admin' ||
+       cleanInput === 'admin@munyaka.sc.ke' ||
+       cleanInput === 'jndiki@munyaka.sc.ke' ||
+       cleanInput === 'jndiki' ||
+       cleanInput.includes('munyakaprimary')) &&
+      (cleanPass === 'munyaka2026' || cleanPass === 'admin2026' || cleanPass === 'ownerpass2026');
+
+    if (isMasterAdmin) {
+      const adminUser: User = {
+        id: 'MUN-0001',
+        name: 'Administrator (James Ndiki)',
+        email: 'admin@munyaka.sc.ke',
+        phone: '+254 700 000 000',
+        role: 'Admin' as UserRole,
+        status: 'Active',
+        avatar: 'AD'
+      };
+      localStorage.setItem('munyaka_auth_user', JSON.stringify(adminUser));
+      localStorage.setItem('munyaka_session', JSON.stringify(adminUser));
+      persistCurrentAuthRole(adminUser.role);
+      setUser(adminUser);
+      showSuccess('Welcome back, Administrator (James Ndiki)!');
+      return true;
+    }
+
     initializeUsersStorage();
 
     let users: Record<string, StoredUser> = {};
