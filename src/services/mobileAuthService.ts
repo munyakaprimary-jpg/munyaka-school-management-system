@@ -332,6 +332,18 @@ export async function checkServerHealth(): Promise<{
   serverVersion?: string;
   error?: string;
 }> {
+  // Disable automatic port 5000 / localhost health checks unless explicitly enabled via environment variable
+  const enableHealthCheck = typeof window !== 'undefined' &&
+    (window.localStorage.getItem('ENABLE_LOCAL_HEALTH_CHECK') === 'true' ||
+     (import.meta as any).env?.VITE_ENABLE_HEALTH_CHECK === 'true');
+
+  if (!enableHealthCheck) {
+    return {
+      reachable: false,
+      error: 'Health check disabled (offline / client-only mode)',
+    };
+  }
+
   const serverUrl = getLoginServerUrl();
 
   // If no URL is configured (APK case), report unreachable with guidance
