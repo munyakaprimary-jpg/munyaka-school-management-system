@@ -199,8 +199,24 @@ export const syncEventsNoticesToCloud = async (): Promise<{ success: boolean; co
 };
 
 /**
+ * Builds a stable Firestore document id from a timetable grade key.
+ * "Grade 4 Green" -> "grade_4_green". Slashes are stripped because Firestore
+ * document ids cannot contain "/".
+ */
+const timetableDocId = (gradeKey: string): string => {
+  const slug = String(gradeKey || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  const withoutPrefix = slug.startsWith('grade_') ? slug.slice('grade_'.length) : slug;
+  return `grade_${withoutPrefix || 'unknown'}`;
+};
+
+/**
  * Syncs local timetable schedules (per grade) to Firestore cloud collection `timetables`.
- * Each grade becomes one document keyed `grade_<index>`; the whole grade record (timeSlots + entries) is upserted.
+ * Each grade becomes one document keyed by its grade slug (e.g. `grade_4_green`);
+ * the whole grade record (timeSlots + entries) is upserted.
  */
 export const syncTimetablesToCloud = async (): Promise<{ success: boolean; count: number; error?: string }> => {
   try {
@@ -210,10 +226,13 @@ export const syncTimetablesToCloud = async (): Promise<{ success: boolean; count
       return { success: false, count: 0, error: 'No local timetable data found' };
     }
 
-    const records: any[] = [];
+    const records: { docId: string; payload: any }[] = [];
     Object.entries(local).forEach(([gradeId, record]: [string, any]) => {
       if (record && Array.isArray(record.timeSlots)) {
-        records.push({ ...record, grade_id: gradeId, syncedAt: new Date().toISOString() });
+        records.push({
+          docId: timetableDocId(gradeId),
+          payload: { ...record, grade_id: gradeId, synced_at: new Date().toISOString() },
+        });
       }
     });
 
@@ -222,9 +241,8 @@ export const syncTimetablesToCloud = async (): Promise<{ success: boolean; count
     }
 
     const batch = writeBatch(db);
-    records.forEach((record: any, idx: number) => {
-      const docId = `grade_${idx}`;
-      batch.set(doc(db, 'timetables', docId), record, { merge: true });
+    records.forEach(({ docId, payload }) => {
+      batch.set(doc(db, 'timetables', docId), payload, { merge: true });
     });
 
     await batch.commit();
