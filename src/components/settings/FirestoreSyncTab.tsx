@@ -86,6 +86,23 @@ export default function FirestoreSyncTab() {
   const [cloudEventsNoticesCount, setCloudEventsNoticesCount] = useState(0);
   const [cloudEventsNoticesList, setCloudEventsNoticesList] = useState<any[]>([]);
 
+  // Timetable Cloud Sync state
+  const [isSyncingTimetables, setIsSyncingTimetables] = useState(false);
+  const [cloudTimetablesCount, setCloudTimetablesCount] = useState(0);
+  const [cloudTimetablesList, setCloudTimetablesList] = useState<any[]>([]);
+
+  // Local timetable schedules count (per grade)
+  const localTimetablesCount = (() => {
+    try {
+      const raw = localStorage.getItem('school-timetable-data') || localStorage.getItem('munyaka_timetable') || '{}';
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return Object.keys(parsed).filter((k) => parsed[k] && Array.isArray(parsed[k].timeSlots)).length;
+      }
+    } catch { /* ignore */ }
+    return 0;
+  })();
+
   const handleSyncEventsNotices = async () => {
     if (isSyncingEventsNotices) return;
     setIsSyncingEventsNotices(true);
@@ -105,6 +122,28 @@ export default function FirestoreSyncTab() {
       showError(`Events & Notices Sync Error: ${err?.message || 'Unknown error'}`);
     } finally {
       setIsSyncingEventsNotices(false);
+    }
+  };
+
+  const handleSyncTimetables = async () => {
+    if (isSyncingTimetables) return;
+    setIsSyncingTimetables(true);
+    try {
+      const { syncTimetablesToCloud } = await import('@/services/SyncEngine');
+      const res = await syncTimetablesToCloud();
+      if (!res.success) {
+        throw new Error(res.error || 'Timetable sync failed');
+      }
+      setCloudTimetablesCount(res.count);
+      setLastSynced(new Date());
+      const snap = await getDocs(collection(db, 'timetables'));
+      setCloudTimetablesList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      showSuccess(`Successfully synchronized ${res.count} Timetable schedules to 'timetables' Firestore collection!`);
+    } catch (err: any) {
+      console.error('Timetable Firestore sync error:', err);
+      showError(`Timetable Sync Error: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsSyncingTimetables(false);
     }
   };
 
@@ -268,6 +307,12 @@ export default function FirestoreSyncTab() {
       const eventsNoticesDocs = (eventsNoticesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudEventsNoticesList(eventsNoticesDocs);
 
+      // Timetable Collection (per-grade timetable schedules)
+      const timetablesSnap = await getDocs(collection(db, 'timetables')).catch(() => ({ size: 0, docs: [] }));
+      setCloudTimetablesCount(timetablesSnap?.size || 0);
+      const timetablesDocs = (timetablesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudTimetablesList(timetablesDocs);
+
       // Users Collection (User Management / Auth)
       const usersSnap = await getDocs(collection(db, 'users')).catch(() => ({ size: 0, docs: [] }));
       const usersDocs = (usersSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
@@ -364,14 +409,14 @@ export default function FirestoreSyncTab() {
   const syncAllCollectionsToCloud = async () => {
     setIsSyncingAll(true);
     try {
-      setSyncProgressText("Syncing 1 of 13: Staff Registry...");
+      setSyncProgressText("Syncing 1 of 14: Staff Registry...");
       try {
         await syncStaffToCloud();
       } catch (err) {
         console.error("Staff sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 2 of 13: User Management & Auth...");
+      setSyncProgressText("Syncing 2 of 14: User Management & Auth...");
       try {
         const { syncUsersToCloud } = await import('@/services/SyncEngine');
         await syncUsersToCloud();
@@ -379,77 +424,77 @@ export default function FirestoreSyncTab() {
         console.error("Users sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 3 of 13: Learners Directory...");
+      setSyncProgressText("Syncing 3 of 14: Learners Directory...");
       try {
         await syncLearnersToCloud();
       } catch (err) {
         console.error("Learners sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 4 of 13: Grade & Class Structure...");
+      setSyncProgressText("Syncing 4 of 14: Grade & Class Structure...");
       try {
         await handleSyncGrades();
       } catch (err) {
         console.error("Grades sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 5 of 13: Fee Management & Transactions...");
+      setSyncProgressText("Syncing 5 of 14: Fee Management & Transactions...");
       try {
         await syncFeesToCloud();
       } catch (err) {
         console.error("Fees sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 6 of 13: Library & Catalog...");
+      setSyncProgressText("Syncing 6 of 14: Library & Catalog...");
       try {
         await syncLibraryToCloud();
       } catch (err) {
         console.error("Library sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 7 of 13: Assessment Marks & Rubrics...");
+      setSyncProgressText("Syncing 7 of 14: Assessment Marks & Rubrics...");
       try {
         await handleSyncAssessmentMarks();
       } catch (err) {
         console.error("Assessment marks sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 8 of 13: Exam Creator & Papers...");
+      setSyncProgressText("Syncing 8 of 14: Exam Creator & Papers...");
       try {
         await syncExamsToCloud();
       } catch (err) {
         console.error("Exams sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 9 of 13: ICT Lab & Assets...");
+      setSyncProgressText("Syncing 9 of 14: ICT Lab & Assets...");
       try {
         await syncIctLabToCloud();
       } catch (err) {
         console.error("ICT Lab sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 10 of 13: CBC Learning Areas...");
+      setSyncProgressText("Syncing 10 of 14: CBC Learning Areas...");
       try {
         await syncLearningAreasToCloud();
       } catch (err) {
         console.error("Learning areas sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 11 of 13: Exam Types & Schedules...");
+      setSyncProgressText("Syncing 11 of 14: Exam Types & Schedules...");
       try {
         await syncExamTypesToCloud();
       } catch (err) {
         console.error("Exam types sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 12 of 13: Communication & Messages...");
+      setSyncProgressText("Syncing 12 of 14: Communication & Messages...");
       try {
         await syncCommunicationToCloud();
       } catch (err) {
         console.error("Communication sync error in master sequence:", err);
       }
 
-      setSyncProgressText("Syncing 13 of 13: Events & Notices...");
+      setSyncProgressText("Syncing 13 of 14: Events & Notices...");
       try {
         const { syncEventsNoticesToCloud } = await import('@/services/SyncEngine');
         await syncEventsNoticesToCloud();
@@ -457,10 +502,17 @@ export default function FirestoreSyncTab() {
         console.error("Events notices sync error in master sequence:", err);
       }
 
+      setSyncProgressText("Syncing 14 of 14: Timetable Schedules...");
+      try {
+        await handleSyncTimetables();
+      } catch (err) {
+        console.error("Timetable sync error in master sequence:", err);
+      }
+
       // Auto-refresh all counters
       await refreshAllCloudCounters();
 
-      showSuccess("All 13 modules synchronized successfully to Firestore!");
+      showSuccess("All 14 modules synchronized successfully to Firestore!");
     } catch (error) {
       console.error("Master sync error:", error);
       showError("Sync failed for one or more modules. Check browser console.");
@@ -2232,7 +2284,7 @@ export default function FirestoreSyncTab() {
               Sync All Modules to Cloud
             </h2>
             <p className="text-indigo-200 text-sm max-w-xl">
-              Execute sequential synchronization across all 13 core school management modules to Google Firestore with isolated error handling and live progress tracking.
+              Execute sequential synchronization across all 14 core school management modules to Google Firestore with isolated error handling and live progress tracking.
             </p>
             {syncProgressText && (
               <div className="flex items-center gap-2 text-amber-300 font-mono text-sm pt-1">
@@ -2274,6 +2326,9 @@ export default function FirestoreSyncTab() {
               </Badge>
               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-bold px-3 py-1">
                 Local: {localLearners.length} | Cloud: {cloudLearnersCount}
+              </Badge>
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 font-bold px-3 py-1">
+                Timetables Local: {localTimetablesCount} | Cloud: {cloudTimetablesCount}
               </Badge>
             </div>
           </div>
@@ -2541,6 +2596,20 @@ export default function FirestoreSyncTab() {
                               <p className="text-2xl font-extrabold text-rose-400 mt-1">
                                 {cloudUsersCount}
                               </p>
+                            </div>
+                            <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50" data-testid="timetable-status-card">
+                              <div className="flex items-center justify-between gap-1">
+                                <p className="text-xs text-slate-400">Timetable</p>
+                                <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
+                                  Cloud: {cloudTimetablesCount}
+                                </span>
+                              </div>
+                              <p className="text-2xl font-extrabold text-cyan-400 mt-1">
+                                {cloudTimetablesCount}
+                              </p>
+                              <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
+                                Local: {localTimetablesCount}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -3183,6 +3252,69 @@ export default function FirestoreSyncTab() {
                           </TableCell>
                           <TableCell className="p-2 text-xs">
                             <span className="font-semibold text-emerald-700">{item.status || 'Active'}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Timetable Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Timetable Cloud Sync</h3>
+              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
+                Cloud Schedules: {cloudTimetablesCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync per-grade timetable schedules (time slots and entries) to the 'timetables' Firestore collection.
+            </p>
+            <Button
+              onClick={handleSyncTimetables}
+              disabled={isSyncingTimetables}
+              className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingTimetables && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingTimetables ? 'Syncing Timetables...' : 'Sync Timetables to Cloud'}
+            </Button>
+
+            {cloudTimetablesList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Timetable Schedules Preview ({cloudTimetablesList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Timetables
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Grade ID</TableHead>
+                        <TableHead className="p-2 font-medium">Time Slots</TableHead>
+                        <TableHead className="p-2 font-medium">Entries</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudTimetablesList.map((t, idx) => (
+                        <TableRow key={t.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-mono text-xs">{t.grade_id || t.id}</TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              {Array.isArray(t.timeSlots) ? t.timeSlots.length : 0} slots
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              {Array.isArray(t.entries) ? t.entries.length : 0} entries
+                            </Badge>
                           </TableCell>
                         </TableRow>
                       ))}

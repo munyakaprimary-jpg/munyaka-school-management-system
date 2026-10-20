@@ -2,7 +2,7 @@
  * SyncEngine for Firestore cloud synchronization.
  */
 import { db } from '@/lib/firebaseClient';
-import { collection, doc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
 
 export interface ConnectionStatus {
   isOnline: boolean;
@@ -195,5 +195,54 @@ export const syncEventsNoticesToCloud = async (): Promise<{ success: boolean; co
     return { success: true, count: recordsToSync.length };
   } catch (err: any) {
     return { success: false, count: 0, error: err?.message || 'Events & Notices sync failed' };
+  }
+};
+
+/**
+ * Syncs local timetable schedules (per grade) to Firestore cloud collection `timetables`.
+ * Each grade becomes one document keyed `grade_<index>`; the whole grade record (timeSlots + entries) is upserted.
+ */
+export const syncTimetablesToCloud = async (): Promise<{ success: boolean; count: number; error?: string }> => {
+  try {
+    const raw = localStorage.getItem('school-timetable-data') || localStorage.getItem('munyaka_timetable') || '{}';
+    const local = JSON.parse(raw);
+    if (!local || typeof local !== 'object') {
+      return { success: false, count: 0, error: 'No local timetable data found' };
+    }
+
+    const records: any[] = [];
+    Object.entries(local).forEach(([gradeId, record]: [string, any]) => {
+      if (record && Array.isArray(record.timeSlots)) {
+        records.push({ ...record, grade_id: gradeId, syncedAt: new Date().toISOString() });
+      }
+    });
+
+    if (records.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    const batch = writeBatch(db);
+    records.forEach((record: any, idx: number) => {
+      const docId = `grade_${idx}`;
+      batch.set(doc(db, 'timetables', docId), record, { merge: true });
+    });
+
+    await batch.commit();
+    return { success: true, count: records.length };
+  } catch (err: any) {
+    return { success: false, count: 0, error: err?.message || 'Timetable sync failed' };
+  }
+};
+
+/**
+ * Fetches all timetable documents from the Firestore `timetables` collection.
+ */
+export const fetchTimetablesFromCloud = async (): Promise<{ success: boolean; count: number; data?: any[]; error?: string }> => {
+  try {
+    const snap = await getDocs(collection(db, 'timetables')).catch(() => ({ docs: [] }));
+    const docs = (snap?.docs || []).map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    return { success: true, count: docs.length, data: docs };
+  } catch (err: any) {
+    return { success: false, count: 0, error: err?.message || 'Fetch timetables failed' };
   }
 };
