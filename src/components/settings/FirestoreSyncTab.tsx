@@ -2390,26 +2390,26 @@ export default function FirestoreSyncTab() {
           </div>
 
           {/* Table Counts Overview */}
-          <div className="p-3 sm:p-6 rounded-2xl bg-slate-900 text-white space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-              <h2 className="text-lg sm:text-xl font-bold text-white whitespace-normal break-words leading-tight flex items-center gap-2">
-                <Database className="text-amber-400 shrink-0" size={18} /> Firestore Cloud Collections Status
+          <div className="w-full max-w-full overflow-hidden p-3 sm:p-6 bg-slate-900 rounded-xl text-white space-y-4">
+            <div className="w-full flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-base sm:text-xl font-bold text-white break-normal whitespace-normal leading-normal">
+                <Database className="text-amber-400 shrink-0 inline-block align-middle mr-1" size={18} /> Firestore Cloud Collections Status
               </h2>
               <button
                 onClick={handleTestCloudTables}
                 disabled={isCheckingCollections}
-                className="w-full sm:w-auto px-4 py-2 text-sm font-medium whitespace-nowrap bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg flex items-center justify-center gap-2 border border-slate-700 disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex items-center justify-center gap-2 border border-slate-700 disabled:opacity-50"
               >
                 <RefreshCw size={14} className={`${isCheckingCollections ? 'animate-spin' : ''}`} />
                 {isCheckingCollections ? 'Checking Collections...' : 'Test Cloud Collections'}
               </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4 pt-2">
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Learners</p>
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-3 lg:grid-cols-4 w-full" data-testid="firestore-status-grid">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Learners</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudLearnersCount}
                   </span>
                 </div>
@@ -2417,10 +2417,10 @@ export default function FirestoreSyncTab() {
                   {cloudLearnersCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Fees</p>
-                  <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Fees</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudFeesCount}
                   </span>
                 </div>
@@ -2428,10 +2428,10 @@ export default function FirestoreSyncTab() {
                   {cloudFeesCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Library & E-Resources</p>
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Library & E-Resources</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudLibraryCount}
                   </span>
                 </div>
@@ -2439,10 +2439,10 @@ export default function FirestoreSyncTab() {
                   {cloudLibraryCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">ICT Lab</p>
-                  <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">ICT Lab</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudIctLabCount}
                   </span>
                 </div>
@@ -2450,10 +2450,10 @@ export default function FirestoreSyncTab() {
                   {cloudIctLabCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Store &amp; Inventory</p>
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Store &amp; Inventory</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudStoreCount}
                   </span>
                 </div>
@@ -2461,10 +2461,10 @@ export default function FirestoreSyncTab() {
                   {cloudStoreCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Staff Registry</p>
-                  <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Staff Registry</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudStaffCount}
                   </span>
                 </div>
@@ -2472,10 +2472,10 @@ export default function FirestoreSyncTab() {
                   {cloudStaffCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Report Cards</p>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Report Cards</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudReportCardsCount}
                   </span>
                 </div>
@@ -2484,10 +2484,10 @@ export default function FirestoreSyncTab() {
                 </p>
               </div>
 
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Learning Areas</p>
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Learning Areas</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudLearningAreasCount}
                   </span>
                 </div>
@@ -2495,10 +2495,10 @@ export default function FirestoreSyncTab() {
                   {cloudLearningAreasCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Exam Types</p>
-                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Exam Types</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudExamTypesCount}
                   </span>
                 </div>
@@ -2506,10 +2506,10 @@ export default function FirestoreSyncTab() {
                   {cloudExamTypesCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Events &amp; Notices</p>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Events &amp; Notices</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudEventsNoticesCount}
                   </span>
                 </div>
@@ -2517,10 +2517,10 @@ export default function FirestoreSyncTab() {
                   {cloudEventsNoticesCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Communication</p>
-                  <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Communication</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudCommunicationCount}
                   </span>
                 </div>
@@ -2528,10 +2528,10 @@ export default function FirestoreSyncTab() {
                   {cloudCommunicationCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Assessment Marks</p>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Assessment Marks</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudAssessmentCount}
                   </span>
                 </div>
@@ -2539,10 +2539,10 @@ export default function FirestoreSyncTab() {
                   {cloudAssessmentCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Exam Creator</p>
-                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Exam Creator</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudExamsCount}
                   </span>
                 </div>
@@ -2551,10 +2551,10 @@ export default function FirestoreSyncTab() {
                 </p>
               </div>
 
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Grades</p>
-                  <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Grades</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudGradesCount}
                   </span>
                 </div>
@@ -2562,10 +2562,10 @@ export default function FirestoreSyncTab() {
                   {cloudGradesCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Streams</p>
-                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <p className="text-xs text-slate-400 min-w-0 break-words">Streams</p>
+                  <span className="text-[10px] whitespace-nowrap shrink-0 bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
                     Cloud: {cloudStreamsCount}
                   </span>
                 </div>
@@ -2573,10 +2573,10 @@ export default function FirestoreSyncTab() {
                   {cloudStreamsCount}
                 </p>
               </div>
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                              <div className="flex items-center justify-between">
-                                <p className="text-xs text-slate-400">Attendance</p>
-                                <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded">
+              <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                              <div className="flex flex-wrap items-center justify-between gap-1">
+                                <p className="text-xs text-slate-400 min-w-0 break-words">Attendance</p>
+                                <span className="text-[10px] whitespace-nowrap shrink-0 bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded">
                                   Cloud: {cloudAttendanceCount}
                                 </span>
                               </div>
@@ -2584,10 +2584,10 @@ export default function FirestoreSyncTab() {
                                 {cloudAttendanceCount}
                               </p>
                             </div>
-                            <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-                              <div className="flex items-center justify-between">
-                                <p className="text-xs text-slate-400">User Management / Auth</p>
-                                <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded">
+                            <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
+                              <div className="flex flex-wrap items-center justify-between gap-1">
+                                <p className="text-xs text-slate-400 min-w-0 break-words">User Management / Auth</p>
+                                <span className="text-[10px] whitespace-nowrap shrink-0 bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded">
                                   Cloud: {cloudUsersCount}
                                 </span>
                               </div>
@@ -2595,17 +2595,17 @@ export default function FirestoreSyncTab() {
                                 {cloudUsersCount}
                               </p>
                             </div>
-                            <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50" data-testid="timetable-status-card">
-                              <div className="flex items-center justify-between gap-1">
-                                <p className="text-xs text-slate-400">Timetable</p>
-                                <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
+                            <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50" data-testid="timetable-status-card">
+                              <div className="flex flex-wrap items-center justify-between gap-1">
+                                <p className="text-xs text-slate-400 min-w-0 break-words">Timetable</p>
+                                <span className="text-[10px] whitespace-nowrap shrink-0 bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded">
                                   Cloud: {cloudTimetablesCount}
                                 </span>
                               </div>
                               <p className="text-2xl font-extrabold text-cyan-400 mt-1">
                                 {cloudTimetablesCount}
                               </p>
-                              <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
+                              <span className="text-[10px] whitespace-nowrap shrink-0 bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">
                                 Local: {localTimetablesCount}
                               </span>
                             </div>
