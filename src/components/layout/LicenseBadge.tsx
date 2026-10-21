@@ -24,14 +24,30 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
   });
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  // Dynamic Days Remaining Calculation as specified
-  const calculateDaysLeft = (expiryDateStr?: string) => {
-    if (!expiryDateStr) return 365; // Default fallback
-    const expiry = new Date(expiryDateStr).getTime();
-    const now = new Date().getTime();
-    const diffTime = expiry - now;
+  // Dynamic Days Remaining Calculation based on monthly due date and grace period
+  const calculateDaysRemaining = (dueDateStr: string, gracePeriodDays: number = 3) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dueDate = new Date(dueDateStr);
+    // Add grace period to total active window
+    dueDate.setDate(dueDate.getDate() + gracePeriodDays);
+    dueDate.setHours(0, 0, 0, 0);
+
+    const diffTime = dueDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
     return diffDays > 0 ? diffDays : 0;
+  };
+
+  const calculateDaysLeft = (expiryDateStr?: string) => {
+    if (!expiryDateStr) {
+      // Default to end of current month with 3-day grace period
+      const now = new Date();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+      return calculateDaysRemaining(endOfMonth, 3);
+    }
+    return calculateDaysRemaining(expiryDateStr, 3);
   };
 
   const fetchLicenseFromFirestore = useCallback(async (showToast = false) => {
