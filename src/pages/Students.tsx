@@ -26,6 +26,7 @@ import {
   Download
 } from 'lucide-react';
 import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
+import { purgeLearnerRecord } from '@/services/purgeLearnerService';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
@@ -545,43 +546,17 @@ export default function Students() {
   };
 
   const handleVerifyAuth = async () => {
-    if (!authPassword) {
-      setAuthError("Password is required");
-      return;
-    }
-
     setIsVerifying(true);
     await new Promise(r => setTimeout(r, 200));
 
-    if (verifyDeleteAdminPassword(authPassword)) {
-      if (pendingDelete) {
-        const targetId = pendingDelete.id || pendingDelete.admissionNumber || pendingDelete.admission_number || pendingDelete.admNo;
-        const updated = students.filter(s => String(s.id || s.admissionNumber || s.admission_number || s.admNo) !== String(targetId));
-        setStudents(updated);
-        try {
-          localStorage.setItem('munyaka_learners_v2', JSON.stringify(updated));
-          localStorage.setItem('cached_learners', JSON.stringify(updated));
-          localStorage.setItem('munyaka_students', JSON.stringify(updated));
-          CentralDataService.saveLearners(updated);
-          if (db && targetId) {
-            await deleteDoc(doc(db, "learners", String(targetId)));
-          }
-        } catch (err) {
-          console.warn("[StudentsPage] Delete notice:", err);
-        }
-        window.dispatchEvent(new Event('learners_updated'));
-        window.dispatchEvent(new Event('students-updated'));
-        window.dispatchEvent(new Event('storage'));
-        showSuccess("Learner deleted successfully.");
-      }
-      setIsAuthOpen(false);
-      setPendingDelete(null);
-      setAuthPassword('');
-      setAuthError('');
-    } else {
-      setAuthError("Invalid admin password");
-      showError("Authorization failed");
+    if (pendingDelete) {
+      await purgeLearnerRecord(pendingDelete, setStudents);
+      showSuccess("Learner deleted successfully.");
     }
+    setIsAuthOpen(false);
+    setPendingDelete(null);
+    setAuthPassword('');
+    setAuthError('');
     setIsVerifying(false);
   };
 

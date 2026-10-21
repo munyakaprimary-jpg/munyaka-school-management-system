@@ -1,14 +1,13 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Trash2 } from 'lucide-react';
-import { deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/config/firebase';
+import { purgeLearnerRecord } from '@/services/purgeLearnerService';
 
 interface DeleteLearnerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  learner?: { id: string; name?: string; admissionNo?: string } | null;
-  studentToDelete?: { id: string; name?: string; admissionNo?: string } | null;
+  learner?: { id: string; name?: string; admissionNo?: string; admissionNumber?: string } | null;
+  studentToDelete?: { id: string; name?: string; admissionNo?: string; admissionNumber?: string } | null;
   onConfirm?: (id: string) => void;
   onVerify?: () => void;
 }
@@ -27,34 +26,12 @@ export default function DeleteLearnerModal({
 
   const handleConfirm = async () => {
     try {
-      const learnerId = target?.id || (target as any)?.admissionNo || (target as any)?.admissionNumber;
-      if (learnerId) {
-        // 1. Filter out from unified local storage
-        const currentList = JSON.parse(localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('cached_learners') || '[]');
-        const updatedList = currentList.filter(
-          (item: any) => String(item.id) !== String(learnerId) && String(item.admissionNo) !== String(learnerId) && String(item.admission_number) !== String(learnerId)
-        );
-        localStorage.setItem('munyaka_learners_v2', JSON.stringify(updatedList));
-        localStorage.setItem('munyaka_students', JSON.stringify(updatedList));
-        localStorage.setItem('cached_learners', JSON.stringify(updatedList));
-
-        // 2. Delete from Firestore if online
-        if (db) {
-          try {
-            await deleteDoc(doc(db, "learners", String(learnerId)));
-          } catch (e) {
-            console.warn("Deleted locally; offline mode active.", e);
-          }
+      if (target) {
+        await purgeLearnerRecord(target);
+        const learnerId = target.id || target.admissionNo || target.admissionNumber;
+        if (onConfirm && learnerId) {
+          await onConfirm(String(learnerId));
         }
-
-        // 3. Dispatch refresh events
-        window.dispatchEvent(new Event('learners_updated'));
-        window.dispatchEvent(new Event('students-updated'));
-        window.dispatchEvent(new Event('storage'));
-      }
-
-      if (onConfirm && learnerId) {
-        await onConfirm(String(learnerId));
       }
       if (onVerify) {
         onVerify();

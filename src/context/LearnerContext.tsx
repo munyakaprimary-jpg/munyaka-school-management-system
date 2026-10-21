@@ -284,10 +284,11 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       let targetId = '';
 
       const updatedList = currentStored.filter((l: any) => {
-        const adm = l.admissionNumber || l.admission_number || l.admNo;
-        const match = adm === admissionNumber || l.id === admissionNumber;
+        const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
+        const lId = String(l.id || l._id || '');
+        const match = adm === admissionNumber || lId === admissionNumber || adm === String(admissionNumber) || lId === String(admissionNumber);
         if (match) {
-          targetId = l.id;
+          targetId = lId || adm;
         }
         return !match;
       });
@@ -296,10 +297,14 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.setItem('school_learners_data', JSON.stringify(updatedList));
       localStorage.setItem('munyaka_students', JSON.stringify(updatedList));
       localStorage.setItem('cached_learners', JSON.stringify(updatedList));
+      localStorage.setItem('learners', JSON.stringify(updatedList));
 
       if (targetId && db) {
         try {
           await deleteDoc(doc(db, 'learners', String(targetId)));
+          if (admissionNumber) {
+            await deleteDoc(doc(db, 'learners', String(admissionNumber))).catch(() => {});
+          }
         } catch (fsErr) {
           console.warn('[LearnerContext] Firestore delete warning:', fsErr);
         }
@@ -310,7 +315,9 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       window.dispatchEvent(new Event('students-updated'));
       window.dispatchEvent(new Event('learners-updated'));
+      window.dispatchEvent(new Event('learners_updated'));
       window.dispatchEvent(new Event('munyaka:data-changed'));
+      window.dispatchEvent(new Event('storage'));
     } catch (err) {
       console.error('[LearnerContext] deleteLearner error:', err);
     }
