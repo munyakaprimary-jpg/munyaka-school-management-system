@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { CentralDataService } from '../services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner, dedupeLearnersById } from '../services/learnerService';
+import { bundleAllLearnersToCentral } from '../services/bundleAllLearners';
 import { initialSeedData } from '../data/initialSeedData';
 import { useAuth } from './AuthContext';
 import { db } from '../config/firebase';
@@ -60,79 +61,22 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
-  // One-time Migration of Seed Data & Unified Initialization
+  // One-time Migration & Complete Bundling of Seed Data & Legacy Records into munyaka_learners_v2
   useEffect(() => {
     let isMounted = true;
 
     const initializeLearners = async () => {
       try {
-        let storedRaw = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
-        let learnersList: any[] = [];
-
-        if (!storedRaw) {
-          // One-Time Migration: very first app launch, localStorage is empty
-          const seedStudents = (initialSeedData as any).students || (initialSeedData as any).learners || [];
-          learnersList = dedupeLearnersById(seedStudents.map(formatLearnerDoc));
-          
-          // Save to munyaka_learners_v2
-          localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(learnersList));
-          
-          // Also mirror to legacy keys for compatibility across components that check other keys
-          localStorage.setItem('school_learners_data', JSON.stringify(learnersList));
-          localStorage.setItem('munyaka_students', JSON.stringify(learnersList));
-          localStorage.setItem('cached_learners', JSON.stringify(learnersList));
-
-          // Push to Firestore on initial seeding
-          if (db) {
-            for (const learner of learnersList) {
-              try {
-                const learnerId = String(learner.id || generateLearnerId());
-                await setDoc(doc(db, 'learners', learnerId), learner, { merge: true });
-              } catch (fsErr) {
-                console.warn('[LearnerContext] Firestore seed push warning:', fsErr);
-              }
-            }
-          }
-          console.log('[LearnerContext] One-time migration completed: Copied seed data into munyaka_learners_v2 and pushed to Firestore.');
-        } else {
-          try {
-            learnersList = JSON.parse(storedRaw);
-            if (!Array.isArray(learnersList)) learnersList = [];
-          } catch {
-            learnersList = [];
-          }
-        }
-
-        // Try syncing from Firestore if available
-        if (db) {
-          try {
-            const querySnapshot = await getDocs(collection(db, 'learners'));
-            if (!querySnapshot.empty) {
-              const remoteLearners: any[] = [];
-              querySnapshot.forEach((docSnap) => {
-                remoteLearners.push(formatLearnerDoc({ id: docSnap.id, ...docSnap.data() }));
-              });
-              if (remoteLearners.length > 0) {
-                // Merge remote learners with local munyaka_learners_v2
-                const merged = dedupeLearnersById([...remoteLearners, ...learnersList]);
-                learnersList = merged;
-                localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(learnersList));
-                localStorage.setItem('school_learners_data', JSON.stringify(learnersList));
-                localStorage.setItem('munyaka_students', JSON.stringify(learnersList));
-                localStorage.setItem('cached_learners', JSON.stringify(learnersList));
-              }
-            }
-          } catch (fsSyncErr) {
-            console.warn('[LearnerContext] Firestore fetch warning (using local munyaka_learners_v2):', fsSyncErr);
-          }
-        }
+        // Execute complete bundling service to migrate all legacy keys, seed data, and cloud records into munyaka_learners_v2
+        const bundledList = await bundleAllLearnersToCentral();
+        const learnersList = dedupeLearnersById((bundledList || []).map(formatLearnerDoc));
 
         if (isMounted) {
           setLearners(filterLearnersForUser(learnersList));
           setLoading(false);
         }
       } catch (err) {
-        console.error('[LearnerContext] Initialization error:', err);
+        console.error('[LearnerContext] Initialization & bundling error:', err);
         if (isMounted) {
           const fallback = filterLearnersForUser(
             (initialSeedData as any).students || (initialSeedData as any).learners || []
