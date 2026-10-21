@@ -73,8 +73,8 @@ export default function AddLearnerModal({
     window.dispatchEvent(new Event('students-updated'));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegisterLearner = async (e: React.FormEvent) => {
+    e.preventDefault(); // Prevent accidental page reload
     if (!fullName.trim()) {
       showError("Please enter full name.");
       return;
@@ -82,21 +82,22 @@ export default function AddLearnerModal({
 
     setIsSaving(true);
     try {
-      const learnerId = generateLearnerId();
+      const learnerId = `learner-${Date.now()}`;
       const genAdm = admissionNumber.trim() || `MUN-${Math.floor(100 + Math.random() * 900)}-2025`;
 
       const parts = fullName.trim().split(/\s+/);
       const firstName = parts[0] || '';
       const middleName = parts.length > 2 ? parts.slice(1, -1).join(' ') : '';
       const lastName = parts.length > 1 ? parts[parts.length - 1] : '';
+      const constructedName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim() || fullName.trim() || 'New Learner';
 
-      const newLearnerRecord = {
+      const newLearner = {
         id: learnerId,
-        firstName: firstName || "Mary",
-        middleName: middleName || "Blessing",
-        lastName: lastName || "Wanjiku",
-        name: fullName.trim() || "Mary Blessing Wanjiku",
-        fullName: fullName.trim() || "Mary Blessing Wanjiku",
+        name: constructedName,
+        fullName: constructedName,
+        firstName: firstName,
+        middleName: middleName,
+        lastName: lastName,
         admissionNumber: genAdm,
         admissionNo: genAdm,
         admNo: genAdm,
@@ -115,17 +116,35 @@ export default function AddLearnerModal({
         updatedAt: new Date().toISOString()
       };
 
-      // Save directly to Firestore collection 'learners'
+      // 1. Immediately update local storage array (Offline-first guarantee)
+      const existingLearners = JSON.parse(localStorage.getItem('cached_learners') || '[]');
+      const filteredList = existingLearners.filter((l: any) => l.id !== learnerId);
+      const updatedList = [newLearner, ...filteredList];
+      localStorage.setItem('cached_learners', JSON.stringify(updatedList));
+
+      // 2. Write directly to Firestore
       try {
-        await setDoc(doc(db, "learners", learnerId), newLearnerRecord);
-      } catch (firestoreErr) {
-        console.warn("Firestore save fallback:", firestoreErr);
+        await setDoc(doc(db, "learners", learnerId), newLearner);
+      } catch (cloudErr) {
+        console.warn("[Firestore] Offline mode: Saved learner locally", cloudErr);
       }
 
-      await handleSaveLearner(newLearnerRecord);
-      showSuccess("Learner successfully added and saved to directory!");
+      // 3. Notify Context and Learners Directory
+      if (typeof addLearner === 'function') {
+        addLearner(newLearner);
+      }
+
+      // Dispatch event so LearnersDirectory updates instantly
+      window.dispatchEvent(new Event('learners_updated'));
+      window.dispatchEvent(new Event('learners-updated'));
+      window.dispatchEvent(new Event('students-updated'));
+      window.dispatchEvent(new Event('storage'));
+
+      showSuccess("Learner successfully registered and saved to directory!");
+      onClose();
     } catch (err) {
-      showError("Failed to save learner record.");
+      console.error("[AddLearner] Failed to register learner:", err);
+      showError("Failed to save learner. Please check form fields.");
     } finally {
       setIsSaving(false);
     }
@@ -139,10 +158,11 @@ export default function AddLearnerModal({
       description="Enter learner particulars, grade assignment, and parent contact details."
       footer={
         <>
-          <Button variant="ghost" className="rounded-xl font-bold" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="ghost" className="rounded-xl font-bold" onClick={onClose}>Cancel</Button>
           <Button
+            type="submit"
+            form="register-learner-form"
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
-            onClick={handleSubmit}
             disabled={isSaving}
           >
             {isSaving ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
@@ -151,7 +171,7 @@ export default function AddLearnerModal({
         </>
       }
     >
-      <div className="max-h-[75vh] overflow-y-auto px-6 py-4 pb-24 space-y-4 -mx-6 -my-4">
+      <form id="register-learner-form" onSubmit={handleRegisterLearner} className="max-h-[75vh] overflow-y-auto px-6 py-4 pb-24 space-y-4 -mx-6 -my-4">
         <div className="space-y-2">
           <Label className="text-xs font-bold text-slate-700 uppercase">Full Name *</Label>
           <Input
@@ -250,7 +270,7 @@ export default function AddLearnerModal({
             />
           </div>
         </div>
-      </div>
+      </form>
     </Modal>
   );
 }
