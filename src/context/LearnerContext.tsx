@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { CentralDataService } from '../services/centralDataService';
-import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '../services/learnerService';
+import { generateLearnerId, formatLearnerDoc, findExistingLearner, dedupeLearnersById } from '../services/learnerService';
+import { initialSeedData } from '../data/initialSeedData';
 import { useAuth } from './AuthContext';
+import { db } from '../config/firebase';
+import { collection, getDocs, setDoc, doc, deleteDoc } from 'firebase/firestore';
 
 interface LearnerContextType {
   learners: any[];
@@ -16,14 +19,15 @@ interface LearnerContextType {
 
 const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
+export const STORAGE_KEY_LEARNERS_V2 = 'munyaka_learners_v2';
+
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Helper to fetch and filter learners based on user role
-  const getFilteredLearners = useCallback(() => {
-    const rawAll = CentralDataService.getLearners() || [];
-    const allLearners = rawAll.map(formatLearnerDoc);
+  // Helper to filter learners based on user role and assigned grade/stream
+  const filterLearnersForUser = useCallback((rawLearners: any[]) => {
+    const allLearners = (rawLearners || []).map(formatLearnerDoc);
     const userRole = user?.role as string;
     if (!user || ['admin', 'owner', 'bursar', 'librarian', 'storekeeper', 'head_teacher', 'accountant', 'staff'].includes(userRole)) {
       return allLearners;
@@ -41,7 +45,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [user]);
 
-  const [learners, setLearnersState] = useState<any[]>(getFilteredLearners);
+  const [learners, setLearnersState] = useState<any[]>([]);
   const learnersRef = useRef(learners);
   learnersRef.current = learners;
 
@@ -56,42 +60,102 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
-  // Effect to handle window events and initial mount
+  // One-time Migration of Seed Data & Unified Initialization
   useEffect(() => {
     let isMounted = true;
 
-    const loadLearners = async () => {
-      if (!isMounted) return;
-      const cached = localStorage.getItem('cached_learners');
-      
-      if (cached && JSON.parse(cached).length > 0) {
-        // Use existing stored learners including user additions
-        setLearners(JSON.parse(cached));
-      } else {
-        // Fallback to seed data ONLY on fresh first-time install
-        const seed = getFilteredLearners();
-        setLearners(seed);
-        localStorage.setItem('cached_learners', JSON.stringify(seed));
+    const initializeLearners = async () => {
+      try {
+        let storedRaw = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+        let learnersList: any[] = [];
+
+        if (!storedRaw) {
+          // One-Time Migration: very first app launch, localStorage is empty
+          const seedStudents = (initialSeedData as any).students || (initialSeedData as any).learners || [];
+          learnersList = dedupeLearnersById(seedStudents.map(formatLearnerDoc));
+          
+          // Save to munyaka_learners_v2
+          localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(learnersList));
+          
+          // Also mirror to legacy keys for compatibility across components that check other keys
+          localStorage.setItem('school_learners_data', JSON.stringify(learnersList));
+          localStorage.setItem('munyaka_students', JSON.stringify(learnersList));
+          localStorage.setItem('cached_learners', JSON.stringify(learnersList));
+
+          // Push to Firestore on initial seeding
+          if (db) {
+            for (const learner of learnersList) {
+              try {
+                const learnerId = String(learner.id || generateLearnerId());
+                await setDoc(doc(db, 'learners', learnerId), learner, { merge: true });
+              } catch (fsErr) {
+                console.warn('[LearnerContext] Firestore seed push warning:', fsErr);
+              }
+            }
+          }
+          console.log('[LearnerContext] One-time migration completed: Copied seed data into munyaka_learners_v2 and pushed to Firestore.');
+        } else {
+          try {
+            learnersList = JSON.parse(storedRaw);
+            if (!Array.isArray(learnersList)) learnersList = [];
+          } catch {
+            learnersList = [];
+          }
+        }
+
+        // Try syncing from Firestore if available
+        if (db) {
+          try {
+            const querySnapshot = await getDocs(collection(db, 'learners'));
+            if (!querySnapshot.empty) {
+              const remoteLearners: any[] = [];
+              querySnapshot.forEach((docSnap) => {
+                remoteLearners.push(formatLearnerDoc({ id: docSnap.id, ...docSnap.data() }));
+              });
+              if (remoteLearners.length > 0) {
+                // Merge remote learners with local munyaka_learners_v2
+                const merged = dedupeLearnersById([...remoteLearners, ...learnersList]);
+                learnersList = merged;
+                localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(learnersList));
+                localStorage.setItem('school_learners_data', JSON.stringify(learnersList));
+                localStorage.setItem('munyaka_students', JSON.stringify(learnersList));
+                localStorage.setItem('cached_learners', JSON.stringify(learnersList));
+              }
+            }
+          } catch (fsSyncErr) {
+            console.warn('[LearnerContext] Firestore fetch warning (using local munyaka_learners_v2):', fsSyncErr);
+          }
+        }
+
+        if (isMounted) {
+          setLearners(filterLearnersForUser(learnersList));
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('[LearnerContext] Initialization error:', err);
+        if (isMounted) {
+          const fallback = filterLearnersForUser(
+            (initialSeedData as any).students || (initialSeedData as any).learners || []
+          );
+          setLearners(fallback);
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
-    loadLearners();
+    initializeLearners();
 
     const handleStorageChange = () => {
       if (!isMounted) return;
-      const cached = localStorage.getItem('cached_learners');
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setLearners(parsed);
-            return;
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setLearners(filterLearnersForUser(parsed));
           }
-        } catch {}
-      }
-      const fresh = getFilteredLearners();
-      setLearners(fresh);
+        }
+      } catch {}
     };
 
     window.addEventListener('students-updated', handleStorageChange);
@@ -108,18 +172,26 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       window.removeEventListener('munyaka:data-changed', handleStorageChange);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [getFilteredLearners, setLearners]);
+  }, [filterLearnersForUser, setLearners]);
 
+  // Unified addLearner: Appends directly to munyaka_learners_v2, mirrors to helper keys, and syncs to Firestore
   const addLearner = useCallback(async (newLearner: any) => {
-    setLearners((prev) => {
-      const normalizedNew = {
-        ...newLearner,
-        id: newLearner.id ? String(newLearner.id) : generateLearnerId(),
-      };
-      const existing = findExistingLearner(prev, normalizedNew);
-      let updated;
+    const normalizedNew = {
+      ...newLearner,
+      id: newLearner.id ? String(newLearner.id) : generateLearnerId(),
+      createdAt: newLearner.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    let updatedList: any[] = [];
+    
+    try {
+      const rawStored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+      const currentStored = rawStored ? JSON.parse(rawStored) : [];
+      const existing = findExistingLearner(currentStored, normalizedNew);
+
       if (existing) {
-        updated = prev.map((l) => {
+        updatedList = currentStored.map((l: any) => {
           const lId = String(l.id || l.learnerId || '');
           const existingId = String(existing.id || existing.learnerId || '');
           const match = (lId && existingId && lId === existingId) ||
@@ -127,47 +199,159 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return match ? { ...l, ...normalizedNew, id: lId || normalizedNew.id } : l;
         });
       } else {
-        updated = [...prev, normalizedNew];
+        updatedList = [normalizedNew, ...currentStored];
       }
-      CentralDataService.saveLearners(updated);
-      return updated;
-    });
-  }, [setLearners]);
+
+      updatedList = dedupeLearnersById(updatedList);
+
+      // Save to central storage key munyaka_learners_v2
+      localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(updatedList));
+      // Mirror to secondary keys for compatibility
+      localStorage.setItem('school_learners_data', JSON.stringify(updatedList));
+      localStorage.setItem('munyaka_students', JSON.stringify(updatedList));
+      localStorage.setItem('cached_learners', JSON.stringify(updatedList));
+
+      // Sync to Firestore
+      if (db) {
+        try {
+          await setDoc(doc(db, 'learners', String(normalizedNew.id)), normalizedNew, { merge: true });
+        } catch (fsErr) {
+          console.warn('[LearnerContext] Firestore sync warning on addLearner:', fsErr);
+        }
+      }
+
+      // Also call CentralDataService
+      CentralDataService.saveLearners(updatedList);
+
+      setLearners(filterLearnersForUser(updatedList));
+
+      window.dispatchEvent(new Event('students-updated'));
+      window.dispatchEvent(new Event('learners-updated'));
+      window.dispatchEvent(new Event('learners_updated'));
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+    } catch (err) {
+      console.error('[LearnerContext] addLearner error:', err);
+    }
+  }, [filterLearnersForUser, setLearners]);
 
   const updateLearner = useCallback(async (admissionNumber: string, updatedData: any) => {
-    setLearners((prev) => {
-      const updated = prev.map((l) => {
-        if ((l.admissionNumber || l.admission_number) === admissionNumber) {
-          return { ...l, ...updatedData };
+    try {
+      const rawStored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+      const currentStored = rawStored ? JSON.parse(rawStored) : [];
+      let targetId = '';
+
+      const updatedList = currentStored.map((l: any) => {
+        const adm = l.admissionNumber || l.admission_number || l.admNo;
+        if (adm === admissionNumber || l.id === admissionNumber) {
+          targetId = l.id;
+          return { ...l, ...updatedData, updatedAt: new Date().toISOString() };
         }
         return l;
       });
-      CentralDataService.saveLearners(updated);
-      return updated;
-    });
-  }, [setLearners]);
+
+      const deduped = dedupeLearnersById(updatedList);
+      localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(deduped));
+      localStorage.setItem('school_learners_data', JSON.stringify(deduped));
+      localStorage.setItem('munyaka_students', JSON.stringify(deduped));
+      localStorage.setItem('cached_learners', JSON.stringify(deduped));
+
+      if (targetId && db) {
+        try {
+          const found = deduped.find((l: any) => l.id === targetId);
+          if (found) {
+            await setDoc(doc(db, 'learners', String(targetId)), found, { merge: true });
+          }
+        } catch (fsErr) {
+          console.warn('[LearnerContext] Firestore sync warning on updateLearner:', fsErr);
+        }
+      }
+
+      CentralDataService.saveLearners(deduped);
+      setLearners(filterLearnersForUser(deduped));
+
+      window.dispatchEvent(new Event('students-updated'));
+      window.dispatchEvent(new Event('learners-updated'));
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+    } catch (err) {
+      console.error('[LearnerContext] updateLearner error:', err);
+    }
+  }, [filterLearnersForUser, setLearners]);
 
   const deleteLearner = useCallback(async (admissionNumber: string) => {
-    setLearners((prev) => {
-      const updated = prev.filter(
-        (l) => (l.admissionNumber || l.admission_number) !== admissionNumber
-      );
-      CentralDataService.saveLearners(updated);
-      return updated;
-    });
-  }, [setLearners]);
+    try {
+      const rawStored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+      const currentStored = rawStored ? JSON.parse(rawStored) : [];
+      let targetId = '';
+
+      const updatedList = currentStored.filter((l: any) => {
+        const adm = l.admissionNumber || l.admission_number || l.admNo;
+        const match = adm === admissionNumber || l.id === admissionNumber;
+        if (match) {
+          targetId = l.id;
+        }
+        return !match;
+      });
+
+      localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(updatedList));
+      localStorage.setItem('school_learners_data', JSON.stringify(updatedList));
+      localStorage.setItem('munyaka_students', JSON.stringify(updatedList));
+      localStorage.setItem('cached_learners', JSON.stringify(updatedList));
+
+      if (targetId && db) {
+        try {
+          await deleteDoc(doc(db, 'learners', String(targetId)));
+        } catch (fsErr) {
+          console.warn('[LearnerContext] Firestore delete warning:', fsErr);
+        }
+      }
+
+      CentralDataService.saveLearners(updatedList);
+      setLearners(filterLearnersForUser(updatedList));
+
+      window.dispatchEvent(new Event('students-updated'));
+      window.dispatchEvent(new Event('learners-updated'));
+      window.dispatchEvent(new Event('munyaka:data-changed'));
+    } catch (err) {
+      console.error('[LearnerContext] deleteLearner error:', err);
+    }
+  }, [filterLearnersForUser, setLearners]);
 
   const refreshLearners = useCallback(() => {
-    const fresh = getFilteredLearners();
-    setLearners(fresh);
-  }, [getFilteredLearners, setLearners]);
+    try {
+      const rawStored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+      if (rawStored) {
+        const parsed = JSON.parse(rawStored);
+        if (Array.isArray(parsed)) {
+          setLearners(filterLearnersForUser(parsed));
+          return;
+        }
+      }
+      const rawAll = CentralDataService.getLearners() || [];
+      setLearners(filterLearnersForUser(rawAll));
+    } catch {
+      setLearners(filterLearnersForUser([]));
+    }
+  }, [filterLearnersForUser, setLearners]);
 
   const resetToSeedData = useCallback(() => {
-    localStorage.removeItem('munyaka_learners');
+    localStorage.removeItem(STORAGE_KEY_LEARNERS_V2);
+    localStorage.removeItem('school_learners_data');
     localStorage.removeItem('munyaka_students');
-    const resetList = getFilteredLearners();
-    setLearners(resetList);
-  }, [getFilteredLearners, setLearners]);
+    localStorage.removeItem('cached_learners');
+
+    const seedStudents = (initialSeedData as any).students || (initialSeedData as any).learners || [];
+    const seedList = dedupeLearnersById(seedStudents.map(formatLearnerDoc));
+
+    localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(seedList));
+    localStorage.setItem('school_learners_data', JSON.stringify(seedList));
+    localStorage.setItem('munyaka_students', JSON.stringify(seedList));
+    localStorage.setItem('cached_learners', JSON.stringify(seedList));
+
+    setLearners(filterLearnersForUser(seedList));
+    window.dispatchEvent(new Event('students-updated'));
+    window.dispatchEvent(new Event('learners-updated'));
+    window.dispatchEvent(new Event('munyaka:data-changed'));
+  }, [filterLearnersForUser, setLearners]);
 
   const value = useMemo(
     () => ({
