@@ -17,7 +17,6 @@ const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [learners, setLearnersState] = useState<any[]>(() => CentralDataService.getLearners());
   const [loading, setLoading] = useState<boolean>(false);
 
   // Helper to fetch and filter learners based on user role
@@ -40,10 +39,9 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [user]);
 
-  // Keep the latest filter function in a ref so the mount effect can run once
-  // while always reading fresh data when storage events fire.
-  const getFilteredLearnersRef = useRef(getFilteredLearners);
-  getFilteredLearnersRef.current = getFilteredLearners;
+  const [learners, setLearnersState] = useState<any[]>(getFilteredLearners);
+  const learnersRef = useRef(learners);
+  learnersRef.current = learners;
 
   // Custom setter that prevents unneeded state updates if data hasn't changed
   const setLearners = useCallback((action: React.SetStateAction<any[]>) => {
@@ -56,13 +54,13 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
-  // Mount + event subscription — runs ONCE on mount.
+  // Effect to handle window events and initial mount
   useEffect(() => {
     let isMounted = true;
 
     const updateFromSource = () => {
       if (!isMounted) return;
-      const fresh = getFilteredLearnersRef.current();
+      const fresh = getFilteredLearners();
       setLearners(fresh);
       setLoading(false);
     };
@@ -85,14 +83,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       window.removeEventListener('munyaka:data-changed', handleStorageChange);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [setLearners]); // EMPTY DEPENDENCY ARRAY — runs once on mount
-
-  // Re-sync when the active user identity changes (e.g. teacher logs in).
-  // Primitive deps only — stable references, no re-render churn.
-  useEffect(() => {
-    setLearners(getFilteredLearnersRef.current());
-    setLoading(false);
-  }, [user?.role, user?.assignedClass, user?.assignedStream, setLearners]);
+  }, [getFilteredLearners, setLearners]);
 
   const addLearner = useCallback(async (newLearner: any) => {
     setLearners((prev) => {
@@ -135,14 +126,16 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [setLearners]);
 
   const refreshLearners = useCallback(() => {
-    setLearners(getFilteredLearnersRef.current());
-  }, [setLearners]);
+    const fresh = getFilteredLearners();
+    setLearners(fresh);
+  }, [getFilteredLearners, setLearners]);
 
   const resetToSeedData = useCallback(() => {
     localStorage.removeItem('munyaka_learners');
     localStorage.removeItem('munyaka_students');
-    setLearners(CentralDataService.getLearners());
-  }, [setLearners]);
+    const resetList = getFilteredLearners();
+    setLearners(resetList);
+  }, [getFilteredLearners, setLearners]);
 
   const value = useMemo(
     () => ({

@@ -185,10 +185,10 @@ const Login: React.FC = () => {
   const { login, isAuthenticated, user, setUser } = useAuth();
 
   // ── Cover page state ────────────────────────────────────────────────────
-  const [showCover, setShowCover] = useState(false);
+  const [showCover, setShowCover] = useState(true);
 
   // ── Admin state ──────────────────────────────────────────────────────────
-  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>('admin');
+  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminAuthError, setAdminAuthError] = useState('');
@@ -206,13 +206,12 @@ const Login: React.FC = () => {
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
   // ── Redirect already-authenticated users straight to the dashboard (On mount once) ─────────
-  useEffect(() => {
-    const isAuth = localStorage.getItem('isAuthenticated') === 'true';
-    const currentHash = window.location.hash;
-    if (isAuth) {
-      window.location.hash = '#/dashboard';
-    }
-  }, [isAuthenticated]);
+    useEffect(() => {
+      const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+      if (isAuth) {
+        navigate('/dashboard', { replace: true });
+      }
+    }, []); // Empty dependency array ensures check runs ONCE on mount
 
   // ── Admin handlers ────────────────────────────────────────────────────────
   const handleRoleSelect = (role: AdminRole) => {
@@ -253,19 +252,34 @@ const Login: React.FC = () => {
       // 1. Instant Local Access Verification (Works Offline & Bypasses Cloud Errors)
       if (entered === expectedPin || entered === 'munyaka' || entered === 'munyaka2026' || entered === savedAdminPin || entered === savedOwnerPin) {
         const success = await login(config.email, entered);
-        const adminSession = {
-          role: selectedAdminRole,
-          roleLabel: config.label,
-          roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
-          timestamp: Date.now(),
-        };
-        localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userRole', selectedAdminRole);
-        showSuccess(`Welcome, ${config.userName}!`);
-        
-        // Force navigation immediately
-        window.location.hash = '#/dashboard';
+        if (success) {
+          const adminSession = {
+            role: selectedAdminRole,
+            roleLabel: config.label,
+            roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+            timestamp: Date.now(),
+          };
+          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('userRole', selectedAdminRole);
+          showSuccess(`Welcome, ${config.userName}!`);
+          const landingPage = getRoleLandingPage(selectedAdminRole);
+          navigate(landingPage, { replace: true });
+        } else {
+          // Force local session fallback even if login helper fails
+          const adminSession = {
+            role: selectedAdminRole,
+            roleLabel: config.label,
+            roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+            timestamp: Date.now(),
+          };
+          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('userRole', selectedAdminRole);
+          showSuccess(`Welcome, ${config.userName}!`);
+          const landingPage = getRoleLandingPage(selectedAdminRole);
+          navigate(landingPage, { replace: true });
+        }
         setIsAdminVerifying(false);
         return;
       }
@@ -276,20 +290,23 @@ const Login: React.FC = () => {
           const adminEmail = localStorage.getItem('admin_email') || 'jamesndiki@gmail.com';
           await signInWithEmailAndPassword(auth, adminEmail, entered);
           const success = await login(config.email, entered);
-          const adminSession = {
-            role: selectedAdminRole,
-            roleLabel: config.label,
-            roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
-            timestamp: Date.now(),
-          };
-          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-          localStorage.setItem('isAuthenticated', 'true');
-          localStorage.setItem('userRole', selectedAdminRole);
-          window.dispatchEvent(new Event('storage'));
-          showSuccess(`Welcome, ${config.userName}!`);
-          
-          window.location.replace('#/dashboard');
-          window.location.reload();
+          if (success) {
+            const adminSession = {
+              role: selectedAdminRole,
+              roleLabel: config.label,
+              roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+              timestamp: Date.now(),
+            };
+            localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+            localStorage.setItem('isAuthenticated', 'true');
+            localStorage.setItem('userRole', selectedAdminRole);
+            showSuccess(`Welcome, ${config.userName}!`);
+            const landingPage = getRoleLandingPage(selectedAdminRole);
+            navigate(landingPage, { replace: true });
+          } else {
+            setAdminAuthError(`Invalid password for ${config.label}.`);
+            showError('Login failed. Invalid password.');
+          }
           setIsAdminVerifying(false);
           return;
         } catch (fbErr: any) {

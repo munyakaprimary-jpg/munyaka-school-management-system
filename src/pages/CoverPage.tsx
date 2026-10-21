@@ -103,7 +103,11 @@ const FeatureTag: React.FC<FeatureTagProps> = ({ icon, label }) => (
 );
 
 // ── Main Cover Page Component ───────────────────────────────────────────────
-export default function CoverPage({ onEnter }: { onEnter?: () => void }) {
+interface CoverPageProps {
+  onEnter: () => void;
+}
+
+const CoverPage: React.FC<CoverPageProps> = ({ onEnter }) => {
   useEffect(() => {
     const isAuth = localStorage.getItem('isAuthenticated') === 'true';
     if (isAuth && window.location.hash !== '#/dashboard') {
@@ -241,4 +245,6 @@ export default function CoverPage({ onEnter }: { onEnter?: () => void }) {
       </div>
     </div>
   );
-}
+};
+
+export default CoverPage;
