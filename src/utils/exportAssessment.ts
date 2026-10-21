@@ -452,19 +452,33 @@ function openPrintDialog(html: string, title: string): void {
     document.body.appendChild(iframe);
     const iframeWin = iframe.contentWindow;
     const doc = iframeWin?.document;
-    if (!doc) return;
-    doc.open();
-    doc.write(html);
-    doc.close();
-    iframeWin?.focus();
-    setTimeout(() => {
-      try {
-        iframeWin?.print();
-      } catch {
-        /* noop */
+    if (!doc) {
+      document.body.removeChild(iframe);
+      return;
+    }
+    try {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      iframeWin?.focus();
+      setTimeout(() => {
+        try {
+          iframeWin?.print();
+        } catch (err) {
+          console.warn("[Export] Frame print exception handled safely:", err);
+        }
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 1500);
+      }, 250);
+    } catch (err) {
+      console.warn("[Export] Frame write exception handled safely:", err);
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
       }
-      setTimeout(() => document.body.removeChild(iframe), 1500);
-    }, 250);
+    }
     return;
   }
   win.document.open();
