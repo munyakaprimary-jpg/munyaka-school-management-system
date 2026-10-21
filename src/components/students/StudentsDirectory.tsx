@@ -152,32 +152,30 @@ export default function StudentsDirectory({
   };
 
   const handleVerifyAuth = async () => {
-    if (!authPassword) {
-      setAuthError("Password is required");
-      return;
-    }
     setIsVerifying(true);
-    await new Promise(r => setTimeout(r, 400));
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-
-    if (authPassword === currentAdminPass) {
-      if (pendingDelete) {
-        const targetId = pendingDelete.id || pendingDelete.admissionNumber;
-        const updated = learnersList.filter(s => (s.id || s.admissionNumber) !== targetId);
-        setLearnersList(updated);
-        try {
-          localStorage.setItem('cached_learners', JSON.stringify(updated));
-          localStorage.setItem('learners', JSON.stringify(updated));
-        } catch {}
-        window.dispatchEvent(new Event('learners_updated'));
-        showSuccess("Learner deleted successfully.");
+    await new Promise(r => setTimeout(r, 200));
+    if (pendingDelete) {
+      const targetId = pendingDelete.id || pendingDelete.admissionNumber || pendingDelete.admission_number || pendingDelete.admNo;
+      const updated = learnersList.filter(s => String(s.id || s.admissionNumber || s.admission_number || s.admNo) !== String(targetId));
+      setLearnersList(updated);
+      try {
+        localStorage.setItem('munyaka_learners_v2', JSON.stringify(updated));
+        localStorage.setItem('cached_learners', JSON.stringify(updated));
+        localStorage.setItem('munyaka_students', JSON.stringify(updated));
+        localStorage.setItem('learners', JSON.stringify(updated));
+        if (db && targetId) {
+          await deleteDoc(doc(db, "learners", String(targetId)));
+        }
+      } catch (err) {
+        console.warn("[StudentsDirectory] Delete notice:", err);
       }
-      setIsAuthOpen(false);
-      setPendingDelete(null);
-    } else {
-      setAuthError("Invalid admin password");
-      showError("Authorization failed");
+      window.dispatchEvent(new Event('learners_updated'));
+      window.dispatchEvent(new Event('students-updated'));
+      window.dispatchEvent(new Event('storage'));
+      showSuccess("Learner deleted successfully.");
     }
+    setIsAuthOpen(false);
+    setPendingDelete(null);
     setIsVerifying(false);
   };
 
