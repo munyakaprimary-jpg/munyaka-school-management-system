@@ -23,6 +23,7 @@ import { collection, onSnapshot, addDoc, setDoc, doc } from 'firebase/firestore'
 import { showSuccess, showError } from '@/utils/toast';
 import { CentralDataService } from '@/services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
+import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
 import AddLearnerModal from '@/components/students/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
@@ -152,30 +153,42 @@ export default function StudentsDirectory({
   };
 
   const handleVerifyAuth = async () => {
+    if (!authPassword) {
+      setAuthError("Admin password is required");
+      return;
+    }
     setIsVerifying(true);
     await new Promise(r => setTimeout(r, 200));
-    if (pendingDelete) {
-      const targetId = pendingDelete.id || pendingDelete.admissionNumber || pendingDelete.admission_number || pendingDelete.admNo;
-      const updated = learnersList.filter(s => String(s.id || s.admissionNumber || s.admission_number || s.admNo) !== String(targetId));
-      setLearnersList(updated);
-      try {
-        localStorage.setItem('munyaka_learners_v2', JSON.stringify(updated));
-        localStorage.setItem('cached_learners', JSON.stringify(updated));
-        localStorage.setItem('munyaka_students', JSON.stringify(updated));
-        localStorage.setItem('learners', JSON.stringify(updated));
-        if (db && targetId) {
-          await deleteDoc(doc(db, "learners", String(targetId)));
+
+    if (verifyDeleteAdminPassword(authPassword)) {
+      if (pendingDelete) {
+        const targetId = pendingDelete.id || pendingDelete.admissionNumber || pendingDelete.admission_number || pendingDelete.admNo;
+        const updated = learnersList.filter(s => String(s.id || s.admissionNumber || s.admission_number || s.admNo) !== String(targetId));
+        setLearnersList(updated);
+        try {
+          localStorage.setItem('munyaka_learners_v2', JSON.stringify(updated));
+          localStorage.setItem('cached_learners', JSON.stringify(updated));
+          localStorage.setItem('munyaka_students', JSON.stringify(updated));
+          localStorage.setItem('learners', JSON.stringify(updated));
+          if (db && targetId) {
+            await deleteDoc(doc(db, "learners", String(targetId)));
+          }
+        } catch (err) {
+          console.warn("[StudentsDirectory] Delete notice:", err);
         }
-      } catch (err) {
-        console.warn("[StudentsDirectory] Delete notice:", err);
+        window.dispatchEvent(new Event('learners_updated'));
+        window.dispatchEvent(new Event('students-updated'));
+        window.dispatchEvent(new Event('storage'));
+        showSuccess("Learner deleted successfully.");
       }
-      window.dispatchEvent(new Event('learners_updated'));
-      window.dispatchEvent(new Event('students-updated'));
-      window.dispatchEvent(new Event('storage'));
-      showSuccess("Learner deleted successfully.");
+      setIsAuthOpen(false);
+      setPendingDelete(null);
+      setAuthPassword('');
+      setAuthError('');
+    } else {
+      setAuthError("Invalid admin password");
+      showError("Authorization failed");
     }
-    setIsAuthOpen(false);
-    setPendingDelete(null);
     setIsVerifying(false);
   };
 
