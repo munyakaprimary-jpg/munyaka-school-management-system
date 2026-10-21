@@ -1,12 +1,15 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { CentralDataService } from '../services/centralDataService';
 import { useAuth } from './AuthContext';
 
 interface LearnerContextType {
   learners: any[];
+  loading: boolean;
   setLearners: React.Dispatch<React.SetStateAction<any[]>>;
   addLearner: (newLearner: any) => Promise<void> | void;
+  updateLearner?: (admissionNumber: string, updatedData: any) => Promise<void> | void;
   deleteLearner: (admissionNumber: string) => Promise<void> | void;
+  refreshLearners?: () => void;
   resetToSeedData: () => void;
 }
 
@@ -14,7 +17,8 @@ const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  
+  const [loading, setLoading] = useState<boolean>(false);
+
   // Helper to fetch and filter learners based on user role
   const getFilteredLearners = useCallback(() => {
     const allLearners = CentralDataService.getLearners();
@@ -43,7 +47,6 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const setLearners = useCallback((action: React.SetStateAction<any[]>) => {
     setLearnersState((prev) => {
       const next = typeof action === 'function' ? action(prev) : action;
-      // Simple shallow/deep length or JSON comparison to avoid redundant updates
       if (JSON.stringify(prev) === JSON.stringify(next)) {
         return prev;
       }
@@ -51,7 +54,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
-  // Effect to handle window events and user changes once on mount or when user changes
+  // Effect to handle window events and initial mount
   useEffect(() => {
     let isMounted = true;
 
@@ -59,6 +62,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (!isMounted) return;
       const fresh = getFilteredLearners();
       setLearners(fresh);
+      setLoading(false);
     };
 
     updateFromSource();
@@ -98,6 +102,19 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [setLearners]);
 
+  const updateLearner = useCallback(async (admissionNumber: string, updatedData: any) => {
+    setLearners((prev) => {
+      const updated = prev.map((l) => {
+        if ((l.admissionNumber || l.admission_number) === admissionNumber) {
+          return { ...l, ...updatedData };
+        }
+        return l;
+      });
+      CentralDataService.saveLearners(updated);
+      return updated;
+    });
+  }, [setLearners]);
+
   const deleteLearner = useCallback(async (admissionNumber: string) => {
     setLearners((prev) => {
       const updated = prev.filter(
@@ -108,6 +125,11 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [setLearners]);
 
+  const refreshLearners = useCallback(() => {
+    const fresh = getFilteredLearners();
+    setLearners(fresh);
+  }, [getFilteredLearners, setLearners]);
+
   const resetToSeedData = useCallback(() => {
     localStorage.removeItem('munyaka_learners');
     localStorage.removeItem('munyaka_students');
@@ -115,8 +137,22 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setLearners(resetList);
   }, [getFilteredLearners, setLearners]);
 
+  const value = useMemo(
+    () => ({
+      learners,
+      loading,
+      setLearners,
+      addLearner,
+      updateLearner,
+      deleteLearner,
+      refreshLearners,
+      resetToSeedData,
+    }),
+    [learners, loading, setLearners, addLearner, updateLearner, deleteLearner, refreshLearners, resetToSeedData]
+  );
+
   return (
-    <LearnerContext.Provider value={{ learners, setLearners, addLearner, deleteLearner, resetToSeedData }}>
+    <LearnerContext.Provider value={value}>
       {children}
     </LearnerContext.Provider>
   );
