@@ -146,6 +146,19 @@ import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./u
 import { initializeCentralStorage } from "./utils/centralDbInit";
 import { runBillingAutoLockCheck } from "./utils/billingAutoLock";
 
+// Simple route check and redirect hook inside App
+function RouteGuardEffect() {
+  useEffect(() => {
+    const currentHash = window.location.hash;
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+
+    if (isAuthenticated && (currentHash === '#/login' || currentHash === '' || currentHash === '#/')) {
+      window.location.hash = '#/dashboard';
+    }
+  }, []);
+  return null;
+}
+
 // Execute unified central storage initialization on application load
 initializeCentralStorage();
 
@@ -528,6 +541,7 @@ const App = () => {
     <AppErrorBoundary>
       <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       <HashRouter>
+          <RouteGuardEffect />
           <AuthProvider>
             <AuthGate>
               <NotificationProvider>
