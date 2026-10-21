@@ -69,10 +69,10 @@ export default function StudentsDirectory({
   const [authError, setAuthError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Direct Real-Time Listener in LearnersDirectory
+  // Direct Real-Time Listener in LearnersDirectory reacting to 'learners_updated'
   useEffect(() => {
     const refreshLearners = () => {
-      const cached = localStorage.getItem('cached_learners') || localStorage.getItem('learners') || localStorage.getItem('munyaka_students');
+      const cached = localStorage.getItem('cached_learners');
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
@@ -81,7 +81,6 @@ export default function StudentsDirectory({
           }
         } catch {}
       } else {
-        // Fallback from CentralDataService if storage empty
         try {
           const central = CentralDataService.getLearners() || [];
           if (central.length > 0) {

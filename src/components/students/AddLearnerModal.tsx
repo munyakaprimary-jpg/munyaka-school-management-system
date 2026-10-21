@@ -38,35 +38,39 @@ export default function AddLearnerModal({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleAddLearnerSubmit = async (learnerData: any) => {
+  const handleSaveLearner = async (formData: any) => {
+    const newId = formData.id || `learner-${Date.now()}`;
     const newLearner = {
-      ...learnerData,
-      id: learnerData.id || `learner-${Date.now()}`,
-      status: learnerData.status || 'Active',
-      createdAt: new Date().toISOString(),
+      ...formData,
+      id: newId,
+      assessmentNo: formData.assessmentNo || formData.assessmentNumber || formData.assessment || '',
+      admissionNo: formData.admissionNo || formData.admissionNumber || '',
+      name: formData.name || formData.fullName || '',
+      grade: formData.grade || formData.gradeLevel || 'Grade 1',
+      stream: formData.stream || '',
+      gender: formData.gender || 'Male',
+      status: 'Active',
+      createdAt: formData.createdAt || new Date().toISOString()
     };
 
-    // 1. Save to Context / State
-    await addLearner(newLearner);
+    // 1. Update localStorage array first for instant offline access
+    const currentList = JSON.parse(localStorage.getItem('cached_learners') || '[]');
+    // Filter out duplicate id if any
+    const filteredList = currentList.filter((l: any) => l.id !== newId);
+    const updatedList = [newLearner, ...filteredList];
+    localStorage.setItem('cached_learners', JSON.stringify(updatedList));
 
-    // 2. Dual Write to Local Storage for offline-first reliability
+    // 2. Save directly to Firestore collection
     try {
-      const existing = JSON.parse(localStorage.getItem('cached_learners') || localStorage.getItem('learners') || '[]');
-      const updated = [newLearner, ...existing];
-      localStorage.setItem('cached_learners', JSON.stringify(updated));
-      localStorage.setItem('learners', JSON.stringify(updated));
-      localStorage.setItem('munyaka_students', JSON.stringify(updated));
-    } catch {}
+      await setDoc(doc(db, "learners", newId), newLearner);
+    } catch (err) {
+      console.warn("[Firestore] Offline mode: saved learner locally:", err);
+    }
 
-    // 3. Trigger active re-render event
+    // 3. Dispatch update event to instantly refresh Directory state
     window.dispatchEvent(new Event('learners_updated'));
     window.dispatchEvent(new Event('learners-updated'));
     window.dispatchEvent(new Event('students-updated'));
-
-    if (onLearnerAdded) {
-      onLearnerAdded(newLearner);
-    }
-    onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,7 +113,7 @@ export default function AddLearnerModal({
         console.warn("Firestore save fallback:", firestoreErr);
       }
 
-      await handleAddLearnerSubmit(learnerData);
+      await handleSaveLearner(learnerData);
       showSuccess("Learner successfully added and saved to directory!");
     } catch (err) {
       showError("Failed to save learner record.");

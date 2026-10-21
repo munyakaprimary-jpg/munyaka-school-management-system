@@ -60,17 +60,38 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     let isMounted = true;
 
-    const updateFromSource = () => {
+    const loadLearners = async () => {
       if (!isMounted) return;
-      const fresh = getFilteredLearners();
-      setLearners(fresh);
+      const cached = localStorage.getItem('cached_learners');
+      
+      if (cached && JSON.parse(cached).length > 0) {
+        // Use existing stored learners including user additions
+        setLearners(JSON.parse(cached));
+      } else {
+        // Fallback to seed data ONLY on fresh first-time install
+        const seed = getFilteredLearners();
+        setLearners(seed);
+        localStorage.setItem('cached_learners', JSON.stringify(seed));
+      }
       setLoading(false);
     };
 
-    updateFromSource();
+    loadLearners();
 
     const handleStorageChange = () => {
-      updateFromSource();
+      if (!isMounted) return;
+      const cached = localStorage.getItem('cached_learners');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setLearners(parsed);
+            return;
+          }
+        } catch {}
+      }
+      const fresh = getFilteredLearners();
+      setLearners(fresh);
     };
 
     window.addEventListener('students-updated', handleStorageChange);
