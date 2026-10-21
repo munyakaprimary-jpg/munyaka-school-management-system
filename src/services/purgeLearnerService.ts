@@ -1,43 +1,48 @@
 import { db } from '../config/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 
-export const trackDeletedId = (learner: any) => {
-  const DELETED_KEY = 'deleted_learner_ids';
-  try {
-    const existing = new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-    
-    if (learner.id) existing.add(String(learner.id).trim());
-    if (learner._id) existing.add(String(learner._id).trim());
-    if (learner.admissionNo) existing.add(String(learner.admissionNo).trim());
-    if (learner.admissionNumber) existing.add(String(learner.admissionNumber).trim());
-    if (learner.admNo) existing.add(String(learner.admNo).trim());
+const UNIFIED_STORAGE_KEY = 'munyaka_learners_v2';
+const DELETED_IDS_KEY = 'deleted_learner_ids';
 
-    localStorage.setItem(DELETED_KEY, JSON.stringify(Array.from(existing)));
+export const trackDeletedId = (learner: any) => {
+  if (!learner) return;
+  try {
+    const deletedSet = new Set(JSON.parse(localStorage.getItem(DELETED_IDS_KEY) || '[]'));
+    const targetId = String(learner.id || learner._id || '').trim();
+    const targetAdm = String(learner.admissionNo || learner.admissionNumber || learner.admNo || '').trim();
+    const targetAssess = String(learner.assessmentNo || learner.assessmentNumber || '').trim();
+
+    if (targetId) deletedSet.add(targetId);
+    if (targetAdm) deletedSet.add(targetAdm);
+    if (targetAssess) deletedSet.add(targetAssess);
+
+    localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(Array.from(deletedSet)));
   } catch {}
 };
 
 export const purgeLearnerPermanently = async (targetLearner: any, setLearnersList?: (list: any[]) => void) => {
-  if (!targetLearner) return;
+  if (!targetLearner) return [];
 
-  const targetId = String(targetLearner.id || targetLearner._id || targetLearner.learnerId || '').trim();
+  // Extract all identifier keys
+  const targetId = String(targetLearner.id || targetLearner._id || '').trim();
   const targetAdm = String(targetLearner.admissionNo || targetLearner.admissionNumber || targetLearner.admNo || '').trim();
   const targetAssess = String(targetLearner.assessmentNo || targetLearner.assessmentNumber || '').trim();
 
-  // 0. Track deleted ID immediately to prevent Firestore re-hydration
+  // A. Track deleted identifiers to block Firestore listener re-hydration
   trackDeletedId(targetLearner);
 
-  // 1. Purge from primary unified storage
-  const UNIFIED_KEY = 'munyaka_learners_v2';
-  let currentUnified: any[] = [];
+  // B. Route Deletion directly through CENTRAL STORAGE KEY
+  let existingRecords: any[] = [];
   try {
-    currentUnified = JSON.parse(localStorage.getItem(UNIFIED_KEY) || localStorage.getItem('cached_learners') || '[]');
+    existingRecords = JSON.parse(localStorage.getItem(UNIFIED_STORAGE_KEY) || localStorage.getItem('cached_learners') || '[]');
+    if (!Array.isArray(existingRecords)) existingRecords = [];
   } catch {
-    currentUnified = [];
+    existingRecords = [];
   }
   
-  const cleanUnifiedList = currentUnified.filter((item: any) => {
+  const remainingRecords = existingRecords.filter((item: any) => {
     if (!item) return false;
-    const itemId = String(item.id || item._id || item.learnerId || '').trim();
+    const itemId = String(item.id || item._id || '').trim();
     const itemAdm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
     const itemAssess = String(item.assessmentNo || item.assessmentNumber || '').trim();
 
@@ -46,34 +51,18 @@ export const purgeLearnerPermanently = async (targetLearner: any, setLearnersLis
       (targetAdm && itemAdm === targetAdm) ||
       (targetAssess && itemAssess === targetAssess);
 
-    return !isMatch;
+    return !isMatch; // Retain only non-matching records
   });
 
-  localStorage.setItem(UNIFIED_KEY, JSON.stringify(cleanUnifiedList));
+  // Commit clean list back to central storage
+  localStorage.setItem(UNIFIED_STORAGE_KEY, JSON.stringify(remainingRecords));
 
-  // 2. Wipe across legacy cache keys to prevent re-hydration
-  ['munyaka_students', 'cached_learners', 'learners', 'students', 'school_learners', 'school_learners_data'].forEach((key) => {
-    const legacyData = localStorage.getItem(key);
-    if (legacyData) {
-      try {
-        const legacyList = JSON.parse(legacyData);
-        if (Array.isArray(legacyList)) {
-          const filtered = legacyList.filter((item: any) => {
-            if (!item) return false;
-            const itemId = String(item.id || item._id || item.learnerId || '').trim();
-            const itemAdm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
-            const isMatch =
-              (targetId && itemId === targetId) ||
-              (targetAdm && itemAdm === targetAdm);
-            return !isMatch;
-          });
-          localStorage.setItem(key, JSON.stringify(filtered));
-        }
-      } catch {}
-    }
+  // C. Wipe legacy cache keys
+  ['cached_learners', 'students', 'learners', 'school_learners', 'munyaka_students', 'school_learners_data'].forEach((key) => {
+    localStorage.removeItem(key);
   });
 
-  // 3. Delete document from Firestore
+  // D. Execute Physical Cloud Deletion in Firestore
   if (db && targetId) {
     try {
       await deleteDoc(doc(db, "learners", targetId));
@@ -82,7 +71,7 @@ export const purgeLearnerPermanently = async (targetLearner: any, setLearnersLis
         await deleteDoc(doc(db, "learners", rawNumeric)).catch(() => {});
       }
     } catch (cloudErr) {
-      console.warn("[Firestore] Local purge completed; cloud delete offline:", cloudErr);
+      console.warn("[Storage Purge] Offline mode active; local record permanently purged:", cloudErr);
     }
   }
 
@@ -92,13 +81,16 @@ export const purgeLearnerPermanently = async (targetLearner: any, setLearnersLis
     } catch {}
   }
 
-  // 4. Update UI state directly & dispatch update event
+  // E. Update UI state directly if setter provided
   if (setLearnersList && typeof setLearnersList === 'function') {
-    setLearnersList(cleanUnifiedList);
+    setLearnersList(remainingRecords);
   }
 
+  // F. Broadcast mandatory state refresh event
   window.dispatchEvent(new Event('learners_updated'));
   window.dispatchEvent(new Event('students-updated'));
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('munyaka:data-changed'));
+
+  return remainingRecords;
 };
