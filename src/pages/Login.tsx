@@ -188,7 +188,7 @@ const Login: React.FC = () => {
   const [showCover, setShowCover] = useState(false);
 
   // ── Admin state ──────────────────────────────────────────────────────────
-  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
+  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>('admin');
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminAuthError, setAdminAuthError] = useState('');
