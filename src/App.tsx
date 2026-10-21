@@ -14,6 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import { ForcePasswordResetModal } from "./components/ForcePasswordResetModal";
 import PasswordResetCallback from "./components/PasswordResetCallback";
 import Login from "./pages/Login";
+import CoverPage from "./pages/CoverPage";
 import ParentPortal from "./pages/ParentPortal";
 import Index from "./pages/Index";
 import Students from "./pages/Students";

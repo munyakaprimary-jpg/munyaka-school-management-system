@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, BookOpen, GraduationCap, Wifi, Wallet } from 'lucide-react';
 
@@ -108,6 +108,13 @@ interface CoverPageProps {
 }
 
 const CoverPage: React.FC<CoverPageProps> = ({ onEnter }) => {
+  useEffect(() => {
+    const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+    if (isAuth && window.location.hash !== '#/dashboard') {
+      window.location.hash = '#/dashboard';
+    }
+  }, []);
+
   return (
     <div className="min-h-screen relative flex flex-col items-center justify-center p-4 overflow-hidden">
 
