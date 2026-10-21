@@ -185,8 +185,8 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, user, setUser } = useAuth();
 
-  // ── Cover page state ────────────────────────────────────────────────────
-  const [showCover, setShowCover] = useState(true);
+  // ── Cover page state (default to false so login page appears directly) ────────────────────────────────────────────────────
+  const [showCover, setShowCover] = useState(false);
 
   // ── Admin state ──────────────────────────────────────────────────────────
   const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
