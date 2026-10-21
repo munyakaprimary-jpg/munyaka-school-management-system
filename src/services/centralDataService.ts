@@ -7,6 +7,7 @@
 import { Preferences } from '@capacitor/preferences';
 import { initialSeedData } from '@/data/initialSeedData';
 import { STORAGE_KEYS as PERSISTENT_KEYS, readStorage, writeStorage, removeStorage, clearAllStorage } from './persistentStore';
+import { generateLearnerId, formatLearnerDoc, dedupeLearnersById } from './learnerService';
 
 export const STORAGE_KEYS = {
   ...PERSISTENT_KEYS,
@@ -270,13 +271,21 @@ export const UnifiedDataStorage = {
       }
     });
 
-    return Array.from(map.values());
+    // Normalization guard: collapse legacy numeric IDs and new prefixed IDs onto one entry
+    return dedupeLearnersById(Array.from(map.values()).map(formatLearnerDoc));
   },
 
   saveLearners: (learners: any[]): boolean => {
+    // Standardize IDs and drop duplicate profiles before writing
+    const normalized = dedupeLearnersById(
+      (learners || []).map((l) => ({
+        ...l,
+        id: l?.id ? String(l.id) : generateLearnerId(),
+      }))
+    );
     try {
-      localStorage.setItem('school_learners_data', JSON.stringify(learners));
-      localStorage.setItem('munyaka_students', JSON.stringify(learners));
+      localStorage.setItem('school_learners_data', JSON.stringify(normalized));
+      localStorage.setItem('munyaka_students', JSON.stringify(normalized));
       localStorage.removeItem('munyaka_master_learner_list'); // Omit redundant master duplicate to prevent quota exhaustion
     } catch (err: any) {
       if (err && (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014)) {
@@ -286,7 +295,7 @@ export const UnifiedDataStorage = {
       }
     }
 
-    CentralDataService.persistAndSyncMutation('students', learners);
+    CentralDataService.persistAndSyncMutation('students', normalized);
 
     window.dispatchEvent(new Event('students-updated'));
     window.dispatchEvent(new Event('learners-updated'));

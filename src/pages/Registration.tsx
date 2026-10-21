@@ -11,6 +11,7 @@ import BackButton from '@/components/ui/BackButton';
 import { logActivity } from '@/services/activityLog';
 import { notifyDataChanged } from '@/hooks/useDashboardData';
 import { RegistrationConfirmationSlip, RegistrationSlipData } from '@/components/students/RegistrationConfirmationSlip';
+import { generateLearnerId, findExistingLearner } from '@/services/learnerService';
 
 const Registration = () => {
   const { toast } = useToast();
@@ -62,8 +63,8 @@ const Registration = () => {
     try {
       const saved = localStorage.getItem('school_learners_data');
       const learners: any[] = saved ? JSON.parse(saved) : [];
-      learners.unshift({
-        id: Date.now().toString(),
+      const newLearner = {
+        id: generateLearnerId(),
         admNo: generatedAdmNumber,
         assessmentNo: generatedAssessmentNumber,
         birthCertificateNo: bcNo || undefined,
@@ -74,7 +75,15 @@ const Registration = () => {
         guardian: String(formData.guardian || '').trim(),
         phone: String(formData.phone || '').trim(),
         address: String(formData.address || '').trim(),
-      });
+      };
+
+      // Deduplication check — prevent duplicate student profiles
+      if (findExistingLearner(learners, newLearner)) {
+        setFormError('A learner with this admission number already exists in the registry.');
+        return;
+      }
+
+      learners.unshift(newLearner);
       localStorage.setItem('school_learners_data', JSON.stringify(learners));
       notifyDataChanged('school_learners_data');
       logActivity({

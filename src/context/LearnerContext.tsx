@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { CentralDataService } from '../services/centralDataService';
+import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '../services/learnerService';
 import { useAuth } from './AuthContext';
 
 interface LearnerContextType {
@@ -21,7 +22,8 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Helper to fetch and filter learners based on user role
   const getFilteredLearners = useCallback(() => {
-    const allLearners = CentralDataService.getLearners();
+    const rawAll = CentralDataService.getLearners() || [];
+    const allLearners = rawAll.map(formatLearnerDoc);
     const userRole = user?.role as string;
     if (!user || ['admin', 'owner', 'bursar', 'librarian', 'storekeeper', 'head_teacher', 'accountant', 'staff'].includes(userRole)) {
       return allLearners;
@@ -87,15 +89,22 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const addLearner = useCallback(async (newLearner: any) => {
     setLearners((prev) => {
-      const existingIndex = prev.findIndex(
-        (l) => (l.admissionNumber || l.admission_number) === (newLearner.admissionNumber || newLearner.admission_number)
-      );
+      const normalizedNew = {
+        ...newLearner,
+        id: newLearner.id ? String(newLearner.id) : generateLearnerId(),
+      };
+      const existing = findExistingLearner(prev, normalizedNew);
       let updated;
-      if (existingIndex >= 0) {
-        updated = [...prev];
-        updated[existingIndex] = { ...updated[existingIndex], ...newLearner };
+      if (existing) {
+        updated = prev.map((l) => {
+          const lId = String(l.id || l.learnerId || '');
+          const existingId = String(existing.id || existing.learnerId || '');
+          const match = (lId && existingId && lId === existingId) ||
+            (l.admissionNumber && existing.admissionNumber && l.admissionNumber === existing.admissionNumber);
+          return match ? { ...l, ...normalizedNew, id: lId || normalizedNew.id } : l;
+        });
       } else {
-        updated = [...prev, newLearner];
+        updated = [...prev, normalizedNew];
       }
       CentralDataService.saveLearners(updated);
       return updated;

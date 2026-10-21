@@ -22,6 +22,7 @@ import { db } from '@/config/firebase';
 import { collection, onSnapshot, addDoc, setDoc, doc } from 'firebase/firestore';
 import { showSuccess, showError } from '@/utils/toast';
 import { CentralDataService } from '@/services/centralDataService';
+import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
 import AddLearnerModal from '@/components/students/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
@@ -73,8 +74,9 @@ export default function StudentsDirectory({
     let unsubscribe: (() => void) | undefined;
     try {
       unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
-        const firestoreList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const localList = JSON.parse(localStorage.getItem('learners') || localStorage.getItem('munyaka_students') || '[]');
+        const firestoreList = snapshot.docs.map(formatLearnerDoc);
+        const localRaw = JSON.parse(localStorage.getItem('learners') || localStorage.getItem('munyaka_students') || '[]');
+        const localList = localRaw.map(formatLearnerDoc);
 
         // Merge unique learners by admission number or ID
         const mergedMap = new Map();

@@ -29,6 +29,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { CentralDataService } from '@/services/centralDataService';
+import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
 import { db } from '@/config/firebase';
 import { collection, onSnapshot, addDoc, setDoc, doc } from 'firebase/firestore';
@@ -164,8 +165,8 @@ export default function Students() {
 
   const [students, setStudents] = useState<any[]>(() => {
     // Load from centralized master data service (aggregates across all storage keys)
-    const loaded = CentralDataService.getLearners();
-    return ensureProperAdmissionNumbers(loaded);
+    const loaded = CentralDataService.getLearners() || [];
+    return ensureProperAdmissionNumbers(loaded.map(formatLearnerDoc));
   });
 
   // Real-Time Firestore Subscription & local storage sync
@@ -174,7 +175,7 @@ export default function Students() {
     try {
       unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
         if (!snapshot.empty) {
-          const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const list = snapshot.docs.map(formatLearnerDoc);
           setStudents(ensureProperAdmissionNumbers(list));
         }
       }, (err) => {
@@ -185,8 +186,8 @@ export default function Students() {
     }
 
     const handleStudentsUpdated = () => {
-      const loaded = CentralDataService.getLearners();
-      setStudents(ensureProperAdmissionNumbers(loaded));
+      const loaded = CentralDataService.getLearners() || [];
+      setStudents(ensureProperAdmissionNumbers(loaded.map(formatLearnerDoc)));
     };
     const handleLearnersUpdated = () => {
       const loaded = CentralDataService.getLearners();
@@ -465,8 +466,9 @@ export default function Students() {
 
     setIsSaving(true);
     try {
+      const targetId = editingId || generateLearnerId();
       const studentData = {
-        id: editingId || `learner-${Date.now()}`,
+        id: targetId,
         name: fullName.trim(),
         fullName: fullName.trim(),
         admissionNumber: admissionNumber || generateAdmissionNumber(grade, students),
@@ -487,12 +489,22 @@ export default function Students() {
         updatedAt: new Date().toISOString()
       };
 
+      if (!editingId) {
+        const existing = CentralDataService.getLearners() || [];
+        const duplicate = findExistingLearner(existing, studentData);
+        if (duplicate) {
+          showError("A learner with this ID or admission number already exists in the registry.");
+          setIsSaving(false);
+          return;
+        }
+      }
+
       // Try saving to Firestore if available
       try {
         if (editingId) {
           await setDoc(doc(db, "learners", editingId), studentData, { merge: true });
         } else {
-          await addDoc(collection(db, "learners"), studentData);
+          await setDoc(doc(db, "learners", targetId), studentData);
         }
       } catch (firestoreErr) {
         console.warn("Firestore save fallback to local:", firestoreErr);
