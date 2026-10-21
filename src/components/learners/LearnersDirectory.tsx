@@ -60,27 +60,86 @@ export default function LearnersDirectory() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  // Direct Real-Time Listener reacting to 'learners_updated'
+  // Direct Real-Time Listener reacting to 'learners_updated' and Firestore snapshot
   useEffect(() => {
+    const UNIFIED_KEY = 'munyaka_learners_v2';
+    const DELETED_KEY = 'deleted_learner_ids';
+
     const loadFromStorage = () => {
       try {
-        const unified = localStorage.getItem('munyaka_learners_v2');
+        const deletedIds = new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
+        const unified = localStorage.getItem(UNIFIED_KEY);
         if (unified) {
           const parsed = JSON.parse(unified);
           if (Array.isArray(parsed)) {
-            setLearnersList(parsed.map(formatLearnerDoc));
+            const filtered = parsed.filter((item: any) => {
+              const id = String(item.id || item._id || '').trim();
+              const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
+              return !deletedIds.has(id) && !deletedIds.has(adm);
+            });
+            setLearnersList(filtered.map(formatLearnerDoc));
             return;
-          }
-        }
-        const cached = localStorage.getItem('cached_learners') || localStorage.getItem('munyaka_students');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed)) {
-            setLearnersList(parsed.map(formatLearnerDoc));
           }
         }
       } catch {}
     };
+
+    loadFromStorage();
+
+    let unsubscribe: (() => void) | undefined;
+    if (db) {
+      try {
+        unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
+          const deletedIds = new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
+          
+          const cloudLearners = snapshot.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data()
+          }));
+
+          const validCloudLearners = cloudLearners.filter((item: any) => {
+            const id = String(item.id || item._id || '').trim();
+            const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
+            return !deletedIds.has(id) && !deletedIds.has(adm);
+          });
+
+          const currentLocal = JSON.parse(localStorage.getItem(UNIFIED_KEY) || '[]');
+          const localMap = new Map();
+
+          currentLocal.forEach((l: any) => {
+            const lId = String(l.id || l._id || '').trim();
+            const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
+            if (!deletedIds.has(lId) && !deletedIds.has(lAdm)) {
+              localMap.set(lId || lAdm, l);
+            }
+          });
+
+          validCloudLearners.forEach((l: any) => {
+            const lId = String(l.id || l._id || '').trim();
+            const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
+            const key = lId || lAdm;
+            if (key && !localMap.has(key) && !deletedIds.has(lId) && !deletedIds.has(lAdm)) {
+              localMap.set(key, l);
+            }
+          });
+
+          const unifiedList = Array.from(localMap.values()).filter(
+            item => {
+              const id = String(item.id || item._id || '').trim();
+              const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
+              return !deletedIds.has(id) && !deletedIds.has(adm);
+            }
+          );
+
+          localStorage.setItem(UNIFIED_KEY, JSON.stringify(unifiedList));
+          setLearnersList(unifiedList.map(formatLearnerDoc));
+        }, (error) => {
+          console.warn("[Firestore Listener] Offline or sync error, using local fallback:", error);
+        });
+      } catch (e) {
+        console.warn("[Firestore Listener] Init error:", e);
+      }
+    }
 
     window.addEventListener('learners_updated', loadFromStorage);
     window.addEventListener('students-updated', loadFromStorage);
@@ -88,6 +147,7 @@ export default function LearnersDirectory() {
     window.addEventListener('munyaka:data-changed', loadFromStorage);
 
     return () => {
+      if (unsubscribe) unsubscribe();
       window.removeEventListener('learners_updated', loadFromStorage);
       window.removeEventListener('students-updated', loadFromStorage);
       window.removeEventListener('storage', loadFromStorage);

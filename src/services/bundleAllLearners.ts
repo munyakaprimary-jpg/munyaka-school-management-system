@@ -86,8 +86,18 @@ export const bundleAllLearnersToCentral = async () => {
     }
   }
 
-  // E. Construct Consolidated Final Learner List
-  const bundledLearners = Array.from(learnerMap.values());
+  // E. Construct Consolidated Final Learner List excluding deleted IDs
+  let deletedIds = new Set<string>();
+  try {
+    deletedIds = new Set(JSON.parse(localStorage.getItem('deleted_learner_ids') || '[]'));
+  } catch {}
+
+  const bundledLearners = Array.from(learnerMap.values()).filter((item: any) => {
+    if (!item) return false;
+    const id = String(item.id || item._id || '').trim();
+    const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
+    return !deletedIds.has(id) && !deletedIds.has(adm);
+  });
 
   // F. Write exclusively to Central Storage Key
   localStorage.setItem(CENTRAL_KEY, JSON.stringify(bundledLearners));

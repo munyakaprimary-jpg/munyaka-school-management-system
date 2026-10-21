@@ -1,12 +1,30 @@
 import { db } from '../config/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 
+export const trackDeletedId = (learner: any) => {
+  const DELETED_KEY = 'deleted_learner_ids';
+  try {
+    const existing = new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
+    
+    if (learner.id) existing.add(String(learner.id).trim());
+    if (learner._id) existing.add(String(learner._id).trim());
+    if (learner.admissionNo) existing.add(String(learner.admissionNo).trim());
+    if (learner.admissionNumber) existing.add(String(learner.admissionNumber).trim());
+    if (learner.admNo) existing.add(String(learner.admNo).trim());
+
+    localStorage.setItem(DELETED_KEY, JSON.stringify(Array.from(existing)));
+  } catch {}
+};
+
 export const purgeLearnerPermanently = async (targetLearner: any, setLearnersList?: (list: any[]) => void) => {
   if (!targetLearner) return;
 
   const targetId = String(targetLearner.id || targetLearner._id || targetLearner.learnerId || '').trim();
   const targetAdm = String(targetLearner.admissionNo || targetLearner.admissionNumber || targetLearner.admNo || '').trim();
   const targetAssess = String(targetLearner.assessmentNo || targetLearner.assessmentNumber || '').trim();
+
+  // 0. Track deleted ID immediately to prevent Firestore re-hydration
+  trackDeletedId(targetLearner);
 
   // 1. Purge from primary unified storage
   const UNIFIED_KEY = 'munyaka_learners_v2';
@@ -23,7 +41,7 @@ export const purgeLearnerPermanently = async (targetLearner: any, setLearnersLis
     const itemAdm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
     const itemAssess = String(item.assessmentNo || item.assessmentNumber || '').trim();
 
-    const isMatch = 
+    const isMatch =
       (targetId && itemId === targetId) ||
       (targetAdm && itemAdm === targetAdm) ||
       (targetAssess && itemAssess === targetAssess);
@@ -44,7 +62,7 @@ export const purgeLearnerPermanently = async (targetLearner: any, setLearnersLis
             if (!item) return false;
             const itemId = String(item.id || item._id || item.learnerId || '').trim();
             const itemAdm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
-            const isMatch = 
+            const isMatch =
               (targetId && itemId === targetId) ||
               (targetAdm && itemAdm === targetAdm);
             return !isMatch;
@@ -56,7 +74,7 @@ export const purgeLearnerPermanently = async (targetLearner: any, setLearnersLis
   });
 
   // 3. Delete document from Firestore
-  if (targetId) {
+  if (db && targetId) {
     try {
       await deleteDoc(doc(db, "learners", targetId));
       if (targetId.startsWith('learner-')) {
@@ -68,7 +86,7 @@ export const purgeLearnerPermanently = async (targetLearner: any, setLearnersLis
     }
   }
 
-  if (targetAdm) {
+  if (db && targetAdm) {
     try {
       await deleteDoc(doc(db, "learners", targetAdm)).catch(() => {});
     } catch {}
