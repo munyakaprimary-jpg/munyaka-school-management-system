@@ -206,13 +206,14 @@ const Login: React.FC = () => {
   // ── Forgot password modal ───────────────────────────────────────────────
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
-  // ── Redirect already-authenticated users straight to the dashboard (On mount once) ─────────
+  // ── Redirect already-authenticated users straight to the dashboard (Once only) ─────────
     useEffect(() => {
       const isAuth = localStorage.getItem('isAuthenticated') === 'true';
-      if (isAuth) {
+      const session = localStorage.getItem('munyaka_session');
+      if (isAuth && session && !window.location.hash.includes('dashboard')) {
         navigate('/dashboard', { replace: true });
       }
-    }, []); // Empty dependency array ensures check runs ONCE on mount
+    }, [navigate]); // Safe guard with navigate dependency
 
   // ── Admin handlers ────────────────────────────────────────────────────────
   const handleRoleSelect = (role: AdminRole) => {

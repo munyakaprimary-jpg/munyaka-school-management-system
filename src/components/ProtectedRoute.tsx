@@ -18,10 +18,23 @@ const ProtectedRoute = ({
   blockedRoles,
   moduleKey,
 }: ProtectedRouteProps) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth() as any;
   const location = useLocation();
 
-  if (!isAuthenticated || !user) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-sm font-medium text-slate-600">Loading session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isAuth = isAuthenticated || localStorage.getItem('isAuthenticated') === 'true';
+
+  if (!isAuth || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
