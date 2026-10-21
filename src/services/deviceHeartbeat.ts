@@ -1,71 +1,50 @@
 /**
  * Device Heartbeat Service
- * Pings the central Munyaka server on local Wi-Fi every 15 seconds.
+ * Pings connected teacher devices to the central LAN server periodically.
  */
-
-const DEVICE_ID_KEY = 'munyaka_device_id';
-const DEFAULT_SERVER_URL = 'http://10.53.221.196:5000';
 
 let heartbeatInterval: number | null = null;
+const DEFAULT_SERVER_URL = 'http://10.53.221.196:5000';
 
-/**
- * Gets or generates a persistent unique device ID stored in localStorage.
- */
-export const getDeviceId = (): string => {
-  try {
-    let id = localStorage.getItem(DEVICE_ID_KEY);
-    if (!id) {
-      id = 'DEV-' + Math.random().toString(36).substring(2, 9).toUpperCase() + '-' + Date.now().toString(36).toUpperCase();
-      localStorage.setItem(DEVICE_ID_KEY, id);
-    }
-    return id;
-  } catch {
-    return 'DEV-FALLBACK-' + Math.floor(Math.random() * 100000);
+const getDeviceId = (): string => {
+  let id = localStorage.getItem('device_uuid');
+  if (!id) {
+    id = 'device-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now().toString(36);
+    localStorage.setItem('device_uuid', id);
   }
+  return id;
 };
 
-/**
- * Computes the number of pending unsynced offline records in localStorage.
- */
 const getPendingSyncCount = (): number => {
   try {
-    let count = 0;
-    const keys = ['offline_queue', 'pending_attendance', 'pending_grades', 'sync_queue', 'pending_fee_payments'];
-    for (const key of keys) {
-      const item = localStorage.getItem(key);
-      if (item) {
-        try {
-          const parsed = JSON.parse(item);
-          if (Array.isArray(parsed)) {
-            count += parsed.length;
-          } else if (parsed && typeof parsed === 'object') {
-            count += 1;
-          }
-        } catch {
-          // ignore parse errors
-        }
-      }
-    }
-    return count;
+    const raw = localStorage.getItem('pending_sync_items');
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.length : 0;
   } catch {
     return 0;
   }
 };
 
 /**
- * Starts the heartbeat service which pings the server every 15 seconds.
+ * Starts the heartbeat service which pings the server with a short timeout.
  */
 export const startHeartbeatService = (
   serverBaseUrl?: string,
   teacherData?: { name?: string; role?: string; id?: string }
 ): (() => void) => {
-  // Clear any existing timer first
   stopHeartbeatService();
 
   const sendBeat = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 sec timeout limit
+
     try {
       const baseUrl = serverBaseUrl || localStorage.getItem('lan_server_url') || DEFAULT_SERVER_URL;
-      if (!baseUrl || !navigator.onLine) return;
+      if (!baseUrl || !navigator.onLine) {
+        clearTimeout(timeoutId);
+        return;
+      }
 
       const deviceId = getDeviceId();
       const teacherName =
@@ -76,11 +55,8 @@ export const startHeartbeatService = (
       const role = teacherData?.role || localStorage.getItem('munyaka_user_role') || 'Teacher';
       const ipAddress = '192.168.1.' + Math.floor(20 + Math.random() * 70);
       const appVersion = '1.2.4-LAN';
-      const batteryLevel = 85 + Math.floor(Math.random() * 15); // Simulated or read from Navigator.getBattery if available
+      const batteryLevel = 85 + Math.floor(Math.random() * 15);
       const pendingSyncCount = getPendingSyncCount();
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
 
       await fetch(`${baseUrl.replace(/\/+$/, '')}/api/devices/heartbeat`, {
         method: 'POST',
@@ -98,17 +74,15 @@ export const startHeartbeatService = (
         }),
         signal: controller.signal,
       });
-
+    } catch (error) {
+      // Silently fall back to client-only mode without throwing blocking errors
+      console.warn("[Heartbeat] LAN server unreachable. Running in standalone local mode.");
+    } finally {
       clearTimeout(timeoutId);
-    } catch {
-      // Fetch errors are caught silently so the app does not crash when moving out of Wi-Fi range
     }
   };
 
-  // Send immediately on start
   sendBeat();
-
-  // Then repeat every 15 seconds
   heartbeatInterval = window.setInterval(sendBeat, 15000);
 
   return stopHeartbeatService;
