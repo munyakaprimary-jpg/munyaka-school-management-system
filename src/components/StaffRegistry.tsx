@@ -12,6 +12,7 @@ import {
   Phone,
   Award,
   FileSpreadsheet,
+  Download,
   AlertCircle,
   Fingerprint,
   Sparkles,
@@ -361,6 +362,36 @@ export default function StaffRegistry() {
     toast.success(`Access code ${code} copied to clipboard!`);
   };
 
+  const handleExportCSV = () => {
+    if (!filteredStaff || filteredStaff.length === 0) {
+      alert("No staff records available to export.");
+      return;
+    }
+
+    // CSV Headers aligned with Munyaka Portal schema
+    const headers = ["Full Name", "TSC Number", "Email", "Role", "Phone Number", "Status"];
+    
+    const rows = filteredStaff.map(member => [
+      `"${member.name || ''}"`,
+      `"${member.tscNumber || 'N/A'}"`,
+      `"${member.email || ''}"`,
+      `"${member.category || 'Teacher'}"`,
+      `"${member.phone || ''}"`,
+      `"${member.status || 'Active'}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Munyaka_Staff_Registry_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
@@ -605,12 +636,21 @@ export default function StaffRegistry() {
           </h2>
           <p className="text-slate-500 text-xs mt-1">Manage teaching assignments, access codes, TSC registration, and system roles.</p>
         </div>
-        <button 
-          onClick={handleOpenAddModal}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-semibold rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-sm shadow-indigo-100 border border-indigo-700"
-        >
-          <Plus className="w-4.5 h-4.5" /> Register New Staff
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <button
+            onClick={handleOpenAddModal}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-semibold rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-sm shadow-indigo-100 border border-indigo-700"
+          >
+            <Plus className="w-4.5 h-4.5" /> Register New Staff
+          </button>
+
+          <button
+            onClick={handleExportCSV}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-xl border border-slate-300 dark:border-slate-700 transition-all duration-200 shadow-sm"
+          >
+            <Download className="w-4.5 h-4.5" /> Export Staff List
+          </button>
+        </div>
       </div>
 
       {/* Filters and Search Dashboard */}
