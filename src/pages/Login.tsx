@@ -382,22 +382,33 @@ const Login: React.FC = () => {
       setIsStaffVerifying(false);
   };
 
-  // ── Lightweight server reachability check on mount ──────────────────────
+  // ── Lightweight server reachability check on mount (Once only) ──────────────────────
   useEffect(() => {
-    let cancelled = false;
-    checkServerHealth().then((status) => {
-      if (cancelled) return;
-      if (!status.reachable) {
-        // Soft warning — the user can still try to log in, the service
-        // will surface the network error in the form if the server is
-        // genuinely unreachable. We just log it for diagnostics.
-        console.warn(`[Login] Health check: ${status.error} — server may be offline`);
-      } else {
-        console.log(`[Login] Health check: server reachable in ${status.latencyMs}ms`);
+    let isMounted = true;
+    const performHealthCheck = async () => {
+      try {
+        const status = await checkServerHealth();
+        if (!isMounted) return;
+        if (!status.reachable) {
+          if (status.error?.includes('disabled')) {
+            console.log("[Login] Client-only offline mode active.");
+          } else {
+            console.warn(`[Login] Health check: ${status.error} — server may be offline`);
+          }
+        } else {
+          console.log(`[Login] Health check: server reachable in ${status.latencyMs}ms`);
+        }
+      } catch (e) {
+        if (isMounted) {
+          console.log("[Login] Client-only offline mode active.");
+        }
       }
-    });
-    return () => { cancelled = true; };
-  }, []);
+    };
+    performHealthCheck();
+    return () => {
+      isMounted = false;
+    };
+  }, []); // EMPTY DEPENDENCY ARRAY to prevent rapid execution
 
   // ─────────────────────────────────────────────────────────────────────────
     //  Render — only shown when user is NOT authenticated
