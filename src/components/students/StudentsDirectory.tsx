@@ -158,7 +158,24 @@ export default function StudentsDirectory({
     await new Promise(r => setTimeout(r, 200));
 
     if (pendingDelete) {
-      await purgeLearnerPermanently(pendingDelete, setLearnersList);
+      const learnerToDelete = pendingDelete;
+      await purgeLearnerPermanently(learnerToDelete);
+
+      // Direct State Mutation: Remove immediately from active UI state
+      setLearnersList((prevList: any[]) =>
+        prevList.filter((item) => {
+          const itemId = String(item.id || item._id || '').trim();
+          const targetId = String(learnerToDelete.id || learnerToDelete._id || '').trim();
+          const itemAdm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
+          const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learnerToDelete.admNo || '').trim();
+
+          const matchId = targetId && itemId === targetId;
+          const matchAdm = targetAdm && itemAdm === targetAdm;
+
+          return !matchId && !matchAdm;
+        })
+      );
+
       showSuccess("Learner deleted successfully.");
     }
     setIsAuthOpen(false);
