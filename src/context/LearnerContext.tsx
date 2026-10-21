@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { CentralDataService } from '../services/centralDataService';
 import { useAuth } from './AuthContext';
 
@@ -14,10 +14,10 @@ const LearnerContext = createContext<LearnerContextType | undefined>(undefined);
 
 export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const allLearners = CentralDataService.getLearners();
-
-  // If user is a teacher, filter learners strictly to their assigned grade and stream
-  const filteredLearners = React.useMemo(() => {
+  
+  // Helper to fetch and filter learners based on user role
+  const getFilteredLearners = useCallback(() => {
+    const allLearners = CentralDataService.getLearners();
     const userRole = user?.role as string;
     if (!user || ['admin', 'owner', 'bursar', 'librarian', 'storekeeper', 'head_teacher', 'accountant', 'staff'].includes(userRole)) {
       return allLearners;
@@ -33,36 +33,38 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const streamMatch = !assignedStream || lStream.toLowerCase() === assignedStream.toLowerCase();
       return gradeMatch && streamMatch;
     });
-  }, [allLearners, user]);
+  }, [user]);
 
-  const [learners, setLearners] = useState<any[]>(filteredLearners);
+  const [learners, setLearnersState] = useState<any[]>(getFilteredLearners);
+  const learnersRef = useRef(learners);
+  learnersRef.current = learners;
 
-  // Sync state when filteredLearners content actually changes or when window events fire
+  // Custom setter that prevents unneeded state updates if data hasn't changed
+  const setLearners = useCallback((action: React.SetStateAction<any[]>) => {
+    setLearnersState((prev) => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      // Simple shallow/deep length or JSON comparison to avoid redundant updates
+      if (JSON.stringify(prev) === JSON.stringify(next)) {
+        return prev;
+      }
+      return next;
+    });
+  }, []);
+
+  // Effect to handle window events and user changes once on mount or when user changes
   useEffect(() => {
-    setLearners(filteredLearners);
+    let isMounted = true;
+
+    const updateFromSource = () => {
+      if (!isMounted) return;
+      const fresh = getFilteredLearners();
+      setLearners(fresh);
+    };
+
+    updateFromSource();
 
     const handleStorageChange = () => {
-      const refreshed = CentralDataService.getLearners();
-      // Apply teacher filtering if needed
-      const userRole = user?.role as string;
-      if (!user || ['admin', 'owner', 'bursar', 'librarian', 'storekeeper', 'head_teacher', 'accountant', 'staff'].includes(userRole)) {
-        setLearners(refreshed);
-        return;
-      }
-      const assignedGrade = (user as any).assignedClass || (user as any).grade || '';
-      const assignedStream = (user as any).assignedStream || (user as any).stream || '';
-      if (!assignedGrade && !assignedStream) {
-        setLearners(refreshed);
-        return;
-      }
-      const filtered = refreshed.filter((l: any) => {
-        const lGrade = l.grade || l.class || l.assignedClass || '';
-        const lStream = l.stream || l.assignedStream || '';
-        const gradeMatch = !assignedGrade || lGrade.toLowerCase().includes(assignedGrade.toLowerCase()) || assignedGrade.toLowerCase().includes(lGrade.toLowerCase());
-        const streamMatch = !assignedStream || lStream.toLowerCase() === assignedStream.toLowerCase();
-        return gradeMatch && streamMatch;
-      });
-      setLearners(filtered);
+      updateFromSource();
     };
 
     window.addEventListener('students-updated', handleStorageChange);
@@ -71,15 +73,15 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
+      isMounted = false;
       window.removeEventListener('students-updated', handleStorageChange);
       window.removeEventListener('learners-updated', handleStorageChange);
       window.removeEventListener('munyaka:data-changed', handleStorageChange);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [filteredLearners, user]);
+  }, [getFilteredLearners, setLearners]);
 
-  const addLearner = async (newLearner: any) => {
-    // Local state & storage update
+  const addLearner = useCallback(async (newLearner: any) => {
     setLearners((prev) => {
       const existingIndex = prev.findIndex(
         (l) => (l.admissionNumber || l.admission_number) === (newLearner.admissionNumber || newLearner.admission_number)
@@ -94,10 +96,9 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       CentralDataService.saveLearners(updated);
       return updated;
     });
-  };
+  }, [setLearners]);
 
-  const deleteLearner = async (admissionNumber: string) => {
-    // Local state & storage update
+  const deleteLearner = useCallback(async (admissionNumber: string) => {
     setLearners((prev) => {
       const updated = prev.filter(
         (l) => (l.admissionNumber || l.admission_number) !== admissionNumber
@@ -105,14 +106,14 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       CentralDataService.saveLearners(updated);
       return updated;
     });
-  };
+  }, [setLearners]);
 
-  const resetToSeedData = () => {
+  const resetToSeedData = useCallback(() => {
     localStorage.removeItem('munyaka_learners');
     localStorage.removeItem('munyaka_students');
-    const resetList = CentralDataService.getLearners();
+    const resetList = getFilteredLearners();
     setLearners(resetList);
-  };
+  }, [getFilteredLearners, setLearners]);
 
   return (
     <LearnerContext.Provider value={{ learners, setLearners, addLearner, deleteLearner, resetToSeedData }}>

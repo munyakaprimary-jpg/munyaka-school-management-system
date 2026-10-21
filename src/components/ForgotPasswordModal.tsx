@@ -142,6 +142,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
       // 5. Update React auth context state
       if (setUser) {
         setUser({
+          id: 'admin-1',
           email: 'jamesndiki@gmail.com',
           role: 'admin',
           name: 'Super Admin'
