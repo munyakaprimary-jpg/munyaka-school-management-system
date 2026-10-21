@@ -311,13 +311,32 @@ export default function SecurityAuthTab() {
       localStorage.setItem('munyaka_admin_password', trimmedPass);
       localStorage.setItem('admin_pin', trimmedPass);
 
-      // 3. Save/Merge to Firestore school_settings/credentials
+      // Save deleteAdminPassword in security_auth_settings and system_settings for delete confirmation modals
+      const securityAuthPayload = {
+        deleteAdminPassword: trimmedPass,
+        adminPassword: trimmedPass,
+        adminPin: trimmedPass,
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('security_auth_settings', JSON.stringify(securityAuthPayload));
+      localStorage.setItem('system_settings', JSON.stringify(securityAuthPayload));
+      CentralDataService.setData('security_auth_settings', securityAuthPayload);
+
+      // 3. Save/Merge to Firestore school_settings/credentials and settings/security
       try {
         const credRef = doc(db, 'school_settings', 'credentials');
         await setDoc(credRef, {
           admin_email: trimmedEmail,
           admin_pin: trimmedPass,
           admin_password: trimmedPass,
+          deleteAdminPassword: trimmedPass,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        const secRef = doc(db, 'settings', 'security');
+        await setDoc(secRef, {
+          deleteAdminPassword: trimmedPass,
+          adminPassword: trimmedPass,
           updatedAt: new Date().toISOString()
         }, { merge: true });
       } catch (fsErr) {

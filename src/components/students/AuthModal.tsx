@@ -34,19 +34,30 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const [showPass, setShowPass] = useState(false);
 
   const handleAuthorizeClick = () => {
-    const input = authPassword.trim().toLowerCase();
-    const validPasswords = [
-      'munyaka',
-      'admin',
-      'munyaka2026',
-      'admin123',
-      'ownerpass2026',
-      'sysadmin2026',
-      'munyaka5239',
-      (import.meta.env.VITE_ADMIN_PASSWORD || '').toLowerCase()
-    ].filter(Boolean);
+    // 1. Fetch system settings from local storage or Firestore
+    let securitySettings: any = {};
+    try {
+      const rawSec = localStorage.getItem('security_auth_settings') ||
+                     localStorage.getItem('system_settings') ||
+                     localStorage.getItem('munyaka_security_settings');
+      if (rawSec) securitySettings = JSON.parse(rawSec);
+    } catch {}
 
-    if (!validPasswords.includes(input)) {
+    // 2. Determine configured delete/admin password (defaults to 'munyaka')
+    const configuredPassword = (
+      securitySettings.deleteAdminPassword ||
+      securitySettings.adminPassword ||
+      securitySettings.adminPin ||
+      localStorage.getItem('munyaka_admin_password') ||
+      localStorage.getItem('admin_pin') ||
+      'munyaka'
+    ).toString().trim().toLowerCase();
+
+    const inputPassword = authPassword.trim().toLowerCase();
+
+    // 3. Validate input against configured password, munyaka, or admin fallbacks
+    const validFallbacks = ['munyaka', 'admin', 'munyaka2026', 'admin123', 'ownerpass2026', 'sysadmin2026', 'munyaka5239'];
+    if (inputPassword !== configuredPassword && !validFallbacks.includes(inputPassword)) {
       setAuthError('Invalid admin password');
       return;
     }
