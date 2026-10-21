@@ -182,24 +182,35 @@ export default function StudentsDirectory({
   };
 
   const filteredLearners = useMemo(() => {
-    return learnersList.filter(s => {
-      if (!s) return false;
-      const name = (s.name || s.fullName || '').toLowerCase();
-      const adm = (s.admissionNumber || s.admNo || '').toLowerCase();
-      const ass = (s.assessmentNo || s.assessmentNumber || '').toLowerCase();
-      const sGrade = s.grade || s.gradeLevel || s.class || '';
-      const sStream = s.stream || s.assignedStream || '';
-      const sUpi = s.UPI || s.upi || s.assessmentNumber || '';
+    const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
 
-      const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase()) || sUpi.toLowerCase().includes(searchTerm.toLowerCase());
+    return learnersList.filter((learner) => {
+      if (!learner) return false;
+      // Combine all possible name fields into a single searchable string
+      const fullName = `
+        ${learner.firstName || ''}
+        ${learner.middleName || ''}
+        ${learner.lastName || ''}
+        ${learner.name || ''}
+        ${learner.fullName || ''}
+        ${learner.assessmentNo || ''}
+        ${learner.assessmentNumber || ''}
+        ${learner.admissionNo || ''}
+        ${learner.admissionNumber || ''}
+      `.toLowerCase().replace(/\s+/g, '');
+
+      // Check if search query matches the combined name or IDs
+      const matchesSearch = !searchClean || fullName.includes(searchClean);
+
+      const sGrade = learner.grade || learner.gradeLevel || learner.class || '';
+      const sStream = learner.stream || learner.assignedStream || '';
+      const sGender = learner.gender || '';
 
       const sGradeNorm = normalizeGradeStr(sGrade);
       const filterGradeNorm = normalizeGradeStr(gradeFilter);
-      // Fallback render check: graceful handling if optional fields like stream or UPI/assessment are initially blank
+
       const matchesGrade = gradeFilter === 'all' || !sGrade || sGradeNorm === filterGradeNorm || sGrade.toLowerCase() === gradeFilter.toLowerCase();
       const matchesStream = streamFilter === 'all' || !sStream || sStream.toLowerCase() === streamFilter.toLowerCase();
-
-      const sGender = s.gender || '';
       const matchesGender = genderFilter === 'all' || !sGender || sGender.toLowerCase() === genderFilter.toLowerCase();
 
       return matchesSearch && matchesGrade && matchesStream && matchesGender;

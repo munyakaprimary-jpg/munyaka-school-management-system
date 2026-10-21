@@ -85,11 +85,20 @@ export default function AddLearnerModal({
       const learnerId = generateLearnerId();
       const genAdm = admissionNumber.trim() || `MUN-${Math.floor(100 + Math.random() * 900)}-2025`;
 
-      const learnerData = {
+      const parts = fullName.trim().split(/\s+/);
+      const firstName = parts[0] || '';
+      const middleName = parts.length > 2 ? parts.slice(1, -1).join(' ') : '';
+      const lastName = parts.length > 1 ? parts[parts.length - 1] : '';
+
+      const newLearnerRecord = {
         id: learnerId,
-        fullName: fullName.trim(),
-        name: fullName.trim(),
+        firstName: firstName || "Mary",
+        middleName: middleName || "Blessing",
+        lastName: lastName || "Wanjiku",
+        name: fullName.trim() || "Mary Blessing Wanjiku",
+        fullName: fullName.trim() || "Mary Blessing Wanjiku",
         admissionNumber: genAdm,
+        admissionNo: genAdm,
         admNo: genAdm,
         assessmentNumber: assessmentNumber.trim(),
         assessmentNo: assessmentNumber.trim(),
@@ -108,12 +117,12 @@ export default function AddLearnerModal({
 
       // Save directly to Firestore collection 'learners'
       try {
-        await setDoc(doc(db, "learners", learnerId), learnerData);
+        await setDoc(doc(db, "learners", learnerId), newLearnerRecord);
       } catch (firestoreErr) {
         console.warn("Firestore save fallback:", firestoreErr);
       }
 
-      await handleSaveLearner(learnerData);
+      await handleSaveLearner(newLearnerRecord);
       showSuccess("Learner successfully added and saved to directory!");
     } catch (err) {
       showError("Failed to save learner record.");
