@@ -10,7 +10,7 @@ import { CentralDataService } from "@/services/centralDataService";
 import { auth, db } from '@/config/firebase';
 import { updatePassword, updateEmail } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { MUNYAKA_ADMIN_PASSWORD } from '@/services/adminCredentials';
+import { MUNYAKA_ADMIN_PASSWORD, saveAdminPassword } from '@/services/adminCredentials';
 import {
   Shield,
   Key,
@@ -304,12 +304,12 @@ export default function SecurityAuthTab() {
         }
       }
 
-      // 2. Save to localStorage
+      // 2. Save to localStorage using saveAdminPassword helper
+      saveAdminPassword(trimmedPass);
       localStorage.setItem('munyaka_admin_email', trimmedEmail);
       localStorage.setItem('admin_email', trimmedEmail);
       localStorage.setItem('munyaka_admin_password', trimmedPass);
       localStorage.setItem('admin_pin', trimmedPass);
-      localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, trimmedPass);
 
       // 3. Save/Merge to Firestore school_settings/credentials
       try {

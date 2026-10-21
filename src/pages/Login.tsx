@@ -46,6 +46,7 @@ import { verifyStaffLogin } from '@/services/staffMasterService';
 import {
   MUNYAKA_ADMIN_PASSWORD,
   DEFAULT_ADMIN_PASSWORD,
+  getActiveAdminPassword,
 } from '@/services/adminCredentials';
 import type { LoginFailure, LoginSuccess } from '@/services/mobileAuthService';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
@@ -244,13 +245,14 @@ const Login: React.FC = () => {
   
       const config = ROLE_CONFIGS[selectedAdminRole];
   
-      // Retrieve saved local master PINs with fallback to 'munyaka'
-      const savedAdminPin = localStorage.getItem('admin_pin') || localStorage.getItem('munyaka_admin_password') || 'munyaka';
-      const savedOwnerPin = localStorage.getItem('owner_pin') || localStorage.getItem('munyaka_owner_password') || 'munyaka';
-      const expectedPin = selectedAdminRole === 'owner' ? savedOwnerPin : savedAdminPin;
+      // Retrieve saved local master PINs using getActiveAdminPassword() as single source of truth
+      const officialPassword = getActiveAdminPassword();
+      const savedAdminPin = localStorage.getItem('admin_pin') || localStorage.getItem('munyaka_admin_password') || officialPassword;
+      const savedOwnerPin = localStorage.getItem('owner_pin') || localStorage.getItem('munyaka_owner_password') || officialPassword;
+      const expectedPin = selectedAdminRole === 'owner' ? (localStorage.getItem('munyaka_owner_password') || officialPassword) : officialPassword;
 
       // 1. Instant Local Access Verification (Works Offline & Bypasses Cloud Errors)
-      if (entered === expectedPin || entered === 'munyaka' || entered === 'munyaka2026' || entered === savedAdminPin || entered === savedOwnerPin) {
+      if (entered === expectedPin || entered === officialPassword || entered === 'munyaka' || entered === 'munyaka2026' || entered === savedAdminPin || entered === savedOwnerPin) {
         const success = await login(config.email, entered);
         if (success) {
           const adminSession = {
