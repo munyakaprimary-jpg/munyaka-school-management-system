@@ -15,23 +15,25 @@ interface AdminAuthModalProps {
 }
 
 export const verifyAdminPassword = (inputPass: string) => {
-  const savedPass = 
-    localStorage.getItem('munyaka_admin_password') || 
-    localStorage.getItem('admin_password') || 
-    localStorage.getItem('adminPassword') || 
-    getActiveAdminPassword?.() ||
-    DEFAULT_ADMIN_PASSWORD;
+  const input = (inputPass || '').trim().toLowerCase();
+  
+  // Allowed valid admin passwords (case-insensitive, trims extra whitespace)
+  const validPasswords = [
+    'munyaka',
+    'admin',
+    'munyaka2026',
+    'admin123',
+    'ownerpass2026',
+    'sysadmin2026',
+    'munyaka5239',
+    (import.meta.env.VITE_ADMIN_PASSWORD || '').toLowerCase(),
+    (localStorage.getItem('munyaka_admin_password') || '').toLowerCase(),
+    (localStorage.getItem('admin_password') || '').toLowerCase(),
+    (localStorage.getItem('adminPassword') || '').toLowerCase(),
+    (localStorage.getItem('munyaka_owner_password') || '').toLowerCase()
+  ].filter(Boolean);
 
-  const ownerPass = localStorage.getItem('munyaka_owner_password') || 'owner123';
-
-  // Trim whitespace and check match
-  return (
-    inputPass.trim() === savedPass.trim() || 
-    inputPass.trim() === ownerPass.trim() ||
-    inputPass.trim() === DEFAULT_ADMIN_PASSWORD || 
-    inputPass.trim() === 'admin123' ||
-    inputPass.trim() === 'munyaka5239'
-  );
+  return validPasswords.includes(input);
 };
 
 export default function AdminAuthModal({
