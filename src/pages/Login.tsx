@@ -276,22 +276,20 @@ const Login: React.FC = () => {
           const adminEmail = localStorage.getItem('admin_email') || 'jamesndiki@gmail.com';
           await signInWithEmailAndPassword(auth, adminEmail, entered);
           const success = await login(config.email, entered);
-          if (success) {
-            const adminSession = {
-              role: selectedAdminRole,
-              roleLabel: config.label,
-              roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
-              timestamp: Date.now(),
-            };
-            localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.setItem('userRole', selectedAdminRole);
-            showSuccess(`Welcome, ${config.userName}!`);
-            window.location.hash = '#/dashboard';
-          } else {
-            setAdminAuthError(`Invalid password for ${config.label}.`);
-            showError('Login failed. Invalid password.');
-          }
+          const adminSession = {
+            role: selectedAdminRole,
+            roleLabel: config.label,
+            roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+            timestamp: Date.now(),
+          };
+          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('userRole', selectedAdminRole);
+          showSuccess(`Welcome, ${config.userName}!`);
+          
+          // Force window location to dashboard directly & reload to clear state cleanly
+          window.location.hash = '#/dashboard';
+          window.location.reload();
           setIsAdminVerifying(false);
           return;
         } catch (fbErr: any) {

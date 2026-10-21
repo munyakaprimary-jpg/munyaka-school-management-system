@@ -152,7 +152,7 @@ function RouteGuardEffect() {
     const currentHash = window.location.hash;
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
-    if (isAuthenticated && (currentHash === '#/login' || currentHash === '' || currentHash === '#/')) {
+    if (isAuthenticated && (currentHash === '#/login' || currentHash === '' || currentHash === '#/' || currentHash === '#/cover')) {
       window.location.hash = '#/dashboard';
     }
   }, []);
