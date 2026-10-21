@@ -3,6 +3,7 @@ import { X, KeyRound, ArrowRight, Loader2, ShieldCheck, CheckCircle2, AlertCircl
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import { auth, db } from '@/config/firebase';
 import { signInWithEmailAndPassword, updatePassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -29,7 +30,8 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
   const [confirmPin, setConfirmPin] = useState('');
   const [step, setStep] = useState<'input' | 'success' | 'admin_reset'>('input');
   const [isLoading, setIsLoading] = useState(false);
-  const { logout } = useAuth();
+  const { setUser } = useAuth();
+  const navigate = useNavigate();
 
   if (!open) return null;
 
@@ -131,18 +133,26 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
         }
       }
 
-      // 4. Close modal, clear any active session, and return to Login Screen
-      try {
-        await logout();
-      } catch {
-        // Fallback local cleanup
-        localStorage.removeItem('munyaka_auth_user');
-        localStorage.removeItem('munyaka_session');
-        localStorage.removeItem('munyaka_admin_session');
+      // 4. Persist authenticated session and active role
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userRole', 'admin');
+      localStorage.setItem('munyaka_session', JSON.stringify({ email: 'jamesndiki@gmail.com', role: 'admin' }));
+      localStorage.setItem('munyaka_admin_session', 'true');
+
+      // 5. Update React auth context state
+      if (setUser) {
+        setUser({
+          email: 'jamesndiki@gmail.com',
+          role: 'admin',
+          name: 'Super Admin'
+        });
       }
 
-      toast.success("Password updated successfully. Please sign in with your new password.");
+      toast.success("Password updated successfully! Welcome to Admin Dashboard.");
       handleClose();
+
+      // 6. Explicit Navigation to Dashboard
+      navigate('/dashboard');
     } catch (err: any) {
       console.error("Failed to update password:", err);
       toast.error(err.message || 'Failed to update password.');

@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Lock, KeyRound, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 
 export const ForcePasswordResetModal: React.FC = () => {
   const auth = useAuth() as any;
   const mustChangePassword = auth.mustChangePassword;
   const changePassword = auth.changePassword;
+  const setUser = auth.setUser;
   const user = auth.user;
+  const navigate = useNavigate();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -33,10 +37,28 @@ export const ForcePasswordResetModal: React.FC = () => {
     try {
       const res = await changePassword(newPassword);
       if (res.success) {
+        // 1. Persist authenticated session and active role
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userRole', 'admin');
+        localStorage.setItem('munyaka_session', JSON.stringify({ email: user?.email || 'admin@school.com', role: 'admin' }));
+        localStorage.setItem('munyaka_admin_session', 'true');
+
+        // 2. Update React auth context state
+        if (setUser) {
+          setUser({
+            email: user?.email || 'admin@school.com',
+            role: 'admin',
+            name: user?.name || 'Super Admin'
+          });
+        }
+
         setSuccess(true);
+        toast.success("Password updated successfully! Welcome to Admin Dashboard.");
+
+        // 3. Explicit Navigation to Dashboard
         setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+          navigate('/dashboard');
+        }, 800);
       } else {
         setError(res.message || 'Failed to update password. Please try again.');
       }
