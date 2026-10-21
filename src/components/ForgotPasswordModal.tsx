@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { X, KeyRound, Mail, CheckCircle2, AlertCircle, ArrowRight, Loader2, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { X, KeyRound, ArrowRight, Loader2, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { sendPasswordResetEmail, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
-import { auth, db } from '../config/firebase';
+import { auth, db } from '@/config/firebase';
+import { signInWithEmailAndPassword, updatePassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { saveAdminPassword } from '@/services/adminCredentials';
@@ -14,56 +14,77 @@ interface ForgotPasswordModalProps {
   onClose: () => void;
 }
 
-const ADMIN_EMAILS = ['munyaka2026', 'admin@munyaka.sc.ke', 'jndiki@munyaka.sc.ke', 'jamesndiki@gmail.com'];
+const ADMIN_EMAILS = [
+  'jamesndiki@gmail.com',
+  'admin@munyaka.sc.ke',
+  'sysadmin@munyaka.sc.ke',
+  'munyaka2026',
+  'ownerpass2026',
+  'sysadmin2026',
+];
 
 const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose }) => {
-  const { setUser } = useAuth();
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState<'input' | 'success' | 'admin_bypass'>('input');
+  const [identifier, setIdentifier] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [step, setStep] = useState<'input' | 'success' | 'admin_reset'>('input');
+  const [isLoading, setIsLoading] = useState(false);
+  const { logout } = useAuth();
 
   if (!open) return null;
 
-  const handleResetPassword = async (targetEmail: string) => {
-    setIsLoading(true);
-    try {
-      if (auth) {
-        await sendPasswordResetEmail(auth, targetEmail || 'jamesndiki@gmail.com');
-      }
-      setStep('success');
-      toast.success('Password reset email sent successfully!');
-    } catch (error: any) {
-      console.error('Password reset email error:', error);
-      toast.error(error.message || 'Failed to send password reset email.');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleClose = () => {
+    setIdentifier('');
+    setNewPin('');
+    setConfirmPin('');
+    setStep('input');
+    setIsLoading(false);
+    onClose();
   };
 
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEmail = (email || '').trim().toLowerCase();
-    
-    // Check for admin immediate recovery bypass
-    if (ADMIN_EMAILS.some(adm => cleanEmail.includes(adm))) {
-      setStep('admin_bypass');
+    const trimmed = identifier.trim().toLowerCase();
+    if (!trimmed) {
+      toast.error('Please enter your email or admin username.');
       return;
     }
 
-    await handleResetPassword(cleanEmail);
+    setIsLoading(true);
+    try {
+      const isAdminMatch = ADMIN_EMAILS.some(ae => ae.toLowerCase() === trimmed);
+      if (isAdminMatch) {
+        setStep('admin_reset');
+        setIsLoading(false);
+        return;
+      }
+
+      // Standard user password reset email via Firebase Auth
+      if (auth) {
+        try {
+          await sendPasswordResetEmail(auth, identifier.trim());
+        } catch (fbErr: any) {
+          console.warn('Firebase sendPasswordResetEmail warning:', fbErr);
+        }
+      }
+      setStep('success');
+    } catch (err: any) {
+      console.error('Password reset lookup error:', err);
+      toast.error(err.message || 'Failed to process password reset.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAdminPinReset = async (e?: { preventDefault?: () => void }) => {
     e?.preventDefault?.();
     const trimmedPin = newPin.trim();
     if (!trimmedPin || trimmedPin.length < 4) {
-      toast.error('PIN must be at least 4 characters/digits.');
+      toast.error('Password must be at least 4 characters.');
       return;
     }
     if (trimmedPin !== confirmPin.trim()) {
-      toast.error('PINs do not match.');
+      toast.error('Passwords do not match.');
       return;
     }
 
@@ -73,13 +94,12 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
       if (auth) {
         try {
           if (!auth.currentUser) {
-            // Attempt sign-in with default or stored credentials to get current user session
             const adminEmail = 'jamesndiki@gmail.com';
             const oldPass = localStorage.getItem('munyaka_admin_password') || 'munyaka5239';
             try {
               await signInWithEmailAndPassword(auth, adminEmail, oldPass);
             } catch {
-              // Ignore sign-in failure if offline or credential mismatch, but still try update if user exists
+              // Ignore offline/mismatch sign-in error
             }
           }
           if (auth.currentUser) {
@@ -111,55 +131,41 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
         }
       }
 
-      // Automatically log the user in immediately
-      const adminUser = {
-        id: 'MUN-0001',
-        name: 'Administrator (James Ndiki)',
-        fullName: 'Administrator (James Ndiki)',
-        role: 'Admin',
-        email: 'jamesndiki@gmail.com',
-        phone: '+254 700 000 000',
-        status: 'Active',
-        avatar: 'AD'
-      } as any;
+      // 4. Close modal, clear any active session, and return to Login Screen
+      try {
+        await logout();
+      } catch {
+        // Fallback local cleanup
+        localStorage.removeItem('munyaka_auth_user');
+        localStorage.removeItem('munyaka_session');
+        localStorage.removeItem('munyaka_admin_session');
+      }
 
-      localStorage.setItem('munyaka_auth_user', JSON.stringify(adminUser));
-      localStorage.setItem('munyaka_session', JSON.stringify(adminUser));
-      setUser(adminUser);
-
-      toast.success("PIN & Firebase Auth password updated successfully! Logged in as Administrator.");
-      onClose();
+      toast.success("Password updated successfully. Please sign in with your new password.");
+      handleClose();
     } catch (err: any) {
-      console.error("Failed to update admin PIN:", err);
-      toast.error(err.message || 'Failed to update PIN.');
+      console.error("Failed to update password:", err);
+      toast.error(err.message || 'Failed to update password.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setEmail('');
-    setStep('input');
-    setNewPin('');
-    setConfirmPin('');
-    onClose();
-  };
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md overflow-hidden transform transition-all">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b bg-gradient-to-br from-indigo-50 to-blue-50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center">
-              {step === 'admin_bypass' ? <ShieldAlert className="w-5 h-5 text-indigo-600" /> : <KeyRound className="w-5 h-5 text-indigo-600" />}
+              <KeyRound className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-900">
-                {step === 'admin_bypass' ? 'Admin Immediate Recovery' : 'Reset Password'}
+                {step === 'admin_reset' ? 'Reset Admin Password' : 'Reset Password'}
               </h3>
               <p className="text-xs text-slate-500">
-                {step === 'admin_bypass' ? 'Authorized emergency PIN reset' : 'Recover account access'}
+                {step === 'admin_reset' ? 'Set a new master password for your administrator account.' : 'Recover account access'}
               </p>
             </div>
           </div>
@@ -171,27 +177,24 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
+        {/* Body */}
+        <div className="p-6 space-y-4">
           {step === 'input' && (
             <form onSubmit={handleNext} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Account Email / Username
+                  Account Email or Admin Username
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    type="text"
-                    placeholder="e.g. jamesndiki@gmail.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-11 rounded-2xl border-slate-200"
-                    required
-                  />
-                </div>
-                <p className="text-[11px] text-slate-500 mt-2">
-                  Enter your registered account email or administrator username. Superadmin usernames trigger instant recovery.
+                <Input
+                  type="text"
+                  placeholder="e.g. jamesndiki@gmail.com or admin"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className="h-11 rounded-2xl border-slate-200"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1.5">
+                  Enter your registered account email or administrator username. Administrator accounts allow direct credential reset.
                 </p>
               </div>
 
@@ -204,7 +207,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
+                      Verifying...
                     </>
                   ) : (
                     <>
@@ -217,22 +220,22 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
             </form>
           )}
 
-          {step === 'admin_bypass' && (
+          {step === 'admin_reset' && (
             <form onSubmit={handleAdminPinReset} className="space-y-4">
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
-                <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-800">
-                  <span className="font-bold">Superadmin Bypass Active:</span> You are setting a new master PIN for Firebase Auth and local storage synchronously.
+              <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-indigo-900">
+                  <span className="font-bold">Administrator Reset:</span> Setting a new master password for Firebase Auth, Firestore, and local storage simultaneously.
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  New Admin PIN / Password
+                  New Administrator Password
                 </label>
                 <Input
                   type="password"
-                  placeholder="Enter new PIN (min 4 chars)"
+                  placeholder="Enter new password (min 4 chars)"
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value)}
                   className="h-11 rounded-2xl border-slate-200"
@@ -242,11 +245,11 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Confirm New PIN / Password
+                  Confirm New Password
                 </label>
                 <Input
                   type="password"
-                  placeholder="Re-enter new PIN"
+                  placeholder="Re-enter new password"
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value)}
                   className="h-11 rounded-2xl border-slate-200"
@@ -258,7 +261,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-600/20"
+                  className="w-full h-11 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-600/20"
                 >
                   {isLoading ? (
                     <>
@@ -268,7 +271,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
                   ) : (
                     <>
                       <ShieldCheck className="w-4 h-4 mr-2" />
-                      Update PIN Now
+                      Update Password Now
                     </>
                   )}
                 </Button>
@@ -277,19 +280,21 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
           )}
 
           {step === 'success' && (
-            <div className="text-center py-6 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto text-emerald-600">
+            <div className="text-center py-4 space-y-4">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-600">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h4 className="text-lg font-bold text-slate-900">Check Your Email</h4>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                We have sent a password reset link to <span className="font-semibold text-slate-700">{email}</span>. Follow the instructions to log in.
-              </p>
+              <div className="space-y-1">
+                <h4 className="font-bold text-slate-900 text-base">Check Your Inbox</h4>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                  If an account exists for <span className="font-medium text-slate-700">{identifier}</span>, a password reset email has been sent.
+                </p>
+              </div>
               <Button
                 onClick={handleClose}
                 className="w-full h-11 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold"
               >
-                Back to Sign In
+                Return to Sign In
               </Button>
             </div>
           )}
