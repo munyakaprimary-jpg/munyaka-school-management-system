@@ -281,18 +281,26 @@ export default function SecurityAuthTab() {
       const trimmedEmail = adminUsername.trim();
       const trimmedPass = adminPassword.trim();
 
-      // 1. Update Firebase Auth password / email if user is logged in
+      // 1. Update Firebase Auth password / email if user is logged in.
+      //    The password update is the critical part and runs independently of
+      //    the email update — a rejected `updateEmail` (it requires a recent
+      //    login) must never prevent the new password from being applied.
+      let firebasePasswordUpdated = false;
       if (auth.currentUser) {
-        try {
-          if (auth.currentUser.email && auth.currentUser.email !== trimmedEmail) {
-            await updateEmail(auth.currentUser, trimmedEmail);
-          }
-          if (trimmedPass) {
+        if (trimmedPass) {
+          try {
             await updatePassword(auth.currentUser, trimmedPass);
+            firebasePasswordUpdated = true;
+          } catch (pwErr: any) {
+            console.warn('[SecurityAuthTab] Firebase Auth password update notice:', pwErr);
           }
-        } catch (fbErr: any) {
-          console.warn('[SecurityAuthTab] Firebase Auth credential update notice:', fbErr);
-          // If requires recent login or other non-fatal constraint, we still save to localStorage/Firestore
+        }
+        if (auth.currentUser.email && auth.currentUser.email !== trimmedEmail) {
+          try {
+            await updateEmail(auth.currentUser, trimmedEmail);
+          } catch (emailErr: any) {
+            console.warn('[SecurityAuthTab] Firebase Auth email update notice:', emailErr);
+          }
         }
       }
 
@@ -303,7 +311,7 @@ export default function SecurityAuthTab() {
       localStorage.setItem('admin_pin', trimmedPass);
       localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, trimmedPass);
 
-      // 3. Save to Firestore school_settings/credentials
+      // 3. Save/Merge to Firestore school_settings/credentials
       try {
         const credRef = doc(db, 'school_settings', 'credentials');
         await setDoc(credRef, {
@@ -316,7 +324,11 @@ export default function SecurityAuthTab() {
         console.warn('[SecurityAuthTab] Firestore credentials sync notice:', fsErr);
       }
 
-      showSuccess("Admin credentials and Firebase Auth password updated successfully!");
+      if (firebasePasswordUpdated) {
+        showSuccess("Admin credentials and Firebase Auth password updated successfully!");
+      } else {
+        showSuccess("Admin credentials saved. Sign in again to re-sync the Firebase Auth password.");
+      }
       logSecurityEvent('System Administrator', trimmedEmail, 'Admin Credentials & Firebase Auth Password Updated');
     } catch (e: any) {
       console.error(e);
@@ -329,16 +341,24 @@ export default function SecurityAuthTab() {
       const trimmedEmail = ownerUsername.trim();
       const trimmedPass = ownerPassword.trim();
 
+      // The password update runs independently of the email update so a
+      // rejected `updateEmail` cannot block the new password from applying.
+      let firebasePasswordUpdated = false;
       if (auth.currentUser) {
-        try {
-          if (auth.currentUser.email && auth.currentUser.email !== trimmedEmail) {
-            await updateEmail(auth.currentUser, trimmedEmail);
-          }
-          if (trimmedPass) {
+        if (trimmedPass) {
+          try {
             await updatePassword(auth.currentUser, trimmedPass);
+            firebasePasswordUpdated = true;
+          } catch (pwErr: any) {
+            console.warn('[SecurityAuthTab] Firebase Auth owner password update notice:', pwErr);
           }
-        } catch (fbErr: any) {
-          console.warn('[SecurityAuthTab] Firebase Auth owner credential update notice:', fbErr);
+        }
+        if (auth.currentUser.email && auth.currentUser.email !== trimmedEmail) {
+          try {
+            await updateEmail(auth.currentUser, trimmedEmail);
+          } catch (emailErr: any) {
+            console.warn('[SecurityAuthTab] Firebase Auth owner email update notice:', emailErr);
+          }
         }
       }
 
@@ -359,7 +379,11 @@ export default function SecurityAuthTab() {
         console.warn('[SecurityAuthTab] Firestore owner credentials sync notice:', fsErr);
       }
 
-      showSuccess("Owner credentials and Firebase Auth password updated successfully!");
+      if (firebasePasswordUpdated) {
+        showSuccess("Owner credentials and Firebase Auth password updated successfully!");
+      } else {
+        showSuccess("Owner credentials saved. Sign in again to re-sync the Firebase Auth password.");
+      }
       logSecurityEvent('School Owner', trimmedEmail, 'Owner Credentials & Firebase Auth Password Updated');
     } catch (e: any) {
       console.error(e);

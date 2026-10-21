@@ -288,19 +288,34 @@ const initializeUsersStorage = () => {
       notifyDataChanged(USERS_STORAGE_KEY);
     
       // ── Seed the unified admin password key on fresh installs ─────────────────
-      // On a fresh browser environment (e.g. first load on Vercel), the
-      // `MUNYAKA_ADMIN_PASSWORD` key does not exist yet. Without this, the
-      // login flow falls back to the hard-coded default inside
-      // `getActiveAdminPassword()`, which is correct — but we still seed it
-      // explicitly so the value is consistent across all code paths.
-      try {
-        if (localStorage.getItem(MUNYAKA_ADMIN_PASSWORD) === null) {
-          localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, DEFAULT_ADMIN_PASSWORD);
-        }
-      } catch {
-        /* localStorage unavailable — non-fatal */
-      }
-    };
+            // On a fresh browser environment (e.g. first load on Vercel), the
+            // `MUNYAKA_ADMIN_PASSWORD` key does not exist yet. Without this, the
+            // login flow falls back to the hard-coded default inside
+            // `getActiveAdminPassword()`, which is correct — but we still seed it
+            // explicitly so the value is consistent across all code paths.
+            try {
+              if (localStorage.getItem(MUNYAKA_ADMIN_PASSWORD) === null) {
+                localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, DEFAULT_ADMIN_PASSWORD);
+              }
+            } catch {
+              /* localStorage unavailable — non-fatal */
+            }
+      
+            // ── Seed role-specific PIN keys on fresh installs ─────────────────────
+            // The Login page reads `admin_pin` / `owner_pin` directly for the
+            // fastest authentication path. Seed them with the default 'munyaka'
+            // PIN so a fresh browser can log in without any configuration step.
+            try {
+              if (localStorage.getItem('admin_pin') === null) {
+                localStorage.setItem('admin_pin', 'munyaka');
+              }
+              if (localStorage.getItem('owner_pin') === null) {
+                localStorage.setItem('owner_pin', 'munyaka');
+              }
+            } catch {
+              /* localStorage unavailable — non-fatal */
+            }
+          };
 
 /**
  * Persist the role of the *currently signed-in* user to localStorage
@@ -581,19 +596,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     
     if (foundUser) {
-      // ── Admin pre-check: owner + system_admin can authenticate with
-      // whatever the Configuration tab has just saved into the unified
-      // MUNYAKA_ADMIN_PASSWORD key. This is the precedence path: the
-      // custom PIN wins over both the default and whatever the user
-      // record was initialised with.
-      //
-      // We check the active PIN (custom or default) FIRST and return
-      // success when the entered value matches it — exactly mirroring
-      // the Login page's own dual-mode check so a saved-or-default
-      // flow works the same way in both directions.
+      // ── Role-specific PIN keys (admin_pin / owner_pin) are the source of
+      // truth for the Login page's fastest authentication path. Honour them
+      // here so a user who just updated their PIN in Settings can log in
+      // immediately without needing the per-user stored password.
       const normalizedRole = String(foundUser.role || '').toLowerCase();
-      // Admin pre-check applies to any admin-level role (owner/admin are equivalent here).
-      const isAdminUser = normalizedRole === 'admin';
+      const rolePinKey = normalizedRole === 'owner' ? 'owner_pin' : normalizedRole === 'admin' ? 'admin_pin' : null;
+      const rolePin = rolePinKey ? String(localStorage.getItem(rolePinKey) || '').trim() : '';
+      const matchesRolePin = rolePin.length > 0 && cleanPass === rolePin;
+
+      // Admin pre-check applies to any admin-level role (owner/admin are
+      // equivalent here). Include the role-pin match alongside the existing
+      // activeAdminPin / DEFAULT_ADMIN_PASSWORD checks.
+      const isAdminUser = normalizedRole === 'admin' || normalizedRole === 'owner';
       if (isAdminUser) {
         const activeAdminPin = getActiveAdminPassword();
         const entered = cleanPass;
@@ -612,7 +627,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           });
         }
 
-        if (entered === activeAdminPin || entered === DEFAULT_ADMIN_PASSWORD) {
+        if (matchesRolePin || entered === activeAdminPin || entered === DEFAULT_ADMIN_PASSWORD) {
           if (!foundUser.isActive) {
             showError("Your account is inactive. Please contact the administrator.");
             return false;
@@ -864,6 +879,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Also save unified admin password so Login page checks succeed
     localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, newPass);
     localStorage.setItem('munyaka_owner_pass', newPass);
+
+    // Also save role-specific PIN keys so the Login page's fastest path works
+    if (normalizedUserRole === 'owner') {
+      localStorage.setItem('owner_pin', newPass);
+    } else {
+      localStorage.setItem('admin_pin', newPass);
+    }
 
     users[normalizeEmail(foundUser.email)] = foundUser;
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));

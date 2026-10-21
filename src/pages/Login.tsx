@@ -46,7 +46,6 @@ import { verifyStaffLogin } from '@/services/staffMasterService';
 import {
   MUNYAKA_ADMIN_PASSWORD,
   DEFAULT_ADMIN_PASSWORD,
-  getActiveAdminPassword,
 } from '@/services/adminCredentials';
 import type { LoginFailure, LoginSuccess } from '@/services/mobileAuthService';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
@@ -229,72 +228,68 @@ const Login: React.FC = () => {
   };
 
   const handleAdminLogin = async (e?: { preventDefault?: () => void }) => {
-    e?.preventDefault?.();
-    if (!selectedAdminRole) return;
-
-    // Normalise the entered PIN: trim whitespace and strip newlines
-    const entered = String(adminPassword || '').trim().replace(/\n$/, '');
-
-    if (!entered) {
-      setAdminAuthError('Please enter your password.');
-      return;
-    }
-
-    setIsAdminVerifying(true);
-    setAdminAuthError('');
-    await new Promise(r => setTimeout(r, 600));
-
-    const config = ROLE_CONFIGS[selectedAdminRole];
-
-    // ── Direct localStorage read on every attempt ───────────────────────────
-    // We never trust React state for the active PIN — always read fresh so
-    // a PIN updated from the Configuration tab is picked up immediately.
-    const activeStored = getActiveAdminPassword();
-
-    // ── Debug logging (development only) ────────────────────────────────────
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('[AdminLogin]', {
-        key: MUNYAKA_ADMIN_PASSWORD,
-        stored: activeStored,
-        entered,
-        match: entered === activeStored,
-        default: DEFAULT_ADMIN_PASSWORD,
-        defaultMatch: entered === DEFAULT_ADMIN_PASSWORD,
-      });
-    }
-
-    // 1. First try authenticating against Firebase Auth using signInWithEmailAndPassword
-    let firebaseAuthenticated = false;
-    if (auth) {
-      try {
-        await signInWithEmailAndPassword(auth, config.email, entered);
-        firebaseAuthenticated = true;
-      } catch (fbErr) {
-        console.warn('[Login] Firebase Auth offline/password fallback mode active:', fbErr);
+      e?.preventDefault?.();
+      if (!selectedAdminRole) return;
+  
+      // Normalise the entered PIN: trim whitespace and strip newlines
+      const entered = String(adminPassword || '').trim().replace(/\n$/, '');
+  
+      if (!entered) {
+        setAdminAuthError('Please enter your password.');
+        return;
       }
-    }
-
-    // 2. If offline or using local PIN mode, fall back to matching against localStorage or Firestore synced credentials record
-    let expectedPass = '';
-    if (selectedAdminRole === 'admin') {
-      expectedPass = localStorage.getItem('munyaka_admin_password') || localStorage.getItem('admin_pin') || activeStored || DEFAULT_ADMIN_PASSWORD;
-    } else if (selectedAdminRole === 'owner') {
-      expectedPass = localStorage.getItem('munyaka_owner_password') || localStorage.getItem('owner_pin') || activeStored || 'owner123';
-    } else {
-      expectedPass = activeStored || DEFAULT_ADMIN_PASSWORD;
-    }
-
-    const isValid = firebaseAuthenticated || entered === expectedPass || entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD || entered === 'jemo69';
-
-    if (!isValid) {
-      setAdminAuthError(`Invalid password for ${config.label}.`);
-      showError('Authentication failed');
-      setIsAdminVerifying(false);
-      return;
-    }
-
-    const success = await login(config.email, entered);
+  
+      setIsAdminVerifying(true);
+      setAdminAuthError('');
+      await new Promise(r => setTimeout(r, 600));
+  
+      const config = ROLE_CONFIGS[selectedAdminRole];
+  
+      // ── Direct localStorage read on every attempt ───────────────────────────
+      // We never trust React state for the active PIN — always read fresh so
+      // a PIN updated from the Configuration tab is picked up immediately.
+      const savedPin = localStorage.getItem(selectedAdminRole === 'owner' ? 'owner_pin' : 'admin_pin') || 'munyaka';
+  
+      // ── Debug logging (development only) ────────────────────────────────────
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.log('[AdminLogin]', {
+          role: selectedAdminRole,
+          savedPin,
+          entered,
+          localMatch: entered === savedPin,
+        });
+      }
+  
+      // 1. Check local PIN match directly — fastest path, no network call.
+      if (entered === savedPin) {
+        const success = await login(config.email, entered);
+        if (success) {
+          const adminSession = {
+            role: selectedAdminRole,
+            roleLabel: config.label,
+            roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+            timestamp: Date.now(),
+          };
+          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+          showSuccess(`Welcome, ${config.userName}!`);
+          const landingPage = getRoleLandingPage(selectedAdminRole);
+          navigate(landingPage, { replace: true });
+        } else {
+          setAdminAuthError('Login failed. Please try again.');
+          showError('Authentication failed');
+        }
+        setIsAdminVerifying(false);
+        return;
+      }
+  
+      // 2. Fall back to Firebase Cloud Auth using the canonical owner email.
+      //    This keeps the app usable even when localStorage has been wiped or
+      //    the PIN was updated in a different tab / device.
+      if (auth) {
+        try {
+          await signInWithEmailAndPassword(auth, 'jamesndiki@gmail.com', entered);
+          const success = await login(config.email, entered);
           if (success) {
             const adminSession = {
               role: selectedAdminRole,
@@ -302,18 +297,26 @@ const Login: React.FC = () => {
               roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
               timestamp: Date.now(),
             };
-        localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-        showSuccess(`Welcome, ${config.userName}!`);
-        
-        // Redirect user dynamically to their highest-priority accessible landing page based on RBAC
-        const landingPage = getRoleLandingPage(selectedAdminRole);
-        navigate(landingPage, { replace: true });
-      } else {
-          setAdminAuthError('Login failed. Please try again.');
-          showError('Authentication failed');
+            localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+            showSuccess(`Welcome, ${config.userName}!`);
+            const landingPage = getRoleLandingPage(selectedAdminRole);
+            navigate(landingPage, { replace: true });
+          } else {
+            setAdminAuthError('Login failed. Please try again.');
+            showError('Authentication failed');
+          }
+          setIsAdminVerifying(false);
+          return;
+        } catch (fbErr: any) {
+          console.warn('[Login] Firebase Auth fallback failed:', fbErr);
+          // Fall through to error state below.
         }
-        setIsAdminVerifying(false);
-      };
+      }
+  
+      setAdminAuthError(`Invalid password for ${config.label}.`);
+      showError('Login failed. Invalid password.');
+      setIsAdminVerifying(false);
+    };
 
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {

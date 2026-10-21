@@ -369,35 +369,49 @@ const queryClient = new QueryClient();
 const App = () => {
 
   useEffect(() => {
-    try {
-      const existingDb = localStorage.getItem('munyaka_central_db');
-      if (!existingDb) {
-              const initialDb = {
-                students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
-                staff: initialSeedData.staff || [],
-              };
-              const ok = safeWrite('munyaka_central_db', initialDb, { operation: 'seed' });
-              if (!ok) {
-                console.error('Storage quota exceeded during initial seed. Please clear old records.');
-              } else {
-                window.dispatchEvent(new Event('central_db_updated'));
-              }
-            } else {
-              const parsed = JSON.parse(existingDb);
-              if (!parsed.students || parsed.students.length === 0) {
-                parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
-                const ok = safeWrite('munyaka_central_db', parsed, { operation: 're-seed' });
+      try {
+        const existingDb = localStorage.getItem('munyaka_central_db');
+        if (!existingDb) {
+                const initialDb = {
+                  students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
+                  staff: initialSeedData.staff || [],
+                };
+                const ok = safeWrite('munyaka_central_db', initialDb, { operation: 'seed' });
                 if (!ok) {
-                  console.error('Storage quota exceeded while re-seeding munyaka_central_db. Please clear old records.');
+                  console.error('Storage quota exceeded during initial seed. Please clear old records.');
                 } else {
                   window.dispatchEvent(new Event('central_db_updated'));
                 }
+              } else {
+                const parsed = JSON.parse(existingDb);
+                if (!parsed.students || parsed.students.length === 0) {
+                  parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
+                  const ok = safeWrite('munyaka_central_db', parsed, { operation: 're-seed' });
+                  if (!ok) {
+                    console.error('Storage quota exceeded while re-seeding munyaka_central_db. Please clear old records.');
+                  } else {
+                    window.dispatchEvent(new Event('central_db_updated'));
+                  }
+                }
               }
-            }
-    } catch (err) {
-      console.error("Failed to seed munyaka_central_db:", err);
-    }
-  }, []);
+      } catch (err) {
+        console.error("Failed to seed munyaka_central_db:", err);
+      }
+  
+      // Initialize admin_pin and owner_pin in localStorage to 'munyaka' if they do not exist yet
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          if (!localStorage.getItem('admin_pin')) {
+            localStorage.setItem('admin_pin', 'munyaka');
+          }
+          if (!localStorage.getItem('owner_pin')) {
+            localStorage.setItem('owner_pin', 'munyaka');
+          }
+        } catch {
+          /* localStorage unavailable — non-fatal */
+        }
+      }
+    }, []);
 
   // ── One-time learner-data migrations ───────────────────────────────────
     // Sequential, independently-gated migrations run on first launch:
