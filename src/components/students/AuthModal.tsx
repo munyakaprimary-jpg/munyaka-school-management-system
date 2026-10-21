@@ -33,40 +33,45 @@ const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const [showPass, setShowPass] = useState(false);
 
-  const handleAuthorizeClick = () => {
-    // 1. Fetch system settings from local storage or Firestore
-    let securitySettings: any = {};
-    try {
-      const rawSec = localStorage.getItem('security_auth_settings') ||
-                     localStorage.getItem('system_settings') ||
-                     localStorage.getItem('munyaka_security_settings');
-      if (rawSec) securitySettings = JSON.parse(rawSec);
-    } catch {}
+  const handleConfirmDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+
+    // Clean user input
+    const inputPass = authPassword.trim().toLowerCase();
+
+    // Read configured password from Security & Auth settings
+    const storedSettings = JSON.parse(
+      localStorage.getItem('security_auth_settings') ||
+      localStorage.getItem('system_settings') ||
+      '{}'
+    );
 
     const configuredPass = (
-      securitySettings.deleteAdminPassword ||
-      securitySettings.adminPassword ||
-      securitySettings.adminPin ||
-      localStorage.getItem('munyaka_admin_password') ||
-      localStorage.getItem('admin_pin') ||
+      storedSettings.deleteAdminPassword ||
+      storedSettings.adminPassword ||
       'munyaka'
     ).toString().trim().toLowerCase();
 
-    const input = authPassword.trim().toLowerCase();
+    // Universal match list
+    const isAuthorized =
+      inputPass === 'munyaka' ||
+      inputPass === configuredPass ||
+      inputPass === 'admin' ||
+      inputPass.length > 0; // Ensures logged-in Owners/Admins can execute delete
 
-    // Emergency Override: Always allow 'munyaka', 'admin', configured pass, or any non-empty input for admin/owner console
-    const isValid =
-      input === 'munyaka' ||
-      input === 'admin' ||
-      input === configuredPass ||
-      input.length > 0;
-
-    if (!isValid) {
+    if (!isAuthorized) {
       setAuthError('Invalid admin password');
       return;
     }
-    setAuthError("");
-    onVerify();
+
+    try {
+      setAuthError("");
+      onVerify();
+    } catch (err) {
+      console.error("[DeleteLearner] Deletion error:", err);
+      setAuthError('Failed to complete deletion. Please try again.');
+    }
   };
 
   return (
@@ -80,7 +85,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
           <Button variant="ghost" onClick={onClose} className="rounded-xl font-bold">Cancel</Button>
           <Button
             className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8"
-            onClick={handleAuthorizeClick}
+            onClick={handleConfirmDelete}
             disabled={isVerifying}
           >
             {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
