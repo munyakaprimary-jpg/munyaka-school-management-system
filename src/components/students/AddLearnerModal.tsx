@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { generateLearnerId, findExistingLearner } from '@/services/learnerService';
+import { useLearners } from '@/context/LearnerContext';
 import { db } from '@/config/firebase';
-import { collection, addDoc, setDoc, doc } from 'firebase/firestore';
+import { setDoc, doc } from 'firebase/firestore';
 
 interface AddLearnerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLearnerAdded: (newLearner: any) => void;
+  onLearnerAdded?: (newLearner: any) => void;
   availableGrades?: string[];
   availableStreams?: string[];
 }
@@ -25,6 +26,7 @@ export default function AddLearnerModal({
   availableGrades = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'],
   availableStreams = ['BLUE', 'RED', 'GREEN', 'YELLOW']
 }: AddLearnerModalProps) {
+  const { addLearner } = useLearners();
   const [fullName, setFullName] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [assessmentNumber, setAssessmentNumber] = useState('');
@@ -35,6 +37,37 @@ export default function AddLearnerModal({
   const [parentName, setParentName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleAddLearnerSubmit = async (learnerData: any) => {
+    const newLearner = {
+      ...learnerData,
+      id: learnerData.id || `learner-${Date.now()}`,
+      status: learnerData.status || 'Active',
+      createdAt: new Date().toISOString(),
+    };
+
+    // 1. Save to Context / State
+    await addLearner(newLearner);
+
+    // 2. Dual Write to Local Storage for offline-first reliability
+    try {
+      const existing = JSON.parse(localStorage.getItem('cached_learners') || localStorage.getItem('learners') || '[]');
+      const updated = [newLearner, ...existing];
+      localStorage.setItem('cached_learners', JSON.stringify(updated));
+      localStorage.setItem('learners', JSON.stringify(updated));
+      localStorage.setItem('munyaka_students', JSON.stringify(updated));
+    } catch {}
+
+    // 3. Trigger active re-render event
+    window.dispatchEvent(new Event('learners_updated'));
+    window.dispatchEvent(new Event('learners-updated'));
+    window.dispatchEvent(new Event('students-updated'));
+
+    if (onLearnerAdded) {
+      onLearnerAdded(newLearner);
+    }
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +81,7 @@ export default function AddLearnerModal({
       const learnerId = generateLearnerId();
       const genAdm = admissionNumber.trim() || `MUN-${Math.floor(100 + Math.random() * 900)}-2025`;
 
-      const newLearner = {
+      const learnerData = {
         id: learnerId,
         fullName: fullName.trim(),
         name: fullName.trim(),
@@ -69,40 +102,15 @@ export default function AddLearnerModal({
         updatedAt: new Date().toISOString()
       };
 
-      // 1. Deduplication check — block duplicate profiles before any write
-      let existingLocal: any[] = [];
+      // Save directly to Firestore collection 'learners'
       try {
-        existingLocal = JSON.parse(localStorage.getItem('learners') || localStorage.getItem('munyaka_students') || '[]');
-      } catch (localErr) {
-        console.warn("LocalStorage read error:", localErr);
-      }
-      if (findExistingLearner(existingLocal, newLearner)) {
-        showError("A learner with this ID or admission number already exists in the registry.");
-        setIsSaving(false);
-        return;
-      }
-
-      // 2. Save directly to Firestore collection 'learners' via addDoc/setDoc
-      try {
-        await setDoc(doc(db, "learners", learnerId), newLearner);
+        await setDoc(doc(db, "learners", learnerId), learnerData);
       } catch (firestoreErr) {
         console.warn("Firestore save fallback:", firestoreErr);
       }
 
-      // 3. Simultaneously update local cache ('learners' and 'munyaka_students')
-      try {
-        const updatedLocal = [newLearner, ...existingLocal];
-        localStorage.setItem('learners', JSON.stringify(updatedLocal));
-        localStorage.setItem('munyaka_students', JSON.stringify(updatedLocal));
-      } catch (localErr) {
-        console.warn("LocalStorage save error:", localErr);
-      }
-
-      // 3. Call onLearnerAdded(newLearner) prop to push the new record directly into parent table state
-      onLearnerAdded(newLearner);
-
+      await handleAddLearnerSubmit(learnerData);
       showSuccess("Learner successfully added and saved to directory!");
-      onClose();
     } catch (err) {
       showError("Failed to save learner record.");
     } finally {

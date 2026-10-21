@@ -56,7 +56,7 @@ export default function StudentsDirectory({
   assignedTeacherStream = 'all'
 }: StudentsDirectoryProps) {
   const navigate = useNavigate();
-  const [learners, setLearners] = useState<any[]>([]);
+  const [learnersList, setLearnersList] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
   const [streamFilter, setStreamFilter] = useState('all');
@@ -69,36 +69,70 @@ export default function StudentsDirectory({
   const [authError, setAuthError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Real-Time Firestore Subscription & Local Storage Merge
+  // Direct Real-Time Listener in LearnersDirectory
+  useEffect(() => {
+    const refreshLearners = () => {
+      const cached = localStorage.getItem('cached_learners') || localStorage.getItem('learners') || localStorage.getItem('munyaka_students');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setLearnersList(parsed);
+          }
+        } catch {}
+      } else {
+        // Fallback from CentralDataService if storage empty
+        try {
+          const central = CentralDataService.getLearners() || [];
+          if (central.length > 0) {
+            setLearnersList(central);
+            localStorage.setItem('cached_learners', JSON.stringify(central));
+          }
+        } catch {}
+      }
+    };
+
+    // Initial load
+    refreshLearners();
+
+    // Event listeners for immediate UI updates
+    window.addEventListener('learners_updated', refreshLearners);
+    window.addEventListener('learners-updated', refreshLearners);
+    window.addEventListener('students-updated', refreshLearners);
+    window.addEventListener('munyaka:data-changed', refreshLearners);
+    window.addEventListener('storage', refreshLearners);
+
+    return () => {
+      window.removeEventListener('learners_updated', refreshLearners);
+      window.removeEventListener('learners-updated', refreshLearners);
+      window.removeEventListener('students-updated', refreshLearners);
+      window.removeEventListener('munyaka:data-changed', refreshLearners);
+      window.removeEventListener('storage', refreshLearners);
+    };
+  }, []);
+
+  // Also sync with Firestore snapshot or fallback
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     try {
       unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
         const firestoreList = snapshot.docs.map(formatLearnerDoc);
-        const localRaw = JSON.parse(localStorage.getItem('learners') || localStorage.getItem('munyaka_students') || '[]');
-        const localList = localRaw.map(formatLearnerDoc);
-
-        // Merge unique learners by admission number or ID
-        const mergedMap = new Map();
-        [...localList, ...firestoreList].forEach(item => {
-          const key = item.admissionNumber || item.admNo || item.id;
-          if (key) mergedMap.set(key, item);
-        });
-
-        const merged = Array.from(mergedMap.values());
-        setLearners(merged);
-        try {
-          localStorage.setItem('learners', JSON.stringify(merged));
-        } catch {}
-      }, (err) => {
-        console.warn("Firestore snapshot offline or error, falling back to local:", err);
-        const localList = JSON.parse(localStorage.getItem('learners') || localStorage.getItem('munyaka_students') || '[]');
-        setLearners(localList);
-      });
-    } catch (e) {
-      const localList = JSON.parse(localStorage.getItem('learners') || localStorage.getItem('munyaka_students') || '[]');
-      setLearners(localList);
-    }
+        if (firestoreList.length > 0) {
+          const localRaw = JSON.parse(localStorage.getItem('cached_learners') || localStorage.getItem('learners') || '[]');
+          const mergedMap = new Map();
+          [...firestoreList, ...localRaw].forEach(item => {
+            const key = item.admissionNumber || item.admNo || item.id;
+            if (key) mergedMap.set(key, item);
+          });
+          const merged = Array.from(mergedMap.values());
+          setLearnersList(merged);
+          try {
+            localStorage.setItem('cached_learners', JSON.stringify(merged));
+            localStorage.setItem('learners', JSON.stringify(merged));
+          } catch {}
+        }
+      }, () => {});
+    } catch {}
 
     return () => {
       if (unsubscribe) unsubscribe();
@@ -106,18 +140,9 @@ export default function StudentsDirectory({
   }, []);
 
   const handleLearnerAdded = (newLearner: any) => {
-    // 1. Push newly created learner object directly into React state array for immediate rendering
-    setLearners(prev => [newLearner, ...prev]);
-
-    // 2. Grade Filter Auto-Reset: Automatically adjust or reset active Grade Filter to match newly added learner's grade (or set to 'all')
+    setLearnersList(prev => [newLearner, ...prev]);
     const addedGrade = newLearner.gradeLevel || newLearner.grade || 'all';
     setGradeFilter(addedGrade);
-
-    // Also sync to localStorage
-    try {
-      const current = JSON.parse(localStorage.getItem('learners') || '[]');
-      localStorage.setItem('learners', JSON.stringify([newLearner, ...current]));
-    } catch {}
   };
 
   const requestDelete = (learner: any) => {
@@ -139,11 +164,13 @@ export default function StudentsDirectory({
     if (authPassword === currentAdminPass) {
       if (pendingDelete) {
         const targetId = pendingDelete.id || pendingDelete.admissionNumber;
-        const updated = learners.filter(s => (s.id || s.admissionNumber) !== targetId);
-        setLearners(updated);
+        const updated = learnersList.filter(s => (s.id || s.admissionNumber) !== targetId);
+        setLearnersList(updated);
         try {
+          localStorage.setItem('cached_learners', JSON.stringify(updated));
           localStorage.setItem('learners', JSON.stringify(updated));
         } catch {}
+        window.dispatchEvent(new Event('learners_updated'));
         showSuccess("Learner deleted successfully.");
       }
       setIsAuthOpen(false);
@@ -156,26 +183,29 @@ export default function StudentsDirectory({
   };
 
   const filteredLearners = useMemo(() => {
-    return learners.filter(s => {
+    return learnersList.filter(s => {
+      if (!s) return false;
       const name = (s.name || s.fullName || '').toLowerCase();
       const adm = (s.admissionNumber || s.admNo || '').toLowerCase();
       const ass = (s.assessmentNo || s.assessmentNumber || '').toLowerCase();
       const sGrade = s.grade || s.gradeLevel || s.class || '';
-      const sStream = s.stream || '';
+      const sStream = s.stream || s.assignedStream || '';
+      const sUpi = s.UPI || s.upi || s.assessmentNumber || '';
 
-      const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase());
+      const matchesSearch = name.includes(searchTerm.toLowerCase()) || adm.includes(searchTerm.toLowerCase()) || ass.includes(searchTerm.toLowerCase()) || sUpi.toLowerCase().includes(searchTerm.toLowerCase());
 
       const sGradeNorm = normalizeGradeStr(sGrade);
       const filterGradeNorm = normalizeGradeStr(gradeFilter);
-      const matchesGrade = gradeFilter === 'all' || sGradeNorm === filterGradeNorm || sGrade.toLowerCase() === gradeFilter.toLowerCase();
-      const matchesStream = streamFilter === 'all' || sStream.toLowerCase() === streamFilter.toLowerCase();
+      // Fallback render check: graceful handling if optional fields like stream or UPI/assessment are initially blank
+      const matchesGrade = gradeFilter === 'all' || !sGrade || sGradeNorm === filterGradeNorm || sGrade.toLowerCase() === gradeFilter.toLowerCase();
+      const matchesStream = streamFilter === 'all' || !sStream || sStream.toLowerCase() === streamFilter.toLowerCase();
 
       const sGender = s.gender || '';
-      const matchesGender = genderFilter === 'all' || sGender.toLowerCase() === genderFilter.toLowerCase();
+      const matchesGender = genderFilter === 'all' || !sGender || sGender.toLowerCase() === genderFilter.toLowerCase();
 
       return matchesSearch && matchesGrade && matchesStream && matchesGender;
     });
-  }, [learners, searchTerm, gradeFilter, streamFilter, genderFilter]);
+  }, [learnersList, searchTerm, gradeFilter, streamFilter, genderFilter]);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
