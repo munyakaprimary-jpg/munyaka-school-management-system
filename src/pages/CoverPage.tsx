@@ -241,6 +241,4 @@ export default function CoverPage({ onEnter }: { onEnter?: () => void }) {
       </div>
     </div>
   );
-};
-
-export default CoverPage;
+}
