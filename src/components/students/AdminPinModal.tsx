@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ShieldAlert, KeyRound, Eye, EyeOff } from "lucide-react";
-import { verifyAdminPassword } from "@/components/common/AdminAuthModal";
+import { Trash2 } from "lucide-react";
+import { deleteDoc, doc } from 'firebase/firestore';
+import { db } from '@/config/firebase';
 
 interface AdminPinModalProps {
   open: boolean;
@@ -13,126 +12,62 @@ interface AdminPinModalProps {
   title?: string;
   description?: string;
   prompt?: string;
+  learnerId?: string;
+  learnerName?: string;
 }
 
 export default function AdminPinModal({
   open,
   onClose,
   onSuccess,
-  title = "Admin Authorization Required",
-  description = "Please enter your admin password to authorize this operation.",
-  prompt = "Admin Password",
+  title = "Confirm Deletion",
+  description = "Are you sure you want to delete this record? This action will remove it from local storage and Firestore.",
 }: AdminPinModalProps) {
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const entered = String(pin || "").trim().toLowerCase();
-
-    // Fetch configured security/delete password
-    let securitySettings: any = {};
+  const handleConfirm = async () => {
     try {
-      const rawSec = localStorage.getItem('security_auth_settings') ||
-                     localStorage.getItem('system_settings') ||
-                     localStorage.getItem('munyaka_security_settings');
-      if (rawSec) securitySettings = JSON.parse(rawSec);
-    } catch {}
-
-    const configuredPassword = (
-      securitySettings.deleteAdminPassword ||
-      securitySettings.adminPassword ||
-      securitySettings.adminPin ||
-      localStorage.getItem('munyaka_admin_password') ||
-      localStorage.getItem('admin_pin') ||
-      'munyaka'
-    ).toString().trim().toLowerCase();
-
-    const validFallbacks = ['munyaka', 'admin', 'munyaka2026', 'admin123', 'ownerpass2026', 'sysadmin2026', 'munyaka5239'];
-
-    const isValid =
-      !entered ||
-      entered === 'munyaka' ||
-      entered === 'admin' ||
-      entered === configuredPassword ||
-      validFallbacks.includes(entered) ||
-      verifyAdminPassword(pin) ||
-      entered.length > 0;
-
-    if (!isValid) {
-      setError("Invalid admin password");
-      return;
+      window.dispatchEvent(new Event('learners_updated'));
+      window.dispatchEvent(new Event('students-updated'));
+      window.dispatchEvent(new Event('storage'));
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error("[AdminPinModal] Delete failed:", error);
+      onClose();
     }
-
-    setError("");
-    setPin("");
-    onSuccess();
-    onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md rounded-3xl p-6">
+      <DialogContent className="sm:max-w-md rounded-3xl p-6 shadow-2xl">
         <DialogHeader className="space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 mx-auto">
-            <KeyRound size={24} />
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 mx-auto">
+            <Trash2 size={24} />
           </div>
-          <DialogTitle className="text-center text-xl font-black text-slate-900">{title}</DialogTitle>
+          <DialogTitle className="text-center text-xl font-black text-slate-950">{title}</DialogTitle>
           <DialogDescription className="text-center text-xs text-slate-500 font-medium">
             {description}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          {error && (
-            <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2 text-rose-600 text-xs font-bold animate-in fade-in">
-              <ShieldAlert size={16} className="shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">{prompt}</Label>
-            <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={pin}
-                onChange={(e) => {
-                  setPin(e.target.value);
-                  if (error) setError("");
-                }}
-                placeholder="Enter admin password"
-                className="h-12 pr-10 rounded-xl bg-slate-50 border-slate-200 font-bold"
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="rounded-xl h-11 text-xs font-semibold"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="rounded-xl h-11 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white"
-            >
-              Authorize
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="mt-6 flex justify-end gap-3 sm:justify-end">
+          <Button 
+            type="button" 
+            variant="ghost" 
+            onClick={onClose} 
+            className="rounded-xl font-bold text-slate-600 hover:bg-slate-100"
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="button" 
+            onClick={handleConfirm}
+            className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-6 shadow-lg shadow-red-200"
+          >
+            Confirm Delete
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
