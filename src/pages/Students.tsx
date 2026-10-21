@@ -25,7 +25,7 @@ import {
   Eye,
   Download
 } from 'lucide-react';
-import { showSuccess, showError } from '@/utils/toast';
+import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { CentralDataService } from '@/services/centralDataService';
@@ -550,21 +550,33 @@ export default function Students() {
     }
 
     setIsVerifying(true);
-    await new Promise(r => setTimeout(r, 600));
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+    await new Promise(r => setTimeout(r, 200));
 
-    if (authPassword === currentAdminPass) {
+    if (verifyDeleteAdminPassword(authPassword)) {
       if (pendingDelete) {
-              const targetId = pendingDelete.id || pendingDelete.admissionNumber;
-              const updated = students.filter(s => (s.id || s.admissionNumber) !== targetId);
-              setStudents(updated);
-              try {
-                CentralDataService.saveLearners(updated);
-              } catch {}
-              showSuccess("Learner deleted successfully.");
-            }
+        const targetId = pendingDelete.id || pendingDelete.admissionNumber || pendingDelete.admission_number || pendingDelete.admNo;
+        const updated = students.filter(s => String(s.id || s.admissionNumber || s.admission_number || s.admNo) !== String(targetId));
+        setStudents(updated);
+        try {
+          localStorage.setItem('munyaka_learners_v2', JSON.stringify(updated));
+          localStorage.setItem('cached_learners', JSON.stringify(updated));
+          localStorage.setItem('munyaka_students', JSON.stringify(updated));
+          CentralDataService.saveLearners(updated);
+          if (db && targetId) {
+            await deleteDoc(doc(db, "learners", String(targetId)));
+          }
+        } catch (err) {
+          console.warn("[StudentsPage] Delete notice:", err);
+        }
+        window.dispatchEvent(new Event('learners_updated'));
+        window.dispatchEvent(new Event('students-updated'));
+        window.dispatchEvent(new Event('storage'));
+        showSuccess("Learner deleted successfully.");
+      }
       setIsAuthOpen(false);
       setPendingDelete(null);
+      setAuthPassword('');
+      setAuthError('');
     } else {
       setAuthError("Invalid admin password");
       showError("Authorization failed");
