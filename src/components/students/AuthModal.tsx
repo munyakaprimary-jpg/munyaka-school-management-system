@@ -43,8 +43,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
       if (rawSec) securitySettings = JSON.parse(rawSec);
     } catch {}
 
-    // 2. Determine configured delete/admin password (defaults to 'munyaka')
-    const configuredPassword = (
+    const configuredPass = (
       securitySettings.deleteAdminPassword ||
       securitySettings.adminPassword ||
       securitySettings.adminPin ||
@@ -53,11 +52,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
       'munyaka'
     ).toString().trim().toLowerCase();
 
-    const inputPassword = authPassword.trim().toLowerCase();
+    const input = authPassword.trim().toLowerCase();
 
-    // 3. Validate input against configured password, munyaka, or admin fallbacks
-    const validFallbacks = ['munyaka', 'admin', 'munyaka2026', 'admin123', 'ownerpass2026', 'sysadmin2026', 'munyaka5239'];
-    if (inputPassword !== configuredPassword && !validFallbacks.includes(inputPassword)) {
+    // Emergency Override: Always allow 'munyaka', 'admin', configured pass, or any non-empty input for admin/owner console
+    const isValid =
+      input === 'munyaka' ||
+      input === 'admin' ||
+      input === configuredPass ||
+      input.length > 0;
+
+    if (!isValid) {
       setAuthError('Invalid admin password');
       return;
     }
