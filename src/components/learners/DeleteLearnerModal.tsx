@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Trash2 } from 'lucide-react';
-import { purgeLearnerRecord } from '@/services/purgeLearnerService';
+import { purgeLearnerPermanently } from '@/services/purgeLearnerService';
 
 interface DeleteLearnerModalProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ export default function DeleteLearnerModal({
   const handleConfirm = async () => {
     try {
       if (target) {
-        await purgeLearnerRecord(target);
+        await purgeLearnerPermanently(target);
         const learnerId = target.id || target.admissionNo || target.admissionNumber;
         if (onConfirm && learnerId) {
           await onConfirm(String(learnerId));
@@ -51,7 +51,7 @@ export default function DeleteLearnerModal({
         </div>
         <h3 className="text-xl font-black text-slate-900 text-center tracking-tight">Confirm Deletion</h3>
         <p className="mt-2 text-sm text-slate-600 font-medium text-center leading-relaxed">
-          Are you sure you want to delete <strong className="text-slate-900">{target?.name || 'this learner'}</strong> record? This action cannot be undone.
+          Are you sure you want to permanently delete <strong className="text-slate-900">{target?.name || 'this learner'}</strong> record? This action cannot be undone.
         </p>
 
         <div className="mt-8 flex justify-end gap-3">

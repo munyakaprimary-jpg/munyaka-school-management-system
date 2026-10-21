@@ -26,7 +26,7 @@ import {
   Download
 } from 'lucide-react';
 import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
-import { purgeLearnerRecord } from '@/services/purgeLearnerService';
+import { purgeLearnerPermanently } from '@/services/purgeLearnerService';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
@@ -550,7 +550,7 @@ export default function Students() {
     await new Promise(r => setTimeout(r, 200));
 
     if (pendingDelete) {
-      await purgeLearnerRecord(pendingDelete, setStudents);
+      await purgeLearnerPermanently(pendingDelete, setStudents);
       showSuccess("Learner deleted successfully.");
     }
     setIsAuthOpen(false);
