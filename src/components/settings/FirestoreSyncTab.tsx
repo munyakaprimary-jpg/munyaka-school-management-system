@@ -9,6 +9,7 @@ import { collection, doc, setDoc, getDocs, writeBatch } from 'firebase/firestore
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { migrateLegacyLearnerIds } from '@/utils/migrateLegacyLearnerIds';
 
 export default function FirestoreSyncTab() {
   const [isSyncing, setIsSyncing] = useState(false);
@@ -394,6 +395,26 @@ export default function FirestoreSyncTab() {
   useEffect(() => {
     handleTestCloudTables().catch(console.error);
   }, []);
+
+  const [isMigratingIds, setIsMigratingIds] = useState(false);
+
+  const handleRunLearnerIdMigration = async () => {
+    if (isMigratingIds) return;
+    setIsMigratingIds(true);
+    try {
+      const res = await migrateLegacyLearnerIds();
+      if (res.success) {
+        showSuccess(`Learner ID migration complete! Standardized ${res.count} document IDs.`);
+        await handleTestCloudTables();
+      } else {
+        throw new Error('Migration failed');
+      }
+    } catch (err: any) {
+      showError(err?.message || 'Failed to migrate learner IDs');
+    } finally {
+      setIsMigratingIds(false);
+    }
+  };
 
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [syncProgressText, setSyncProgressText] = useState('');
@@ -2352,16 +2373,27 @@ export default function FirestoreSyncTab() {
 
           {/* Status Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
-            <div className="p-4 rounded-2xl bg-slate-50 border flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                <Server size={20} />
+            <div className="p-4 rounded-2xl bg-slate-50 border flex items-center justify-between col-span-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+                  <RefreshCw size={20} className={isMigratingIds ? "animate-spin" : ""} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-semibold">Legacy Learner ID Normalization</p>
+                  <p className="text-sm font-bold text-slate-900">
+                    Migrate numeric learner IDs (e.g. "12345") to standardized format ("learner-12345")
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-semibold">Sync Status</p>
-                <p className="text-sm font-bold text-slate-900">
-                  {isSyncing ? 'Syncing to Firestore...' : 'Idle / Ready'}
-                </p>
-              </div>
+              <Button
+                onClick={handleRunLearnerIdMigration}
+                disabled={isMigratingIds}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl gap-2 shrink-0"
+              >
+                {isMigratingIds ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {isMigratingIds ? 'Migrating IDs...' : 'Run ID Migration'}
+              </Button>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-50 border flex items-center gap-3">
