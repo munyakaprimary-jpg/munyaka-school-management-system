@@ -205,14 +205,13 @@ const Login: React.FC = () => {
   // ── Forgot password modal ───────────────────────────────────────────────
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
-  // ── Redirect already-authenticated users straight to the dashboard ─────────
+  // ── Redirect already-authenticated users straight to the dashboard (On mount once) ─────────
     useEffect(() => {
-      if (isAuthenticated && user) {
-        // Bypass any secondary landing / role-selection screens: every
-        // authenticated user goes straight to the main dashboard.
+      const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+      if (isAuth) {
         navigate('/dashboard', { replace: true });
       }
-    }, [isAuthenticated, user, navigate]);
+    }, []); // Empty dependency array ensures check runs ONCE on mount
 
   // ── Admin handlers ────────────────────────────────────────────────────────
   const handleRoleSelect = (role: AdminRole) => {
@@ -385,23 +384,19 @@ const Login: React.FC = () => {
   // ── Lightweight server reachability check on mount (Once only) ──────────────────────
   useEffect(() => {
     let isMounted = true;
+    const loggedRef = { current: false };
     const performHealthCheck = async () => {
       try {
         const status = await checkServerHealth();
         if (!isMounted) return;
-        if (!status.reachable) {
-          if (status.error?.includes('disabled')) {
+        if (!status.reachable && status.error?.includes('disabled')) {
+          if (!loggedRef.current) {
+            loggedRef.current = true;
             console.log("[Login] Client-only offline mode active.");
-          } else {
-            console.warn(`[Login] Health check: ${status.error} — server may be offline`);
           }
-        } else {
-          console.log(`[Login] Health check: server reachable in ${status.latencyMs}ms`);
         }
       } catch (e) {
-        if (isMounted) {
-          console.log("[Login] Client-only offline mode active.");
-        }
+        // ignore
       }
     };
     performHealthCheck();
