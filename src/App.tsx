@@ -149,11 +149,11 @@ import { runBillingAutoLockCheck } from "./utils/billingAutoLock";
 // Simple route check and redirect hook inside App
 function RouteGuardEffect() {
   useEffect(() => {
-    const currentHash = window.location.hash;
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    const currentHash = window.location.hash;
 
     if (isAuthenticated) {
-      if (currentHash === '#/login' || currentHash === '' || currentHash === '#/' || currentHash === '#/cover' || currentHash === '#/cover-page' || currentHash === '#/portal') {
+      if (currentHash === '#/login' || currentHash === '' || currentHash === '#/' || currentHash === '#/cover' || currentHash === '#/cover-page') {
         window.location.replace('#/dashboard');
       }
     } else {

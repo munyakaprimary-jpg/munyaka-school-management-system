@@ -285,9 +285,9 @@ const Login: React.FC = () => {
           localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
           localStorage.setItem('isAuthenticated', 'true');
           localStorage.setItem('userRole', selectedAdminRole);
+          window.dispatchEvent(new Event('storage'));
           showSuccess(`Welcome, ${config.userName}!`);
           
-          // Force window location to dashboard directly & reload to clear state cleanly
           window.location.replace('#/dashboard');
           window.location.reload();
           setIsAdminVerifying(false);
