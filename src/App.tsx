@@ -152,8 +152,14 @@ function RouteGuardEffect() {
     const currentHash = window.location.hash;
     const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
 
-    if (isAuthenticated && (currentHash === '#/login' || currentHash === '' || currentHash === '#/' || currentHash === '#/cover')) {
-      window.location.hash = '#/dashboard';
+    if (isAuthenticated) {
+      if (currentHash === '#/login' || currentHash === '' || currentHash === '#/' || currentHash === '#/cover' || currentHash === '#/cover-page' || currentHash === '#/portal') {
+        window.location.replace('#/dashboard');
+      }
+    } else {
+      if (currentHash === '' || currentHash === '#/') {
+        window.location.replace('#/login');
+      }
     }
   }, []);
   return null;
@@ -554,6 +560,7 @@ const App = () => {
                       <Routes>
                         {/* Public Routes */}
                       <Route path="/login" element={<Login />} />
+                      <Route path="/cover" element={<CoverPage />} />
                       <Route path="/portal" element={<ParentPortal />} />
                       <Route path="/reset-password" element={<PasswordResetCallback />} />
 

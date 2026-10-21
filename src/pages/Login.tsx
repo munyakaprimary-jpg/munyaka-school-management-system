@@ -185,7 +185,7 @@ const Login: React.FC = () => {
   const { login, isAuthenticated, user, setUser } = useAuth();
 
   // ── Cover page state ────────────────────────────────────────────────────
-  const [showCover, setShowCover] = useState(true);
+  const [showCover, setShowCover] = useState(false);
 
   // ── Admin state ──────────────────────────────────────────────────────────
   const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
@@ -209,7 +209,7 @@ const Login: React.FC = () => {
   useEffect(() => {
     const isAuth = localStorage.getItem('isAuthenticated') === 'true';
     const currentHash = window.location.hash;
-    if (isAuth && (currentHash === '#/login' || currentHash === '' || currentHash === '#/')) {
+    if (isAuth) {
       window.location.hash = '#/dashboard';
     }
   }, [isAuthenticated]);
@@ -288,7 +288,7 @@ const Login: React.FC = () => {
           showSuccess(`Welcome, ${config.userName}!`);
           
           // Force window location to dashboard directly & reload to clear state cleanly
-          window.location.hash = '#/dashboard';
+          window.location.replace('#/dashboard');
           window.location.reload();
           setIsAdminVerifying(false);
           return;
