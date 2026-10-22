@@ -116,10 +116,19 @@ export default function CentralDataServicePage() {
       const candidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
       const masterStaff = candidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
 
-      // Learners count sync
-      const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-      const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
-      const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
+      // Learners count sync strictly from munyaka_learners_v2
+      const UNIFIED_KEY = 'munyaka_learners_v2';
+      const getCentralLearnersCount = (): number => {
+        try {
+          const raw = localStorage.getItem(UNIFIED_KEY);
+          if (!raw) return 0;
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed.length : 0;
+        } catch {
+          return 0;
+        }
+      };
+      const masterLearnersCount = getCentralLearnersCount();
 
       // Check teaching vs non-teaching staff
       const teachingStaff = masterStaff.filter((s: any) => {
@@ -146,7 +155,7 @@ export default function CentralDataServicePage() {
         : Object.keys(marks || {}).length;
 
       setStats({
-        registeredStudents: masterLearners.length,
+        registeredStudents: masterLearnersCount,
         teachingStaff,
         nonTeachingStaff,
         attendanceRecords: attendanceCount,
@@ -341,9 +350,20 @@ export default function CentralDataServicePage() {
         const staffCandidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
         const masterStaff = staffCandidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
   
-        const l1 = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-        const l2 = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
-        const masterLearners = [learners, l1, l2].filter(Array.isArray).reduce((max, curr) => (curr.length > max.length ? curr : max), learners);
+        const masterLearners = (() => {
+          try {
+            const raw = localStorage.getItem('munyaka_learners_v2');
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })();
+          } catch {
+            return [];
+          }
+        })();
   
         const f1 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
         const f2 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
