@@ -14,6 +14,7 @@ import { HarmonizedLearnerService } from '@/services/harmonizedLearnerService';
 
 export default function FirestoreSyncTab() {
   const [isSyncing, setIsSyncing] = useState(false);
+  const [localCount, setLocalCount] = useState(0);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -28,6 +29,31 @@ export default function FirestoreSyncTab() {
 
   const [cloudLearnersList, setCloudLearnersList] = useState<any[]>([]);
   const [isCheckingCollections, setIsCheckingCollections] = useState(false);
+
+  useEffect(() => {
+    const updateLocalCount = () => {
+      try {
+        const raw = localStorage.getItem('munyaka_learners_v2');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            setLocalCount(parsed.length);
+            return;
+          }
+        }
+        setLocalCount(0);
+      } catch {
+        setLocalCount(0);
+      }
+    };
+    updateLocalCount();
+    window.addEventListener('learners_updated', updateLocalCount);
+    window.addEventListener('storage', updateLocalCount);
+    return () => {
+      window.removeEventListener('learners_updated', updateLocalCount);
+      window.removeEventListener('storage', updateLocalCount);
+    };
+  }, []);
 
   const [isSyncingAssessments, setIsSyncingAssessments] = useState(false);
   const [cloudAssessmentMarks, setCloudAssessmentMarks] = useState<any[]>([]);
@@ -2003,7 +2029,34 @@ export default function FirestoreSyncTab() {
     }
   };
 
-  const handleSyncToCloud = async () => {
+  const handleLocalToCloudHarmonize = async () => {
+    try {
+      // Step 1: Read local primary key
+      const UNIFIED_KEY = 'munyaka_learners_v2';
+      const localRecords = JSON.parse(localStorage.getItem(UNIFIED_KEY) || '[]');
+
+      // Step 2: Push all local records to Firestore first (Preserve Local Edits)
+      for (const record of localRecords) {
+        const docId = String(record.id || record.admissionNo || Date.now());
+        await setDoc(doc(db, "learners", docId), record, { merge: true });
+      }
+
+      // Step 3: Fetch updated clean snapshot back from Cloud
+      const snapshot = await getDocs(collection(db, "learners"));
+      const freshCloudRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Step 4: Overwrite primary key with verified merged data & purge legacy keys
+      localStorage.setItem(UNIFIED_KEY, JSON.stringify(freshCloudRecords));
+      localStorage.removeItem('students');
+      localStorage.removeItem('cached_learners');
+
+      // Step 5: Notify UI counters
+      window.dispatchEvent(new Event('learners_updated'));
+      alert(`Successfully pushed local changes and harmonized ${freshCloudRecords.length} records!`);
+    } catch (error) {
+      console.error("Local-to-cloud sync failed:", error);
+    }
+  };
     if (isSyncing) return;
     setIsSyncing(true);
 
@@ -3905,7 +3958,7 @@ export default function FirestoreSyncTab() {
                 Clean Local Storage & Pull Fresh Cloud Data
               </Button>
               <Button
-                onClick={handleSyncToCloud}
+                onClick={handleLocalToCloudHarmonize}
                 disabled={isSyncing}
                 className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
               >
