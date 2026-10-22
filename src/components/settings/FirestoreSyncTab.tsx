@@ -2116,48 +2116,6 @@ export default function FirestoreSyncTab() {
       setIsSyncing(false);
     }
   };
-          if (!resource) return;
-          const resourceId = String(resource.id || resource.resourceId || `eres_${idx + 1}`).trim();
-          
-          // Generate unique document ID: eresource_{resource_id} (lowercase, spaces replaced by underscores)
-          const rawDocId = `eresource_${resourceId}`;
-          const docId = rawDocId.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
-
-          recordsToSync.push({
-            id: docId,
-            type: 'digital_resource',
-            resource_id: resourceId,
-            title: String(resource.title || resource.name || 'Untitled Resource').trim(),
-            description: String(resource.description || '').trim(),
-            category: String(resource.category || resource.type || 'Educational').trim(),
-            subcategory: String(resource.subcategory || '').trim(),
-            format: String(resource.format || 'PDF').trim(), // PDF, Video, Audio, Interactive, etc.
-            url: String(resource.url || resource.link || '').trim(),
-            file_size: String(resource.fileSize || '').trim(),
-            grade_level: String(resource.gradeLevel || resource.grade || '').trim(),
-            subject: String(resource.subject || '').trim(),
-            term: String(resource.term || '').trim(),
-            academic_year: String(resource.academicYear || resource.year || '').trim(),
-            publisher: String(resource.publisher || '').trim(),
-            publication_date: String(resource.publicationDate || resource.datePublished || new Date().toISOString().split('T')[0]).trim(),
-            is_free: Boolean(resource.isFree || resource.free || false),
-            cost: Number(resource.cost || resource.price || 0),
-            license_type: String(resource.licenseType || 'Standard').trim(),
-            access_count: Number(resource.accessCount || 0),
-            rating: Number(resource.rating || 0),
-            tags: Array.isArray(resource.tags) ? resource.tags : [],
-            synced_at: new Date().toISOString()
-          });
-        });
-      }
-
-      // If no data found at all, create fallback records
-      if (recordsToSync.length === 0) {
-        // Create a sample book
-        const bookDocId = 'book_9780143127741'.toLowerCase().replace(/\s+/g, '_');
-        recordsToSync.push({
-          id: bookDocId,
-          type: 'physical_book',
           isbn: '9780143127741',
           book_id: 'BK001',
           title: 'To Kill a Mockingbird',
