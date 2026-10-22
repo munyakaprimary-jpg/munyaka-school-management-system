@@ -2045,7 +2045,8 @@ export default function FirestoreSyncTab() {
     setIsSyncing(true);
 
     try {
-      const rawData = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || localStorage.getItem('learners') || '';
+      const UNIFIED_KEY = 'munyaka_learners_v2';
+      const rawData = localStorage.getItem(UNIFIED_KEY) || localStorage.getItem('munyaka_learners') || localStorage.getItem('learners') || '';
       let localLearnersList: any[] = [];
       if (rawData) {
         try {
@@ -2056,58 +2057,62 @@ export default function FirestoreSyncTab() {
         localLearnersList = HarmonizedLearnerService.getLearners() || [];
       }
 
-      const learnersPayload = localLearnersList.map((l: any, index: number) => {
-        if (!l) return null;
-        const id = String(l.id || l.admissionNumber || l.admission_number || l.admission_no || l.admissionNo || `learner_${index + 1}`);
-        return {
+      // Step A: Fetch existing cloud doc IDs
+      const cloudSnap = await getDocs(collection(db, "learners"));
+      const localIds = new Set(localLearnersList.map((l: any) => String(l.id || l.admissionNumber || l.admissionNo || l.admNo)));
+
+      // Step B: Delete orphaned / legacy documents in Firestore
+      const batch = writeBatch(db);
+      let deleteCount = 0;
+
+      cloudSnap.docs.forEach((docSnap) => {
+        if (!localIds.has(docSnap.id)) {
+          batch.delete(docSnap.ref);
+          deleteCount++;
+        }
+      });
+
+      // Step C: Push active local records
+      localLearnersList.forEach((learner: any, index: number) => {
+        if (!learner) return;
+        const id = String(learner.id || learner.admissionNumber || learner.admission_number || learner.admission_no || learner.admissionNo || `learner_${index + 1}`);
+        const normalizedRecord = {
+          ...learner,
           id,
-          admission_number: String(l.admissionNumber || l.admission_number || l.admission_no || l.admissionNo || l.admNo || id).trim(),
-          upi_no: String(l.upiNumber || l.upi || l.upi_no || '').trim(),
-          name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
-          grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
-          stream: String(l.stream || '').trim(),
-          gender: String(l.gender || 'Unknown').trim(),
-          dob: l.dateOfBirth || l.date_of_birth || l.dob || null,
-          parent_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
-          parent_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim(),
+          admission_number: String(learner.admissionNumber || learner.admission_number || learner.admission_no || learner.admissionNo || learner.admNo || id).trim(),
+          name: String(learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`).trim() || 'Learner',
+          grade: String(learner.grade || learner.gradeLevel || 'Grade 1').trim(),
+          stream: String(learner.stream || '').trim(),
+          gender: String(learner.gender || 'Unknown').trim(),
           updated_at: new Date().toISOString()
         };
-      }).filter((l): l is any => Boolean(l));
-
-      if (!learnersPayload || learnersPayload.length === 0) {
-        alert('No local learner records found to sync.');
-        return;
-      }
-
-      const batch = writeBatch(db);
-
-      learnersPayload.forEach((learner) => {
-        const docId = String(learner.id || learner.admission_number || Date.now());
-        const docRef = doc(db, 'learners', docId);
-        batch.set(docRef, learner, { merge: true });
+        const docRef = doc(db, "learners", id);
+        batch.set(docRef, normalizedRecord, { merge: true });
       });
 
       await batch.commit();
 
       setLastSynced(new Date());
-      
+
       const fetchCloudCount = async () => {
         try {
           const snapshot = await getDocs(collection(db, "learners"));
           setCloudLearnersCount(snapshot.size);
+          setCloudLearnersList(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
         } catch (err) {
           console.error("Error fetching learners cloud count:", err);
         }
       };
       await fetchCloudCount();
 
-      alert(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
-      showSuccess(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
+      alert(`Clean Sync Complete! Overwrote Firestore with exact ${localLearnersList.length} records (Deleted ${deleteCount} legacy cloud items).`);
+      showSuccess(`Clean Sync Complete! Overwrote Firestore with exact ${localLearnersList.length} records (Deleted ${deleteCount} legacy cloud items).`);
 
+      window.dispatchEvent(new Event('learners_updated'));
       handleTestCloudTables().catch(console.error);
 
     } catch (err: any) {
-      console.error('Learners sync error:', err);
+      console.error('Learners exact sync error:', err);
       const msg = err.message || 'Unknown error';
       setErrorMessage(msg);
       alert(`Sync failed: ${msg}`);
