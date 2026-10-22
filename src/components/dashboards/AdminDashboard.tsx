@@ -19,29 +19,17 @@ const SCHOOL_CENTRE_CODE = '26534178';
 export const AdminDashboardComponent: React.FC = () => {
   const navigate = useNavigate();
 
-  // ── Centralized LocalStorage DB Sync (Exact match to Central Data Hub & Subject Allocations) ──
+  // ── Centralized LocalStorage DB Sync (Strictly bound to munyaka_learners_v2) ──
+  const UNIFIED_STORAGE_KEY = 'munyaka_learners_v2';
+
   const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => {
     try {
-      const keys = ['munyaka_learners_db', 'school_learners_master', 'school_learners_data', 'munyaka_students_db', 'munyaka_students', 'students', 'learners'];
-      let all: any[] = [];
-      for (const k of keys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            all = [...all, ...parsed];
-          }
+      const raw = localStorage.getItem(UNIFIED_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
         }
-      }
-      if (all.length > 0) {
-        const map = new Map<string, any>();
-        all.forEach(l => {
-          if (l && (l.id || l.admissionNumber || l.admission_no || l.name)) {
-            const key = String(l.id || l.admissionNumber || l.admission_no || l.name).trim().toLowerCase();
-            if (!map.has(key)) map.set(key, l);
-          }
-        });
-        return Array.from(map.values());
       }
     } catch {}
     return getStoredLearners();
@@ -64,35 +52,23 @@ export const AdminDashboardComponent: React.FC = () => {
   useEffect(() => {
     const handleSync = () => {
       try {
-        const lKeys = ['munyaka_learners_db', 'school_learners_master', 'school_learners_data', 'munyaka_students_db', 'munyaka_students', 'students', 'learners'];
-        let all: any[] = [];
-        for (const k of lKeys) {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              all = [...all, ...parsed];
-            }
+        const raw = localStorage.getItem(UNIFIED_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            setReactiveLearners(parsed);
+          } else {
+            setReactiveLearners(getStoredLearners());
           }
-        }
-        if (all.length > 0) {
-          const map = new Map<string, any>();
-          all.forEach(l => {
-            if (l && (l.id || l.admissionNumber || l.admission_no || l.name)) {
-              const key = String(l.id || l.admissionNumber || l.admission_no || l.name).trim().toLowerCase();
-              if (!map.has(key)) map.set(key, l);
-            }
-          });
-          setReactiveLearners(Array.from(map.values()));
         } else {
           setReactiveLearners(getStoredLearners());
         }
 
         const sKeys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
         for (const k of sKeys) {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
+          const rawStaff = localStorage.getItem(k);
+          if (rawStaff) {
+            const parsed = JSON.parse(rawStaff);
             if (Array.isArray(parsed) && parsed.length > 0) {
               setLocalStaff(parsed);
               break;
@@ -106,12 +82,14 @@ export const AdminDashboardComponent: React.FC = () => {
     window.addEventListener('storage', handleSync);
     window.addEventListener('munyaka:data-changed', handleSync);
     window.addEventListener('munyaka_learners_updated', handleSync);
+    window.addEventListener('learners_updated', handleSync);
     window.addEventListener('staff-changed', handleSync);
 
     return () => {
       window.removeEventListener('storage', handleSync);
       window.removeEventListener('munyaka:data-changed', handleSync);
       window.removeEventListener('munyaka_learners_updated', handleSync);
+      window.removeEventListener('learners_updated', handleSync);
       window.removeEventListener('staff-changed', handleSync);
     };
   }, []);
