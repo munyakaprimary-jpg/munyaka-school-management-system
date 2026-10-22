@@ -162,6 +162,11 @@ export default function FirestoreSyncTab() {
   const [lanConfigCloudCount, setLanConfigCloudCount] = useState<number>(0);
   const [isSyncingLan, setIsSyncingLan] = useState<boolean>(false);
 
+  // Payment & Subscriptions Cloud Sync state
+  const [subCount, setSubCount] = useState<number>(0);
+  const [subCloudCount, setSubCloudCount] = useState<number>(0);
+  const [isSyncingSub, setIsSyncingSub] = useState<boolean>(false);
+
   // Load local count on mount
   useEffect(() => {
     try {
@@ -178,7 +183,38 @@ export default function FirestoreSyncTab() {
     } catch (e) {
       setLanConfigCount(0);
     }
+
+    try {
+      const rawSub = localStorage.getItem('munyaka_subscriptions_v1');
+      setSubCount(rawSub ? 1 : 0);
+    } catch (e) {
+      setSubCount(0);
+    }
   }, []);
+
+  const handleSyncSubscriptions = async () => {
+    setIsSyncingSub(true);
+    try {
+      const raw = localStorage.getItem('munyaka_subscriptions_v1');
+      const subData = raw ? JSON.parse(raw) : {};
+      
+      const docRef = doc(db, "subscriptions", "active_license");
+      await setDoc(docRef, {
+        ...subData,
+        lastSyncedAt: new Date().toISOString()
+      }, { merge: true });
+
+      setSubCloudCount(1);
+      alert('Successfully synced Payment & Subscriptions to Firestore!');
+      showSuccess('Successfully synced Payment & Subscriptions to Firestore!');
+    } catch (err: any) {
+      console.error("Subscription sync error:", err);
+      alert(`Sync failed: ${err.message || 'Unknown error'}`);
+      showError(err.message || 'Unknown error');
+    } finally {
+      setIsSyncingSub(false);
+    }
+  };
 
   const handleSyncLanConfig = async () => {
     setIsSyncingLan(true);
@@ -390,6 +426,10 @@ export default function FirestoreSyncTab() {
       // LAN Server Config Collection
       const lanSnap = await getDoc(doc(db, 'lan_server_config', 'main_config')).catch(() => null);
       setLanConfigCloudCount(lanSnap?.exists() ? 1 : 0);
+
+      // Subscriptions Collection
+      const subSnap = await getDoc(doc(db, 'subscriptions', 'active_license')).catch(() => null);
+      setSubCloudCount(subSnap?.exists() ? 1 : 0);
       setCloudExamsList(examsDocs);
 
       // ICT Lab Records Collection
@@ -2619,6 +2659,26 @@ export default function FirestoreSyncTab() {
                   className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
                   {isSyncingLan ? 'Syncing LAN Config...' : 'Sync LAN Config'}
+                </button>
+              </div>
+
+              {/* Payment & Subscriptions Sync Card */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-slate-200 font-semibold text-lg">Subscriptions</h3>
+                    <span className="text-xs bg-slate-800 text-emerald-400 px-2.5 py-1 rounded-full border border-slate-700">
+                      Cloud: {subCloudCount}
+                    </span>
+                  </div>
+                  <p className="text-3xl font-bold text-emerald-400 mb-4">{subCount} active</p>
+                </div>
+                <button
+                  onClick={handleSyncSubscriptions}
+                  disabled={isSyncingSub}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {isSyncingSub ? 'Syncing Subscriptions...' : 'Sync Subscriptions'}
                 </button>
               </div>
 
