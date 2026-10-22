@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { CentralDataService } from '../services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner, dedupeLearnersById } from '../services/learnerService';
 import { bundleAllLearnersToCentral } from '../services/bundleAllLearners';
+import { purgeLearnerPermanently } from '../services/purgeLearnerService';
 import { initialSeedData } from '../data/initialSeedData';
 import { useAuth } from './AuthContext';
 import { db } from '../config/firebase';
@@ -222,50 +223,35 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [filterLearnersForUser, setLearners]);
 
   const deleteLearner = useCallback(async (admissionNumber: string) => {
-    try {
-      const rawStored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
-      const currentStored = rawStored ? JSON.parse(rawStored) : [];
-      let targetId = '';
-
-      const updatedList = currentStored.filter((l: any) => {
-        const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
-        const lId = String(l.id || l._id || '');
-        const match = adm === admissionNumber || lId === admissionNumber || adm === String(admissionNumber) || lId === String(admissionNumber);
-        if (match) {
-          targetId = lId || adm;
+      try {
+        const rawStored = localStorage.getItem(STORAGE_KEY_LEARNERS_V2);
+        const currentStored = rawStored ? JSON.parse(rawStored) : [];
+        
+        // Find the learner to delete by admissionNumber
+        const learnerToDelete = currentStored.find((l: any) => {
+          const adm = String(l.admissionNumber || l.admission_number || l.admNo || l.admissionNo || '');
+          const lId = String(l.id || l._id || '');
+          return adm === admissionNumber || lId === admissionNumber || adm === String(admissionNumber) || lId === String(admissionNumber);
+        });
+  
+        if (!learnerToDelete) {
+          console.warn('[LearnerContext] Learner not found for deletion:', admissionNumber);
+          return;
         }
-        return !match;
-      });
-
-      localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(updatedList));
-      localStorage.setItem('school_learners_data', JSON.stringify(updatedList));
-      localStorage.setItem('munyaka_students', JSON.stringify(updatedList));
-      localStorage.setItem('cached_learners', JSON.stringify(updatedList));
-      localStorage.setItem('learners', JSON.stringify(updatedList));
-
-      if (targetId && db) {
-        try {
-          await deleteDoc(doc(db, 'learners', String(targetId)));
-          if (admissionNumber) {
-            await deleteDoc(doc(db, 'learners', String(admissionNumber))).catch(() => {});
-          }
-        } catch (fsErr) {
-          console.warn('[LearnerContext] Firestore delete warning:', fsErr);
-        }
+  
+        // Use purgeLearnerPermanently for unified deletion across all storage layers
+        const updatedList = await purgeLearnerPermanently(learnerToDelete);
+        setLearners(filterLearnersForUser(updatedList));
+  
+        window.dispatchEvent(new Event('students-updated'));
+        window.dispatchEvent(new Event('learners-updated'));
+        window.dispatchEvent(new Event('learners_updated'));
+        window.dispatchEvent(new Event('munyaka:data-changed'));
+        window.dispatchEvent(new Event('storage'));
+      } catch (err) {
+        console.error('[LearnerContext] deleteLearner error:', err);
       }
-
-      CentralDataService.saveLearners(updatedList);
-      setLearners(filterLearnersForUser(updatedList));
-
-      window.dispatchEvent(new Event('students-updated'));
-      window.dispatchEvent(new Event('learners-updated'));
-      window.dispatchEvent(new Event('learners_updated'));
-      window.dispatchEvent(new Event('munyaka:data-changed'));
-      window.dispatchEvent(new Event('storage'));
-    } catch (err) {
-      console.error('[LearnerContext] deleteLearner error:', err);
-    }
-  }, [filterLearnersForUser, setLearners]);
+    }, [filterLearnersForUser, setLearners]);
 
   const refreshLearners = useCallback(() => {
     try {

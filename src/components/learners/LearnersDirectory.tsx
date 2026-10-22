@@ -97,7 +97,7 @@ export default function LearnersDirectory() {
             ...docSnap.data()
           }));
 
-          const validCloudLearners = cloudLearners.filter((item: any) => {
+          const cleanCloudList = cloudLearners.filter((item: any) => {
             const id = String(item.id || item._id || '').trim();
             const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
             return !deletedIds.has(id) && !deletedIds.has(adm);
@@ -114,7 +114,7 @@ export default function LearnersDirectory() {
             }
           });
 
-          validCloudLearners.forEach((l: any) => {
+          cleanCloudList.forEach((l: any) => {
             const lId = String(l.id || l._id || '').trim();
             const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
             const key = lId || lAdm;
