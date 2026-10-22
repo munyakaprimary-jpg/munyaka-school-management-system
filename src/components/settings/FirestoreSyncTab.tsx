@@ -2057,37 +2057,54 @@ export default function FirestoreSyncTab() {
         localLearnersList = HarmonizedLearnerService.getLearners() || [];
       }
 
+      // Standardize helper
+      const standardizeLearnerId = (rawId: any) => {
+        const strId = String(rawId || '').trim();
+        if (!strId) return `learner-${Date.now()}`;
+        return strId.startsWith('learner-') ? strId : `learner-${strId}`;
+      };
+
+      // Normalize local records IDs in place and save back to storage
+      localLearnersList = localLearnersList.map((l: any, idx: number) => {
+        if (!l) return null;
+        const rawKey = l.id || l.admissionNumber || l.admission_number || l.admission_no || l.admissionNo || `learner_${idx + 1}`;
+        const standardizedId = standardizeLearnerId(rawKey);
+        return {
+          ...l,
+          id: standardizedId,
+          admission_number: String(l.admissionNumber || l.admission_number || l.admission_no || l.admissionNo || l.admNo || standardizedId).trim(),
+          name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
+          grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
+          stream: String(l.stream || '').trim(),
+          gender: String(l.gender || 'Unknown').trim(),
+          updated_at: new Date().toISOString()
+        };
+      }).filter(Boolean);
+
+      localStorage.setItem(UNIFIED_KEY, JSON.stringify(localLearnersList));
+
       // Step A: Fetch existing cloud doc IDs
       const cloudSnap = await getDocs(collection(db, "learners"));
-      const localIds = new Set(localLearnersList.map((l: any) => String(l.id || l.admissionNumber || l.admissionNo || l.admNo)));
+      const localIds = new Set(localLearnersList.map((l: any) => l.id));
 
-      // Step B: Delete orphaned / legacy documents in Firestore
+      // Step B: Delete orphaned / legacy documents in Firestore (including numeric raw IDs)
       const batch = writeBatch(db);
       let deleteCount = 0;
 
       cloudSnap.docs.forEach((docSnap) => {
-        if (!localIds.has(docSnap.id)) {
+        const docId = docSnap.id;
+        const normalizedDocId = standardizeLearnerId(docId);
+        // If the doc ID is not in local IDs, or if it was stored without 'learner-' prefix (numeric/raw), delete it so it gets re-created with the standardized 'learner-' ID
+        if (!localIds.has(docId) || !docId.startsWith('learner-')) {
           batch.delete(docSnap.ref);
           deleteCount++;
         }
       });
 
-      // Step C: Push active local records
-      localLearnersList.forEach((learner: any, index: number) => {
-        if (!learner) return;
-        const id = String(learner.id || learner.admissionNumber || learner.admission_number || learner.admission_no || learner.admissionNo || `learner_${index + 1}`);
-        const normalizedRecord = {
-          ...learner,
-          id,
-          admission_number: String(learner.admissionNumber || learner.admission_number || learner.admission_no || learner.admissionNo || learner.admNo || id).trim(),
-          name: String(learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`).trim() || 'Learner',
-          grade: String(learner.grade || learner.gradeLevel || 'Grade 1').trim(),
-          stream: String(learner.stream || '').trim(),
-          gender: String(learner.gender || 'Unknown').trim(),
-          updated_at: new Date().toISOString()
-        };
-        const docRef = doc(db, "learners", id);
-        batch.set(docRef, normalizedRecord, { merge: true });
+      // Step C: Push active standardized local records
+      localLearnersList.forEach((learner: any) => {
+        const docRef = doc(db, "learners", learner.id);
+        batch.set(docRef, learner, { merge: true });
       });
 
       await batch.commit();
@@ -2105,8 +2122,8 @@ export default function FirestoreSyncTab() {
       };
       await fetchCloudCount();
 
-      alert(`Clean Sync Complete! Overwrote Firestore with exact ${localLearnersList.length} records (Deleted ${deleteCount} legacy cloud items).`);
-      showSuccess(`Clean Sync Complete! Overwrote Firestore with exact ${localLearnersList.length} records (Deleted ${deleteCount} legacy cloud items).`);
+      alert(`Clean Standardized Sync Complete! Overwrote Firestore with exact ${localLearnersList.length} standardized records (Purged ${deleteCount} legacy/numeric cloud items).`);
+      showSuccess(`Clean Standardized Sync Complete! Overwrote Firestore with exact ${localLearnersList.length} standardized records (Purged ${deleteCount} legacy/numeric cloud items).`);
 
       window.dispatchEvent(new Event('learners_updated'));
       handleTestCloudTables().catch(console.error);
