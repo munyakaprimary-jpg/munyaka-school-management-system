@@ -3815,7 +3815,7 @@ export default function FirestoreSyncTab() {
             </div>
           </div>
         </CardContent>
-        </Card>
+      </Card>
     </div>
   );
 }
