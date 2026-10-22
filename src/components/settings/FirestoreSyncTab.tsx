@@ -2542,6 +2542,26 @@ export default function FirestoreSyncTab() {
                 </p>
               </div>
 
+              {/* Games Hub Sync Card */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-slate-200 font-semibold text-lg">Games Hub</h3>
+                    <span className="text-xs bg-slate-800 text-purple-400 px-2.5 py-1 rounded-full border border-slate-700">
+                      Cloud: {cloudGamesCount ?? 0}
+                    </span>
+                  </div>
+                  <p className="text-3xl font-bold text-purple-400 mb-4">{gamesCount}</p>
+                </div>
+                <button
+                  onClick={handleSyncGamesHub}
+                  disabled={isSyncingGames}
+                  className="w-full bg-purple-600 hover:bg-purple-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {isSyncingGames ? 'Syncing Games Hub...' : 'Sync Games Hub'}
+                </button>
+              </div>
+
               <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
                 <div className="flex flex-wrap items-center justify-between gap-1">
                   <p className="text-xs text-slate-400 min-w-0 break-words">Grades</p>
