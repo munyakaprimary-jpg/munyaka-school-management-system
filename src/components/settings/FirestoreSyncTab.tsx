@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, Table as TableIcon, Wallet } from 'lucide-react';
 import { db } from '@/lib/firebaseClient';
-import { collection, doc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
