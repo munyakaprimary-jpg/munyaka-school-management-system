@@ -1945,7 +1945,7 @@ export default function FirestoreSyncTab() {
     setIsSyncing(true);
 
     try {
-      const rawData = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners') || '';
+      const rawData = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || localStorage.getItem('learners') || '';
       let localLearnersList: any[] = [];
       if (rawData) {
         try {
@@ -1953,7 +1953,7 @@ export default function FirestoreSyncTab() {
         } catch {}
       }
       if (!Array.isArray(localLearnersList) || localLearnersList.length === 0) {
-        localLearnersList = [];
+        localLearnersList = HarmonizedLearnerService.getLearners() || [];
       }
 
       const learnersPayload = localLearnersList.map((l: any, index: number) => {
