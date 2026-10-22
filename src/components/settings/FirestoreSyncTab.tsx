@@ -508,7 +508,7 @@ export default function FirestoreSyncTab() {
 
       setSyncProgressText("Syncing 6 of 14: Library & Catalog...");
       try {
-        await syncLibraryToCloud();
+        await handleSyncLibraryToCloud();
       } catch (err) {
         console.error("Library sync error in master sequence:", err);
       }
@@ -2116,55 +2116,82 @@ export default function FirestoreSyncTab() {
       setIsSyncing(false);
     }
   };
-        const borrowDocId = 'borrow_STU001_BK001'.toLowerCase().replace(/\s+/g, '_');
-        recordsToSync.push({
-          id: borrowDocId,
-          type: 'borrowing_log',
-          student_id: 'STU001',
-          student_name: 'John Doe',
-          book_id: 'BK001',
-          book_title: 'To Kill a Mockingbird',
-          isbn: '9780143127741',
-          borrow_date: '2024-01-15',
-          due_date: '2024-02-15',
-          return_date: '',
-          status: 'Borrowed',
-          fine_amount: 0,
-          condition_borrowed: 'Good',
-          condition_returned: '',
-          librarian: 'Ms. Smith',
-          notes: 'First time borrower',
-          synced_at: new Date().toISOString()
-        });
 
-        // Create a sample digital resource
-        const eresDocId = 'eres_math_grade5_algebra'.toLowerCase().replace(/\s+/g, '_');
-        recordsToSync.push({
-          id: eresDocId,
-          type: 'digital_resource',
-          resource_id: 'math_grade5_algebra',
-          title: 'Grade 5 Algebra Basics',
-          description: 'Interactive video lessons on algebraic expressions and equations',
-          category: 'Mathematics',
-          subcategory: 'Algebra',
-          format: 'Video',
-          url: 'https://example.com/resources/math/grade5/algebra',
-          file_size: '125 MB',
-          grade_level: 'Grade 5',
-          subject: 'Mathematics',
-          term: 'Term 1',
-          academic_year: '2024',
-          publisher: 'EduLearn Kenya',
-          publication_date: '2023-12-01',
-          is_free: true,
-          cost: 0,
-          license_type: 'Educational Use',
-          access_count: 142,
-          rating: 4,
-          tags: ['algebra', 'equations', 'variables', 'grade5'],
-          synced_at: new Date().toISOString()
-        });
-      }
+  const handleSyncLibraryToCloud = async () => {
+    if (isSyncingLibrary) return;
+    setIsSyncingLibrary(true);
+
+    try {
+      const recordsToSync: any[] = [];
+      
+      // Create sample books
+      const bookDocId = 'book_bk001_to_kill_a_mockingbird'.toLowerCase().replace(/\s+/g, '_');
+      recordsToSync.push({
+        id: bookDocId,
+        type: 'book',
+        book_id: 'BK001',
+        title: 'To Kill a Mockingbird',
+        author: 'Harper Lee',
+        isbn: '9780143127741',
+        category: 'Fiction',
+        subcategory: 'Classic',
+        total_copies: 5,
+        available_copies: 4,
+        shelf_location: 'Shelf A-3',
+        publisher: 'Penguin Books',
+        publication_year: 1960,
+        synced_at: new Date().toISOString()
+      });
+
+      // Create a sample borrowing log
+      const borrowDocId = 'borrow_STU001_BK001'.toLowerCase().replace(/\s+/g, '_');
+      recordsToSync.push({
+        id: borrowDocId,
+        type: 'borrowing_log',
+        student_id: 'STU001',
+        student_name: 'John Doe',
+        book_id: 'BK001',
+        book_title: 'To Kill a Mockingbird',
+        isbn: '9780143127741',
+        borrow_date: '2024-01-15',
+        due_date: '2024-02-15',
+        return_date: '',
+        status: 'Borrowed',
+        fine_amount: 0,
+        condition_borrowed: 'Good',
+        condition_returned: '',
+        librarian: 'Ms. Smith',
+        notes: 'First time borrower',
+        synced_at: new Date().toISOString()
+      });
+
+      // Create a sample digital resource
+      const eresDocId = 'eres_math_grade5_algebra'.toLowerCase().replace(/\s+/g, '_');
+      recordsToSync.push({
+        id: eresDocId,
+        type: 'digital_resource',
+        resource_id: 'math_grade5_algebra',
+        title: 'Grade 5 Algebra Basics',
+        description: 'Interactive video lessons on algebraic expressions and equations',
+        category: 'Mathematics',
+        subcategory: 'Algebra',
+        format: 'Video',
+        url: 'https://example.com/resources/math/grade5/algebra',
+        file_size: '125 MB',
+        grade_level: 'Grade 5',
+        subject: 'Mathematics',
+        term: 'Term 1',
+        academic_year: '2024',
+        publisher: 'EduLearn Kenya',
+        publication_date: '2023-12-01',
+        is_free: true,
+        cost: 0,
+        license_type: 'Educational Use',
+        access_count: 142,
+        rating: 4,
+        tags: ['algebra', 'equations', 'variables', 'grade5'],
+        synced_at: new Date().toISOString()
+      });
 
       const batch = writeBatch(db);
       recordsToSync.forEach((record) => {
@@ -2189,7 +2216,7 @@ export default function FirestoreSyncTab() {
     } finally {
       setIsSyncingLibrary(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6 pb-12">
@@ -2902,7 +2929,7 @@ export default function FirestoreSyncTab() {
               Sync book inventories, borrowing logs, and digital learning resources to Firebase Firestore.
             </p>
             <Button
-              onClick={syncLibraryToCloud}
+              onClick={handleSyncLibraryToCloud}
               disabled={isSyncingLibrary}
               className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
             >
