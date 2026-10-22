@@ -52,6 +52,11 @@ export default function LearnersDirectory() {
   const [streamFilter, setStreamFilter] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  // Active table states kept in sync for immediate UI re-render
+  const [learners, setLearners] = useState<any[]>([]);
+  const [filteredLearners, setFilteredLearners] = useState<any[]>([]);
+  const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
+
   // Deletion auth state
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<any | null>(null);
@@ -65,6 +70,12 @@ export default function LearnersDirectory() {
     const UNIFIED_KEY = 'munyaka_learners_v2';
     const DELETED_KEY = 'deleted_learner_ids';
 
+    const applyList = (raw: any[]) => {
+      const formatted = raw.map(formatLearnerDoc);
+      setLearnersList(formatted);
+      setLearners(formatted);
+    };
+
     const loadFromStorage = () => {
       try {
         const deletedIds = new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
@@ -77,7 +88,7 @@ export default function LearnersDirectory() {
               const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
               return !deletedIds.has(id) && !deletedIds.has(adm);
             });
-            setLearnersList(filtered.map(formatLearnerDoc));
+            applyList(filtered);
             return;
           }
         }
@@ -91,7 +102,7 @@ export default function LearnersDirectory() {
       try {
         unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
           const deletedIds = new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-          
+
           const cloudLearners = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
             ...docSnap.data()
@@ -132,7 +143,7 @@ export default function LearnersDirectory() {
           );
 
           localStorage.setItem(UNIFIED_KEY, JSON.stringify(unifiedList));
-          setLearnersList(unifiedList.map(formatLearnerDoc));
+          applyList(unifiedList);
         }, (error) => {
           console.warn("[Firestore Listener] Offline or sync error, using local fallback:", error);
         });
@@ -155,10 +166,73 @@ export default function LearnersDirectory() {
     };
   }, []);
 
+  // Derive filtered learners whenever the source list or filters change
+  useEffect(() => {
+    const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
+    const next = (learnersList || []).filter(learner => {
+      const name = (learner.name || learner.fullName || '').toLowerCase();
+      const adm = (learner.admissionNumber || learner.admissionNo || learner.admNo || '').toLowerCase();
+      const grade = (learner.grade || learner.gradeLevel || learner.class || '').toLowerCase();
+      const stream = (learner.stream || '').toLowerCase();
+
+      const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean);
+      const gradeMatch = gradeFilter === 'all' || grade.includes(gradeFilter.toLowerCase());
+      const streamMatch = streamFilter === 'all' || stream === streamFilter.toLowerCase();
+
+      return nameMatch && gradeMatch && streamMatch;
+    });
+    setFilteredLearners(next);
+    setDisplayedLearners(next);
+  }, [learnersList, searchTerm, gradeFilter, streamFilter]);
+
   const handleLearnerAdded = (newLearner: any) => {
-    setLearnersList(prev => [formatLearnerDoc(newLearner), ...prev]);
+    const formatted = formatLearnerDoc(newLearner);
+    setLearnersList(prev => [formatted, ...prev]);
+    setLearners(prev => [formatted, ...prev]);
+    setFilteredLearners(prev => [formatted, ...prev]);
+    setDisplayedLearners(prev => [formatted, ...prev]);
     const addedGrade = newLearner.gradeLevel || newLearner.grade || 'all';
     setGradeFilter(addedGrade);
+  };
+
+  // Force immediate UI table re-render: synchronize filtered learners state upon deletion
+  const handleDeleteLearner = async (learnerToDelete: any) => {
+    if (!learnerToDelete) return;
+
+    // Extract identifiers
+    const targetId = String(learnerToDelete.id || learnerToDelete._id || '').trim();
+    const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || '').trim();
+
+    // 1. Run Storage Purge Service
+    if (typeof purgeLearnerPermanently === 'function') {
+      await purgeLearnerPermanently(learnerToDelete);
+    }
+
+    // 2. Direct Filter Function
+    const isNotTarget = (item: any) => {
+      const itemId = String(item.id || item._id || '').trim();
+      const itemAdm = String(item.admissionNo || item.admissionNumber || '').trim();
+
+      const matches = 
+        (targetId && itemId === targetId) || 
+        (targetAdm && itemAdm === targetAdm);
+
+      return !matches;
+    };
+
+    // 3. Mutate ALL Active Table States
+    if (typeof setLearnersList === 'function') {
+      setLearnersList((prev: any[]) => prev.filter(isNotTarget));
+    }
+    if (typeof setLearners === 'function') {
+      setLearners((prev: any[]) => prev.filter(isNotTarget));
+    }
+    if (typeof setFilteredLearners === 'function') {
+      setFilteredLearners((prev: any[]) => prev.filter(isNotTarget));
+    }
+    if (typeof setDisplayedLearners === 'function') {
+      setDisplayedLearners((prev: any[]) => prev.filter(isNotTarget));
+    }
   };
 
   const requestDelete = (learner: any) => {
@@ -175,10 +249,10 @@ export default function LearnersDirectory() {
     if (pendingDelete) {
       const learnerToDelete = pendingDelete;
       // 1. Execute permanent central purge
-      const updatedList = await purgeLearnerPermanently(learnerToDelete);
+      await purgeLearnerPermanently(learnerToDelete);
 
-      // 2. Direct State Mutation in Table View
-      setLearnersList(updatedList);
+      // 2. Force immediate UI table re-render by clearing all local states
+      await handleDeleteLearner(learnerToDelete);
 
       showSuccess("Learner deleted successfully.");
     }
@@ -188,22 +262,6 @@ export default function LearnersDirectory() {
     setAuthError('');
     setIsVerifying(false);
   };
-
-  const filteredLearners = useMemo(() => {
-    const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
-    return (learnersList || []).filter(learner => {
-      const name = (learner.name || learner.fullName || '').toLowerCase();
-      const adm = (learner.admissionNumber || learner.admissionNo || learner.admNo || '').toLowerCase();
-      const grade = (learner.grade || learner.gradeLevel || learner.class || '').toLowerCase();
-      const stream = (learner.stream || '').toLowerCase();
-
-      const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean);
-      const gradeMatch = gradeFilter === 'all' || grade.includes(gradeFilter.toLowerCase());
-      const streamMatch = streamFilter === 'all' || stream === streamFilter.toLowerCase();
-
-      return nameMatch && gradeMatch && streamMatch;
-    });
-  }, [learnersList, searchTerm, gradeFilter, streamFilter]);
 
   const gradesList = useMemo(() => {
     const set = new Set<string>();
@@ -288,14 +346,14 @@ export default function LearnersDirectory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {filteredLearners.length === 0 ? (
+              {displayedLearners.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-16 text-center text-slate-400 font-medium">
                     No learners found matching your criteria.
                   </td>
                 </tr>
               ) : (
-                filteredLearners.map(learner => {
+                displayedLearners.map(learner => {
                   const name = learner.name || learner.fullName || 'Unnamed Learner';
                   const adm = learner.admissionNumber || learner.admissionNo || learner.admNo || '-';
                   const grade = learner.grade || learner.gradeLevel || learner.class || '-';
