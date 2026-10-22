@@ -173,10 +173,46 @@ export default function FirestoreSyncTab() {
     return [];
   });
 
+  const UNIFIED_STORAGE_KEY = 'munyaka_learners_v2';
+
+  const getUnifiedLocalCount = (): number => {
+    try {
+      const raw = localStorage.getItem(UNIFIED_STORAGE_KEY);
+      if (!raw) return 0;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.length : 0;
+    } catch {
+      return 0;
+    }
+  };
+
+  const [localCount, setLocalCount] = useState<number>(getUnifiedLocalCount);
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === UNIFIED_STORAGE_KEY || e.key === null) {
+        setLocalCount(getUnifiedLocalCount());
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    
+    // Also poll/listen periodically or via custom event for same-tab updates
+    const interval = setInterval(() => {
+      const current = getUnifiedLocalCount();
+      setLocalCount(prev => prev !== current ? current : prev);
+    }, 1500);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
+  }, []);
+
   const localLearners = (() => {
     try {
-      const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
-      return raw ? JSON.parse(raw) : [];
+      const raw = localStorage.getItem(UNIFIED_STORAGE_KEY) || localStorage.getItem('munyaka_learners') || localStorage.getItem('learners');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -2346,7 +2382,7 @@ export default function FirestoreSyncTab() {
                 Connected to Firebase
               </Badge>
               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 font-bold px-3 py-1">
-                Local: {localLearners.length} | Cloud: {cloudLearnersCount}
+                Local: {localCount} | Cloud: {cloudLearnersCount}
               </Badge>
               <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300 font-bold px-3 py-1">
                 Timetables Local: {localTimetablesCount} | Cloud: {cloudTimetablesCount}
@@ -2415,7 +2451,7 @@ export default function FirestoreSyncTab() {
               <div>
                 <p className="text-xs text-muted-foreground font-semibold">Ready State</p>
                 <p className="text-sm font-bold text-slate-900">
-                  {localLearners.length} Local Learners Ready
+                  {localCount} Local Learners Ready
                 </p>
               </div>
             </div>
@@ -3817,7 +3853,7 @@ export default function FirestoreSyncTab() {
           {/* Action Trigger */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
             <div className="text-sm text-slate-600 flex items-center gap-2">
-              <span>Local: <strong className="text-slate-900">{localLearners.length}</strong></span>
+              <span>Local: <strong className="text-slate-900">{localCount}</strong></span>
               <span>•</span>
               <span>Cloud: <strong className="text-slate-900">{cloudLearnersCount}</strong></span>
             </div>
@@ -3835,7 +3871,7 @@ export default function FirestoreSyncTab() {
                 ) : (
                   <>
                     <Cloud size={18} />
-                    Sync {localLearners.length} Learners to Firestore
+                    Sync {localCount} Learners to Firestore
                   </>
                 )}
               </Button>
