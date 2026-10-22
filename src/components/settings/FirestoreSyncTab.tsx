@@ -1976,6 +1976,32 @@ export default function FirestoreSyncTab() {
     }
   };
 
+  const handleResetAndPullFromCloud = async () => {
+    try {
+      // 1. Fetch real documents from Firestore
+      const snapshot = await getDocs(collection(db, "learners"));
+      const trueLearners = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // 2. Overwrite local storage with TRUE learners only
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify(trueLearners));
+
+      // 3. Clean up legacy keys completely
+      localStorage.removeItem('students');
+      localStorage.removeItem('cached_learners');
+
+      // 4. Notify UI
+      window.dispatchEvent(new Event('learners_updated'));
+      alert(`Cleaned local storage! Now showing ${trueLearners.length} verified learners.`);
+      
+      // Update cloud counter and local count state
+      setCloudLearnersCount(trueLearners.length);
+      setCloudLearnersList(trueLearners);
+    } catch (err) {
+      console.error("Failed to pull clean cloud data:", err);
+      alert("Failed to pull clean cloud data. Check console.");
+    }
+  };
+
   const handleSyncToCloud = async () => {
     if (isSyncing) return;
     setIsSyncing(true);
@@ -3869,6 +3895,14 @@ export default function FirestoreSyncTab() {
               <span>Cloud: <strong className="text-slate-900">{cloudLearnersCount}</strong></span>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={handleResetAndPullFromCloud}
+                className="w-full sm:w-auto border-emerald-300 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 font-bold px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+              >
+                <Cloud size={18} />
+                Clean Local Storage & Pull Fresh Cloud Data
+              </Button>
               <Button
                 onClick={handleSyncToCloud}
                 disabled={isSyncing}
