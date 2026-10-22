@@ -2116,8 +2116,6 @@ export default function FirestoreSyncTab() {
       setIsSyncing(false);
     }
   };
-
-        // Create a sample borrowing log
         const borrowDocId = 'borrow_STU001_BK001'.toLowerCase().replace(/\s+/g, '_');
         recordsToSync.push({
           id: borrowDocId,
