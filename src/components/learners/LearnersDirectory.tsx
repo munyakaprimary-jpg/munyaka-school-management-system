@@ -24,10 +24,32 @@ import { showSuccess, showError } from '@/utils/toast';
 import { CentralDataService } from '@/services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
 import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
-import { purgeLearnerPermanently } from '@/services/purgeLearnerService';
+import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
 import AddLearnerModal from '@/components/students/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
+
+const LEARNER_ID_PREFIX = 'learner-';
+
+/**
+ * Normalized deleted-record check. Compares the bare id, the `learner-` prefixed id
+ * and the admission/assessment numbers so `17898...` and `learner-17898...`
+ * resolve to the same record.
+ */
+const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
+  if (!item) return true;
+  const id = String(item.id || item._id || '').trim();
+  const rawId = toRawLearnerId(id);
+  const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
+  const assess = String(item.assessmentNo || item.assessmentNumber || '').trim();
+
+  if (id && deletedIds.has(id)) return true;
+  if (rawId && deletedIds.has(rawId)) return true;
+  if (rawId && deletedIds.has(LEARNER_ID_PREFIX + rawId)) return true;
+  if (adm && deletedIds.has(adm)) return true;
+  if (assess && deletedIds.has(assess)) return true;
+  return false;
+};
 
 export default function LearnersDirectory() {
   const navigate = useNavigate();
@@ -83,11 +105,7 @@ export default function LearnersDirectory() {
         if (unified) {
           const parsed = JSON.parse(unified);
           if (Array.isArray(parsed)) {
-            const filtered = parsed.filter((item: any) => {
-              const id = String(item.id || item._id || '').trim();
-              const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
-              return !deletedIds.has(id) && !deletedIds.has(adm);
-            });
+            const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
             applyList(filtered);
             return;
           }
@@ -108,38 +126,29 @@ export default function LearnersDirectory() {
             ...docSnap.data()
           }));
 
-          const cleanCloudList = cloudLearners.filter((item: any) => {
-            const id = String(item.id || item._id || '').trim();
-            const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
-            return !deletedIds.has(id) && !deletedIds.has(adm);
-          });
+          const cleanCloudList = cloudLearners.filter((item: any) => !isDeletedRecord(item, deletedIds));
 
           const currentLocal = JSON.parse(localStorage.getItem(UNIFIED_KEY) || '[]');
           const localMap = new Map();
 
           currentLocal.forEach((l: any) => {
+            if (isDeletedRecord(l, deletedIds)) return;
             const lId = String(l.id || l._id || '').trim();
             const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
-            if (!deletedIds.has(lId) && !deletedIds.has(lAdm)) {
-              localMap.set(lId || lAdm, l);
-            }
+            localMap.set(lId || lAdm, l);
           });
 
           cleanCloudList.forEach((l: any) => {
             const lId = String(l.id || l._id || '').trim();
             const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
             const key = lId || lAdm;
-            if (key && !localMap.has(key) && !deletedIds.has(lId) && !deletedIds.has(lAdm)) {
+            if (key && !localMap.has(key)) {
               localMap.set(key, l);
             }
           });
 
           const unifiedList = Array.from(localMap.values()).filter(
-            item => {
-              const id = String(item.id || item._id || '').trim();
-              const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
-              return !deletedIds.has(id) && !deletedIds.has(adm);
-            }
+            (item: any) => !isDeletedRecord(item, deletedIds)
           );
 
           localStorage.setItem(UNIFIED_KEY, JSON.stringify(unifiedList));
@@ -199,22 +208,32 @@ export default function LearnersDirectory() {
   const handleDeleteLearner = async (learnerToDelete: any) => {
     if (!learnerToDelete) return;
 
-    // Extract identifiers
-    const targetId = String(learnerToDelete.id || learnerToDelete._id || '').trim();
+    // Normalize identifiers: `17898...` and `learner-17898...` are the same learner
+    const sourceId = learnerToDelete.id || learnerToDelete._id || learnerToDelete.learnerId || '';
+    const targetRawId = toRawLearnerId(sourceId);
+    const targetPrefixedId = targetRawId ? LEARNER_ID_PREFIX + targetRawId : '';
     const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || '').trim();
 
-    // 1. Run Storage Purge Service
+    // 1. Run Storage Purge Service with a normalized target (raw + prefixed ids)
     if (typeof purgeLearnerPermanently === 'function') {
-      await purgeLearnerPermanently(learnerToDelete);
+      await purgeLearnerPermanently({
+        ...learnerToDelete,
+        id: targetRawId || String(sourceId).trim(),
+        _id: targetRawId || String(sourceId).trim(),
+        prefixedId: targetPrefixedId,
+        admissionNo: targetAdm,
+      });
     }
 
-    // 2. Direct Filter Function
+    // 2. Direct Filter Function (prefix-insensitive)
     const isNotTarget = (item: any) => {
-      const itemId = String(item.id || item._id || '').trim();
+      const itemSourceId = item.id || item._id || item.learnerId || '';
+      const itemRawId = toRawLearnerId(itemSourceId);
       const itemAdm = String(item.admissionNo || item.admissionNumber || '').trim();
 
-      const matches = 
-        (targetId && itemId === targetId) || 
+      const matches =
+        (targetRawId && itemRawId === targetRawId) ||
+        (targetPrefixedId && String(itemSourceId).trim() === targetPrefixedId) ||
         (targetAdm && itemAdm === targetAdm);
 
       return !matches;
@@ -248,10 +267,8 @@ export default function LearnersDirectory() {
 
     if (pendingDelete) {
       const learnerToDelete = pendingDelete;
-      // 1. Execute permanent central purge
-      await purgeLearnerPermanently(learnerToDelete);
-
-      // 2. Force immediate UI table re-render by clearing all local states
+      // Executes the permanent central purge (dual Firestore doc-id delete)
+      // and forces an immediate UI table re-render across all local states
       await handleDeleteLearner(learnerToDelete);
 
       showSuccess("Learner deleted successfully.");
