@@ -164,6 +164,16 @@ export default function FirestoreSyncTab() {
   const [campusesCloudCount, setCampusesCloudCount] = useState<number>(0);
   const [isSyncingCampuses, setIsSyncingCampuses] = useState<boolean>(false);
 
+  // LAN Server Config Cloud Sync state
+  const [lanConfigCount, setLanConfigCount] = useState<number>(0);
+  const [lanConfigCloudCount, setLanConfigCloudCount] = useState<number>(0);
+  const [isSyncingLan, setIsSyncingLan] = useState<boolean>(false);
+
+  // Payment & Subscriptions Cloud Sync state
+  const [subCount, setSubCount] = useState<number>(0);
+  const [subCloudCount, setSubCloudCount] = useState<number>(0);
+  const [isSyncingSub, setIsSyncingSub] = useState<boolean>(false);
+
   const loadLocalGames = () => {
     try {
       const raw = localStorage.getItem('munyaka_games_v1');
@@ -2786,7 +2796,7 @@ export default function FirestoreSyncTab() {
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-slate-200 font-semibold text-lg">LAN Server Config</h3>
                     <span className="text-xs bg-slate-800 text-cyan-400 px-2.5 py-1 rounded-full border border-slate-700">
-                      Cloud: {lanConfigCloudCount}
+                      Cloud: {typeof lanConfigCloudCount !== 'undefined' ? lanConfigCloudCount : 0}
                     </span>
                   </div>
                   <p className="text-3xl font-bold text-cyan-400 mb-4">{lanConfigCount} active</p>
@@ -2806,7 +2816,7 @@ export default function FirestoreSyncTab() {
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-slate-200 font-semibold text-lg">Subscriptions</h3>
                     <span className="text-xs bg-slate-800 text-emerald-400 px-2.5 py-1 rounded-full border border-slate-700">
-                      Cloud: {subCloudCount}
+                      Cloud: {typeof subCloudCount !== 'undefined' ? subCloudCount : 0}
                     </span>
                   </div>
                   <p className="text-3xl font-bold text-emerald-400 mb-4">{subCount} active</p>
