@@ -22,17 +22,37 @@ export const AdminDashboardComponent: React.FC = () => {
   // ── Centralized LocalStorage DB Sync (Strictly bound to munyaka_learners_v2) ──
   const UNIFIED_STORAGE_KEY = 'munyaka_learners_v2';
 
+  const getCleanCount = (): number => {
+    try {
+      const raw = localStorage.getItem(UNIFIED_STORAGE_KEY);
+      if (!raw) return 0;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return 0;
+      const uniqueLearners = Array.from(new Map(parsed.map((item: any) => [item.id || item.admissionNo || item.admission_number, item])).values());
+      return uniqueLearners.length;
+    } catch {
+      return 0;
+    }
+  };
+
   const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => {
     try {
       const raw = localStorage.getItem(UNIFIED_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          const map = new Map<string, any>();
+          parsed.forEach((item: any) => {
+            if (item && (item.id || item.admissionNo || item.admission_number || item.name)) {
+              const key = String(item.id || item.admissionNo || item.admission_number || item.name).trim().toLowerCase();
+              if (!map.has(key)) map.set(key, item);
+            }
+          });
+          return Array.from(map.values());
         }
       }
     } catch {}
-    return getStoredLearners();
+    return [];
   });
 
   const [localStaff, setLocalStaff] = useState<any[]>(() => {
@@ -56,12 +76,19 @@ export const AdminDashboardComponent: React.FC = () => {
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            setReactiveLearners(parsed);
+            const map = new Map<string, any>();
+            parsed.forEach((item: any) => {
+              if (item && (item.id || item.admissionNo || item.admission_number || item.name)) {
+                const key = String(item.id || item.admissionNo || item.admission_number || item.name).trim().toLowerCase();
+                if (!map.has(key)) map.set(key, item);
+              }
+            });
+            setReactiveLearners(Array.from(map.values()));
           } else {
-            setReactiveLearners(getStoredLearners());
+            setReactiveLearners([]);
           }
         } else {
-          setReactiveLearners(getStoredLearners());
+          setReactiveLearners([]);
         }
 
         const sKeys = ['munyaka_staff_db', 'munyaka_staff_master_v1', 'munyaka_staff_directory', 'munyaka_master_staff_list', 'munyaka_staff', 'staff_members', 'staff'];
@@ -94,7 +121,24 @@ export const AdminDashboardComponent: React.FC = () => {
     };
   }, []);
 
-  const learners = reactiveLearners.length > 0 ? reactiveLearners : getStoredLearners();
+  const learners = (() => {
+    try {
+      const raw = localStorage.getItem(UNIFIED_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      const map = new Map<string, any>();
+      parsed.forEach((item: any) => {
+        if (item && (item.id || item.admissionNo || item.admission_number || item.name)) {
+          const key = String(item.id || item.admissionNo || item.admission_number || item.name).trim().toLowerCase();
+          if (!map.has(key)) map.set(key, item);
+        }
+      });
+      return Array.from(map.values());
+    } catch {
+      return [];
+    }
+  })();
   const staff = localStaff.length > 0 ? localStaff : (CentralDataService.getStaff() || []);
 
   const teaching = staff.filter((s: any) => {
