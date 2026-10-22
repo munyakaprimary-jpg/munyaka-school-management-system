@@ -2193,48 +2193,6 @@ export default function FirestoreSyncTab() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Master Sync All Modules Action Card */}
-      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 rounded-2xl p-6 text-white shadow-xl border border-indigo-700/50">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/30 text-indigo-200 text-xs font-medium border border-indigo-400/30">
-              <Cloud className="w-3.5 h-3.5 animate-pulse" />
-              Master Orchestration Hub
-            </div>
-            <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-              Sync All Modules to Cloud
-            </h2>
-            <p className="text-indigo-200 text-sm max-w-xl">
-              Execute sequential synchronization across all 14 core school management modules to Google Firestore with isolated error handling and live progress tracking.
-            </p>
-            {syncProgressText && (
-              <div className="flex items-center gap-2 text-amber-300 font-mono text-sm pt-1">
-                <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
-                <span>{syncProgressText}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-            <button
-              onClick={refreshAllCloudCounters}
-              disabled={isSyncingAll}
-              className="px-4 py-2.5 rounded-xl bg-indigo-800/80 hover:bg-indigo-700 text-indigo-100 font-medium text-sm transition-all border border-indigo-600 flex items-center gap-2 disabled:opacity-50"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh All Counters
-            </button>
-            <button
-              onClick={syncAllCollectionsToCloud}
-              disabled={isSyncingAll}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-sm shadow-lg shadow-cyan-500/25 transition-all flex items-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed"
-            >
-              <Cloud className={`w-5 h-5 ${isSyncingAll ? 'animate-spin' : ''}`} />
-              {isSyncingAll ? 'Syncing Modules...' : 'Sync All Modules to Cloud'}
-            </button>
-          </div>
-        </div>
-      </div>
       <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
         <CardHeader className="px-0 pt-0 pb-6 border-b">
           <div className="flex items-center justify-between">
