@@ -2041,79 +2041,81 @@ export default function FirestoreSyncTab() {
   };
 
   const handleSyncToCloud = async () => {
-      const bookSources = [
-        'munyaka_books',
-        'library_books',
-        'books',
-        'munyaka_library',
-        'library_inventory'
-      ];
-      let books: any[] = [];
-      for (const key of bookSources) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              books = [...books, ...parsed];
-            }
-          } catch {}
-        }
+    if (isSyncing) return;
+    setIsSyncing(true);
+
+    try {
+      const rawData = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || localStorage.getItem('learners') || '';
+      let localLearnersList: any[] = [];
+      if (rawData) {
+        try {
+          localLearnersList = JSON.parse(rawData);
+        } catch {}
+      }
+      if (!Array.isArray(localLearnersList) || localLearnersList.length === 0) {
+        localLearnersList = HarmonizedLearnerService.getLearners() || [];
       }
 
-      const borrowSources = [
-        'munyaka_borrow_logs',
-        'borrow_logs',
-        'borrowing_records',
-        'munyaka_borrowing',
-        'library_borrowing'
-      ];
-      let borrowLogs: any[] = [];
-      for (const key of borrowSources) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              borrowLogs = [...borrowLogs, ...parsed];
-            }
-          } catch {}
-        }
+      const learnersPayload = localLearnersList.map((l: any, index: number) => {
+        if (!l) return null;
+        const id = String(l.id || l.admissionNumber || l.admission_number || l.admission_no || l.admissionNo || `learner_${index + 1}`);
+        return {
+          id,
+          admission_number: String(l.admissionNumber || l.admission_number || l.admission_no || l.admissionNo || l.admNo || id).trim(),
+          upi_no: String(l.upiNumber || l.upi || l.upi_no || '').trim(),
+          name: String(l.name || `${l.firstName || ''} ${l.lastName || ''}`).trim() || 'Learner',
+          grade: String(l.grade || l.gradeLevel || 'Grade 1').trim(),
+          stream: String(l.stream || '').trim(),
+          gender: String(l.gender || 'Unknown').trim(),
+          dob: l.dateOfBirth || l.date_of_birth || l.dob || null,
+          parent_name: String(l.guardianName || l.parentName || l.guardian_name || '').trim(),
+          parent_phone: String(l.guardianPhone || l.parentPhone || l.guardian_phone || '').trim(),
+          updated_at: new Date().toISOString()
+        };
+      }).filter((l): l is any => Boolean(l));
+
+      if (!learnersPayload || learnersPayload.length === 0) {
+        alert('No local learner records found to sync.');
+        return;
       }
 
-      const eResourceSources = [
-        'munyaka_eresources',
-        'digital_resources',
-        'e_learning_resources',
-        'schemes_of_work',
-        'munyaka_eresources',
-        'library_eresources'
-      ];
-      let eResources: any[] = [];
-      for (const key of eResourceSources) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              eResources = [...eResources, ...parsed];
-            }
-          } catch {}
+      const batch = writeBatch(db);
+
+      learnersPayload.forEach((learner) => {
+        const docId = String(learner.id || learner.admission_number || Date.now());
+        const docRef = doc(db, 'learners', docId);
+        batch.set(docRef, learner, { merge: true });
+      });
+
+      await batch.commit();
+
+      setLastSynced(new Date());
+      
+      const fetchCloudCount = async () => {
+        try {
+          const snapshot = await getDocs(collection(db, "learners"));
+          setCloudLearnersCount(snapshot.size);
+        } catch (err) {
+          console.error("Error fetching learners cloud count:", err);
         }
-      }
+      };
+      await fetchCloudCount();
 
-      // If no explicit data found, generate synthesized records from learners and books
-      const recordsToSync: any[] = [];
+      alert(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
+      showSuccess(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
 
-      // Process physical books
-      if (books.length > 0) {
-        books.forEach((book: any, idx: number) => {
-          if (!book) return;
-          const isbnOrId = String(book.isbn || book.bookId || book.id || `book_${idx + 1}`).trim();
-          
-          // Generate unique document ID: book_{isbn_or_book_id} (lowercase, spaces replaced by underscores)
-          const rawDocId = `book_${isbnOrId}`;
-          const docId = rawDocId.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
+      handleTestCloudTables().catch(console.error);
+
+    } catch (err: any) {
+      console.error('Learners sync error:', err);
+      const msg = err.message || 'Unknown error';
+      setErrorMessage(msg);
+      alert(`Sync failed: ${msg}`);
+      showError(msg);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
           recordsToSync.push({
             id: docId,
