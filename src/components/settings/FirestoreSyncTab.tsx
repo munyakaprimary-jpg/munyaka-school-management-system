@@ -2116,28 +2116,6 @@ export default function FirestoreSyncTab() {
       setIsSyncing(false);
     }
   };
-            student_id: studentId,
-            student_name: String(log.studentName || log.learnerName || '').trim(),
-            book_id: bookId,
-            book_title: String(log.bookTitle || log.title || '').trim(),
-            isbn: String(log.isbn || '').trim(),
-            borrow_date: String(log.borrowDate || log.dateBorrowed || new Date().toISOString().split('T')[0]).trim(),
-            due_date: String(log.dueDate || log.dateDue || '').trim(),
-            return_date: String(log.returnDate || log.dateReturned || '').trim(),
-            status: String(log.status || 'Borrowed').trim(), // Borrowed, Returned, Overdue, Lost
-            fine_amount: Number(log.fineAmount || log.fine || 0),
-            condition_borrowed: String(log.conditionBorrowed || 'Good').trim(),
-            condition_returned: String(log.conditionReturned || '').trim(),
-            librarian: String(log.librarian || log.issuedBy || '').trim(),
-            notes: String(log.notes || '').trim(),
-            synced_at: new Date().toISOString()
-          });
-        });
-      }
-
-      // Process digital learning resources
-      if (eResources.length > 0) {
-        eResources.forEach((resource: any, idx: number) => {
           if (!resource) return;
           const resourceId = String(resource.id || resource.resourceId || `eres_${idx + 1}`).trim();
           
