@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { CentralDataService } from '../services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner, dedupeLearnersById } from '../services/learnerService';
 import { bundleAllLearnersToCentral } from '../services/bundleAllLearners';
 import { purgeLearnerPermanently } from '../services/purgeLearnerService';
-import { initialSeedData } from '../data/initialSeedData';
 import { useAuth } from './AuthContext';
 import { db } from '../config/firebase';
 import { collection, getDocs, setDoc, doc, deleteDoc } from 'firebase/firestore';
@@ -79,10 +77,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } catch (err) {
         console.error('[LearnerContext] Initialization & bundling error:', err);
         if (isMounted) {
-          const fallback = filterLearnersForUser(
-            (initialSeedData as any).students || (initialSeedData as any).learners || []
-          );
-          setLearners(fallback);
+          setLearners(filterLearnersForUser([]));
           setLoading(false);
         }
       }
@@ -165,9 +160,6 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      // Also call CentralDataService
-      CentralDataService.saveLearners(updatedList);
-
       setLearners(filterLearnersForUser(updatedList));
 
       window.dispatchEvent(new Event('students-updated'));
@@ -211,7 +203,6 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      CentralDataService.saveLearners(deduped);
       setLearners(filterLearnersForUser(deduped));
 
       window.dispatchEvent(new Event('students-updated'));
@@ -263,8 +254,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return;
         }
       }
-      const rawAll = CentralDataService.getLearners() || [];
-      setLearners(filterLearnersForUser(rawAll));
+      setLearners(filterLearnersForUser([]));
     } catch {
       setLearners(filterLearnersForUser([]));
     }
@@ -276,15 +266,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.removeItem('munyaka_students');
     localStorage.removeItem('cached_learners');
 
-    const seedStudents = (initialSeedData as any).students || (initialSeedData as any).learners || [];
-    const seedList = dedupeLearnersById(seedStudents.map(formatLearnerDoc));
-
-    localStorage.setItem(STORAGE_KEY_LEARNERS_V2, JSON.stringify(seedList));
-    localStorage.setItem('school_learners_data', JSON.stringify(seedList));
-    localStorage.setItem('munyaka_students', JSON.stringify(seedList));
-    localStorage.setItem('cached_learners', JSON.stringify(seedList));
-
-    setLearners(filterLearnersForUser(seedList));
+    setLearners(filterLearnersForUser([]));
     window.dispatchEvent(new Event('students-updated'));
     window.dispatchEvent(new Event('learners-updated'));
     window.dispatchEvent(new Event('munyaka:data-changed'));
