@@ -7,28 +7,61 @@ export { STORAGE_KEYS };
 
 export const CentralDataService = {
   getLearners: (): any[] => {
-    const primary = readStorage<any[]>('school_learners_data', []);
-    const legacy = readStorage<any[]>('munyaka_students', []);
-    const schoolV1 = readStorage<any[]>('school_learners_v1', []);
-    const studentsKey = readStorage<any[]>('students', []);
-
-    const combined = [...primary, ...legacy, ...schoolV1, ...studentsKey];
-    if (combined.length === 0) {
-      return (initialSeedData as any).students || (initialSeedData as any).learners || [];
-    }
-
-    const map = new Map<string, any>();
-    combined.forEach(s => {
-      if (s && (s.id || s.admissionNumber || s.admNo || s.name)) {
-        const key = String(s.id || s.admissionNumber || s.admNo || s.name).trim().toLowerCase();
-        map.set(key, s);
+    const UNIFIED_STORAGE_KEY = 'munyaka_learners_v2';
+    const DELETED_IDS_KEY = 'deleted_learner_ids';
+    try {
+      const rawLearners = localStorage.getItem(UNIFIED_STORAGE_KEY);
+      if (!rawLearners) {
+        // Fallback to legacy reads if unified key is empty
+        const primary = readStorage<any[]>('school_learners_data', []);
+        const legacy = readStorage<any[]>('munyaka_students', []);
+        const schoolV1 = readStorage<any[]>('school_learners_v1', []);
+        const studentsKey = readStorage<any[]>('students', []);
+        const combined = [...primary, ...legacy, ...schoolV1, ...studentsKey];
+        if (combined.length === 0) {
+          return [];
+        }
+        const rawDeleted = localStorage.getItem(DELETED_IDS_KEY);
+        const deletedIds: string[] = rawDeleted ? JSON.parse(rawDeleted) : [];
+        const validMap = new Map<string, any>();
+        combined.forEach(l => {
+          if (l && (l.id || l.admissionNumber || l.admNo || l.name)) {
+            const idStr = String(l.id || l.admissionNumber || l.admNo || '').trim();
+            if (!deletedIds.includes(idStr)) {
+              const key = (idStr || String(l.name)).toLowerCase();
+              if (!validMap.has(key)) validMap.set(key, l);
+            }
+          }
+        });
+        return dedupeLearnersById(Array.from(validMap.values()).map(formatLearnerDoc));
       }
-    });
 
-    return dedupeLearnersById(Array.from(map.values()).map(formatLearnerDoc));
+      const learners = JSON.parse(rawLearners);
+      if (!Array.isArray(learners)) return [];
+
+      const rawDeleted = localStorage.getItem(DELETED_IDS_KEY);
+      const deletedIds: string[] = rawDeleted ? JSON.parse(rawDeleted) : [];
+
+      const validLearnersMap = new Map<string, any>();
+      learners.forEach((l: any) => {
+        if (!l) return;
+        const idStr = String(l.id || l.admissionNo || l.admission_number || '').trim();
+        if (!deletedIds.includes(idStr)) {
+          const key = (idStr || String(l.name || '')).toLowerCase();
+          if (!validLearnersMap.has(key)) {
+            validLearnersMap.set(key, l);
+          }
+        }
+      });
+
+      return dedupeLearnersById(Array.from(validLearnersMap.values()).map(formatLearnerDoc));
+    } catch {
+      return [];
+    }
   },
 
   saveLearners: (learners: any[]): boolean => {
+    const UNIFIED_STORAGE_KEY = 'munyaka_learners_v2';
     const normalized = dedupeLearnersById(
       (learners || []).map((l) => ({
         ...l,
@@ -36,6 +69,7 @@ export const CentralDataService = {
       }))
     );
     try {
+      localStorage.setItem(UNIFIED_STORAGE_KEY, JSON.stringify(normalized));
       localStorage.setItem('school_learners_data', JSON.stringify(normalized));
       localStorage.setItem('munyaka_students', JSON.stringify(normalized));
     } catch (err) {
@@ -43,6 +77,7 @@ export const CentralDataService = {
     }
     window.dispatchEvent(new Event('students-updated'));
     window.dispatchEvent(new Event('learners-updated'));
+    window.dispatchEvent(new Event('learners_updated'));
     window.dispatchEvent(new Event('munyaka:data-changed'));
     return true;
   },
