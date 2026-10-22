@@ -1997,7 +1997,7 @@ export default function FirestoreSyncTab() {
       setCloudLearnersCount(trueLearners.length);
       setCloudLearnersList(trueLearners);
     } catch (err) {
-      console.error("Error fetching learners cloud count:", err);
+      console.error("Failed to pull clean cloud data:", err);
       alert("Failed to pull clean cloud data. Check console.");
     }
   };
@@ -2057,8 +2057,8 @@ export default function FirestoreSyncTab() {
         try {
           const snapshot = await getDocs(collection(db, "learners"));
           setCloudLearnersCount(snapshot.size);
-        } catch (err) {
-          console.error("Error fetching learners cloud count:", err);
+        } catch (error) {
+          console.error("Failed to fetch cloud count:", error);
         }
       };
       await fetchCloudCount();
