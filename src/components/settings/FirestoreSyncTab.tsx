@@ -157,6 +157,11 @@ export default function FirestoreSyncTab() {
   const [cloudGamesCount, setCloudGamesCount] = useState<number>(0);
   const [cloudGamesList, setCloudGamesList] = useState<any[]>([]);
 
+  // LAN Server Config Cloud Sync state
+  const [lanConfigCount, setLanConfigCount] = useState<number>(0);
+  const [lanConfigCloudCount, setLanConfigCloudCount] = useState<number>(0);
+  const [isSyncingLan, setIsSyncingLan] = useState<boolean>(false);
+
   // Load local count on mount
   useEffect(() => {
     try {
@@ -166,7 +171,38 @@ export default function FirestoreSyncTab() {
     } catch (e) {
       setGamesCount(0);
     }
+
+    try {
+      const rawLan = localStorage.getItem('munyaka_lan_config_v1');
+      setLanConfigCount(rawLan ? 1 : 0);
+    } catch (e) {
+      setLanConfigCount(0);
+    }
   }, []);
+
+  const handleSyncLanConfig = async () => {
+    setIsSyncingLan(true);
+    try {
+      const raw = localStorage.getItem('munyaka_lan_config_v1');
+      const configData = raw ? JSON.parse(raw) : {};
+      
+      const docRef = doc(db, "lan_server_config", "main_config");
+      await setDoc(docRef, {
+        ...configData,
+        lastSyncedAt: new Date().toISOString()
+      }, { merge: true });
+
+      setLanConfigCloudCount(1);
+      alert('Successfully synced LAN Server Config to Firestore!');
+      showSuccess('Successfully synced LAN Server Config to Firestore!');
+    } catch (err: any) {
+      console.error("LAN Config sync error:", err);
+      alert(`Sync failed: ${err.message || 'Unknown error'}`);
+      showError(err.message || 'Unknown error');
+    } finally {
+      setIsSyncingLan(false);
+    }
+  };
 
   const handleSyncGamesHub = async () => {
     setIsSyncingGames(true);
@@ -350,6 +386,10 @@ export default function FirestoreSyncTab() {
       setCloudGamesCount(gamesSnap?.size || 0);
       const gamesDocs = (gamesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudGamesList(gamesDocs);
+
+      // LAN Server Config Collection
+      const lanSnap = await getDoc(doc(db, 'lan_server_config', 'main_config')).catch(() => null);
+      setLanConfigCloudCount(lanSnap?.exists() ? 1 : 0);
       setCloudExamsList(examsDocs);
 
       // ICT Lab Records Collection
@@ -2559,6 +2599,26 @@ export default function FirestoreSyncTab() {
                   className="w-full bg-purple-600 hover:bg-purple-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
                   {isSyncingGames ? 'Syncing Games Hub...' : 'Sync Games Hub'}
+                </button>
+              </div>
+
+              {/* LAN Server Config Sync Card */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-slate-200 font-semibold text-lg">LAN Server Config</h3>
+                    <span className="text-xs bg-slate-800 text-cyan-400 px-2.5 py-1 rounded-full border border-slate-700">
+                      Cloud: {lanConfigCloudCount}
+                    </span>
+                  </div>
+                  <p className="text-3xl font-bold text-cyan-400 mb-4">{lanConfigCount} active</p>
+                </div>
+                <button
+                  onClick={handleSyncLanConfig}
+                  disabled={isSyncingLan}
+                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {isSyncingLan ? 'Syncing LAN Config...' : 'Sync LAN Config'}
                 </button>
               </div>
 
