@@ -14,7 +14,7 @@ import { HarmonizedLearnerService } from '@/services/harmonizedLearnerService';
 
 export default function FirestoreSyncTab() {
   const [isSyncing, setIsSyncing] = useState(false);
-  const [localCount, setLocalCount] = useState(0);
+  const [cloudCount, setCloudCount] = useState<number>(0);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -30,30 +30,7 @@ export default function FirestoreSyncTab() {
   const [cloudLearnersList, setCloudLearnersList] = useState<any[]>([]);
   const [isCheckingCollections, setIsCheckingCollections] = useState(false);
 
-  useEffect(() => {
-    const updateLocalCount = () => {
-      try {
-        const raw = localStorage.getItem('munyaka_learners_v2');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            setLocalCount(parsed.length);
-            return;
-          }
-        }
-        setLocalCount(0);
-      } catch {
-        setLocalCount(0);
-      }
-    };
-    updateLocalCount();
-    window.addEventListener('learners_updated', updateLocalCount);
-    window.addEventListener('storage', updateLocalCount);
-    return () => {
-      window.removeEventListener('learners_updated', updateLocalCount);
-      window.removeEventListener('storage', updateLocalCount);
-    };
-  }, []);
+  // Removed duplicate useEffect for localCount
 
   const [isSyncingAssessments, setIsSyncingAssessments] = useState(false);
   const [cloudAssessmentMarks, setCloudAssessmentMarks] = useState<any[]>([]);
@@ -214,6 +191,7 @@ export default function FirestoreSyncTab() {
   };
 
   const [localCount, setLocalCount] = useState<number>(getUnifiedLocalCount);
+  const [cloudCount, setCloudCount] = useState<number>(0);
 
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
