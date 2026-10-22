@@ -14,7 +14,6 @@ import { HarmonizedLearnerService } from '@/services/harmonizedLearnerService';
 
 export default function FirestoreSyncTab() {
   const [isSyncing, setIsSyncing] = useState(false);
-  const [cloudCount, setCloudCount] = useState<number>(0);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
