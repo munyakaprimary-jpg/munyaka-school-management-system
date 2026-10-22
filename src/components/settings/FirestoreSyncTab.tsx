@@ -95,62 +95,7 @@ export default function FirestoreSyncTab() {
   const [cloudTimetablesCount, setCloudTimetablesCount] = useState(0);
   const [cloudTimetablesList, setCloudTimetablesList] = useState<any[]>([]);
 
-  // Local counts & helpers for additional core sync cards
-  const localStaffCount = (() => {
-    try {
-      const raw = localStorage.getItem('munyaka_staff') || localStorage.getItem('staff_registry') || '[]';
-      const p = JSON.parse(raw);
-      return Array.isArray(p) ? p.length : 0;
-    } catch { return 0; }
-  })();
-
-  const localReportCardsCount = (() => {
-    try {
-      const raw = localStorage.getItem('munyaka_report_cards') || localStorage.getItem('report_cards') || '[]';
-      const p = JSON.parse(raw);
-      return Array.isArray(p) ? p.length : 0;
-    } catch { return 0; }
-  })();
-
-  const localLibraryCount = (() => {
-    try {
-      const raw = localStorage.getItem('munyaka_library') || localStorage.getItem('library_records') || '[]';
-      const p = JSON.parse(raw);
-      return Array.isArray(p) ? p.length : 0;
-    } catch { return 0; }
-  })();
-
-  const localIctCount = (() => {
-    try {
-      const raw = localStorage.getItem('munyaka_ict_lab') || localStorage.getItem('ict_hardware_inventory') || '[]';
-      const p = JSON.parse(raw);
-      return Array.isArray(p) ? p.length : 0;
-    } catch { return 0; }
-  })();
-
-  const localLearningAreasCount = (() => {
-    try {
-      const raw = localStorage.getItem('munyaka_learning_areas') || localStorage.getItem('learning_areas') || '[]';
-      const p = JSON.parse(raw);
-      return Array.isArray(p) ? p.length : 0;
-    } catch { return 0; }
-  })();
-
-  const localCommunicationCount = (() => {
-    try {
-      const raw = localStorage.getItem('munyaka_communications') || localStorage.getItem('communications') || '[]';
-      const p = JSON.parse(raw);
-      return Array.isArray(p) ? p.length : 0;
-    } catch { return 0; }
-  })();
-
-  const localEventsNoticesCount = (() => {
-    try {
-      const raw = localStorage.getItem('events_notices') || '[]';
-      const p = JSON.parse(raw);
-      return Array.isArray(p) ? p.length : 0;
-    } catch { return 0; }
-  })();
+  // Local timetable schedules count (per grade)
   const localTimetablesCount = (() => {
     try {
       const raw = localStorage.getItem('school-timetable-data') || localStorage.getItem('munyaka_timetable') || '{}';
