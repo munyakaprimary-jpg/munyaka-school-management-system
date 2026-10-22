@@ -153,29 +153,50 @@ export default function FirestoreSyncTab() {
 
   // Games Hub Cloud Sync state
   const [gamesCount, setGamesCount] = useState<number>(0);
+  const [gamesList, setGamesList] = useState<any[]>([]);
   const [isSyncingGames, setIsSyncingGames] = useState<boolean>(false);
   const [cloudGamesCount, setCloudGamesCount] = useState<number>(0);
   const [cloudGamesList, setCloudGamesList] = useState<any[]>([]);
 
-  // LAN Server Config Cloud Sync state
-  const [lanConfigCount, setLanConfigCount] = useState<number>(0);
-  const [lanConfigCloudCount, setLanConfigCloudCount] = useState<number>(0);
-  const [isSyncingLan, setIsSyncingLan] = useState<boolean>(false);
+  // Campuses / Tenants Cloud Sync state
+  const [campusesCount, setCampusesCount] = useState<number>(0);
+  const [campusesList, setCampusesList] = useState<any[]>([]);
+  const [campusesCloudCount, setCampusesCloudCount] = useState<number>(0);
+  const [isSyncingCampuses, setIsSyncingCampuses] = useState<boolean>(false);
 
-  // Payment & Subscriptions Cloud Sync state
-  const [subCount, setSubCount] = useState<number>(0);
-  const [subCloudCount, setSubCloudCount] = useState<number>(0);
-  const [isSyncingSub, setIsSyncingSub] = useState<boolean>(false);
-
-  // Load local count on mount
-  useEffect(() => {
+  const loadLocalGames = () => {
     try {
       const raw = localStorage.getItem('munyaka_games_v1');
       const items = raw ? JSON.parse(raw) : [];
-      setGamesCount(Array.isArray(items) ? items.length : 0);
+      const arr = Array.isArray(items) ? items : [];
+      setGamesList(arr);
+      setGamesCount(arr.length);
     } catch (e) {
+      setGamesList([]);
       setGamesCount(0);
     }
+  };
+
+  const loadLocalCampuses = () => {
+    try {
+      const raw = localStorage.getItem('munyaka_campuses_v1') || localStorage.getItem('munyaka_tenants_v1');
+      const items = raw ? JSON.parse(raw) : [
+        { id: 'MUN-CAMPUS-01', name: 'Munyaka Main Campus', location: 'Eldoret, Uasin Gishu' },
+        { id: 'MUN-CAMPUS-02', name: 'Munyaka Annex Branch', location: 'Nakuru Town' }
+      ];
+      const arr = Array.isArray(items) ? items : [];
+      setCampusesList(arr);
+      setCampusesCount(arr.length);
+    } catch (e) {
+      setCampusesList([]);
+      setCampusesCount(0);
+    }
+  };
+
+  // Load local counts and lists on mount
+  useEffect(() => {
+    loadLocalGames();
+    loadLocalCampuses();
 
     try {
       const rawLan = localStorage.getItem('munyaka_lan_config_v1');
@@ -191,6 +212,33 @@ export default function FirestoreSyncTab() {
       setSubCount(0);
     }
   }, []);
+
+  const handleSyncCampuses = async () => {
+    setIsSyncingCampuses(true);
+    try {
+      const raw = localStorage.getItem('munyaka_campuses_v1') || localStorage.getItem('munyaka_tenants_v1');
+      const items = raw ? JSON.parse(raw) : campusesList;
+      const batch = writeBatch(db);
+      
+      const arr = Array.isArray(items) ? items : [];
+      arr.forEach((campus: any) => {
+        const docId = String(campus.id || campus.campusId || `campus_${Date.now()}`);
+        const docRef = doc(db, "tenants_campuses", docId);
+        batch.set(docRef, { ...campus, lastSyncedAt: new Date().toISOString() }, { merge: true });
+      });
+      
+      await batch.commit();
+      setCampusesCloudCount(arr.length);
+      alert(`Successfully synced ${arr.length} Tenants / Campuses to Firestore!`);
+      showSuccess(`Successfully synced ${arr.length} Tenants / Campuses to Firestore!`);
+    } catch (err: any) {
+      console.error("Campuses sync error:", err);
+      alert(`Sync failed: ${err.message || 'Unknown error'}`);
+      showError(err.message || 'Unknown error');
+    } finally {
+      setIsSyncingCampuses(false);
+    }
+  };
 
   const handleSyncSubscriptions = async () => {
     setIsSyncingSub(true);
@@ -430,6 +478,10 @@ export default function FirestoreSyncTab() {
       // Subscriptions Collection
       const subSnap = await getDoc(doc(db, 'subscriptions', 'active_license')).catch(() => null);
       setSubCloudCount(subSnap?.exists() ? 1 : 0);
+
+      // Campuses Collection
+      const campSnap = await getDocs(collection(db, 'tenants_campuses')).catch(() => ({ size: 0, docs: [] }));
+      setCampusesCloudCount(campSnap?.size || 0);
       setCloudExamsList(examsDocs);
 
       // ICT Lab Records Collection
@@ -2631,14 +2683,100 @@ export default function FirestoreSyncTab() {
                       Cloud: {cloudGamesCount ?? 0}
                     </span>
                   </div>
-                  <p className="text-3xl font-bold text-purple-400 mb-4">{gamesCount}</p>
+                  <p className="text-3xl font-bold text-purple-400 mb-2">{gamesCount}</p>
+
+                  <div className="mt-4 border-t border-slate-800 pt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-slate-300 font-medium text-sm">Synced Games Preview ({gamesCount})</h4>
+                      <button onClick={loadLocalGames} className="text-xs text-purple-400 hover:underline flex items-center gap-1">
+                        🔄 Refresh Games
+                      </button>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/50">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
+                          <tr>
+                            <th className="p-2.5">Game Title</th>
+                            <th className="p-2.5">Category</th>
+                            <th className="p-2.5">ID</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60">
+                          {gamesList.length === 0 ? (
+                            <tr><td colSpan={3} className="p-4 text-center text-slate-500">No local games found</td></tr>
+                          ) : (
+                            gamesList.map((g: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-slate-900/40">
+                                <td className="p-2.5 font-medium text-slate-200">{g.title || g.name || 'Unnamed Game'}</td>
+                                <td className="p-2.5 text-purple-400">{g.category || 'General'}</td>
+                                <td className="p-2.5 text-slate-500">{g.id || 'N/A'}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
                 <button
                   onClick={handleSyncGamesHub}
                   disabled={isSyncingGames}
-                  className="w-full bg-purple-600 hover:bg-purple-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
+                  className="w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
                   {isSyncingGames ? 'Syncing Games Hub...' : 'Sync Games Hub'}
+                </button>
+              </div>
+
+              {/* Tenants / Campuses Sync Card */}
+              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-slate-200 font-semibold text-lg">Tenants / Campuses</h3>
+                    <span className="text-xs bg-slate-800 text-amber-400 px-2.5 py-1 rounded-full border border-slate-700">
+                      Cloud: {campusesCloudCount}
+                    </span>
+                  </div>
+                  <p className="text-3xl font-bold text-amber-400 mb-2">{campusesCount}</p>
+
+                  <div className="mt-4 border-t border-slate-800 pt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-slate-300 font-medium text-sm">Campuses Preview ({campusesCount})</h4>
+                      <button onClick={loadLocalCampuses} className="text-xs text-amber-400 hover:underline flex items-center gap-1">
+                        🔄 Refresh Campuses
+                      </button>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/50">
+                      <table className="w-full text-left text-xs text-slate-300">
+                        <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
+                          <tr>
+                            <th className="p-2.5">Campus Name</th>
+                            <th className="p-2.5">Location</th>
+                            <th className="p-2.5">Branch ID</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60">
+                          {campusesList.length === 0 ? (
+                            <tr><td colSpan={3} className="p-4 text-center text-slate-500">No local campuses found</td></tr>
+                          ) : (
+                            campusesList.map((c: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-slate-900/40">
+                                <td className="p-2.5 font-medium text-slate-200">{c.name || c.campusName || 'Main Campus'}</td>
+                                <td className="p-2.5 text-amber-400">{c.location || 'N/A'}</td>
+                                <td className="p-2.5 text-slate-500">{c.id || 'N/A'}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSyncCampuses}
+                  disabled={isSyncingCampuses}
+                  className="w-full mt-4 bg-amber-600 hover:bg-amber-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
+                >
+                  {isSyncingCampuses ? 'Syncing Campuses...' : 'Sync Campuses'}
                 </button>
               </div>
 
