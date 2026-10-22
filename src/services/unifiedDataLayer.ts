@@ -474,16 +474,22 @@ export const UnifiedDataService = {
     const primary = await UnifiedDataService.get<Student[]>(UNIFIED_KEYS.STUDENTS, []);
     const master = await UnifiedDataService.get<Student[]>(UNIFIED_KEYS.MASTER_LEARNERS, []);
     const legacy = await UnifiedDataService.get<Student[]>(UNIFIED_KEYS.STUDENTS_LEGACY, []);
+    const schoolV1 = await UnifiedDataService.get<Student[]>('school_learners_data', []);
+    const studentsKey = await UnifiedDataService.get<Student[]>('munyaka_students', []);
 
-    const combinedMap = new Map<string, Student>();
-    [...master, ...primary, ...legacy].forEach((s) => {
+    const combined = [...primary, ...master, ...legacy, ...schoolV1, ...studentsKey];
+
+    const map = new Map<string, any>();
+    combined.forEach((s) => {
       if (s && (s.id || s.admissionNumber || (s as any).admNo || s.name)) {
-        const key = String(s.id || s.admissionNumber || (s as any).admNo || s.name).trim().toLowerCase();
-        combinedMap.set(key, s);
+        const key = String(s.id || s.admissionNumber || (s as any).admNo || s.name).trim();
+        if (!map.has(key)) {
+          map.set(key, s);
+        }
       }
     });
 
-    return Array.from(combinedMap.values());
+    return Array.from(map.values());
   },
 
   saveLearners: async (learners: Student[]): Promise<boolean> => {
