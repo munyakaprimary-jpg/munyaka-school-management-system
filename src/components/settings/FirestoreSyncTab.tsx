@@ -10,6 +10,7 @@ import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { migrateLegacyLearnerIds } from '@/utils/migrateLegacyLearnerIds';
+import { HarmonizedLearnerService } from '@/services/harmonizedLearnerService';
 
 export default function FirestoreSyncTab() {
   const [isSyncing, setIsSyncing] = useState(false);

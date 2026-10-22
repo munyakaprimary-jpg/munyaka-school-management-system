@@ -350,20 +350,15 @@ export default function CentralDataServicePage() {
         const staffCandidates = [staff, s1, s2, s3, s4].filter(Array.isArray);
         const masterStaff = staffCandidates.reduce((max, curr) => (curr.length > max.length ? curr : max), staff);
   
-        const masterLearners = (() => {
+        const getUnifiedLearners = () => {
           try {
             const raw = localStorage.getItem('munyaka_learners_v2');
-            if (!raw) return [];
-            const parsed = JSON.parse(raw);
-            return Array.isArray(parsed) ? parsed : [];
+            return raw ? JSON.parse(raw) : [];
           } catch {
             return [];
           }
-        })();
-          } catch {
-            return [];
-          }
-        })();
+        };
+        const masterLearners = getUnifiedLearners();
   
         const f1 = JSON.parse(localStorage.getItem('munyaka_fees') || '[]');
         const f2 = JSON.parse(localStorage.getItem('munyaka_fees_records') || '[]');
