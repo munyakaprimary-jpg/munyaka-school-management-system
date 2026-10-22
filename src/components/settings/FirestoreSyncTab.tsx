@@ -151,7 +151,53 @@ export default function FirestoreSyncTab() {
     }
   };
 
-  // User Management / Auth Cloud Sync state
+  // Games Hub Cloud Sync state
+  const [gamesCount, setGamesCount] = useState<number>(0);
+  const [isSyncingGames, setIsSyncingGames] = useState<boolean>(false);
+  const [cloudGamesCount, setCloudGamesCount] = useState<number>(0);
+  const [cloudGamesList, setCloudGamesList] = useState<any[]>([]);
+
+  // Load local count on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('munyaka_games_v1');
+      const items = raw ? JSON.parse(raw) : [];
+      setGamesCount(Array.isArray(items) ? items.length : 0);
+    } catch (e) {
+      setGamesCount(0);
+    }
+  }, []);
+
+  const handleSyncGamesHub = async () => {
+    setIsSyncingGames(true);
+    try {
+      const raw = localStorage.getItem('munyaka_games_v1');
+      const items = raw ? JSON.parse(raw) : [];
+      const batch = writeBatch(db);
+      
+      const gamesArray = Array.isArray(items) ? items : [];
+      gamesArray.forEach((game: any) => {
+        const docId = String(game.id || game.gameId || `game_${Date.now()}`);
+        const docRef = doc(db, "games_hub", docId);
+        batch.set(docRef, { ...game, lastSyncedAt: new Date().toISOString() }, { merge: true });
+      });
+      
+      await batch.commit();
+
+      const snapshot = await getDocs(collection(db, "games_hub")).catch(() => ({ size: 0, docs: [] }));
+      setCloudGamesCount(snapshot?.size || gamesArray.length);
+      setCloudGamesList((snapshot?.docs || []).map((d: any) => ({ id: d.id, ...(d.data() || {}) })));
+
+      alert(`Successfully synced ${gamesArray.length} Games Hub items to Firestore!`);
+      showSuccess(`Successfully synced ${gamesArray.length} Games Hub items to Firestore!`);
+    } catch (err: any) {
+      console.error("Games Hub sync error:", err);
+      alert(`Sync failed: ${err.message || 'Unknown error'}`);
+      showError(err.message || 'Unknown error');
+    } finally {
+      setIsSyncingGames(false);
+    }
+  };
   const [isSyncingUsers, setIsSyncingUsers] = useState(false);
   const [cloudUsersCount, setCloudUsersCount] = useState(0);
   const [cloudUsersList, setCloudUsersList] = useState<any[]>(() => {
@@ -298,6 +344,12 @@ export default function FirestoreSyncTab() {
       const examsSnap = await getDocs(collection(db, 'exam_creator_records')).catch(() => ({ size: 0, docs: [] }));
       setCloudExamsCount(examsSnap?.size || 0);
       const examsDocs = (examsSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+
+      // Games Hub Collection
+      const gamesSnap = await getDocs(collection(db, 'games_hub')).catch(() => ({ size: 0, docs: [] }));
+      setCloudGamesCount(gamesSnap?.size || 0);
+      const gamesDocs = (gamesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+      setCloudGamesList(gamesDocs);
       setCloudExamsList(examsDocs);
 
       // ICT Lab Records Collection
@@ -3657,6 +3709,69 @@ export default function FirestoreSyncTab() {
                         </div>
                       )}
                     </div>
+
+          {/* Games Hub Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Games Hub Cloud Sync</h3>
+              <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300">
+                Cloud Records: {cloudGamesCount} | Local: {gamesCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync educational games, quizzes, and learner play logs to the 'games_hub' Firestore collection.
+            </p>
+            <Button
+              onClick={handleSyncGamesHub}
+              disabled={isSyncingGames}
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingGames && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingGames ? 'Syncing Games Hub...' : 'Sync Games Hub to Cloud'}
+            </Button>
+
+            {cloudGamesList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Games Hub Preview ({cloudGamesList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Games
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Game ID</TableHead>
+                        <TableHead className="p-2 font-medium">Title</TableHead>
+                        <TableHead className="p-2 font-medium">Category</TableHead>
+                        <TableHead className="p-2 font-medium">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudGamesList.map((g, idx) => (
+                        <TableRow key={g.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-mono text-xs">{g.id || g.gameId || `game_${idx+1}`}</TableCell>
+                          <TableCell className="p-2 font-semibold text-slate-900">{g.title || g.name || 'Untitled Game'}</TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                              {g.category || g.subject || 'Educational'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <span className="font-semibold text-emerald-700">Synced</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
           
                     {/* Cloud Learners Preview Table */}
                     <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
