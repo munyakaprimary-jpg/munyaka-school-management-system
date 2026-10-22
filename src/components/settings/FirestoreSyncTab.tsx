@@ -2116,48 +2116,6 @@ export default function FirestoreSyncTab() {
       setIsSyncing(false);
     }
   };
-
-          recordsToSync.push({
-            id: docId,
-            type: 'physical_book',
-            isbn: String(book.isbn || '').trim(),
-            book_id: String(book.bookId || book.id || '').trim(),
-            title: String(book.title || book.name || 'Untitled Book').trim(),
-            author: String(book.author || '').trim(),
-            publisher: String(book.publisher || '').trim(),
-            publication_year: Number(book.publicationYear || book.year || 0),
-            isbn_13: String(book.isbn13 || book.isbn_13 || '').trim(),
-            isbn_10: String(book.isbn10 || book.isbn_10 || '').trim(),
-            category: String(book.category || book.genre || 'General').trim(),
-            language: String(book.language || 'English').trim(),
-            pages: Number(book.pages || 0),
-            quantity_total: Number(book.quantity || book.totalCopies || 1),
-            quantity_available: Number(book.available || book.availableCopies || book.quantity || 1),
-            location: String(book.location || book.shelf || 'General').trim(),
-            condition: String(book.condition || 'Good').trim(),
-            acquisition_date: String(book.acquisitionDate || book.purchaseDate || new Date().toISOString().split('T')[0]).trim(),
-            price: Number(book.price || book.cost || 0),
-            supplier: String(book.supplier || '').trim(),
-            notes: String(book.notes || '').trim(),
-            synced_at: new Date().toISOString()
-          });
-        });
-      }
-
-      // Process borrowing logs
-      if (borrowLogs.length > 0) {
-        borrowLogs.forEach((log: any, idx: number) => {
-          if (!log) return;
-          const studentId = String(log.studentId || log.admissionNumber || log.learnerId || `STU${idx + 1}`).trim();
-          const bookId = String(log.bookId || log.isbn || log.bookIdentifier || `BK${idx + 1}`).trim();
-          
-          // Generate unique document ID: borrow_{student_id}_{book_id} (lowercase, spaces replaced by underscores)
-          const rawDocId = `borrow_${studentId}_${bookId}`;
-          const docId = rawDocId.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_.-]/g, '_');
-
-          recordsToSync.push({
-            id: docId,
-            type: 'borrowing_log',
             student_id: studentId,
             student_name: String(log.studentName || log.learnerName || '').trim(),
             book_id: bookId,
