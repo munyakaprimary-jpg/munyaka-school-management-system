@@ -100,7 +100,7 @@ export default function LearnersDirectory() {
 
     const loadFromStorage = () => {
       try {
-        const deletedIds = new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
+        const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
         const unified = localStorage.getItem(UNIFIED_KEY);
         if (unified) {
           const parsed = JSON.parse(unified);
@@ -119,7 +119,7 @@ export default function LearnersDirectory() {
     if (db) {
       try {
         unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
-          const deletedIds = new Set(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
+          const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
 
           const cloudLearners = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
