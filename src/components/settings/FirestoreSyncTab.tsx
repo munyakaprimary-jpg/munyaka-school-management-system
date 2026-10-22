@@ -2026,6 +2026,17 @@ export default function FirestoreSyncTab() {
       await batch.commit();
 
       setLastSynced(new Date());
+      
+      const fetchCloudCount = async () => {
+        try {
+          const snapshot = await getDocs(collection(db, "learners"));
+          setCloudLearnersCount(snapshot.size);
+        } catch (error) {
+          console.error("Failed to fetch cloud count:", error);
+        }
+      };
+      await fetchCloudCount();
+
       alert(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
       showSuccess(`Successfully synced ${learnersPayload.length} learners to Firestore!`);
 
