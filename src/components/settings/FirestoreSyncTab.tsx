@@ -2116,27 +2116,6 @@ export default function FirestoreSyncTab() {
       setIsSyncing(false);
     }
   };
-          isbn: '9780143127741',
-          book_id: 'BK001',
-          title: 'To Kill a Mockingbird',
-          author: 'Harper Lee',
-          publisher: 'Harper Perennial Modern Classics',
-          publication_year: 1960,
-          isbn_13: '9780143127741',
-          isbn_10: '014312774X',
-          category: 'Fiction',
-          language: 'English',
-          pages: 281,
-          quantity_total: 5,
-          quantity_available: 3,
-          location: 'Fiction Shelf A1',
-          condition: 'Good',
-          acquisition_date: '2023-09-01',
-          price: 1299,
-          supplier: 'Local Book Distributors',
-          notes: 'Classic American novel',
-          synced_at: new Date().toISOString()
-        });
 
         // Create a sample borrowing log
         const borrowDocId = 'borrow_STU001_BK001'.toLowerCase().replace(/\s+/g, '_');
