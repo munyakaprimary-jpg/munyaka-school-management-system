@@ -13,7 +13,7 @@ const WarningBanner: React.FC = () => {
           <div>
             <h3 className="font-bold text-amber-800 mb-2">⚠️ Critical Action Required</h3>
             <p className="text-sm text-amber-700 mb-3">
-              The "Promote Students" feature is designed for end-of-year grade advancement. 
+              The "Promote Learners" feature is designed for end-of-year grade advancement.
               This action will permanently change student grades and cannot be easily undone.
             </p>
             <div className="flex flex-wrap gap-4 text-xs text-amber-800">

@@ -181,7 +181,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
-        { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['admin', 'head_teacher'] },
+        { icon: GraduationCap, label: 'Promote Learners', path: '/promote', roles: ['admin', 'head_teacher'] },
       ];
 
   // Route-level role denylist: these roles are blocked even if listed in item.roles.

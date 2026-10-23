@@ -332,8 +332,8 @@ export default function PromotePage() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Student Promotion & Advancement</h1>
-          <p className="text-sm text-muted-foreground mt-1">Advance active students to the next grade sequence for academic year {targetYear}.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Learner Promotion & Advancement</h1>
+          <p className="text-sm text-muted-foreground mt-1">Advance active learners to the next grade sequence for academic year {targetYear}.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -508,7 +508,7 @@ export default function PromotePage() {
       </Card>
 
       {/* Confirmation Modal */}
-      <Modal isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} title="Confirm Student Promotion">
+      <Modal isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} title="Confirm Learner Promotion">
         <div className="space-y-4 pt-2">
           <div className="p-4 bg-indigo-50 dark:bg-indigo-950/40 rounded-2xl border border-indigo-100 dark:border-indigo-900 text-sm text-indigo-900 dark:text-indigo-200">
             You are about to advance <span className="font-bold">{promotionMode === 'selected' ? selectedStudentIds.length : filteredLearners.length}</span> students to academic year <span className="font-bold">{targetYear}</span>.

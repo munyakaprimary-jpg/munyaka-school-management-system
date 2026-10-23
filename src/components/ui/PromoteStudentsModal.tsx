@@ -98,8 +98,8 @@ const PromoteStudentsModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Promote Students to Next Grade"
-      description="End-of-year grade promotion process. This action affects all active students."
+      title="Promote Learners to Next Grade"
+      description="End-of-year grade promotion process. This action affects all active learners."
       footer={
         <div className="flex gap-3 justify-end">
           <Button 
@@ -144,7 +144,7 @@ const PromoteStudentsModal = ({
               <div>
                 <h3 className="font-bold text-amber-800 mb-2">Critical Warning</h3>
                 <p className="text-sm text-amber-700 leading-relaxed">
-                  This will increment the grade of ALL active students by 1 level (e.g., Grade 6 becomes Grade 7). 
+                  This will increment the grade of ALL active learners by 1 level (e.g., Grade 6 becomes Grade 7).
                   This action cannot be easily undone. Students in the highest grade will be marked as "Graduated".
                 </p>
               </div>
@@ -203,7 +203,7 @@ const PromoteStudentsModal = ({
               <div>
                 <p className="text-xs font-bold text-blue-800 mb-1">What Happens During Promotion</p>
                 <ul className="text-xs text-blue-700 space-y-1">
-                  <li>• All active students move up one grade level</li>
+                  <li>• All active learners move up one grade level</li>
                   <li>• Students in highest grade become "Graduated"</li>
                   <li>• Streams/colors remain unchanged</li>
                   <li>• This is an irreversible action</li>

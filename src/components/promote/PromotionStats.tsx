@@ -76,7 +76,7 @@ const PromotionStats: React.FC<PromotionStatsProps> = ({ stats }) => {
       />
       
       <StatsCard
-        title="Active Students"
+        title="Active Learners"
         value={stats.activeStudents}
         icon={UserCheck}
         color="text-emerald-600"

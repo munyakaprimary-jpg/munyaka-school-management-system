@@ -63,7 +63,7 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Promote Students</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Promote Learners</h1>
             <p className="text-muted-foreground">End-of-year grade promotion with safety safeguards.</p>
           </div>
         </div>
