@@ -612,27 +612,6 @@ export const initialSeedData = {
       "updatedAt": "2026-10-05T17:29:50.882Z"
     },
     {
-      "id": "learner-1790759996788",
-      "name": "PAUL MACHARIA",
-      "fullName": "PAUL MACHARIA",
-      "admissionNumber": "MUN-002-2020",
-      "admNo": "MUN-002-2020",
-      "assessmentNo": "B003204655",
-      "dateOfBirth": "2011-06-12",
-      "dob": "2011-06-12",
-      "birthDate": "2011-06-12",
-      "gender": "Male",
-      "grade": "Grade 7",
-      "class": "Grade 7",
-      "stream": "Mercury",
-      "parentName": "SUSAN MUMBI",
-      "guardian": "SUSAN MUMBI",
-      "phoneNumber": "0757533122",
-      "parentPhone": "0757533122",
-      "phone": "0757533122",
-      "updatedAt": "2026-09-30T09:19:56.788Z"
-    },
-    {
       "id": "learner-1791221522282",
       "name": "BRIGHTON EWOI JAMAL",
       "fullName": "BRIGHTON EWOI JAMAL",
