@@ -26,7 +26,7 @@ export const getNormalizedLearners = () => {
     const uniqueLearnersMap = new Map();
     learners.forEach((l: any) => {
       if (!l) return;
-      const key = String(l.id || l.admissionNo || l.admission_number || l.admNo || '').trim();
+      const key = String(l.id || l.learnerId || l.admNo || l.admissionNumber || l.admission_number || '').trim();
       if (key && !deletedIds.includes(key)) {
         uniqueLearnersMap.set(key, l);
       } else if (!key && l.name) {
@@ -39,6 +39,25 @@ export const getNormalizedLearners = () => {
     console.error("Error reading learners:", e);
     return [];
   }
+};
+
+export const sanitizeAndSeedLearners = (learners: any[]) => {
+  const uniqueMap = new Map();
+  learners.forEach((learner) => {
+    if (!learner) return;
+    const key = String(learner.id || learner.learnerId || learner.admNo || learner.admissionNumber || learner.admission_number || '').trim();
+    if (key && !uniqueMap.has(key)) {
+      uniqueMap.set(key, learner);
+    } else if (!key && learner.name) {
+      const nameKey = String(learner.name).trim().toLowerCase();
+      if (!uniqueMap.has(nameKey)) {
+        uniqueMap.set(nameKey, learner);
+      }
+    }
+  });
+  const cleanLearners = Array.from(uniqueMap.values());
+  localStorage.setItem('munyaka_learners_v2', JSON.stringify(cleanLearners));
+  return cleanLearners;
 };
 
 export const getActiveStaff = () => {

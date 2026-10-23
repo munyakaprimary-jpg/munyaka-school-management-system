@@ -362,7 +362,7 @@ export const initialSeedData = {
     {
       "id": "learner-1790973025254",
       "name": "Bridgit Moraa",
-      "fullName": "Bridgit Moraa",
+      "fullName": "BRIDGIT MORAA",
       "admissionNumber": "MUN-017-2022",
       "admNo": "MUN-017-2022",
       "assessmentNo": "B006487459",
