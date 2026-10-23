@@ -25,6 +25,7 @@ import { CentralDataService } from '@/services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
 import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
 import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
+import { getNormalizedLearners } from '@/utils/dataLoader';
 import AddLearnerModal from '@/components/students/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
