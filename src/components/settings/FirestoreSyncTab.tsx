@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
 import { Database, Cloud, RefreshCw, CheckCircle2, ShieldCheck, Server, Table as TableIcon, Wallet } from 'lucide-react';
 import { db } from '@/lib/firebaseClient';
-import { collection, doc, setDoc, getDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -153,150 +153,20 @@ export default function FirestoreSyncTab() {
 
   // Games Hub Cloud Sync state
   const [gamesCount, setGamesCount] = useState<number>(0);
-  const [gamesList, setGamesList] = useState<any[]>([]);
   const [isSyncingGames, setIsSyncingGames] = useState<boolean>(false);
   const [cloudGamesCount, setCloudGamesCount] = useState<number>(0);
   const [cloudGamesList, setCloudGamesList] = useState<any[]>([]);
 
-  // Campuses / Tenants Cloud Sync state
-  const [campusesCount, setCampusesCount] = useState<number>(0);
-  const [campusesList, setCampusesList] = useState<any[]>([]);
-  const [campusesCloudCount, setCampusesCloudCount] = useState<number>(0);
-  const [isSyncingCampuses, setIsSyncingCampuses] = useState<boolean>(false);
-
-  // LAN Server Config Cloud Sync state
-  const [lanConfigCount, setLanConfigCount] = useState<number>(0);
-  const [lanConfigCloudCount, setLanConfigCloudCount] = useState<number>(0);
-  const [isSyncingLan, setIsSyncingLan] = useState<boolean>(false);
-
-  // Payment & Subscriptions Cloud Sync state
-  const [subCount, setSubCount] = useState<number>(0);
-  const [subCloudCount, setSubCloudCount] = useState<number>(0);
-  const [isSyncingSub, setIsSyncingSub] = useState<boolean>(false);
-
-  const loadLocalGames = () => {
+  // Load local count on mount
+  useEffect(() => {
     try {
       const raw = localStorage.getItem('munyaka_games_v1');
       const items = raw ? JSON.parse(raw) : [];
-      const arr = Array.isArray(items) ? items : [];
-      setGamesList(arr);
-      setGamesCount(arr.length);
+      setGamesCount(Array.isArray(items) ? items.length : 0);
     } catch (e) {
-      setGamesList([]);
       setGamesCount(0);
     }
-  };
-
-  const loadLocalCampuses = () => {
-    try {
-      const raw = localStorage.getItem('munyaka_campuses_v1') || localStorage.getItem('munyaka_tenants_v1');
-      const items = raw ? JSON.parse(raw) : [
-        { id: 'MUN-CAMPUS-01', name: 'Munyaka Main Campus', location: 'Eldoret, Uasin Gishu' },
-        { id: 'MUN-CAMPUS-02', name: 'Munyaka Annex Branch', location: 'Nakuru Town' }
-      ];
-      const arr = Array.isArray(items) ? items : [];
-      setCampusesList(arr);
-      setCampusesCount(arr.length);
-    } catch (e) {
-      setCampusesList([]);
-      setCampusesCount(0);
-    }
-  };
-
-  // Load local counts and lists on mount
-  useEffect(() => {
-    loadLocalGames();
-    loadLocalCampuses();
-
-    try {
-      const rawLan = localStorage.getItem('munyaka_lan_config_v1');
-      setLanConfigCount(rawLan ? 1 : 0);
-    } catch (e) {
-      setLanConfigCount(0);
-    }
-
-    try {
-      const rawSub = localStorage.getItem('munyaka_subscriptions_v1');
-      setSubCount(rawSub ? 1 : 0);
-    } catch (e) {
-      setSubCount(0);
-    }
   }, []);
-
-  const handleSyncCampuses = async () => {
-    setIsSyncingCampuses(true);
-    try {
-      const raw = localStorage.getItem('munyaka_campuses_v1') || localStorage.getItem('munyaka_tenants_v1');
-      const items = raw ? JSON.parse(raw) : campusesList;
-      const batch = writeBatch(db);
-      
-      const arr = Array.isArray(items) ? items : [];
-      arr.forEach((campus: any) => {
-        const docId = String(campus.id || campus.campusId || `campus_${Date.now()}`);
-        const docRef = doc(db, "tenants_campuses", docId);
-        batch.set(docRef, { ...campus, lastSyncedAt: new Date().toISOString() }, { merge: true });
-      });
-      
-      await batch.commit();
-      setCampusesCloudCount(arr.length);
-      alert(`Successfully synced ${arr.length} Tenants / Campuses to Firestore!`);
-      showSuccess(`Successfully synced ${arr.length} Tenants / Campuses to Firestore!`);
-    } catch (err: any) {
-      console.error("Campuses sync error:", err);
-      alert(`Sync failed: ${err.message || 'Unknown error'}`);
-      showError(err.message || 'Unknown error');
-    } finally {
-      setIsSyncingCampuses(false);
-    }
-  };
-
-  const handleSyncSubscriptions = async () => {
-    setIsSyncingSub(true);
-    try {
-      const raw = localStorage.getItem('munyaka_subscriptions_v1');
-      const subData = raw ? JSON.parse(raw) : {};
-      
-      const docRef = doc(db, "subscriptions", "active_license");
-      await setDoc(docRef, {
-        ...subData,
-        lastSyncedAt: new Date().toISOString()
-      }, { merge: true });
-
-      setSubCloudCount(1);
-      alert('Successfully synced Payment & Subscriptions to Firestore!');
-      showSuccess('Successfully synced Payment & Subscriptions to Firestore!');
-    } catch (err: any) {
-      console.error("Subscription sync error:", err);
-      alert(`Sync failed: ${err.message || 'Unknown error'}`);
-      showError(err.message || 'Unknown error');
-    } finally {
-      setIsSyncingSub(false);
-    }
-  };
-
-  const handleSyncLanConfig = async () => {
-    setIsSyncingLan(true);
-    try {
-      const raw = localStorage.getItem('munyaka_lan_config_v1');
-      const configData = raw ? JSON.parse(raw) : {};
-      
-      const docRef = doc(db, "lan_server_config", "main_config");
-      await setDoc(docRef, {
-        ...configData,
-        lastSyncedAt: new Date().toISOString()
-      }, { merge: true });
-
-      setLanConfigCloudCount(1);
-      alert('Successfully synced LAN Server Config to Firestore!');
-      showSuccess('Successfully synced LAN Server Config to Firestore!');
-    } catch (err: any) {
-      console.error("LAN Config sync error:", err);
-      alert(`Sync failed: ${err.message || 'Unknown error'}`);
-      showError(err.message || 'Unknown error');
-    } finally {
-      setIsSyncingLan(false);
-    }
-  };
 
   const handleSyncGamesHub = async () => {
     setIsSyncingGames(true);
@@ -480,18 +350,6 @@ export default function FirestoreSyncTab() {
       setCloudGamesCount(gamesSnap?.size || 0);
       const gamesDocs = (gamesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
       setCloudGamesList(gamesDocs);
-
-      // LAN Server Config Collection
-      const lanSnap = await getDoc(doc(db, 'lan_server_config', 'main_config')).catch(() => null);
-      setLanConfigCloudCount(lanSnap?.exists() ? 1 : 0);
-
-      // Subscriptions Collection
-      const subSnap = await getDoc(doc(db, 'subscriptions', 'active_license')).catch(() => null);
-      setSubCloudCount(subSnap?.exists() ? 1 : 0);
-
-      // Campuses Collection
-      const campSnap = await getDocs(collection(db, 'tenants_campuses')).catch(() => ({ size: 0, docs: [] }));
-      setCampusesCloudCount(campSnap?.size || 0);
       setCloudExamsList(examsDocs);
 
       // ICT Lab Records Collection
@@ -2684,152 +2542,6 @@ export default function FirestoreSyncTab() {
                 </p>
               </div>
 
-              {/* Games Hub Sync Card */}
-              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-slate-200 font-semibold text-lg">Games Hub</h3>
-                    <span className="text-xs bg-slate-800 text-purple-400 px-2.5 py-1 rounded-full border border-slate-700">
-                      Cloud: {cloudGamesCount ?? 0}
-                    </span>
-                  </div>
-                  <p className="text-3xl font-bold text-purple-400 mb-2">{gamesCount}</p>
-
-                  <div className="mt-4 border-t border-slate-800 pt-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="text-slate-300 font-medium text-sm">Synced Games Preview ({gamesCount})</h4>
-                      <button onClick={loadLocalGames} className="text-xs text-purple-400 hover:underline flex items-center gap-1">
-                        🔄 Refresh Games
-                      </button>
-                    </div>
-                    <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/50">
-                      <table className="w-full text-left text-xs text-slate-300">
-                        <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                          <tr>
-                            <th className="p-2.5">Game Title</th>
-                            <th className="p-2.5">Category</th>
-                            <th className="p-2.5">ID</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/60">
-                          {gamesList.length === 0 ? (
-                            <tr><td colSpan={3} className="p-4 text-center text-slate-500">No local games found</td></tr>
-                          ) : (
-                            gamesList.map((g: any, idx: number) => (
-                              <tr key={idx} className="hover:bg-slate-900/40">
-                                <td className="p-2.5 font-medium text-slate-200">{g.title || g.name || 'Unnamed Game'}</td>
-                                <td className="p-2.5 text-purple-400">{g.category || 'General'}</td>
-                                <td className="p-2.5 text-slate-500">{g.id || 'N/A'}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={handleSyncGamesHub}
-                  disabled={isSyncingGames}
-                  className="w-full mt-4 bg-purple-600 hover:bg-purple-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  {isSyncingGames ? 'Syncing Games Hub...' : 'Sync Games Hub'}
-                </button>
-              </div>
-
-              {/* Tenants / Campuses Sync Card */}
-              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-slate-200 font-semibold text-lg">Tenants / Campuses</h3>
-                    <span className="text-xs bg-slate-800 text-amber-400 px-2.5 py-1 rounded-full border border-slate-700">
-                      Cloud: {campusesCloudCount}
-                    </span>
-                  </div>
-                  <p className="text-3xl font-bold text-amber-400 mb-2">{campusesCount}</p>
-
-                  <div className="mt-4 border-t border-slate-800 pt-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className="text-slate-300 font-medium text-sm">Campuses Preview ({campusesCount})</h4>
-                      <button onClick={loadLocalCampuses} className="text-xs text-amber-400 hover:underline flex items-center gap-1">
-                        🔄 Refresh Campuses
-                      </button>
-                    </div>
-                    <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/50">
-                      <table className="w-full text-left text-xs text-slate-300">
-                        <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                          <tr>
-                            <th className="p-2.5">Campus Name</th>
-                            <th className="p-2.5">Location</th>
-                            <th className="p-2.5">Branch ID</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/60">
-                          {campusesList.length === 0 ? (
-                            <tr><td colSpan={3} className="p-4 text-center text-slate-500">No local campuses found</td></tr>
-                          ) : (
-                            campusesList.map((c: any, idx: number) => (
-                              <tr key={idx} className="hover:bg-slate-900/40">
-                                <td className="p-2.5 font-medium text-slate-200">{c.name || c.campusName || 'Main Campus'}</td>
-                                <td className="p-2.5 text-amber-400">{c.location || 'N/A'}</td>
-                                <td className="p-2.5 text-slate-500">{c.id || 'N/A'}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={handleSyncCampuses}
-                  disabled={isSyncingCampuses}
-                  className="w-full mt-4 bg-amber-600 hover:bg-amber-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  {isSyncingCampuses ? 'Syncing Campuses...' : 'Sync Campuses'}
-                </button>
-              </div>
-
-              {/* LAN Server Config Sync Card */}
-              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-slate-200 font-semibold text-lg">LAN Server Config</h3>
-                    <span className="text-xs bg-slate-800 text-cyan-400 px-2.5 py-1 rounded-full border border-slate-700">
-                      Cloud: {typeof lanConfigCloudCount !== 'undefined' ? lanConfigCloudCount : 0}
-                    </span>
-                  </div>
-                  <p className="text-3xl font-bold text-cyan-400 mb-4">{lanConfigCount} active</p>
-                </div>
-                <button
-                  onClick={handleSyncLanConfig}
-                  disabled={isSyncingLan}
-                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  {isSyncingLan ? 'Syncing LAN Config...' : 'Sync LAN Config'}
-                </button>
-              </div>
-
-              {/* Payment & Subscriptions Sync Card */}
-              <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-slate-200 font-semibold text-lg">Subscriptions</h3>
-                    <span className="text-xs bg-slate-800 text-emerald-400 px-2.5 py-1 rounded-full border border-slate-700">
-                      Cloud: {typeof subCloudCount !== 'undefined' ? subCloudCount : 0}
-                    </span>
-                  </div>
-                  <p className="text-3xl font-bold text-emerald-400 mb-4">{subCount} active</p>
-                </div>
-                <button
-                  onClick={handleSyncSubscriptions}
-                  disabled={isSyncingSub}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  {isSyncingSub ? 'Syncing Subscriptions...' : 'Sync Subscriptions'}
-                </button>
-              </div>
-
               <div className="w-full p-3 bg-slate-800/80 rounded-lg flex flex-col justify-between border border-slate-700/50">
                 <div className="flex flex-wrap items-center justify-between gap-1">
                   <p className="text-xs text-slate-400 min-w-0 break-words">Grades</p>
@@ -2891,388 +2603,7 @@ export default function FirestoreSyncTab() {
                           </div>
                         </div>
 
-          {/* Core Sync Cards Grid with Uniform Games Hub Card Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-
-            {/* 1. Learners Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Learners</h3>
-                  <span className="text-xs bg-slate-800 text-amber-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudLearnersCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-amber-400 mb-4">{localCount}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Learners Preview ({cloudLearnersList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-amber-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Learners
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Admission / ID</th>
-                          <th className="p-2.5">Name</th>
-                          <th className="p-2.5">Grade</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudLearnersList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud learners found</td></tr>
-                        ) : (
-                          cloudLearnersList.slice(0, 15).map((l: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-mono text-slate-400">{l.admission_number || l.admissionNo || l.id || 'N/A'}</td>
-                              <td className="p-2.5 font-medium text-slate-200">{l.name || 'Unnamed Learner'}</td>
-                              <td className="p-2.5 text-amber-400">{l.grade || 'Grade 1'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleSyncToCloud}
-                disabled={isSyncing}
-                className="w-full mt-6 bg-amber-600 hover:bg-amber-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncing ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncing ? 'Syncing Learners...' : 'Sync Learners'}
-              </button>
-            </div>
-
-            {/* 2. Fees Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Fees</h3>
-                  <span className="text-xs bg-slate-800 text-cyan-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudFeesCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-cyan-400 mb-4">{cloudFeesList.length}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Fees Preview ({cloudFeesList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-cyan-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Fees
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Student</th>
-                          <th className="p-2.5">Amount</th>
-                          <th className="p-2.5">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudFeesList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud fees found</td></tr>
-                        ) : (
-                          cloudFeesList.slice(0, 15).map((f: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-medium text-slate-200">{f.student_name || f.admission_number || 'Student'}</td>
-                              <td className="p-2.5 font-semibold text-cyan-400">KES {Number(f.amount || 0).toLocaleString()}</td>
-                              <td className="p-2.5 text-slate-400">{f.status || 'Paid'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={syncFeesToCloud}
-                disabled={isSyncingFees}
-                className="w-full mt-6 bg-cyan-600 hover:bg-cyan-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingFees ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingFees ? 'Syncing Fees...' : 'Sync Fees'}
-              </button>
-            </div>
-
-            {/* 3. Exam Creator Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Exam Creator</h3>
-                  <span className="text-xs bg-slate-800 text-purple-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudExamsCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-purple-400 mb-4">{localExamsList.length}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Exam Creator Preview ({cloudExamsList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-purple-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Exam Creator
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Exam Title</th>
-                          <th className="p-2.5">Subject</th>
-                          <th className="p-2.5">Grade</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudExamsList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud exams found</td></tr>
-                        ) : (
-                          cloudExamsList.slice(0, 15).map((ex: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-medium text-slate-200">{ex.title || ex.exam_title || 'Exam'}</td>
-                              <td className="p-2.5 text-purple-400">{ex.subject || 'General'}</td>
-                              <td className="p-2.5 text-slate-400">{ex.grade_level || ex.grade_id || 'Grade 1'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={syncExamsToCloud}
-                disabled={isSyncingExams}
-                className="w-full mt-6 bg-purple-600 hover:bg-purple-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingExams ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingExams ? 'Syncing Exam Creator...' : 'Sync Exam Creator'}
-              </button>
-            </div>
-
-            {/* 4. Grades Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Grades</h3>
-                  <span className="text-xs bg-slate-800 text-indigo-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudGradesCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-indigo-400 mb-4">{cloudGradesList.length || 11}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Grades Preview ({cloudGradesList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-indigo-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Grades
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Grade ID</th>
-                          <th className="p-2.5">Name</th>
-                          <th className="p-2.5">Category</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudGradesList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud grades found</td></tr>
-                        ) : (
-                          cloudGradesList.slice(0, 15).map((g: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-mono text-slate-400">{g.id || 'N/A'}</td>
-                              <td className="p-2.5 font-medium text-slate-200">{g.name || 'Grade'}</td>
-                              <td className="p-2.5 text-indigo-400">{g.category || 'Primary'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleSyncGrades}
-                disabled={isSyncingGrades}
-                className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingGrades ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingGrades ? 'Syncing Grades...' : 'Sync Grades'}
-              </button>
-            </div>
-
-            {/* 5. Streams Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Streams</h3>
-                  <span className="text-xs bg-slate-800 text-emerald-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudStreamsCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-emerald-400 mb-4">{cloudStreamsList.length}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Streams Preview ({cloudStreamsList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Streams
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Grade</th>
-                          <th className="p-2.5">Stream Name</th>
-                          <th className="p-2.5">Teacher</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudStreamsList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud streams found</td></tr>
-                        ) : (
-                          cloudStreamsList.slice(0, 15).map((s: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-medium text-slate-200">{s.grade || 'Grade 1'}</td>
-                              <td className="p-2.5 text-emerald-400">{s.stream_name || s.name || 'Blue'}</td>
-                              <td className="p-2.5 text-slate-400">{s.class_teacher || 'Unassigned'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleSyncStreams}
-                disabled={isSyncingStreams}
-                className="w-full mt-6 bg-emerald-600 hover:bg-emerald-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingStreams ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingStreams ? 'Syncing Streams...' : 'Sync Streams'}
-              </button>
-            </div>
-
-            {/* 6. Attendance Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Attendance</h3>
-                  <span className="text-xs bg-slate-800 text-blue-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudAttendanceCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-blue-400 mb-4">{cloudAttendanceList.length}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Attendance Preview ({cloudAttendanceList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-blue-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Attendance
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Adm No</th>
-                          <th className="p-2.5">Learner</th>
-                          <th className="p-2.5">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudAttendanceList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud attendance found</td></tr>
-                        ) : (
-                          cloudAttendanceList.slice(0, 15).map((a: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-mono text-slate-400">{a.admission_number || 'N/A'}</td>
-                              <td className="p-2.5 font-medium text-slate-200">{a.learner_name || 'Student'}</td>
-                              <td className="p-2.5 text-blue-400">{a.status || 'Present'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleSyncAttendance}
-                disabled={isSyncingAttendance}
-                className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingAttendance ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingAttendance ? 'Syncing Attendance...' : 'Sync Attendance'}
-              </button>
-            </div>
-
-            {/* 7. User Management Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">User Management</h3>
-                  <span className="text-xs bg-slate-800 text-rose-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudUsersCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-rose-400 mb-4">{cloudUsersList.length}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">User Management Preview ({cloudUsersList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-rose-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh User Management
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">User Name</th>
-                          <th className="p-2.5">Email</th>
-                          <th className="p-2.5">Role</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudUsersList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud users found</td></tr>
-                        ) : (
-                          cloudUsersList.slice(0, 15).map((u: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-medium text-slate-200">{u.fullName || u.name || 'User'}</td>
-                              <td className="p-2.5 text-slate-400 font-mono text-[11px]">{u.email || 'N/A'}</td>
-                              <td className="p-2.5 text-rose-400">{u.role || 'Staff'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleSyncUsers}
-                disabled={isSyncingUsers}
-                className="w-full mt-6 bg-rose-600 hover:bg-rose-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingUsers ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingUsers ? 'Syncing User Management...' : 'Sync User Management'}
-              </button>
-            </div>
-
-          </div>
+          {/* Fees & Finance Cloud Sync & Preview Section */}
           <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-semibold">Fees &amp; Finance Cloud Sync</h3>
@@ -4379,387 +3710,67 @@ export default function FirestoreSyncTab() {
                       )}
                     </div>
 
-          {/* Core Sync Cards Grid with Uniform Games Hub Card Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          {/* Games Hub Cloud Sync & Preview Section */}
+          <div className="bg-card p-6 rounded-xl border border-border shadow-sm mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Games Hub Cloud Sync</h3>
+              <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-300">
+                Cloud Records: {cloudGamesCount} | Local: {gamesCount}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Sync educational games, quizzes, and learner play logs to the 'games_hub' Firestore collection.
+            </p>
+            <Button
+              onClick={handleSyncGamesHub}
+              disabled={isSyncingGames}
+              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isSyncingGames && <RefreshCw className="w-5 h-5 animate-spin"/>}
+              {isSyncingGames ? 'Syncing Games Hub...' : 'Sync Games Hub to Cloud'}
+            </Button>
 
-            {/* 1. Learners Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Learners</h3>
-                  <span className="text-xs bg-slate-800 text-amber-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudLearnersCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-amber-400 mb-4">{localCount}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Learners Preview ({cloudLearnersList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-amber-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Learners
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Admission / ID</th>
-                          <th className="p-2.5">Name</th>
-                          <th className="p-2.5">Grade</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudLearnersList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud learners found</td></tr>
-                        ) : (
-                          cloudLearnersList.slice(0, 15).map((l: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-mono text-slate-400">{l.admission_number || l.admissionNo || l.id || 'N/A'}</td>
-                              <td className="p-2.5 font-medium text-slate-200">{l.name || 'Unnamed Learner'}</td>
-                              <td className="p-2.5 text-amber-400">{l.grade || 'Grade 1'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+            {cloudGamesList.length > 0 && (
+              <div className="mt-6 border-t border-border pt-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center justify-between">
+                  <span>Synced Games Hub Preview ({cloudGamesList.length})</span>
+                  <button
+                    onClick={handleTestCloudTables}
+                    className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <RefreshCw size={12} /> Refresh Games
+                  </button>
+                </h4>
+                <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+                  <Table>
+                    <TableHeader className="bg-muted/50 sticky top-0">
+                      <TableRow>
+                        <TableHead className="p-2 font-medium">Game ID</TableHead>
+                        <TableHead className="p-2 font-medium">Title</TableHead>
+                        <TableHead className="p-2 font-medium">Category</TableHead>
+                        <TableHead className="p-2 font-medium">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cloudGamesList.map((g, idx) => (
+                        <TableRow key={g.id || idx} className="hover:bg-muted/20">
+                          <TableCell className="p-2 font-mono text-xs">{g.id || g.gameId || `game_${idx+1}`}</TableCell>
+                          <TableCell className="p-2 font-semibold text-slate-900">{g.title || g.name || 'Untitled Game'}</TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                              {g.category || g.subject || 'Educational'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="p-2 text-xs">
+                            <span className="font-semibold text-emerald-700">Synced</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
-              <button
-                onClick={handleSyncToCloud}
-                disabled={isSyncing}
-                className="w-full mt-6 bg-amber-600 hover:bg-amber-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncing ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncing ? 'Syncing Learners...' : 'Sync Learners'}
-              </button>
-            </div>
-
-            {/* 2. Fees Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Fees</h3>
-                  <span className="text-xs bg-slate-800 text-cyan-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudFeesCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-cyan-400 mb-4">{cloudFeesList.length}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Fees Preview ({cloudFeesList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-cyan-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Fees
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Student</th>
-                          <th className="p-2.5">Amount</th>
-                          <th className="p-2.5">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudFeesList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud fees found</td></tr>
-                        ) : (
-                          cloudFeesList.slice(0, 15).map((f: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-medium text-slate-200">{f.student_name || f.admission_number || 'Student'}</td>
-                              <td className="p-2.5 font-semibold text-cyan-400">KES {Number(f.amount || 0).toLocaleString()}</td>
-                              <td className="p-2.5 text-slate-400">{f.status || 'Paid'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={syncFeesToCloud}
-                disabled={isSyncingFees}
-                className="w-full mt-6 bg-cyan-600 hover:bg-cyan-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingFees ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingFees ? 'Syncing Fees...' : 'Sync Fees'}
-              </button>
-            </div>
-
-            {/* 3. Exam Creator Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Exam Creator</h3>
-                  <span className="text-xs bg-slate-800 text-purple-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudExamsCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-purple-400 mb-4">{localExamsList.length}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Exam Creator Preview ({cloudExamsList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-purple-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Exam Creator
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Exam Title</th>
-                          <th className="p-2.5">Subject</th>
-                          <th className="p-2.5">Grade</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudExamsList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud exams found</td></tr>
-                        ) : (
-                          cloudExamsList.slice(0, 15).map((ex: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-medium text-slate-200">{ex.title || ex.exam_title || 'Exam'}</td>
-                              <td className="p-2.5 text-purple-400">{ex.subject || 'General'}</td>
-                              <td className="p-2.5 text-slate-400">{ex.grade_level || ex.grade_id || 'Grade 1'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={syncExamsToCloud}
-                disabled={isSyncingExams}
-                className="w-full mt-6 bg-purple-600 hover:bg-purple-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingExams ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingExams ? 'Syncing Exam Creator...' : 'Sync Exam Creator'}
-              </button>
-            </div>
-
-            {/* 4. Grades Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Grades</h3>
-                  <span className="text-xs bg-slate-800 text-indigo-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudGradesCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-indigo-400 mb-4">{cloudGradesList.length || 11}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Grades Preview ({cloudGradesList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-indigo-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Grades
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Grade ID</th>
-                          <th className="p-2.5">Name</th>
-                          <th className="p-2.5">Category</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudGradesList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud grades found</td></tr>
-                        ) : (
-                          cloudGradesList.slice(0, 15).map((g: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-mono text-slate-400">{g.id || 'N/A'}</td>
-                              <td className="p-2.5 font-medium text-slate-200">{g.name || 'Grade'}</td>
-                              <td className="p-2.5 text-indigo-400">{g.category || 'Primary'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleSyncGrades}
-                disabled={isSyncingGrades}
-                className="w-full mt-6 bg-indigo-600 hover:bg-indigo-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingGrades ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingGrades ? 'Syncing Grades...' : 'Sync Grades'}
-              </button>
-            </div>
-
-            {/* 5. Streams Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Streams</h3>
-                  <span className="text-xs bg-slate-800 text-emerald-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudStreamsCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-emerald-400 mb-4">{cloudStreamsList.length}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Streams Preview ({cloudStreamsList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Streams
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Grade</th>
-                          <th className="p-2.5">Stream Name</th>
-                          <th className="p-2.5">Teacher</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudStreamsList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud streams found</td></tr>
-                        ) : (
-                          cloudStreamsList.slice(0, 15).map((s: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-medium text-slate-200">{s.grade || 'Grade 1'}</td>
-                              <td className="p-2.5 text-emerald-400">{s.stream_name || s.name || 'Blue'}</td>
-                              <td className="p-2.5 text-slate-400">{s.class_teacher || 'Unassigned'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleSyncStreams}
-                disabled={isSyncingStreams}
-                className="w-full mt-6 bg-emerald-600 hover:bg-emerald-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingStreams ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingStreams ? 'Syncing Streams...' : 'Sync Streams'}
-              </button>
-            </div>
-
-            {/* 6. Attendance Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">Attendance</h3>
-                  <span className="text-xs bg-slate-800 text-blue-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudAttendanceCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-blue-400 mb-4">{cloudAttendanceList.length}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">Attendance Preview ({cloudAttendanceList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-blue-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh Attendance
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">Adm No</th>
-                          <th className="p-2.5">Learner</th>
-                          <th className="p-2.5">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudAttendanceList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud attendance found</td></tr>
-                        ) : (
-                          cloudAttendanceList.slice(0, 15).map((a: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-mono text-slate-400">{a.admission_number || 'N/A'}</td>
-                              <td className="p-2.5 font-medium text-slate-200">{a.learner_name || 'Student'}</td>
-                              <td className="p-2.5 text-blue-400">{a.status || 'Present'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleSyncAttendance}
-                disabled={isSyncingAttendance}
-                className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingAttendance ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingAttendance ? 'Syncing Attendance...' : 'Sync Attendance'}
-              </button>
-            </div>
-
-            {/* 7. User Management Card */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-lg">
-              <div>
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-slate-100 font-bold text-lg flex items-center gap-2">User Management</h3>
-                  <span className="text-xs bg-slate-800 text-rose-400 px-3 py-1 rounded-full border border-slate-700 font-semibold">
-                    Cloud: {cloudUsersCount}
-                  </span>
-                </div>
-                <p className="text-4xl font-extrabold text-rose-400 mb-4">{cloudUsersList.length}</p>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="text-slate-300 font-medium text-sm">User Management Preview ({cloudUsersList.length})</h4>
-                    <button onClick={handleTestCloudTables} className="text-xs text-rose-400 hover:underline flex items-center gap-1 font-medium">
-                      🔄 Refresh User Management
-                    </button>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-slate-900 sticky top-0 text-slate-400 border-b border-slate-800">
-                        <tr>
-                          <th className="p-2.5">User Name</th>
-                          <th className="p-2.5">Email</th>
-                          <th className="p-2.5">Role</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60">
-                        {cloudUsersList.length === 0 ? (
-                          <tr><td colSpan={3} className="p-4 text-center text-slate-500">No cloud users found</td></tr>
-                        ) : (
-                          cloudUsersList.slice(0, 15).map((u: any, idx: number) => (
-                            <tr key={idx} className="hover:bg-slate-900/40">
-                              <td className="p-2.5 font-medium text-slate-200">{u.fullName || u.name || 'User'}</td>
-                              <td className="p-2.5 text-slate-400 font-mono text-[11px]">{u.email || 'N/A'}</td>
-                              <td className="p-2.5 text-rose-400">{u.role || 'Staff'}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleSyncUsers}
-                disabled={isSyncingUsers}
-                className="w-full mt-6 bg-rose-600 hover:bg-rose-500 text-white py-3 px-4 rounded-xl font-bold transition-colors disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
-              >
-                {isSyncingUsers ? <RefreshCw className="animate-spin" size={16} /> : <Cloud size={16} />}
-                {isSyncingUsers ? 'Syncing User Management...' : 'Sync User Management'}
-              </button>
-            </div>
-
+            )}
           </div>
           
                     {/* Cloud Learners Preview Table */}
