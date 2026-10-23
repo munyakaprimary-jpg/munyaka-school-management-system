@@ -1,5 +1,28 @@
+import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
+
+export const initializeMasterStore = () => {
+  try {
+    const existingLearners = localStorage.getItem('munyaka_learners_v2');
+    if (!existingLearners) {
+      const cleanLearners = (INITIAL_SEED_DATA.learners || []).map((l: any) => ({
+        ...l,
+        id: l.id && String(l.id).startsWith('learner-') ? String(l.id) : `learner-${l.id || l.admNo || Math.random().toString(36).slice(2, 9)}`
+      }));
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify(cleanLearners));
+    }
+    
+    const existingStaff = localStorage.getItem('munyaka_users_v1');
+    if (!existingStaff) {
+      localStorage.setItem('munyaka_users_v1', JSON.stringify(INITIAL_SEED_DATA.staff || []));
+    }
+  } catch (e) {
+    console.error("Error initializing master store:", e);
+  }
+};
+
 export const getNormalizedLearners = () => {
   try {
+    initializeMasterStore();
     const raw = localStorage.getItem('munyaka_learners_v2');
     let learners = [];
     if (raw) {
@@ -7,37 +30,26 @@ export const getNormalizedLearners = () => {
     }
     
     if (!Array.isArray(learners) || learners.length === 0) {
-      // Fallback to central data service / seed data or legacy keys if empty
-      const legacyRaw = localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students');
-      if (legacyRaw) {
-        try {
-          const parsedLegacy = JSON.parse(legacyRaw);
-          if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
-            learners = parsedLegacy;
-          }
-        } catch {}
-      }
+      learners = INITIAL_SEED_DATA.learners || [];
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify(learners));
     }
 
     const rawDeleted = localStorage.getItem('deleted_learner_ids');
     const deletedIds: string[] = rawDeleted ? JSON.parse(rawDeleted) : [];
 
-    // Deduplicate by ID / admissionNo / admission_number
     const uniqueLearnersMap = new Map();
     learners.forEach((l: any) => {
       if (!l) return;
-      const key = String(l.id || l.learnerId || l.admNo || l.admissionNumber || l.admission_number || '').trim();
+      const key = String(l.id || l.admNo || '').trim();
       if (key && !deletedIds.includes(key)) {
         uniqueLearnersMap.set(key, l);
-      } else if (!key && l.name) {
-        uniqueLearnersMap.set(String(l.name).trim().toLowerCase(), l);
       }
     });
     
     return Array.from(uniqueLearnersMap.values());
   } catch (e) {
     console.error("Error reading learners:", e);
-    return [];
+    return INITIAL_SEED_DATA.learners || [];
   }
 };
 
