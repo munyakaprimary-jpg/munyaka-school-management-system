@@ -97,7 +97,7 @@ const TIER_SUBJECTS: Record<string, string[]> = {
 };
 
 const getTierKey = (gradeName: string): string => {
-  const g = gradeName.toLowerCase();
+  const g = String(gradeName || "").toLowerCase();
   if (g.includes("pp1") || g.includes("pp2") || g.includes("pre-primary")) return "pre-primary";
   if (g.includes("grade 1") || g.includes("grade 2") || g.includes("grade 3")) return "lower-primary";
   if (g.includes("grade 4") || g.includes("grade 5") || g.includes("grade 6")) return "upper-primary";
