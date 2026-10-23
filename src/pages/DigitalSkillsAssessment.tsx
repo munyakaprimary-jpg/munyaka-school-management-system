@@ -1118,7 +1118,7 @@ const DigitalSkillsAssessment = () => {
                       </div>
 
                       <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        <span>Total Students: {tool.totalStudents}</span>
+                        <span>Total Learners: {tool.totalStudents}</span>
                         <span className="text-slate-500">Last Updated: Oct 15, 2024</span>
                       </div>
                     </div>

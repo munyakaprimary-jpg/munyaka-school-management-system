@@ -159,7 +159,7 @@ const PromoteStudentsModal = ({
             
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex justify-between py-2 border-b border-slate-100">
-                <span className="text-slate-600">Total Students:</span>
+                <span className="text-slate-600">Total Learners:</span>
                 <span className="font-bold text-slate-900">{students.length}</span>
               </div>
               <div className="flex justify-between py-2 border-b border-slate-100">

@@ -82,7 +82,7 @@ test("ADMIN sees Dashboard Overview with all required sections", async ({ page }
   await expect(page.getByText(/LIVE FACTUAL SYNC/i).first()).toBeVisible();
 
   // System vitals
-  await expect(page.getByText(/Total Students/i)).toBeVisible();
+  await expect(page.getByText(/Total Learners/i)).toBeVisible();
   await expect(page.getByText(/Total Teachers/i)).toBeVisible();
   await expect(page.getByText(/Today's Attendance/i)).toBeVisible();
   await expect(page.getByText(/Junior School/i)).toBeVisible();

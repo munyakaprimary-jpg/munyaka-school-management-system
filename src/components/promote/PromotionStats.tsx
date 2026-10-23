@@ -68,7 +68,7 @@ const PromotionStats: React.FC<PromotionStatsProps> = ({ stats }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <StatsCard
-        title="Total Students"
+        title="Total Learners"
         value={stats.totalStudents}
         icon={Users}
         color="text-indigo-600"

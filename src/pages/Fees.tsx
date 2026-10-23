@@ -606,7 +606,7 @@ const Fees = () => {
       const headers = [
         "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
         `Active Filter: ${activeGradeLabel} | ${selectedTerm} | ${selectedYear}`,
-        `Total Students: ${filteredCalculatedFees.length} | Generated: ${new Date().toLocaleString()}`,
+        `Total Learners: ${filteredCalculatedFees.length} | Generated: ${new Date().toLocaleString()}`,
         "",
         ["Adm No", "Student Name", "Grade", "Stream", "Term Fee (KES)", "Fee Paid (KES)", "Balance (KES)", "Status"].join(","),
       ];

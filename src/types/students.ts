@@ -13,7 +13,7 @@ export interface STUDENT {
   needs: string;
 }
 
-export interface StudentFilters {
+export interface LearnerFilters {
   searchTerm: string;
   filterGrade: string;
   filterStream: string;

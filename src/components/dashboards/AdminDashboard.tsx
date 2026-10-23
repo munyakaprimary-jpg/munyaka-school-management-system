@@ -420,10 +420,10 @@ export const AdminDashboardComponent: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
-        {/* Total Students Card */}
+        {/* Total Learners Card */}
         <Card className="border shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">TOTAL STUDENTS</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">TOTAL LEARNERS</CardTitle>
             <Users className="w-5 h-5 text-blue-600" />
           </CardHeader>
           <CardContent>

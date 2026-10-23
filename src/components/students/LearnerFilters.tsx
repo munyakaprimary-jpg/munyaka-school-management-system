@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Search, X } from "lucide-react";
 import { useGradesStreamsConfig } from "@/hooks/useGradesStreams";
 
-interface StudentFiltersProps {
+interface LearnerFiltersProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
   filterGrade: string;
@@ -19,7 +19,7 @@ interface StudentFiltersProps {
   onClearFilters: () => void;
 }
 
-const StudentFilters: React.FC<StudentFiltersProps> = ({
+const LearnerFilters: React.FC<LearnerFiltersProps> = ({
   searchTerm,
   setSearchTerm,
   filterGrade,
@@ -163,4 +163,4 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
   );
 };
 
-export default StudentFilters;
+export default LearnerFilters;
