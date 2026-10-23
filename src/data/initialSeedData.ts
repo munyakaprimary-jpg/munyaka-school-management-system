@@ -654,7 +654,7 @@ export const initialSeedData = {
       "updatedAt": "2026-10-06T17:23:25.958Z"
     },
     {
-      "id": "1790679140445",
+      "id": "learner-1790679140445",
       "name": "JOHN ADIEMA",
       "fullName": "JOHN ADIEMA",
       "admissionNumber": "MUN-031-2026",
@@ -673,24 +673,7 @@ export const initialSeedData = {
     }
   ],
   "students": [
-    {
-      "id": "1790673553858",
-      "name": "MARY WANJIKU",
-      "fullName": "MARY WANJIKU",
-      "admissionNumber": "MUN-001-2020",
-      "admNo": "MUN-001-2020",
-      "assessmentNumber": "B003427929",
-      "assessmentNo": "B003427929",
-      "assessment": "B003427929",
-      "gender": "Female",
-      "grade": "GRADE 7",
-      "stream": "MERCURY",
-      "parentName": "BEATRICE MUTHONI",
-      "guardian": "BEATRICE MUTHONI",
-      "phoneNumber": "-715612147",
-      "phone": "-715612147",
-      "createdAt": "2026-09-29T09:19:13.858Z"
-    },
+ 
     {
       "id": "learner-1790759996788",
       "name": "PAUL MACHARIA",
