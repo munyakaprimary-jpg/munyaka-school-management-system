@@ -93,7 +93,13 @@ export function hydrateFromInitialSeed(): void {
       });
 
       // Canonical learner & staff keys (omitting redundant duplicate master backups to prevent localStorage quota exhaustion)
-      const studentsList = (initialSeedData as any).students || [];
+      // Ensure one-time clear of old unstandardized storage key if requested
+      if (!localStorage.getItem('munyaka_seed_v2_initialized')) {
+        localStorage.removeItem('munyaka_learners_v2');
+        localStorage.setItem('munyaka_seed_v2_initialized', 'true');
+      }
+
+      const studentsList = (initialSeedData as any).learners || (initialSeedData as any).students || [];
       const staffList = (initialSeedData as any).staff || [];
       localStorage.setItem('school_learners_data', JSON.stringify(studentsList));
       localStorage.setItem('munyaka_students', JSON.stringify(studentsList));

@@ -1046,7 +1046,8 @@ export const initialSeedData = {
   ]
 };
 
-(initialSeedData as any).learners = initialSeedData.students;
+(initialSeedData as any).learners = initialSeedData.learners || (initialSeedData as any).students;
+delete (initialSeedData as any).students;
 
 export const INITIAL_SEED_DATA = initialSeedData;
 
