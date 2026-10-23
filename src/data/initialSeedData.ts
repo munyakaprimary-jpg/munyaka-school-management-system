@@ -361,7 +361,7 @@ export const initialSeedData = {
     },
     {
       "id": "learner-1790973025254",
-      "name": "Bridgit Moraa",
+      "name": "BRIDGIT MORAA",
       "fullName": "BRIDGIT MORAA",
       "admissionNumber": "MUN-017-2022",
       "admNo": "MUN-017-2022",
@@ -612,69 +612,6 @@ export const initialSeedData = {
       "updatedAt": "2026-10-05T17:29:50.882Z"
     },
     {
-      "id": "learner-1791221522282",
-      "name": "BRIGHTON EWOI KJAMAL",
-      "fullName": "BRIGHTON EWOI KJAMAL",
-      "admissionNumber": "MUN-029-2022",
-      "admNo": "MUN-029-2022",
-      "assessmentNo": "B005532576",
-      "dateOfBirth": "2015-03-14",
-      "dob": "2015-03-14",
-      "birthDate": "2015-03-14",
-      "gender": "Male",
-      "grade": "Grade 5",
-      "class": "Grade 5",
-      "stream": "Yellow",
-      "parentName": "LYDIA NAMAKOYE",
-      "guardian": "LYDIA NAMAKOYE",
-      "phoneNumber": "0757568162",
-      "parentPhone": "0757568162",
-      "phone": "0757568162",
-      "updatedAt": "2026-10-05T17:32:02.282Z"
-    },
-    {
-      "id": "learner-1791307405958",
-      "name": "JOHN KAMAU GUTHUA",
-      "fullName": "JOHN KAMAU GUTHUA",
-      "admissionNumber": "MUN-030-2022",
-      "admNo": "MUN-030-2022",
-      "assessmentNo": "BOO5489484",
-      "dateOfBirth": "2015-06-23",
-      "dob": "2015-06-23",
-      "birthDate": "2015-06-23",
-      "gender": "Male",
-      "grade": "Grade 5",
-      "class": "Grade 5",
-      "stream": "Yellow",
-      "parentName": "DANIEL GUTHUA KAMAU",
-      "guardian": "DANIEL GUTHUA KAMAU",
-      "phoneNumber": "0726472230",
-      "parentPhone": "0726472230",
-      "phone": "0726472230",
-      "updatedAt": "2026-10-06T17:23:25.958Z"
-    },
-    {
-      "id": "learner-1790679140445",
-      "name": "JOHN ADIEMA",
-      "fullName": "JOHN ADIEMA",
-      "admissionNumber": "MUN-031-2026",
-      "admNo": "MUN-031-2026",
-      "assessmentNumber": "",
-      "assessmentNo": "",
-      "assessment": "",
-      "gender": "Male",
-      "grade": "GRADE 1",
-      "stream": "GREEN",
-      "parentName": "VICTOR OUMA ONYANGO",
-      "guardian": "VICTOR OUMA ONYANGO",
-      "phoneNumber": "0746862043",
-      "phone": "0746862043",
-      "createdAt": "2026-09-29T10:52:20.445Z"
-    }
-  ],
-  "students": [
- 
-    {
       "id": "learner-1790759996788",
       "name": "PAUL MACHARIA",
       "fullName": "PAUL MACHARIA",
@@ -717,7 +654,7 @@ export const initialSeedData = {
       "updatedAt": "2026-10-02T11:05:40.138Z"
     },
     {
-      "id": "1790437574910",
+      "id": "learner-1790437574910",
       "name": "MICHAEL GICHUHI KADALA",
       "fullName": "MICHAEL GICHUHI KADALA",
       "admissionNumber": "MUN-004-2021",
@@ -735,7 +672,7 @@ export const initialSeedData = {
       "createdAt": "2026-09-26T15:46:36.661Z"
     },
     {
-      "id": "1789881428012",
+      "id": "learner-1789881428012",
       "name": "NICOLE WAITHIRA MUHORO",
       "fullName": "NICOLE WAITHIRA MUHORO",
       "admissionNumber": "MUN-005-2021",
@@ -753,7 +690,7 @@ export const initialSeedData = {
       "createdAt": "2026-09-26T15:01:37.875Z"
     },
     {
-      "id": "1789880616052",
+      "id": "learner-1789880616052",
       "name": "GRACE MUTHONI",
       "fullName": "GRACE MUTHONI",
       "admissionNumber": "MUN-006-2021",
@@ -771,7 +708,7 @@ export const initialSeedData = {
       "createdAt": "2026-09-20T05:03:36.052Z"
     },
     {
-      "id": "1789880087460",
+      "id": "learner-1789880087460",
       "name": "BRIGHTON KIPKOECH",
       "fullName": "BRIGHTON KIPKOECH",
       "admissionNumber": "MUN-007-2021",
@@ -789,7 +726,7 @@ export const initialSeedData = {
       "createdAt": "2026-09-20T05:09:03.812Z"
     },
     {
-      "id": "1789826147758",
+      "id": "learner-1789826147758",
       "name": "GIFT ALEMBI MUKABI",
       "fullName": "GIFT ALEMBI MUKABI",
       "admissionNumber": "MUN-008-2021",
@@ -807,7 +744,7 @@ export const initialSeedData = {
       "createdAt": "2026-09-26T15:03:08.813Z"
     },
     {
-      "id": "1790417192645",
+      "id": "learner-1790417192645",
       "name": "MARY WAIRIMU MWANGI",
       "fullName": "MARY WAIRIMU MWANGI",
       "admissionNumber": "MUN-009-2021",
@@ -825,7 +762,7 @@ export const initialSeedData = {
       "createdAt": "2026-09-26T14:15:56.756Z"
     },
     {
-      "id": "1790418477989",
+      "id": "learner-1790418477989",
       "name": "FAITH WANGOI WANYOIKE",
       "fullName": "FAITH WANGOI WANYOIKE",
       "admissionNumber": "MUN-010-2021",
@@ -843,7 +780,7 @@ export const initialSeedData = {
       "createdAt": "2026-09-26T10:27:57.989Z"
     },
     {
-      "id": "1790451537138",
+      "id": "learner-1790451537138",
       "name": "TABITHA WANJIRU MACHARIA",
       "fullName": "TABITHA WANJIRU MACHARIA",
       "admissionNumber": "MUN-011-2021",
@@ -861,7 +798,7 @@ export const initialSeedData = {
       "createdAt": "2026-09-26T19:38:57.138Z"
     },
     {
-      "id": "1790694827085",
+      "id": "learner-1790694827085",
       "name": "ADRIAN JONES",
       "fullName": "ADRIAN JONES",
       "admissionNumber": "MUN-012-2022",
@@ -879,7 +816,7 @@ export const initialSeedData = {
       "createdAt": "2026-09-29T15:18:24.635Z"
     },
     {
-      "id": "1790696448411",
+      "id": "learner-1790696448411",
       "name": "QUINTANN SUZANA",
       "fullName": "QUINTANN SUZANA",
       "admissionNumber": "MUN-013-2022",
@@ -958,27 +895,6 @@ export const initialSeedData = {
       "parentPhone": "0758444231",
       "phone": "0758444231",
       "updatedAt": "2026-09-30T17:55:53.321Z"
-    },
-    {
-      "id": "learner-1790973025254",
-      "name": "Bridgit Moraa",
-      "fullName": "Bridgit Moraa",
-      "admissionNumber": "MUN-017-2022",
-      "admNo": "MUN-017-2022",
-      "assessmentNo": "B006487459",
-      "dateOfBirth": "2016-01-03",
-      "dob": "2016-01-03",
-      "birthDate": "2016-01-03",
-      "gender": "Female",
-      "grade": "Grade 5",
-      "class": "Grade 5",
-      "stream": "Green",
-      "parentName": "Janet Kerubo Obaigwa",
-      "guardian": "Janet Kerubo Obaigwa",
-      "phoneNumber": "0706728494",
-      "parentPhone": "0706728494",
-      "phone": "0706728494",
-      "updatedAt": "2026-10-02T20:30:25.254Z"
     },
     {
       "id": "learner-1791000835197",
@@ -1213,8 +1129,8 @@ export const initialSeedData = {
     },
     {
       "id": "learner-1791221522282",
-      "name": "BRIGHTON EWOI KJAMAL",
-      "fullName": "BRIGHTON EWOI KJAMAL",
+      "name": "BRIGHTON EWOI JAMAL",
+      "fullName": "BRIGHTON EWOI JAMAL",
       "admissionNumber": "MUN-029-2022",
       "admNo": "MUN-029-2022",
       "assessmentNo": "B005532576",
@@ -1254,7 +1170,7 @@ export const initialSeedData = {
       "updatedAt": "2026-10-06T17:23:25.958Z"
     },
     {
-      "id": "1790679140445",
+      "id": "learner-1790679140445",
       "name": "JOHN ADIEMA",
       "fullName": "JOHN ADIEMA",
       "admissionNumber": "MUN-031-2026",
@@ -1276,8 +1192,8 @@ export const initialSeedData = {
   "fees": [
     {
       "id": "FEE-001",
-      "studentId": "1789826147758",
-      "student": "PETER MWANGI",
+      "learnerId": "1789826147758",
+      "learner": "PETER MWANGI",
       "admNo": "MUN-G1-001-2026",
       "grade": "Grade 1",
       "stream": "North",
@@ -1292,8 +1208,8 @@ export const initialSeedData = {
     },
     {
       "id": "FEE-002",
-      "studentId": "1789881428012",
-      "student": "FRED KAPONDI",
+      "learnerId": "1789881428012",
+      "learner": "FRED KAPONDI",
       "admNo": "MUN-G1-002-2026",
       "grade": "GRADE 1",
       "stream": "GREEN",
@@ -1308,8 +1224,8 @@ export const initialSeedData = {
     },
     {
       "id": "FEE-003",
-      "studentId": "1789880616052",
-      "student": "GRACE MUTHONI",
+      "learnerId": "1789880616052",
+      "learner": "GRACE MUTHONI",
       "admNo": "MUN-G6-002-2026",
       "grade": "GRADE 6",
       "stream": "GREEN",
@@ -1324,8 +1240,8 @@ export const initialSeedData = {
     },
     {
       "id": "FEE-004",
-      "studentId": "1789880087460",
-      "student": "BRIGHTON KIPKOECH",
+      "learnerId": "1789880087460",
+      "learner": "BRIGHTON KIPKOECH",
       "admNo": "MUN-G6-001-2026",
       "grade": "GRADE 6",
       "stream": "BLUE",
@@ -1528,11 +1444,11 @@ export const initialSeedData = {
   "settings": {
     "schoolName": "Munyaka Primary & Junior School",
     "schoolCode": "MUNYAKA-001",
-    "motto": "Discipline and Excellence",
+    "motto": "Knowledge is Power",
     "address": "P.O. Box 123-00100, Nairobi, Kenya",
-    "phone": "+254 712 345678",
-    "email": "info@munyakaprimary.ac.ke",
-    "currentTerm": "Term 1, 2026",
+    "phone": "+254 738873359",
+    "email": "munyakaprimary@gmail.com",
+    "currentTerm": "Term 3, 2026",
     "academicYear": "2026"
   },
   "notices": [
@@ -1612,15 +1528,15 @@ export const initialSeedData = {
       "id": "tenant-001",
       "name": "Munyaka Primary and Junior School",
       "code": "MUNYAKA-001",
-      "location": "Nairobi, Kenya",
+      "location": "Eldoret, Kenya",
       "plan": "Enterprise",
       "status": "Active",
       "studentCount": 840,
       "maxSeats": 1000,
       "dbMode": "Isolated SQLite",
       "lastSynced": "Just now",
-      "adminEmail": "admin@munyakaprimary.ac.ke",
-      "adminPhone": "+254 712 345678"
+      "adminEmail": "munyakaprimary@gmail.com",
+      "adminPhone": "+254 738873359"
     }
   ]
 };
