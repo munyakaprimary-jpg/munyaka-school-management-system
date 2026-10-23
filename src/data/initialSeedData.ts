@@ -1666,8 +1666,7 @@ export const initialFeePayments = (initialSeedData as any).fees || (initialSeedD
 export const initialStudyCorner = (initialSeedData as any).studyCorner || (initialSeedData as any).study_materials || [];
 export const initialLibraryBooks = (initialSeedData as any).libraryBooks || (initialSeedData as any).library_books || [];
 export const initialLibraryLogs = (initialSeedData as any).libraryLogs || (initialSeedData as any).library_logs || [];
-export const mockLearners = initialSeedData.students || [];
-export const mockStudents = initialSeedData.students || [];
+// mockLearners and mockStudents removed per requirement to delete hardcoded and mock learners data. Use getNormalizedLearners() from '@/utils/dataLoader' instead.
 export const mockStaff = [];
 export const initialGrades = (initialSeedData as any).grades || [];
 export const initialStreams = (initialSeedData as any).streams || [];
