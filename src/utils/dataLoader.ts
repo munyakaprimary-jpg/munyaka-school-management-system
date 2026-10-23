@@ -2,6 +2,13 @@ import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 
 export const initializeMasterStore = () => {
   try {
+    // Force reset on development boot if flag not set for this seed version
+    const SEED_VERSION_KEY = 'munyaka_seed_version_v3_clean';
+    if (!localStorage.getItem(SEED_VERSION_KEY)) {
+      localStorage.removeItem('munyaka_learners_v2');
+      localStorage.setItem(SEED_VERSION_KEY, 'true');
+    }
+
     const existingLearners = localStorage.getItem('munyaka_learners_v2');
     if (!existingLearners) {
       const cleanLearners = (INITIAL_SEED_DATA.learners || []).map((l: any) => ({
