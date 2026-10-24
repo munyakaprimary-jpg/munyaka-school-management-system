@@ -823,6 +823,9 @@ export default function PaymentManagement() {
             <form onSubmit={(e) => {
               e.preventDefault();
               const amtNum = Number(paymentAmount);
+              const referenceCode = paymentMethod === 'Cash' && !paymentRef
+                ? `CASH-${Date.now().toString().slice(-6)}`
+                : paymentRef;
               
               setSubscriptions(prev => prev.map(s => {
                 if (s.school === paymentCampus) {
@@ -872,7 +875,7 @@ export default function PaymentManagement() {
                   date: paymentDate,
                   campus: paymentCampus,
                   method: paymentMethod,
-                  ref: paymentRef || `REF-${Math.floor(1000 + Math.random() * 9000)}`,
+                  ref: referenceCode,
                   amount: `KES ${amtNum.toLocaleString()}`,
                   period: paymentPeriod,
                   notes: paymentNotes
@@ -885,12 +888,11 @@ export default function PaymentManagement() {
                 campus: paymentCampus,
                 amount: paymentAmount,
                 method: paymentMethod,
-                ref: paymentRef,
+                ref: referenceCode,
                 period: paymentPeriod,
                 notes: paymentNotes
               });
               setIsPaymentModalOpen(false);
-              // Force state refresh so global lock toggle and status update instantly
               setIsGloballyLocked(false);
             }} className="flex flex-col flex-1 overflow-hidden">
               {/* Modal Body (Scrollable Area) */}
@@ -915,13 +917,15 @@ export default function PaymentManagement() {
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-bold uppercase text-slate-500">Transaction Reference Code</Label>
+                    <Label className="text-[11px] font-bold uppercase text-slate-500">
+                      TRANSACTION REFERENCE CODE {paymentMethod === 'Cash' ? '(Optional)' : '*'}
+                    </Label>
                     <Input
                       value={paymentRef}
                       onChange={(e) => setPaymentRef(e.target.value)}
-                      placeholder="e.g. QKH78923XX"
+                      placeholder="e.g. QKH78923XX (Optional for Cash)"
                       className="h-10 bg-slate-50 font-mono text-xs font-semibold"
-                      required
+                      required={paymentMethod !== 'Cash'}
                     />
                   </div>
                 </div>
