@@ -63,43 +63,24 @@ export default function PaymentManagement() {
   const dynamicLicenseKey = `MUNYAKA-ENT-2026-${schoolIdHex}`;
 
   const handleDownloadPDF = (invoice: any) => {
-    // Remove any existing print iframe if present
-    const existingIframe = document.getElementById('invoice-print-iframe');
-    if (existingIframe) {
-      existingIframe.remove();
-    }
-
-    // Create hidden iframe
-    const iframe = document.createElement('iframe');
-    iframe.id = 'invoice-print-iframe';
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const iframeDoc = iframe.contentWindow?.document;
-    if (!iframeDoc) return;
-
     const feePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
     const totalSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6); // 37
+    const invoiceTotal = Number(invoice.amount) || (totalSeats * feePerSeat);
 
-    iframeDoc.write(`
+    const htmlContent = `
       <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="utf-8">
           <title>Invoice - ${invoice.id}</title>
           <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #111; line-height: 1.5; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #111; line-height: 1.5; max-width: 800px; margin: auto; }
             .header { border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }
             .school-title { font-size: 22px; font-weight: bold; color: #1e3a8a; margin: 0; }
             .doc-type { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #4b5563; margin-top: 4px; }
-            .badge { display: inline-block; padding: 4px 12px; background-color: #d1fae5; color: #065f46; font-weight: bold; border-radius: 9999px; font-size: 12px; }
-            .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; background: #f9fafb; padding: 15px; border-radius: 8px; }
+            .badge { display: inline-block; padding: 4px 12px; background-color: #d1fae5; color: #065f46; font-weight: bold; border-radius: 9999px; font-size: 12px; float: right; }
+            .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; }
             .meta-item { font-size: 13px; }
-            .meta-item strong { color: #374151; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 30px; }
             th { background-color: #f3f4f6; text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #374151; border-bottom: 1px solid #e5e7eb; }
             td { padding: 12px; font-size: 13px; border-bottom: 1px solid #e5e7eb; }
@@ -138,14 +119,14 @@ export default function PaymentManagement() {
                 <td>Official Software License Renewal</td>
                 <td class="text-right">${totalSeats}</td>
                 <td class="text-right">KES ${feePerSeat}</td>
-                <td class="text-right">KES ${Number(invoice.amount).toLocaleString()}</td>
+                <td class="text-right">KES ${invoiceTotal.toLocaleString()}</td>
               </tr>
             </tbody>
           </table>
 
           <div class="total-box">
             <span>Total Paid:</span>
-            <span>KES ${Number(invoice.amount).toLocaleString()}</span>
+            <span>KES ${invoiceTotal.toLocaleString()}</span>
           </div>
 
           <div class="footer">
@@ -153,15 +134,18 @@ export default function PaymentManagement() {
           </div>
         </body>
       </html>
-    `);
+    `;
 
-    iframeDoc.close();
-
-    // Wait for content to render, then open native system Save-as-PDF / Print prompt
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    }, 300);
+    // Create direct Blob download link
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${invoice.id}_Official_Invoice.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'seats' | 'monthly' | 'invoices'>('subscriptions');
