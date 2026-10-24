@@ -496,7 +496,7 @@ export default function FirestoreSyncTab() {
     try {
       const res = await migrateLegacyLearnerIds();
       if (res.success) {
-        showSuccess(`Learner ID migration complete! Standardized ${res.count} document IDs.`);
+        showSuccess(`Learner ID migration complete! Standardized ${res.purgedCount || 0} document IDs.`);
         await handleTestCloudTables();
       } else {
         throw new Error('Migration failed');
