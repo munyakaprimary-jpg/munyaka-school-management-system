@@ -62,59 +62,106 @@ export default function PaymentManagement() {
   }, []);
   const dynamicLicenseKey = `MUNYAKA-ENT-2026-${schoolIdHex}`;
 
-  const handleDownloadPDF = (item: any) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+  const handleDownloadPDF = (invoice: any) => {
+    // Remove any existing print iframe if present
+    const existingIframe = document.getElementById('invoice-print-iframe');
+    if (existingIframe) {
+      existingIframe.remove();
+    }
 
-    printWindow.document.write(`
+    // Create hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.id = 'invoice-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (!iframeDoc) return;
+
+    const feePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+    const totalSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6); // 37
+
+    iframeDoc.write(`
+      <!DOCTYPE html>
       <html>
         <head>
-          <title>Invoice - ${item.id}</title>
+          <title>Invoice - ${invoice.id}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
-            .header { border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-            .school-name { font-size: 22px; font-weight: bold; color: #1e3a8a; }
-            .inv-details { margin-bottom: 20px; font-size: 14px; line-height: 1.6; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-            th { background-color: #f3f4f6; }
-            .total { font-size: 18px; font-weight: bold; margin-top: 20px; text-align: right; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #111; line-height: 1.5; }
+            .header { border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }
+            .school-title { font-size: 22px; font-weight: bold; color: #1e3a8a; margin: 0; }
+            .doc-type { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #4b5563; margin-top: 4px; }
+            .badge { display: inline-block; padding: 4px 12px; background-color: #d1fae5; color: #065f46; font-weight: bold; border-radius: 9999px; font-size: 12px; }
+            .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; background: #f9fafb; padding: 15px; border-radius: 8px; }
+            .meta-item { font-size: 13px; }
+            .meta-item strong { color: #374151; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 30px; }
+            th { background-color: #f3f4f6; text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #374151; border-bottom: 1px solid #e5e7eb; }
+            td { padding: 12px; font-size: 13px; border-bottom: 1px solid #e5e7eb; }
+            .text-right { text-align: right; }
+            .total-box { display: flex; justify-content: flex-end; align-items: center; gap: 20px; font-size: 18px; font-weight: bold; color: #047857; margin-top: 10px; }
+            .footer { margin-top: 50px; font-size: 11px; text-align: center; color: #9ca3af; border-top: 1px solid #f3f4f6; padding-top: 15px; }
           </style>
         </head>
         <body>
           <div class="header">
-            <div class="school-name">Munyaka Primary & Junior School</div>
-            <h2>OFFICIAL INVOICE / RECEIPT</h2>
+            <div>
+              <h1 class="school-title">Munyaka Primary & Junior School</h1>
+              <div class="doc-type">Official Software License Receipt / Invoice</div>
+            </div>
+            <span class="badge">${invoice.status || 'PAID'}</span>
           </div>
-          <div class="inv-details">
-            <strong>Invoice ID:</strong> ${item.id}<br/>
-            <strong>Date:</strong> ${item.date}<br/>
-            <strong>Status:</strong> ${item.status || 'Paid'}
+
+          <div class="meta-grid">
+            <div class="meta-item"><strong>Invoice Reference:</strong> ${invoice.id}</div>
+            <div class="meta-item"><strong>Billing Date:</strong> ${invoice.date}</div>
+            <div class="meta-item"><strong>Total Active Seats:</strong> ${totalSeats} (31 Learners + 6 Staff)</div>
+            <div class="meta-item"><strong>Per-Seat Rate:</strong> KES ${feePerSeat} / Seat</div>
           </div>
+
           <table>
             <thead>
               <tr>
                 <th>Description</th>
-                <th>Amount</th>
+                <th class="text-right">Seats</th>
+                <th class="text-right">Rate / Seat</th>
+                <th class="text-right">Total Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>Software License Fee Renewal (${item.period || '1 Month'}) - 37 Seats</td>
-                <td>KES ${Number(item.amount).toLocaleString()}</td>
+                <td>Official Software License Renewal</td>
+                <td class="text-right">${totalSeats}</td>
+                <td class="text-right">KES ${feePerSeat}</td>
+                <td class="text-right">KES ${Number(invoice.amount).toLocaleString()}</td>
               </tr>
             </tbody>
           </table>
-          <div class="total">Total Paid: KES ${Number(item.amount).toLocaleString()}</div>
+
+          <div class="total-box">
+            <span>Total Paid:</span>
+            <span>KES ${Number(invoice.amount).toLocaleString()}</span>
+          </div>
+
+          <div class="footer">
+            Generated by Munyaka School Management Portal • Official Digital License Document
+          </div>
         </body>
       </html>
     `);
 
-    printWindow.document.close();
-    printWindow.focus();
+    iframeDoc.close();
+
+    // Wait for content to render, then open native system Save-as-PDF / Print prompt
     setTimeout(() => {
-      printWindow.print();
-    }, 250);
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    }, 300);
   };
 
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'seats' | 'monthly' | 'invoices'>('subscriptions');
