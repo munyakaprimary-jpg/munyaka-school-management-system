@@ -534,7 +534,7 @@ export default function PaymentManagement() {
             <CardTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
               <Users className="text-indigo-600" size={24} /> Learner & Staff Seats Allocation
             </CardTitle>
-            <p className="text-xs text-slate-500 font-medium mt-1">Live active learner slots synchronized directly from <code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-mono text-xs">munyaka_central_db</code>.</p>
+            <p className="text-xs text-slate-500 font-medium mt-1">Live active learner slots synchronized directly from master store (<code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-mono text-xs">munyaka_learners_v2</code> &amp; <code className="bg-slate-100 text-indigo-600 px-1.5 py-0.5 rounded font-mono text-xs">munyaka_users_v1</code>).</p>
           </CardHeader>
 
           <CardContent className="p-0 space-y-6 pt-2">
@@ -590,7 +590,7 @@ export default function PaymentManagement() {
                   <Calendar className="text-indigo-600" size={24} /> Monthly Payment & Billing Setting
                 </CardTitle>
                 <p className="text-xs text-slate-500 font-medium mt-1">
-                  Calculated automatically from <strong className="text-indigo-600">{totalActiveStudents} active learners</strong> and <strong className="text-indigo-600">{totalActiveStaff} active staff</strong> synchronized from <code className="bg-slate-100 text-indigo-600 px-1 py-0.5 rounded font-mono text-[11px]">munyaka_central_db</code>.
+                  Calculated automatically from <strong className="text-indigo-600">{totalActiveStudents} active learners</strong> and <strong className="text-indigo-600">{totalActiveStaff} active staff</strong> synchronized from master store.
                 </p>
               </div>
 
