@@ -357,42 +357,43 @@ const getSubscriptionSettings = (issuedAt?: string): SubscriptionSettings => {
 
 const resolveLicenseInfo = (): LicenseInfo => {
   const license = getActiveLicense();
+  const storedBillingDate = localStorage.getItem('munyaka_next_billing_date') || localStorage.getItem('munyaka_payment_due_date');
+
+  const getDaysRemaining = (targetDateStr: string) => {
+    const target = new Date(targetDateStr).getTime();
+    const now = new Date().getTime();
+    const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 ? diffDays : 0;
+  };
+
+  const nextBillingDate = storedBillingDate || (license ? addDays(safeDate(getSubscriptionSettings(license.issuedAt).cycleStartDate) ?? new Date(), BILLING_CYCLE_DAYS[getSubscriptionSettings(license.issuedAt).billingCycle] ?? 30).toISOString().slice(0, 10) : '2026-10-30');
+  const daysRemaining = getDaysRemaining(nextBillingDate);
 
   if (!license) {
-    const today = new Date();
-    const nextBilling = addDays(today, 30).toISOString().slice(0, 10);
     return {
       planName: 'Pro Plan',
       billingInterval: 'Monthly',
-      nextBillingDate: nextBilling,
-      daysRemaining: 30,
+      nextBillingDate,
+      daysRemaining,
       expiresAt: null,
       maxStudentSeats: 500,
       maxStaffSeats: 50,
       isEnterprise: false,
-      status: 'active',
+      status: daysRemaining === 0 ? 'expired' : daysRemaining <= 14 ? 'due' : 'active',
       licenseId: null,
     };
   }
 
   const settings = getSubscriptionSettings(license.issuedAt);
   const billingCycle: BillingCycle = settings.billingCycle;
-  const cycleStartDate = settings.cycleStartDate;
 
   const isEnterprise = (license.validityDays ?? 0) >= 730;
   const maxStudentSeats = isEnterprise ? 2000 : 500;
   const maxStaffSeats = isEnterprise ? 200 : 50;
 
-  const billingDays = BILLING_CYCLE_DAYS[billingCycle] ?? 30;
-  const cycleStart = safeDate(cycleStartDate) ?? new Date();
-  const nextBillingDate = addDays(cycleStart, billingDays).toISOString().slice(0, 10);
-  const today = new Date();
-
-  const daysRemaining = Math.max(0, differenceInDays(addDays(cycleStart, billingDays), today));
-
   let status: SubscriptionStatus = 'active';
-  if (isLicenseExpiredAt(license.expiresAt ?? '')) {
-    const daysSinceExpiry = Math.max(0, differenceInDays(today, safeDate(license.expiresAt) ?? today));
+  if (isLicenseExpiredAt(license.expiresAt ?? '') || daysRemaining === 0) {
+    const daysSinceExpiry = Math.max(0, differenceInDays(new Date(), safeDate(license.expiresAt) ?? new Date()));
     status = daysSinceExpiry <= 7 ? 'grace_period' : 'expired';
   } else if (daysRemaining <= 14) {
     status = 'due';

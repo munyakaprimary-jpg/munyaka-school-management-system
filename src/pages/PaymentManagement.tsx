@@ -1113,7 +1113,25 @@ export default function PaymentManagement() {
                 const existingInvoices = JSON.parse(localStorage.getItem('munyaka_billing_invoices') || '[]');
                 const updatedInvoices = [newInvoiceObj, ...existingInvoices];
                 localStorage.setItem('munyaka_billing_invoices', JSON.stringify(updatedInvoices));
+
+                // ── Compute next billing date and update storage & events ──
+                const calculateNextBillingDate = (paymentDateStr: string, monthsToAdd: number) => {
+                  const date = new Date(paymentDateStr);
+                  date.setMonth(date.getMonth() + monthsToAdd);
+                  return date.toISOString().split('T')[0]; // Format YYYY-MM-DD
+                };
+
+                const monthsCount = parseInt(paymentPeriod, 10) || 1;
+                const baseDate = paymentDate || new Date().toISOString().split('T')[0];
+                const newNextBilling = calculateNextBillingDate(baseDate, monthsCount);
+
+                localStorage.setItem('munyaka_next_billing_date', newNextBilling);
+                localStorage.setItem('munyaka_payment_due_date', newNextBilling);
+                localStorage.setItem('school_license_expiry', newNextBilling);
+
                 window.dispatchEvent(new Event('billing_invoices_updated'));
+                window.dispatchEvent(new Event('fee_per_seat_updated'));
+                window.dispatchEvent(new Event('storage'));
               } catch {}
 
               showSuccess(`Payment of KES ${amtNum.toLocaleString()} successfully recorded for ${paymentCampus}!`);
