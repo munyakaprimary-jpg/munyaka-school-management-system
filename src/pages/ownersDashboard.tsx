@@ -543,16 +543,7 @@ export default function OwnersDashboard() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => {
-                                  localStorage.setItem('munyaka_active_tenant', JSON.stringify({
-                                    name: tenant.name,
-                                    shortName: tenant.code || tenant.name.split(' ')[0],
-                                    type: tenant.type || 'Primary & Junior School'
-                                  }));
-                                  window.dispatchEvent(new Event('tenant_context_changed'));
-                                  setActiveTenantId(tenant.id);
-                                  alert(`Context successfully switched to ${tenant.name}`);
-                                }}
+                                onClick={() => setActiveTenantId(tenant.id)}
                                 className="h-8 text-xs bg-indigo-50/50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300"
                               >
                                 Switch Context
