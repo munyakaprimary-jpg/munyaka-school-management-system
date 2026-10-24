@@ -42,7 +42,23 @@ export default function PaymentManagement() {
   const PRICE_PER_SEAT = 250;
   const annualSubtotal = activeLearners * PRICE_PER_SEAT * 12;
 
-  // Invoices state for billing history & invoices
+  // Listen for updates in billing invoices
+  useEffect(() => {
+    const loadInvoices = () => {
+      const saved = localStorage.getItem('munyaka_billing_invoices');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setInvoices(parsed);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+
+    window.addEventListener('billing_invoices_updated', loadInvoices);
+    return () => window.removeEventListener('billing_invoices_updated', loadInvoices);
+  }, []);
   const [invoices, setInvoices] = useState(() => {
     const savedInvoices = localStorage.getItem('munyaka_billing_invoices');
     if (savedInvoices) {
@@ -1082,17 +1098,22 @@ export default function PaymentManagement() {
 
               try {
                 const history = JSON.parse(localStorage.getItem('munyaka_billing_history') || '[]');
-                history.unshift({
-                  id: `INV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
-                  date: paymentDate,
-                  campus: paymentCampus,
-                  method: paymentMethod,
-                  ref: referenceCode,
-                  amount: amtNum,
-                  period: paymentPeriod,
-                  notes: paymentNotes
-                });
+                const newInvoiceObj = {
+                  id: `PAY-${Date.now()}`,
+                  campusName: paymentCampus || 'Munyaka Primary & Junior School',
+                  date: paymentDate || new Date().toISOString().split('T')[0],
+                  amount: amtNum || 3700,
+                  period: paymentPeriod ? `${paymentPeriod}` : '1 Month(s)',
+                  status: 'Paid',
+                  remarks: paymentNotes || `Official software license renewal`
+                };
+                history.unshift(newInvoiceObj);
                 localStorage.setItem('munyaka_billing_history', JSON.stringify(history));
+
+                const existingInvoices = JSON.parse(localStorage.getItem('munyaka_billing_invoices') || '[]');
+                const updatedInvoices = [newInvoiceObj, ...existingInvoices];
+                localStorage.setItem('munyaka_billing_invoices', JSON.stringify(updatedInvoices));
+                window.dispatchEvent(new Event('billing_invoices_updated'));
               } catch {}
 
               showSuccess(`Payment of KES ${amtNum.toLocaleString()} successfully recorded for ${paymentCampus}!`);
