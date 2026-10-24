@@ -155,6 +155,56 @@ export default function PaymentManagement() {
   const [licenseKey, setLicenseKey] = useState(dynamicLicenseKey);
   const [isRenewed, setIsRenewed] = useState(false);
 
+  // Invoices state loaded at component top-level to preserve React hook order
+  const [invoices, setInvoices] = useState<any[]>(() => {
+    const totalActiveSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
+    const currentFeePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+    const defaultInvoiceAmount = totalActiveSeats * currentFeePerSeat;
+    const defaultInvoices = [
+      {
+        id: 'INV-2026-001',
+        campusName: 'Munyaka Primary & Junior School',
+        date: '2026-10-24',
+        amount: defaultInvoiceAmount,
+        status: 'Paid',
+      }
+    ];
+    try {
+      const rawInvoices = localStorage.getItem('munyaka_billing_invoices');
+      if (rawInvoices) {
+        const parsed = JSON.parse(rawInvoices);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      const raw = localStorage.getItem('munyaka_billing_history');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((h: any, idx: number) => ({
+            id: h.id || `PAY-REC-${idx}`,
+            campusName: h.campus || 'Munyaka Primary & Junior School',
+            date: h.date || new Date().toISOString().split('T')[0],
+            amount: typeof h.amount === 'number' ? h.amount : Number(String(h.amount).replace(/[^0-9.]/g, '')) || defaultInvoiceAmount,
+            status: 'Paid',
+            isPayment: true
+          }));
+        }
+      }
+    } catch {}
+    return defaultInvoices;
+  });
+
+  const handleDeleteInvoice = (invoiceId: string) => {
+    if (window.confirm('Are you sure you want to delete this invoice record?')) {
+      const updatedInvoices = invoices.filter((inv) => inv.id !== invoiceId);
+      setInvoices(updatedInvoices);
+      try {
+        localStorage.setItem('munyaka_billing_invoices', JSON.stringify(updatedInvoices));
+        localStorage.setItem('munyaka_billing_history', JSON.stringify(updatedInvoices));
+      } catch {}
+      showSuccess('Invoice record successfully deleted.');
+    }
+  };
+
   // Register New Campus Modal State / Add Campus Modal State
   const [isRegisterCampusModalOpen, setIsRegisterCampusModalOpen] = useState(false);
 
