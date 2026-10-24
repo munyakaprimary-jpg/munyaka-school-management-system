@@ -77,8 +77,30 @@ export default function PaymentManagement() {
   const [paymentCampus, setPaymentCampus] = useState('Munyaka Primary & Junior School');
   const [paymentMethod, setPaymentMethod] = useState('M-Pesa Paybill / STK');
   const [paymentRef, setPaymentRef] = useState('');
-  const [paymentAmount, setPaymentAmount] = useState('112500');
   const [paymentPeriod, setPaymentPeriod] = useState('1 Year Extension');
+  
+  // Dynamic active seats & base monthly total calculation
+  const activeSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
+  const feePerSeat = 100;
+  const monthlyTotal = activeSeats * feePerSeat;
+
+  const durationMultipliers: Record<string, number> = {
+    '1 Month Extension': 1,
+    '3 Months Extension': 3,
+    '6 Months Extension': 6,
+    '1 Year Extension': 12,
+  };
+
+  const [paymentAmount, setPaymentAmount] = useState<string>(() => {
+    const months = durationMultipliers['1 Year Extension'] || 12;
+    return String(monthlyTotal * months);
+  });
+
+  useEffect(() => {
+    const months = durationMultipliers[paymentPeriod] || 1;
+    setPaymentAmount(String(monthlyTotal * months));
+  }, [paymentPeriod, monthlyTotal]);
+
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentNotes, setPaymentNotes] = useState('Official annual software license renewal');
 
