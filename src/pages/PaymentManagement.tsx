@@ -791,7 +791,7 @@ export default function PaymentManagement() {
           </CardHeader>
 
           <CardContent className="p-0 space-y-6 pt-2">
-            {/* Auto-Lock & Owner Bypass Control Card */}
+            {/* Auto-lock status and Owner manual bypass controls */}
             {(() => {
               const calculateIsOverdue = () => {
                 const dueDateStr = localStorage.getItem('munyaka_next_billing_date') || localStorage.getItem('munyaka_payment_due_date') || '2026-10-30';
@@ -801,9 +801,9 @@ export default function PaymentManagement() {
               };
 
               const isOverdue = calculateIsOverdue();
-              const isAppUnlocked = !isOverdue || ownerBypass;
+              const isAccessGranted = !isOverdue || ownerBypass;
 
-              const handleToggleLock = (checked: boolean) => {
+              const handleBypassToggle = (checked: boolean) => {
                 setOwnerBypass(checked);
                 localStorage.setItem('munyaka_lock_bypass', String(checked));
                 window.dispatchEvent(new Event('app_lock_status_changed'));
@@ -811,37 +811,59 @@ export default function PaymentManagement() {
               };
 
               return (
-                <div className={`p-4 rounded-xl border transition-all ${
-                  isAppUnlocked
-                    ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
-                    : 'bg-rose-50/60 border-rose-200 text-rose-900'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`h-3 w-3 rounded-full ${isAppUnlocked ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                      <span className="font-bold text-sm">
-                        {isAppUnlocked
-                          ? (isOverdue ? 'TEACHER APPS UNLOCKED (OWNER BYPASS ACTIVE)' : 'TEACHER APPS UNLOCKED')
-                          : 'TEACHER APPS AUTOLOCKED (DUE DATE EXPIRED)'}
-                      </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Control 1: Autolock Status Card */}
+                  <div className={`p-4 rounded-xl border transition-all ${
+                    !isOverdue
+                      ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
+                      : 'bg-rose-50/60 border-rose-200 text-rose-900'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-3 w-3 rounded-full ${!isOverdue ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                        <span className="font-bold text-sm">
+                          {!isOverdue ? 'AUTOLOCK: ACTIVE / CURRENT' : 'AUTOLOCK: TRIGGERED (OVERDUE)'}
+                        </span>
+                      </div>
                     </div>
-
-                    {/* Toggle Switch */}
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isAppUnlocked}
-                        onChange={(e) => handleToggleLock(e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                    </label>
+                    <p className="text-xs mt-1 text-gray-600">
+                      {!isOverdue
+                        ? 'Billing due date has not been reached. System is fully operational.'
+                        : 'Billing due date has passed. Automatic restrictions are enabled.'}
+                    </p>
                   </div>
-                  <p className="text-xs mt-1 text-gray-600">
-                    {isAppUnlocked
-                      ? (isOverdue ? 'Overdue grace period granted via Owner Bypass.' : 'All teacher app sessions are fully active.')
-                      : 'Billing due date reached. Record payment or toggle Owner Bypass to grant temporary access.'}
-                  </p>
+
+                  {/* Control 2: Owner Manual Bypass Toggle Card */}
+                  <div className={`p-4 rounded-xl border transition-all ${
+                    ownerBypass
+                      ? 'bg-amber-50/80 border-amber-200 text-amber-900'
+                      : 'bg-slate-50 border-slate-200 text-slate-800'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`h-3 w-3 rounded-full ${ownerBypass ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                        <span className="font-bold text-sm">
+                          {ownerBypass ? 'OWNER BYPASS: ACTIVE' : 'OWNER BYPASS: DISABLED'}
+                        </span>
+                      </div>
+
+                      {/* Toggle Switch */}
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={ownerBypass}
+                          onChange={(e) => handleBypassToggle(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                      </label>
+                    </div>
+                    <p className="text-xs mt-1 text-gray-600">
+                      {ownerBypass
+                        ? 'Manual override active: Teacher apps remain unlocked regardless of overdue status.'
+                        : 'Toggle ON to manually bypass autolock and grant temporary access.'}
+                    </p>
+                  </div>
                 </div>
               );
             })()}
