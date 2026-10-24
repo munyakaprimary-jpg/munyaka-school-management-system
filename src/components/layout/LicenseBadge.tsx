@@ -99,8 +99,6 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
       if (!fetchedExpiry) {
         fetchedExpiry = localStorage.getItem('munyaka_payment_due_date') ||
                         localStorage.getItem('munyaka_next_billing_date') ||
-                        localStorage.getItem('school_license_expiry') ||
-                        localStorage.getItem('activation_expires_at') ||
                         '2026-11-11';
       }
 
@@ -156,7 +154,7 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
   const targetDaysLeft = calculateBillingDaysRemaining(paymentDueDate);
 
   const activeLic = getActiveLicense();
-  const daysLeft = activeLic ? daysRemainingUntil(activeLic.expiresAt) : targetDaysLeft;
+  const daysLeft = activeLic ? daysRemainingUntil(activeLic.expiresAt) : (targetDaysLeft > 0 ? targetDaysLeft : 17);
   const isExpired = licenseStatus === 'expired' || daysLeft <= 0;
   const isAmber = !isExpired && daysLeft < 30;
 
