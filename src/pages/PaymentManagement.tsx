@@ -129,7 +129,26 @@ export default function PaymentManagement() {
   }, [isPaymentModalOpen, paymentPeriod, monthlyBaseCommitment]);
 
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [paymentNotes, setPaymentNotes] = useState('Official annual software license renewal');
+  
+  // Dynamic default remarks logic based on billing period
+  const getDefaultRemark = (months: number) => {
+    if (months === 12) {
+      return "Official annual software license renewal";
+    }
+    return `Official ${months}-month software license renewal`;
+  };
+
+  const [paymentNotes, setPaymentNotes] = useState(() => getDefaultRemark(1));
+  const [hasCustomNotes, setHasCustomNotes] = useState(false);
+
+  // Sync paymentNotes with paymentPeriod whenever paymentPeriod changes (unless user typed custom notes)
+  useEffect(() => {
+    const match = paymentPeriod.match(/^(\d+)/);
+    const months = match ? Number(match[1]) : 1;
+    if (!hasCustomNotes) {
+      setPaymentNotes(getDefaultRemark(months));
+    }
+  }, [paymentPeriod, hasCustomNotes]);
 
   // Global App Lock Toggle State
   const GLOBAL_LOCK_KEY = 'munyaka_global_app_lock';
@@ -985,7 +1004,10 @@ export default function PaymentManagement() {
                   <Label className="text-[11px] font-bold uppercase text-slate-500">Notes / Receipt Remarks</Label>
                   <Input
                     value={paymentNotes}
-                    onChange={(e) => setPaymentNotes(e.target.value)}
+                    onChange={(e) => {
+                      setPaymentNotes(e.target.value);
+                      setHasCustomNotes(true);
+                    }}
                     placeholder="Additional notes..."
                     className="h-10 bg-slate-50 text-xs font-medium"
                   />
