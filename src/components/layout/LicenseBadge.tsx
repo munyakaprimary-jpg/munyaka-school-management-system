@@ -3,7 +3,7 @@ import { ShieldCheck, AlertTriangle, XCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { db } from '@/config/firebase';
 import { doc, getDoc, collection, getDocs, limit, query } from 'firebase/firestore';
-import { getActiveLicense, daysRemainingUntil } from '@/services/licenseService';
+import { getActiveLicense, daysRemainingUntil, parseDDMMYYYY } from '@/services/licenseService';
 
 interface LicenseBadgeProps {
   className?: string;
@@ -142,8 +142,16 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
   }, [fetchLicenseFromFirestore]);
 
   // Also check licenseService daysRemainingUntil
+  const targetDueDate = '30/10/2026';
+  const targetDate = parseDDMMYYYY(targetDueDate) || new Date('2026-10-30');
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  targetDate.setHours(0, 0, 0, 0);
+  const diffTime = targetDate.getTime() - now.getTime();
+  const targetDaysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
   const activeLic = getActiveLicense();
-  const daysLeft = activeLic ? daysRemainingUntil(activeLic.expiresAt) : calculateDaysLeft(expiryDate);
+  const daysLeft = activeLic ? daysRemainingUntil(activeLic.expiresAt) : Math.max(targetDaysLeft, calculateDaysLeft(expiryDate));
   const isExpired = licenseStatus === 'expired' || daysLeft <= 0;
   const isAmber = !isExpired && daysLeft < 30;
 
