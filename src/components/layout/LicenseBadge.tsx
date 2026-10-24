@@ -143,7 +143,7 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
 
   // Also check licenseService daysRemainingUntil
   const paymentDueDate = localStorage.getItem('munyaka_payment_due_date') || '2026-10-30';
-  const calculateDaysRemaining = (dueDateStr: string) => {
+  const customCalcDays = (dueDateStr: string) => {
     const due = new Date(dueDateStr);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -151,7 +151,7 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
     const diffTime = due.getTime() - today.getTime();
     return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
   };
-  const targetDaysLeft = calculateDaysRemaining(paymentDueDate);
+  const targetDaysLeft = customCalcDays(paymentDueDate);
 
   const activeLic = getActiveLicense();
   const daysLeft = activeLic ? daysRemainingUntil(activeLic.expiresAt) : targetDaysLeft;
