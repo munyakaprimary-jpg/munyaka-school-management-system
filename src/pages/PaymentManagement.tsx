@@ -175,8 +175,17 @@ export default function PaymentManagement() {
     }
   }, [totalCapacity, maxSeats]);
 
-  // Monthly billing setting state
-  const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState<number>(100);
+  // Monthly billing setting state with localStorage synchronization ('munyaka_fee_per_seat')
+  const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState<number>(() => {
+    return Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+  });
+
+  const handleFeeChange = (newFee: number) => {
+    setMonthlyFeePerStudent(newFee);
+    localStorage.setItem('munyaka_fee_per_seat', String(newFee));
+    window.dispatchEvent(new Event('fee_per_seat_updated'));
+  };
+
   const totalSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6); // 37
   const currentFee = Number(monthlyFeePerStudent) || 0;
   const estimatedTotal = totalSeats * currentFee;
@@ -352,7 +361,21 @@ export default function PaymentManagement() {
               const learnersCount = INITIAL_SEED_DATA.learners?.length || 31;
               const staffCount = INITIAL_SEED_DATA.staff?.length || 6;
               const totalSeats = learnersCount + staffCount;
-              const feePerSeat = 100;
+              
+              const [feePerSeat, setFeePerSeat] = useState<number>(() => {
+                return Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+              });
+
+              useEffect(() => {
+                const updateFee = () => {
+                  const storedFee = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+                  setFeePerSeat(storedFee);
+                };
+
+                window.addEventListener('fee_per_seat_updated', updateFee);
+                return () => window.removeEventListener('fee_per_seat_updated', updateFee);
+              }, []);
+
               const totalCommitment = totalSeats * feePerSeat;
 
               return (
@@ -642,7 +665,7 @@ export default function PaymentManagement() {
                             <Input
                               type="number"
                               value={monthlyFeePerStudent}
-                              onChange={(e) => setMonthlyFeePerStudent(Number(e.target.value))}
+                              onChange={(e) => handleFeeChange(Number(e.target.value))}
                               className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
                             />
                           </div>
