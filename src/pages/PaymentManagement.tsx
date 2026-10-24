@@ -1037,35 +1037,44 @@ export default function PaymentManagement() {
               </div>
 
               {/* Dynamic Calculation Preview */}
-              <div className="bg-gradient-to-br from-indigo-50/70 to-slate-50 border border-indigo-100/80 rounded-2xl p-4 space-y-3">
-                <p className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-700">Dynamic Payment & Expiry Preview</p>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-white/80 p-3 rounded-xl border border-indigo-50">
-                    <p className="text-[10px] uppercase font-bold text-slate-400">Calculated Amount</p>
-                    <p className="font-extrabold text-sm text-emerald-600 mt-0.5">
-                      KES {(Number(customMonths || 1) * 10000).toLocaleString()}
-                    </p>
+              {(() => {
+                const totalSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
+                const ratePerSeat = 100;
+                const monthlyCommitment = totalSeats * ratePerSeat;
+                const durationMonths = parseInt(customMonths) || 1;
+                const calculatedAmount = durationMonths * monthlyCommitment;
+
+                return (
+                  <div className="bg-gradient-to-br from-indigo-50/70 to-slate-50 border border-indigo-100/80 rounded-2xl p-4 space-y-3">
+                    <p className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-700">Dynamic Payment & Expiry Preview</p>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="bg-white/80 p-3 rounded-xl border border-indigo-50">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Calculated Amount</p>
+                        <p className="font-extrabold text-sm text-emerald-600 mt-0.5">
+                          KES {calculatedAmount.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="bg-white/80 p-3 rounded-xl border border-indigo-50">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">New Expiry Date</p>
+                        <p className="font-extrabold text-sm text-slate-900 mt-0.5">
+                          {(() => {
+                            try {
+                              const currentSub = subscriptions.find((s: any) => s.school === paymentCampus);
+                              const base = currentSub && currentSub.expires && new Date(currentSub.expires) > new Date()
+                                ? new Date(currentSub.expires)
+                                : new Date();
+                              base.setMonth(base.getMonth() + durationMonths);
+                              return base.toISOString().split('T')[0];
+                            } catch {
+                              return '2027-03-31';
+                            }
+                          })()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-white/80 p-3 rounded-xl border border-indigo-50">
-                    <p className="text-[10px] uppercase font-bold text-slate-400">New Expiry Date</p>
-                    <p className="font-extrabold text-sm text-slate-900 mt-0.5">
-                      {(() => {
-                        try {
-                          const months = parseInt(customMonths) || 1;
-                          const currentSub = subscriptions.find((s: any) => s.school === paymentCampus);
-                          const base = currentSub && currentSub.expires && new Date(currentSub.expires) > new Date()
-                            ? new Date(currentSub.expires)
-                            : new Date();
-                          base.setMonth(base.getMonth() + months);
-                          return base.toISOString().split('T')[0];
-                        } catch {
-                          return '2027-03-31';
-                        }
-                      })()}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
             </div>
 
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
@@ -1081,7 +1090,8 @@ export default function PaymentManagement() {
                 type="button"
                 onClick={() => {
                   const m = parseInt(customMonths) || 1;
-                  const calculatedAmt = m * 10000;
+                  const totalSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
+                  const calculatedAmt = m * totalSeats * 100;
                   setPaymentPeriod(`Custom Term (${m} Months)`);
                   setPaymentAmount(String(calculatedAmt));
                   setIsCustomTermModalOpen(false);
