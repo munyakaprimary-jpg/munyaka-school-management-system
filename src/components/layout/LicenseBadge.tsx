@@ -98,9 +98,16 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
         fetchedExpiry = active.expiresAt;
       }
       if (!fetchedExpiry) {
-        fetchedExpiry = localStorage.getItem('school_license_expiry') ||
-                        localStorage.getItem('activation_expires_at') ||
-                        new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+        const computeDaysLeft = (dueDateString: string) => {
+          const target = new Date(dueDateString || '2026-11-11');
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          target.setHours(0, 0, 0, 0);
+          const diffMs = target.getTime() - today.getTime();
+          return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+        };
+        const dynamicDays = computeDaysLeft(localStorage.getItem('munyaka_next_billing_date') || '2026-11-11');
+        fetchedExpiry = new Date(Date.now() + dynamicDays * 24 * 60 * 60 * 1000).toISOString();
       }
 
       setExpiryDate(fetchedExpiry);
