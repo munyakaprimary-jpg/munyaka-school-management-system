@@ -160,11 +160,73 @@ export function daysRemainingUntil(expiresAt: string, now: Date = new Date()): n
 // Storage helpers
 // ─────────────────────────────────────────────
 
+const INITIAL_LICENSES: License[] = [
+  {
+    id: 'lic-seed-001',
+    activationKey: 'MUNYAKA-PRO-2025-001',
+    planName: 'Munyaka Pro Monthly (37 Seats)',
+    maxSeats: 37,
+    feePerSeat: 100,
+    amountPaid: 3700,
+    status: 'active',
+    issuedDate: '2025-01-01',
+    expiryDate: '2025-02-01',
+    paymentMethod: 'M-Pesa',
+    reference: 'QGK92NX38M',
+    type: 'subscription',
+    schoolName: 'Munyaka Primary School',
+    contactEmail: 'admin@munyaka.ac.ke',
+    billingInterval: 'Monthly',
+    nextBillingDate: '2025-02-01',
+  },
+  {
+    id: 'lic-seed-002',
+    activationKey: 'MUNYAKA-PRO-2024-121',
+    planName: 'Munyaka Pro Monthly (37 Seats)',
+    maxSeats: 37,
+    feePerSeat: 100,
+    amountPaid: 3700,
+    status: 'expired',
+    issuedDate: '2024-12-01',
+    expiryDate: '2025-01-01',
+    paymentMethod: 'M-Pesa',
+    reference: 'QFH81LP29K',
+    type: 'renewal',
+    schoolName: 'Munyaka Primary School',
+    contactEmail: 'admin@munyaka.ac.ke',
+    billingInterval: 'Monthly',
+    nextBillingDate: '2025-01-01',
+  },
+  {
+    id: 'lic-seed-003',
+    activationKey: 'MUNYAKA-PRO-2024-111',
+    planName: 'Munyaka Pro Monthly (37 Seats)',
+    maxSeats: 37,
+    feePerSeat: 100,
+    amountPaid: 3700,
+    status: 'expired',
+    issuedDate: '2024-11-01',
+    expiryDate: '2024-12-01',
+    paymentMethod: 'Bank Transfer',
+    reference: 'BNK-2024-1101',
+    type: 'renewal',
+    schoolName: 'Munyaka Primary School',
+    contactEmail: 'admin@munyaka.ac.ke',
+    billingInterval: 'Monthly',
+    nextBillingDate: '2024-12-01',
+  },
+];
+
 function readLicenses(): License[] {
   try {
     const raw = localStorage.getItem(LICENSE_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+    if (!raw) {
+      localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(INITIAL_LICENSES));
+      return INITIAL_LICENSES;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_LICENSES;
+  } catch { return INITIAL_LICENSES; }
 }
 
 function writeLicenses(licenses: License[]): void {
