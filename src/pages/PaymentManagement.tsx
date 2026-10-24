@@ -803,39 +803,72 @@ export default function PaymentManagement() {
       )}
 
       {/* Tab 4: Billing History & Invoices */}
-      {activeTab === 'invoices' && (
-        <Card className="border border-slate-200 shadow-sm rounded-3xl overflow-hidden bg-white animate-in fade-in">
-          <CardHeader className="bg-slate-50/70 border-b border-slate-100 px-6 py-5">
-            <CardTitle className="text-lg font-black text-slate-900">Official Billing & Tax Invoices</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="divide-y divide-slate-100">
-              {[
-              { id: 'INV-2026-001', date: new Date().toISOString().split('T')[0], campus: 'Munyaka Primary & Junior School', amount: `KES ${(allocatedSeats * 250).toLocaleString()}`, status: 'Paid' },
-              ].map((inv) => (
-                <div key={inv.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-bold">
-                      <FileText size={20} />
+      {activeTab === 'invoices' && (() => {
+        const totalActiveSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6); // 37
+        const currentFeePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+        const defaultInvoiceAmount = totalActiveSeats * currentFeePerSeat;
+        const dynamicInvoices = [
+          {
+            id: 'INV-2026-001',
+            campusName: 'Munyaka Primary & Junior School',
+            date: '2026-10-24',
+            amount: defaultInvoiceAmount,
+            status: 'Paid',
+          }
+        ];
+        // Also load recorded payments from munyaka_billing_history if any
+        let recordedHistory: any[] = [];
+        try {
+          const raw = localStorage.getItem('munyaka_billing_history');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              recordedHistory = parsed.map((h: any, idx: number) => ({
+                id: h.id || `PAY-REC-${idx}`,
+                campusName: h.campus || 'Munyaka Primary & Junior School',
+                date: h.date || new Date().toISOString().split('T')[0],
+                amount: typeof h.amount === 'number' ? h.amount : Number(String(h.amount).replace(/[^0-9.]/g, '')) || defaultInvoiceAmount,
+                status: 'Paid',
+                isPayment: true
+              }));
+            }
+          }
+        } catch {}
+
+        const allInvoices = [...dynamicInvoices, ...recordedHistory];
+
+        return (
+          <Card className="border border-slate-200 shadow-sm rounded-3xl overflow-hidden bg-white animate-in fade-in">
+            <CardHeader className="bg-slate-50/70 border-b border-slate-100 px-6 py-5">
+              <CardTitle className="text-lg font-black text-slate-900">Official Billing & Tax Invoices</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-100">
+                {allInvoices.map((inv) => (
+                  <div key={inv.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-bold">
+                        <FileText size={20} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">{inv.id}</p>
+                        <p className="text-xs text-slate-500 font-medium">{inv.campusName} • {inv.date}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-slate-900 text-sm">{inv.id}</p>
-                      <p className="text-xs text-slate-500 font-medium">{inv.campus} • {inv.date}</p>
+                    <div className="flex items-center gap-6">
+                      <span className="font-black text-slate-900">KES {inv.amount.toLocaleString()}</span>
+                      <Badge className="bg-emerald-100 text-emerald-700 font-bold px-3 py-1">{inv.status}</Badge>
+                      <Button variant="outline" onClick={() => showSuccess(`Downloading ${inv.id} PDF...`)} className="rounded-xl border-slate-200 text-xs font-bold gap-1">
+                        PDF
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <span className="font-black text-slate-900">{inv.amount}</span>
-                    <Badge className="bg-emerald-100 text-emerald-700 font-bold px-3 py-1">{inv.status}</Badge>
-                    <Button variant="outline" onClick={() => showSuccess(`Downloading ${inv.id} PDF...`)} className="rounded-xl border-slate-200 text-xs font-bold gap-1">
-                      PDF
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Record Payment Modal */}
       {isPaymentModalOpen && (
@@ -900,12 +933,12 @@ export default function PaymentManagement() {
               try {
                 const history = JSON.parse(localStorage.getItem('munyaka_billing_history') || '[]');
                 history.unshift({
-                  id: `PAY-${Date.now()}`,
+                  id: `INV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
                   date: paymentDate,
                   campus: paymentCampus,
                   method: paymentMethod,
                   ref: referenceCode,
-                  amount: `KES ${amtNum.toLocaleString()}`,
+                  amount: amtNum,
                   period: paymentPeriod,
                   notes: paymentNotes
                 });
