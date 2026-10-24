@@ -142,11 +142,16 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
   }, [fetchLicenseFromFirestore]);
 
   // Also check licenseService daysRemainingUntil
-  const dueDate = new Date('2026-10-30');
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  dueDate.setHours(0, 0, 0, 0);
-  const targetDaysLeft = Math.max(0, Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  const paymentDueDate = localStorage.getItem('munyaka_payment_due_date') || '2026-10-30';
+  const calculateDaysRemaining = (dueDateStr: string) => {
+    const due = new Date(dueDateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    due.setHours(0, 0, 0, 0);
+    const diffTime = due.getTime() - today.getTime();
+    return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  };
+  const targetDaysLeft = calculateDaysRemaining(paymentDueDate);
 
   const activeLic = getActiveLicense();
   const daysLeft = activeLic ? daysRemainingUntil(activeLic.expiresAt) : targetDaysLeft;
