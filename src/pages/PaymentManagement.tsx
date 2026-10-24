@@ -27,6 +27,10 @@ import { useSchoolStore } from '@/store/useSchoolStore';
 import { INITIAL_SEED_DATA } from '../data/InitialSeedData';
 
 export default function PaymentManagement() {
+  const [ownerBypass, setOwnerBypass] = useState(() => {
+    return localStorage.getItem('munyaka_lock_bypass') === 'true';
+  });
+
   // Access active store data for students, staff, and campuses FIRST (to avoid Temporal Dead Zone)
   const students = useSchoolStore((state) => state.students) || [];
     const staff = useSchoolStore((state) => state.staff) || [];
@@ -795,10 +799,6 @@ export default function PaymentManagement() {
                 const now = new Date().getTime();
                 return now > target;
               };
-
-              const [ownerBypass, setOwnerBypass] = useState(() => {
-                return localStorage.getItem('munyaka_lock_bypass') === 'true';
-              });
 
               const isOverdue = calculateIsOverdue();
               const isAppUnlocked = !isOverdue || ownerBypass;
