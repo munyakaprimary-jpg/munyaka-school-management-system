@@ -624,12 +624,27 @@ export default function PaymentManagement() {
           </CardHeader>
 
           <CardContent className="p-0 space-y-6 pt-2">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                <p className="text-xs font-black uppercase text-slate-400">Active Learners</p>
-                <p className="text-3xl font-black text-slate-900 mt-2">{activeLearnersCount}</p>
-                <p className="text-xs text-slate-500 mt-1">Billed monthly</p>
+            <div className="grid grid-cols-2 gap-4 my-4">
+              {/* Card 1: Active Learners */}
+              <div className="p-4 bg-white rounded-xl border border-gray-200/80 shadow-sm">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">ACTIVE LEARNERS</span>
+                <div className="text-3xl font-extrabold text-gray-900 mt-2">
+                  {INITIAL_SEED_DATA.learners?.length || 31}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Billed monthly</p>
               </div>
+
+              {/* Card 2: Active Staff */}
+              <div className="p-4 bg-white rounded-xl border border-gray-200/80 shadow-sm">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">ACTIVE STAFF</span>
+                <div className="text-3xl font-extrabold text-gray-900 mt-2">
+                  {INITIAL_SEED_DATA.staff?.length || 6}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">System user access</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <p className="text-xs font-black uppercase text-slate-400">Fee Per Learner</p>
                 <p className="text-3xl font-black text-indigo-600 mt-2">KES {feePerLearner.toLocaleString()}</p>
@@ -637,8 +652,8 @@ export default function PaymentManagement() {
               </div>
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <p className="text-xs font-black uppercase text-slate-400">Estimated Monthly Total</p>
-                <p className="text-3xl font-black text-emerald-600 mt-2">KES {(activeLearnersCount * feePerLearner).toLocaleString()}</p>
-                <p className="text-xs text-slate-500 mt-1">Auto-calculated</p>
+                <p className="text-3xl font-black text-emerald-600 mt-2">KES {(31 * feePerLearner).toLocaleString()}</p>
+                <p className="text-xs text-slate-500 mt-1">Auto-calculated (31 active learners × KES {feePerLearner})</p>
               </div>
             </div>
 
