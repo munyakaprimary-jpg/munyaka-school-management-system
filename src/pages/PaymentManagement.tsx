@@ -35,9 +35,10 @@ export default function PaymentManagement() {
     const addCampus = useSchoolStore((state) => state.addCampus);
     const deleteCampus = useSchoolStore((state) => state.deleteCampus);
     const updateCampusSeats = useSchoolStore((state) => state.updateCampusSeats);
-  const activeLearners = students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length;
-  const PRICE_PER_SEAT = 250;
-  const annualSubtotal = activeLearners * PRICE_PER_SEAT;
+  const activeLearnersCount = students?.length > 0 ? students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length : (INITIAL_SEED_DATA?.learners?.length || 31);
+  const feePerLearner = 100;
+  const estimatedMonthlyTotal = activeLearnersCount * feePerLearner;
+  const activeLearners = activeLearnersCount;
 
   // Calculate total combined seats and commitment across all campuses
   const totalCampusSeats = campuses.reduce((acc, c: any) => acc + Number(c.activeSeats || 0), 0);
@@ -132,7 +133,7 @@ export default function PaymentManagement() {
   }, [totalCapacity, maxSeats]);
 
   // Monthly billing setting state
-  const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState(1200);
+  const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState(100);
   const [autoDebitEnabled, setAutoDebitEnabled] = useState(true);
   const [paymentDueDate, setPaymentDueDate] = useState<string>(() => {
     try {
@@ -624,17 +625,17 @@ export default function PaymentManagement() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <p className="text-xs font-black uppercase text-slate-400">Active Learners</p>
-                <p className="text-3xl font-black text-slate-900 mt-2">{activeLearners}</p>
+                <p className="text-3xl font-black text-slate-900 mt-2">{activeLearnersCount}</p>
                 <p className="text-xs text-slate-500 mt-1">Billed monthly</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <p className="text-xs font-black uppercase text-slate-400">Fee Per Learner</p>
-                <p className="text-3xl font-black text-indigo-600 mt-2">KES {monthlyFeePerStudent.toLocaleString()}</p>
+                <p className="text-3xl font-black text-indigo-600 mt-2">KES {feePerLearner.toLocaleString()}</p>
                 <p className="text-xs text-slate-500 mt-1">Standard rate</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <p className="text-xs font-black uppercase text-slate-400">Estimated Monthly Total</p>
-                <p className="text-3xl font-black text-emerald-600 mt-2">KES {(activeLearners * monthlyFeePerStudent).toLocaleString()}</p>
+                <p className="text-3xl font-black text-emerald-600 mt-2">KES {(activeLearnersCount * feePerLearner).toLocaleString()}</p>
                 <p className="text-xs text-slate-500 mt-1">Auto-calculated</p>
               </div>
             </div>
