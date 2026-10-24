@@ -81,6 +81,7 @@ export default function PaymentManagement() {
   
   // Dynamic active seats & base monthly total calculation
   const activeSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
+  const feePerSeat = 100;
   const monthlyTotal = activeSeats * feePerSeat;
 
   const billingPeriodOptions = [
@@ -175,28 +176,9 @@ export default function PaymentManagement() {
   }, [totalCapacity, maxSeats]);
 
   // Monthly billing setting state
-  const [feePerSeat, setFeePerSeat] = useState<number>(() => {
-    return Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
-  });
-
-  useEffect(() => {
-    const updateFee = () => {
-      const storedFee = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
-      setFeePerSeat(storedFee);
-    };
-
-    window.addEventListener('fee_per_seat_updated', updateFee);
-    return () => window.removeEventListener('fee_per_seat_updated', updateFee);
-  }, []);
-
-  const handleFeeChange = (newFee: number) => {
-    setFeePerSeat(newFee);
-    localStorage.setItem('munyaka_fee_per_seat', String(newFee));
-    window.dispatchEvent(new Event('fee_per_seat_updated'));
-  };
-
+  const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState<number>(100);
   const totalSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6); // 37
-  const currentFee = Number(feePerSeat) || 0;
+  const currentFee = Number(monthlyFeePerStudent) || 0;
   const estimatedTotal = totalSeats * currentFee;
   const [paymentDueDate, setPaymentDueDate] = useState<string>(() => {
     try {
@@ -370,6 +352,7 @@ export default function PaymentManagement() {
               const learnersCount = INITIAL_SEED_DATA.learners?.length || 31;
               const staffCount = INITIAL_SEED_DATA.staff?.length || 6;
               const totalSeats = learnersCount + staffCount;
+              const feePerSeat = 100;
               const totalCommitment = totalSeats * feePerSeat;
 
               return (
@@ -387,7 +370,7 @@ export default function PaymentManagement() {
                       onClick={() => {
                         setPaymentCampus('Munyaka Primary & Junior School');
                         setPaymentAmount(String(totalCommitment));
-                        setPaymentPeriod('1 Month');
+                        setPaymentPeriod('1 Month Extension');
                         setIsPaymentModalOpen(true);
                       }}
                       className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-sm"
@@ -658,8 +641,8 @@ export default function PaymentManagement() {
                             <Label className="text-xs font-black uppercase text-slate-500">MONTHLY LICENSE FEE PER SEAT (KES)</Label>
                             <Input
                               type="number"
-                              value={feePerSeat}
-                              onChange={(e) => handleFeeChange(Number(e.target.value))}
+                              value={monthlyFeePerStudent}
+                              onChange={(e) => setMonthlyFeePerStudent(Number(e.target.value))}
                               className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
                             />
                           </div>
@@ -739,7 +722,7 @@ export default function PaymentManagement() {
               <DollarSign className="shrink-0 text-amber-600 mt-0.5" size={20} />
               <div>
                 <p className="font-bold text-xs uppercase tracking-wider">Dynamic Monthly Billing Preview</p>
-                <p className="text-xs mt-1">Based on {totalActiveStudents} active learners & {totalActiveStaff} staff members × KES {feePerSeat.toLocaleString()}, your next scheduled automatic invoice is <strong>KES {(allocatedSeats * feePerSeat).toLocaleString()}</strong>.</p>
+                <p className="text-xs mt-1">Based on {totalActiveStudents} active learners & {totalActiveStaff} staff members × KES {monthlyFeePerStudent.toLocaleString()}, your next scheduled automatic invoice is <strong>KES {(allocatedSeats * monthlyFeePerStudent).toLocaleString()}</strong>.</p>
               </div>
             </div>
 
