@@ -39,6 +39,8 @@ export default function PaymentManagement() {
   const feePerLearner = 100;
   const estimatedMonthlyTotal = activeLearnersCount * feePerLearner;
   const activeLearners = activeLearnersCount;
+  const PRICE_PER_SEAT = 250;
+  const annualSubtotal = activeLearners * PRICE_PER_SEAT * 12;
 
   // Calculate total combined seats and commitment across all campuses
   const totalCampusSeats = campuses.reduce((acc, c: any) => acc + Number(c.activeSeats || 0), 0);
