@@ -62,7 +62,7 @@ export default function PaymentManagement() {
   }, []);
   const dynamicLicenseKey = `MUNYAKA-ENT-2026-${schoolIdHex}`;
 
-  const [activeTab, setActiveTab] = useState<'subscriptions' | 'seats' | 'monthly' | 'gateways' | 'invoices'>('subscriptions');
+  const [activeTab, setActiveTab] = useState<'subscriptions' | 'seats' | 'monthly' | 'invoices'>('subscriptions');
   const [mpesaNumber, setMpesaNumber] = useState('0738873359');
   const [selectedPlan, setSelectedPlan] = useState('Enterprise Annual (KES 120,000)');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -286,16 +286,6 @@ export default function PaymentManagement() {
           }`}
         >
           <Calendar size={18} /> Monthly Payment Setting
-        </button>
-        <button
-          onClick={() => setActiveTab('gateways')}
-          className={`px-5 py-3 font-bold text-sm rounded-t-2xl transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'gateways'
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
-              : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'
-          }`}
-        >
-          <Smartphone size={18} /> M-Pesa & Bank Gateways
         </button>
         <button
           onClick={() => setActiveTab('invoices')}
@@ -566,7 +556,7 @@ export default function PaymentManagement() {
         </Card>
       )}
 
-      {/* Tab 3: Monthly Payment Setting (Powered by real central DB active student calculations) */}
+      {/* Tab 3: Monthly Payment Setting */}
       {activeTab === 'monthly' && (
         <Card className="border border-slate-200 shadow-sm rounded-3xl p-8 bg-white animate-in fade-in space-y-6">
           <CardHeader className="p-0 border-b border-slate-100 pb-4">
@@ -783,70 +773,7 @@ export default function PaymentManagement() {
         </Card>
       )}
 
-      {/* Tab 4: M-Pesa & Bank Gateways */}
-      {activeTab === 'gateways' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in">
-          <Card className="border border-slate-200 shadow-sm rounded-3xl p-6 bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center font-bold">
-                  <Smartphone size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">M-Pesa Daraja API Gateway</h3>
-                  <p className="text-xs text-slate-500 font-medium">Automated C2B & STK Push</p>
-                </div>
-              </div>
-              <Badge className="bg-emerald-100 text-emerald-700 font-bold">Connected</Badge>
-            </div>
-            
-            <div className="space-y-4 pt-2">
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-400 uppercase">Shortcode / Paybill</Label>
-                <Input readOnly value="523900 (Munyaka Official Paybill)" className="bg-slate-50 font-mono font-bold" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-400 uppercase">Consumer Key</Label>
-                <Input readOnly value="••••••••••••••••••••••••••••••••" className="bg-slate-50 font-mono" />
-              </div>
-              <Button onClick={() => showSuccess('M-Pesa gateway settings saved.')} className="w-full rounded-xl bg-slate-900 text-white font-bold h-11">
-                Configure Gateway Credentials
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="border border-slate-200 shadow-sm rounded-3xl p-6 bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-bold">
-                  <Building size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">Co-operative Bank / Equity Bank</h3>
-                  <p className="text-xs text-slate-500 font-medium">Direct Institutional Bank Feed</p>
-                </div>
-              </div>
-              <Badge className="bg-blue-100 text-blue-700 font-bold">Active</Badge>
-            </div>
-            
-            <div className="space-y-4 pt-2">
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-400 uppercase">Bank Account Number</Label>
-                <Input readOnly value="0119234857200 (Eldoret Branch)" className="bg-slate-50 font-mono font-bold" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-slate-400 uppercase">API Endpoint Status</Label>
-                <Input readOnly value="https://api.bank.co.ke/v2/feed/munyaka" className="bg-slate-50 font-mono text-xs" />
-              </div>
-              <Button onClick={() => showSuccess('Bank gateway synchronized.')} className="w-full rounded-xl bg-slate-900 text-white font-bold h-11">
-                Sync Bank Statement Feed
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Tab 5: Billing History & Invoices */}
+      {/* Tab 4: Billing History & Invoices */}
       {activeTab === 'invoices' && (
         <Card className="border border-slate-200 shadow-sm rounded-3xl overflow-hidden bg-white animate-in fade-in">
           <CardHeader className="bg-slate-50/70 border-b border-slate-100 px-6 py-5">
