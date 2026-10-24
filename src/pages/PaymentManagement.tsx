@@ -176,8 +176,19 @@ export default function PaymentManagement() {
   }, [totalCapacity, maxSeats]);
 
   // Monthly billing setting state
-  const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState(100);
-  const [paymentDueDate, setPaymentDueDate] = useState<string>(() => {
+  const [feePerSeat, setFeePerSeat] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_fee_per_seat');
+      if (saved) return Number(saved);
+    } catch {}
+    return 100;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('munyaka_fee_per_seat', String(feePerSeat));
+    } catch {}
+  }, [feePerSeat]);
     try {
       const saved = localStorage.getItem('munyaka_payment_due_date');
       if (saved) return saved;
@@ -614,11 +625,11 @@ export default function PaymentManagement() {
             </div>
 
             <div className="grid grid-cols-2 gap-4 w-full my-4">
-              {/* Card 1: Fee Per Learner */}
+              {/* Card 1: Fee Per Seat */}
               <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm w-full">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">FEE PER SEAT</span>
                 <div className="text-3xl font-extrabold text-indigo-600 mt-2">
-                  KES 100
+                  KES {Number(feePerSeat || 0).toLocaleString()}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Standard rate</p>
               </div>
@@ -627,9 +638,11 @@ export default function PaymentManagement() {
               <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm w-full">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">ESTIMATED MONTHLY TOTAL</span>
                 <div className="text-3xl font-extrabold text-emerald-600 mt-2">
-                  KES {(allocatedSeats * 100).toLocaleString()}
+                  KES {(((INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6)) * Number(feePerSeat || 0)).toLocaleString()}
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Auto-calculated ({allocatedSeats} total active seats (L+S) × KES 100)</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Auto-calculated ({((INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6))} total active seats (L+S) × KES {feePerSeat})
+                </p>
               </div>
             </div>
 
@@ -638,8 +651,8 @@ export default function PaymentManagement() {
                             <Label className="text-xs font-black uppercase text-slate-500">Monthly License Fee Per Seat (KES)</Label>
                             <Input
                               type="number"
-                              value={monthlyFeePerStudent}
-                              onChange={(e) => setMonthlyFeePerStudent(Number(e.target.value))}
+                              value={feePerSeat}
+                              onChange={(e) => setFeePerSeat(Number(e.target.value))}
                               className="h-12 bg-slate-50 border-slate-200 font-bold text-lg"
                             />
                           </div>
