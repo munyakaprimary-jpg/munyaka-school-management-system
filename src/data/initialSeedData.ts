@@ -1022,6 +1022,14 @@ export const initialSeedData = {
       "adminEmail": "munyakaprimary@gmail.com",
       "adminPhone": "+254 738873359"
     }
+  ],
+  "staff": [
+    { "id": "staff-1", "name": "Joseph Mbutiru", "role": "Teacher", "status": "active" },
+    { "id": "staff-2", "name": "Hellen Wangari", "role": "Teacher", "status": "active" },
+    { "id": "staff-3", "name": "Md Ogolla", "role": "Teacher", "status": "active" },
+    { "id": "staff-4", "name": "Md Njuguna", "role": "Teacher", "status": "active" },
+    { "id": "staff-5", "name": "Ann Nduta", "role": "Teacher", "status": "active" },
+    { "id": "staff-6", "name": "Joseph Wachira", "role": "Teacher", "status": "active" }
   ]
 };
 

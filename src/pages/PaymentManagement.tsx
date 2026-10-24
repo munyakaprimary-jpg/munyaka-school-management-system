@@ -101,7 +101,7 @@ export default function PaymentManagement() {
   const { totalActiveStudents, totalActiveStaff, totalCapacity, availableSlots } = useMemo(() => {
     try {
       const sCount = INITIAL_SEED_DATA.learners.length;
-      const staffCount = INITIAL_SEED_DATA.staff.length;
+      const staffCount = INITIAL_SEED_DATA.staff?.length || 6;
       const totalAllocated = sCount + staffCount;
       const capacity = Math.max(totalAllocated + 120, 500);
 
@@ -113,7 +113,7 @@ export default function PaymentManagement() {
       };
     } catch {}
     const sCount = INITIAL_SEED_DATA.learners.length;
-    const staffCount = INITIAL_SEED_DATA.staff.length;
+    const staffCount = INITIAL_SEED_DATA.staff?.length || 6;
     const totalAllocated = sCount + staffCount;
     return {
       totalActiveStudents: sCount,
@@ -577,7 +577,7 @@ export default function PaymentManagement() {
                   <Calendar className="text-indigo-600" size={24} /> Monthly Payment & Billing Setting
                 </CardTitle>
                 <p className="text-xs text-slate-500 font-medium mt-1">
-                  Calculated automatically from {totalActiveStudents} active learners and {totalActiveStaff} active staff synchronized from src/data/InitialSeedData.ts.
+                  Calculated automatically from {activeLearnersCount} active learners and {INITIAL_SEED_DATA.staff.length} active staff synchronized from src/data/InitialSeedData.ts.
                 </p>
               </div>
 
