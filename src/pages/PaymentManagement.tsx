@@ -624,10 +624,10 @@ export default function PaymentManagement() {
           </CardHeader>
 
           <CardContent className="p-0 space-y-6 pt-2">
-            <div className="grid grid-cols-2 gap-4 my-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               {/* Card 1: Active Learners */}
-              <div className="p-4 bg-white rounded-xl border border-gray-200/80 shadow-sm">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">ACTIVE LEARNERS</span>
+              <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">ACTIVE LEARNERS</span>
                 <div className="text-3xl font-extrabold text-gray-900 mt-2">
                   {INITIAL_SEED_DATA.learners?.length || 31}
                 </div>
@@ -635,8 +635,8 @@ export default function PaymentManagement() {
               </div>
 
               {/* Card 2: Active Staff */}
-              <div className="p-4 bg-white rounded-xl border border-gray-200/80 shadow-sm">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">ACTIVE STAFF</span>
+              <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">ACTIVE STAFF</span>
                 <div className="text-3xl font-extrabold text-gray-900 mt-2">
                   {INITIAL_SEED_DATA.staff?.length || 6}
                 </div>
