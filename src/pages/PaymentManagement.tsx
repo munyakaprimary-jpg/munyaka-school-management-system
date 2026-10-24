@@ -81,8 +81,8 @@ export default function PaymentManagement() {
   
   // Dynamic active seats & base monthly total calculation
   const activeSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
-  const feePerSeat = 100;
-  const monthlyTotal = activeSeats * feePerSeat;
+  const currentFeePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+  const monthlyBaseCommitment = activeSeats * currentFeePerSeat; // e.g. 37 * 100 = 3,700
 
   const billingPeriodOptions = [
     { label: '1 Month', value: 1 },
@@ -115,15 +115,18 @@ export default function PaymentManagement() {
   };
 
   const [paymentAmount, setPaymentAmount] = useState<string>(() => {
-    const months = durationMultipliers['1 Month'] || 1;
-    return String(monthlyTotal * months);
+    const selectedMonths = 1;
+    return String(monthlyBaseCommitment * selectedMonths);
   });
 
+  // Reactive Amount Recalculation:
+  // Update paymentAmount when modal opens, paymentPeriod changes, or fee per seat changes
   useEffect(() => {
-    if (paymentPeriod.startsWith('Custom Term')) return;
-    const months = durationMultipliers[paymentPeriod] || 1;
-    setPaymentAmount(String(monthlyTotal * months));
-  }, [paymentPeriod, monthlyTotal]);
+    if (!isPaymentModalOpen) return;
+    const match = paymentPeriod.match(/^(\d+)/);
+    const selectedMonths = match ? Number(match[1]) : 1;
+    setPaymentAmount(String(monthlyBaseCommitment * selectedMonths));
+  }, [isPaymentModalOpen, paymentPeriod, monthlyBaseCommitment]);
 
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentNotes, setPaymentNotes] = useState('Official annual software license renewal');
