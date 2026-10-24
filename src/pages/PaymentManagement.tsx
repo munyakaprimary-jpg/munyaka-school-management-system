@@ -25,8 +25,6 @@ import { showSuccess, showError } from '@/utils/toast';
 import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { INITIAL_SEED_DATA } from '../data/InitialSeedData';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 
 export default function PaymentManagement() {
   // Access active store data for students, staff, and campuses FIRST (to avoid Temporal Dead Zone)
@@ -65,38 +63,58 @@ export default function PaymentManagement() {
   const dynamicLicenseKey = `MUNYAKA-ENT-2026-${schoolIdHex}`;
 
   const handleDownloadPDF = (item: any) => {
-    const doc = new jsPDF();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
 
-    // Header
-    doc.setFontSize(18);
-    doc.text('OFFICIAL INVOICE / RECEIPT', 14, 20);
-    doc.setFontSize(10);
-    doc.text(`School: ${item.campusName || item.campus || 'Munyaka Primary & Junior School'}`, 14, 30);
-    doc.text(`Reference: ${item.id}`, 14, 36);
-    doc.text(`Date: ${item.date}`, 14, 42);
-    doc.text(`Status: ${item.status || 'Paid'}`, 14, 48);
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Invoice - ${item.id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
+            .header { border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+            .school-name { font-size: 22px; font-weight: bold; color: #1e3a8a; }
+            .inv-details { margin-bottom: 20px; font-size: 14px; line-height: 1.6; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background-color: #f3f4f6; }
+            .total { font-size: 18px; font-weight: bold; margin-top: 20px; text-align: right; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="school-name">Munyaka Primary & Junior School</div>
+            <h2>OFFICIAL INVOICE / RECEIPT</h2>
+          </div>
+          <div class="inv-details">
+            <strong>Invoice ID:</strong> ${item.id}<br/>
+            <strong>Date:</strong> ${item.date}<br/>
+            <strong>Status:</strong> ${item.status || 'Paid'}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Software License Fee Renewal (${item.period || '1 Month'}) - 37 Seats</td>
+                <td>KES ${Number(item.amount).toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="total">Total Paid: KES ${Number(item.amount).toLocaleString()}</div>
+        </body>
+      </html>
+    `);
 
-    // Line Divider
-    doc.setLineWidth(0.5);
-    doc.line(14, 54, 196, 54);
-
-    // Table / Details
-    doc.setFontSize(12);
-    doc.text('Description', 14, 65);
-    doc.text('Amount (KES)', 150, 65);
-
-    doc.setFontSize(10);
-    doc.text(`Software License Fee Renewal (${item.period || '1 Month'})`, 14, 75);
-    doc.text(`KES ${Number(item.amount).toLocaleString()}`, 150, 75);
-
-    doc.line(14, 85, 196, 85);
-    doc.setFontSize(12);
-    doc.text('Total Paid:', 100, 95);
-    doc.text(`KES ${Number(item.amount).toLocaleString()}`, 150, 95);
-
-    // Native Web / Capacitor Download Trigger
-    const filename = `${item.id}_Invoice.pdf`;
-    doc.save(filename);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'seats' | 'monthly' | 'invoices'>('subscriptions');
