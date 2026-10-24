@@ -84,6 +84,18 @@ export function validityLabel(days: ValidityDuration): string {
 // Date helpers
 // ─────────────────────────────────────────────
 
+export const parseDDMMYYYY = (dateString: string): Date | null => {
+  if (!dateString) return null;
+  const parts = dateString.split('/');
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // Months are 0-indexed in JS
+    const year = parseInt(parts[2], 10);
+    return new Date(year, month, day);
+  }
+  return new Date(dateString);
+};
+
 /** Today in YYYY-MM-DD (local time). */
 export function todayIso(): string {
   const d = new Date();
@@ -98,20 +110,18 @@ export function todayIso(): string {
  */
 function endOfDay(dateStr: string): number {
   if (!dateStr) return NaN;
-  const parts = dateStr.split('-').map(Number);
-  if (parts.length !== 3) return NaN;
-  const [y, m, d] = parts;
-  const dt = new Date(y, m - 1, d, 23, 59, 59, 999);
+  const parsed = parseDDMMYYYY(dateStr);
+  if (!parsed || isNaN(parsed.getTime())) return NaN;
+  const dt = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 23, 59, 59, 999);
   return dt.getTime();
 }
 
 /** Parse YYYY-MM-DD into a Date at 00:00:00 (local time) on that day. */
 function startOfDay(dateStr: string): number {
   if (!dateStr) return NaN;
-  const parts = dateStr.split('-').map(Number);
-  if (parts.length !== 3) return NaN;
-  const [y, m, d] = parts;
-  const dt = new Date(y, m - 1, d, 0, 0, 0, 0);
+  const parsed = parseDDMMYYYY(dateStr);
+  if (!parsed || isNaN(parsed.getTime())) return NaN;
+  const dt = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 0, 0, 0, 0);
   return dt.getTime();
 }
 
