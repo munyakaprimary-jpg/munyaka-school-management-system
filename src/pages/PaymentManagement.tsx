@@ -644,9 +644,9 @@ export default function PaymentManagement() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4">
+            <div className="grid grid-cols-2 gap-4 w-full my-4">
               {/* Card 1: Fee Per Learner */}
-              <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm w-full">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">FEE PER LEARNER</span>
                 <div className="text-3xl font-extrabold text-indigo-600 mt-2">
                   KES 100
@@ -655,7 +655,7 @@ export default function PaymentManagement() {
               </div>
 
               {/* Card 2: Estimated Monthly Total */}
-              <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm w-full">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">ESTIMATED MONTHLY TOTAL</span>
                 <div className="text-3xl font-extrabold text-emerald-600 mt-2">
                   KES 3,100
