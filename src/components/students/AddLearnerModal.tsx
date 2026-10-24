@@ -26,6 +26,7 @@ export default function AddLearnerModal({
   const [fullName, setFullName] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [assessmentNumber, setAssessmentNumber] = useState('');
+  const [birthCertificateNo, setBirthCertificateNo] = useState('');
   const [gradeLevel, setGradeLevel] = useState('Grade 6');
   const [stream, setStream] = useState('BLUE');
   const [gender, setGender] = useState('Female');
@@ -43,8 +44,8 @@ export default function AddLearnerModal({
 
     setIsSaving(true);
     try {
-      const learnerId = `learner-${Date.now()}`;
-      const genAdm = admissionNumber.trim() || `MUN-${Math.floor(100 + Math.random() * 900)}-2025`;
+      const learnerId = `LRN-${Date.now()}`;
+      const genAdm = admissionNumber.trim() || `MUN/${gradeLevel}/${Math.floor(1000 + Math.random() * 9000)}`;
 
       const parts = fullName.trim().split(/\s+/);
       const firstName = parts[0] || '';
@@ -64,6 +65,7 @@ export default function AddLearnerModal({
         admNo: genAdm,
         assessmentNumber: assessmentNumber.trim(),
         assessmentNo: assessmentNumber.trim(),
+        birthCertificateNo: birthCertificateNo.trim(),
         gradeLevel: gradeLevel,
         grade: gradeLevel,
         class: gradeLevel,
@@ -71,7 +73,9 @@ export default function AddLearnerModal({
         gender: gender,
         dateOfBirth: dateOfBirth,
         parentName: parentName.trim(),
+        guardian: parentName.trim(),
         phoneNumber: phoneNumber.trim(),
+        phone: phoneNumber.trim(),
         status: 'Active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -127,20 +131,20 @@ export default function AddLearnerModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admission No</Label>
-            <Input
-              value={admissionNumber}
-              onChange={(e) => setAdmissionNumber(e.target.value)}
-              placeholder="e.g. MUN-450-2025"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assessment No</Label>
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assessment No (UPI)</Label>
             <Input
               value={assessmentNumber}
               onChange={(e) => setAssessmentNumber(e.target.value)}
               placeholder="e.g. CBC-1092"
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Birth Certificate No</Label>
+            <Input
+              value={birthCertificateNo}
+              onChange={(e) => setBirthCertificateNo(e.target.value)}
+              placeholder="e.g. BC/2020/12345"
               className="rounded-xl h-12 bg-slate-50 border-none font-bold"
             />
           </div>
