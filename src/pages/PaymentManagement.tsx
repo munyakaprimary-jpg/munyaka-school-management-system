@@ -84,19 +84,43 @@ export default function PaymentManagement() {
   const feePerSeat = 100;
   const monthlyTotal = activeSeats * feePerSeat;
 
+  const billingPeriodOptions = [
+    { label: '1 Month Extension', value: 1 },
+    { label: '2 Months Extension', value: 2 },
+    { label: '3 Months Extension', value: 3 },
+    { label: '4 Months Extension', value: 4 },
+    { label: '5 Months Extension', value: 5 },
+    { label: '6 Months Extension', value: 6 },
+    { label: '7 Months Extension', value: 7 },
+    { label: '8 Months Extension', value: 8 },
+    { label: '9 Months Extension', value: 9 },
+    { label: '10 Months Extension', value: 10 },
+    { label: '11 Months Extension', value: 11 },
+    { label: '12 Months Extension (1 Year)', value: 12 },
+  ];
+
   const durationMultipliers: Record<string, number> = {
     '1 Month Extension': 1,
+    '2 Months Extension': 2,
     '3 Months Extension': 3,
+    '4 Months Extension': 4,
+    '5 Months Extension': 5,
     '6 Months Extension': 6,
-    '1 Year Extension': 12,
+    '7 Months Extension': 7,
+    '8 Months Extension': 8,
+    '9 Months Extension': 9,
+    '10 Months Extension': 10,
+    '11 Months Extension': 11,
+    '12 Months Extension (1 Year)': 12,
   };
 
   const [paymentAmount, setPaymentAmount] = useState<string>(() => {
-    const months = durationMultipliers['1 Year Extension'] || 12;
+    const months = durationMultipliers['12 Months Extension (1 Year)'] || 12;
     return String(monthlyTotal * months);
   });
 
   useEffect(() => {
+    if (paymentPeriod.startsWith('Custom Term')) return;
     const months = durationMultipliers[paymentPeriod] || 1;
     setPaymentAmount(String(monthlyTotal * months));
   }, [paymentPeriod, monthlyTotal]);
@@ -913,17 +937,13 @@ export default function PaymentManagement() {
                             setIsCustomTermModalOpen(true);
                           } else {
                             setPaymentPeriod(val);
-                            if (val === '1 Year Extension') {
-                              setPaymentAmount('120000');
-                            } else if (val === '6 Months Extension') {
-                              setPaymentAmount('65000');
-                            }
                           }
                         }}
                         className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
                       >
-                        <option value="1 Year Extension">1 Year Extension</option>
-                        <option value="6 Months Extension">6 Months Extension</option>
+                        {billingPeriodOptions.map(opt => (
+                          <option key={opt.label} value={opt.label}>{opt.label}</option>
+                        ))}
                         <option value="Custom Term">Custom Term {paymentPeriod.startsWith('Custom') ? `(${paymentPeriod})` : ''}</option>
                       </select>
                       {paymentPeriod.startsWith('Custom') && (
