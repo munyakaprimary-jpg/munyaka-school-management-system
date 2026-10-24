@@ -326,40 +326,39 @@ export default function PaymentManagement() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in">
           <div className="lg:col-span-2 space-y-5">
             {/* Top-Level Subscription Summary Banner */}
-            <div className="bg-gradient-to-r from-indigo-50 to-slate-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-bold uppercase text-indigo-600 tracking-wider">Per-Seat Subscription Summary</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5">Total Licensed Seats: <span className="text-indigo-600 font-extrabold">{activeLearners} Active Seats</span></p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Total Commitment</p>
-                  <p className="text-sm font-extrabold text-emerald-600">KES {annualSubtotal.toLocaleString()}</p>
+            {(() => {
+              const learnersCount = INITIAL_SEED_DATA.learners?.length || 31;
+              const staffCount = INITIAL_SEED_DATA.staff?.length || 6;
+              const totalSeats = learnersCount + staffCount;
+              const feePerSeat = 100;
+              const totalCommitment = totalSeats * feePerSeat;
+
+              return (
+                <div className="bg-gradient-to-r from-indigo-50 to-slate-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase text-indigo-600 tracking-wider">Per-Seat Subscription Summary</p>
+                    <p className="text-sm font-bold text-slate-900 mt-0.5">Total Licensed Seats: <span className="text-indigo-600 font-extrabold">{totalSeats} Active Seats ({learnersCount} Learners + {staffCount} Staff)</span></p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Total Commitment</p>
+                      <p className="text-sm font-extrabold text-emerald-600">KES {totalCommitment.toLocaleString()}</p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        setPaymentCampus('Munyaka Primary & Junior School');
+                        setPaymentAmount(String(totalCommitment));
+                        setPaymentPeriod('1 Month Extension');
+                        setIsPaymentModalOpen(true);
+                      }}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-sm"
+                    >
+                      Record Payment
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  onClick={() => {
-                    setPaymentCampus('Munyaka Primary & Junior School');
-                    let computed = allocatedSeats * 250 * 12;
-                    try {
-                      const centralRaw = localStorage.getItem('munyaka_central_db');
-                      if (centralRaw) {
-                        const centralDb = JSON.parse(centralRaw);
-                        const learners = Array.isArray(centralDb.students) ? centralDb.students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED') : [];
-                        const staffList = Array.isArray(centralDb.staff) ? centralDb.staff : [];
-                        const totalActive = (learners.length + staffList.length) > 0 ? (learners.length + staffList.length) : allocatedSeats;
-                        computed = totalActive * 250 * 12;
-                      }
-                    } catch {}
-                    setPaymentAmount(String(computed));
-                    setPaymentPeriod('1 Year Extension');
-                    setIsPaymentModalOpen(true);
-                  }}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-sm"
-                >
-                  Record Payment
-                </Button>
-              </div>
-            </div>
+              );
+            })()}
 
             <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden p-5">
               <div className="flex items-center justify-between mb-4">
