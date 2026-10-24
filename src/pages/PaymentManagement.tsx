@@ -746,6 +746,8 @@ export default function PaymentManagement() {
                             onClick={() => {
                               try {
                                 localStorage.setItem('munyaka_payment_due_date', paymentDueDate);
+                                localStorage.setItem('munyaka_next_billing_date', paymentDueDate);
+                                window.dispatchEvent(new Event('storage'));
                                 // Save billing auto-lock settings to munyaka_central_db
                                 const centralRaw = localStorage.getItem('munyaka_central_db');
                                 if (centralRaw) {
