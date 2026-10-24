@@ -180,8 +180,24 @@ export default function PaymentManagement() {
     return Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
   });
 
+  const [summaryFeePerSeat, setSummaryFeePerSeat] = useState<number>(() => {
+    return Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+  });
+
+  useEffect(() => {
+    const updateFee = () => {
+      const storedFee = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
+      setMonthlyFeePerStudent(storedFee);
+      setSummaryFeePerSeat(storedFee);
+    };
+
+    window.addEventListener('fee_per_seat_updated', updateFee);
+    return () => window.removeEventListener('fee_per_seat_updated', updateFee);
+  }, []);
+
   const handleFeeChange = (newFee: number) => {
     setMonthlyFeePerStudent(newFee);
+    setSummaryFeePerSeat(newFee);
     localStorage.setItem('munyaka_fee_per_seat', String(newFee));
     window.dispatchEvent(new Event('fee_per_seat_updated'));
   };
@@ -361,22 +377,7 @@ export default function PaymentManagement() {
               const learnersCount = INITIAL_SEED_DATA.learners?.length || 31;
               const staffCount = INITIAL_SEED_DATA.staff?.length || 6;
               const totalSeats = learnersCount + staffCount;
-              
-              const [feePerSeat, setFeePerSeat] = useState<number>(() => {
-                return Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
-              });
-
-              useEffect(() => {
-                const updateFee = () => {
-                  const storedFee = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
-                  setFeePerSeat(storedFee);
-                };
-
-                window.addEventListener('fee_per_seat_updated', updateFee);
-                return () => window.removeEventListener('fee_per_seat_updated', updateFee);
-              }, []);
-
-              const totalCommitment = totalSeats * feePerSeat;
+              const totalCommitment = totalSeats * summaryFeePerSeat;
 
               return (
                 <div className="bg-gradient-to-r from-indigo-50 to-slate-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
