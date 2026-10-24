@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
 import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
 import { useSchoolStore } from '@/store/useSchoolStore';
+import { INITIAL_SEED_DATA } from '../data/InitialSeedData';
 
 export default function PaymentManagement() {
   // Access active store data for students, staff, and campuses FIRST (to avoid Temporal Dead Zone)
@@ -96,25 +97,8 @@ export default function PaymentManagement() {
   // Real Data from munyaka_central_db and school store
   const { totalActiveStudents, totalActiveStaff, totalCapacity, availableSlots } = useMemo(() => {
     try {
-      const centralStudents = students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED');
-      const centralStaff = staff;
-
-      const raw = localStorage.getItem('munyaka_central_db');
-      let dbStudents = centralStudents;
-      let dbStaff = centralStaff;
-
-      if (raw) {
-        const db = JSON.parse(raw);
-        if (Array.isArray(db.students) && db.students.length > 0 && dbStudents.length === 0) {
-          dbStudents = db.students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED');
-        }
-        if (Array.isArray(db.staff) && db.staff.length > 0 && dbStaff.length === 0) {
-          dbStaff = db.staff;
-        }
-      }
-
-      const sCount = dbStudents.length;
-      const staffCount = dbStaff.length;
+      const sCount = INITIAL_SEED_DATA.learners.length;
+      const staffCount = INITIAL_SEED_DATA.staff.length;
       const totalAllocated = sCount + staffCount;
       const capacity = Math.max(totalAllocated + 120, 500);
 
@@ -125,8 +109,8 @@ export default function PaymentManagement() {
         availableSlots: Math.max(0, capacity - totalAllocated),
       };
     } catch {}
-    const sCount = activeLearners;
-    const staffCount = staff.length;
+    const sCount = INITIAL_SEED_DATA.learners.length;
+    const staffCount = INITIAL_SEED_DATA.staff.length;
     const totalAllocated = sCount + staffCount;
     return {
       totalActiveStudents: sCount,
@@ -590,7 +574,7 @@ export default function PaymentManagement() {
                   <Calendar className="text-indigo-600" size={24} /> Monthly Payment & Billing Setting
                 </CardTitle>
                 <p className="text-xs text-slate-500 font-medium mt-1">
-                  Calculated automatically from <strong className="text-indigo-600">{totalActiveStudents} active learners</strong> and <strong className="text-indigo-600">{totalActiveStaff} active staff</strong> synchronized from master store.
+                  Calculated automatically from {totalActiveStudents} active learners and {totalActiveStaff} active staff synchronized from src/data/InitialSeedData.ts.
                 </p>
               </div>
 
