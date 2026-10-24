@@ -136,7 +136,6 @@ export default function PaymentManagement() {
 
   // Monthly billing setting state
   const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState(100);
-  const [autoDebitEnabled, setAutoDebitEnabled] = useState(true);
   const [paymentDueDate, setPaymentDueDate] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('munyaka_payment_due_date');
@@ -664,7 +663,7 @@ export default function PaymentManagement() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                           <div className="space-y-2">
                             <Label className="text-xs font-black uppercase text-slate-500">Monthly License Fee Per Seat (KES)</Label>
                             <Input
@@ -683,18 +682,6 @@ export default function PaymentManagement() {
                               onChange={(e) => setPaymentDueDate(e.target.value)}
                               className="h-12 bg-slate-50 border-slate-200 font-bold text-sm"
                             />
-                          </div>
-            
-                          <div className="space-y-2">
-                            <Label className="text-xs font-black uppercase text-slate-500">Automated Monthly Direct Debit</Label>
-                            <select
-                              value={autoDebitEnabled ? 'yes' : 'no'}
-                              onChange={(e) => setAutoDebitEnabled(e.target.value === 'yes')}
-                              className="w-full h-12 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800"
-                            >
-                              <option value="yes">Enabled (Auto-charge via M-Pesa / Bank)</option>
-                              <option value="no">Disabled (Manual Invoicing)</option>
-                            </select>
                           </div>
                         </div>
             
