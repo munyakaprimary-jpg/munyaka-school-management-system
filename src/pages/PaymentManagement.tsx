@@ -647,7 +647,7 @@ export default function PaymentManagement() {
             <div className="grid grid-cols-2 gap-4 w-full my-4">
               {/* Card 1: Fee Per Learner */}
               <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm w-full">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">FEE PER LEARNER</span>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">FEE PER SEAT</span>
                 <div className="text-3xl font-extrabold text-indigo-600 mt-2">
                   KES 100
                 </div>
@@ -658,15 +658,15 @@ export default function PaymentManagement() {
               <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm w-full">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">ESTIMATED MONTHLY TOTAL</span>
                 <div className="text-3xl font-extrabold text-emerald-600 mt-2">
-                  KES 3,100
+                  KES {(allocatedSeats * 100).toLocaleString()}
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Auto-calculated (31 active learners × KES 100)</p>
+                <p className="text-xs text-gray-400 mt-1">Auto-calculated ({allocatedSeats} total active seats (L+S) × KES 100)</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
                           <div className="space-y-2">
-                            <Label className="text-xs font-black uppercase text-slate-500">Monthly License Fee Per Student (KES)</Label>
+                            <Label className="text-xs font-black uppercase text-slate-500">Monthly License Fee Per Seat (KES)</Label>
                             <Input
                               type="number"
                               value={monthlyFeePerStudent}
