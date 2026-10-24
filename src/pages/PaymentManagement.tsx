@@ -81,7 +81,20 @@ export default function PaymentManagement() {
   
   // Dynamic active seats & base monthly total calculation
   const activeSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
-  const feePerSeat = 100;
+  const [feePerSeat, setFeePerSeat] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_fee_per_seat');
+      if (saved) return Number(saved);
+    } catch {}
+    return 100;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('munyaka_fee_per_seat', String(feePerSeat));
+    } catch {}
+  }, [feePerSeat]);
+
   const monthlyTotal = activeSeats * feePerSeat;
 
   const billingPeriodOptions = [
