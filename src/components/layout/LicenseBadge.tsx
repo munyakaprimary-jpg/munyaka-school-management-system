@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { ShieldCheck, AlertTriangle, XCircle, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
-import { db } from '@/config/firebase';
-import { doc, getDoc, collection, getDocs, limit, query } from 'firebase/firestore';
-import { getActiveLicense, daysRemainingUntil, parseDDMMYYYY } from '@/services/licenseService';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, AlertTriangle, XCircle, RotateCw } from 'lucide-react';
+import { getActiveLicense } from '@/services/licenseService';
 
 interface LicenseBadgeProps {
   className?: string;
@@ -13,7 +10,7 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
   const [expiryDate, setExpiryDate] = useState<string>(() => {
     const active = getActiveLicense();
     if (active?.expiresAt) return active.expiresAt;
-    const paymentDueDate = localStorage.getItem('munyaka_payment_due_date') || localStorage.getItem('munyaka_next_billing_date') || '2026-11-11';
+    const paymentDueDate = localStorage.getItem('munyaka_next_billing_date') || localStorage.getItem('munyaka_payment_due_date') || '2026-10-30';
     return paymentDueDate;
   });
   const [licenseStatus, setLicenseStatus] = useState<string>(() => {
@@ -22,139 +19,35 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
     return localStorage.getItem('school_license_status') || 'active';
   });
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-
-  // Dynamic Days Remaining Calculation based on monthly due date and grace period
-  const calculateDaysRemaining = (dueDateStr: string, gracePeriodDays: number = 3) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const dueDate = new Date(dueDateStr);
-    // Add grace period to total active window
-    dueDate.setDate(dueDate.getDate() + gracePeriodDays);
-    dueDate.setHours(0, 0, 0, 0);
-
-    const diffTime = dueDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    return diffDays > 0 ? diffDays : 0;
-  };
-
-  const calculateDaysLeft = (expiryDateStr?: string) => {
-    if (!expiryDateStr) {
-      // Default to end of current month with 3-day grace period
-      const now = new Date();
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
-      return calculateDaysRemaining(endOfMonth, 3);
-    }
-    return calculateDaysRemaining(expiryDateStr, 3);
-  };
-
-  const fetchLicenseFromFirestore = useCallback(async (showToast = false) => {
-    setIsRefreshing(true);
-    try {
-      let fetchedExpiry: string | null = null;
-      let fetchedStatus = 'active';
-
-      // Fetch from Firestore (school_settings, system_config, school_settings_v1)
-      if (db) {
-        try {
-          // Check school_settings/config
-          const settingsRef = doc(db, 'school_settings', 'config');
-          const settingsSnap = await getDoc(settingsRef);
-          if (settingsSnap.exists()) {
-            const data = settingsSnap.data();
-            if (data.licenseExpiryDate) fetchedExpiry = data.licenseExpiryDate;
-            if (data.expiresAt) fetchedExpiry = data.expiresAt;
-            if (data.licenseStatus) fetchedStatus = data.licenseStatus;
-          } else {
-            // Check system_config/license
-            const systemRef = doc(db, 'system_config', 'license');
-            const systemSnap = await getDoc(systemRef);
-            if (systemSnap.exists()) {
-              const data = systemSnap.data();
-              if (data.expiryDate) fetchedExpiry = data.expiryDate;
-              if (data.status) fetchedStatus = data.status;
-            } else {
-              // Query collection fallback
-              const q = query(collection(db, 'school_settings'), limit(1));
-              const querySnapshot = await getDocs(q);
-              if (!querySnapshot.empty) {
-                const docData = querySnapshot.docs[0].data();
-                if (docData.licenseExpiryDate) fetchedExpiry = docData.licenseExpiryDate;
-                if (docData.expiresAt) fetchedExpiry = docData.expiresAt;
-                if (docData.licenseStatus) fetchedStatus = docData.licenseStatus;
-              }
-            }
-          }
-        } catch (fbErr) {
-          console.warn('Firestore fetch license warning:', fbErr);
-        }
-      }
-
-      // Check activeLicense service & localStorage fallbacks
-      const active = getActiveLicense();
-      if (!fetchedExpiry && active?.expiresAt) {
-        fetchedExpiry = active.expiresAt;
-      }
-      if (!fetchedExpiry) {
-        fetchedExpiry = localStorage.getItem('munyaka_payment_due_date') ||
-                        localStorage.getItem('munyaka_next_billing_date') ||
-                        '2026-11-11';
-      }
-
-      setExpiryDate(fetchedExpiry);
-      setLicenseStatus(active ? 'active' : fetchedStatus);
-
-      localStorage.setItem('school_license_expiry', fetchedExpiry);
-      localStorage.setItem('school_license_status', active ? 'active' : fetchedStatus);
-
-      if (showToast) {
-        toast.success('License status successfully refreshed from Firestore.');
-      }
-    } catch (error) {
-      console.error('Failed to fetch license status:', error);
-      if (showToast) {
-        toast.error('Failed to refresh license status. Using cached settings.');
-      }
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, []);
+  const [daysLeft, setDaysLeft] = useState<number>(() => {
+    const dueDateStr = localStorage.getItem('munyaka_next_billing_date') || localStorage.getItem('munyaka_payment_due_date') || '2026-10-30';
+    const target = new Date(dueDateStr).getTime();
+    const now = new Date().getTime();
+    const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 ? diffDays : 0;
+  });
 
   useEffect(() => {
-    fetchLicenseFromFirestore(false);
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'school_license_expiry' && e.newValue) {
-        setExpiryDate(e.newValue);
-      }
-      if (e.key === 'school_license_status' && e.newValue) {
-        setLicenseStatus(e.newValue);
-      }
-      if (e.key === 'activation_expires_at' && e.newValue) {
-        setExpiryDate(e.newValue);
-      }
+    const updateDays = () => {
+      const dueDateStr = localStorage.getItem('munyaka_next_billing_date') || localStorage.getItem('munyaka_payment_due_date') || '2026-10-30';
+      const target = new Date(dueDateStr).getTime();
+      const now = new Date().getTime();
+      const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+      setDaysLeft(diffDays >= 0 ? diffDays : 0);
+      setExpiryDate(dueDateStr);
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [fetchLicenseFromFirestore]);
+    updateDays();
+    window.addEventListener('billing_invoices_updated', updateDays);
+    window.addEventListener('fee_per_seat_updated', updateDays);
+    window.addEventListener('storage', updateDays);
+    return () => {
+      window.removeEventListener('billing_invoices_updated', updateDays);
+      window.removeEventListener('fee_per_seat_updated', updateDays);
+      window.removeEventListener('storage', updateDays);
+    };
+  }, []);
 
-  // Also check licenseService daysRemainingUntil
-  const paymentDueDate = localStorage.getItem('munyaka_payment_due_date') || localStorage.getItem('munyaka_next_billing_date') || '2026-11-11';
-  const calculateBillingDaysRemaining = (targetDateStr: string) => {
-    if (!targetDateStr) return 17;
-    const target = new Date(targetDateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    target.setHours(0, 0, 0, 0);
-    const diffTime = target.getTime() - today.getTime();
-    return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-  };
-  const targetDaysLeft = calculateBillingDaysRemaining(paymentDueDate);
-
-  const activeLic = getActiveLicense();
-  const daysLeft = activeLic ? daysRemainingUntil(activeLic.expiresAt) : (targetDaysLeft > 0 ? targetDaysLeft : 17);
   const isExpired = licenseStatus === 'expired' || daysLeft <= 0;
   const isAmber = !isExpired && daysLeft < 30;
 
@@ -181,19 +74,7 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
     >
       <IconComponent size={14} className="shrink-0" />
       <span>{badgeText}</span>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          fetchLicenseFromFirestore(true);
-        }}
-        disabled={isRefreshing}
-        className="ml-1 p-0.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"
-        title="Refresh license status from Firestore"
-        aria-label="Refresh license status"
-      >
-        <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
-      </button>
+      <RotateCw size={12} className="ml-0.5 opacity-70 animate-spin-slow" />
     </div>
   );
 };
