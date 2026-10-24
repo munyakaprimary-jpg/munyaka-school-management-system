@@ -1179,5 +1179,6 @@ export default function PaymentManagement() {
         </div>
       )}
 
-  return (
-    <div className="space-y-8 animate-in fade-in pb-12 max-w-7xl mx-auto">
+    </div>
+  );
+}
