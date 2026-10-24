@@ -25,6 +25,8 @@ import { showSuccess, showError } from '@/utils/toast';
 import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
 import { useSchoolStore } from '@/store/useSchoolStore';
 import { INITIAL_SEED_DATA } from '../data/InitialSeedData';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 export default function PaymentManagement() {
   // Access active store data for students, staff, and campuses FIRST (to avoid Temporal Dead Zone)
@@ -61,6 +63,41 @@ export default function PaymentManagement() {
     }
   }, []);
   const dynamicLicenseKey = `MUNYAKA-ENT-2026-${schoolIdHex}`;
+
+  const handleDownloadPDF = (item: any) => {
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(18);
+    doc.text('OFFICIAL INVOICE / RECEIPT', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`School: ${item.campusName || item.campus || 'Munyaka Primary & Junior School'}`, 14, 30);
+    doc.text(`Reference: ${item.id}`, 14, 36);
+    doc.text(`Date: ${item.date}`, 14, 42);
+    doc.text(`Status: ${item.status || 'Paid'}`, 14, 48);
+
+    // Line Divider
+    doc.setLineWidth(0.5);
+    doc.line(14, 54, 196, 54);
+
+    // Table / Details
+    doc.setFontSize(12);
+    doc.text('Description', 14, 65);
+    doc.text('Amount (KES)', 150, 65);
+
+    doc.setFontSize(10);
+    doc.text(`Software License Fee Renewal (${item.period || '1 Month'})`, 14, 75);
+    doc.text(`KES ${Number(item.amount).toLocaleString()}`, 150, 75);
+
+    doc.line(14, 85, 196, 85);
+    doc.setFontSize(12);
+    doc.text('Total Paid:', 100, 95);
+    doc.text(`KES ${Number(item.amount).toLocaleString()}`, 150, 95);
+
+    // Native Web / Capacitor Download Trigger
+    const filename = `${item.id}_Invoice.pdf`;
+    doc.save(filename);
+  };
 
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'seats' | 'monthly' | 'invoices'>('subscriptions');
   const [mpesaNumber, setMpesaNumber] = useState('0738873359');
@@ -852,13 +889,13 @@ export default function PaymentManagement() {
                       </div>
                       <div>
                         <p className="font-bold text-slate-900 text-sm">{inv.id}</p>
-                        <p className="text-xs text-slate-500 font-medium">{inv.campusName} • {inv.date}</p>
+                        <p className="text-xs text-slate-500 font-medium">{inv.campusName || inv.campus} • {inv.date}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-6">
-                      <span className="font-black text-slate-900">KES {inv.amount.toLocaleString()}</span>
+                      <span className="font-black text-slate-900">KES {Number(inv.amount).toLocaleString()}</span>
                       <Badge className="bg-emerald-100 text-emerald-700 font-bold px-3 py-1">{inv.status}</Badge>
-                      <Button variant="outline" onClick={() => showSuccess(`Downloading ${inv.id} PDF...`)} className="rounded-xl border-slate-200 text-xs font-bold gap-1">
+                      <Button variant="outline" onClick={() => handleDownloadPDF(inv)} className="rounded-xl border-slate-200 text-xs font-bold gap-1">
                         PDF
                       </Button>
                     </div>
@@ -1124,6 +1161,5 @@ export default function PaymentManagement() {
         </div>
       )}
 
-      </div>
-        );
-      }
+  return (
+    <div className="space-y-8 animate-in fade-in pb-12 max-w-7xl mx-auto">
