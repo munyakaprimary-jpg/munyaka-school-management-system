@@ -176,7 +176,10 @@ export default function PaymentManagement() {
   }, [totalCapacity, maxSeats]);
 
   // Monthly billing setting state
-  const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState(100);
+  const [monthlyFeePerStudent, setMonthlyFeePerStudent] = useState<number>(100);
+  const totalSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6); // 37
+  const currentFee = Number(monthlyFeePerStudent) || 0;
+  const estimatedTotal = totalSeats * currentFee;
   const [paymentDueDate, setPaymentDueDate] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('munyaka_payment_due_date');
@@ -618,7 +621,7 @@ export default function PaymentManagement() {
               <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm w-full">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">FEE PER SEAT</span>
                 <div className="text-3xl font-extrabold text-indigo-600 mt-2">
-                  KES 100
+                  KES {currentFee.toLocaleString()}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Standard rate</p>
               </div>
@@ -627,15 +630,15 @@ export default function PaymentManagement() {
               <div className="p-5 bg-white rounded-2xl border border-gray-100 shadow-sm w-full">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">ESTIMATED MONTHLY TOTAL</span>
                 <div className="text-3xl font-extrabold text-emerald-600 mt-2">
-                  KES {(allocatedSeats * 100).toLocaleString()}
+                  KES {estimatedTotal.toLocaleString()}
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Auto-calculated ({allocatedSeats} total active seats (L+S) × KES 100)</p>
+                <p className="text-xs text-gray-400 mt-1">Auto-calculated ({totalSeats} total active seats (L+S) × KES {currentFee})</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                           <div className="space-y-2">
-                            <Label className="text-xs font-black uppercase text-slate-500">Monthly License Fee Per Seat (KES)</Label>
+                            <Label className="text-xs font-black uppercase text-slate-500">MONTHLY LICENSE FEE PER SEAT (KES)</Label>
                             <Input
                               type="number"
                               value={monthlyFeePerStudent}
