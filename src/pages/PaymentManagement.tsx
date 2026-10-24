@@ -902,26 +902,44 @@ export default function PaymentManagement() {
             status: 'Paid',
           }
         ];
-        // Also load recorded payments from munyaka_billing_history if any
-        let recordedHistory: any[] = [];
+        
+        let initialHistory: any[] = [];
         try {
-          const raw = localStorage.getItem('munyaka_billing_history');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              recordedHistory = parsed.map((h: any, idx: number) => ({
-                id: h.id || `PAY-REC-${idx}`,
-                campusName: h.campus || 'Munyaka Primary & Junior School',
-                date: h.date || new Date().toISOString().split('T')[0],
-                amount: typeof h.amount === 'number' ? h.amount : Number(String(h.amount).replace(/[^0-9.]/g, '')) || defaultInvoiceAmount,
-                status: 'Paid',
-                isPayment: true
-              }));
+          const rawInvoices = localStorage.getItem('munyaka_billing_invoices');
+          if (rawInvoices) {
+            const parsed = JSON.parse(rawInvoices);
+            if (Array.isArray(parsed)) initialHistory = parsed;
+          } else {
+            const raw = localStorage.getItem('munyaka_billing_history');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                initialHistory = parsed.map((h: any, idx: number) => ({
+                  id: h.id || `PAY-REC-${idx}`,
+                  campusName: h.campus || 'Munyaka Primary & Junior School',
+                  date: h.date || new Date().toISOString().split('T')[0],
+                  amount: typeof h.amount === 'number' ? h.amount : Number(String(h.amount).replace(/[^0-9.]/g, '')) || defaultInvoiceAmount,
+                  status: 'Paid',
+                  isPayment: true
+                }));
+              }
             }
           }
         } catch {}
 
-        const allInvoices = [...dynamicInvoices, ...recordedHistory];
+        const [invoices, setInvoices] = useState<any[]>(() => [...dynamicInvoices, ...initialHistory]);
+
+        const handleDeleteInvoice = (invoiceId: string) => {
+          if (window.confirm('Are you sure you want to delete this invoice record?')) {
+            const updatedInvoices = invoices.filter((inv) => inv.id !== invoiceId);
+            setInvoices(updatedInvoices);
+            try {
+              localStorage.setItem('munyaka_billing_invoices', JSON.stringify(updatedInvoices));
+              localStorage.setItem('munyaka_billing_history', JSON.stringify(updatedInvoices));
+            } catch {}
+            showSuccess('Invoice record successfully deleted.');
+          }
+        };
 
         return (
           <Card className="border border-slate-200 shadow-sm rounded-3xl overflow-hidden bg-white animate-in fade-in">
@@ -930,26 +948,35 @@ export default function PaymentManagement() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-slate-100">
-                {allInvoices.map((inv) => (
-                  <div key={inv.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-bold">
-                        <FileText size={20} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-900 text-sm">{inv.id}</p>
-                        <p className="text-xs text-slate-500 font-medium">{inv.campusName || inv.campus} • {inv.date}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      <span className="font-black text-slate-900">KES {Number(inv.amount).toLocaleString()}</span>
-                      <Badge className="bg-emerald-100 text-emerald-700 font-bold px-3 py-1">{inv.status}</Badge>
-                      <Button variant="outline" onClick={() => handleDownloadPDF(inv)} className="rounded-xl border-slate-200 text-xs font-bold gap-1">
-                        PDF
-                      </Button>
-                    </div>
+                {invoices.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500 font-medium space-y-2">
+                    <p>No billing or invoice records found.</p>
                   </div>
-                ))}
+                ) : (
+                  invoices.map((inv) => (
+                    <div key={inv.id} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-bold">
+                          <FileText size={20} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm">{inv.id}</p>
+                          <p className="text-xs text-slate-500 font-medium">{inv.campusName || inv.campus} • {inv.date}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="font-black text-slate-900">KES {Number(inv.amount).toLocaleString()}</span>
+                        <Badge className="bg-emerald-100 text-emerald-700 font-bold px-3 py-1">{inv.status || 'Paid'}</Badge>
+                        <Button variant="outline" onClick={() => handleDownloadPDF(inv)} className="rounded-xl border-slate-200 text-xs font-bold gap-1">
+                          PDF
+                        </Button>
+                        <Button variant="outline" onClick={() => handleDeleteInvoice(inv.id)} className="rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold px-3">
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
