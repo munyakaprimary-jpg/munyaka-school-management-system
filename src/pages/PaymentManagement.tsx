@@ -81,8 +81,7 @@ export default function PaymentManagement() {
   
   // Dynamic active seats & base monthly total calculation
   const activeSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
-  const feePerSeat = 100;
-  const monthlyTotal = activeSeats * feePerSeat;
+  const monthlyTotal = activeSeats * (Number(feePerSeat) || 100);
 
   const billingPeriodOptions = [
     { label: '1 Month', value: 1 },
@@ -355,13 +354,12 @@ export default function PaymentManagement() {
       {activeTab === 'subscriptions' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in">
           <div className="lg:col-span-2 space-y-5">
-            {/* Top-Level Subscription Summary Banner */}
+              {/* Top-Level Subscription Summary Banner */}
             {(() => {
               const learnersCount = INITIAL_SEED_DATA.learners?.length || 31;
               const staffCount = INITIAL_SEED_DATA.staff?.length || 6;
               const totalSeats = learnersCount + staffCount;
-              const feePerSeat = 100;
-              const totalCommitment = totalSeats * feePerSeat;
+              const totalCommitment = totalSeats * (Number(feePerSeat) || 100);
 
               return (
                 <div className="bg-gradient-to-r from-indigo-50 to-slate-50 border border-indigo-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
