@@ -441,7 +441,7 @@ export default function PaymentManagement() {
                 </div>
             </div>
 
-            <Card className="border border-slate-200 shadow-sm rounded-2xl p-5 bg-white">
+            <Card className="border border-slate-200 shadow-sm rounded-2xl p-6 bg-white max-w-2xl">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-3">
                 <Key className="text-indigo-600" size={18} /> Software Activation & License Key
               </h3>
@@ -450,76 +450,16 @@ export default function PaymentManagement() {
               </p>
               
               <div className="flex flex-col md:flex-row items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <div className="flex-1 font-mono font-bold text-indigo-600 bg-white px-3.5 py-2 rounded-lg border border-slate-200 w-full text-center md:text-left text-xs">
+                <div className="flex-1 font-mono font-bold text-indigo-600 bg-white px-3.5 py-2.5 rounded-lg border border-slate-200 w-full text-center md:text-left text-xs">
                   {licenseKey}
                 </div>
                 <Button
                   onClick={handleRegenerateLicense}
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-9 px-4 w-full md:w-auto shrink-0 shadow-sm gap-1.5"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs h-10 px-6 w-full md:w-auto shrink-0 shadow-sm gap-1.5"
                 >
                   <RefreshCw size={14} /> Regenerate Key
                 </Button>
               </div>
-            </Card>
-          </div>
-
-          <div className="space-y-5">
-            <Card className="border border-indigo-200 shadow-md rounded-2xl p-5 bg-gradient-to-br from-indigo-50/50 via-white to-slate-50">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-1.5">
-                <CreditCard className="text-indigo-600" size={18} /> Instant M-Pesa Renewal
-              </h3>
-              <p className="text-xs text-slate-500 mb-4 font-medium">
-                Trigger automated STK Push for total per-seat commitment: <strong className="text-emerald-600">KES {annualSubtotal.toLocaleString()}</strong>.
-              </p>
-
-              <form onSubmit={handleMpesaCheckout} className="space-y-3.5">
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Select Subscription Plan</Label>
-                  <select
-                    value={selectedPlan}
-                    onChange={(e) => setSelectedPlan(e.target.value)}
-                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
-                  >
-                    <option value="Enterprise Per-Seat Annual">Enterprise Per-Seat Annual (KES {annualSubtotal.toLocaleString()})</option>
-                    <option value="Standard Per-Seat Annual">Standard Per-Seat Annual</option>
-                    <option value="Starter Per-Seat Annual">Starter Per-Seat Annual</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] font-bold uppercase text-slate-500 tracking-wider">M-Pesa Phone Number (STK Push)</Label>
-                  <div className="relative">
-                    <Smartphone className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                    <Input
-                      type="text"
-                      value={mpesaNumber}
-                      onChange={(e) => setMpesaNumber(e.target.value)}
-                      placeholder="0712345678"
-                      className="pl-9 h-9 rounded-xl bg-white border-slate-200 font-semibold text-xs"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={isProcessing}
-                  className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm gap-1.5 mt-1"
-                >
-                  {isProcessing ? <RefreshCw className="animate-spin" size={15} /> : <CheckCircle2 size={15} />}
-                  {isProcessing ? 'Processing STK Push...' : `Pay KES ${annualSubtotal.toLocaleString()} via M-Pesa`}
-                </Button>
-              </form>
-
-              {isRenewed && (
-                <div className="mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-emerald-800 animate-in fade-in text-xs">
-                  <CheckCircle2 className="shrink-0 text-emerald-600 mt-0.5" size={16} />
-                  <div>
-                    <p className="font-bold uppercase tracking-wider text-[11px]">Renewal Successful</p>
-                    <p className="mt-0.5">Per-seat license extended through Dec 31, 2026. Official receipt generated.</p>
-                  </div>
-                </div>
-              )}
             </Card>
           </div>
         </div>
