@@ -142,16 +142,14 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({ className = '' }) =>
   }, [fetchLicenseFromFirestore]);
 
   // Also check licenseService daysRemainingUntil
-  const targetDueDate = '30/10/2026';
-  const targetDate = parseDDMMYYYY(targetDueDate) || new Date('2026-10-30');
+  const dueDate = new Date('2026-10-30');
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  targetDate.setHours(0, 0, 0, 0);
-  const diffTime = targetDate.getTime() - now.getTime();
-  const targetDaysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  dueDate.setHours(0, 0, 0, 0);
+  const targetDaysLeft = Math.max(0, Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
 
   const activeLic = getActiveLicense();
-  const daysLeft = activeLic ? daysRemainingUntil(activeLic.expiresAt) : Math.max(targetDaysLeft, calculateDaysLeft(expiryDate));
+  const daysLeft = activeLic ? daysRemainingUntil(activeLic.expiresAt) : targetDaysLeft;
   const isExpired = licenseStatus === 'expired' || daysLeft <= 0;
   const isAmber = !isExpired && daysLeft < 30;
 
