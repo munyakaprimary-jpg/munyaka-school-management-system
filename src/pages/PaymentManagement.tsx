@@ -77,7 +77,7 @@ export default function PaymentManagement() {
   const [paymentCampus, setPaymentCampus] = useState('Munyaka Primary & Junior School');
   const [paymentMethod, setPaymentMethod] = useState('M-Pesa Paybill / STK');
   const [paymentRef, setPaymentRef] = useState('');
-  const [paymentPeriod, setPaymentPeriod] = useState('1 Year Extension');
+  const [paymentPeriod, setPaymentPeriod] = useState('1 Month');
   
   // Dynamic active seats & base monthly total calculation
   const activeSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
@@ -85,37 +85,37 @@ export default function PaymentManagement() {
   const monthlyTotal = activeSeats * feePerSeat;
 
   const billingPeriodOptions = [
-    { label: '1 Month Extension', value: 1 },
-    { label: '2 Months Extension', value: 2 },
-    { label: '3 Months Extension', value: 3 },
-    { label: '4 Months Extension', value: 4 },
-    { label: '5 Months Extension', value: 5 },
-    { label: '6 Months Extension', value: 6 },
-    { label: '7 Months Extension', value: 7 },
-    { label: '8 Months Extension', value: 8 },
-    { label: '9 Months Extension', value: 9 },
-    { label: '10 Months Extension', value: 10 },
-    { label: '11 Months Extension', value: 11 },
-    { label: '12 Months Extension (1 Year)', value: 12 },
+    { label: '1 Month', value: 1 },
+    { label: '2 Months', value: 2 },
+    { label: '3 Months', value: 3 },
+    { label: '4 Months', value: 4 },
+    { label: '5 Months', value: 5 },
+    { label: '6 Months', value: 6 },
+    { label: '7 Months', value: 7 },
+    { label: '8 Months', value: 8 },
+    { label: '9 Months', value: 9 },
+    { label: '10 Months', value: 10 },
+    { label: '11 Months', value: 11 },
+    { label: '12 Months (1 Year)', value: 12 },
   ];
 
   const durationMultipliers: Record<string, number> = {
-    '1 Month Extension': 1,
-    '2 Months Extension': 2,
-    '3 Months Extension': 3,
-    '4 Months Extension': 4,
-    '5 Months Extension': 5,
-    '6 Months Extension': 6,
-    '7 Months Extension': 7,
-    '8 Months Extension': 8,
-    '9 Months Extension': 9,
-    '10 Months Extension': 10,
-    '11 Months Extension': 11,
-    '12 Months Extension (1 Year)': 12,
+    '1 Month': 1,
+    '2 Months': 2,
+    '3 Months': 3,
+    '4 Months': 4,
+    '5 Months': 5,
+    '6 Months': 6,
+    '7 Months': 7,
+    '8 Months': 8,
+    '9 Months': 9,
+    '10 Months': 10,
+    '11 Months': 11,
+    '12 Months (1 Year)': 12,
   };
 
   const [paymentAmount, setPaymentAmount] = useState<string>(() => {
-    const months = durationMultipliers['12 Months Extension (1 Year)'] || 12;
+    const months = durationMultipliers['1 Month'] || 1;
     return String(monthlyTotal * months);
   });
 
@@ -927,7 +927,7 @@ export default function PaymentManagement() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-bold uppercase text-slate-500">Billing Period / Extension</Label>
+                    <Label className="text-[11px] font-bold uppercase text-slate-500">Billing Period</Label>
                     <div className="flex items-center gap-2">
                       <select
                         value={paymentPeriod}
