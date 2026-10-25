@@ -194,20 +194,20 @@ function loadAssessments(): Assessment[] {
 
 function loadSubmissions(assessmentId: string): StudentSubmission[] {
   try {
-    const raw = localStorage.getItem(SUBMISSION_KEY);
+    const raw = localStorage.getItem("munyaka_exam_submissions") || localStorage.getItem(SUBMISSION_KEY);
     if (!raw) return [];
     
     // Parse raw which could be either an Array or an Object/Record map
     let subs: StudentSubmission[] = [];
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      subs = parsed.filter((s) => s.isComplete || s.status === 'submitted' || s.status === 'completed');
+      subs = parsed as StudentSubmission[];
     } else if (parsed && typeof parsed === 'object') {
-      subs = Object.values(parsed).filter((s: any) => s.isComplete || s.status === 'submitted' || s.status === 'completed');
+      subs = Object.values(parsed) as StudentSubmission[];
     }
 
     if (assessmentId === ALL_EXAMS_VALUE) return subs;
-    return subs.filter((s) => s.assessmentId === assessmentId || s.examId === assessmentId);
+    return subs.filter((s) => s.assessmentId === assessmentId || (s as any).examId === assessmentId);
   } catch { return []; }
 }
 
@@ -647,24 +647,18 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const filteredGrades = useMemo(() => {
-    return studentGrades.filter((g) => {
-      const matchesExam =
-        selectedExamId === ALL_EXAMS_VALUE ||
-        selectedExamId === "" ||
-        g.assessmentId === selectedExamId;
-      const matchesGrade =
-        selectedGrade === ALL_GRADES_VALUE ||
-        normaliseGrade(g.classId) === normaliseGrade(selectedGrade) ||
-        normaliseGrade(g.className) === normaliseGrade(selectedGrade);
-      const matchesStream =
-        selectedStream === ALL_STREAMS_VALUE ||
-        normaliseGrade(g.stream) === normaliseGrade(selectedStream);
+    return studentGrades.filter((sub) => {
+      const subWithExtras = sub as any;
+      const matchesGrade = !selectedGrade || selectedGrade === ALL_GRADES_VALUE || normaliseGrade(sub.classId) === normaliseGrade(selectedGrade) || normaliseGrade(sub.className) === normaliseGrade(selectedGrade) || normaliseGrade(subWithExtras.grade) === normaliseGrade(selectedGrade);
+      const matchesStream = !selectedStream || selectedStream === ALL_STREAMS_VALUE || normaliseGrade(sub.stream) === normaliseGrade(selectedStream);
+      const matchesExam = !selectedExamId || selectedExamId === ALL_EXAMS_VALUE || sub.assessmentId === selectedExamId || subWithExtras.examId === selectedExamId || subWithExtras.assessmentTitle === selectedExamId;
       const matchesSearch =
               !String(searchTerm || '').trim() ||
-              g.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              g.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              g.classId.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesExam && matchesGrade && matchesStream && matchesSearch;
+              sub.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              sub.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              sub.classId.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return matchesGrade && matchesStream && matchesExam && matchesSearch;
     });
   }, [studentGrades, searchTerm, selectedGrade, selectedStream, selectedExamId]);
 
