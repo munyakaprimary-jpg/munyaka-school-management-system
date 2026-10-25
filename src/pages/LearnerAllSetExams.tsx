@@ -1460,6 +1460,7 @@ const LearnerAllSetExams: React.FC = () => {
   const [examScore, setExamScore] = useState<{ score: number; total: number } | null>(null);
 
   const handleTakeExam = (exam: ExamListItem) => {
+    localStorage.setItem('munyaka_selected_target_exam', JSON.stringify(exam));
     setTakingExam(exam);
     setExamAnswers({});
     setExamSubmitted(false);
