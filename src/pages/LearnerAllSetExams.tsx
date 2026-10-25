@@ -26,7 +26,6 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 import StudentAssessmentView from "@/components/assessments/StudentAssessmentView";
-import StudentAssessmentView from "@/components/assessments/StudentAssessmentView";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
