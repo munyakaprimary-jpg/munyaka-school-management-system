@@ -23,13 +23,13 @@ import {
   ChevronLeft,
   Users,
   BookOpen,
+  BookOpenCheck,
   Loader2,
   X,
   Gamepad2,
     BookMarked,
     Menu,
-    MessageSquare,
-    ClipboardList
+    MessageSquare
   } from "lucide-react";
 import BilingualMatch from "@/components/games/BilingualMatch";
 import MemoryMatch from "@/components/games/MemoryMatch";
@@ -598,7 +598,7 @@ const Dashboard = ({
   const navItems = [
     { id: 'overview' as const, label: 'Overview', icon: User },
     { id: 'inbox' as const, label: 'Announcements & Inbox', icon: MessageSquare },
-    { id: 'assessments' as const, label: 'Take Assessment', icon: ClipboardList },
+    { id: 'assessments' as const, label: 'All Set Exams', icon: BookOpenCheck },
     { id: 'attendance' as const, label: 'Attendance', icon: Calendar },
     { id: 'reports' as const, label: 'Reports', icon: FileText },
     { id: 'fees' as const, label: 'Fees', icon: Receipt },
