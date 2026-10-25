@@ -1034,23 +1034,25 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
             </select>
 
             {/* ── Exam Selector (cascaded by grade & stream) ─────────────────── */}
-            <div className="relative w-full max-w-xs">
-              <select
-                value={selectedExamId}
-                onChange={(e) => setSelectedExamId(e.target.value)}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-2xl shadow-sm text-xs font-bold text-gray-900 truncate focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer appearance-none pr-8"
-              >
-                <option value={ALL_EXAMS_VALUE}>All Exams</option>
-                {filteredExams.map((exam) => (
-                  <option key={exam.id} value={exam.id}>
-                    {exam.title || "KNEC SCHOOL BASED ASSESSMENT"} ({exam.subject} • {exam.category || exam.examType || "Assessment"})
-                  </option>
-                ))}
-              </select>
-              
-              {/* Custom Dropdown Arrow Chevron */}
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                <ChevronDown className="w-4 h-4"/>
+            <div className="w-full max-w-sm">
+              <div className="relative flex items-center w-full">
+                <select
+                  value={selectedExamId}
+                  onChange={(e) => setSelectedExamId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-2xl shadow-sm text-xs font-bold text-gray-900 truncate focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer appearance-none pr-8"
+                >
+                  <option value={ALL_EXAMS_VALUE}>All Exams</option>
+                  {filteredExams.map((exam) => (
+                    <option key={exam.id} value={exam.id}>
+                      {exam.title || "KNEC SCHOOL BASED ASSESSMENT"} ({exam.subject} • {exam.category || exam.examType || "Assessment"})
+                    </option>
+                  ))}
+                </select>
+                
+                {/* Chevron icon positioned natively inside */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                  <ChevronDown className="w-4 h-4"/>
+                </div>
               </div>
             </div>
 
