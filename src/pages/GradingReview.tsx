@@ -73,6 +73,31 @@ function loadAvailableAssessments(): Assessment[] {
   return result;
 }
 
+function getStudentDetails(studentId: string): { name: string; admissionNo: string } {
+  try {
+    const raw = localStorage.getItem("school_learners_data");
+    if (raw) {
+      const learners = JSON.parse(raw);
+      const student = learners.find(
+        (l: any) =>
+          l.id === studentId ||
+          l.admissionNumber === studentId ||
+          l.admNo === studentId
+      );
+      if (student) {
+        return {
+          name: student.name || student.fullName || studentId,
+          admissionNo: student.admissionNumber || student.admNo || studentId
+        };
+      }
+    }
+  } catch { /* ignore */ }
+  return {
+    name: studentId,
+    admissionNo: studentId
+  };
+}
+
 export default function GradingReview() {
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
@@ -397,41 +422,44 @@ export default function GradingReview() {
                 ) : (
                   <ScrollArea className="max-h-[500px]">
                     <div className="divide-y divide-slate-100">
-                      {filteredResults.map((r) => (
-                        <div key={r.id} className="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
-                          <div className="flex items-start gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center shrink-0">
-                              {r.studentName.charAt(0).toUpperCase()}
+                      {filteredResults.map((r) => {
+                        const studentDetails = getStudentDetails(r.studentId);
+                        return (
+                          <div key={r.id} className="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
+                            <div className="flex items-start gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center shrink-0">
+                                {studentDetails.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-bold text-slate-800 text-sm">{studentDetails.name}</p>
+                                <p className="text-xs text-slate-500">
+                                  Adm: {studentDetails.admissionNo} · {r.classId || "Class"} {r.stream ? `· ${r.stream}` : ""}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-bold text-slate-800 text-sm">{r.studentName}</p>
-                              <p className="text-xs text-slate-500">
-                                Adm: {r.studentId} · {r.classId || "Class"} {r.stream ? `· ${r.stream}` : ""}
-                              </p>
-                            </div>
-                          </div>
 
-                          <div className="flex items-center gap-4 ml-12 sm:ml-0">
-                            <div className="text-right">
-                              <p className="text-sm font-black text-slate-800">
-                                {r.totalScore} / {r.maxScore} <span className="text-indigo-600 font-bold">({r.percentage}%)</span>
-                              </p>
-                              <p className="text-[10px] text-slate-400 flex items-center justify-end gap-1 mt-0.5">
-                                <Clock className="w-3 h-3" />
-                                {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : "Saved"}
-                              </p>
+                            <div className="flex items-center gap-4 ml-12 sm:ml-0">
+                              <div className="text-right">
+                                <p className="text-sm font-black text-slate-800">
+                                  {r.totalScore} / {r.maxScore} <span className="text-indigo-600 font-bold">({r.percentage}%)</span>
+                                </p>
+                                <p className="text-[10px] text-slate-400 flex items-center justify-end gap-1 mt-0.5">
+                                  <Clock className="w-3 h-3" />
+                                  {r.submittedAt ? new Date(r.submittedAt).toLocaleDateString() : "Saved"}
+                                </p>
+                              </div>
+                              <Badge className={`font-bold text-xs px-2.5 py-1 rounded-lg border ${
+                                r.gradeLevel === "EE" ? "bg-emerald-100 text-emerald-800 border-emerald-300" :
+                                r.gradeLevel === "ME" ? "bg-blue-100 text-blue-800 border-blue-300" :
+                                r.gradeLevel === "AE" ? "bg-amber-100 text-amber-800 border-amber-300" :
+                                "bg-red-100 text-red-800 border-red-300"
+                              }`}>
+                                {r.gradeLevel}
+                              </Badge>
                             </div>
-                            <Badge className={`font-bold text-xs px-2.5 py-1 rounded-lg border ${
-                              r.gradeLevel === "EE" ? "bg-emerald-100 text-emerald-800 border-emerald-300" :
-                              r.gradeLevel === "ME" ? "bg-blue-100 text-blue-800 border-blue-300" :
-                              r.gradeLevel === "AE" ? "bg-amber-100 text-amber-800 border-amber-300" :
-                              "bg-red-100 text-red-800 border-red-300"
-                            }`}>
-                              {r.gradeLevel}
-                            </Badge>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </ScrollArea>
                 )}
