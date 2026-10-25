@@ -254,7 +254,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
-    { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     { icon: ClipboardList, label: 'All Set Exams', path: '/assessments/list', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
     // Digital Hub & ICT
