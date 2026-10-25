@@ -1599,8 +1599,15 @@ const LearnerAllSetExams: React.FC = () => {
           {/* Primary: Take Exam */}
           {exam.status !== "Closed" && (
             <Button
-              onClick={(e) => handleTakeExam(e, exam)}
-              className="flex-1 h-10 px-3 rounded-lg text-sm font-medium gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveExamModal({
+                  isOpen: true,
+                  exam: exam
+                });
+              }}
+              className="flex-1 h-10 px-3 rounded-lg text-sm font-medium gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer pointer-events-auto"
             >
               <PlayCircle size={15} />
               Take Exam
@@ -1689,8 +1696,15 @@ const LearnerAllSetExams: React.FC = () => {
                   <div className="flex items-center justify-end gap-1">
                     {exam.status !== "Closed" && (
                       <Button variant="ghost" size="icon"
-                        onClick={(e) => handleTakeExam(e, exam)}
-                        className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50" title="Take Exam">
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setActiveExamModal({
+                            isOpen: true,
+                            exam: exam
+                          });
+                        }}
+                        className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50 cursor-pointer pointer-events-auto" title="Take Exam">
                         <PlayCircle size={14} />
                       </Button>
                     )}
