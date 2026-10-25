@@ -1456,6 +1456,10 @@ const LearnerAllSetExams: React.FC = () => {
 
   // Direct assessment taking state
   const [takingExam, setTakingExam] = useState<ExamListItem | null>(null);
+  const [activeExamModal, setActiveExamModal] = useState<{
+    isOpen: boolean;
+    exam: any | null;
+  }>({ isOpen: false, exam: null });
   const [examAnswers, setExamAnswers] = useState<{ [key: number]: string }>({});
   const [examSubmitted, setExamSubmitted] = useState<boolean>(false);
   const [examScore, setExamScore] = useState<{ score: number; total: number } | null>(null);
