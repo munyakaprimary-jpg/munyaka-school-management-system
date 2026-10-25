@@ -1,39 +1,50 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, X, Download } from 'lucide-react';
 
 export const DocumentPreviewModal: React.FC<{ file: any; onClose: () => void }> = ({ file, onClose }) => {
-  
-  // Generate secure object URL from file data (base64, ArrayBuffer, or raw blob)
-  const objectUrl = useMemo(() => {
-    if (!file) return '';
-    if (file.url) return file.url; // if already a URL
+  const [previewUrl, setPreviewUrl] = useState<string>('');
 
+  useEffect(() => {
+    if (!file) return;
+
+    // If it's already a valid URL or data URI
+    if (file.url && file.url.startsWith('blob:')) {
+      setPreviewUrl(file.url);
+      return;
+    }
+
+    if (file.data && file.data.startsWith('data:')) {
+      setPreviewUrl(file.data);
+      return;
+    }
+
+    // If stored as a File object or raw data bytes, read it via FileReader
+    if (file.rawFile instanceof Blob || file instanceof Blob) {
+      const blobUrl = URL.createObjectURL(file.rawFile || file);
+      setPreviewUrl(blobUrl);
+      return;
+    }
+
+    // Fallback: convert stored base64 or string data into a safe PDF data URI
     try {
-      let rawData = file.data || file.content || '';
+      const base64Data = file.data || file.content || '';
+      const cleanBase64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
       
-      // If base64 string with header prefix
-      if (typeof rawData === 'string' && rawData.includes(',')) {
-        rawData = rawData.split(',')[1];
+      if (cleanBase64) {
+        const binaryString = window.atob(cleanBase64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
       }
-
-      if (typeof rawData !== 'string' || !rawData.trim()) {
-        return file.data || '';
-      }
-
-      const binaryString = atob(rawData);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      return URL.createObjectURL(blob);
-    } catch (err) {
-      console.error('Error generating blob URL for preview:', err);
-      return file.data || '';
+    } catch (e) {
+      console.error('Failed to parse document stream:', e);
     }
   }, [file]);
 
@@ -53,9 +64,9 @@ export const DocumentPreviewModal: React.FC<{ file: any; onClose: () => void }> 
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {objectUrl && (
+            {previewUrl && (
               <a
-                href={objectUrl}
+                href={previewUrl}
                 download={file?.name || 'document.pdf'}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors"
               >
@@ -69,18 +80,18 @@ export const DocumentPreviewModal: React.FC<{ file: any; onClose: () => void }> 
           </div>
         </div>
 
-        {/* PDF / Document Iframe Container */}
+        {/* PDF Viewer Iframe */}
         <div className="flex-1 bg-slate-100 dark:bg-slate-950 p-4 flex items-center justify-center overflow-hidden">
-          {objectUrl ? (
+          {previewUrl ? (
             <iframe
-              src={objectUrl}
+              src={previewUrl}
               title={file?.name || 'Document'}
               className="w-full h-full bg-white rounded-xl border border-gray-300 dark:border-slate-800 shadow-inner"
             />
           ) : (
             <div className="text-center space-y-3 p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800">
-              <FileText className="w-12 h-12 text-indigo-600 mx-auto"/>
-              <h4 className="font-bold text-gray-900 dark:text-white">Loading Document Preview...</h4>
+              <FileText className="w-12 h-12 text-indigo-600 mx-auto animate-pulse"/>
+              <h4 className="font-bold text-gray-900 dark:text-white">Loading Document Pages...</h4>
             </div>
           )}
         </div>
