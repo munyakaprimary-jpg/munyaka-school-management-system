@@ -251,7 +251,7 @@ function InboxSection({ student }: { student?: string }) {
   );
 }
 
-// ── Storage helpers ───────────────────────────────────────────────────────────
+import StudyCorner from './StudyCorner';
 
 const savePortalSession = (session: PortalSession) => {
   localStorage.setItem(PARENT_PORTAL_SESSION_KEY, JSON.stringify(session));
@@ -336,6 +336,34 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
     return id.trim().toLowerCase().replace(/[\s-]/g, '');
   };
 
+  const handleLearnerLogin = (inputIdentifier: string) => {
+    const cleanInput = inputIdentifier.trim().toLowerCase();
+    
+    // Retrieve registered learners from local storage
+    const registeredLearners = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
+
+    const matchedLearner = registeredLearners.find((learner: any) => {
+      const adm = (learner.admissionNumber || learner.admNo || '').trim().toLowerCase();
+      const upi = (learner.upi || learner.assessmentNumber || '').trim().toLowerCase();
+      const birthCert = (learner.birthCertNumber || learner.entryNumber || '').trim().toLowerCase();
+
+      return (
+        (adm && adm === cleanInput) ||
+        (upi && upi === cleanInput) ||
+        (birthCert && birthCert === cleanInput)
+      );
+    });
+
+    if (matchedLearner) {
+      // Save active session and proceed to portal
+      localStorage.setItem('active_learner_session', JSON.stringify(matchedLearner));
+      window.dispatchEvent(new Event('learner_logged_in'));
+      // Redirect or close modal to portal view
+    } else {
+      setError('No matching record found. Please verify your Admission Number or Assessment Number.');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -347,7 +375,7 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
 
     setIsSearching(true);
 
-    // Simulate async verification
+    // Run both standard student matching and active_learner_session handler
     setTimeout(() => {
       const students = getStudents();
       const rawInput = identifier.trim();
@@ -391,9 +419,53 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
           loggedInAt: new Date().toISOString(),
         };
         savePortalSession(session);
+        
+        // Also save active_learner_session for LearnerTakeAssessment integration
+        localStorage.setItem('active_learner_session', JSON.stringify({
+          fullName: matchedStudent.name,
+          admissionNumber: matchedStudent.admNo || (matchedStudent as any).admissionNo || '',
+          grade: matchedStudent.grade || '',
+          gradeLevel: matchedStudent.grade || ''
+        }));
+        window.dispatchEvent(new Event('learner_logged_in'));
+
         onLogin(session);
         showSuccess(`Welcome, ${matchedStudent.name}!`);
       } else {
+        // Fallback check against munyaka_learners directly
+        try {
+          const registeredLearners = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
+          const matchedLearner = registeredLearners.find((learner: any) => {
+            const adm = (learner.admissionNumber || learner.admNo || '').trim().toLowerCase();
+            const upi = (learner.upi || learner.assessmentNumber || '').trim().toLowerCase();
+            const birthCert = (learner.birthCertNumber || learner.entryNumber || '').trim().toLowerCase();
+            const cleanInput = rawInput.toLowerCase();
+
+            return (
+              (adm && adm === cleanInput) ||
+              (upi && upi === cleanInput) ||
+              (birthCert && birthCert === cleanInput)
+            );
+          });
+
+          if (matchedLearner) {
+            const session: PortalSession = {
+              studentId: matchedLearner.id || 'learner-' + Date.now(),
+              studentName: matchedLearner.fullName || matchedLearner.name || 'Learner',
+              admissionNo: matchedLearner.admissionNumber || matchedLearner.admNo || '',
+              grade: matchedLearner.gradeLevel || matchedLearner.grade || '',
+              stream: matchedLearner.stream || '',
+              loggedInAt: new Date().toISOString(),
+            };
+            savePortalSession(session);
+            localStorage.setItem('active_learner_session', JSON.stringify(matchedLearner));
+            window.dispatchEvent(new Event('learner_logged_in'));
+            onLogin(session);
+            showSuccess(`Welcome, ${session.studentName}!`);
+            return;
+          }
+        } catch {}
+
         setError('No matching record found. Please verify your Admission Number or Assessment Number.');
         setIsSearching(false);
       }
@@ -1071,6 +1143,13 @@ const Dashboard = ({
           </div>
         )}
 
+        {/* Take Assessment Tab */}
+        {activeTab === 'assessments' && (
+          <div className="space-y-6">
+            <LearnerTakeAssessment />
+          </div>
+        )}
+
         {/* Study Corner Tab */}
         {activeTab === 'study' && (
           <div className="space-y-6">
@@ -1081,7 +1160,7 @@ const Dashboard = ({
         {/* Take Assessment Tab */}
         {activeTab === 'assessments' && (
           <div className="space-y-6">
-            <LearnerTakeAssessment studentName={session.studentName} />
+            <LearnerTakeAssessment />
           </div>
         )}
 
