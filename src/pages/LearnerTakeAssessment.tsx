@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-export const LearnerTakeAssessment: React.FC = () => {
+export default function LearnerTakeAssessment() {
   const [assessments, setAssessments] = useState<any[]>([]);
   const [selectedExam, setSelectedExam] = useState<any | null>(null);
   const [answers, setAnswers] = useState<{ [key: number]: string }>({});
