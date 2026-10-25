@@ -38,7 +38,7 @@ import SpeedMath from "@/components/games/SpeedMath";
 import SudokuMini from "@/components/games/SudokuMini";
 import TargetMath from "@/components/games/TargetMath";
 import WordScramble from "@/components/games/WordScramble";
-import LearnerTakeAssessment from './LearnerTakeAssessment';
+import LearnerAllSetExams from './LearnerAllSetExams';
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
 import { getStudents, getPaymentRecords, readStorage, STORAGE_KEYS } from '@/utils/storage';
@@ -1143,26 +1143,19 @@ const Dashboard = ({
           </div>
         )}
 
-        {/* Take Assessment Tab */}
-        {activeTab === 'assessments' && (
-          <div className="space-y-6">
-            <LearnerTakeAssessment />
-          </div>
-        )}
-
-        {/* Study Corner Tab */}
-        {activeTab === 'study' && (
-          <div className="space-y-6">
-            <StudyCorner />
-          </div>
-        )}
-
-        {/* Take Assessment Tab */}
-        {activeTab === 'assessments' && (
-          <div className="space-y-6">
-            <LearnerTakeAssessment />
-          </div>
-        )}
+        {/* All Set Exams Tab */}
+                {activeTab === 'assessments' && (
+                  <div className="space-y-6">
+                    <LearnerAllSetExams />
+                  </div>
+                )}
+        
+                {/* Study Corner Tab */}
+                {activeTab === 'study' && (
+                  <div className="space-y-6">
+                    <StudyCorner />
+                  </div>
+                )}
 
         {/* Inbox / Announcements Tab */}
         {activeTab === 'inbox' && (
