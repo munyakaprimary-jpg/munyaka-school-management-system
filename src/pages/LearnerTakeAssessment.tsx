@@ -1,400 +1,202 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ClipboardList, CheckCircle2, Clock, Award, ArrowRight, Play, AlertCircle, RotateCcw } from "lucide-react";
-import { showSuccess, showError } from '@/utils/toast';
 
-interface Assessment {
-  id: string;
-  title: string;
-  subject: string;
-  grade: string;
-  durationMinutes: number;
-  questionsCount: number;
-  questions: {
-    id: string;
-    text: string;
-    options: string[];
-    correctAnswer: number;
-    points: number;
-  }[];
-}
+export const LearnerTakeAssessment: React.FC = () => {
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [selectedExam, setSelectedExam] = useState<any | null>(null);
+  const [answers, setAnswers] = useState<{ [key: number]: string }>({});
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [scoreResult, setScoreResult] = useState<{ score: number; total: number } | null>(null);
 
-const SAMPLE_ASSESSMENTS: Assessment[] = [
-  {
-    id: 'asm-1',
-    title: 'Grade 5 Mathematics - Term 1 End Assessment',
-    subject: 'Mathematics',
-    grade: 'Grade 5',
-    durationMinutes: 15,
-    questionsCount: 5,
-    questions: [
-      {
-        id: 'q1',
-        text: 'What is the place value of digit 7 in the number 478,321?',
-        options: ['Thousands', 'Ten Thousands', 'Hundreds', 'Millions'],
-        correctAnswer: 1,
-        points: 20
-      },
-      {
-        id: 'q2',
-        text: 'Evaluate: 456 + 289 - 145',
-        options: ['590', '600', '612', '585'],
-        correctAnswer: 1,
-        points: 20
-      },
-      {
-        id: 'q3',
-        text: 'What is 3/4 expressed as a percentage?',
-        options: ['25%', '50%', '75%', '100%'],
-        correctAnswer: 2,
-        points: 20
-      },
-      {
-        id: 'q4',
-        text: 'Calculate the perimeter of a square with side length 12 cm.',
-        options: ['24 cm', '48 cm', '144 cm', '36 cm'],
-        correctAnswer: 1,
-        points: 20
-      },
-      {
-        id: 'q5',
-        text: 'If a pen costs Ksh 45, how much will 6 such pens cost?',
-        options: ['Ksh 250', 'Ksh 270', 'Ksh 300', 'Ksh 240'],
-        correctAnswer: 1,
-        points: 20
-      }
-    ]
-  },
-  {
-    id: 'asm-2',
-    title: 'Integrated Science & Environment - CBC Quiz',
-    subject: 'Science',
-    grade: 'Grade 5',
-    durationMinutes: 10,
-    questionsCount: 4,
-    questions: [
-      {
-        id: 'sq1',
-        text: 'Which of the following is a non-flowering plant?',
-        options: ['Maize', 'Pine tree', 'Bean plant', 'Rose flower'],
-        correctAnswer: 1,
-        points: 25
-      },
-      {
-        id: 'sq2',
-        text: 'What gas do plants absorb from the atmosphere during photosynthesis?',
-        options: ['Oxygen', 'Carbon Dioxide', 'Nitrogen', 'Hydrogen'],
-        correctAnswer: 1,
-        points: 25
-      },
-      {
-        id: 'sq3',
-        text: 'Which part of the digestive system absorbs water and mineral salts?',
-        options: ['Stomach', 'Small intestine', 'Large intestine', 'Mouth'],
-        correctAnswer: 2,
-        points: 25
-      },
-      {
-        id: 'sq4',
-        text: 'Which of these is a renewable source of energy?',
-        options: ['Coal', 'Petroleum', 'Solar energy', 'Natural gas'],
-        correctAnswer: 2,
-        points: 25
-      }
-    ]
-  },
-  {
-    id: 'asm-3',
-    title: 'English Language & Grammar Mastery',
-    subject: 'English',
-    grade: 'Grade 5',
-    durationMinutes: 10,
-    questionsCount: 3,
-    questions: [
-      {
-        id: 'eq1',
-        text: 'Choose the correct plural form of "child":',
-        options: ['Childs', 'Children', 'Childes', 'Childrens'],
-        correctAnswer: 1,
-        points: 33
-      },
-      {
-        id: 'eq2',
-        text: 'Identify the adverb in the sentence: "The diligent learner wrote neatly."',
-        options: ['learner', 'wrote', 'diligent', 'neatly'],
-        correctAnswer: 3,
-        points: 33
-      },
-      {
-        id: 'eq3',
-        text: 'What is the past tense of "run"?',
-        options: ['ran', 'running', 'runs', 'runned'],
-        correctAnswer: 0,
-        points: 34
-      }
-    ]
-  }
-];
+  // Get current logged-in learner's grade (e.g. from session storage or active context)
+  const activeLearner = JSON.parse(localStorage.getItem('active_learner_session') || '{}');
+  const learnerGrade = activeLearner.gradeLevel || activeLearner.grade || 'Grade 6'; // Fallback to Grade 6 if needed
 
-export default function LearnerTakeAssessment({ studentName }: { studentName?: string }) {
-  const [assessments, setAssessments] = useState<Assessment[]>(SAMPLE_ASSESSMENTS);
-  const [activeAssessment, setActiveAssessment] = useState<Assessment | null>(null);
-  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [scoreResult, setScoreResult] = useState<{ score: number; total: number; percentage: number } | null>(null);
+  const loadAssessments = () => {
+    // Pull from the main assessment/exam creation bank storage key
+    const savedExams = JSON.parse(localStorage.getItem('munyaka_assessments') || localStorage.getItem('munyaka_exams_bank') || '[]');
 
-  // Load any created exams from localStorage if available
-  useEffect(() => {
-    try {
-      const savedExams = localStorage.getItem('munyaka_set_exams');
-      if (savedExams) {
-        const parsed = JSON.parse(savedExams);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Map to format if needed
-          const formatted = parsed.map((e: any, i: number) => ({
-            id: e.id || `custom-${i}`,
-            title: e.title || e.examName || 'Custom Assessment',
-            subject: e.subject || 'General',
-            grade: e.grade || 'Grade 5',
-            durationMinutes: 15,
-            questionsCount: e.questions?.length || 3,
-            questions: (e.questions || [
-              { id: 'q1', text: e.description || 'Sample Question', options: ['Option A', 'Option B', 'Option C', 'Option D'], correctAnswer: 0, points: 100 }
-            ]).map((q: any, qIdx: number) => ({
-              id: q.id || `q-${qIdx}`,
-              text: q.text || q.question || 'Sample Question',
-              options: q.options || ['A', 'B', 'C', 'D'],
-              correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
-              points: Math.round(100 / (e.questions?.length || 1))
-            }))
-          }));
-          setAssessments([...SAMPLE_ASSESSMENTS, ...formatted]);
+    // Filter assessments that match the learner's grade or are set to "All Grades" / "General"
+    const filtered = savedExams.filter((exam: any) => {
+      const targetGrade = (exam.grade || exam.targetGrade || '').trim().toLowerCase();
+      const currentGrade = learnerGrade.trim().toLowerCase();
+      return !targetGrade || targetGrade === 'all' || targetGrade === currentGrade || targetGrade.includes(currentGrade);
+    });
+
+    // If no exam in main bank, provide default sample assessment so the view isn't empty
+    if (filtered.length === 0) {
+      setAssessments([
+        {
+          id: 'default-exam-1',
+          title: 'CBC Term 1 Mathematics Assessment',
+          subject: 'Mathematics',
+          grade: learnerGrade,
+          questions: [
+            { questionText: 'What is 45 + 55?', options: ['90', '100', '110', '95'], correctAnswer: '100' },
+            { questionText: 'What is the place value of 7 in 742?', options: ['Hundreds', 'Tens', 'Ones', 'Thousands'], correctAnswer: 'Hundreds' }
+          ]
         }
-      }
-    } catch {}
-  }, []);
-
-  const handleStartAssessment = (asm: Assessment) => {
-    setActiveAssessment(asm);
-    setCurrentQuestionIdx(0);
-    setAnswers({});
-    setIsSubmitted(false);
-    setScoreResult(null);
+      ]);
+    } else {
+      setAssessments(filtered);
+    }
   };
 
-  const handleSelectOption = (questionId: string, optionIndex: number) => {
-    setAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
+  useEffect(() => {
+    loadAssessments();
+    window.addEventListener('storage', loadAssessments);
+    return () => window.removeEventListener('storage', loadAssessments);
+  }, [learnerGrade]);
+
+  const handleOptionSelect = (qIdx: number, option: string) => {
+    setAnswers(prev => ({ ...prev, [qIdx]: option }));
   };
 
-  const handleSubmitQuiz = () => {
-    if (!activeAssessment) return;
+  const handleSubmitAssessment = () => {
+    if (!selectedExam) return;
 
-    let earnedPoints = 0;
-    let totalPoints = 0;
-
-    activeAssessment.questions.forEach((q) => {
-      totalPoints += q.points;
-      if (answers[q.id] === q.correctAnswer) {
-        earnedPoints += q.points;
+    let correctScore = 0;
+    selectedExam.questions?.forEach((q: any, idx: number) => {
+      if (answers[idx] === q.correctAnswer || (q.options && typeof q.correctAnswer === 'number' && answers[idx] === q.options[q.correctAnswer])) {
+        correctScore++;
       }
     });
 
-    const percentage = Math.round((earnedPoints / (totalPoints || 1)) * 100);
-    setScoreResult({ score: earnedPoints, total: totalPoints, percentage });
-    setIsSubmitted(true);
-    showSuccess(`Assessment completed! Score: ${percentage}%`);
+    const resultRecord = {
+      examId: selectedExam.id,
+      title: selectedExam.title,
+      learnerName: activeLearner.fullName || 'Learner',
+      grade: learnerGrade,
+      score: correctScore,
+      total: selectedExam.questions?.length || 0,
+      submittedAt: new Date().toISOString()
+    };
 
-    // Save to student assessment records in storage
-    try {
-      const history = JSON.parse(localStorage.getItem('munyaka_assessment_submissions') || '[]');
-      history.unshift({
-        id: 'sub-' + Date.now(),
-        studentName: studentName || 'Learner',
-        assessmentTitle: activeAssessment.title,
-        subject: activeAssessment.subject,
-        score: percentage,
-        submittedAt: new Date().toISOString()
-      });
-      localStorage.setItem('munyaka_assessment_submissions', JSON.stringify(history));
-    } catch {}
+    // Save to completed records
+    const history = JSON.parse(localStorage.getItem('munyaka_completed_assessments') || '[]');
+    localStorage.setItem('munyaka_completed_assessments', JSON.stringify([resultRecord, ...history]));
+
+    setScoreResult({ score: correctScore, total: selectedExam.questions?.length || 0 });
+    setIsSubmitted(true);
   };
 
-  if (activeAssessment && !isSubmitted) {
-    const q = activeAssessment.questions[currentQuestionIdx];
-    return (
-      <div className="space-y-6 animate-in fade-in duration-300 max-w-4xl mx-auto">
-        <div className="bg-gradient-to-r from-indigo-600 via-purple-700 to-indigo-800 rounded-[2.5rem] p-6 md:p-8 text-white shadow-xl flex items-center justify-between">
-          <div>
-            <Badge className="bg-white/20 text-white border-transparent font-bold mb-2">{activeAssessment.subject} • {activeAssessment.grade}</Badge>
-            <h1 className="text-xl md:text-2xl font-black">{activeAssessment.title}</h1>
-          </div>
-          <Button
-            variant="outline"
-            className="rounded-2xl border-white/30 text-white bg-white/10 hover:bg-white/20 font-bold"
-            onClick={() => setActiveAssessment(null)}
-          >
-            Exit Assessment
-          </Button>
-        </div>
-
-        <Card className="rounded-[2.5rem] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl p-8">
-          <div className="flex items-center justify-between pb-6 mb-6 border-b border-slate-100 dark:border-slate-800 text-sm font-bold text-slate-500">
-            <span>Question {currentQuestionIdx + 1} of {activeAssessment.questions.length}</span>
-            <span className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-3 py-1 rounded-full">
-              <Clock size={14} /> Active Timed Quiz
-            </span>
-          </div>
-
-          <div className="space-y-6 mb-8">
-            <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white leading-snug">
-              {q.text}
-            </h3>
-
-            <div className="space-y-3">
-              {q.options.map((opt, optIdx) => {
-                const isSelected = answers[q.id] === optIdx;
-                return (
-                  <button
-                    key={optIdx}
-                    type="button"
-                    onClick={() => handleSelectOption(q.id, optIdx)}
-                    className={`w-full text-left p-4 rounded-2xl border-2 font-bold text-sm transition-all flex items-center gap-4 ${
-                      isSelected
-                        ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/50 text-indigo-900 dark:text-indigo-200 shadow-md'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200'
-                    }`}
-                  >
-                    <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                      {String.fromCharCode(65 + optIdx)}
-                    </span>
-                    <span>{opt}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-slate-800">
-            <Button
-              variant="outline"
-              disabled={currentQuestionIdx === 0}
-              onClick={() => setCurrentQuestionIdx(prev => Math.max(0, prev - 1))}
-              className="rounded-2xl font-bold px-6"
-            >
-              Previous
-            </Button>
-
-            {currentQuestionIdx < activeAssessment.questions.length - 1 ? (
-              <Button
-                onClick={() => setCurrentQuestionIdx(prev => prev + 1)}
-                className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 shadow-lg shadow-indigo-600/25 gap-2"
-              >
-                Next Question <ArrowRight size={16} />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSubmitQuiz}
-                className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black px-8 shadow-lg shadow-emerald-600/25 gap-2"
-              >
-                Submit Assessment <CheckCircle2 size={16} />
-              </Button>
-            )}
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  if (isSubmitted && scoreResult && activeAssessment) {
-    return (
-      <div className="space-y-6 animate-in fade-in duration-300 max-w-3xl mx-auto text-center">
-        <Card className="rounded-[2.5rem] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl p-10 space-y-6">
-          <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-            <Award size={40} />
-          </div>
-
-          <div>
-            <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-bold px-4 py-1 mb-2">Assessment Completed Successfully</Badge>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">{activeAssessment.title}</h1>
-            <p className="text-slate-500 text-sm mt-1">Great effort, {studentName || 'Learner'}!</p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 max-w-lg mx-auto">
-            <div>
-              <div className="text-xs font-bold uppercase text-slate-400">Total Score</div>
-              <div className="text-xl font-black text-slate-900 dark:text-white mt-1">{scoreResult.score} / {scoreResult.total}</div>
-            </div>
-            <div>
-              <div className="text-xs font-bold uppercase text-slate-400">Percentage</div>
-              <div className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-1">{scoreResult.percentage}%</div>
-            </div>
-            <div>
-              <div className="text-xs font-bold uppercase text-slate-400">Grade</div>
-              <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                {scoreResult.percentage >= 80 ? 'Exceeding' : scoreResult.percentage >= 60 ? 'Meeting' : 'Approaching'}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-center gap-4 pt-4">
-            <Button
-              onClick={() => setActiveAssessment(null)}
-              className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 shadow-lg shadow-indigo-600/25 gap-2"
-            >
-              <RotateCcw size={16} /> Return to Assessments List
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-700 to-indigo-800 rounded-[2.5rem] p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 backdrop-blur-md">
-            <ClipboardList size={14} />
-            CBC Learner Assessments
-          </div>
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight mb-2">Interactive Quiz & Assessment Center</h1>
-          <p className="text-indigo-100 text-sm max-w-xl">
-            Test your knowledge with teacher-assigned quizzes, formative assessments, and practice exams for {studentName || 'Learner'}.
+    <div className="p-6 max-w-4xl mx-auto space-y-6">
+      {/* Portal Header */}
+      <div className="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-lg flex justify-between items-center">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
+            {activeLearner.fullName || 'Learner Portal'} • {learnerGrade}
+          </span>
+          <h1 className="text-2xl font-bold mt-1">Take Assessment & Exams</h1>
+          <p className="text-indigo-200 text-sm mt-1">
+            Assessments created by teachers in the main portal, filtered for your grade level.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {assessments.map((asm) => (
-          <Card key={asm.id} className="rounded-[2rem] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-xl transition-all p-6 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Badge className="bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold">{asm.subject}</Badge>
-                <span className="text-xs font-bold text-slate-400">{asm.grade}</span>
-              </div>
-              <h3 className="font-black text-slate-900 dark:text-white text-lg leading-snug">{asm.title}</h3>
-              <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
-                <span className="flex items-center gap-1"><Clock size={14} /> {asm.durationMinutes} mins</span>
-                <span className="flex items-center gap-1"><ClipboardList size={14} /> {asm.questionsCount} Questions</span>
-              </div>
+      {selectedExam ? (
+        /* Taking Selected Assessment */
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-gray-200 dark:border-slate-800 shadow-sm space-y-6">
+          <div className="flex justify-between items-center border-b border-gray-100 dark:border-slate-800 pb-4">
+            <div>
+              <span className="px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 rounded-full">
+                {selectedExam.subject || 'CBC Assessment'}
+              </span>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{selectedExam.title}</h2>
             </div>
+            <button
+              onClick={() => { setSelectedExam(null); setIsSubmitted(false); setScoreResult(null); setAnswers({}); }}
+              className="px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg text-xs font-bold transition-colors"
+            >
+              Back to List
+            </button>
+          </div>
 
-            <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800">
-              <Button
-                onClick={() => handleStartAssessment(asm)}
-                className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-600/20 gap-2"
+          {isSubmitted ? (
+            <div className="py-12 text-center space-y-4">
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+                ✓
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Assessment Submitted!</h3>
+              <p className="text-gray-600 dark:text-slate-300 text-base">
+                Your score: <strong className="text-indigo-600 dark:text-indigo-400">{scoreResult?.score}</strong> / <strong className="text-gray-900 dark:text-white">{scoreResult?.total}</strong>
+              </p>
+              <button
+                onClick={() => { setSelectedExam(null); setIsSubmitted(false); setScoreResult(null); setAnswers({}); }}
+                className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-sm"
               >
-                <Play size={16} /> Take Assessment Now
-              </Button>
+                Return to Assessments
+              </button>
             </div>
-          </Card>
-        ))}
-      </div>
+          ) : (
+            <div className="space-y-6">
+              {selectedExam.questions?.map((q: any, qIdx: number) => (
+                <div key={qIdx} className="p-4 bg-gray-50 dark:bg-slate-800/50 rounded-xl border border-gray-100 dark:border-slate-800 space-y-3">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                    {qIdx + 1}. {q.questionText || q.text}
+                  </p>
+                  <div className="space-y-2">
+                    {q.options?.map((opt: string, optIdx: number) => (
+                      <label key={optIdx} className="flex items-center gap-3 p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30">
+                        <input
+                          type="radio"
+                          name={`question-${qIdx}`}
+                          checked={answers[qIdx] === opt}
+                          onChange={() => handleOptionSelect(qIdx, opt)}
+                          className="text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-slate-300">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <button
+                onClick={handleSubmitAssessment}
+                className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-md hover:bg-indigo-700 transition-colors"
+              >
+                Submit Assessment
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Filtered List of Assessments */
+        <div className="space-y-4">
+          {assessments.length === 0 ? (
+            <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 space-y-3">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-slate-800 text-gray-400 rounded-full flex items-center justify-center mx-auto text-xl">
+                📄
+              </div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">No Assessment Available for {learnerGrade}</h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400 max-w-sm mx-auto">
+                The requested assessment could not be found, or no assessment has been created yet for your grade level in the main portal.
+              </p>
+            </div>
+          ) : (
+            assessments.map((exam) => (
+              <div key={exam.id || Math.random()} className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="px-2.5 py-0.5 text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 rounded-full">
+                    {exam.subject || 'Assessment'} • {exam.grade || learnerGrade}
+                  </span>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">{exam.title}</h3>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">{exam.questions?.length || 0} Questions</p>
+                </div>
+                <button
+                  onClick={() => setSelectedExam(exam)}
+                  className="px-4 py-2 bg-indigo-600 text-white font-bold text-sm rounded-xl hover:bg-indigo-700 shadow-sm transition-colors"
+                >
+                  Take Assessment
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
-}
+};
