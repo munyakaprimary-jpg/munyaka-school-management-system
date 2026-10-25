@@ -1046,7 +1046,7 @@ const Dashboard = ({
                       <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">1</span>
                     </button>
                   </div>
-                </CardCard>
+                </Card>
               </div>
             </div>
           </div>
