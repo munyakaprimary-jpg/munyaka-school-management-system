@@ -1024,7 +1024,7 @@ const Dashboard = ({
                     <MessageSquare size={16} className="mr-2" />
                     New Message
                   </Button>
-                </CardCard>
+                </Card>
 
                 <Card className="rounded-2xl border-0 shadow-sm p-6">
                   <h4 className="font-black text-slate-800 text-base mb-3">Quick Filters</h4>
