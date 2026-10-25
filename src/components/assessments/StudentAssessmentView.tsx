@@ -126,7 +126,15 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   // Cleans up the local session state and routes back to the exams listing.
   // When `onBackToExams` is provided the parent owns navigation; otherwise we
   // fall back to browser-history back.
-  const handleBackToExams = useCallback(() => {
+  const handleBackToExams = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    try {
+      localStorage.removeItem("munyaka_selected_target_exam");
+    } catch { /* ignore */ }
+
     if (onBackToExams) {
       onBackToExams();
     } else {
@@ -541,7 +549,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         assessmentQuestionCount={assessment.questions.length}
         assessmentDuration={assessment.duration}
         onBeginExam={handleBeginExam}
-        onClose={handleBackToExams}
+        onClose={(e?: any) => handleBackToExams(e)}
       />
     );
   }
