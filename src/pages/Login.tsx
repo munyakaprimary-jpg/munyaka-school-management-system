@@ -206,6 +206,49 @@ const Login: React.FC = () => {
   // ── Forgot password modal ───────────────────────────────────────────────
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
+  // Student / Parent Portal login state & handler
+  const [studentPortalInput, setStudentPortalInput] = useState("");
+  const [studentLoginError, setStudentLoginError] = useState<string | null>(null);
+
+  const handleStudentPortalLogin = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanInput = studentPortalInput.trim().toLowerCase();
+    if (!cleanInput) {
+      setStudentLoginError("Please enter an Admission Number or Assessment Number.");
+      return;
+    }
+
+    try {
+      const registeredStudents = JSON.parse(localStorage.getItem('munyaka_students') || localStorage.getItem('school_learners_data') || '[]');
+      const matchedStudent = registeredStudents.find((student: any) => {
+        const adm = (student.admissionNumber || student.admissionNo || student.admNo || '').trim().toLowerCase();
+        const assess = (student.assessmentNumber || student.assessmentNo || student.assessNo || '').trim().toLowerCase();
+        const id = (student.id || '').trim().toLowerCase();
+
+        return (adm && adm === cleanInput) ||
+               (assess && assess === cleanInput) ||
+               (id && id === cleanInput);
+      });
+
+      if (matchedStudent) {
+        localStorage.setItem('active_learner', JSON.stringify(matchedStudent));
+        setUser({
+          id: matchedStudent.id || matchedStudent.admissionNumber || 'learner-1',
+          name: matchedStudent.name || matchedStudent.fullName || 'Student',
+          email: matchedStudent.email || `${matchedStudent.admissionNumber || 'student'}@munyaka.sc.ke`,
+          role: 'student'
+        });
+        setStudentLoginError(null);
+        navigate('/student/portal');
+      } else {
+        setStudentLoginError("No matching record found. Please verify your Admission Number or Assessment Number.");
+      }
+    } catch (err) {
+      console.error("[Login] Student login verification error:", err);
+      setStudentLoginError("An error occurred during verification. Please try again.");
+    }
+  };
+
   // ── Redirect already-authenticated users straight to the dashboard (Once only) ─────────
     useEffect(() => {
       const isAuth = localStorage.getItem('isAuthenticated') === 'true';
