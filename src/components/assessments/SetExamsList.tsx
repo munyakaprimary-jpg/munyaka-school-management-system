@@ -1364,7 +1364,8 @@ const SetExamsList: React.FC = () => {
 
   const handleTakeExamClick = (exam: any) => {
     localStorage.setItem('munyaka_selected_target_exam', JSON.stringify(exam));
-    navigate(`/assessments/student?id=${exam.id}`);
+    window.location.hash = '#/assessments/student';
+    window.dispatchEvent(new Event('hashchange'));
   };
 
   // Returns to the Assessments parent menu and resets in-page nested state.
