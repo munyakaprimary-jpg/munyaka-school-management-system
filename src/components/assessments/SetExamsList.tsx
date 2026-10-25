@@ -1364,7 +1364,7 @@ const SetExamsList: React.FC = () => {
 
   const handleTakeExamClick = (exam: any) => {
     localStorage.setItem('munyaka_selected_target_exam', JSON.stringify(exam));
-    window.location.hash = '#/assessments/student';
+    window.location.hash = `#/assessments/student?id=${encodeURIComponent(exam.id)}`;
     window.dispatchEvent(new Event('hashchange'));
   };
 
