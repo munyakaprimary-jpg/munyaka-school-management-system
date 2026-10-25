@@ -1464,11 +1464,6 @@ const LearnerAllSetExams: React.FC = () => {
   const [examSubmitted, setExamSubmitted] = useState<boolean>(false);
   const [examScore, setExamScore] = useState<{ score: number; total: number } | null>(null);
 
-  const [activeExamModal, setActiveExamModal] = useState<{
-    isOpen: boolean;
-    exam: any | null;
-  }>({ isOpen: false, exam: null });
-
   const handleTakeExam = (e: React.MouseEvent, exam: ExamListItem) => {
     e.preventDefault();
     e.stopPropagation();
