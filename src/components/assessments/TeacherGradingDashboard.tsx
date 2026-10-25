@@ -1034,30 +1034,23 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
             </select>
 
             {/* ── Exam Selector (cascaded by grade & stream) ─────────────────── */}
-            <div className="relative w-full max-w-sm">
-              <div className="flex items-center justify-between w-full px-4 py-2 bg-white border border-gray-200 rounded-2xl shadow-sm cursor-pointer overflow-hidden relative">
-                <div className="flex flex-col truncate pr-2 w-full">
-                  <span className="text-xs font-bold text-gray-900 truncate">
-                    {selectedExamId === ALL_EXAMS_VALUE || !selectedExamId ? "All Exams" : (selectedExam?.title || "Select Assessment")}
-                  </span>
-                  <span className="text-[11px] text-gray-500 truncate">
-                    {selectedExamId === ALL_EXAMS_VALUE || !selectedExamId ? "Choose an exam to grade" : `${selectedExam?.subject || ''} • ${selectedExam?.category || selectedExam?.examType || 'Assessment'}`}
-                  </span>
-                </div>
-                <select
-                  value={selectedExamId}
-                  onChange={(e) => setSelectedExamId(e.target.value)}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  aria-label="Select exam"
-                >
-                  <option value={ALL_EXAMS_VALUE}>All Exams</option>
-                  {filteredExams.map((exam) => (
-                    <option key={exam.id} value={exam.id}>
-                      {exam.title || "KNEC SCHOOL BASED ASSESSMENT"} — {exam.subject} • {exam.category || exam.examType || "Assessment"}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-gray-400 shrink-0 ml-2" />
+            <div className="relative w-full max-w-xs">
+              <select
+                value={selectedExamId}
+                onChange={(e) => setSelectedExamId(e.target.value)}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-2xl shadow-sm text-xs font-bold text-gray-900 truncate focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer appearance-none pr-8"
+              >
+                <option value={ALL_EXAMS_VALUE}>All Exams</option>
+                {filteredExams.map((exam) => (
+                  <option key={exam.id} value={exam.id}>
+                    {exam.title || "KNEC SCHOOL BASED ASSESSMENT"} ({exam.subject} • {exam.category || exam.examType || "Assessment"})
+                  </option>
+                ))}
+              </select>
+              
+              {/* Custom Dropdown Arrow Chevron */}
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                <ChevronDown className="w-4 h-4"/>
               </div>
             </div>
 
