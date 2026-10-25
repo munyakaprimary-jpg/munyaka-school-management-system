@@ -9,38 +9,20 @@ export default function LearnerTakeAssessment() {
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [scoreResult, setScoreResult] = useState<{ score: number; total: number } | null>(null);
 
-  // Get current logged-in learner's grade (e.g. from session storage or active context)
   const activeLearner = JSON.parse(localStorage.getItem('active_learner_session') || '{}');
-  const learnerGrade = activeLearner.gradeLevel || activeLearner.grade || 'Grade 6'; // Fallback to Grade 6 if needed
+  const learnerGrade = activeLearner.gradeLevel || activeLearner.grade || 'Grade 6';
 
   const loadAssessments = () => {
-    // Pull from the main assessment/exam creation bank storage key
+    // Pull strictly from real created exam bank storage (NO mock fallbacks)
     const savedExams = JSON.parse(localStorage.getItem('munyaka_assessments') || localStorage.getItem('munyaka_exams_bank') || '[]');
 
-    // Filter assessments that match the learner's grade or are set to "All Grades" / "General"
     const filtered = savedExams.filter((exam: any) => {
       const targetGrade = (exam.grade || exam.targetGrade || '').trim().toLowerCase();
       const currentGrade = learnerGrade.trim().toLowerCase();
       return !targetGrade || targetGrade === 'all' || targetGrade === currentGrade || targetGrade.includes(currentGrade);
     });
 
-    // If no exam in main bank, provide default sample assessment so the view isn't empty
-    if (filtered.length === 0) {
-      setAssessments([
-        {
-          id: 'default-exam-1',
-          title: 'CBC Term 1 Mathematics Assessment',
-          subject: 'Mathematics',
-          grade: learnerGrade,
-          questions: [
-            { questionText: 'What is 45 + 55?', options: ['90', '100', '110', '95'], correctAnswer: '100' },
-            { questionText: 'What is the place value of 7 in 742?', options: ['Hundreds', 'Tens', 'Ones', 'Thousands'], correctAnswer: 'Hundreds' }
-          ]
-        }
-      ]);
-    } else {
-      setAssessments(filtered);
-    }
+    setAssessments(filtered);
   };
 
   useEffect(() => {
@@ -73,7 +55,6 @@ export default function LearnerTakeAssessment() {
       submittedAt: new Date().toISOString()
     };
 
-    // Save to completed records
     const history = JSON.parse(localStorage.getItem('munyaka_completed_assessments') || '[]');
     localStorage.setItem('munyaka_completed_assessments', JSON.stringify([resultRecord, ...history]));
 
@@ -84,20 +65,17 @@ export default function LearnerTakeAssessment() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       {/* Portal Header */}
-      <div className="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-lg flex justify-between items-center">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
-            {activeLearner.fullName || 'Learner Portal'} • {learnerGrade}
-          </span>
-          <h1 className="text-2xl font-bold mt-1">Take Assessment & Exams</h1>
-          <p className="text-indigo-200 text-sm mt-1">
-            Assessments created by teachers in the main portal, filtered for your grade level.
-          </p>
-        </div>
+      <div className="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
+        <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
+          {activeLearner.fullName || 'Learner Portal'} • {learnerGrade}
+        </span>
+        <h1 className="text-2xl font-bold mt-1">Take Assessment & Exams</h1>
+        <p className="text-indigo-200 text-sm mt-1">
+          Complete exams assigned by your teachers.
+        </p>
       </div>
 
       {selectedExam ? (
-        /* Taking Selected Assessment */
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-gray-200 dark:border-slate-800 shadow-sm space-y-6">
           <div className="flex justify-between items-center border-b border-gray-100 dark:border-slate-800 pb-4">
             <div>
@@ -164,19 +142,9 @@ export default function LearnerTakeAssessment() {
           )}
         </div>
       ) : (
-        /* Filtered List of Assessments */
+        /* Render strictly real exams, or display NOTHING if empty */
         <div className="space-y-4">
-          {assessments.length === 0 ? (
-            <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 space-y-3">
-              <div className="w-12 h-12 bg-gray-100 dark:bg-slate-800 text-gray-400 rounded-full flex items-center justify-center mx-auto text-xl">
-                📄
-              </div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-white">No Assessment Available for {learnerGrade}</h3>
-              <p className="text-xs text-gray-500 dark:text-slate-400 max-w-sm mx-auto">
-                The requested assessment could not be found, or no assessment has been created yet for your grade level in the main portal.
-              </p>
-            </div>
-          ) : (
+          {assessments.length === 0 ? null : (
             assessments.map((exam) => (
               <div key={exam.id || Math.random()} className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
                 <div className="space-y-1">
@@ -199,4 +167,4 @@ export default function LearnerTakeAssessment() {
       )}
     </div>
   );
-};
+}
