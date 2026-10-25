@@ -28,7 +28,8 @@ import {
   Gamepad2,
     BookMarked,
     Menu,
-    MessageSquare
+    MessageSquare,
+    ClipboardList
   } from "lucide-react";
 import BilingualMatch from "@/components/games/BilingualMatch";
 import MemoryMatch from "@/components/games/MemoryMatch";
@@ -37,7 +38,7 @@ import SpeedMath from "@/components/games/SpeedMath";
 import SudokuMini from "@/components/games/SudokuMini";
 import TargetMath from "@/components/games/TargetMath";
 import WordScramble from "@/components/games/WordScramble";
-import StudyCorner from './StudyCorner';
+import LearnerTakeAssessment from './LearnerTakeAssessment';
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
 import { getStudents, getPaymentRecords, readStorage, STORAGE_KEYS } from '@/utils/storage';
@@ -496,7 +497,7 @@ const Dashboard = ({
   onLogout: () => void;
 }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'inbox' | 'attendance' | 'reports' | 'fees' | 'games' | 'study'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'inbox' | 'attendance' | 'reports' | 'fees' | 'games' | 'study' | 'assessments'>('overview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const attendance = useMemo(() => getAttendanceForStudent(session.studentId), [session.studentId]);
@@ -525,6 +526,7 @@ const Dashboard = ({
   const navItems = [
     { id: 'overview' as const, label: 'Overview', icon: User },
     { id: 'inbox' as const, label: 'Announcements & Inbox', icon: MessageSquare },
+    { id: 'assessments' as const, label: 'Take Assessment', icon: ClipboardList },
     { id: 'attendance' as const, label: 'Attendance', icon: Calendar },
     { id: 'reports' as const, label: 'Reports', icon: FileText },
     { id: 'fees' as const, label: 'Fees', icon: Receipt },
@@ -1073,6 +1075,13 @@ const Dashboard = ({
         {activeTab === 'study' && (
           <div className="space-y-6">
             <StudyCorner />
+          </div>
+        )}
+
+        {/* Take Assessment Tab */}
+        {activeTab === 'assessments' && (
+          <div className="space-y-6">
+            <LearnerTakeAssessment studentName={session.studentName} />
           </div>
         )}
 
