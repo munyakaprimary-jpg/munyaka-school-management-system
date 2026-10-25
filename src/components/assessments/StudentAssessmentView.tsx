@@ -127,11 +127,6 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   // When `onBackToExams` is provided the parent owns navigation; otherwise we
   // fall back to browser-history back.
   const handleBackToExams = useCallback(() => {
-    // Clear the current student session so the next launch starts fresh
-    try {
-      localStorage.removeItem("current_student_session");
-    } catch { /* ignore */ }
-
     if (onBackToExams) {
       onBackToExams();
     } else {
