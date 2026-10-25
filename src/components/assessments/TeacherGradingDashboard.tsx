@@ -985,27 +985,24 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20">
       {/* Page Header */}
       <header className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
-              <Award className="w-5 h-5 text-white" />
+            <div className="p-3 bg-purple-100 text-purple-600 rounded-2xl">
+              <Award className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-800">Teacher Grading Dashboard</h1>
-              <p className="text-sm text-slate-500">
-                Auto-score MCQs · Grade structured responses · Export marks
-              </p>
+              <h1 className="text-xl font-bold text-slate-900">Grading & Marks</h1>
+              <p className="text-xs text-slate-500">Auto-score MCQs • Grade structured assessments</p>
             </div>
           </div>
 
-          <div className="sm:ml-auto flex flex-wrap items-center gap-3">
-            {/* ── Grade Selector (Locked for teachers) ─────────────────────────────────── */}
+          <div className="w-full md:w-auto min-w-[280px]">
             <Select
               value={selectedGrade}
               onValueChange={(val) => isAdmin && setSelectedGrade(val)}
               disabled={!isAdmin}
             >
-              <SelectTrigger className={`w-44 rounded-xl border-slate-200 font-medium ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : 'bg-slate-50'}`}>
+              <SelectTrigger className={`w-full md:w-72 rounded-xl border-slate-200 font-medium ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : 'bg-slate-50'}`}>
                 <SelectValue placeholder="All Grades" />
               </SelectTrigger>
               <SelectContent>
