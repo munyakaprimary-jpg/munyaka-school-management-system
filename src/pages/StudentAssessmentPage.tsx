@@ -185,7 +185,10 @@ const StudentAssessmentPage: React.FC = () => {
       studentId={studentId}
       studentName={studentName}
       skipGate={false}
-      onBackToExams={() => (window.location.href = "/assessments/list")}
+      onBackToExams={() => {
+        window.location.hash = "#/assessments/list";
+        window.dispatchEvent(new Event("hashchange"));
+      }}
     />
   );
 };
