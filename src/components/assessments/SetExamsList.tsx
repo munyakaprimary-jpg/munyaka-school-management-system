@@ -1691,7 +1691,10 @@ const SetExamsList: React.FC = () => {
             </div>
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <StudentAssessmentView
-                assessment={activeAssessmentQuiz}
+                assessment={{
+                  ...activeAssessmentQuiz,
+                  questions: activeAssessmentQuiz.questions || (activeAssessmentQuiz as any).questionBank || [],
+                }}
                 studentId={user?.id || user?.email || "teacher_admin_eval"}
                 studentName={user?.name || "Teacher / Admin Evaluator"}
                 skipGate={true}

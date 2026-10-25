@@ -49,6 +49,7 @@ const TIMER_TICK_MS = 1000;
 function sanitizeQuestionsForAttempt(
   questions: Question[]
 ): Question[] {
+  if (!Array.isArray(questions)) return [];
   return questions.map((q) => {
     const sanitized: Question = { ...q };
     delete sanitized.correctOptionId;
