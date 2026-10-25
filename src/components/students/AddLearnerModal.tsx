@@ -26,6 +26,10 @@ export default function AddLearnerModal({
   const [fullName, setFullName] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [assessmentNumber, setAssessmentNumber] = useState('');
+  const [idType, setIdType] = useState<'assessment' | 'birthCert'>('assessment');
+  const [idValue, setIdValue] = useState('');
+  const [idType, setIdType] = useState<'assessment' | 'birthCert'>('assessment');
+  const [idValue, setIdValue] = useState('');
   const [gradeLevel, setGradeLevel] = useState('Grade 6');
   const [stream, setStream] = useState('BLUE');
   const [gender, setGender] = useState('Female');
@@ -38,6 +42,26 @@ export default function AddLearnerModal({
     e.preventDefault();
     if (!fullName.trim()) {
       showError("Please enter full name.");
+      return;
+    }
+
+    const cleanValue = idValue.trim().toUpperCase();
+    if (!cleanValue) {
+      showError(`Please enter a valid ${idType === 'assessment' ? 'Assessment Number' : 'Birth Certificate Number'}.`);
+      return;
+    }
+
+    // Scan Local Storage for Existing Duplicates
+    const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || '[]');
+    const duplicateFound = existingLearners.find((learner: any) => {
+      const existingId = (learner.idValue || learner.assessmentNumber || learner.assessmentNo || learner.birthCertificateNo || learner.birthCertNo || '').trim().toUpperCase();
+      return existingId === cleanValue && cleanValue !== '';
+    });
+
+    if (duplicateFound) {
+      showError(
+        `DUPLICATE REGISTRATION BLOCKED:\n\nA learner named "${duplicateFound.fullName || duplicateFound.name}" (${duplicateFound.gradeLevel || duplicateFound.grade || 'N/A'}) is already registered with this ${idType === 'assessment' ? 'Assessment' : 'Birth Certificate'} number (${cleanValue}).`
+      );
       return;
     }
 
@@ -62,8 +86,11 @@ export default function AddLearnerModal({
         admissionNumber: genAdm,
         admissionNo: genAdm,
         admNo: genAdm,
-        assessmentNumber: assessmentNumber.trim(),
-        assessmentNo: assessmentNumber.trim(),
+        idType: idType,
+        idValue: cleanValue,
+        assessmentNumber: idType === 'assessment' ? cleanValue : '',
+        assessmentNo: idType === 'assessment' ? cleanValue : '',
+        birthCertificateNo: idType === 'birthCert' ? cleanValue : '',
         gradeLevel: gradeLevel,
         grade: gradeLevel,
         class: gradeLevel,
@@ -136,13 +163,30 @@ export default function AddLearnerModal({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assessment No</Label>
-            <Input
-              value={assessmentNumber}
-              onChange={(e) => setAssessmentNumber(e.target.value)}
-              placeholder="e.g. CBC-1092"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-            />
+            <label className="block text-xs font-black uppercase text-slate-400 tracking-widest">
+              IDENTIFIER TYPE & NUMBER <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-2">
+              <select
+                value={idType}
+                onChange={(e) => setIdType(e.target.value as 'assessment' | 'birthCert')}
+                className="px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="assessment">Assessment No (UPI)</option>
+                <option value="birthCert">Birth Certificate No</option>
+              </select>
+              <input
+                type="text"
+                required
+                value={idValue}
+                onChange={(e) => setIdValue(e.target.value)}
+                placeholder={idType === 'assessment' ? 'e.g. ASS-827361' : 'e.g. BC-10928374'}
+                className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <p className="text-[10px] text-slate-500">
+              * Mandatory field used to verify learner identity and prevent duplicate registration.
+            </p>
           </div>
         </div>
 

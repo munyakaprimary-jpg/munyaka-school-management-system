@@ -228,6 +228,8 @@ export default function Students() {
   const [fullName, setFullName] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [assessmentNumber, setAssessmentNumber] = useState('');
+  const [idType, setIdType] = useState<'assessment' | 'birthCert'>('assessment');
+  const [idValue, setIdValue] = useState('');
   const [grade, setGrade] = useState('Grade 6');
   const [stream, setStream] = useState('BLUE');
   const [gender, setGender] = useState('Female');
@@ -297,6 +299,7 @@ export default function Students() {
     setFullName('');
     setAdmissionNumber('');
     setAssessmentNumber('');
+    setIdValue('');
     setGrade('Grade 6');
     setStream('BLUE');
     setGender('Female');
@@ -449,7 +452,8 @@ export default function Students() {
     setEditingId(student.id || student.admissionNumber);
     setFullName(student.name || student.fullName || '');
     setAdmissionNumber(student.admissionNumber || student.admNo || '');
-    setAssessmentNumber(student.assessmentNo || student.assessmentNumber || '');
+    setIdType(student.idType || (student.birthCertificateNo || student.birthCertNo ? 'birthCert' : 'assessment'));
+    setIdValue(student.idValue || student.assessmentNumber || student.assessmentNo || student.birthCertificateNo || student.birthCertNo || '');
     setGrade(student.grade || student.class || 'Grade 6');
     setStream(student.stream || 'BLUE');
     setGender(student.gender || 'Female');
@@ -466,6 +470,29 @@ export default function Students() {
       return;
     }
 
+    const cleanValue = idValue.trim().toUpperCase();
+    if (!cleanValue) {
+      showError(`Please enter a valid ${idType === 'assessment' ? 'Assessment Number' : 'Birth Certificate Number'}.`);
+      setIsSaving(false);
+      return;
+    }
+
+    if (!editingId) {
+      const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || '[]');
+      const duplicateFound = existingLearners.find((learner: any) => {
+        const existingId = (learner.idValue || learner.assessmentNumber || learner.assessmentNo || learner.birthCertificateNo || learner.birthCertNo || '').trim().toUpperCase();
+        return existingId === cleanValue && cleanValue !== '';
+      });
+
+      if (duplicateFound) {
+        showError(
+          `DUPLICATE REGISTRATION BLOCKED:\n\nA learner named "${duplicateFound.fullName || duplicateFound.name}" (${duplicateFound.gradeLevel || duplicateFound.grade || 'N/A'}) is already registered with this ${idType === 'assessment' ? 'Assessment' : 'Birth Certificate'} number (${cleanValue}).`
+        );
+        setIsSaving(false);
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       const targetId = editingId || generateLearnerId();
@@ -475,7 +502,11 @@ export default function Students() {
         fullName: fullName.trim(),
         admissionNumber: admissionNumber || generateAdmissionNumber(grade, students),
         admNo: admissionNumber || generateAdmissionNumber(grade, students),
-        assessmentNo: assessmentNumber.trim(),
+        idType: idType,
+        idValue: cleanValue,
+        assessmentNumber: idType === 'assessment' ? cleanValue : '',
+        assessmentNo: idType === 'assessment' ? cleanValue : '',
+        birthCertificateNo: idType === 'birthCert' ? cleanValue : '',
         dateOfBirth: dateOfBirth,
         dob: dateOfBirth,
         birthDate: dateOfBirth,
@@ -490,16 +521,6 @@ export default function Students() {
         phone: phoneNumber.trim(),
         updatedAt: new Date().toISOString()
       };
-
-      if (!editingId) {
-        const existing = CentralDataService.getLearners() || [];
-        const duplicate = findExistingLearner(existing, studentData);
-        if (duplicate) {
-          showError("A learner with this ID or admission number already exists in the registry.");
-          setIsSaving(false);
-          return;
-        }
-      }
 
       // Try saving to Firestore if available
       try {
@@ -992,13 +1013,30 @@ export default function Students() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-700 uppercase">Assessment Number</Label>
-              <Input
-                value={assessmentNumber}
-                onChange={(e) => setAssessmentNumber(e.target.value)}
-                placeholder="e.g. ASS-827361"
-                className="rounded-xl h-12 border-slate-200 font-mono text-xs"
-              />
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                IDENTIFIER TYPE & NUMBER <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={idType}
+                  onChange={(e) => setIdType(e.target.value as 'assessment' | 'birthCert')}
+                  className="px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="assessment">Assessment No (UPI)</option>
+                  <option value="birthCert">Birth Certificate No</option>
+                </select>
+                <input
+                  type="text"
+                  required
+                  value={idValue}
+                  onChange={(e) => setIdValue(e.target.value)}
+                  placeholder={idType === 'assessment' ? 'e.g. ASS-827361' : 'e.g. BC-10928374'}
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 font-bold font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500">
+                * Mandatory field used to verify learner identity and prevent duplicate registration.
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
