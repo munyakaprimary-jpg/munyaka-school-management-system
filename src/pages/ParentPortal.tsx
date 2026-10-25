@@ -91,6 +91,165 @@ interface AssessmentScore {
   date?: string;
 }
 
+// ── Inbox Component listening to munyaka_teacher_messages & munyaka_school_communications ──
+function InboxSection({ student }: { student?: string }) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [filter, setFilter] = useState<'all' | 'announcements' | 'homework' | 'fees'>('all');
+
+  const loadMessages = () => {
+    try {
+      const teacherMsgs = JSON.parse(localStorage.getItem('munyaka_teacher_messages') || '[]');
+      const schoolComms = JSON.parse(localStorage.getItem('munyaka_school_communications') || '[]');
+
+      // Normalize both into standard format
+      const normalizedTeacher = teacherMsgs.map((m: any) => ({
+        id: m.id || `T-${Math.random()}`,
+        title: m.title || 'Untitled',
+        content: m.content || '',
+        category: m.category || 'General Announcement',
+        targetGrade: m.targetGrade || 'ALL',
+        senderName: m.senderName || 'Tr. Joseph / Administration',
+        timestamp: m.timestamp ? new Date(m.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Recently',
+        source: 'teacher'
+      }));
+
+      const normalizedSchool = schoolComms.map((c: any) => ({
+        id: c.id || `C-${Math.random()}`,
+        title: c.title || 'Untitled',
+        content: c.content || '',
+        category: c.type === 'HOMEWORK' ? 'Homework' : c.type === 'FEE_CIRCULAR' ? 'Fee Notice' : c.type === 'TEACHER_DIRECT' ? 'Teacher Direct' : 'General Announcement',
+        targetGrade: c.targetAudience === 'SPECIFIC_GRADE' ? 'Grade 5' : 'ALL',
+        senderName: c.sender || 'School Administration',
+        timestamp: c.timestamp || 'Recently',
+        source: 'school'
+      }));
+
+      // Combine and deduplicate or list both
+      const combined = [...normalizedTeacher, ...normalizedSchool];
+      setMessages(combined);
+    } catch {
+      setMessages([]);
+    }
+  };
+
+  useEffect(() => {
+    loadMessages();
+    const handleUpdate = () => loadMessages();
+    window.addEventListener('teacher_messages_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('teacher_messages_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
+  const filteredMessages = messages.filter(m => {
+    if (filter === 'announcements') return m.category.toLowerCase().includes('announcement') || m.category.toLowerCase().includes('general');
+    if (filter === 'homework') return m.category.toLowerCase().includes('homework') || m.category.toLowerCase().includes('project');
+    if (filter === 'fees') return m.category.toLowerCase().includes('fee') || m.category.toLowerCase().includes('bursar');
+    return true;
+  });
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="md:col-span-2 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-slate-800 dark:text-white text-lg flex items-center gap-2">
+            <MessageSquare size={18} className="text-indigo-600" />
+            Live Teacher & School Broadcasts ({messages.length})
+          </h3>
+          <span className="text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50 px-3 py-1 rounded-full">Live Sync Active</span>
+        </div>
+
+        {filteredMessages.length === 0 ? (
+          <Card className="rounded-2xl border-0 shadow-sm p-12 text-center bg-white dark:bg-slate-900">
+            <MessageSquare className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <h4 className="font-bold text-slate-700 dark:text-slate-200 text-lg">No Messages Found</h4>
+            <p className="text-xs text-slate-400 mt-1">Broadcasts dispatched from the Teacher Communication Center will appear here instantly.</p>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {filteredMessages.map((msg, idx) => (
+              <Card key={msg.id || idx} className="rounded-2xl border-0 shadow-sm hover:shadow-md transition-all border-l-4 border-l-indigo-600 bg-white dark:bg-slate-900">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 px-2.5 py-0.5 rounded-md">{msg.category}</span>
+                        <span className="text-xs text-slate-400 font-medium">{msg.timestamp}</span>
+                        <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">Target: {msg.targetGrade}</span>
+                      </div>
+                      <h4 className="font-black text-slate-900 dark:text-white text-base">{msg.title}</h4>
+                    </div>
+                    <span className="w-2.5 h-2.5 bg-indigo-600 rounded-full shrink-0 mt-2"></span>
+                  </div>
+                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-4 whitespace-pre-line">
+                    {msg.content}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">From: {msg.senderName}</span>
+                    <Button variant="ghost" size="sm" className="h-8 text-indigo-600 dark:text-indigo-400 font-bold hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-xl" onClick={() => alert(`Details:\n\n${msg.title}\n\n${msg.content}`)}>View Details</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <Card className="rounded-2xl border-0 shadow-sm bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 p-6">
+          <h4 className="font-black text-slate-900 dark:text-white text-base mb-2">Teacher Communication Center</h4>
+          <p className="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
+            All announcements and broadcast notes sent by Tr. Joseph or administration instantly synchronize to this portal in real time.
+          </p>
+          <Button
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-lg shadow-indigo-600/20"
+            onClick={() => alert(`Connected to Munyaka Teacher Communication Center. Active learner: ${student || 'Student'}`)}
+          >
+            <MessageSquare size={16} className="mr-2" />
+            Portal Status: Connected
+          </Button>
+        </Card>
+
+        <Card className="rounded-2xl border-0 shadow-sm p-6 bg-white dark:bg-slate-900">
+          <h4 className="font-black text-slate-900 dark:text-white text-base mb-3">Quick Filters</h4>
+          <div className="space-y-2 text-xs font-bold">
+            <button
+              onClick={() => setFilter('all')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between transition-all ${filter === 'all' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+            >
+              <span>All Broadcasts</span>
+              <span className={`px-2 py-0.5 rounded-full ${filter === 'all' ? 'bg-indigo-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>{messages.length}</span>
+            </button>
+            <button
+              onClick={() => setFilter('announcements')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between transition-all ${filter === 'announcements' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+            >
+              <span>Announcements</span>
+              <span className={`px-2 py-0.5 rounded-full ${filter === 'announcements' ? 'bg-indigo-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>{messages.filter(m => m.category.toLowerCase().includes('announcement') || m.category.toLowerCase().includes('general')).length}</span>
+            </button>
+            <button
+              onClick={() => setFilter('homework')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between transition-all ${filter === 'homework' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+            >
+              <span>Homework & Projects</span>
+              <span className={`px-2 py-0.5 rounded-full ${filter === 'homework' ? 'bg-indigo-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>{messages.filter(m => m.category.toLowerCase().includes('homework') || m.category.toLowerCase().includes('project')).length}</span>
+            </button>
+            <button
+              onClick={() => setFilter('fees')}
+              className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between transition-all ${filter === 'fees' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+            >
+              <span>Fee Notices & Circulars</span>
+              <span className={`px-2 py-0.5 rounded-full ${filter === 'fees' ? 'bg-indigo-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>{messages.filter(m => m.category.toLowerCase().includes('fee') || m.category.toLowerCase().includes('bursar')).length}</span>
+            </button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // ── Storage helpers ───────────────────────────────────────────────────────────
 
 const savePortalSession = (session: PortalSession) => {
@@ -924,131 +1083,16 @@ const Dashboard = ({
               <div className="relative z-10">
                 <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 backdrop-blur-md">
                   <MessageSquare size={14} />
-                  School Communication
+                  School Communication & Inbox
                 </div>
                 <h1 className="text-2xl md:text-3xl font-black tracking-tight mb-2">Announcements & Inbox</h1>
                 <p className="text-indigo-100 text-sm max-w-xl">
-                  Stay updated with official school broadcasts, circulars, teacher notes, and direct messages regarding {session?.studentName}.
+                  Stay updated with official school broadcasts, circulars, teacher notes, and direct messages regarding {session?.studentName}. Synchronized in real-time with Teacher Communication Center.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                    <MessageSquare size={18} className="text-indigo-600" />
-                    Recent Messages & Broadcasts
-                  </h3>
-                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">3 New</span>
-                </div>
-
-                <div className="space-y-3">
-                  <Card className="rounded-2xl border-0 shadow-sm hover:shadow-md transition-all border-l-4 border-l-indigo-600">
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md">Official Broadcast</span>
-                            <span className="text-xs text-slate-400 font-medium">Today, 08:30 AM</span>
-                          </div>
-                          <h4 className="font-black text-slate-800 text-base">End of Term 1 Closing & Report Card Collection</h4>
-                        </div>
-                        <span className="w-2.5 h-2.5 bg-indigo-600 rounded-full shrink-0 mt-2"></span>
-                      </div>
-                      <p className="text-sm text-slate-600 leading-relaxed mb-4">
-                        Dear Parents and Guardians, please note that school closes for the April holiday on Friday next week. Final academic report cards will be accessible in your portal and available for physical pickup at the administration office.
-                      </p>
-                      <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100">
-                        <span className="font-bold text-slate-700">From: Office of the Principal</span>
-                        <Button variant="ghost" size="sm" className="h-8 text-indigo-600 font-bold hover:bg-indigo-50 rounded-xl">View Details</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="rounded-2xl border-0 shadow-sm hover:shadow-md transition-all border-l-4 border-l-purple-600">
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md">Teacher Note</span>
-                            <span className="text-xs text-slate-400 font-medium">Yesterday, 02:15 PM</span>
-                          </div>
-                          <h4 className="font-black text-slate-800 text-base">Class Project: Science Model Exhibition</h4>
-                        </div>
-                        <span className="w-2.5 h-2.5 bg-purple-600 rounded-full shrink-0 mt-2"></span>
-                      </div>
-                      <p className="text-sm text-slate-600 leading-relaxed mb-4">
-                        Hello! Learners are reminded to bring recycled materials for their upcoming environmental science group models. Thank you for your continued support at home.
-                      </p>
-                      <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100">
-                        <span className="font-bold text-slate-700">From: Mr. Kamau (Science Teacher)</span>
-                        <Button variant="ghost" size="sm" className="h-8 text-purple-600 font-bold hover:bg-purple-50 rounded-xl">Reply</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="rounded-2xl border-0 shadow-sm hover:shadow-md transition-all">
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">Fee Reminder</span>
-                            <span className="text-xs text-slate-400 font-medium">3 days ago</span>
-                          </div>
-                          <h4 className="font-black text-slate-800 text-base">Term 1 Balance Reminder</h4>
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-600 leading-relaxed mb-4">
-                        Friendly reminder that outstanding fee balances for the current term are due before midterm break. You can check your statement under the Fees tab.
-                      </p>
-                      <div className="flex items-center justify-between text-xs text-slate-500 pt-3 border-t border-slate-100">
-                        <span className="font-bold text-slate-700">From: Accounts Office</span>
-                        <Button variant="ghost" size="sm" className="h-8 text-slate-600 font-bold hover:bg-slate-100 rounded-xl">View Statement</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Card className="rounded-2xl border-0 shadow-sm bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
-                  <h4 className="font-black text-slate-800 text-base mb-2">Message Teachers & Admin</h4>
-                  <p className="text-xs text-slate-600 mb-4 leading-relaxed">
-                    Have a quick question about {session?.studentName}'s progress or attendance? Send a direct message to the class teacher or school administration.
-                  </p>
-                  <Button
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl shadow-lg shadow-indigo-600/20"
-                    onClick={() => alert("Message composer opened. You can send inquiries directly to school administration.")}
-                  >
-                    <MessageSquare size={16} className="mr-2" />
-                    New Message
-                  </Button>
-                </Card>
-
-                <Card className="rounded-2xl border-0 shadow-sm p-6">
-                  <h4 className="font-black text-slate-800 text-base mb-3">Quick Filters</h4>
-                  <div className="space-y-2 text-xs font-bold">
-                    <button className="w-full text-left px-3 py-2 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-between">
-                      <span>All Messages</span>
-                      <span className="bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">3</span>
-                    </button>
-                    <button className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-600 flex items-center justify-between">
-                      <span>School Broadcasts</span>
-                      <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">1</span>
-                    </button>
-                    <button className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-600 flex items-center justify-between">
-                      <span>Teacher Notes</span>
-                      <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">1</span>
-                    </button>
-                    <button className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-600 flex items-center justify-between">
-                      <span>Fee Notices</span>
-                      <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">1</span>
-                    </button>
-                  </div>
-                </Card>
-              </div>
-            </div>
+            <InboxSection student={session?.studentName} />
           </div>
         )}
       </div>

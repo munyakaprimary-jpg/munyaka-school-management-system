@@ -142,7 +142,7 @@ const TeacherCommunication = () => {
       sender: sender.trim() || 'School Administration',
       targetAudience,
       priority,
-      timestamp: 'Just now'
+      timestamp: new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
     };
 
     const updated = [newItem, ...communications];
@@ -150,6 +150,22 @@ const TeacherCommunication = () => {
     try {
       CentralDataService.setData(COMMUNICATION_STORAGE_KEY, updated);
       window.dispatchEvent(new Event('storage'));
+    } catch {}
+
+    // Also dispatch to munyaka_teacher_messages and trigger teacher_messages_updated as requested
+    try {
+      const existingTeacherMessages = JSON.parse(localStorage.getItem('munyaka_teacher_messages') || '[]');
+      const newTeacherMessage = {
+        id: `MSG-${Date.now()}`,
+        title: title.trim(),
+        content: content.trim(),
+        category: type === 'HOMEWORK' ? 'Homework' : type === 'FEE_CIRCULAR' ? 'Fee Notice' : type === 'TEACHER_DIRECT' ? 'Teacher Direct' : 'General Announcement',
+        targetGrade: targetAudience === 'SPECIFIC_GRADE' ? 'Grade 5' : 'ALL',
+        senderName: sender.trim() || 'Tr. Joseph / Administration',
+        timestamp: new Date().toISOString(),
+      };
+      localStorage.setItem('munyaka_teacher_messages', JSON.stringify([newTeacherMessage, ...existingTeacherMessages]));
+      window.dispatchEvent(new Event('teacher_messages_updated'));
     } catch {}
 
     showSuccess(`Successfully broadcasted "${title}" to ${targetAudience.replace('_', ' ')}!`);
