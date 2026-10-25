@@ -1453,6 +1453,52 @@ const LearnerAllSetExams: React.FC = () => {
     setResultsExamSubject(subject || "");
   }, []);
 
+  // Direct assessment taking state
+  const [takingExam, setTakingExam] = useState<ExamListItem | null>(null);
+  const [examAnswers, setExamAnswers] = useState<{ [key: number]: string }>({});
+  const [examSubmitted, setExamSubmitted] = useState<boolean>(false);
+  const [examScore, setExamScore] = useState<{ score: number; total: number } | null>(null);
+
+  const handleTakeExam = (exam: ExamListItem) => {
+    setTakingExam(exam);
+    setExamAnswers({});
+    setExamSubmitted(false);
+    setExamScore(null);
+  };
+
+  const handleAnswerSelect = (qIdx: number, option: string) => {
+    setExamAnswers(prev => ({ ...prev, [qIdx]: option }));
+  };
+
+  const handleFinishExam = () => {
+    if (!takingExam) return;
+    let correct = 0;
+    const questions = (takingExam as any).questions || [];
+    questions.forEach((q: any, idx: number) => {
+      const userAns = examAnswers[idx];
+      if (userAns !== undefined && (userAns === q.correctAnswer || (q.options && typeof q.correctAnswer === 'number' && userAns === q.options[q.correctAnswer]))) {
+        correct++;
+      }
+    });
+
+    const activeLearner = JSON.parse(localStorage.getItem('active_learner_session') || '{}');
+    const resultRecord = {
+      examId: takingExam.id,
+      title: takingExam.title,
+      learnerName: activeLearner.fullName || user?.name || 'Learner',
+      grade: activeLearner.gradeLevel || takingExam.classLevel || 'Grade 6',
+      score: correct,
+      total: questions.length || 0,
+      submittedAt: new Date().toISOString()
+    };
+
+    const history = JSON.parse(localStorage.getItem('munyaka_completed_assessments') || '[]');
+    localStorage.setItem('munyaka_completed_assessments', JSON.stringify([resultRecord, ...history]));
+
+    setExamScore({ score: correct, total: questions.length || 0 });
+    setExamSubmitted(true);
+  };
+
   // ── Derived ───────────────────────────────────────────────────────────────
   const categoryOptions = useMemo(() => {
     const set = new Set<string>();
@@ -1545,7 +1591,7 @@ const LearnerAllSetExams: React.FC = () => {
           {/* Primary: Take Exam */}
           {exam.status !== "Closed" && (
             <Button
-              onClick={() => navigate(`/assessments/student?id=${exam.id}`)}
+              onClick={() => handleTakeExam(exam)}
               className="flex-1 h-10 px-3 rounded-lg text-sm font-medium gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
             >
               <PlayCircle size={15} />
@@ -1635,7 +1681,7 @@ const LearnerAllSetExams: React.FC = () => {
                   <div className="flex items-center justify-end gap-1">
                     {exam.status !== "Closed" && (
                       <Button variant="ghost" size="icon"
-                        onClick={() => navigate(`/assessments/student?id=${exam.id}`)}
+                        onClick={() => handleTakeExam(exam)}
                         className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50" title="Take Exam">
                         <PlayCircle size={14} />
                       </Button>
