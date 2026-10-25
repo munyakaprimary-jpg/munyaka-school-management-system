@@ -1468,10 +1468,8 @@ const LearnerAllSetExams: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     localStorage.setItem('munyaka_selected_target_exam', JSON.stringify(exam));
-    setActiveExamModal({
-      isOpen: true,
-      exam: exam
-    });
+    window.location.hash = `#/assessments/student?id=${encodeURIComponent(exam.id)}`;
+    window.dispatchEvent(new Event('hashchange'));
   };
 
   const handleAnswerSelect = (qIdx: number, option: string) => {
@@ -1602,10 +1600,9 @@ const LearnerAllSetExams: React.FC = () => {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setActiveExamModal({
-                  isOpen: true,
-                  exam: exam
-                });
+                localStorage.setItem('munyaka_selected_target_exam', JSON.stringify(exam));
+                window.location.hash = `#/assessments/student?id=${encodeURIComponent(exam.id)}`;
+                window.dispatchEvent(new Event('hashchange'));
               }}
               className="flex-1 h-10 px-3 rounded-lg text-sm font-medium gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer pointer-events-auto"
             >
@@ -1699,10 +1696,9 @@ const LearnerAllSetExams: React.FC = () => {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          setActiveExamModal({
-                            isOpen: true,
-                            exam: exam
-                          });
+                          localStorage.setItem('munyaka_selected_target_exam', JSON.stringify(exam));
+                          window.location.hash = `#/assessments/student?id=${encodeURIComponent(exam.id)}`;
+                          window.dispatchEvent(new Event('hashchange'));
                         }}
                         className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50 cursor-pointer pointer-events-auto" title="Take Exam">
                         <PlayCircle size={14} />
