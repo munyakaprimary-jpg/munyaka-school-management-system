@@ -186,6 +186,9 @@ const StudentAssessmentPage: React.FC = () => {
       studentName={studentName}
       skipGate={false}
       onBackToExams={() => {
+        try {
+          localStorage.removeItem("munyaka_selected_target_exam");
+        } catch { /* ignore */ }
         window.location.hash = "#/assessments/list";
         window.dispatchEvent(new Event("hashchange"));
       }}
