@@ -25,6 +25,8 @@ import {
   ArrowLeft,
   FileSpreadsheet,
 } from "lucide-react";
+import StudentAssessmentView from "@/components/assessments/StudentAssessmentView";
+import StudentAssessmentView from "@/components/assessments/StudentAssessmentView";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -1459,13 +1461,19 @@ const LearnerAllSetExams: React.FC = () => {
   const [examSubmitted, setExamSubmitted] = useState<boolean>(false);
   const [examScore, setExamScore] = useState<{ score: number; total: number } | null>(null);
 
-  const handleTakeExam = (exam: ExamListItem) => {
-    const handleTakeExamClick = (targetExam: any) => {
-      localStorage.setItem('munyaka_selected_target_exam', JSON.stringify(targetExam));
-      window.location.hash = '#/assessments/student';
-      window.dispatchEvent(new Event('hashchange'));
-    };
-    handleTakeExamClick(exam);
+  const [activeExamModal, setActiveExamModal] = useState<{
+    isOpen: boolean;
+    exam: any | null;
+  }>({ isOpen: false, exam: null });
+
+  const handleTakeExam = (e: React.MouseEvent, exam: ExamListItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    localStorage.setItem('munyaka_selected_target_exam', JSON.stringify(exam));
+    setActiveExamModal({
+      isOpen: true,
+      exam: exam
+    });
   };
 
   const handleAnswerSelect = (qIdx: number, option: string) => {
@@ -1593,7 +1601,7 @@ const LearnerAllSetExams: React.FC = () => {
           {/* Primary: Take Exam */}
           {exam.status !== "Closed" && (
             <Button
-              onClick={() => handleTakeExam(exam)}
+              onClick={(e) => handleTakeExam(e, exam)}
               className="flex-1 h-10 px-3 rounded-lg text-sm font-medium gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
             >
               <PlayCircle size={15} />
@@ -1683,7 +1691,7 @@ const LearnerAllSetExams: React.FC = () => {
                   <div className="flex items-center justify-end gap-1">
                     {exam.status !== "Closed" && (
                       <Button variant="ghost" size="icon"
-                        onClick={() => handleTakeExam(exam)}
+                        onClick={(e) => handleTakeExam(e, exam)}
                         className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50" title="Take Exam">
                         <PlayCircle size={14} />
                       </Button>
