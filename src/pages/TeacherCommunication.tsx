@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,234 +10,368 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
-import { MessageSquare, Mail, Send, History, CheckCircle2, Users, Bell, Sparkles } from 'lucide-react';
+import { 
+  MessageSquare, 
+  Send, 
+  History, 
+  Sparkles, 
+  Megaphone, 
+  FileText, 
+  BookOpen, 
+  AlertCircle, 
+  CheckCircle2, 
+  Users, 
+  Bell, 
+  Search, 
+  Pin, 
+  Calendar,
+  Filter,
+  Check
+} from 'lucide-react';
 import { CentralDataService } from '@/services/centralDataService';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { useNotifications } from '@/components/ui/notification-provider';
 
-interface TeacherMessage {
+// Unified Storage Key as requested
+const COMMUNICATION_STORAGE_KEY = 'munyaka_school_communications';
+
+export interface CommunicationItem {
   id: string;
-  recipientGroup: string;
-  subject: string;
-  channel: 'SMS' | 'WhatsApp' | 'Portal Notice';
-  date: string;
-  status: string;
+  type: 'ANNOUNCEMENT' | 'TEACHER_DIRECT' | 'HOMEWORK' | 'FEE_CIRCULAR';
+  title: string;
   content: string;
+  sender: string; // e.g., "Principal's Office" or "Tr. Joseph (Grade 5)"
+  targetAudience: 'ALL_PARENTS' | 'SPECIFIC_GRADE' | 'STAFF';
+  priority: 'NORMAL' | 'URGENT';
+  timestamp: string;
 }
 
-const STORAGE_KEY = 'munyaka_teacher_portal_messages_v1';
+const getInitialCommunications = (): CommunicationItem[] => {
+  try {
+    const saved = CentralDataService.getData<CommunicationItem[]>(COMMUNICATION_STORAGE_KEY, []);
+    if (saved && saved.length > 0) return saved;
+  } catch {}
 
-const getInitialMessages = (): TeacherMessage[] => {
-  const saved = CentralDataService.getData<TeacherMessage[]>(STORAGE_KEY, []);
-  if (saved && saved.length > 0) return saved;
-  return [
+  const defaultItems: CommunicationItem[] = [
     {
-      id: 'tm-1',
-      recipientGroup: 'Grade 4 Parents (All Streams)',
-      subject: 'Upcoming Mathematics Assessment Reminder',
-      channel: 'SMS',
-      date: 'Today, 08:30 AM',
-      status: 'Delivered',
-      content: 'Dear parents, please note that Grade 4 Mathematics assessment will take place this Thursday. Kindly ensure revision materials are reviewed.'
+      id: 'comm-1',
+      type: 'ANNOUNCEMENT',
+      title: 'Term 1 Opening Dates & Reporting Instructions',
+      content: 'Dear Parents and Guardians, we are delighted to welcome you to the new academic term. All learners are expected to report on Monday by 8:00 AM in full clean uniform. Kindly ensure all holiday assignments and book returns are completed.',
+      sender: "Principal's Office",
+      targetAudience: 'ALL_PARENTS',
+      priority: 'URGENT',
+      timestamp: 'Today, 08:30 AM'
     },
     {
-      id: 'tm-2',
-      recipientGroup: 'Class 4A Students & Parents',
-      subject: 'Science Practical Project Submission',
-      channel: 'Portal Notice',
-      date: 'Yesterday, 02:15 PM',
-      status: 'Published',
-      content: 'Reminder to all learners in Class 4A to bring recycled materials for the science practical activity.'
+      id: 'comm-2',
+      type: 'FEE_CIRCULAR',
+      title: 'Fee Payment Guidelines and Bank Account Details',
+      content: 'Please note that fee balances for the current term are due by the 5th of next month. Payments should be made directly through the school bank accounts or official M-Pesa paybill. Receipt slips must be submitted to the bursar.',
+      sender: 'Bursar & Finance Office',
+      targetAudience: 'ALL_PARENTS',
+      priority: 'NORMAL',
+      timestamp: 'Yesterday, 02:15 PM'
+    },
+    {
+      id: 'comm-3',
+      type: 'HOMEWORK',
+      title: 'Grade 5 Science Practical Observation Project',
+      content: 'Learners are required to observe plant growth over the week and record daily heights in their science journals. Group discussions will take place during Friday lesson.',
+      sender: 'Tr. Joseph (Grade 5)',
+      targetAudience: 'SPECIFIC_GRADE',
+      priority: 'NORMAL',
+      timestamp: '3 days ago'
+    },
+    {
+      id: 'comm-4',
+      type: 'TEACHER_DIRECT',
+      title: 'Staff Meeting on CBC Assessment Portals',
+      content: 'All teachers are reminded to attend the departmental meeting in the main staffroom at 3:30 PM today to review formative assessment score entries.',
+      sender: 'Deputy Headteacher',
+      targetAudience: 'STAFF',
+      priority: 'URGENT',
+      timestamp: 'Today, 10:00 AM'
     }
   ];
+
+  try {
+    CentralDataService.setData(COMMUNICATION_STORAGE_KEY, defaultItems);
+  } catch {}
+
+  return defaultItems;
 };
 
 const TeacherCommunication = () => {
   const [activeTab, setActiveTab] = useState<'compose' | 'history'>('compose');
-  const [messages, setMessages] = useState<TeacherMessage[]>(getInitialMessages());
-  const [channel, setChannel] = useState<'SMS' | 'WhatsApp' | 'Portal Notice'>('SMS');
-  const [recipientGroup, setRecipientGroup] = useState('Grade 4 Parents (All Streams)');
-  const [subject, setSubject] = useState('');
+  const [communications, setCommunications] = useState<CommunicationItem[]>(getInitialCommunications());
+  
+  // Form state
+  const [type, setType] = useState<'ANNOUNCEMENT' | 'TEACHER_DIRECT' | 'HOMEWORK' | 'FEE_CIRCULAR'>('ANNOUNCEMENT');
+  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [sender, setSender] = useState("Tr. Joseph (Grade 5)");
+  const [targetAudience, setTargetAudience] = useState<'ALL_PARENTS' | 'SPECIFIC_GRADE' | 'STAFF'>('ALL_PARENTS');
+  const [priority, setPriority] = useState<'NORMAL' | 'URGENT'>('NORMAL');
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<TeacherMessage | null>(null);
+  const [selectedItem, setSelectedItem] = useState<CommunicationItem | null>(null);
   const { addNotification } = useNotifications();
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!subject.trim() || !content.trim()) return;
+  // Load latest on mount & storage events
+  useEffect(() => {
+    const handleStorage = () => {
+      setCommunications(getInitialCommunications());
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
-    const newMessage: TeacherMessage = {
-      id: 'tm-' + Date.now(),
-      recipientGroup,
-      subject: subject.trim(),
-      channel,
-      date: 'Just now',
-      status: 'Delivered',
-      content: content.trim()
+  const handleBroadcast = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !content.trim()) {
+      showError('Please provide both title and content.');
+      return;
+    }
+
+    const newItem: CommunicationItem = {
+      id: 'comm-' + Date.now(),
+      type,
+      title: title.trim(),
+      content: content.trim(),
+      sender: sender.trim() || 'School Administration',
+      targetAudience,
+      priority,
+      timestamp: 'Just now'
     };
 
-    const updated = [newMessage, ...messages];
-    setMessages(updated);
-    CentralDataService.setData(STORAGE_KEY, updated);
+    const updated = [newItem, ...communications];
+    setCommunications(updated);
+    try {
+      CentralDataService.setData(COMMUNICATION_STORAGE_KEY, updated);
+      window.dispatchEvent(new Event('storage'));
+    } catch {}
 
-    showSuccess(`Successfully sent ${channel} to ${recipientGroup}!`);
+    showSuccess(`Successfully broadcasted "${title}" to ${targetAudience.replace('_', ' ')}!`);
+    
     if (typeof addNotification === 'function') {
       addNotification({
-        title: `Teacher ${channel} Sent`,
-        message: `Sent to ${recipientGroup}: ${subject}`,
-        priority: 'medium',
+        title: `School Broadcast: ${type.replace('_', ' ')}`,
+        message: title,
+        priority: priority === 'URGENT' ? 'high' : 'medium',
       });
     }
 
-    setSubject('');
+    setTitle('');
     setContent('');
     setActiveTab('history');
   };
 
+  const handleDelete = (id: string) => {
+    const updated = communications.filter(c => c.id !== id);
+    setCommunications(updated);
+    try {
+      CentralDataService.setData(COMMUNICATION_STORAGE_KEY, updated);
+      window.dispatchEvent(new Event('storage'));
+    } catch {}
+    showSuccess('Communication removed successfully.');
+    setIsModalOpen(false);
+  };
+
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-6 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-600 to-teal-700 p-8 rounded-[2.5rem] text-white shadow-xl shadow-emerald-900/10">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-indigo-600 via-purple-700 to-indigo-800 p-8 rounded-[2.5rem] text-white shadow-xl shadow-indigo-900/10">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Badge className="bg-emerald-500/30 text-white border-white/20 font-bold px-3 py-1">Teacher Portal</Badge>
-            <Badge className="bg-white/20 text-white border-transparent font-bold">Direct Parent & Student Link</Badge>
+            <Badge className="bg-white/20 text-white border-transparent font-bold px-3 py-1">Teacher & Admin Portal</Badge>
+            <Badge className="bg-indigo-500/30 text-white border-white/20 font-bold">Unified Broadcast System</Badge>
           </div>
-          <h1 className="text-3xl font-black tracking-tight">Teacher Communication Center</h1>
-          <p className="text-emerald-100 text-sm mt-1 max-w-xl">
-            Broadcast announcements, dispatch SMS notifications, and share updates directly with parents and learners in your assigned classes.
+          <h1 className="text-3xl font-black tracking-tight">Communication & Announcements Center</h1>
+          <p className="text-indigo-100 text-sm mt-1 max-w-xl">
+            Create school announcements, homework briefs, direct teacher circulars, and fee notices. All items instantly sync to the parent and learner inbox.
           </p>
         </div>
         <div className="flex gap-3">
           <Button
             onClick={() => setActiveTab('compose')}
-            className={`rounded-2xl font-bold gap-2 ${activeTab === 'compose' ? 'bg-white text-emerald-800 hover:bg-emerald-50' : 'bg-emerald-700/60 text-white hover:bg-emerald-700'}`}
+            className={`rounded-2xl font-bold gap-2 ${activeTab === 'compose' ? 'bg-white text-indigo-900 hover:bg-indigo-50' : 'bg-indigo-700/60 text-white hover:bg-indigo-700'}`}
           >
-            <Send size={16} /> Compose Message
+            <Send size={16} /> Compose Broadcast
           </Button>
           <Button
             onClick={() => setActiveTab('history')}
-            className={`rounded-2xl font-bold gap-2 ${activeTab === 'history' ? 'bg-white text-emerald-800 hover:bg-emerald-50' : 'bg-emerald-700/60 text-white hover:bg-emerald-700'}`}
+            className={`rounded-2xl font-bold gap-2 ${activeTab === 'history' ? 'bg-white text-indigo-900 hover:bg-indigo-50' : 'bg-indigo-700/60 text-white hover:bg-indigo-700'}`}
           >
-            <History size={16} /> History ({messages.length})
+            <History size={16} /> All Broadcasts ({communications.length})
           </Button>
         </div>
       </div>
 
-      {/* Main Content Tabs */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full space-y-6">
         <TabsList className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 h-14 inline-flex gap-2">
-          <TabsTrigger value="compose" className="rounded-xl px-6 h-full font-bold text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-            <Send size={16} className="mr-2" /> Compose & Send
+          <TabsTrigger value="compose" className="rounded-xl px-6 h-full font-bold text-sm data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <Send size={16} className="mr-2" /> Compose & Broadcast
           </TabsTrigger>
-          <TabsTrigger value="history" className="rounded-xl px-6 h-full font-bold text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-            <History size={16} className="mr-2" /> Message History
+          <TabsTrigger value="history" className="rounded-xl px-6 h-full font-bold text-sm data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <History size={16} className="mr-2" /> Broadcast History & Logs
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="compose" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left: Quick Templates */}
+            {/* Quick Templates / Guidelines */}
             <div className="space-y-4">
               <Card className="rounded-[2rem] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Sparkles size={18} className="text-emerald-500" /> Quick Templates
+                  <Sparkles size={18} className="text-indigo-500" /> Quick Templates
                 </h3>
                 <div className="space-y-3">
                   <button
                     type="button"
                     onClick={() => {
-                      setSubject('Homework & Assignment Reminder');
-                      setContent('Dear parents, kindly ensure your child completes the assigned revision exercises before tomorrow morning.');
+                      setType('ANNOUNCEMENT');
+                      setTitle('Important School Assembly & Notice');
+                      setContent('All parents and learners are advised that our special assembly will be held tomorrow morning. Punctuality is required.');
+                      setTargetAudience('ALL_PARENTS');
+                      setPriority('NORMAL');
                     }}
-                    className="w-full text-left p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-slate-100 dark:border-slate-700 transition-all text-xs font-bold text-slate-700 dark:text-slate-200"
+                    className="w-full text-left p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border border-slate-100 dark:border-slate-700 transition-all text-xs font-bold text-slate-700 dark:text-slate-200"
                   >
-                    📝 Homework Reminder
+                    📢 School Assembly Notice
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setSubject('Upcoming Assessment Notice');
-                      setContent('Please note that our class evaluation test is scheduled for this week. Regular attendance and punctuality are vital.');
+                      setType('HOMEWORK');
+                      setTitle('Weekly Homework & Revision Brief');
+                      setContent('Kindly assist learners in completing their reading assignments and mathematics problem sets before the weekend review.');
+                      setTargetAudience('SPECIFIC_GRADE');
+                      setPriority('NORMAL');
                     }}
-                    className="w-full text-left p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-slate-100 dark:border-slate-700 transition-all text-xs font-bold text-slate-700 dark:text-slate-200"
+                    className="w-full text-left p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border border-slate-100 dark:border-slate-700 transition-all text-xs font-bold text-slate-700 dark:text-slate-200"
                   >
-                    📊 Assessment Notice
+                    📚 Homework Brief
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setSubject('Class Meeting Invitation');
-                      setContent('We invite all parents for our end-of-month class progress review meeting this Friday at 2:00 PM.');
+                      setType('FEE_CIRCULAR');
+                      setTitle('Term 1 Fee Payment Circular & Deadlines');
+                      setContent('Dear Parents, please clear outstanding school fee balances to ensure smooth provision of learning materials and meals.');
+                      setTargetAudience('ALL_PARENTS');
+                      setPriority('URGENT');
                     }}
-                    className="w-full text-left p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-slate-100 dark:border-slate-700 transition-all text-xs font-bold text-slate-700 dark:text-slate-200"
+                    className="w-full text-left p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border border-slate-100 dark:border-slate-700 transition-all text-xs font-bold text-slate-700 dark:text-slate-200"
                   >
-                    🤝 Parent Meeting Invite
+                    💳 Fee Circular
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setType('TEACHER_DIRECT');
+                      setTitle('Staff Coordination & Briefing');
+                      setContent('All faculty members are requested to submit end-of-week lesson reflections and attendance tallies by Friday afternoon.');
+                      setTargetAudience('STAFF');
+                      setPriority('NORMAL');
+                    }}
+                    className="w-full text-left p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border border-slate-100 dark:border-slate-700 transition-all text-xs font-bold text-slate-700 dark:text-slate-200"
+                  >
+                    👥 Teacher Direct Note
                   </button>
                 </div>
               </Card>
 
-              <Card className="rounded-[2rem] border-slate-200 dark:border-slate-800 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-sm p-6">
-                <h4 className="font-bold text-emerald-900 dark:text-emerald-300 text-sm mb-1">Teacher Communication Guidelines</h4>
-                <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
-                  All messages sent here are logged securely in the school database and dispatched to verified parent contacts instantly.
+              <Card className="rounded-[2rem] border-slate-200 dark:border-slate-800 bg-indigo-50/60 dark:bg-indigo-950/20 shadow-sm p-6">
+                <h4 className="font-bold text-indigo-900 dark:text-indigo-300 text-sm mb-1">Unified Storage Key</h4>
+                <p className="text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed font-mono bg-white/60 dark:bg-indigo-900/30 p-2 rounded-xl mt-2">
+                  munyaka_school_communications
+                </p>
+                <p className="text-xs text-indigo-600 dark:text-indigo-300 mt-2">
+                  Broadcasts saved here automatically synchronize across the Parent & Learner Inbox in real time.
                 </p>
               </Card>
             </div>
 
-            {/* Right: Compose Form */}
+            {/* Compose Form */}
             <div className="lg:col-span-2">
               <Card className="rounded-[2.5rem] border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl p-8">
-                <form onSubmit={handleSendMessage} className="space-y-6">
+                <form onSubmit={handleBroadcast} className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Communication Channel</Label>
-                      <Select value={channel} onValueChange={(v: any) => setChannel(v)}>
+                      <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Communication Type</Label>
+                      <Select value={type} onValueChange={(v: any) => setType(v)}>
                         <SelectTrigger className="rounded-2xl h-12 border-slate-200 dark:border-slate-700 font-bold">
-                          <SelectValue placeholder="Select channel" />
+                          <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl">
-                          <SelectItem value="SMS">📱 SMS Notification</SelectItem>
-                          <SelectItem value="WhatsApp">💬 WhatsApp Broadcast</SelectItem>
-                          <SelectItem value="Portal Notice">📢 Portal Notice</SelectItem>
+                          <SelectItem value="ANNOUNCEMENT">📢 General Announcement</SelectItem>
+                          <SelectItem value="HOMEWORK">📚 Homework / Assignment</SelectItem>
+                          <SelectItem value="FEE_CIRCULAR">💳 Fee Circular</SelectItem>
+                          <SelectItem value="TEACHER_DIRECT">👤 Teacher Direct / Staff</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Recipient Group</Label>
-                      <Select value={recipientGroup} onValueChange={setRecipientGroup}>
+                      <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Target Audience</Label>
+                      <Select value={targetAudience} onValueChange={(v: any) => setTargetAudience(v)}>
                         <SelectTrigger className="rounded-2xl h-12 border-slate-200 dark:border-slate-700 font-bold">
-                          <SelectValue placeholder="Select recipient" />
+                          <SelectValue placeholder="Select audience" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl">
-                          <SelectItem value="Grade 4 Parents (All Streams)">Grade 4 Parents (All Streams)</SelectItem>
-                          <SelectItem value="Class 4A Students & Parents">Class 4A Students & Parents</SelectItem>
-                          <SelectItem value="Class 4B Stream Parents">Class 4B Stream Parents</SelectItem>
-                          <SelectItem value="Junior Secondary Parents">Junior Secondary Parents</SelectItem>
+                          <SelectItem value="ALL_PARENTS">🌐 All Parents & Guardians</SelectItem>
+                          <SelectItem value="SPECIFIC_GRADE">🏫 Specific Grade / Class</SelectItem>
+                          <SelectItem value="STAFF">👥 School Staff Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Sender Signature</Label>
+                      <Input
+                        value={sender}
+                        onChange={(e) => setSender(e.target.value)}
+                        placeholder="e.g. Principal's Office or Tr. Joseph"
+                        required
+                        className="rounded-2xl h-12 border-slate-200 dark:border-slate-700 font-bold"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Priority Level</Label>
+                      <Select value={priority} onValueChange={(v: any) => setPriority(v)}>
+                        <SelectTrigger className="rounded-2xl h-12 border-slate-200 dark:border-slate-700 font-bold">
+                          <SelectValue placeholder="Select priority" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl">
+                          <SelectItem value="NORMAL">🟢 Normal Priority</SelectItem>
+                          <SelectItem value="URGENT">🔴 Urgent Alert</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Subject / Headline</Label>
+                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Announcement Title</Label>
                     <Input
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      placeholder="e.g. Important update regarding class activities..."
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. Term 1 Sports Day and Parent Briefing"
                       required
                       className="rounded-2xl h-12 border-slate-200 dark:border-slate-700 font-bold"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Message Content</Label>
+                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500">Detailed Content & Instructions</Label>
                     <Textarea
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
-                      placeholder="Write your message details here..."
+                      placeholder="Write the full announcement or circular text here..."
                       required
                       className="rounded-2xl border-slate-200 dark:border-slate-700 min-h-[160px] p-4 text-sm font-medium"
                     />
@@ -247,9 +381,9 @@ const TeacherCommunication = () => {
                     <Button
                       type="submit"
                       size="lg"
-                      className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 shadow-lg shadow-emerald-600/25 gap-2"
+                      className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 shadow-lg shadow-indigo-600/25 gap-2"
                     >
-                      <Send size={18} /> Dispatch Message
+                      <Send size={18} /> Broadcast to School Inbox
                     </Button>
                   </div>
                 </form>
@@ -263,11 +397,11 @@ const TeacherCommunication = () => {
             <CardContent className="p-0">
               <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-slate-900 dark:text-white text-lg">Dispatched Messages History</h3>
-                  <p className="text-xs text-slate-500">Review all previously sent communications and announcements.</p>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-lg">Broadcasts History & Active Items</h3>
+                  <p className="text-xs text-slate-500">All announcements stored under munyaka_school_communications.</p>
                 </div>
-                <Badge className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold px-3 py-1">
-                  {messages.length} Records
+                <Badge className="bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold px-3 py-1">
+                  {communications.length} Total Records
                 </Badge>
               </div>
 
@@ -275,41 +409,64 @@ const TeacherCommunication = () => {
                 <table className="w-full text-sm min-w-max">
                   <thead>
                     <tr className="bg-slate-50/75 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                      <th className="px-6 py-4 text-left">Recipient Group</th>
-                      <th className="px-6 py-4 text-left">Subject</th>
-                      <th className="px-6 py-4 text-center">Channel</th>
-                      <th className="px-6 py-4 text-center">Date</th>
-                      <th className="px-6 py-4 text-right">Status</th>
+                      <th className="px-6 py-4 text-left">Type</th>
+                      <th className="px-6 py-4 text-left">Title & Summary</th>
+                      <th className="px-6 py-4 text-left">Sender</th>
+                      <th className="px-6 py-4 text-center">Audience</th>
+                      <th className="px-6 py-4 text-center">Priority</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                    {messages.map((msg) => (
+                    {communications.map((item) => (
                       <tr
-                        key={msg.id}
-                        onClick={() => { setSelectedMessage(msg); setIsModalOpen(true); }}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
+                        key={item.id}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
                       >
-                        <td className="px-6 py-5 font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                          <Users size={16} className="text-emerald-500" /> {msg.recipientGroup}
-                        </td>
-                        <td className="px-6 py-5 text-slate-700 dark:text-slate-300 font-semibold">{msg.subject}</td>
-                        <td className="px-6 py-5 text-center">
+                        <td className="px-6 py-5">
                           <Badge variant="outline" className="font-bold text-xs">
-                            {msg.channel}
+                            {item.type}
                           </Badge>
                         </td>
-                        <td className="px-6 py-5 text-center text-slate-500 text-xs">{msg.date}</td>
-                        <td className="px-6 py-5 text-right">
-                          <Badge className="bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 gap-1 font-bold">
-                            <CheckCircle2 size={12} /> {msg.status}
+                        <td className="px-6 py-5">
+                          <div className="font-bold text-slate-900 dark:text-white max-w-xs truncate">{item.title}</div>
+                          <div className="text-xs text-slate-500 max-w-sm truncate mt-0.5">{item.content}</div>
+                        </td>
+                        <td className="px-6 py-5 font-semibold text-slate-700 dark:text-slate-300">{item.sender}</td>
+                        <td className="px-6 py-5 text-center">
+                          <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-0 font-bold text-[10px]">
+                            {item.targetAudience}
                           </Badge>
+                        </td>
+                        <td className="px-6 py-5 text-center">
+                          <Badge className={item.priority === 'URGENT' ? 'bg-rose-100 text-rose-700 font-bold' : 'bg-emerald-100 text-emerald-700 font-bold'}>
+                            {item.priority}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-5 text-right space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl font-bold"
+                            onClick={() => { setSelectedItem(item); setIsModalOpen(true); }}
+                          >
+                            View
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="rounded-xl font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 border-0"
+                            onClick={() => handleDelete(item.id)}
+                          >
+                            Delete
+                          </Button>
                         </td>
                       </tr>
                     ))}
-                    {messages.length === 0 && (
+                    {communications.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="text-center py-16 text-slate-400 font-medium">
-                          No messages sent yet. Use the compose tab to send your first notification.
+                        <td colSpan={6} className="text-center py-16 text-slate-400 font-medium">
+                          No communications broadcasted yet. Use the compose tab to create your first announcement.
                         </td>
                       </tr>
                     )}
@@ -321,31 +478,46 @@ const TeacherCommunication = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Message Details Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Message Details">
-        {selectedMessage && (
+      {/* View Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Broadcast Details">
+        {selectedItem && (
           <div className="space-y-6 py-2">
             <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
               <div>
-                <p className="text-[10px] font-black uppercase text-slate-400">Recipient Group</p>
-                <p className="font-bold text-sm text-slate-900 dark:text-white mt-0.5">{selectedMessage.recipientGroup}</p>
+                <p className="text-[10px] font-black uppercase text-slate-400">Type</p>
+                <p className="font-bold text-sm text-slate-900 dark:text-white mt-0.5">{selectedItem.type}</p>
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase text-slate-400">Channel</p>
-                <p className="font-bold text-sm text-slate-900 dark:text-white mt-0.5">{selectedMessage.channel}</p>
+                <p className="text-[10px] font-black uppercase text-slate-400">Target Audience</p>
+                <p className="font-bold text-sm text-slate-900 dark:text-white mt-0.5">{selectedItem.targetAudience}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400">Sender</p>
+                <p className="font-bold text-sm text-slate-900 dark:text-white mt-0.5">{selectedItem.sender}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400">Priority</p>
+                <p className="font-bold text-sm text-slate-900 dark:text-white mt-0.5">{selectedItem.priority}</p>
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase text-slate-400">Subject</p>
-              <p className="font-bold text-base text-slate-900 dark:text-white mt-1">{selectedMessage.subject}</p>
+              <p className="text-[10px] font-black uppercase text-slate-400">Title</p>
+              <p className="font-bold text-base text-slate-900 dark:text-white mt-1">{selectedItem.title}</p>
             </div>
             <div>
               <p className="text-[10px] font-black uppercase text-slate-400">Full Content</p>
               <div className="mt-1 p-4 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                {selectedMessage.content}
+                {selectedItem.content}
               </div>
             </div>
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-between items-center pt-4">
+              <Button
+                variant="destructive"
+                className="rounded-xl font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 border-0"
+                onClick={() => handleDelete(selectedItem.id)}
+              >
+                Delete Broadcast
+              </Button>
               <Button onClick={() => setIsModalOpen(false)} className="rounded-xl font-bold">Close</Button>
             </div>
           </div>
