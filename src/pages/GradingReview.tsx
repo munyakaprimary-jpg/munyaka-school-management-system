@@ -499,36 +499,30 @@ export default function GradingReview() {
 
           <div className="sm:ml-auto flex flex-wrap items-center gap-3">
             {/* Assessment selector */}
-            <Select
-              value={selectedAssessmentId}
-              onValueChange={setSelectedAssessmentId}
-            >
-              <SelectTrigger className="w-64 rounded-xl border-slate-200 bg-slate-50 font-medium">
-                <SelectValue placeholder="Select assessment..." />
-              </SelectTrigger>
-              <SelectContent>
-                {assessments.length === 0 && (
-                  <SelectItem value="none" disabled>
-                    No assessments found
-                  </SelectItem>
-                )}
-                {assessments.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    <div className="relative flex flex-col px-4 py-2 bg-white border border-gray-200 rounded-2xl shadow-sm max-w-xs w-full overflow-hidden">
-                      {/* Assessment Title - Truncated or wrapped properly */}
-                      <span className="text-xs font-bold text-gray-900 truncate w-full block text-center">
-                        {a.title || "KNEC SCHOOL BASED ASSESSMENT"}
-                      </span>
-                      
-                      {/* Subtitle / Category */}
-                      <span className="text-[11px] text-gray-500 truncate w-full block text-center">
-                        {a.subject} • {a.category}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="w-full sm:w-80">
+              <div className="relative flex items-center w-full">
+                <select
+                  value={selectedAssessmentId}
+                  onChange={(e) => setSelectedAssessmentId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-2xl shadow-sm text-xs font-bold text-gray-900 truncate focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer appearance-none pr-8"
+                >
+                  {assessments.length === 0 ? (
+                    <option value="" disabled>No assessments found</option>
+                  ) : (
+                    assessments.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.title || "KNEC SCHOOL BASED ASSESSMENT"} ({a.subject} • {a.category})
+                      </option>
+                    ))
+                  )}
+                </select>
+                
+                {/* Chevron icon positioned natively inside */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                  <ChevronDown className="w-4 h-4"/>
+                </div>
+              </div>
+            </div>
 
             {/* Save All */}
             <Button
