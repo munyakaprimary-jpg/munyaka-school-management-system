@@ -203,21 +203,29 @@ function loadSubmissions(assessmentId: string): StudentSubmission[] {
   } catch { return []; }
 }
 
-function loadStudentName(studentId: string): string {
+function getStudentDetails(studentId: string): { name: string; admissionNo: string } {
   try {
     const raw = localStorage.getItem("school_learners_data");
     if (raw) {
       const learners = JSON.parse(raw);
-      const found = learners.find(
+      const student = learners.find(
         (l: any) =>
           l.id === studentId ||
           l.admissionNumber === studentId ||
           l.admNo === studentId
       );
-      if (found) return found.name || studentId;
+      if (student) {
+        return {
+          name: student.name || studentId,
+          admissionNo: student.admissionNumber || student.admNo || studentId || 'No Admission No.'
+        };
+      }
     }
   } catch { /* ignore */ }
-  return studentId;
+  return {
+    name: studentId,
+    admissionNo: 'No Admission No.'
+  };
 }
 
 function loadStudentMeta(studentId: string): { classId: string; className: string; stream?: string } {
@@ -374,10 +382,11 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
       const maxScore = mcqMax + structuredMax;
       const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
+      const studentDetails = getStudentDetails(sub.studentId);
       const studentMeta = loadStudentMeta(sub.studentId);
       grades.push({
         studentId: sub.studentId,
-        studentName: loadStudentName(sub.studentId),
+        studentName: studentDetails.name,
         classId: studentMeta.classId,
         className: studentMeta.className,
         stream: studentMeta.stream,
@@ -386,7 +395,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         submission: {
           ...sub,
           marks: (sub as any).marks ?? {},
-          admissionNo: (sub as any).admissionNo ?? sub.studentId,
+          admissionNo: (sub as any).admissionNo ?? studentDetails.admissionNo,
         } as UnifiedSubmission,
         responses: respMap,
         startedAt: (sub as any).startedAt,
@@ -1159,26 +1168,26 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                     const isSelected = g.studentId === selectedStudentId;
 
                     return (
-                      <button
-                        key={g.studentId}
-                        onClick={() => setSelectedStudentId(g.studentId)}
-                        className={`w-full text-left p-4 rounded-2xl border transition-all ${
-                          isSelected
-                            ? "bg-indigo-50 border-indigo-300 shadow-md shadow-indigo-100 ring-2 ring-indigo-200"
-                            : "bg-white border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/40"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="min-w-0">
-                            <p className="font-semibold text-slate-800 truncate">{g.studentName}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                              {g.classId}{g.stream ? ` · ${g.stream}` : ""}
-                            </p>
-                          </div>
-                          <Badge className={`shrink-0 font-bold text-xs px-2 py-0.5 rounded-lg border ${gradeColor(g.gradeLevel)}`}>
-                            {g.gradeLevel}
-                          </Badge>
-                        </div>
+      <button
+        key={g.studentId}
+        onClick={() => setSelectedStudentId(g.studentId)}
+        className={`w-full text-left p-4 rounded-2xl border transition-all ${
+          isSelected
+            ? "bg-indigo-50 border-indigo-300 shadow-md shadow-indigo-100 ring-2 ring-indigo-200"
+            : "bg-white border-slate-200 hover:border-indigo-200 hover:bg-indigo-50/40"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-800 truncate">{g.studentName}</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Adm: {g.submission?.admissionNo || g.studentId} {g.classId ? `· ${g.classId}` : ""} {g.stream ? `· ${g.stream}` : ""}
+            </p>
+          </div>
+          <Badge className={`shrink-0 font-bold text-xs px-2 py-0.5 rounded-lg border ${gradeColor(g.gradeLevel)}`}>
+            {g.gradeLevel}
+          </Badge>
+        </div>
                         <div className="mt-2">
                           <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
                             <span>{g.totalScore} / {g.maxScore} pts</span>
