@@ -174,8 +174,14 @@ const INITIAL_LICENSES: License[] = [
     paymentMethod: 'M-Pesa',
     reference: 'QGK92NX38M',
     type: 'subscription',
-    billingInterval: 'Monthly',
     nextBillingDate: '2025-02-01',
+    issuedTo: 'Munyaka Primary School',
+    deviceId: 'DEVICE-MUNYAKA-01',
+    validityDays: 30,
+    issuedAt: '2025-01-01T00:00:00.000Z',
+    expiresAt: '2025-02-01T00:00:00.000Z',
+    autoRenew: true,
+    payment: { method: 'mpesa', refNumber: 'QGK92NX38M', amount: '3700' }
   },
   {
     id: 'lic-seed-002',
@@ -190,8 +196,14 @@ const INITIAL_LICENSES: License[] = [
     paymentMethod: 'M-Pesa',
     reference: 'QFH81LP29K',
     type: 'renewal',
-    billingInterval: 'Monthly',
     nextBillingDate: '2025-01-01',
+    issuedTo: 'Munyaka Primary School',
+    deviceId: 'DEVICE-MUNYAKA-01',
+    validityDays: 30,
+    issuedAt: '2024-12-01T00:00:00.000Z',
+    expiresAt: '2025-01-01T00:00:00.000Z',
+    autoRenew: false,
+    payment: { method: 'mpesa', refNumber: 'QFH81LP29K', amount: '3700' }
   },
   {
     id: 'lic-seed-003',
@@ -207,9 +219,14 @@ const INITIAL_LICENSES: License[] = [
     reference: 'BNK-2024-1101',
     type: 'renewal',
     schoolName: 'Munyaka Primary School',
-    contactEmail: 'admin@munyaka.ac.ke',
-    billingInterval: 'Monthly',
     nextBillingDate: '2024-12-01',
+    issuedTo: 'Munyaka Primary School',
+    deviceId: 'DEVICE-MUNYAKA-01',
+    validityDays: 30,
+    issuedAt: '2024-11-01T00:00:00.000Z',
+    expiresAt: '2024-12-01T00:00:00.000Z',
+    autoRenew: false,
+    payment: { method: 'bank', refNumber: 'BNK-2024-1101', amount: '3700' }
   },
 ];
 
