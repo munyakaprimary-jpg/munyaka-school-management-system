@@ -983,110 +983,106 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20">
-      {/* Page Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Responsive Grid Header Container */}
+        <div className="flex flex-col gap-4 p-6 bg-white border-b rounded-3xl shadow-sm mb-6">
+          {/* Header Title Section */}
           <div className="flex items-center gap-3">
             <div className="p-3 bg-purple-100 text-purple-600 rounded-2xl">
-              <Award className="w-6 h-6" />
+              <Award className="w-6 h-6"/>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Grading & Marks</h1>
-              <p className="text-xs text-slate-500">Auto-score MCQs • Grade structured assessments</p>
+              <h1 className="text-xl font-bold text-gray-900">Grading & Marks</h1>
+              <p className="text-xs text-gray-500">Auto-score MCQs • Grade structured assessments</p>
             </div>
           </div>
 
-          <div className="w-full md:w-auto min-w-[280px]">
-            <Select
-              value={selectedGrade}
-              onValueChange={(val) => isAdmin && setSelectedGrade(val)}
-              disabled={!isAdmin}
-            >
-              <SelectTrigger className={`w-full md:w-72 rounded-xl border-slate-200 font-medium ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : 'bg-slate-50'}`}>
-                <SelectValue placeholder="All Grades" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_GRADES_VALUE}>All Grades</SelectItem>
-                {GRADE_OPTIONS.map((g) => (
-                  <SelectItem key={g} value={g}>{g}</SelectItem>
-                ))}
-                {!isAdmin && <SelectItem value={user?.assignedClass || user?.grade || 'Grade 1'}>{user?.assignedClass || user?.grade || 'Grade 1'}</SelectItem>}
-              </SelectContent>
-            </Select>
-
-            {/* ── Stream Selector (Locked for teachers) ──────────────────────── */}
-            <select
-              value={selectedStream}
-              onChange={(e) => isAdmin && setSelectedStream(e.target.value)}
-              disabled={!isAdmin}
-              className={`h-11 w-36 rounded-xl border border-slate-200 px-3 text-sm font-medium ${
-                !isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : 'bg-slate-50 text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100'
-              }`}
-              aria-label="Filter by stream"
-            >
-              <option value={ALL_STREAMS_VALUE}>All Streams</option>
-              {availableStreams.map((streamName) => (
-                <option key={streamName} value={streamName}>
-                  {streamName}
-                </option>
-              ))}
-              {!isAdmin && <option value={user?.assignedStream || user?.stream || 'East'}>{user?.assignedStream || user?.stream || 'East'}</option>}
-            </select>
-
-            {/* ── Exam Selector (cascaded by grade & stream) ─────────────────── */}
-            <div className="w-full max-w-sm">
-              <div className="relative flex items-center w-full">
-                <select
-                  value={selectedExamId}
-                  onChange={(e) => setSelectedExamId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-2xl shadow-sm text-xs font-bold text-gray-900 truncate focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer appearance-none pr-8"
-                >
-                  <option value={ALL_EXAMS_VALUE}>All Exams</option>
-                  {filteredExams.map((exam) => (
-                    <option key={exam.id} value={exam.id}>
-                      {exam.title || "KNEC SCHOOL BASED ASSESSMENT"} ({exam.subject} • {exam.category || exam.examType || "Assessment"})
-                    </option>
+          {/* Filters & Actions Grid Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center pt-2">
+            {/* Grade Selector */}
+            <div className="w-full">
+              <Select
+                value={selectedGrade}
+                onValueChange={(val) => isAdmin && setSelectedGrade(val)}
+                disabled={!isAdmin}
+              >
+                <SelectTrigger className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-purple-500 cursor-pointer ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}>
+                  <SelectValue placeholder="All Grades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_GRADES_VALUE}>All Grades</SelectItem>
+                  {GRADE_OPTIONS.map((g) => (
+                    <SelectItem key={g} value={g}>{g}</SelectItem>
                   ))}
-                </select>
-                
-                {/* Chevron icon positioned natively inside */}
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                  <ChevronDown className="w-4 h-4"/>
-                </div>
-              </div>
+                  {!isAdmin && <SelectItem value={user?.assignedClass || user?.grade || 'Grade 1'}>{user?.assignedClass || user?.grade || 'Grade 1'}</SelectItem>}
+                </SelectContent>
+              </Select>
             </div>
 
-            <Button
-              variant="outline"
-              className="h-10 px-4 rounded-xl gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 font-semibold hover:bg-indigo-100 disabled:opacity-50"
+            {/* Stream Selector */}
+            <div className="w-full">
+              <select
+                value={selectedStream}
+                onChange={(e) => isAdmin && setSelectedStream(e.target.value)}
+                disabled={!isAdmin}
+                className={`w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-purple-500 cursor-pointer ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}
+              >
+                <option value={ALL_STREAMS_VALUE}>All Streams</option>
+                {availableStreams.map((streamName) => (
+                  <option key={streamName} value={streamName}>
+                    {streamName}
+                  </option>
+                ))}
+                {!isAdmin && <option value={user?.assignedStream || user?.stream || 'East'}>{user?.assignedStream || user?.stream || 'East'}</option>}
+              </select>
+            </div>
+
+            {/* Assessment Selector */}
+            <div className="w-full sm:col-span-2 lg:col-span-2">
+              <select
+                value={selectedExamId}
+                onChange={(e) => setSelectedExamId(e.target.value)}
+                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-2xl text-xs font-semibold text-gray-900 truncate focus:ring-2 focus:ring-purple-500 cursor-pointer"
+              >
+                <option value="" disabled>Select Assessment...</option>
+                <option value={ALL_EXAMS_VALUE}>All Exams</option>
+                {filteredExams.map((exam) => (
+                  <option key={exam.id} value={exam.id}>
+                    {exam.title || "KNEC SCHOOL BASED ASSESSMENT"} ({exam.subject})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Action Buttons Row */}
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
+            <button
               onClick={handleExportCSV}
               disabled={csvExport.isDownloading || studentGrades.length === 0}
+              className="px-4 py-2 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-2xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {csvExport.isDownloading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin"/>
               ) : (
-                <Download className="w-4 h-4" />
+                <Download className="w-4 h-4"/>
               )}
               Export Marks
-            </Button>
-
-            <Button
+            </button>
+            <button
               onClick={handleSaveAll}
               disabled={isSaving || studentGrades.length === 0}
-              className="h-10 px-5 rounded-xl font-semibold shadow-sm gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
+              className="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-2xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
             >
               {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin"/>
               ) : (
-                <Save className="w-4 h-4" />
+                <Save className="w-4 h-4"/>
               )}
               Save All
-            </Button>
+            </button>
           </div>
         </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 py-6">
         {/* No assessment */}
         {!selectedExam && (
           <div className="flex flex-col items-center justify-center py-28 text-center">
