@@ -196,10 +196,18 @@ function loadSubmissions(assessmentId: string): StudentSubmission[] {
   try {
     const raw = localStorage.getItem(SUBMISSION_KEY);
     if (!raw) return [];
-    const all: Record<string, StudentSubmission> = JSON.parse(raw);
-    const subs = Object.values(all).filter((s) => s.isComplete);
+    
+    // Parse raw which could be either an Array or an Object/Record map
+    let subs: StudentSubmission[] = [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      subs = parsed.filter((s) => s.isComplete || s.status === 'submitted' || s.status === 'completed');
+    } else if (parsed && typeof parsed === 'object') {
+      subs = Object.values(parsed).filter((s: any) => s.isComplete || s.status === 'submitted' || s.status === 'completed');
+    }
+
     if (assessmentId === ALL_EXAMS_VALUE) return subs;
-    return subs.filter((s) => s.assessmentId === assessmentId);
+    return subs.filter((s) => s.assessmentId === assessmentId || s.examId === assessmentId);
   } catch { return []; }
 }
 
