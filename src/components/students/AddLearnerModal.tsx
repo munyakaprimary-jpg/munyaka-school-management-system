@@ -28,8 +28,6 @@ export default function AddLearnerModal({
   const [assessmentNumber, setAssessmentNumber] = useState('');
   const [idType, setIdType] = useState<'assessment' | 'birthCert'>('assessment');
   const [idValue, setIdValue] = useState('');
-  const [idType, setIdType] = useState<'assessment' | 'birthCert'>('assessment');
-  const [idValue, setIdValue] = useState('');
   const [gradeLevel, setGradeLevel] = useState('Grade 6');
   const [stream, setStream] = useState('BLUE');
   const [gender, setGender] = useState('Female');

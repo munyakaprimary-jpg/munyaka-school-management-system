@@ -25,6 +25,15 @@ export interface License {
   type?: string;
   /** Display name of the active plan, e.g. "Munyaka Starter" */
   planName?: string;
+  maxSeats?: number;
+  feePerSeat?: number;
+  amountPaid?: number;
+  issuedDate?: string;
+  expiryDate?: string;
+  paymentMethod?: string;
+  nextBillingDate?: string;
+  reference?: string;
+  schoolName?: string;
   validityDays: ValidityDuration;
   issuedAt: string;     // ISO date string
   expiresAt: string;   // ISO date string

@@ -1023,7 +1023,7 @@ export const initialSeedData = {
       "adminPhone": "+254 738873359"
     }
   ],
-  "staff": [
+  staffItems: [
     { "id": "staff-1", "name": "Joseph Mbutiru", "role": "Teacher", "status": "active" },
     { "id": "staff-2", "name": "Hellen Wangari", "role": "Teacher", "status": "active" },
     { "id": "staff-3", "name": "Md Ogolla", "role": "Teacher", "status": "active" },

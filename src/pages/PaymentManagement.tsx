@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { showSuccess, showError } from '@/utils/toast';
 import { recordPaymentAndUnlock } from '@/utils/billingAutoLock';
 import { useSchoolStore } from '@/store/useSchoolStore';
-import { INITIAL_SEED_DATA } from '../data/InitialSeedData';
+import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 
 export default function PaymentManagement() {
   const [ownerBypass, setOwnerBypass] = useState(() => {
