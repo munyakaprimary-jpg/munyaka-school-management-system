@@ -1360,6 +1360,7 @@ const SetExamsList: React.FC = () => {
   const [resultsExamId, setResultsExamId] = useState<string | null>(null);
   const [resultsExamTitle, setResultsExamTitle] = useState<string>("");
   const [resultsExamSubject, setResultsExamSubject] = useState<string>("");
+  const [activeAssessmentQuiz, setActiveAssessmentQuiz] = useState<Assessment | null>(null);
 
   // Returns to the Assessments parent menu and resets in-page nested state.
   const handleBackToParent = useBackToAssessmentsMenu(
@@ -1545,7 +1546,7 @@ const SetExamsList: React.FC = () => {
           {/* Primary: Take Exam */}
           {exam.status !== "Closed" && (
             <Button
-              onClick={() => navigate(`/assessments/student?id=${exam.id}`)}
+              onClick={() => setActiveAssessmentQuiz(exam)}
               className="flex-1 h-10 px-3 rounded-lg text-sm font-medium gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
             >
               <PlayCircle size={15} />
@@ -1635,7 +1636,7 @@ const SetExamsList: React.FC = () => {
                   <div className="flex items-center justify-end gap-1">
                     {exam.status !== "Closed" && (
                       <Button variant="ghost" size="icon"
-                        onClick={() => navigate(`/assessments/student?id=${exam.id}`)}
+                        onClick={() => setActiveAssessmentQuiz(exam)}
                         className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50" title="Take Exam">
                         <PlayCircle size={14} />
                       </Button>
@@ -1674,6 +1675,32 @@ const SetExamsList: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 pb-20 max-w-full">
+      {activeAssessmentQuiz && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-6xl max-h-[95vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col relative">
+            <div className="absolute top-4 right-4 z-20">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveAssessmentQuiz(null)}
+                className="bg-white/90 hover:bg-slate-100 text-slate-700 font-bold rounded-xl shadow-sm"
+              >
+                ✕ Close Assessment
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <StudentAssessmentView
+                assessment={activeAssessmentQuiz}
+                studentId={user?.id || user?.email || "teacher_admin_eval"}
+                studentName={user?.name || "Teacher / Admin Evaluator"}
+                skipGate={true}
+                onBackToExams={() => setActiveAssessmentQuiz(null)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {previewExamId && (
         <ExamViewModal
           examId={previewExamId}
