@@ -298,13 +298,29 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
           (s: any) => !s.status || s.status === "Active" || s.status === "active" || s.status === true || s.status === undefined
         ) as RegisteredStudent[];
         setStudents(active);
+
+        // Check active student session on mount
+        const storedStudent = localStorage.getItem('active_learner') || localStorage.getItem('munyaka_active_student');
+        if (storedStudent) {
+          try {
+            const studentData = JSON.parse(storedStudent);
+            if (studentData) {
+              setSelectedStudentId(studentData.id || studentData.admissionNumber || studentData.admissionNo || '');
+              if (studentData.grade) setSelectedGrade(studentData.grade);
+              if (studentData.stream) setSelectedStream(studentData.stream);
+            }
+          } catch (err) {
+            console.error("Failed to parse active learner session", err);
+          }
+        }
       } catch (err) {
         console.error("[LearnerIdentificationModal] Failed to load students:", err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
-
     loadStudents();
+  }, []);
     window.addEventListener('storage', loadStudents);
     window.addEventListener('munyaka_learners_updated', loadStudents);
     window.addEventListener('munyaka:data-changed', loadStudents);
