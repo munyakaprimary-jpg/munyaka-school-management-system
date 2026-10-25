@@ -135,9 +135,10 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     if (onBackToExams) {
       onBackToExams();
     } else {
-      navigate(-1);
+      window.location.hash = "#/assessments/list";
+      window.dispatchEvent(new Event("hashchange"));
     }
-  }, [onBackToExams, navigate]);
+  }, [onBackToExams]);
 
   // ── Gate State ─────────────────────────────────────────────────────────────
   const [isGatePassed, setIsGatePassed] = useState(skipGate);
