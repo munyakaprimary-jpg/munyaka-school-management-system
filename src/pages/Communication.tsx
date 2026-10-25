@@ -71,10 +71,12 @@ const Communication = () => {
     showSuccess(`${msgType} message broadcasted successfully!`);
 
     // Add a notification for the sent message
-    (addNotification as any)({
-      title: `New ${msgType} Message Sent`,
-      message: `Sent to ${recipient}: ${subject}`,
-    });
+    if (typeof addNotification === 'function') {
+      (addNotification as any)({
+        title: `New ${msgType} Message Sent`,
+        message: `Sent to ${recipient}: ${subject}`,
+      });
+    }
   };
 
   return (

@@ -82,11 +82,13 @@ const TeacherCommunication = () => {
     CentralDataService.setData(STORAGE_KEY, updated);
 
     showSuccess(`Successfully sent ${channel} to ${recipientGroup}!`);
-    addNotification({
-      title: `Teacher ${channel} Sent`,
-      message: `Sent to ${recipientGroup}: ${subject}`,
-      priority: 'medium',
-    });
+    if (typeof addNotification === 'function') {
+      addNotification({
+        title: `Teacher ${channel} Sent`,
+        message: `Sent to ${recipientGroup}: ${subject}`,
+        priority: 'medium',
+      });
+    }
 
     setSubject('');
     setContent('');
