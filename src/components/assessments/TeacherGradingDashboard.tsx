@@ -1050,8 +1050,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
               ) : (
                 filteredExams.map((exam) => (
                   <option key={exam.id} value={exam.id}>
-                    {exam.title} ({exam.subject}
-                    {(exam.classLevel || exam.grade) && ` • ${exam.classLevel || exam.grade}`})
+                    {exam.title || "KNEC SCHOOL BASED ASSESSMENT"} — {exam.subject} • {exam.category || exam.examType || "Assessment"}
                   </option>
                 ))
               )}

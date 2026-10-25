@@ -514,12 +514,17 @@ export default function GradingReview() {
                 )}
                 {assessments.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
-                    <span className="flex flex-col">
-                      <span className="font-medium">{a.title}</span>
-                      <span className="text-xs text-slate-500">
-                        {a.subject} · {a.category} · Class {a.classLevel}
+                    <div className="relative flex flex-col px-4 py-2 bg-white border border-gray-200 rounded-2xl shadow-sm max-w-xs w-full overflow-hidden">
+                      {/* Assessment Title - Truncated or wrapped properly */}
+                      <span className="text-xs font-bold text-gray-900 truncate w-full block text-center">
+                        {a.title || "KNEC SCHOOL BASED ASSESSMENT"}
                       </span>
-                    </span>
+                      
+                      {/* Subtitle / Category */}
+                      <span className="text-[11px] text-gray-500 truncate w-full block text-center">
+                        {a.subject} • {a.category}
+                      </span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
