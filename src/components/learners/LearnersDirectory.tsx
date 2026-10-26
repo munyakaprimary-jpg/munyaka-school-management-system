@@ -280,15 +280,18 @@ export default function LearnersDirectory() {
   };
 
   const purgeAllLearnersDataCompletely = async () => {
-    if (window.confirm("Are you sure you want to completely wipe all learners from both local storage and Firestore? This cannot be undone.")) {
+    if (window.confirm("Are you sure you want to completely wipe all learners from both local storage and cloud records? This cannot be undone.")) {
       try {
-        // 1. Clear LocalStorage keys
-        localStorage.removeItem('munyaka_learners');
-        localStorage.removeItem('munyaka_exam_submissions');
+        localStorage.setItem('munyaka_learners', JSON.stringify([]));
         localStorage.removeItem('munyaka_learners_v2');
+        localStorage.removeItem('munyaka_learners_db');
+        localStorage.removeItem('school_learners_data');
+        localStorage.removeItem('school_learners_master');
+        localStorage.removeItem('munyaka_students');
         localStorage.removeItem('deleted_learner_ids');
+        window.dispatchEvent(new Event('munyaka_learners_updated'));
+        window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
 
-        // 2. Clear Firestore collections if Firebase is initialized
         if (db) {
           const collectionsToClear = ['learners', 'students', 'exam_submissions', 'attendance'];
           for (const colName of collectionsToClear) {
@@ -300,7 +303,7 @@ export default function LearnersDirectory() {
           }
         }
 
-        alert("All local and cloud records have been successfully purged.");
+        alert("All local and cloud learner records have been successfully and completely purged.");
         window.location.reload();
       } catch (error) {
         console.error("Error purging database:", error);
