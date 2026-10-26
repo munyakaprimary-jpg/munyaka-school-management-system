@@ -58,21 +58,11 @@ const normalizeGradeStr = (val: string) => {
 };
 
 const generateAdmissionNumber = (studentGrade: string, admissionYear: string = '2026') => {
-  // 1. Retrieve all registered students from localStorage
-  const students = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-
-  // 2. Filter ONLY students who belong to this exact grade
-  const studentsInThisGrade = students.filter((s: any) => {
-    const gradeMatch = s.grade === studentGrade || s.gradeAndStream?.includes(studentGrade);
-    return gradeMatch;
-  });
-
-  // 3. The sequence starts at 1 for this grade, incrementing only by the count of students in THIS grade
-  const nextSeq = studentsInThisGrade.length + 1;
-  const paddedSeq = String(nextSeq).padStart(3, '0');
-
-  // 4. Return format: MUN-[001]-[YEAR] scoped exclusively to the grade
-  return `MUN-${paddedSeq}-${admissionYear}`;
+  // Generate a random 4-character alphanumeric string (e.g., 7K9A)
+  const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+  
+  // Format: MUN-[RANDOM_CODE]-[GRADE_1_ENTRY_YEAR]
+  return `MUN-${randomCode}-${admissionYear}`;
 };
 
 // Re-sequence all existing learners with a single continuous unbroken global sequence
