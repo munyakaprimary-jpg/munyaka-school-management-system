@@ -431,70 +431,8 @@ const App = () => {
     //
     // Each is idempotent and gated by its own localStorage flag.
     useEffect(() => {
-      // Re-seed canonical storage keys on mount to ensure data persistence
-      // after any migrations or clean installs.
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          const seedKeys: [string, unknown][] = [
-            ['munyaka_students', (initialSeedData as any).students || (initialSeedData as any).learners || []],
-            ['munyaka_fees_records', (initialSeedData as any).fees || []],
-            ['munyaka_student_fees', (initialSeedData as any).fees || []],
-            ['munyaka_fees', (initialSeedData as any).fees || []],
-            ['munyaka_payments', (initialSeedData as any).payments || (initialSeedData as any).fees || []],
-            ['munyaka_transactions', (initialSeedData as any).transactions || (initialSeedData as any).payments || []],
-            ['munyaka_attendance', (initialSeedData as any).attendance || []],
-            ['munyaka_grades', (initialSeedData as any).grades || []],
-            ['munyaka_exam_types', (initialSeedData as any).examTypes || []],
-            ['munyaka_library_books', (initialSeedData as any).libraryBooks || []],
-            ['munyaka_fee_structures', (initialSeedData as any).feeStructures || []],
-            ['munyaka_notices', (initialSeedData as any).notices || []],
-            ['munyaka_system_settings_v3', (initialSeedData as any).settings || {}],
-          ];
-  
-          let anySeeded = false;
-          for (const [key, value] of seedKeys) {
-            const existing = localStorage.getItem(key);
-            if (!existing) {
-              localStorage.setItem(key, JSON.stringify(value));
-              anySeeded = true;
-            } else {
-              // If the existing data is an empty array and seed has data, re-seed it.
-              try {
-                const parsed = JSON.parse(existing);
-                if ((Array.isArray(parsed) && parsed.length === 0) && Array.isArray(value) && value.length > 0) {
-                  localStorage.setItem(key, JSON.stringify(value));
-                  anySeeded = true;
-                }
-              } catch {
-                // Keep existing data on parse error
-              }
-            }
-          }
-  
-          // Also ensure munyaka_central_db is populated (used by CentralDataService)
-          const existingDb = localStorage.getItem('munyaka_central_db');
-          if (!existingDb) {
-            const initialDb = {
-              students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
-              staff: initialSeedData.staff || [],
-            };
-            localStorage.setItem('munyaka_central_db', JSON.stringify(initialDb));
-          } else {
-            const parsed = JSON.parse(existingDb);
-            if (!parsed.students || parsed.students.length === 0) {
-              parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
-              localStorage.setItem('munyaka_central_db', JSON.stringify(parsed));
-            }
-          }
-  
-          if (anySeeded) {
-            console.log('[App Mount] Re-seeded canonical storage keys from initialSeedData.');
-          }
-        } catch (err) {
-          console.error("Failed to re-seed storage keys:", err);
-        }
-      }
-  
+      // Auto-seeding disabled to respect user purge & reset state.
+      // If local storage is empty, it remains empty ([]).
       runOneTimeAssessmentCleanup();
       runOneTimeLegacyAdmNoMigration();
       runOneTimeAdmissionNoBackfill();
