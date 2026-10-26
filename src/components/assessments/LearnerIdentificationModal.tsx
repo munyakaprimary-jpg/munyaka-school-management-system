@@ -320,7 +320,6 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
       }
     };
     loadStudents();
-  }, []);
     window.addEventListener('storage', loadStudents);
     window.addEventListener('munyaka_learners_updated', loadStudents);
     window.addEventListener('munyaka:data-changed', loadStudents);
