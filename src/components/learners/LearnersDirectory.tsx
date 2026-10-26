@@ -280,36 +280,32 @@ export default function LearnersDirectory() {
   };
 
   const purgeAllLearnersDataCompletely = async () => {
-    if (window.confirm("Are you sure you want to completely wipe all learners from both local storage and cloud records? This cannot be undone.")) {
-      try {
-        localStorage.setItem('munyaka_learners', JSON.stringify([]));
-        localStorage.removeItem('munyaka_learners_v2');
-        localStorage.removeItem('munyaka_learners_db');
-        localStorage.removeItem('school_learners_data');
-        localStorage.removeItem('school_learners_master');
-        localStorage.removeItem('munyaka_students');
-        localStorage.removeItem('deleted_learner_ids');
-        window.dispatchEvent(new Event('munyaka_learners_updated'));
-        window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
+    if (window.confirm("Are you sure you want to completely wipe all learners and student records from local storage? This cannot be undone.")) {
+      const keysToPurge = [
+        'munyaka_learners',
+        'munyaka_learners_v2',
+        'munyaka_learners_db',
+        'school_learners_data',
+        'school_learners_master',
+        'munyaka_students',
+        'munyaka_students_master',
+        'students',
+        'learners',
+        'cached_learners',
+        'school_learners',
+        'deleted_learner_ids'
+      ];
 
-        if (db) {
-          const collectionsToClear = ['learners', 'students', 'exam_submissions', 'attendance'];
-          for (const colName of collectionsToClear) {
-            const querySnapshot = await getDocs(collection(db, colName));
-            const deletePromises = querySnapshot.docs.map((document) =>
-              deleteDoc(doc(db, colName, document.id))
-            );
-            await Promise.all(deletePromises);
-          }
-        }
-
-        alert("All local and cloud learner records have been successfully and completely purged.");
-        window.location.reload();
-      } catch (error) {
-        console.error("Error purging database:", error);
-        alert("Purged local data, but encountered an error clearing Firestore. Check console.");
-        window.location.reload();
+      for (const k of keysToPurge) {
+        localStorage.setItem(k, JSON.stringify([]));
+        localStorage.removeItem(k);
       }
+
+      window.dispatchEvent(new Event('munyaka_learners_updated'));
+      window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
+
+      alert("All local learner and student records have been successfully purged!");
+      window.location.reload();
     }
   };
 
