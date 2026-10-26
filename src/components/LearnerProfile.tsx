@@ -64,7 +64,7 @@ const StudentProfile = () => {
             </div>
             <p className="font-bold text-slate-700">This learner record does not exist.</p>
             <p className="text-sm text-slate-500">The student may have been removed or the ID is incorrect.</p>
-            <Link to="/students">
+            <Link to="/learners">
               <Button className="mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
                 Back to Learners
               </Button>

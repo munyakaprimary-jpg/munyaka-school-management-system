@@ -174,7 +174,7 @@ export default function TeacherDashboard() {
               </div>
 
               <div
-                onClick={() => navigate('/students')}
+                onClick={() => navigate('/learners')}
                 className="p-5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-emerald-50/50 hover:border-emerald-200 transition-all cursor-pointer group flex items-start gap-4"
               >
                 <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
