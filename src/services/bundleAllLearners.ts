@@ -40,14 +40,15 @@ export const bundleAllLearnersToCentral = async () => {
     learnerMap.set(mapKey, standardized);
   };
 
-  // A. Gather from static seed data fallback
+  // A. Gather from static seed data fallback (now empty [] by default)
   const seedStudents = (initialSeedData as any)?.students || (initialSeedData as any)?.learners || [];
   if (Array.isArray(seedStudents)) {
     seedStudents.forEach(addLearnerToMap);
   }
 
-  // B. Gather from all legacy local storage keys
-  LEGACY_KEYS.forEach((key) => {
+  // B. Gather from legacy local storage keys
+  const SAFE_LEGACY_KEYS = ['cached_learners', 'students', 'learners', 'school_learners', 'school_learners_data'];
+  SAFE_LEGACY_KEYS.forEach((key) => {
     try {
       const raw = localStorage.getItem(key);
       if (raw) {
