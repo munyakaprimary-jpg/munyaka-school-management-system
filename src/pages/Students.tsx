@@ -23,7 +23,8 @@ import {
   UserCheck,
   ArrowRightLeft,
   Eye,
-  Download
+  Download,
+  RefreshCw
 } from 'lucide-react';
 import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
 import { purgeLearnerPermanently } from '@/services/purgeLearnerService';
@@ -33,6 +34,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { CentralDataService } from '@/services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
+import { migrateExistingAdmissionNumbers } from '@/utils/migrateExistingAdmissionNumbers';
 import { db } from '@/config/firebase';
 import { collection, onSnapshot, addDoc, setDoc, doc } from 'firebase/firestore';
 
@@ -656,6 +658,18 @@ export default function Students() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            className="rounded-2xl border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 gap-2 font-bold text-xs sm:text-sm"
+            onClick={() => {
+              if (window.confirm("Run one-time migration to re-format all existing learner admission numbers to random hash codes with their Grade 1 entry year?")) {
+                migrateExistingAdmissionNumbers();
+                showSuccess("Admission numbers successfully migrated to hash format!");
+              }
+            }}
+          >
+            <RefreshCw size={18} /> Migrate Admission Nos.
+          </Button>
           <Button
             variant="outline"
             className="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 font-bold text-xs sm:text-sm"
