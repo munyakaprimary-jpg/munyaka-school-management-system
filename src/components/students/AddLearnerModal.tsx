@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '@/components/ui/Modal';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,30 @@ export default function AddLearnerModal({
   const [parentName, setParentName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // 1. Calculate Grade 1 Entry Year relative to 2026
+  const calculateCohortYear = (gradeStr: string): number => {
+    const currentYear = 2026;
+    const match = (gradeStr || '').match(/\d+/);
+    const gradeNum = match ? parseInt(match[0], 10) : 1;
+    // Grade 1 -> 2026, Grade 2 -> 2025, Grade 5 -> 2022, Grade 6 -> 2021, etc.
+    return currentYear - (gradeNum - 1);
+  };
+
+  // 2. Generate admission number string
+  const generateAdmissionNumber = (gradeStr: string): string => {
+    const year = calculateCohortYear(gradeStr);
+    const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `MUN-${randomHash}-${year}`;
+  };
+
+  // 3. React Effect: Update input value on Grade change
+  useEffect(() => {
+    if (gradeLevel) {
+      const freshAdmNo = generateAdmissionNumber(gradeLevel);
+      setAdmissionNumber(freshAdmNo);
+    }
+  }, [gradeLevel]);
 
   const handleRegisterLearner = async (e: React.FormEvent) => {
     e.preventDefault();
