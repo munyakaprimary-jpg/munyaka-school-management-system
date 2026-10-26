@@ -58,14 +58,9 @@ export default function LearnersDirectory() {
   const navigate = useNavigate();
   const [learnersList, setLearnersList] = useState<any[]>(() => {
     try {
-      const unified = localStorage.getItem('munyaka_learners_v2');
+      const unified = localStorage.getItem('munyaka_learners');
       if (unified) {
         const parsed = JSON.parse(unified);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(formatLearnerDoc);
-      }
-      const cached = localStorage.getItem('cached_learners') || localStorage.getItem('munyaka_learners');
-      if (cached) {
-        const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) return parsed.map(formatLearnerDoc);
       }
     } catch {}
@@ -104,7 +99,7 @@ export default function LearnersDirectory() {
     const loadFromStorage = () => {
       try {
         const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-        const unified = localStorage.getItem(UNIFIED_KEY);
+        const unified = localStorage.getItem('munyaka_learners');
         if (unified) {
           const parsed = JSON.parse(unified);
           if (Array.isArray(parsed)) {
@@ -114,6 +109,7 @@ export default function LearnersDirectory() {
           }
         }
       } catch {}
+      applyList([]);
     };
 
     loadFromStorage();
