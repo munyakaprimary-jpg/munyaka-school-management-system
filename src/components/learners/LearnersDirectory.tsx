@@ -334,14 +334,14 @@ export default function LearnersDirectory() {
           <h1 className="text-2xl font-black text-slate-900 mt-2">Learners Directory</h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">Manage school enrollment, student records, and profiles</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button
             onClick={handlePurgeAndReset}
-            className="px-4 py-2 border-2 border-red-300 text-red-600 bg-red-50 hover:bg-red-100 rounded-2xl font-bold flex items-center gap-2 shadow-sm transition-all"
+            variant="outline"
+            className="rounded-2xl font-bold border-rose-200 text-rose-700 bg-rose-50/50 hover:bg-rose-100 hover:text-rose-800 h-12 px-5 shadow-sm flex items-center gap-2"
           >
-            <Trash size={16} />
-            <span>Purge & Reset Directory</span>
-          </button>
+            <Trash size={18} /> Purge & Reset Directory
+          </Button>
           <Button
             onClick={() => setIsAddModalOpen(true)}
             className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-6 shadow-lg shadow-indigo-100"
