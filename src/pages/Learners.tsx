@@ -36,7 +36,7 @@ import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/serv
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
 import { migrateExistingAdmissionNumbers } from '@/utils/migrateExistingAdmissionNumbers';
 import { db } from '@/config/firebase';
-import { collection, onSnapshot, addDoc, setDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, setDoc, doc, getDocs, deleteDoc } from 'firebase/firestore';
 
 const STUDENTS_STORAGE_KEY = 'munyaka_students';
 const API_BASE_URL = '/api';
@@ -646,6 +646,39 @@ export default function Students() {
     return { totalMale, totalFemale, totalAll };
   }, [streamBreakdown]);
 
+  const handlePurgeAndReset = async () => {
+    if (window.confirm("Are you sure you want to completely wipe all learner records, exam submissions, and remnants from local storage and Firestore? This cannot be undone.")) {
+      try {
+        // 1. Clear LocalStorage keys
+        localStorage.removeItem('munyaka_students');
+        localStorage.removeItem('munyaka_learners');
+        localStorage.removeItem('munyaka_exam_submissions');
+        localStorage.removeItem('munyaka_attendance');
+        localStorage.removeItem('munyaka_learners_v2');
+        localStorage.removeItem('deleted_learner_ids');
+
+        // 2. Clear Firestore collections if available
+        if (db) {
+          const collectionsToClear = ['learners', 'students', 'exam_submissions', 'attendance'];
+          for (const colName of collectionsToClear) {
+            const querySnapshot = await getDocs(collection(db, colName));
+            const deletePromises = querySnapshot.docs.map((document) =>
+              deleteDoc(doc(db, colName, document.id))
+            );
+            await Promise.all(deletePromises);
+          }
+        }
+
+        alert("System successfully purged and reset.");
+        window.location.reload();
+      } catch (error) {
+        console.error("Error during purge:", error);
+        alert("Local data cleared, but encountered an error clearing Firestore. Check console.");
+        window.location.reload();
+      }
+    }
+  };
+
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header action bar */}
@@ -659,21 +692,11 @@ export default function Students() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button
-            variant="outline"
-            className="rounded-2xl border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 gap-2 font-bold text-xs sm:text-sm"
-            onClick={() => {
-              const students = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-              if (!students.length) {
-                alert("No learners found to migrate.");
-                return;
-              }
-              if (window.confirm("Run one-time migration to re-format all existing learner admission numbers to random hash codes with their Grade 1 entry year?")) {
-                migrateExistingAdmissionNumbers(setStudents);
-                showSuccess("Admission numbers successfully migrated to hash format!");
-              }
-            }}
+            variant="destructive"
+            className="rounded-2xl bg-rose-600 hover:bg-rose-700 text-white gap-2 font-bold text-xs sm:text-sm shadow-lg shadow-rose-100"
+            onClick={handlePurgeAndReset}
           >
-            <RefreshCw size={18} /> Migrate Admission Nos.
+            <Trash2 size={18} /> Purge & Reset Directory
           </Button>
           <Button
             variant="outline"
