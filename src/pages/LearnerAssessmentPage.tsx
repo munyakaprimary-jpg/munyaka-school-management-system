@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import StudentAssessmentView from "@/components/assessments/StudentAssessmentView";
+import LearnerAssessmentView from "@/components/assessments/LearnerAssessmentView";
 import type { Assessment } from "@/types/questions";
 import { FileQuestion } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -180,7 +180,7 @@ const StudentAssessmentPage: React.FC = () => {
   }
 
   return (
-    <StudentAssessmentView
+    <LearnerAssessmentView
       assessment={assessment}
       studentId={studentId}
       studentName={studentName}

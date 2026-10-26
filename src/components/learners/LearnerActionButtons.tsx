@@ -7,42 +7,28 @@ import { notifyDataChanged } from '@/utils/storage';
 import { Button } from '@/components/ui/button';
 import { ArrowRightLeft } from 'lucide-react';
 
-const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => {
+const LearnerActionButtons = ({ learner }: { learner: StudentTransferInfo }) => {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState(student);
+  const [selectedLearner, setSelectedLearner] = useState(learner);
 
-  const handleTransferStudent = (learner: StudentTransferInfo) => {
-    setSelectedStudent({
-      ...learner as any,
-            assessment_no: (learner as any).assessment_no || null,
-      admission_no: (learner as any).admission_no || (learner as any).admissionNo || (learner as any).admNo || null
+  const handleTransferLearner = (l: StudentTransferInfo) => {
+    setSelectedLearner({
+      ...l as any,
+      assessment_no: (l as any).assessment_no || null,
+      admission_no: (l as any).admission_no || (l as any).admissionNo || (l as any).admNo || null
     });
     setIsTransferOpen(true);
   };
 
-  /**
-   * Called after TransferWorkflow has:
-   *   1. Written the archive record (archive_updated event dispatched)
-   *   2. Called onTransferComplete with the studentId + certificateNumber
-   *
-   * This handler must:
-   *   a. Mark the learner as TRANSFERRED in school_learners_data
-   *   b. Update local React state so callers that rely on the local state
-   *      (e.g. a directory table) get an immediate re-render
-   *   c. Dispatch cross-tab / same-tab events so the Learners page,
-   *      the TransferredLearnersArchive page, and any other listener
-   *      refreshes without a page reload
-   */
-  const handleTransferComplete = (studentId: string, certificateNumber: string) => {
-    // ── (a) Persist the TRANSFERRED status to the active roster ─────────
+  const handleTransferComplete = (learnerId: string, certificateNumber: string) => {
     try {
-      const raw = window.localStorage.getItem('school_learners_data');
+      const raw = window.localStorage.getItem('school_learners_data') || window.localStorage.getItem('munyaka_learners');
       if (raw) {
         const parsed: { id: string; status?: string }[] = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           const updated = parsed.map((l) =>
-            l.id === studentId
+            l.id === learnerId
               ? { ...l, status: 'TRANSFERRED' as const }
               : l,
           );
@@ -50,7 +36,12 @@ const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => 
             'school_learners_data',
             JSON.stringify(updated),
           );
+          window.localStorage.setItem(
+            'munyaka_learners',
+            JSON.stringify(updated),
+          );
           notifyDataChanged('school_learners_data');
+          notifyDataChanged('munyaka_learners');
         }
       }
     } catch (err) {
@@ -60,11 +51,9 @@ const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => 
       );
     }
 
-    // ── (b) Update local state so this component's callers re-render ───
     setIsTransferOpen(false);
-    setSelectedStudent(null);
+    setSelectedLearner(null);
 
-    // ── (c) Notify all open tabs and same-tab listeners ────────────────
     try {
       window.dispatchEvent(new Event('learners_data_updated'));
       window.dispatchEvent(new Event('archive_updated'));
@@ -83,7 +72,7 @@ const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => 
         variant="ghost"
         size="sm"
         className="h-8 px-2 text-amber-600 hover:text-amber-900 hover:bg-amber-50"
-        onClick={() => handleTransferStudent(student)}
+        onClick={() => handleTransferLearner(learner)}
         title="Transfer Out / Stream Change"
       >
         <ArrowRightLeft size={16} /> <span className="text-xs ml-1 hidden sm:inline">Transfer Out</span>
@@ -92,12 +81,12 @@ const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => 
       <AcademicHistoryModal
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
-        studentId={selectedStudent?.id || ''}
-        studentName={selectedStudent?.name || ''}
+        studentId={selectedLearner?.id || ''}
+        studentName={selectedLearner?.name || ''}
       />
 
       <TransferWorkflow
-        student={selectedStudent}
+        student={selectedLearner}
         isOpen={isTransferOpen}
         onClose={() => setIsTransferOpen(false)}
         onTransferComplete={handleTransferComplete}

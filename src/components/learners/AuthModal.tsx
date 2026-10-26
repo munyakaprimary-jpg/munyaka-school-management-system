@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Loader2 } from 'lucide-react';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
@@ -13,28 +12,27 @@ interface AuthModalProps {
   setAuthError?: (value: string) => void;
   isVerifying?: boolean;
   setIsVerifying?: (value: boolean) => void;
-  studentToDelete: { id: string; name: string } | null;
+  learnerToDelete: { id: string; name: string } | null;
   onVerify: () => void;
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
-  studentToDelete,
+  learnerToDelete,
   onVerify
 }) => {
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
     try {
-      if (studentToDelete?.id) {
-        const learnerId = String(studentToDelete.id);
-        const currentList = JSON.parse(localStorage.getItem('munyaka_learners_v2') || '[]');
+      if (learnerToDelete?.id) {
+        const learnerId = String(learnerToDelete.id);
+        const currentList = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
         const updatedList = currentList.filter(
           (item: any) => String(item.id) !== learnerId && String(item.admissionNo || item.admission_number || item.admNo) !== learnerId
         );
-        localStorage.setItem('munyaka_learners_v2', JSON.stringify(updatedList));
-        localStorage.setItem('munyaka_students', JSON.stringify(updatedList));
+        localStorage.setItem('munyaka_learners', JSON.stringify(updatedList));
         localStorage.setItem('cached_learners', JSON.stringify(updatedList));
 
         if (db) {
@@ -46,7 +44,6 @@ const AuthModal: React.FC<AuthModalProps> = ({
         }
 
         window.dispatchEvent(new Event('learners_updated'));
-        window.dispatchEvent(new Event('students-updated'));
         window.dispatchEvent(new Event('storage'));
       }
       onVerify();
@@ -62,7 +59,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
       <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-100">
         <h3 className="text-xl font-black text-slate-900 tracking-tight">Confirm Deletion</h3>
         <p className="mt-2 text-sm text-slate-600 font-medium leading-relaxed">
-          Are you sure you want to delete <strong className="text-slate-900">{studentToDelete?.name || 'this learner'}</strong>? 
+          Are you sure you want to delete <strong className="text-slate-900">{learnerToDelete?.name || 'this learner'}</strong>? 
           This action will permanently remove the record from local storage and Firestore.
         </p>
 

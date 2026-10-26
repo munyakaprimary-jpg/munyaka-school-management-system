@@ -37,14 +37,11 @@ import { showSuccess, showError } from '@/utils/toast';
 export interface TransferInModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** Invoked after the learner has been inserted into the roster. */
   onTransferInComplete?: (learner: Learner) => void;
-  /** Current admin user — recorded against the academic-history log. */
   actorName?: string;
 }
 
 interface FormState {
-  // ── Learner details ────────────────────────────────────────────────
   fullName: string;
   gender: 'Male' | 'Female' | 'Other';
   dob: string;
@@ -52,14 +49,10 @@ interface FormState {
   admissionNumber: string;
   assessmentNo: string;
   nemisUpi: string;
-
-  // ── Transfer metadata ─────────────────────────────────────────────
   previousSchool: string;
   clearanceRef: string;
   reason: string;
   dateAdmitted: string;
-
-  // ── Placement ─────────────────────────────────────────────────────
   grade: string;
   stream: string;
 }
@@ -75,57 +68,36 @@ const REASON_PRESETS = [
   'Other',
 ];
 
-/**
- * Auto-generate a fresh Admission Number using the school's MUN prefix
- * format with grade and year-based sequence.
- */
 const generateUniqueAdmissionNo = (
   grade: string,
-  existingStudents: Learner[],
+  existingLearners: Learner[],
   enrollmentYear: number
 ): string => {
-  // Ensure grade has a safe default
   const safeGrade = grade || 'Grade 1';
-  const safeStudents = existingStudents || [];
-  
-  // Extract numeric grade digit (e.g., "Grade 4" -> 4, "PP1" -> 0, "PP2" -> 2)
+  const safeLearners = existingLearners || [];
   const gradeMatch = safeGrade.match(/(\d+)/);
   const gradeDigit = gradeMatch ? gradeMatch[1] : '0';
   
-  // Filter students by same grade and enrollment year
-  const cohortStudents = safeStudents.filter((s: Learner) => {
-    const matchesGrade = (s.grade || '').toLowerCase() === safeGrade.toLowerCase();
-    // Check if student has admission year matching (stored in dateOfAdmission)
-    const studentYear = s.dateOfAdmission
-      ? new Date(s.dateOfAdmission).getFullYear()
+  const cohortLearners = safeLearners.filter((l: Learner) => {
+    const matchesGrade = (l.grade || '').toLowerCase() === safeGrade.toLowerCase();
+    const learnerYear = l.dateOfAdmission
+      ? new Date(l.dateOfAdmission).getFullYear()
       : null;
-    return matchesGrade && studentYear === enrollmentYear;
+    return matchesGrade && learnerYear === enrollmentYear;
   });
   
-  const nextSeq = cohortStudents.length + 1;
+  const nextSeq = cohortLearners.length + 1;
   return `MUN-G${gradeDigit}-${String(nextSeq).padStart(3, '0')}/${enrollmentYear}`;
 };
 
 const todayIso = (): string => new Date().toISOString().split('T')[0];
 
-/**
- * Modal that walks the admin through registering an incoming
- * transfer learner. The submit handler:
- *
- *   1. Validates every required field.
- *   2. Creates an `ACTIVE` learner row in `school_learners_data`.
- *   3. Inserts the learner into every per-(grade, stream) roster.
- *   4. Logs a `TRANSFERRED_IN` entry to the academic-history audit log.
- *   5. Surfaces a success notification and lets the parent route the
- *      user to the updated class list / learner profile.
- */
 const TransferInModal: React.FC<TransferInModalProps> = ({
   isOpen,
   onClose,
   onTransferInComplete,
   actorName,
 }) => {
-  /* ── live grades & streams config ──────────────────────────────── */
   const [gradesConfig, setGradesConfig] = useState<GradesStreamsConfig>(() =>
     readGradesAndStreams(),
   );
@@ -161,10 +133,9 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
     };
   }, [isOpen]);
 
-  /* ── form state ─────────────────────────────────────────────────── */
   const getExistingLearners = (): Learner[] => {
     try {
-      const raw = localStorage.getItem('school_learners_data');
+      const raw = localStorage.getItem('munyaka_learners') || localStorage.getItem('school_learners_data');
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
@@ -174,14 +145,14 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
   const currentYear = new Date().getFullYear();
   
   const buildInitialState = (): FormState => {
-    const existingStudents = getExistingLearners();
+    const existingLearners = getExistingLearners();
     const defaultGrade = gradesConfig.grades[0] ?? 'Grade 1';
     return {
       fullName: '',
       gender: 'Male',
       dob: '',
       birthCertificateNo: '',
-      admissionNumber: generateUniqueAdmissionNo(defaultGrade, existingStudents, currentYear),
+      admissionNumber: generateUniqueAdmissionNo(defaultGrade, existingLearners, currentYear),
       assessmentNo: '',
       nemisUpi: '',
       previousSchool: '',
@@ -197,23 +168,19 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  /* Reset every time the modal re-opens so the next transfer starts clean. */
   useEffect(() => {
     if (isOpen) {
       setForm(buildInitialState());
       setFormError('');
       setSubmitting(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  /* The streams available for the currently selected grade. */
   const availableStreams = useMemo((): string[] => {
     if (!form.grade) return [];
     return getStreamsForGrade(form.grade, gradesConfig);
   }, [form.grade, gradesConfig]);
 
-  /* Auto-pick the first stream when the grade changes. */
   useEffect(() => {
     if (form.grade && availableStreams.length > 0) {
       if (!availableStreams.includes(form.stream)) {
@@ -224,32 +191,29 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
     }
   }, [form.grade, availableStreams, form.stream]);
 
-  /* Auto-regenerate admission number when grade changes. */
   useEffect(() => {
     const grade = form.grade || gradesConfig.grades[0] || 'Grade 1';
-    const existingStudents = getExistingLearners() || [];
+    const existingLearners = getExistingLearners() || [];
     const selectedYear = form.dateAdmitted
       ? new Date(form.dateAdmitted).getFullYear()
       : new Date().getFullYear();
-    const newAdmNo = generateUniqueAdmissionNo(grade, existingStudents, selectedYear);
+    const newAdmNo = generateUniqueAdmissionNo(grade, existingLearners, selectedYear);
     setForm((prev) => ({ ...prev, admissionNumber: newAdmNo }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.grade]);
 
-  /* ── handlers ───────────────────────────────────────────────────── */
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleRegenerateAdmNo = () => {
-    const existingStudents = getExistingLearners() || [];
+    const existingLearners = getExistingLearners() || [];
     const selectedYear = form.dateAdmitted
       ? new Date(form.dateAdmitted).getFullYear()
       : new Date().getFullYear();
     
     const newAdmNo = generateUniqueAdmissionNo(
       form.grade || 'Grade 1',
-      existingStudents,
+      existingLearners,
       selectedYear
     );
 
@@ -262,41 +226,34 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
   };
 
   const validate = (): string => {
-      if (!String(form.fullName || '').trim()) return 'Please enter the learner\u2019s Full Name.';
-      if (!form.gender) return 'Please select a Gender.';
-      if (!form.dob) return 'Please provide the Date of Birth.';
-      
-      // Admission Number is required
-      const hasAdmNo = String(form.admissionNumber || '').trim();
-      if (!hasAdmNo) {
-        return 'Please generate or enter an Admission Number.';
-      }
-      
-      // At least one other identifier should be provided
-      const hasBirthCert = String(form.birthCertificateNo || '').trim();
-      const hasAssessment = String(form.assessmentNo || '').trim();
-      if (!hasBirthCert && !hasAssessment) {
-        return 'Please provide either a Birth Certificate Number or Assessment Number.';
-      }
+    if (!String(form.fullName || '').trim()) return 'Please enter the learner\u2019s Full Name.';
+    if (!form.gender) return 'Please select a Gender.';
+    if (!form.dob) return 'Please provide the Date of Birth.';
+    
+    const hasAdmNo = String(form.admissionNumber || '').trim();
+    if (!hasAdmNo) {
+      return 'Please generate or enter an Admission Number.';
+    }
+    
+    const hasBirthCert = String(form.birthCertificateNo || '').trim();
+    const hasAssessment = String(form.assessmentNo || '').trim();
+    if (!hasBirthCert && !hasAssessment) {
+      return 'Please provide either a Birth Certificate Number or Assessment Number.';
+    }
  
-      if (!String(form.previousSchool || '').trim())
-        return 'Please record the Previous School Name for audit purposes.';
-      if (!String(form.clearanceRef || '').trim())
-        return 'Please capture the Previous School Clearance / Transfer Reference Number.';
-      if (!String(form.reason || '').trim()) return 'Please provide a Reason for Transfer.';
-      if (!form.dateAdmitted) return 'Please select the Date Admitted.';
-      if (!form.grade) return 'Please select a Grade Level.';
-      if (!form.stream) return 'Please select a Stream.';
-      return '';
-    };
+    if (!String(form.previousSchool || '').trim())
+      return 'Please record the Previous School Name for audit purposes.';
+    if (!String(form.clearanceRef || '').trim())
+      return 'Please capture the Previous School Clearance / Transfer Reference Number.';
+    if (!String(form.reason || '').trim()) return 'Please provide a Reason for Transfer.';
+    if (!form.dateAdmitted) return 'Please select the Date Admitted.';
+    if (!form.grade) return 'Please select a Grade Level.';
+    if (!form.stream) return 'Please select a Stream.';
+    return '';
+  };
 
-  /**
-   * Persist the learner row + roster insertion + history log atomically.
-   *
-   * Returns the persisted learner on success, or null on failure.
-   */
   const performInsert = (): Learner | null => {
-    const existingRaw = localStorage.getItem('school_learners_data');
+    const existingRaw = localStorage.getItem('munyaka_learners') || localStorage.getItem('school_learners_data');
     let existing: Learner[] = [];
     try {
       existing = existingRaw ? (JSON.parse(existingRaw) as Learner[]) : [];
@@ -305,7 +262,6 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
       existing = [];
     }
 
-    // Reject duplicate admission numbers — they MUST be unique.
     const admNo = String(form.admissionNumber || '').trim();
     const birthCertNo = String(form.birthCertificateNo || '').trim();
     const assessmentNo = String(form.assessmentNo || '').trim();
@@ -317,7 +273,6 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
       return null;
     }
 
-    const now = new Date().toISOString();
     const gradeVal = String(form.grade || 'Grade 1').trim();
     const streamVal = String(form.stream || 'BLUE').trim().toUpperCase();
 
@@ -343,10 +298,11 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
       transferReason: String(form.reason || '').trim(),
     };
 
-    // 1. Insert into the active learner directory.
     const updated = [learner, ...existing];
     try {
+      localStorage.setItem('munyaka_learners', JSON.stringify(updated));
       localStorage.setItem('school_learners_data', JSON.stringify(updated));
+      notifyDataChanged('munyaka_learners');
       notifyDataChanged('school_learners_data');
     } catch (err) {
       console.error('[TransferInModal] Failed to persist learner:', err);
@@ -354,8 +310,6 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
       return null;
     }
 
-    // 2. Append to per-class rosters (attendance / marksheet / register).
-    // 3. Log a TRANSFERRED_IN entry in academic history.
     registerTransferredInLearner(
       {
         id: learner.id,
@@ -388,8 +342,6 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
     setFormError('');
     setSubmitting(true);
 
-    // Tiny UX delay so the spinner can render — keeps the experience
-    // feeling responsive without making the user wait unnecessarily.
     window.setTimeout(() => {
       try {
         const learner = performInsert();
@@ -465,7 +417,6 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
           </div>
         )}
 
-        {/* ── Section 1: Learner Details ─────────────────────────────── */}
         <section className="space-y-4">
           <header className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-600">
             <Users size={14} />
@@ -523,22 +474,22 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
             </div>
 
             <div className="space-y-2">
-                          <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                            NEMIS / UPI / Assessment No.
-                          </Label>
-                          <div className="relative">
-                            <Hash
-                              size={14}
-                              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                            />
-                            <Input
-                              value={form.nemisUpi}
-                              onChange={(e) => update('nemisUpi', e.target.value)}
-                              placeholder="Optional"
-                              className="pl-9 rounded-xl h-12 bg-slate-50 border-none font-bold"
-                            />
-                          </div>
-                        </div>
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                NEMIS / UPI / Assessment No.
+              </Label>
+              <div className="relative">
+                <Hash
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <Input
+                  value={form.nemisUpi}
+                  onChange={(e) => update('nemisUpi', e.target.value)}
+                  placeholder="Optional"
+                  className="pl-9 rounded-xl h-12 bg-slate-50 border-none font-bold"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -613,7 +564,6 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
           </div>
         </section>
 
-        {/* ── Section 2: Transfer Metadata ─────────────────────────── */}
         <section className="space-y-4 pt-2 border-t border-slate-100">
           <header className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-amber-600 pt-4">
             <FileSignature size={14} />
@@ -711,7 +661,6 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
           </div>
         </section>
 
-        {/* ── Section 3: Placement ──────────────────────────────────── */}
         <section className="space-y-4 pt-2 border-t border-slate-100">
           <header className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-600 pt-4">
             <CheckCircle2 size={14} />
@@ -777,7 +726,6 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
             </div>
           </div>
 
-          {/* Live confirmation of the destination roster. */}
           {form.grade && form.stream && (
             <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold animate-in slide-in-from-top-2">
               <CheckCircle2 size={14} className="shrink-0" />

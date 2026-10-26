@@ -36,23 +36,19 @@ export default function AddLearnerModal({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // 1. Calculate Grade 1 Entry Year relative to 2026
   const calculateCohortYear = (gradeStr: string): number => {
     const currentYear = 2026;
     const match = (gradeStr || '').match(/\d+/);
     const gradeNum = match ? parseInt(match[0], 10) : 1;
-    // Grade 1 -> 2026, Grade 2 -> 2025, Grade 5 -> 2022, Grade 6 -> 2021, etc.
     return currentYear - (gradeNum - 1);
   };
 
-  // 2. Generate admission number string
   const generateAdmissionNumber = (gradeStr: string): string => {
     const year = calculateCohortYear(gradeStr);
     const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase();
     return `MUN-${randomHash}-${year}`;
   };
 
-  // 3. React Effect: Update input value on Grade change
   useEffect(() => {
     if (gradeLevel) {
       const freshAdmNo = generateAdmissionNumber(gradeLevel);
@@ -73,8 +69,7 @@ export default function AddLearnerModal({
       return;
     }
 
-    // Scan Local Storage for Existing Duplicates
-    const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || '[]');
+    const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
     const duplicateFound = existingLearners.find((learner: any) => {
       const existingId = (learner.idValue || learner.assessmentNumber || learner.assessmentNo || learner.birthCertificateNo || learner.birthCertNo || '').trim().toUpperCase();
       return existingId === cleanValue && cleanValue !== '';
@@ -126,7 +121,6 @@ export default function AddLearnerModal({
         updatedAt: new Date().toISOString()
       };
 
-      // STRICT GUARD: Register exclusively via registerLearnerGuarded (munyaka_learners_v2 & Firestore)
       await registerLearnerGuarded(newLearner);
 
       showSuccess("Learner successfully registered and saved to central directory!");

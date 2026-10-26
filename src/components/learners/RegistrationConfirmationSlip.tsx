@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { School, Printer, Download, CheckCircle2, ShieldCheck, Award } from 'lucide-react';
+import { School, Printer, Download, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -38,7 +38,6 @@ export const RegistrationConfirmationSlip: React.FC<RegistrationConfirmationSlip
   const handlePrint = () => {
     if (!slipRef.current) return;
     const printContent = slipRef.current.innerHTML;
-    const originalContent = document.body.innerHTML;
 
     const printWindow = window.open('', '_blank', 'width=800,height=900');
     if (!printWindow) {
@@ -103,31 +102,6 @@ export const RegistrationConfirmationSlip: React.FC<RegistrationConfirmationSlip
               color: #475569;
               margin-top: 4px;
             }
-            .highlight-box {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 16px;
-              background: #f8fafc;
-              border: 1px solid #cbd5e1;
-              border-radius: 8px;
-              padding: 16px;
-              margin-bottom: 24px;
-            }
-            .highlight-item label {
-              display: block;
-              font-size: 10px;
-              font-weight: 800;
-              text-transform: uppercase;
-              color: #64748b;
-              letter-spacing: 1px;
-              margin-bottom: 4px;
-            }
-            .highlight-item span {
-              font-size: 16px;
-              font-weight: 900;
-              font-family: monospace;
-              color: #0f172a;
-            }
             .section-title {
               font-size: 12px;
               font-weight: 900;
@@ -138,55 +112,6 @@ export const RegistrationConfirmationSlip: React.FC<RegistrationConfirmationSlip
               padding: 6px 12px;
               border-radius: 4px;
               margin: 24px 0 12px 0;
-            }
-            .details-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 12px 24px;
-              margin-bottom: 16px;
-            }
-            .detail-row {
-              display: flex;
-              justify-content: space-between;
-              padding: 6px 0;
-              border-bottom: 1px dashed #e2e8f0;
-              font-size: 12px;
-            }
-            .detail-label {
-              font-weight: 700;
-              color: #64748b;
-            }
-            .detail-value {
-              font-weight: 700;
-              color: #0f172a;
-              text-align: right;
-            }
-            .signature-area {
-              margin-top: 40px;
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-end;
-              padding-top: 20px;
-              border-top: 1px solid #cbd5e1;
-            }
-            .signature-line {
-              width: 220px;
-              border-bottom: 1px solid #0f172a;
-              margin-bottom: 6px;
-            }
-            .signature-label {
-              font-size: 10px;
-              font-weight: 700;
-              text-transform: uppercase;
-              color: #64748b;
-            }
-            .footer-note {
-              margin-top: 30px;
-              text-align: center;
-              font-size: 10px;
-              color: #64748b;
-              border-top: 1px solid #e2e8f0;
-              padding-top: 12px;
             }
           </style>
         </head>
@@ -205,15 +130,12 @@ export const RegistrationConfirmationSlip: React.FC<RegistrationConfirmationSlip
   };
 
   const handleDownloadPDF = () => {
-    // Uses the print dialog with save as PDF option which is standard & crisp
     handlePrint();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden my-8 border border-slate-200">
-        
-        {/* Top Control Bar (Hidden when printing or exporting) */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white" data-no-print>
           <div className="flex items-center space-x-2">
             <ShieldCheck className="w-5 h-5 text-emerald-400" />
@@ -250,11 +172,8 @@ export const RegistrationConfirmationSlip: React.FC<RegistrationConfirmationSlip
           </div>
         </div>
 
-        {/* Printable Slip Container */}
         <div className="p-8 sm:p-10 max-h-[80vh] overflow-y-auto bg-slate-50">
           <div ref={slipRef} className="slip-card bg-white shadow-sm border border-slate-300 rounded-xl p-8 max-w-[210mm] mx-auto">
-            
-            {/* School Header */}
             <div className="header-bar text-center border-b-2 border-slate-900 pb-6 mb-6">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-900 text-white mb-2 shadow-inner">
                 <School className="w-6 h-6" />
@@ -270,19 +189,17 @@ export const RegistrationConfirmationSlip: React.FC<RegistrationConfirmationSlip
               </div>
             </div>
 
-            {/* Top Highlight Bar */}
             <div className="grid grid-cols-2 gap-4 bg-slate-50 border border-slate-300 rounded-lg p-4 mb-6">
-              <div className="highlight-item">
+              <div>
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Admission No.</label>
                 <span className="text-base font-black font-mono text-slate-900">{data.admissionNo || 'MUN-2025-000'}</span>
               </div>
-              <div className="highlight-item">
+              <div>
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Assessment No.</label>
                 <span className="text-base font-black font-mono text-slate-900">{data.assessmentNo || 'B000000000'}</span>
               </div>
             </div>
 
-            {/* Section 1 - Learner Particulars */}
             <div>
               <div className="section-title bg-slate-900 text-white text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded mb-3">
                 Section 1 — Learner Particulars
@@ -311,7 +228,6 @@ export const RegistrationConfirmationSlip: React.FC<RegistrationConfirmationSlip
               </div>
             </div>
 
-            {/* Section 2 - Academic Enrollment Details */}
             <div className="mt-6">
               <div className="section-title bg-slate-900 text-white text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded mb-3">
                 Section 2 — Academic Enrollment Details
@@ -332,7 +248,6 @@ export const RegistrationConfirmationSlip: React.FC<RegistrationConfirmationSlip
               </div>
             </div>
 
-            {/* Signature Area */}
             <div className="mt-10 pt-6 border-t border-slate-300 flex justify-between items-end">
               <div>
                 <p className="text-[10px] text-slate-500 font-medium">This document is electronically generated and is valid</p>
@@ -348,15 +263,12 @@ export const RegistrationConfirmationSlip: React.FC<RegistrationConfirmationSlip
               </div>
             </div>
 
-            {/* Footer */}
             <div className="mt-8 text-center text-[10px] font-semibold text-slate-400 border-t border-slate-200 pt-4">
               MUNYAKA PRIMARY & JUNIOR SECONDARY SCHOOL • OFFICIAL REGISTRATION SLIP • CENTRE CODE: 26534178
             </div>
-
           </div>
         </div>
 
-        {/* Bottom Bar */}
         <div className="flex items-center justify-end px-6 py-4 bg-white border-t border-slate-200" data-no-print>
           {onClose ? (
             <Button onClick={onClose} className="bg-slate-900 hover:bg-slate-800 text-white font-semibold">
@@ -368,7 +280,6 @@ export const RegistrationConfirmationSlip: React.FC<RegistrationConfirmationSlip
             </Button>
           )}
         </div>
-
       </div>
     </div>
   );

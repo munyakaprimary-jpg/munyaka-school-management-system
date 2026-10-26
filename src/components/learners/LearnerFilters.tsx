@@ -30,27 +30,20 @@ const LearnerFilters: React.FC<LearnerFiltersProps> = ({
 }) => {
   const config = useGradesStreamsConfig();
   
-  // Precompute the numeric string from the filterGrade for efficient comparison
   const filterGradeNumber = React.useMemo(() => {
     if (filterGrade === "all" || !filterGrade) return null;
     const match = filterGrade.match(/\d+/);
     return match ? match[0] : null;
   }, [filterGrade]);
 
-  // Compute available streams dynamically from the grades/streams configuration
   const availableStreams = React.useMemo(() => {
     if (filterGrade === "all" || !filterGrade) {
-      // When no specific grade is selected, show all unique streams
       return config.streams.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     }
     
-    // Find the matching grade key in the configuration
     const matchKey = filterGrade.toLowerCase().replace(/\s+/g, '');
-    
-    // Try exact match first
     let streams = config.gradeStreamMap[filterGrade] || config.gradeStreamMap[matchKey];
     
-    // If not found, try partial match
     if (!streams) {
       for (const key of Object.keys(config.gradeStreamMap)) {
         if (key.toLowerCase().includes(filterGrade.toLowerCase()) ||
@@ -61,7 +54,6 @@ const LearnerFilters: React.FC<LearnerFiltersProps> = ({
       }
     }
     
-    // Handle numeric grade matching (e.g., "Grade 4" -> "grade4")
     if (!streams) {
       const gradeMatch = filterGrade.match(/(\d+)/);
       if (gradeMatch) {
@@ -73,7 +65,6 @@ const LearnerFilters: React.FC<LearnerFiltersProps> = ({
     return (streams || []).slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [filterGrade, config]);
   
-  // Reset stream selection when grade changes
   React.useEffect(() => {
     if (filterGrade === "all" || !filterGrade) {
       if (filterStream !== "all") {
@@ -82,13 +73,11 @@ const LearnerFilters: React.FC<LearnerFiltersProps> = ({
       return;
     }
     
-    // Check if current stream exists for the new grade
     const normalizedStream = filterStream?.toLowerCase().trim();
     const streamExists = availableStreams.some(
       s => s.toLowerCase() === normalizedStream
     );
     
-    // Reset to first available stream or "all" if no streams exist for this grade
     if (filterStream && !streamExists && availableStreams.length > 0) {
       setFilterStream(availableStreams[0]);
     } else if (availableStreams.length === 0 && filterStream && filterStream !== "all") {

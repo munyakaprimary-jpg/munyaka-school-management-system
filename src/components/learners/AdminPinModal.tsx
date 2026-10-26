@@ -2,8 +2,6 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/config/firebase';
 
 interface AdminPinModalProps {
   open: boolean;
@@ -28,7 +26,6 @@ export default function AdminPinModal({
   const handleConfirm = async () => {
     try {
       window.dispatchEvent(new Event('learners_updated'));
-      window.dispatchEvent(new Event('students-updated'));
       window.dispatchEvent(new Event('storage'));
       onSuccess();
       onClose();

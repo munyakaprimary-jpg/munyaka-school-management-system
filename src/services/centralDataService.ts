@@ -1,7 +1,7 @@
 import { initialSeedData } from '@/data/initialSeedData';
 import { readStorage, writeStorage } from '@/services/persistentStore';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
-import { generateLearnerId, formatLearnerDoc, dedupeLearnersById } from '@/services/learnerService';
+import { generateLearnerId, formatLearnerDoc, deduplicateLearnersById as dedupeLearnersById } from '@/services/learnerService';
 
 export { STORAGE_KEYS };
 

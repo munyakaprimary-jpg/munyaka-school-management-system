@@ -17,9 +17,9 @@ import Login from "./pages/Login";
 import CoverPage from "./pages/CoverPage";
 import ParentPortal from "./pages/ParentPortal";
 import Index from "./pages/Index";
-import Students from "./pages/Students";
+import Learners from "./pages/Learners";
 import TransferredLearnersArchive from "./pages/TransferredLearnersArchive";
-import StudentProfile from "./pages/StudentProfile";
+import LearnerProfile from "./pages/LearnerProfile";
 import Registration from "./pages/Registration";
 import Attendance from "./pages/Attendance";
 import Assessments from "./pages/Assessments";
@@ -123,10 +123,10 @@ import SupportStaffPortalView from "./pages/SupportStaffPortalView";
 import SecurityPortalView from "./pages/SecurityPortalView";
 import AssessmentSettings from "./pages/AssessmentSettings";
 import QuestionCreator from "./pages/QuestionCreator";
-import StudentAssessment from "./pages/StudentAssessment";
+import LearnerAssessment from "./pages/LearnerAssessment";
 import GradingReview from "./pages/GradingReview";
 import AssessmentImport from "./pages/AssessmentImport";
-import StudentAssessmentPage from "./pages/StudentAssessmentPage";
+import LearnerAssessmentPage from "./pages/LearnerAssessmentPage";
 import TeacherGradingPage from "./pages/TeacherGradingPage";
 import ExamCreatorPage from "./pages/ExamCreatorPage";
 import SetExamsListPage from "./pages/SetExamsListPage";
@@ -527,9 +527,9 @@ const App = () => {
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/learners" element={<ProtectedRoute><AppUnlock><Layout><Learners /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/learners/archive" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/students/:id" element={<ProtectedRoute><AppUnlock><Layout><StudentProfile /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/learners/:id" element={<ProtectedRoute><AppUnlock><Layout><LearnerProfile /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/grades" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><GradesStreams /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/learning-areas" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><LearningAreas /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/exam-types" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ExamTypes /></Layout></AppUnlock></ProtectedRoute>} />
@@ -558,10 +558,10 @@ const App = () => {
                                             <Route path="/support/portal" element={<ProtectedRoute allowedRoles={['support', 'maintenance', 'admin']}><AppUnlock><Layout><SupportStaffPortalView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/security/portal" element={<ProtectedRoute allowedRoles={['security', 'guard', 'admin']}><AppUnlock><Layout><SecurityPortalView /></Layout></AppUnlock></ProtectedRoute>} />
                                             <Route path="/question-creator" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><QuestionCreator /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/student-assessment" element={<ProtectedRoute><AppUnlock><Layout><StudentAssessment /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/student-assessment" element={<ProtectedRoute><AppUnlock><Layout><LearnerAssessment /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/grading" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><GradingReview /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/assessments/import" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><AssessmentImport /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/assessments/student" element={<StudentAssessmentPage />} />
+                      <Route path="/assessments/student" element={<LearnerAssessmentPage />} />
                       <Route path="/assessments/grading" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><TeacherGradingPage /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/assessments/create" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ExamCreatorPage /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/assessments/list" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher', 'student']}><AppUnlock><Layout><SetExamsListPage /></Layout></AppUnlock></ProtectedRoute>} />

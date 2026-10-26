@@ -44,7 +44,6 @@ interface RegisterModalProps {
   formError?: string;
   onRegister: (e?: React.FormEvent) => void;
   isSubmitting?: boolean;
-  // Optional teacher-restriction props (for non-admin users)
   currentUserId?: string;
   currentUserEmail?: string;
   isCurrentUserAdmin?: boolean;
@@ -82,7 +81,6 @@ export default function RegisterModal({
   currentUserEmail,
   isCurrentUserAdmin = false,
 }: RegisterModalProps) {
-  // Generate enrollment year options: from 2010 (or 15 years in the past) up to currentYear + 2
   const currentYear = new Date().getFullYear();
   const startYear = Math.min(2010, currentYear - 15);
   const endYear = currentYear + 2;
@@ -125,9 +123,6 @@ export default function RegisterModal({
     };
   }, []);
 
-  // ── Teacher restriction logic ─────────────────────────────────────
-  // For non-admin users with an assigned teaching load, restrict the
-  // grade & stream options to only those the teacher is assigned to.
   const isTeacherRestricted = isTeacherWithRestrictedLoad(
     currentUserId,
     currentUserEmail,
@@ -138,7 +133,6 @@ export default function RegisterModal({
     if (!isTeacherRestricted) return gradesConfig.grades;
     const tGrades = getTeacherAllowedGrades(currentUserId, currentUserEmail, isCurrentUserAdmin);
     if (tGrades.length === 0) return gradesConfig.grades;
-    // Intersect with configured grades to ensure ordering and validity
     return gradesConfig.grades.filter(g => tGrades.some(tg =>
       tg.toLowerCase().trim() === g.toLowerCase().trim() ||
       tg.replace(/\D/g, '') === g.replace(/\D/g, '')
@@ -160,10 +154,8 @@ export default function RegisterModal({
     ));
   }, [regGrade, gradesConfig, isTeacherRestricted, currentUserId, currentUserEmail, isCurrentUserAdmin]);
 
-  // Auto-correct selections when restriction is enforced
   useEffect(() => {
     if (!isTeacherRestricted) return;
-    // If the currently selected grade isn't in the allowed list, snap to the first allowed grade
     if (regGrade && allowedGrades.length > 0 &&
         !allowedGrades.some(g => g.toLowerCase().trim() === regGrade.toLowerCase().trim())) {
       setRegGrade(allowedGrades[0]);
@@ -187,7 +179,6 @@ export default function RegisterModal({
     if (onRegister) {
       onRegister(e);
     }
-    // Push sync queue notification
     try {
       const queue = JSON.parse(localStorage.getItem('munyaka_sync_queue') || '[]');
       queue.push({
@@ -210,7 +201,7 @@ export default function RegisterModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Register New Student"
+      title="Register New Learner"
       description="Enroll learner into the academic system. Provide at least one of Assessment Number or Birth Certificate Number."
       footer={
           <>
@@ -228,7 +219,7 @@ export default function RegisterModal({
               disabled={isSubmitting}
               className="rounded-xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black gap-2 shadow-lg shadow-indigo-100 disabled:opacity-50"
             >
-              {isSubmitting ? 'Registering...' : 'Register Student'}
+              {isSubmitting ? 'Registering...' : 'Register Learner'}
             </Button>
           </>
         }
@@ -242,7 +233,6 @@ export default function RegisterModal({
                 </div>
               )}
       
-              {/* Teacher-restriction notice */}
               {isTeacherRestricted && (
                 <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-700 flex items-start gap-2 animate-in slide-in-from-top-2">
                   <ShieldCheck className="w-4 h-4 shrink-0 text-indigo-500 mt-0.5" />
@@ -256,7 +246,6 @@ export default function RegisterModal({
                 </div>
               )}
       
-              {/* 1. Full Name */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Full Name <span className="text-rose-500">*</span>
@@ -269,7 +258,6 @@ export default function RegisterModal({
                 />
               </div>
 
-        {/* 3. Assessment No & 4. Birth Certificate No */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
@@ -298,7 +286,6 @@ export default function RegisterModal({
           </div>
         </div>
 
-        {/* 5. Enrollment Year, Grade Level, Stream */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
@@ -426,7 +413,6 @@ export default function RegisterModal({
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* Admission Number (Auto-generated) placed directly between Gender and Guardian Name */}
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                       Admission Number

@@ -3,7 +3,7 @@ import AdminDashboard from '@/components/dashboards/AdminDashboard';
 import StaffRegistry from '@/components/StaffRegistry';
 import AttendanceMonitor from '@/pages/AttendanceMonitor';
 import Fees from '@/pages/Fees';
-import Students from '@/pages/Students';
+import Learners from '@/pages/Learners';
 
 import { Button } from '@/components/ui/button';
 import { Cloud, RefreshCw } from 'lucide-react';

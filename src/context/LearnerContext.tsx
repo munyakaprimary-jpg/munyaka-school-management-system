@@ -132,8 +132,8 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       if (existing) {
         updatedList = currentStored.map((l: any) => {
-          const lId = String(l.id || l.learnerId || '');
-          const existingId = String(existing.id || existing.learnerId || '');
+          const lId = String(l.id || (l as any).learnerId || '');
+          const existingId = String(existing.id || (existing as any).learnerId || '');
           const match = (lId && existingId && lId === existingId) ||
             (l.admissionNumber && existing.admissionNumber && l.admissionNumber === existing.admissionNumber);
           return match ? { ...l, ...normalizedNew, id: lId || normalizedNew.id } : l;

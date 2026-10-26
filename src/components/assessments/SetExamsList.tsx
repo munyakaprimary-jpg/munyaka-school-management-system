@@ -25,7 +25,7 @@ import {
   ArrowLeft,
   FileSpreadsheet,
 } from "lucide-react";
-import StudentAssessmentView from "./StudentAssessmentView";
+import LearnerAssessmentView from "./LearnerAssessmentView";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

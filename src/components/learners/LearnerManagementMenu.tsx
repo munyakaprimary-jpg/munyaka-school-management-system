@@ -12,10 +12,6 @@ import {
 } from "@/types/learnerMenu";
 import { Button } from "@/components/ui/button";
 
-/* -------------------------------------------------------------------------- */
-/*  Shared styling tokens                                                     */
-/* -------------------------------------------------------------------------- */
-
 const ACCENT_STYLES: Record<
   NonNullable<LearnerMenuFilter["accent"]>,
   { pill: string; ring: string; count: string; icon: string }
@@ -74,11 +70,6 @@ const ATTENDANCE_BADGE: Record<
   },
 };
 
-/* -------------------------------------------------------------------------- */
-/*  Subcomponents — loading / empty / error                                   */
-/* -------------------------------------------------------------------------- */
-
-/** Skeleton used while the dataset is in flight. */
 function LearnerMenuSkeleton() {
   return (
     <div
@@ -104,7 +95,6 @@ function LearnerMenuSkeleton() {
   );
 }
 
-/** Empty state shown when no learners match the active filter. */
 interface EmptyStateProps {
   filterLabel?: string;
   searchTerm?: string;
@@ -128,7 +118,6 @@ function EmptyState({ filterLabel, searchTerm }: EmptyStateProps) {
   );
 }
 
-/** Error state shown when the API call failed. */
 interface ErrorStateProps {
   message: string;
   onRetry?: () => void;
@@ -156,10 +145,6 @@ function ErrorState({ message, onRetry }: ErrorStateProps) {
     </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/*  Filter row                                                                */
-/* -------------------------------------------------------------------------- */
 
 interface FilterRowProps {
   filter: LearnerMenuFilter;
@@ -217,10 +202,6 @@ function FilterRow({ filter, onSelect }: FilterRowProps) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Learner row                                                               */
-/* -------------------------------------------------------------------------- */
-
 interface LearnerRowProps {
   learner: LearnerMenuItem;
   onClick?: (learner: LearnerMenuItem) => void;
@@ -272,35 +253,16 @@ function LearnerRow({ learner, onClick }: LearnerRowProps) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Main component                                                            */
-/* -------------------------------------------------------------------------- */
-
 export interface LearnerManagementMenuProps {
   data: LearnerMenuData;
-  /** Max number of learner rows to render in the embedded list. */
   rowLimit?: number;
-  /** Optional search term forwarded to the empty state. */
   searchTerm?: string;
-  /** Called when the user picks a filter. */
   onFilterChange: (filterId: string) => void;
-  /** Called when the user clicks a learner row. */
   onLearnerClick?: (learner: LearnerMenuItem) => void;
-  /** Called when the user clicks the retry button in the error state. */
   onRetry?: () => void;
-  /** Optional className for the outer container. */
   className?: string;
 }
 
-/**
- * LearnerManagementMenu
- *
- * A fully dynamic side menu for the Learners page. Every counter, label,
- * and list item is driven by `data.learners` — there are no hardcoded
- * counts or hardcoded rows in the JSX. Loading, empty, and error states
- * are all derived from the `isLoading` / `error` props and from the
- * presence of data in the active filter.
- */
 export default function LearnerManagementMenu({
   data,
   rowLimit = 5,
@@ -310,7 +272,6 @@ export default function LearnerManagementMenu({
   onRetry,
   className,
 }: LearnerManagementMenuProps) {
-  // ── Loading state ─────────────────────────────────────────────────────
   if (data.isLoading) {
     return (
       <aside className={cn("space-y-4", className)} aria-busy="true">
@@ -327,7 +288,6 @@ export default function LearnerManagementMenu({
     );
   }
 
-  // ── Error state ───────────────────────────────────────────────────────
   if (data.error) {
     return (
       <aside className={cn("space-y-4", className)}>
@@ -344,9 +304,6 @@ export default function LearnerManagementMenu({
     );
   }
 
-  // Active learner rows for the embedded preview.
-  // We derive the active filter's label from the filters array so the
-  // empty state copy always matches whatever the user has selected.
   const activeFilter = data.filters.find((f) => f.isActive);
   const previewLearners = data.learners.slice(0, rowLimit);
   const hasLearners = previewLearners.length > 0;
@@ -354,7 +311,6 @@ export default function LearnerManagementMenu({
 
   return (
     <aside className={cn("space-y-5", className)}>
-      {/* Header */}
       <div className="px-2 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -369,7 +325,6 @@ export default function LearnerManagementMenu({
         </span>
       </div>
 
-      {/* Filter list — entirely driven by `data.filters` */}
       <div className="space-y-2" role="listbox" aria-label="Learner filters">
         {data.filters.map((filter) => (
           <FilterRow
@@ -380,10 +335,8 @@ export default function LearnerManagementMenu({
         ))}
       </div>
 
-      {/* Divider */}
       <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
-      {/* Preview header */}
       <div className="px-2 flex items-center justify-between">
         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
           {activeFilter?.label ?? "Preview"}
@@ -395,7 +348,6 @@ export default function LearnerManagementMenu({
         )}
       </div>
 
-      {/* Preview list — empty state when nothing matches */}
       {hasLearners ? (
         <div className="space-y-2">
           {previewLearners.map((learner) => (
@@ -413,7 +365,6 @@ export default function LearnerManagementMenu({
         />
       )}
 
-      {/* Footer hint when there are more rows than we display */}
       {hasLearners && totalForActiveFilter > rowLimit && (
         <div className="px-2 pt-1">
           <p className="text-[10px] font-medium text-slate-400 inline-flex items-center gap-1.5">

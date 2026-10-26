@@ -10,7 +10,7 @@ import { AlertCircle } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 import { logActivity } from '@/services/activityLog';
 import { notifyDataChanged } from '@/hooks/useDashboardData';
-import { RegistrationConfirmationSlip, RegistrationSlipData } from '@/components/students/RegistrationConfirmationSlip';
+import { RegistrationConfirmationSlip, RegistrationSlipData } from '@/components/learners/RegistrationConfirmationSlip';
 import { generateLearnerId, findExistingLearner } from '@/services/learnerService';
 
 const Registration = () => {
@@ -78,7 +78,7 @@ const Registration = () => {
       };
 
       // Deduplication check — prevent duplicate student profiles
-      if (findExistingLearner(learners, newLearner)) {
+      if (findExistingLearner(learners, newLearner.assessmentNo || newLearner.admNo)) {
         setFormError('A learner with this admission number already exists in the registry.');
         return;
       }
