@@ -1,20 +1,6 @@
 import { Learner } from '@/types/learners';
 
-const LOCAL_STORAGE_KEY = 'munyaka_learners';
-
-export const initLearnerStorageAlias = (): void => {
-  try {
-    const studentsLegacy = localStorage.getItem('munyaka_students');
-    const learnersMaster = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (studentsLegacy && !learnersMaster) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, studentsLegacy);
-    } else if (learnersMaster && !studentsLegacy) {
-      localStorage.setItem('munyaka_students', learnersMaster);
-    }
-  } catch (err) {
-    console.warn('[learnerService] Storage alias init warning:', err);
-  }
-};
+const MASTER_KEY = 'munyaka_learners';
 
 export const generateLearnerId = (): string => `learner-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
@@ -31,6 +17,16 @@ export const formatLearnerDoc = (raw: any): Learner => ({
   dob: raw.dob || raw.dateOfBirth || '',
   ...raw
 });
+
+export const getLearners = (): Learner[] => {
+  const data = localStorage.getItem(MASTER_KEY);
+  if (!data) return [];
+  try {
+    return JSON.parse(data);
+  } catch {
+    return [];
+  }
+};
 
 export const findExistingLearner = (learners: Learner[], idValue: string): Learner | undefined => {
   const clean = String(idValue || '').trim().toUpperCase();
@@ -54,47 +50,36 @@ export const deduplicateLearnersById = (learners: Learner[]): Learner[] => {
 
 export const dedupeLearnersById = deduplicateLearnersById;
 
+export const saveLearners = (learners: Learner[]): void => {
+  localStorage.setItem(MASTER_KEY, JSON.stringify(learners));
+  window.dispatchEvent(new Event('munyaka_learners_updated'));
+};
+
+export const addLearner = (learner: Learner): Learner[] => {
+  const learners = getLearners();
+  const updated = [learner, ...learners];
+  saveLearners(updated);
+  return updated;
+};
+
+export const updateLearner = (updatedLearner: Learner): Learner[] => {
+  const learners = getLearners();
+  const updated = learners.map(l => l.id === updatedLearner.id ? updatedLearner : l);
+  saveLearners(updated);
+  return updated;
+};
+
+export const deleteLearner = (id: string): Learner[] => {
+  const learners = getLearners();
+  const updated = learners.filter(l => l.id !== id);
+  saveLearners(updated);
+  return updated;
+};
+
 export const learnerService = {
-  getLearners: (): Learner[] => {
-    initLearnerStorageAlias();
-    try {
-      const raw = localStorage.getItem(LOCAL_STORAGE_KEY) || localStorage.getItem('munyaka_students') || '[]';
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
-  },
-
-  saveLearners: (learners: Learner[]): void => {
-    try {
-      const data = JSON.stringify(learners);
-      localStorage.setItem(LOCAL_STORAGE_KEY, data);
-      localStorage.setItem('munyaka_students', data);
-      window.dispatchEvent(new Event('munyaka_learners_updated'));
-      window.dispatchEvent(new Event('storage'));
-    } catch (err) {
-      console.error('[learnerService] saveLearners failed:', err);
-    }
-  },
-
-  addLearner: (learner: Learner): Learner[] => {
-    const learners = learnerService.getLearners();
-    const updated = [learner, ...learners];
-    learnerService.saveLearners(updated);
-    return updated;
-  },
-
-  updateLearner: (updatedLearner: Learner): Learner[] => {
-    const learners = learnerService.getLearners();
-    const updated = learners.map(l => l.id === updatedLearner.id ? updatedLearner : l);
-    learnerService.saveLearners(updated);
-    return updated;
-  },
-
-  deleteLearner: (id: string): Learner[] => {
-    const learners = learnerService.getLearners();
-    const updated = learners.filter(l => l.id !== id);
-    learnerService.saveLearners(updated);
-    return updated;
-  }
+  getLearners,
+  saveLearners,
+  addLearner,
+  updateLearner,
+  deleteLearner
 };
