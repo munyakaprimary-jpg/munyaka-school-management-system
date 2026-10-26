@@ -283,17 +283,18 @@ export default function LearnersDirectory() {
     setIsVerifying(false);
   };
 
-  const purgeAllLearnersDataCompletely = async () => {
-    if (window.confirm("Are you sure you want to completely wipe all learners from both local storage and Firestore? This cannot be undone.")) {
+  const handlePurgeAndReset = async () => {
+    if (window.confirm("Are you sure you want to completely wipe all learner records, exam submissions, and remnants from local storage and Firestore? This cannot be undone.")) {
       try {
         // 1. Clear LocalStorage keys
         localStorage.removeItem('munyaka_students');
         localStorage.removeItem('munyaka_learners');
         localStorage.removeItem('munyaka_exam_submissions');
+        localStorage.removeItem('munyaka_attendance');
         localStorage.removeItem('munyaka_learners_v2');
         localStorage.removeItem('deleted_learner_ids');
 
-        // 2. Clear Firestore collections if Firebase is initialized
+        // 2. Clear Firestore collections if available
         if (db) {
           const collectionsToClear = ['learners', 'students', 'exam_submissions', 'attendance'];
           for (const colName of collectionsToClear) {
@@ -305,11 +306,11 @@ export default function LearnersDirectory() {
           }
         }
 
-        alert("All local and cloud records have been successfully purged.");
+        alert("System successfully purged and reset.");
         window.location.reload();
       } catch (error) {
-        console.error("Error purging database:", error);
-        alert("Purged local data, but encountered an error clearing Firestore. Check console.");
+        console.error("Error during purge:", error);
+        alert("Local data cleared, but encountered an error clearing Firestore. Check console.");
         window.location.reload();
       }
     }
@@ -335,11 +336,11 @@ export default function LearnersDirectory() {
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Button
-            onClick={purgeAllLearnersDataCompletely}
-            variant="destructive"
-            className="rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white h-12 px-5 shadow-lg shadow-rose-100 flex items-center gap-2"
+            onClick={handlePurgeAndReset}
+            variant="outline"
+            className="rounded-2xl font-bold border-rose-200 text-rose-700 bg-rose-50/50 hover:bg-rose-100 hover:text-rose-800 h-12 px-5 shadow-sm flex items-center gap-2"
           >
-            <Trash size={18} /> Purge All Data
+            <Trash size={18} /> Purge & Reset Directory
           </Button>
           <Button
             onClick={() => setIsAddModalOpen(true)}
