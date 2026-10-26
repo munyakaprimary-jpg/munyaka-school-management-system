@@ -679,7 +679,7 @@ const Login: React.FC = () => {
                     {/* Email Address */}
                     <div className="space-y-2">
                       <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        School Email Address (@munyaka.sc.ke)
+                        Email Address
                       </Label>
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -690,7 +690,7 @@ const Login: React.FC = () => {
                           autoCapitalize="none"
                           value={staffId}
                           onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. teacher@munyaka.sc.ke"
+                          placeholder="e.g. jndiki@munyaka.sc.ke"
                           autoComplete="username"
                           className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                           autoFocus
@@ -701,18 +701,18 @@ const Login: React.FC = () => {
                     {/* Access Code */}
                     <div className="space-y-2">
                       <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Access Code (MUN-XXXX)
+                        Access Code
                       </Label>
                       <div className="relative">
                         <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <Input
                           id="staff-password"
-                          type={showStaffPassword ? 'text' : 'password'}
+                          type="password"
                           value={staffPassword}
                           onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. MUN-6ZGC"
+                          placeholder="e.g. MUN-3MDC"
                           autoComplete="current-password"
-                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
+                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-mono font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200 tracking-wider"
                         />
                         <button
                           type="button"
@@ -723,9 +723,9 @@ const Login: React.FC = () => {
                         </button>
                       </div>
                       <p className="text-[10px] text-slate-400 font-medium flex items-center justify-between">
-                        <span>Your password was shared via SMS/email. Contact admin if forgotten.</span>
+                        <span>Your access code was shared via SMS/email.</span>
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold border border-emerald-200">
-                          Demo Code: MUN-PQEM or MUN-1234
+                          Demo Code: MUN-9632 or MUN-1234
                         </span>
                       </p>
                     </div>

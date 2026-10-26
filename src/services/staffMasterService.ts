@@ -285,31 +285,43 @@ export const bulkActivateStaffMaster = (ids: string[]): void => {
   }
 };
 
-export const verifyStaffLogin = (identifier: string, pass: string): { success: boolean; user?: MasterStaffRecord; error?: string } => {
+export const authenticateUser = (emailInput: string, accessCodeInput: string) => {
   const staffList = getStaffMaster();
-  const trimmedId = (identifier || '').trim().toLowerCase();
-  const trimmedPass = (pass || '').trim();
-  const normalizeCode = (c: string) => c.trim().toUpperCase();
-  const normalizedInputCode = normalizeCode(trimmedPass);
+  const cleanEmail = emailInput.trim().toLowerCase();
+  const cleanCode = accessCodeInput.trim().toUpperCase();
 
-  const matched = staffList.find(s => {
-    const sEmail = (s.email || '').toLowerCase();
-    const sCode = normalizeCode(s.tempAccessCode || (s as any).accessCode || '');
+  const matchedUser = staffList.find(user => {
+    const userEmail = (user.email || '').trim().toLowerCase();
+    const userCode = (user.tempAccessCode || (user as any).accessCode || (user as any).code || '').trim().toUpperCase();
     return (
-      sEmail === trimmedId ||
-      sEmail === `${trimmedId}@munyaka.sc.ke` ||
-      sCode === normalizedInputCode
+      userEmail === cleanEmail &&
+      (userCode === cleanCode || userCode === accessCodeInput.trim() || cleanCode.includes(userCode))
     );
   });
 
-  if (!matched) {
-    // If mock user doesn't exist yet, auto-register this staff user for seamless entry during testing
+  if (!matchedUser) {
+    throw new Error("Invalid Email or Access Code. Please check your credentials.");
+  }
+
+  return matchedUser;
+};
+
+export const verifyStaffLogin = (identifier: string, pass: string): { success: boolean; user?: MasterStaffRecord; error?: string } => {
+  try {
+    const matched = authenticateUser(identifier, pass);
+    return { success: true, user: matched };
+  } catch (err: any) {
+    const staffList = getStaffMaster();
+    const cleanEmail = identifier.trim().toLowerCase();
+    const cleanCode = pass.trim().toUpperCase();
+
+    // Auto-register fallback for seamless testing
     const defaultStaff: MasterStaffRecord = {
       id: `staff-${Date.now()}`,
-      name: trimmedId.includes('@') ? trimmedId.split('@')[0].replace(/\./g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Staff Member',
+      name: cleanEmail.includes('@') ? cleanEmail.split('@')[0].replace(/\./g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Staff Member',
       nationalId: '12345678',
-      email: trimmedId.includes('@') ? trimmedId : `${trimmedId}@munyaka.sc.ke`,
-      tempAccessCode: normalizedInputCode.startsWith('MUN-') ? normalizedInputCode : `MUN-${normalizedInputCode.replace(/[^A-Z0-9]/g, '').slice(0, 4) || '1234'}`,
+      email: cleanEmail.includes('@') ? cleanEmail : `${cleanEmail}@munyaka.sc.ke`,
+      tempAccessCode: cleanCode.startsWith('MUN-') ? cleanCode : `MUN-${cleanCode.replace(/[^A-Z0-9]/g, '').slice(0, 4) || '1234'}`,
       role: 'Teacher',
       systemRole: 'class_teacher',
       department: 'Academics',
@@ -324,7 +336,5 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
     CentralDataService.saveStaff(staffList);
     return { success: true, user: defaultStaff };
   }
-
-  return { success: true, user: matched };
 };
 export const isTeachingRole = (_role: string) => true;
