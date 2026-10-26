@@ -54,11 +54,9 @@ export default function AddLearnerModal({
 
   // 3. React Effect: Force update whenever selected Grade changes or modal opens
   useEffect(() => {
-    if (selectedGrade) {
+    if (selectedGrade && isOpen) {
       const newAdmNo = createAdmissionNumber(selectedGrade);
       setAdmissionNumber(newAdmNo);
-      // Also sync if using a unified formData state object:
-      // setFormData(prev => ({ ...prev, admissionNumber: newAdmNo, admissionNo: newAdmNo }));
     }
   }, [selectedGrade, isOpen]);
 
