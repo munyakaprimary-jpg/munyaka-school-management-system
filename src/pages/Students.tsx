@@ -63,22 +63,20 @@ const generateAdmissionNumber = (grade: string, existingStudents: any[] = []) =>
   const currentYear = new Date().getFullYear();
   const admissionYear = currentYear - (gradeNum - 1);
 
-  // Find the single highest global sequence number across ALL existing students
-  let maxGlobalSeq = 0;
-  existingStudents.forEach(s => {
-    const adm = s.admissionNumber || s.admNo || '';
-    const parts = adm.split('-');
-    if (parts.length >= 2) {
-      const seqNum = parseInt(parts[1], 10);
-      if (!isNaN(seqNum) && seqNum > maxGlobalSeq) {
-        maxGlobalSeq = seqNum;
-      }
-    }
-  });
-
-  const nextGlobalSeq = String(maxGlobalSeq + 1).padStart(3, '0');
-  return `MUN-${nextGlobalSeq}-${admissionYear}`;
-};
+  // Count existing students in the same grade and same admission year
+    const gradeYearStudents = existingStudents.filter((s: any) => {
+      const matchesGrade = s.grade === grade || s.class === grade;
+      const adm = s.admissionNumber || s.admNo || '';
+      const matchesYear = adm.endsWith(`-${admissionYear}`);
+      return matchesGrade && matchesYear;
+    });
+  
+    // Next sequence: count + 1, padded to 3 digits (e.g., 2 students -> 003)
+    const nextSeq = gradeYearStudents.length + 1;
+    const paddedSeq = String(nextSeq).padStart(3, '0');
+  
+    return `MUN-${paddedSeq}-${admissionYear}`;
+  };
 
 // Re-sequence all existing learners with a single continuous unbroken global sequence
 const ensureProperAdmissionNumbers = (list: any[]) => {
@@ -330,30 +328,26 @@ export default function Students() {
     const currentYr = String(new Date().getFullYear());
     setTransferYear(currentYr);
     setTransferGrade('Grade 6');
-    setTransferStream('BLUE');
-    setTransferAssessmentNo('');
-    setTransferPreviousSchool('');
-    setTransferGender('Female');
-    setTransferDob('');
-    setTransferParentName('');
-    setTransferPhone('');
-
-    // Compute global sequence with transfer year
-    let maxGlobalSeq = 0;
-    students.forEach(s => {
-      const adm = s.admissionNumber || s.admNo || '';
-      const parts = adm.split('-');
-      if (parts.length >= 2) {
-        const seqNum = parseInt(parts[1], 10);
-        if (!isNaN(seqNum) && seqNum > maxGlobalSeq) {
-          maxGlobalSeq = seqNum;
-        }
-      }
-    });
-    const nextGlobalSeq = String(maxGlobalSeq + 1).padStart(3, '0');
-    setTransferAdmissionNumber(`MUN-${nextGlobalSeq}-${currentYr}`);
-
-    setIsTransferModalOpen(true);
+        setTransferStream('BLUE');
+        setTransferAssessmentNo('');
+        setTransferPreviousSchool('');
+        setTransferGender('Female');
+        setTransferDob('');
+        setTransferParentName('');
+        setTransferPhone('');
+    
+        // Compute grade+year sequence for transfer admission number
+        const transferGradeYearStudents = students.filter((s: any) => {
+          const matchesGrade = s.grade === 'Grade 6' || s.class === 'Grade 6';
+          const adm = s.admissionNumber || s.admNo || '';
+          const matchesYear = adm.endsWith(`-${currentYr}`);
+          return matchesGrade && matchesYear;
+        });
+        const nextSeq = transferGradeYearStudents.length + 1;
+        const paddedSeq = String(nextSeq).padStart(3, '0');
+        setTransferAdmissionNumber(`MUN-${paddedSeq}-${currentYr}`);
+    
+        setIsTransferModalOpen(true);
   };
 
   const handleTransferSubmit = async (e: React.FormEvent) => {
@@ -1164,19 +1158,18 @@ export default function Students() {
             <div className="space-y-2">
               <Label className="text-xs font-bold text-slate-700 uppercase">Transfer-In Year</Label>
               <Select value={transferYear} onValueChange={(val) => {
-                setTransferYear(val);
-                let maxGlobalSeq = 0;
-                students.forEach(s => {
-                  const adm = s.admissionNumber || s.admNo || '';
-                  const parts = adm.split('-');
-                  if (parts.length >= 2) {
-                    const seqNum = parseInt(parts[1], 10);
-                    if (!isNaN(seqNum) && seqNum > maxGlobalSeq) maxGlobalSeq = seqNum;
-                  }
-                });
-                const nextGlobalSeq = String(maxGlobalSeq + 1).padStart(3, '0');
-                setTransferAdmissionNumber(`MUN-${nextGlobalSeq}-${val}`);
-              }}>
+                              setTransferYear(val);
+                              // Compute grade+year sequence for the selected transfer grade and year
+                              const transferGradeYearStudents = students.filter((s: any) => {
+                                const matchesGrade = s.grade === transferGrade || s.class === transferGrade;
+                                const adm = s.admissionNumber || s.admNo || '';
+                                const matchesYear = adm.endsWith(`-${val}`);
+                                return matchesGrade && matchesYear;
+                              });
+                              const nextSeq = transferGradeYearStudents.length + 1;
+                              const paddedSeq = String(nextSeq).padStart(3, '0');
+                              setTransferAdmissionNumber(`MUN-${paddedSeq}-${val}`);
+                            }}>
                 <SelectTrigger className="rounded-xl h-12 border-slate-200">
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
