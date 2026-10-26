@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '@/components/ui/Modal';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,40 @@ export default function AddLearnerModal({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Helper to calculate Grade 1 entry year based on selected grade
+  const getEntryYearForGrade = (gradeString: string) => {
+    const currentYear = 2026;
+    
+    // Extract numeric digit from grade string (e.g., "Grade 5" -> 5)
+    const match = gradeString.match(/\d+/);
+    const gradeNum = match ? parseInt(match[0], 10) : 1;
+    
+    // Grade 1 = current year (2026), Grade 5 = current year - 4 (2022), etc.
+    const entryYear = currentYear - (gradeNum - 1);
+    return String(entryYear);
+  };
+
+  // Function to generate the admission number dynamically
+  const updateAdmissionNumberOnGradeChange = (selectedGrade: string) => {
+    const entryYear = getEntryYearForGrade(selectedGrade);
+    const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const newAdmNo = `MUN-${randomCode}-${entryYear}`;
+    
+    setAdmissionNumber(newAdmNo);
+  };
+
+  // Initialize admission number on mount or when modal opens
+  useEffect(() => {
+    if (isOpen && !admissionNumber) {
+      updateAdmissionNumberOnGradeChange(gradeLevel);
+    }
+  }, [isOpen]);
+
+  const handleGradeChange = (newGrade: string) => {
+    setGradeLevel(newGrade);
+    updateAdmissionNumberOnGradeChange(newGrade);
+  };
+
   const handleRegisterLearner = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
@@ -66,7 +100,7 @@ export default function AddLearnerModal({
     setIsSaving(true);
     try {
       const learnerId = `learner-${Date.now()}`;
-      const genAdm = admissionNumber.trim() || `MUN-${Math.floor(100 + Math.random() * 900)}-2025`;
+      const genAdm = admissionNumber.trim() || `MUN-${Math.floor(100 + Math.random() * 900)}-2026`;
 
       const parts = fullName.trim().split(/\s+/);
       const firstName = parts[0] || '';
@@ -153,12 +187,23 @@ export default function AddLearnerModal({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admission No</Label>
-            <Input
-              value={admissionNumber}
-              onChange={(e) => setAdmissionNumber(e.target.value)}
-              placeholder="e.g. MUN-450-2025"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-            />
+            <div className="flex gap-2">
+              <Input
+                value={admissionNumber}
+                onChange={(e) => setAdmissionNumber(e.target.value)}
+                placeholder="e.g. MUN-450-2026"
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold font-mono"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 rounded-xl text-xs font-bold px-3 shrink-0"
+                onClick={() => updateAdmissionNumberOnGradeChange(gradeLevel)}
+                title="Regenerate admission number for current grade"
+              >
+                Regenerate
+              </Button>
+            </div>
           </div>
           <div className="space-y-2">
             <label className="block text-xs font-black uppercase text-slate-400 tracking-widest">
@@ -191,7 +236,7 @@ export default function AddLearnerModal({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade Level</Label>
-            <Select value={gradeLevel} onValueChange={setGradeLevel}>
+            <Select value={gradeLevel} onValueChange={handleGradeChange}>
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
                 <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
