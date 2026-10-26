@@ -280,7 +280,7 @@ export default function LearnersDirectory() {
   };
 
   const purgeAllLearnersDataCompletely = async () => {
-    if (window.confirm("Are you sure you want to completely wipe all learners and student records from local storage? This cannot be undone.")) {
+    if (window.confirm("Are you sure you want to completely purge and reset the learners directory?")) {
       const keysToPurge = [
         'munyaka_learners',
         'munyaka_learners_v2',
@@ -296,15 +296,15 @@ export default function LearnersDirectory() {
         'deleted_learner_ids'
       ];
 
+      // 1. Completely remove all legacy and active keys from localStorage
       for (const k of keysToPurge) {
-        localStorage.setItem(k, JSON.stringify([]));
         localStorage.removeItem(k);
       }
 
-      window.dispatchEvent(new Event('munyaka_learners_updated'));
-      window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
+      // 2. Initialize the single master key as an empty array
+      localStorage.setItem('munyaka_learners', JSON.stringify([]));
 
-      alert("All local learner and student records have been successfully purged!");
+      // 3. Force reload or reset React state to empty
       window.location.reload();
     }
   };

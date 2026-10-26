@@ -15,10 +15,13 @@ export const purgeAllLearnersCompletely = () => {
     'deleted_learner_ids'
   ];
 
+  // 1. Completely remove all legacy and active keys from localStorage
   for (const k of keysToPurge) {
-    localStorage.setItem(k, JSON.stringify([]));
     localStorage.removeItem(k);
   }
+
+  // 2. Initialize the single master key as an empty array
+  localStorage.setItem('munyaka_learners', JSON.stringify([]));
 
   window.dispatchEvent(new Event('munyaka_learners_updated'));
   window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
