@@ -455,7 +455,7 @@ export default function Attendance() {
           <Sparkles className="w-3 h-3" /> Master Directory Sync (`munyaka_learners_db`)
         </Badge>
       </div>
-      <h1 className="text-2xl font-black tracking-tight">Student Attendance & Roll Call</h1>
+      <h1 className="text-2xl font-black tracking-tight">Learner Attendance & Roll Call</h1>
       <p className="text-emerald-100 text-sm mt-1">
         Directly synchronized with the primary master learners database and Admin Roll Call records.
       </p>

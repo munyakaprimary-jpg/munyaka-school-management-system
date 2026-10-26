@@ -99,7 +99,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Exam Types', path: '/exam-types', icon: Award, moduleKey: 'assessments' },
     { name: 'Timetable', path: '/timetable', icon: Clock, moduleKey: 'timetable' },
     { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, moduleKey: 'attendance' },
-    { name: 'Learner Attendance', path: '/attendance/students', icon: ClipboardCheck, moduleKey: 'attendance' },
+    { name: 'Learner Attendance', path: '/attendance', icon: ClipboardCheck, moduleKey: 'attendance' },
     { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn, moduleKey: 'attendance' },
     { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, moduleKey: 'assessments' },
     { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText, moduleKey: 'assessments' },

@@ -241,7 +241,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'ict_technician', 'ict_teacher'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
         { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
-        { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+        { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     // Staff Attendance
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'ict_technician', 'ict_teacher'] },
     { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher'] },

@@ -155,7 +155,7 @@ export default function TeacherDashboard() {
                   <ClipboardCheck size={20} />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="font-bold text-slate-900 group-hover:text-blue-700">Student Attendance</h4>
+                  <h4 className="font-bold text-slate-900 group-hover:text-blue-700">Learner Attendance</h4>
                   <p className="text-xs text-slate-500">Record daily register, check attendance statistics, and notify parents.</p>
                 </div>
               </div>

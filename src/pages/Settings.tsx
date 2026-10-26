@@ -81,7 +81,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
 
 const SYSTEM_ROLES = [
   { id: 'admin', name: 'Administrators', description: 'Full access to institutional control center, staff records, and financial ledgers.' },
-  { id: 'teacher', name: 'Teachers', description: 'Access to mark entry, student attendance, lesson plans, and CBC assessments.' },
+  { id: 'teacher', name: 'Teachers', description: 'Access to mark entry, learner attendance, lesson plans, and CBC assessments.' },
   { id: 'bursar', name: 'Bursars', description: 'Access to fee collections, payment records, and financial summaries.' },
   { id: 'librarian', name: 'Librarians', description: 'Access to library catalog, book checkouts, and e-resource inventories.' },
   { id: 'ict_technician', name: 'ICT Technicians', description: 'Access to lab devices, digital literacy hubs, and network monitoring.' },
