@@ -28,6 +28,7 @@ export const DEFAULT_CBC_CLUSTERS = [
 export const buildDefaultClusters = () => DEFAULT_CBC_CLUSTERS;
 
 export const initialSeedData = {
+  "version": SEED_VERSION,
   "grades": [
     { "id": "g_pp1", "name": "PP1", "streams": ["BLUE", "GREEN", "RED"] },
     { "id": "g_pp2", "name": "PP2", "streams": ["BLUE", "GREEN", "RED"] },
