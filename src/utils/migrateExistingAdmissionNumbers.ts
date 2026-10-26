@@ -1,16 +1,17 @@
-export const migrateExistingAdmissionNumbers = () => {
+export const migrateExistingAdmissionNumbers = (setStudents?: (students: any[]) => void) => {
   const students = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-  if (!students.length) return;
+  if (!students.length) {
+    return false;
+  }
 
-  const updatedStudents = students.map((student: any) => {
+  const migratedStudents = students.map((student: any) => {
     // Extract year suffix from existing admission number (e.g. MUN-005-2021 -> 2021)
     const yearMatch = (student.admissionNumber || student.admNo || '').match(/\d{4}$/);
-    const entryYear = yearMatch ? yearMatch[0] : (student.admissionYear || '2026');
+    const entryYear = yearMatch ? yearMatch[0] : (student.admissionYear || '2021');
 
-    // Generate unique random 4-char code
-    const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const newAdmNo = `MUN-${randomCode}-${entryYear}`;
-
+    // Generate unique random 4-char uppercase hash (e.g., 4F81)
+    const hash = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const newAdmNo = `MUN-${hash}-${entryYear}`;
     const oldAdmNo = student.admissionNumber || student.admNo;
 
     // Cascade updates into any saved exam submissions matching old admission number
@@ -31,6 +32,9 @@ export const migrateExistingAdmissionNumbers = () => {
   });
 
   // Save updated master student list back to localStorage
-  localStorage.setItem('munyaka_students', JSON.stringify(updatedStudents));
-  window.location.reload(); // Refresh to reflect updated table state instantly
+  localStorage.setItem('munyaka_students', JSON.stringify(migratedStudents));
+  if (setStudents) {
+    setStudents(migratedStudents);
+  }
+  return true;
 };
