@@ -7,7 +7,7 @@ export const generateLearnerId = (): string => `learner-${Date.now()}-${Math.flo
 export const formatLearnerDoc = (raw: any): Learner => ({
   id: raw.id || `learner-${Date.now()}`,
   admNo: raw.admNo || raw.admissionNumber || raw.admissionNo || '',
-  name: raw.name || raw.fullName || 'Unknown Learner',
+  name: raw.name || raw.fullName || '',
   grade: raw.grade || raw.gradeLevel || 'Grade 1',
   stream: raw.stream || 'BLUE',
   gender: raw.gender || 'Female',
