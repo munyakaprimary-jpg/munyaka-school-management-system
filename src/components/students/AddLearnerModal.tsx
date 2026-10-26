@@ -28,7 +28,7 @@ export default function AddLearnerModal({
   const [assessmentNumber, setAssessmentNumber] = useState('');
   const [idType, setIdType] = useState<'assessment' | 'birthCert'>('assessment');
   const [idValue, setIdValue] = useState('');
-  const [gradeLevel, setGradeLevel] = useState('Grade 6');
+  const [selectedGrade, setSelectedGrade] = useState('Grade 6');
   const [stream, setStream] = useState('BLUE');
   const [gender, setGender] = useState('Female');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -36,29 +36,31 @@ export default function AddLearnerModal({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Helper function to derive the Grade 1 entry year from the grade name
-  const calculateEntryYear = (gradeStr: string) => {
+  // 1. Precise grade-to-year calculator
+  const getEntryYearForGrade = (gradeValue: string): number => {
     const currentYear = 2026;
-    const match = (gradeStr || '').match(/\d+/);
-    const gradeNum = match ? parseInt(match[0], 10) : 1;
+    // Extract digit (e.g., "Grade 6" -> 6)
+    const match = (gradeValue || '').match(/\d+/);
+    const gradeNumber = match ? parseInt(match[0], 10) : 1;
     
-    // Grade 1 = 2026, Grade 5 = 2026 - 4 = 2022, etc.
-    return currentYear - (gradeNum - 1);
+    // Formula: Grade 1 = 2026, Grade 6 = 2026 - 5 = 2021
+    return currentYear - (gradeNumber - 1);
   };
 
-  // Function to generate the complete admission number string
-  const generateNewAdmissionNo = (grade: string) => {
-    const entryYear = calculateEntryYear(grade);
+  // 2. Helper to construct the full admission string
+  const generateAdmissionNo = (gradeValue: string): string => {
+    const year = getEntryYearForGrade(gradeValue);
     const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `MUN-${randomHash}-${entryYear}`;
+    return `MUN-${randomHash}-${year}`;
   };
 
-  // Reactively update admission number whenever gradeLevel changes or modal opens
+  // 3. React Effect to update whenever grade state changes or modal opens
   useEffect(() => {
-    if (isOpen) {
-      setAdmissionNumber(generateNewAdmissionNo(gradeLevel));
+    if (selectedGrade && isOpen) {
+      const freshAdmNo = generateAdmissionNo(selectedGrade);
+      setAdmissionNumber(freshAdmNo);
     }
-  }, [isOpen, gradeLevel]);
+  }, [selectedGrade, isOpen]);
 
   const handleRegisterLearner = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,8 +92,7 @@ export default function AddLearnerModal({
     setIsSaving(true);
     try {
       const learnerId = `learner-${Date.now()}`;
-      const entryYear = calculateEntryYear(gradeLevel);
-      const genAdm = admissionNumber.trim() || generateNewAdmissionNo(gradeLevel);
+      const genAdm = admissionNumber.trim() || generateAdmissionNo(selectedGrade);
 
       const parts = fullName.trim().split(/\s+/);
       const firstName = parts[0] || '';
@@ -114,9 +115,9 @@ export default function AddLearnerModal({
         assessmentNumber: idType === 'assessment' ? cleanValue : '',
         assessmentNo: idType === 'assessment' ? cleanValue : '',
         birthCertificateNo: idType === 'birthCert' ? cleanValue : '',
-        gradeLevel: gradeLevel,
-        grade: gradeLevel,
-        class: gradeLevel,
+        gradeLevel: selectedGrade,
+        grade: selectedGrade,
+        class: selectedGrade,
         stream: stream,
         gender: gender,
         dateOfBirth: dateOfBirth,
@@ -189,7 +190,7 @@ export default function AddLearnerModal({
                 type="button"
                 variant="outline"
                 className="h-12 rounded-xl text-xs font-bold px-3 shrink-0"
-                onClick={() => setAdmissionNumber(generateNewAdmissionNo(gradeLevel))}
+                onClick={() => setAdmissionNumber(generateAdmissionNo(selectedGrade))}
                 title="Regenerate admission number for current grade"
               >
                 Regenerate
@@ -227,7 +228,7 @@ export default function AddLearnerModal({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade Level</Label>
-            <Select value={gradeLevel} onValueChange={setGradeLevel}>
+            <Select value={selectedGrade} onValueChange={setSelectedGrade}>
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
                 <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
