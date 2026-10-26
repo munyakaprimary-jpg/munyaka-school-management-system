@@ -36,31 +36,39 @@ export default function AddLearnerModal({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // 1. Precise grade-to-year calculator
-  const getEntryYearForGrade = (gradeValue: string): number => {
+  // 1. Grade-to-Entry-Year calculation logic
+  const calculateGrade1Year = (gradeName: string): number => {
     const currentYear = 2026;
-    // Extract digit (e.g., "Grade 6" -> 6)
-    const match = (gradeValue || '').match(/\d+/);
-    const gradeNumber = match ? parseInt(match[0], 10) : 1;
-    
-    // Formula: Grade 1 = 2026, Grade 6 = 2026 - 5 = 2021
-    return currentYear - (gradeNumber - 1);
+    const match = (gradeName || '').match(/\d+/);
+    const gradeNum = match ? parseInt(match[0], 10) : 1;
+    // Grade 1 = 2026, Grade 2 = 2025, Grade 5 = 2022, etc.
+    return currentYear - (gradeNum - 1);
   };
 
-  // 2. Helper to construct the full admission string
-  const generateAdmissionNo = (gradeValue: string): string => {
-    const year = getEntryYearForGrade(gradeValue);
-    const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `MUN-${randomHash}-${year}`;
+  // 2. Generator for new admission number
+  const createAdmissionNumber = (gradeName: string): string => {
+    const entryYear = calculateGrade1Year(gradeName);
+    const hash = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `MUN-${hash}-${entryYear}`;
   };
 
-  // 3. React Effect to update whenever grade state changes or modal opens
+  // 3. React Effect: Force update whenever selected Grade changes or modal opens
   useEffect(() => {
-    if (selectedGrade && isOpen) {
-      const freshAdmNo = generateAdmissionNo(selectedGrade);
-      setAdmissionNumber(freshAdmNo);
+    if (selectedGrade) {
+      const newAdmNo = createAdmissionNumber(selectedGrade);
+      setAdmissionNumber(newAdmNo);
+      // Also sync if using a unified formData state object:
+      // setFormData(prev => ({ ...prev, admissionNumber: newAdmNo, admissionNo: newAdmNo }));
     }
   }, [selectedGrade, isOpen]);
+
+  // 4. Update the Grade dropdown handler:
+  const handleGradeChange = (newGrade: string) => {
+    setSelectedGrade(newGrade);
+    const updatedAdmNo = createAdmissionNumber(newGrade);
+    setAdmissionNumber(updatedAdmNo);
+    // setFormData(prev => ({ ...prev, grade: newGrade, admissionNumber: updatedAdmNo }));
+  };
 
   const handleRegisterLearner = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +100,7 @@ export default function AddLearnerModal({
     setIsSaving(true);
     try {
       const learnerId = `learner-${Date.now()}`;
-      const genAdm = admissionNumber.trim() || generateAdmissionNo(selectedGrade);
+      const genAdm = admissionNumber.trim() || createAdmissionNumber(selectedGrade);
 
       const parts = fullName.trim().split(/\s+/);
       const firstName = parts[0] || '';
@@ -190,7 +198,7 @@ export default function AddLearnerModal({
                 type="button"
                 variant="outline"
                 className="h-12 rounded-xl text-xs font-bold px-3 shrink-0"
-                onClick={() => setAdmissionNumber(generateAdmissionNo(selectedGrade))}
+                onClick={() => setAdmissionNumber(createAdmissionNumber(selectedGrade))}
                 title="Regenerate admission number for current grade"
               >
                 Regenerate
@@ -228,7 +236,7 @@ export default function AddLearnerModal({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade Level</Label>
-            <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+            <Select value={selectedGrade} onValueChange={handleGradeChange}>
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
                 <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
