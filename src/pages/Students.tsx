@@ -58,17 +58,20 @@ const normalizeGradeStr = (val: string) => {
 };
 
 const generateAdmissionNumber = (studentGrade: string, admissionYear: string = '2026') => {
-  // Retrieve existing students from local storage
+  // 1. Retrieve all registered students from localStorage
   const students = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
 
-  // Filter ONLY students in the exact same grade to isolate the sequence
-  const gradeStudents = students.filter((s: any) => s.grade === studentGrade);
+  // 2. Filter ONLY students who belong to this exact grade
+  const studentsInThisGrade = students.filter((s: any) => {
+    const gradeMatch = s.grade === studentGrade || s.gradeAndStream?.includes(studentGrade);
+    return gradeMatch;
+  });
 
-  // The next sequence number for this grade starts at 1
-  const nextSeq = gradeStudents.length + 1;
+  // 3. The sequence starts at 1 for this grade, incrementing only by the count of students in THIS grade
+  const nextSeq = studentsInThisGrade.length + 1;
   const paddedSeq = String(nextSeq).padStart(3, '0');
 
-  // Return format: MUN-[001]-[YEAR] scoped per grade
+  // 4. Return format: MUN-[001]-[YEAR] scoped exclusively to the grade
   return `MUN-${paddedSeq}-${admissionYear}`;
 };
 
