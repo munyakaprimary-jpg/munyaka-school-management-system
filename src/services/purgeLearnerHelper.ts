@@ -1,7 +1,6 @@
 // Complete system purge of all learners and student keys
 export const purgeAllLearnersCompletely = () => {
-  const keysToPurge = [
-    'munyaka_learners',
+  const legacyKeys = [
     'munyaka_learners_v2',
     'munyaka_learners_db',
     'school_learners_data',
@@ -15,12 +14,12 @@ export const purgeAllLearnersCompletely = () => {
     'deleted_learner_ids'
   ];
 
-  // 1. Completely remove all legacy and active keys from localStorage
-  for (const k of keysToPurge) {
-    localStorage.removeItem(k);
+  // Completely remove all fragment keys
+  for (const key of legacyKeys) {
+    localStorage.removeItem(key);
   }
 
-  // 2. Initialize the single master key as an empty array
+  // Reset the single master key to empty
   localStorage.setItem('munyaka_learners', JSON.stringify([]));
 
   window.dispatchEvent(new Event('munyaka_learners_updated'));
