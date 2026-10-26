@@ -16,10 +16,12 @@ import {
   ArrowRightLeft,
   Lock,
   AlertCircle,
-  Loader2
+  Loader2,
+  RefreshCw,
+  Trash
 } from 'lucide-react';
 import { db } from '@/config/firebase';
-import { collection, onSnapshot, addDoc, setDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, setDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import { showSuccess, showError } from '@/utils/toast';
 import { CentralDataService } from '@/services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
@@ -281,6 +283,38 @@ export default function LearnersDirectory() {
     setIsVerifying(false);
   };
 
+  const purgeAllLearnersDataCompletely = async () => {
+    if (window.confirm("Are you sure you want to completely wipe all learners from both local storage and Firestore? This cannot be undone.")) {
+      try {
+        // 1. Clear LocalStorage keys
+        localStorage.removeItem('munyaka_students');
+        localStorage.removeItem('munyaka_learners');
+        localStorage.removeItem('munyaka_exam_submissions');
+        localStorage.removeItem('munyaka_learners_v2');
+        localStorage.removeItem('deleted_learner_ids');
+
+        // 2. Clear Firestore collections if Firebase is initialized
+        if (db) {
+          const collectionsToClear = ['learners', 'students', 'exam_submissions', 'attendance'];
+          for (const colName of collectionsToClear) {
+            const querySnapshot = await getDocs(collection(db, colName));
+            const deletePromises = querySnapshot.docs.map((document) =>
+              deleteDoc(doc(db, colName, document.id))
+            );
+            await Promise.all(deletePromises);
+          }
+        }
+
+        alert("All local and cloud records have been successfully purged.");
+        window.location.reload();
+      } catch (error) {
+        console.error("Error purging database:", error);
+        alert("Purged local data, but encountered an error clearing Firestore. Check console.");
+        window.location.reload();
+      }
+    }
+  };
+
   const gradesList = useMemo(() => {
     const set = new Set<string>();
     (learnersList || []).forEach(l => {
@@ -299,7 +333,14 @@ export default function LearnersDirectory() {
           <h1 className="text-2xl font-black text-slate-900 mt-2">Learners Directory</h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">Manage school enrollment, student records, and profiles</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button
+            onClick={purgeAllLearnersDataCompletely}
+            variant="destructive"
+            className="rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white h-12 px-5 shadow-lg shadow-rose-100 flex items-center gap-2"
+          >
+            <Trash size={18} /> Purge All Data
+          </Button>
           <Button
             onClick={() => setIsAddModalOpen(true)}
             className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-6 shadow-lg shadow-indigo-100"
