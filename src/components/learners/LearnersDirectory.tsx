@@ -328,16 +328,16 @@ export default function LearnersDirectory() {
   return (
     <div className="space-y-6 pb-16 animate-in fade-in">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm">
         <div>
           <BackButton />
           <h1 className="text-2xl font-black text-slate-900 mt-2">Learners Directory</h1>
           <p className="text-xs text-slate-500 font-medium mt-0.5">Manage school enrollment, student records, and profiles</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 my-2">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handlePurgeAndReset}
-            className="px-4 py-3 border-2 border-red-300 text-red-600 bg-red-50 hover:bg-red-100 rounded-2xl font-bold flex items-center gap-2 shadow-sm transition-all order-first"
+            className="px-4 py-2 border-2 border-red-300 text-red-600 bg-red-50 hover:bg-red-100 rounded-2xl font-bold flex items-center gap-2 shadow-sm transition-all"
           >
             <Trash size={16} />
             <span>Purge & Reset Directory</span>
