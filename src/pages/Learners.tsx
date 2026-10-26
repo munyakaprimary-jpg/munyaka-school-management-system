@@ -38,7 +38,7 @@ import { migrateExistingAdmissionNumbers } from '@/utils/migrateExistingAdmissio
 import { db } from '@/config/firebase';
 import { collection, onSnapshot, addDoc, setDoc, doc, getDocs, deleteDoc } from 'firebase/firestore';
 
-const STUDENTS_STORAGE_KEY = 'munyaka_students';
+const STUDENTS_STORAGE_KEY = 'munyaka_learners';
 const API_BASE_URL = '/api';
 
 // Harmonized grade matcher (supports "1", "Grade 1", "Grade One", etc.)
@@ -650,7 +650,6 @@ export default function Students() {
     if (window.confirm("Are you sure you want to completely wipe all learner records, exam submissions, and remnants from local storage and Firestore? This cannot be undone.")) {
       try {
         // 1. Clear LocalStorage keys
-        localStorage.removeItem('munyaka_students');
         localStorage.removeItem('munyaka_learners');
         localStorage.removeItem('munyaka_exam_submissions');
         localStorage.removeItem('munyaka_attendance');

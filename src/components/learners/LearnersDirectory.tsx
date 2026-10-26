@@ -63,7 +63,7 @@ export default function LearnersDirectory() {
         const parsed = JSON.parse(unified);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(formatLearnerDoc);
       }
-      const cached = localStorage.getItem('cached_learners') || localStorage.getItem('munyaka_students');
+      const cached = localStorage.getItem('cached_learners') || localStorage.getItem('munyaka_learners');
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) return parsed.map(formatLearnerDoc);
@@ -287,7 +287,6 @@ export default function LearnersDirectory() {
     if (window.confirm("Are you sure you want to completely wipe all learners from both local storage and Firestore? This cannot be undone.")) {
       try {
         // 1. Clear LocalStorage keys
-        localStorage.removeItem('munyaka_students');
         localStorage.removeItem('munyaka_learners');
         localStorage.removeItem('munyaka_exam_submissions');
         localStorage.removeItem('munyaka_learners_v2');

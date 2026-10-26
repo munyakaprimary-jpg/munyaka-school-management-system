@@ -32,14 +32,14 @@ export { getLocalStorage };
 
 // ─── Storage Keys ────────────────────────────────────────────────────────────
 
-export const STORAGE_KEY = 'munyaka_students';
+export const STORAGE_KEY = 'munyaka_learners';
 export const LEARNERS_KEY = STORAGE_KEY;
 
 export const STORAGE_KEYS = {
   LEARNERS: STORAGE_KEY,
   // Primary state stores
   STUDENTS: STORAGE_KEY,
-  STUDENTS_LEGACY: 'munyaka_students',
+  STUDENTS_LEGACY: 'munyaka_learners_legacy',
   MASTER_LEARNERS: 'munyaka_master_learner_list',
   CBC_LEARNING_AREAS: 'munyaka_learning_areas',
   PAYMENT_RECORDS: 'munyaka_fees_records',
