@@ -57,26 +57,20 @@ const normalizeGradeStr = (val: string) => {
   return lower;
 };
 
-const generateAdmissionNumber = (grade: string, existingStudents: any[] = []) => {
-  const match = grade.match(/(\d+)/);
-  const gradeNum = match ? parseInt(match[1], 10) : 1;
-  const currentYear = new Date().getFullYear();
-  const admissionYear = currentYear - (gradeNum - 1);
+const generateAdmissionNumber = (studentGrade: string, admissionYear: string = '2026') => {
+  // Retrieve existing students from local storage
+  const students = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
 
-  // Count existing students in the same grade and same admission year
-    const gradeYearStudents = existingStudents.filter((s: any) => {
-      const matchesGrade = s.grade === grade || s.class === grade;
-      const adm = s.admissionNumber || s.admNo || '';
-      const matchesYear = adm.endsWith(`-${admissionYear}`);
-      return matchesGrade && matchesYear;
-    });
-  
-    // Next sequence: count + 1, padded to 3 digits (e.g., 2 students -> 003)
-    const nextSeq = gradeYearStudents.length + 1;
-    const paddedSeq = String(nextSeq).padStart(3, '0');
-  
-    return `MUN-${paddedSeq}-${admissionYear}`;
-  };
+  // Filter ONLY students in the exact same grade to isolate the sequence
+  const gradeStudents = students.filter((s: any) => s.grade === studentGrade);
+
+  // The next sequence number for this grade starts at 1
+  const nextSeq = gradeStudents.length + 1;
+  const paddedSeq = String(nextSeq).padStart(3, '0');
+
+  // Return format: MUN-[001]-[YEAR] scoped per grade
+  return `MUN-${paddedSeq}-${admissionYear}`;
+};
 
 // Re-sequence all existing learners with a single continuous unbroken global sequence
 const ensureProperAdmissionNumbers = (list: any[]) => {
@@ -307,14 +301,14 @@ export default function Students() {
   };
 
   const handleOpenAdd = () => {
-    resetForm();
-    const initialGrade = !isAdmin ? assignedTeacherGrade : 'Grade 6';
-    const initialStream = !isAdmin ? assignedTeacherStream : 'BLUE';
-    setGrade(initialGrade);
-    setStream(initialStream);
-    setAdmissionNumber(generateAdmissionNumber(initialGrade, students));
-    setIsModalOpen(true);
-  };
+      resetForm();
+      const initialGrade = !isAdmin ? assignedTeacherGrade : 'Grade 6';
+      const initialStream = !isAdmin ? assignedTeacherStream : 'BLUE';
+      setGrade(initialGrade);
+      setStream(initialStream);
+      setAdmissionNumber(generateAdmissionNumber(initialGrade));
+      setIsModalOpen(true);
+    };
 
   const handleOpenTransferModal = () => {
     const roleLower = String(user?.role || '').toLowerCase();
@@ -336,14 +330,9 @@ export default function Students() {
         setTransferParentName('');
         setTransferPhone('');
     
-        // Compute grade+year sequence for transfer admission number
-        const transferGradeYearStudents = students.filter((s: any) => {
-          const matchesGrade = s.grade === 'Grade 6' || s.class === 'Grade 6';
-          const adm = s.admissionNumber || s.admNo || '';
-          const matchesYear = adm.endsWith(`-${currentYr}`);
-          return matchesGrade && matchesYear;
-        });
-        const nextSeq = transferGradeYearStudents.length + 1;
+        // Compute grade-only sequence for transfer admission number (isolated per grade)
+        const transferGradeStudents = students.filter((s: any) => s.grade === 'Grade 6');
+        const nextSeq = transferGradeStudents.length + 1;
         const paddedSeq = String(nextSeq).padStart(3, '0');
         setTransferAdmissionNumber(`MUN-${paddedSeq}-${currentYr}`);
     
@@ -491,11 +480,11 @@ export default function Students() {
     try {
       const targetId = editingId || generateLearnerId();
       const studentData = {
-        id: targetId,
-        name: fullName.trim(),
-        fullName: fullName.trim(),
-        admissionNumber: admissionNumber || generateAdmissionNumber(grade, students),
-        admNo: admissionNumber || generateAdmissionNumber(grade, students),
+              id: targetId,
+              name: fullName.trim(),
+              fullName: fullName.trim(),
+              admissionNumber: admissionNumber || generateAdmissionNumber(grade),
+              admNo: admissionNumber || generateAdmissionNumber(grade),
         idType: idType,
         idValue: cleanValue,
         assessmentNumber: idType === 'assessment' ? cleanValue : '',
@@ -1041,10 +1030,10 @@ export default function Students() {
               <Select
                 value={grade}
                 onValueChange={(val) => {
-                  if (!isAdmin) return;
-                  setGrade(val);
-                  setAdmissionNumber(generateAdmissionNumber(val, students));
-                }}
+                                  if (!isAdmin) return;
+                                  setGrade(val);
+                                  setAdmissionNumber(generateAdmissionNumber(val));
+                                }}
                 disabled={!isAdmin}
               >
                 <SelectTrigger className={`rounded-xl h-12 border-slate-200 ${!isAdmin ? 'bg-slate-100 text-slate-700 cursor-not-allowed' : ''}`}>
@@ -1158,18 +1147,13 @@ export default function Students() {
             <div className="space-y-2">
               <Label className="text-xs font-bold text-slate-700 uppercase">Transfer-In Year</Label>
               <Select value={transferYear} onValueChange={(val) => {
-                              setTransferYear(val);
-                              // Compute grade+year sequence for the selected transfer grade and year
-                              const transferGradeYearStudents = students.filter((s: any) => {
-                                const matchesGrade = s.grade === transferGrade || s.class === transferGrade;
-                                const adm = s.admissionNumber || s.admNo || '';
-                                const matchesYear = adm.endsWith(`-${val}`);
-                                return matchesGrade && matchesYear;
-                              });
-                              const nextSeq = transferGradeYearStudents.length + 1;
-                              const paddedSeq = String(nextSeq).padStart(3, '0');
-                              setTransferAdmissionNumber(`MUN-${paddedSeq}-${val}`);
-                            }}>
+                                            setTransferYear(val);
+                                            // Compute grade-only sequence for the selected transfer grade (isolated per grade)
+                                            const transferGradeStudents = students.filter((s: any) => s.grade === transferGrade);
+                                            const nextSeq = transferGradeStudents.length + 1;
+                                            const paddedSeq = String(nextSeq).padStart(3, '0');
+                                            setTransferAdmissionNumber(`MUN-${paddedSeq}-${val}`);
+                                          }}>
                 <SelectTrigger className="rounded-xl h-12 border-slate-200">
                   <SelectValue placeholder="Select year" />
                 </SelectTrigger>
