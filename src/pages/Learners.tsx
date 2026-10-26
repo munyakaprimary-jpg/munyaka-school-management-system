@@ -660,23 +660,6 @@ export default function Students() {
         <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
-            className="rounded-2xl border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 gap-2 font-bold text-xs sm:text-sm"
-            onClick={() => {
-              const students = JSON.parse(localStorage.getItem('munyaka_students') || '[]');
-              if (!students.length) {
-                alert("No learners found to migrate.");
-                return;
-              }
-              if (window.confirm("Run one-time migration to re-format all existing learner admission numbers to random hash codes with their Grade 1 entry year?")) {
-                migrateExistingAdmissionNumbers(setStudents);
-                showSuccess("Admission numbers successfully migrated to hash format!");
-              }
-            }}
-          >
-            <RefreshCw size={18} /> Migrate Admission Nos.
-          </Button>
-          <Button
-            variant="outline"
             className="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 font-bold text-xs sm:text-sm"
             onClick={() => handleDownloadLearners()}
           >
