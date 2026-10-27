@@ -406,6 +406,8 @@ const Login: React.FC = () => {
         email: matched.email || trimmedId,
         phone: matched.phone || '',
         role: String(matched.systemRole || matched.role || 'staff').trim().toLowerCase(),
+        title: matched.title || matched.category || matched.designation || 'Staff',
+        assignedClass: matched.assignedGrade || matched.assignedClass || '',
         staff_id: matched.staffId || '',
         avatar: (matched.name || 'U')
           .split(' ')
@@ -426,8 +428,8 @@ const Login: React.FC = () => {
 
       showSuccess(`Welcome, ${userData.name}!`);
       
-      // Redirect user dynamically to their highest-priority accessible landing page based on RBAC
-      const landingPage = getRoleLandingPage(userData.role);
+      // Redirect user dynamically to their specialized landing page based on role and title
+      const landingPage = getRoleLandingPage(userData.role, undefined, userData);
       navigate(landingPage, { replace: true });
       setIsStaffVerifying(false);
   };

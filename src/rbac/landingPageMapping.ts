@@ -1,9 +1,22 @@
 import { getPermissionsMatrix, getDefaultLandingPage } from './permissionMatrix';
 
-export function getRoleLandingPage(role: string, customPermissions?: Record<string, boolean>): string {
+export function getRoleLandingPage(role: string, customPermissions?: Record<string, boolean>, staffMember?: { title?: string; category?: string; assignedClass?: string }): string {
   const normRole = String(role || '').trim().toUpperCase();
+  const title = String(staffMember?.title || staffMember?.category || '').trim().toLowerCase();
 
-  if (customPermissions) {
+  // Check specialized staff titles / roles first
+  if (title.includes('library') || title.includes('librarian')) {
+    return '/library';
+  }
+  if (title.includes('ict') || title.includes('computer')) {
+    return '/inventory';
+  }
+  if (title.includes('bursar') || title.includes('accountant')) {
+    return '/fees';
+  }
+  if (staffMember?.assignedClass) {
+    return '/portal';
+  }
     const modules = [
       { key: 'dashboard', path: '/dashboard' },
       { key: 'assessments', path: '/assessments' },
