@@ -37,23 +37,5 @@ export function getRoleLandingPage(role: string, customPermissions?: Record<stri
     }
   }
 
-  // Check stored matrix for role
-  try {
-    const matrix = getPermissionsMatrix();
-    const roleMatrix = matrix[normRole];
-    if (roleMatrix) {
-      if (roleMatrix.dashboard) return '/dashboard';
-      if (roleMatrix.assessments) return '/assessments';
-      if (roleMatrix.fees) return '/fees';
-      if (roleMatrix.learners) return '/learners';
-      if (roleMatrix.inventory) return '/inventory';
-      if (roleMatrix.library) return '/library';
-      if (roleMatrix.communication) return '/communication';
-      if (roleMatrix.settings) return '/settings';
-    }
-  } catch (err) {
-    console.error('Error reading permission matrix for landing page:', err);
-  }
-
   return getDefaultLandingPage(normRole);
 }
