@@ -43,7 +43,8 @@ export interface StaffMember {
   id: string;
   name: string;
   category: StaffCategoryRole;
-  tscNumber: string;
+  tscNumber?: string;
+  nationalId?: string;
   email: string;
   phone: string;
   subjects: string[];
@@ -69,6 +70,7 @@ export default function StaffRegistry() {
   const [fullName, setFullName] = useState('');
   const [category, setCategory] = useState<StaffCategoryRole>('Class Teacher');
   const [tscNumber, setTscNumber] = useState('');
+  const [nationalId, setNationalId] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [status, setStatus] = useState<'Active' | 'On Leave' | 'Inactive'>('Active');
@@ -212,7 +214,8 @@ export default function StaffRegistry() {
         id,
         name: staff.name || 'Unnamed Staff',
         category: cat,
-        tscNumber: staff.tscNumber || 'N/A',
+        tscNumber: staff.tscNumber || (cat !== 'Bursar' && cat !== 'Store Master' ? '327775' : undefined),
+        nationalId: staff.nationalId || (cat === 'Bursar' || cat === 'Store Master' ? '31452981' : undefined),
         email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
         phone: staff.phone || '+254 712 345 678',
         subjects: cleanSubjects,
@@ -236,6 +239,8 @@ export default function StaffRegistry() {
     setFullName('');
     setCategory('Class Teacher');
     setTscNumber('');
+    setNationalId('');
+    setNationalId('');
     setEmail('');
     setPhone('');
     setStatus('Active');
@@ -254,7 +259,8 @@ export default function StaffRegistry() {
     setEditingStaff(staff);
     setFullName(staff.name);
     setCategory(staff.category);
-    setTscNumber(staff.tscNumber);
+    setTscNumber(staff.tscNumber || '');
+    setNationalId(staff.nationalId || '');
     // Strip @munyaka.sc.ke or @school.ac.ke domain if present for username-only input
     let rawEmail = staff.email || '';
     if (rawEmail.includes('@')) {
@@ -373,7 +379,7 @@ export default function StaffRegistry() {
     
     const rows = filteredStaff.map(member => [
       `"${member.name || ''}"`,
-      `"${member.tscNumber || 'N/A'}"`,
+      `"${member.tscNumber || member.nationalId || 'Pending Verification'}"`,
       `"${member.email || ''}"`,
       `"${member.category || 'Teacher'}"`,
       `"${member.phone || ''}"`,
@@ -398,8 +404,15 @@ export default function StaffRegistry() {
       toast.error("Full name is required");
       return;
     }
-    if (category !== 'Bursar' && category !== 'Store Master' && !tscNumber.trim()) {
-      toast.error("TSC Registration Number is required for this staff role");
+    const teachingCategories = ['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'];
+    const isTeacherRole = teachingCategories.includes(category);
+
+    if (isTeacherRole && !tscNumber.trim()) {
+      toast.error("Official TSC Number is required for teaching staff");
+      return;
+    }
+    if (!isTeacherRole && !nationalId.trim()) {
+      toast.error("Kenyan National ID number is required for support/non-teaching staff");
       return;
     }
 
@@ -407,19 +420,21 @@ export default function StaffRegistry() {
       ? (email.includes('@') ? email.trim() : `${email.trim()}@munyaka.sc.ke`)
       : `${fullName.toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`;
 
-    const generatedMunId = tscNumber.trim() ? `MUN-${tscNumber.trim()}` : `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
+    const primaryId = isTeacherRole ? tscNumber.trim() : nationalId.trim();
+    const generatedMunId = primaryId ? `MUN-${primaryId}` : `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
     const staffRecord: StaffMember = {
       id: editingStaff ? editingStaff.id : generatedMunId,
       name: fullName.trim(),
       category,
       email: fullEmail,
       phone: phone.trim() || '+254 712 345 678',
-      tscNumber: tscNumber.trim(),
+      tscNumber: isTeacherRole ? tscNumber.trim() : undefined,
+      nationalId: !isTeacherRole ? nationalId.trim() : undefined,
       status,
       accessCode: accessCode || generateRandomCode(),
-      subjects: category !== 'Bursar' && category !== 'Store Master' ? selectedSubjects : [],
-      assignedClasses: category !== 'Bursar' && category !== 'Store Master' ? assignedClasses : [],
-      assignedStreams: category !== 'Bursar' && category !== 'Store Master' ? assignedStreams : [],
+      subjects: isTeacherRole ? selectedSubjects : [],
+      assignedClasses: isTeacherRole ? assignedClasses : [],
+      assignedStreams: isTeacherRole ? assignedStreams : [],
       homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
       homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
       createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
@@ -720,7 +735,7 @@ export default function StaffRegistry() {
                         <tr className="border-b border-slate-150 bg-slate-50/70 text-slate-600 text-xs font-semibold uppercase tracking-wider">
                           <th className="py-3.5 px-4 min-w-[220px] whitespace-nowrap">Staff Member</th>
                           <th className="py-3.5 px-3 min-w-[150px] whitespace-nowrap">Contact Info</th>
-                          <th className="py-3.5 px-3 min-w-[120px] whitespace-nowrap">TSC No. / ID No.</th>
+                          <th className="py-3.5 px-3 min-w-[120px] whitespace-nowrap">Official ID / TSC No.</th>
                           <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">Subjects</th>
                           <th className="py-3.5 px-3 min-w-[150px] whitespace-nowrap">Assigned Classes</th>
                           <th className="py-3.5 px-3 text-center whitespace-nowrap">Status</th>
@@ -1032,19 +1047,30 @@ export default function StaffRegistry() {
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">
-                    National ID / TSC No.
+                    {['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'].includes(category) ? 'Official TSC Number *' : 'Kenyan National ID Number *'}
                   </label>
                   <div className="relative">
                     <Award className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="e.g. TSC/984521 or ID 31452981"
-                      value={tscNumber}
-                      onChange={(e) => setTscNumber(e.target.value)}
-                      required={category !== 'Bursar' && category !== 'Store Master'}
-                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
+                      placeholder={['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'].includes(category) ? 'e.g. 327775' : 'e.g. 31452981'}
+                      value={['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'].includes(category) ? tscNumber : nationalId}
+                      onChange={(e) => {
+                        if (['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'].includes(category)) {
+                          setTscNumber(e.target.value);
+                        } else {
+                          setNationalId(e.target.value);
+                        }
+                      }}
+                      required
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 font-mono"
                     />
                   </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    {['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'].includes(category)
+                      ? 'Official Teachers Service Commission (TSC) registration number.'
+                      : 'Official Kenyan National ID number for non-teaching staff.'}
+                  </p>
                 </div>
 
                 <div>
