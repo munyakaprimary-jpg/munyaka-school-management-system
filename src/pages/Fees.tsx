@@ -486,7 +486,7 @@ const Fees = () => {
   /** Build fee records dynamically from students */
   const calculatedFees: FeeRecord[] = useMemo(() => {
     try {
-      const rawLearners = JSON.parse(localStorage.getItem('munyaka_learners_db') || '[]');
+      const rawLearners = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
       const allLearners = Array.isArray(rawLearners) && rawLearners.length > 0 ? rawLearners : studentsFromStore;
 
       return allLearners.map((learner: any) => {
@@ -539,7 +539,7 @@ const Fees = () => {
         };
       });
     } catch (err) {
-      console.error("Failed to compute calculatedFees from munyaka_learners_db:", err);
+      console.error("Failed to compute calculatedFees from munyaka_learners:", err);
       return [];
     }
   }, [studentsFromStore, getTotalPaidForStudent, getTermFeeForGrade, findGradeIdForLearner, selectedYear, selectedTerm]);
@@ -548,7 +548,7 @@ const Fees = () => {
   const filteredCalculatedFees: FeeRecord[] = useMemo(() => {
     let rawLearners = [];
     try {
-      rawLearners = JSON.parse(localStorage.getItem('munyaka_learners_db') || '[]');
+      rawLearners = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
     } catch {}
 
     if (!selectedGrade || selectedGrade === "all" || selectedGrade === "ALL" || selectedGrade === "") {
@@ -743,9 +743,9 @@ const Fees = () => {
       return updated;
     });
 
-    // Also update existing student ledger balances in munyaka_learners_db matching those grades / terms
+    // Also update existing student ledger balances in munyaka_learners matching those grades / terms
     try {
-      const learnersRaw = localStorage.getItem('munyaka_learners_db');
+      const learnersRaw = localStorage.getItem('munyaka_learners');
       if (learnersRaw) {
         const learners = JSON.parse(learnersRaw);
         if (Array.isArray(learners)) {
