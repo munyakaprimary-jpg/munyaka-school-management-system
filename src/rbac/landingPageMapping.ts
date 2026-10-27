@@ -17,6 +17,8 @@ export function getRoleLandingPage(role: string, customPermissions?: Record<stri
   if (staffMember?.assignedClass) {
     return '/portal';
   }
+
+  if (customPermissions) {
     const modules = [
       { key: 'dashboard', path: '/dashboard' },
       { key: 'assessments', path: '/assessments' },
