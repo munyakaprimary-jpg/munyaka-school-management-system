@@ -109,7 +109,7 @@ const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   // Dynamic Learner Lookup & Property Mapping from receiptData / localStorage
   const lookupLearner = () => {
     try {
-      const allLearners = JSON.parse(localStorage.getItem('munyaka_learners_db') || '[]');
+      const allLearners = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
       const studentId = (receiptData as any).studentId || (receiptData as any).learnerId;
       const found = allLearners.find((l: any) =>
         (studentId && (l.id === studentId || l.admNo === studentId || l.admissionNo === studentId)) ||

@@ -213,22 +213,16 @@ body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f5f5f5; 
   // Dynamic Learner Lookup & Property Mapping from receiptData / localStorage
   const lookupLearner = () => {
     try {
-      const keys = ['school_learners_data', 'munyaka_learners_db', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
+      const raw = localStorage.getItem('munyaka_learners');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return null;
       const studentId = (receiptData as any).studentId;
-      for (const k of keys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            const found = parsed.find((s: any) =>
-              (studentId && (s.id === studentId || s.admNo === studentId || s.admissionNo === studentId)) ||
-              (receiptData.admNo && (s.admNo === receiptData.admNo || s.admissionNo === receiptData.admNo)) ||
-              (receiptData.studentName && s.name?.toLowerCase() === receiptData.studentName.toLowerCase())
-            );
-            if (found) return found;
-          }
-        }
-      }
+      return parsed.find((s: any) =>
+        (studentId && (s.id === studentId || s.admNo === studentId || s.admissionNo === studentId)) ||
+        (receiptData.admNo && (s.admNo === receiptData.admNo || s.admissionNo === receiptData.admNo)) ||
+        (receiptData.studentName && s.name?.toLowerCase() === receiptData.studentName.toLowerCase())
+      );
     } catch {}
     return null;
   };

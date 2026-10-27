@@ -88,17 +88,7 @@ const DEFAULT_GRADES: GradeItem[] = [
   })),
 ];
 
-const LEARNER_STORAGE_KEYS = [
-  'munyaka_learners_db',
-  'school_learners_data',
-  'munyaka_students',
-  'students',
-  'learners',
-  'pupils',
-  'school_students',
-  'registered_students',
-  'munyaka_registered_students',
-];
+const LEARNER_STORAGE_KEY = 'munyaka_learners';
 
 const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
   isOpen,
@@ -188,27 +178,24 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
     } catch {}
 
     let loaded: Learner[] = [];
-    for (const key of LEARNER_STORAGE_KEYS) {
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            loaded = parsed.map((item: any) => ({
-              id: item.id || item.admNo || `STU-${Math.random()}`,
-              admNo: item.admNo || item.id || '',
-              name: item.name || item.studentName || 'Unknown Learner',
-              grade: item.grade || item.gradeLevel || '',
-              stream: item.stream || '',
-              gender: item.gender || 'Other',
-              guardian: item.guardian || item.parentName || '',
-              phone: item.phone || item.parentPhone || '',
-            }));
-            break;
-          }
+    try {
+      const raw = localStorage.getItem(LEARNER_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          loaded = parsed.map((item: any) => ({
+            id: item.id || item.admNo || '',
+            admNo: item.admNo || item.id || '',
+            name: item.name || item.studentName || 'Unknown Learner',
+            grade: item.grade || item.gradeLevel || '',
+            stream: item.stream || '',
+            gender: item.gender || 'Other',
+            guardian: item.guardian || item.parentName || '',
+            phone: item.phone || item.parentPhone || '',
+          }));
         }
-      } catch {}
-    }
+      }
+    } catch {}
     setLearnersList(loaded);
 
     // Reset filters & fields
@@ -364,8 +351,8 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
 
     await new Promise(r => setTimeout(r, 300));
 
-    const learnersRaw = localStorage.getItem('munyaka_learners_db');
-    const allLearners = learnersRaw ? JSON.parse(learnersRaw) : learnersList;
+    const learnersRaw = localStorage.getItem('munyaka_learners');
+        const allLearners = learnersRaw ? JSON.parse(learnersRaw) : learnersList;
     const resolvedLearner = allLearners.find((l: any) => l.id === selectedStudentId || l.admNo === selectedStudentId) || selectedLearner;
     const resolvedLearnerName = resolvedLearner?.fullName || resolvedLearner?.name || `${resolvedLearner?.firstName || ''} ${resolvedLearner?.lastName || ''}`.trim() || 'Learner';
     const resolvedAdmissionNo = resolvedLearner?.admissionNo || resolvedLearner?.admNo || resolvedLearner?.admissionNumber || resolvedLearner?.id || selectedStudentId;
@@ -472,7 +459,7 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
     window.dispatchEvent(new Event('munyaka_fees_updated'));
     window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_transactions' } }));
     window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_fee_payments_db' } }));
-    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners_db' } }));
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key: 'munyaka_learners' } }));
 
     showSuccess(`Successfully posted KES ${amountNum.toLocaleString()} payment for ${selectedLearner?.name || 'Learner'}!`);
     setIsSaving(false);

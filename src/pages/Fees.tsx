@@ -167,16 +167,13 @@ const Fees = () => {
 
   // Direct Data Hydration Hook for Learners DB
   const [learners, setLearners] = useState<any[]>(() => {
-    const keys = ['munyaka_learners_db', 'school_learners_data', 'munyaka_students', 'students', 'learners'];
-    for (const key of keys) {
-      const storedRaw = localStorage.getItem(key);
-      if (storedRaw) {
-        try {
-          const parsed = JSON.parse(storedRaw);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        } catch (e) {
-          console.error(`Failed to parse ${key}`, e);
-        }
+    const storedRaw = localStorage.getItem('munyaka_learners');
+    if (storedRaw) {
+      try {
+        const parsed = JSON.parse(storedRaw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        console.error('Failed to parse munyaka_learners', e);
       }
     }
     return [];
@@ -184,19 +181,16 @@ const Fees = () => {
 
   useEffect(() => {
     const loadRoster = () => {
-      const keys = ['munyaka_learners_db', 'school_learners_data', 'munyaka_students', 'students', 'learners'];
-      for (const key of keys) {
-        const storedRaw = localStorage.getItem(key);
-        if (storedRaw) {
-          try {
-            const parsed = JSON.parse(storedRaw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setLearners(parsed);
-              return;
-            }
-          } catch (e) {
-            console.error(`Failed to parse ${key}`, e);
+      const storedRaw = localStorage.getItem('munyaka_learners');
+      if (storedRaw) {
+        try {
+          const parsed = JSON.parse(storedRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setLearners(parsed);
+            return;
           }
+        } catch (e) {
+          console.error('Failed to parse munyaka_learners', e);
         }
       }
       if (studentsFromHook && studentsFromHook.length > 0) {

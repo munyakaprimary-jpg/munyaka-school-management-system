@@ -92,7 +92,7 @@ export interface UnifiedRecordPaymentModalProps {
 // Storage keys
 // ─────────────────────────────────────────────
 const GRADES_STORAGE_KEY = 'munyaka_grades';
-const STUDENTS_STORAGE_KEY = 'school_learners_data';
+const STUDENTS_STORAGE_KEY = 'munyaka_learners';
 
 // Default grades configuration matching LearnerFeePaymentModal
 const DEFAULT_GRADES_CONFIG: GradeItem[] = [
@@ -227,13 +227,10 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
 
   const [studentsData, setStudentsData] = useState<StudentItem[]>(() => {
     try {
-      const keys = ['school_learners_data', 'munyaka_learners_db', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
-      for (const k of keys) {
-        const stored = localStorage.getItem(k);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
+      const stored = localStorage.getItem(STUDENTS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch { /* use default */ }
     return propStudentsData;
@@ -243,15 +240,11 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     try {
-      const keys = ['school_learners_data', 'munyaka_learners_db', 'munyaka_students', 'students', 'learners', 'pupils', 'school_students', 'registered_students', 'munyaka_registered_students'];
-      for (const k of keys) {
-        const stored = localStorage.getItem(k);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setStudentsData(parsed);
-            return;
-          }
+      const stored = localStorage.getItem(STUDENTS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setStudentsData(parsed);
         }
       }
     } catch {}
@@ -442,8 +435,8 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
             ? `${String(subscriptionName || '').trim()} — ${String(issuedTo || '').trim() || selectedStudent?.name || 'Subscription'}`
             : `Payment for ${selectedStudent?.name ?? String(issuedTo || '').trim() ?? 'Subscription'}`;
 
-    const learnersRaw = localStorage.getItem('munyaka_learners_db');
-    const allLearners = learnersRaw ? JSON.parse(learnersRaw) : studentsData;
+    const learnersRaw = localStorage.getItem('munyaka_learners');
+        const allLearners = learnersRaw ? JSON.parse(learnersRaw) : studentsData;
     const resolvedLearner = allLearners.find((l: any) => l.id === selectedStudentId || l.admNo === selectedStudentId) || selectedStudent;
     const resolvedLearnerName = resolvedLearner?.fullName || resolvedLearner?.name || resolvedLearner?.learnerName || `${resolvedLearner?.firstName || ''} ${resolvedLearner?.lastName || ''}`.trim() || String(issuedTo || '').trim() || 'Learner';
     const resolvedAdmissionNo = resolvedLearner?.admissionNo || resolvedLearner?.admNo || resolvedLearner?.admissionNumber || resolvedLearner?.id || selectedStudentId || '';
