@@ -592,6 +592,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(loggedUser);
         localStorage.setItem('munyaka_session', JSON.stringify(loggedUser));
         localStorage.setItem('munyaka_current_user', JSON.stringify(loggedUser));
+        localStorage.setItem('munyaka_current_user', JSON.stringify(loggedUser));
         persistCurrentAuthRole(loggedUser.role);
         console.log('[AuthContext.login] Login successful for staff/support member:', { name: loggedUser.name, role: loggedUser.role, title: loggedUser.title });
         showSuccess(`Welcome back, ${loggedUser.name}!`);
