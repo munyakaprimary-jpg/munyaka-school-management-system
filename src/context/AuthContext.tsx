@@ -585,6 +585,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           phone: matchedStaff.phone || matchedStaff.phoneNumber || '+254 700 000 000',
           role: normalizedRole,
           title: matchedStaff.title || matchedStaff.category || matchedStaff.designation || 'Staff',
+          identifier: matchedStaff.tscNumber || matchedStaff.nationalId || matchedStaff.id,
           permissions: matchedStaff.permissions || matchedStaff.assignedSubjects || [],
           assignedClasses: matchedStaff.assignedClasses || matchedStaff.assignedGrade ? [matchedStaff.assignedGrade] : [],
           avatar: matchedStaff.avatar || 'ST'
@@ -592,9 +593,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(loggedUser);
         localStorage.setItem('munyaka_session', JSON.stringify(loggedUser));
         localStorage.setItem('munyaka_current_user', JSON.stringify(loggedUser));
-        localStorage.setItem('munyaka_current_user', JSON.stringify(loggedUser));
         persistCurrentAuthRole(loggedUser.role);
-        console.log('[AuthContext.login] Login successful for staff/support member:', { name: loggedUser.name, role: loggedUser.role, title: loggedUser.title });
+        console.log('[AuthContext.login] Login successful for staff/support member:', { name: loggedUser.name, role: loggedUser.role, title: loggedUser.title, identifier: loggedUser.identifier });
         showSuccess(`Welcome back, ${loggedUser.name}!`);
         return true;
       }
