@@ -58,7 +58,7 @@ export default function TeacherDashboard() {
             ) : (
               <>
                 <Button onClick={() => navigate('/staff/attendance')} className="bg-white text-emerald-800 font-bold rounded-xl">Staff Attendance</Button>
-                <Button onClick={() => navigate('/announcements')} className="bg-teal-600 text-white font-bold rounded-xl border border-teal-400">School Notices</Button>
+                <Button onClick={() => navigate('/communication')} className="bg-teal-600 text-white font-bold rounded-xl border border-teal-400">School Notices</Button>
               </>
             )}
           </div>
@@ -67,9 +67,9 @@ export default function TeacherDashboard() {
     );
   }
 
-  const assignedClass = (user as any)?.assignedClass || (user as any)?.gradeStream || 'Grade 4 Blue';
-  const assignedGrade = (user as any)?.assignedGrade || 'Grade 4';
-  const assignedStream = user?.assignedStream || 'Blue';
+  const assignedClass = String((user as any)?.assignedClass || (user as any)?.gradeStream || 'Grade 4 Blue');
+  const assignedGrade = String((user as any)?.assignedGrade || 'Grade 4');
+  const assignedStream = String(user?.assignedStream || 'Blue');
   const fullClassTitle = `${assignedGrade} ${assignedStream}`;
 
   // Filter students matching the teacher's assigned class/stream
