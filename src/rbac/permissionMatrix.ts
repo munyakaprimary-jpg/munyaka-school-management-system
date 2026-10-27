@@ -124,14 +124,15 @@ export function getDefaultLandingPage(role: string): string {
 
 export function resolveRole(role: string): string {
   const norm = String(role || '').toUpperCase().trim();
-  if (norm.includes('ADMIN') || norm.includes('HOI') || norm.includes('DHOI') || norm.includes('OWNER') || norm.includes('SUPER')) {
+  const lower = String(role || '').toLowerCase().trim();
+  if (norm.includes('ADMIN') || norm.includes('HOI') || norm.includes('DHOI') || norm.includes('OWNER') || norm.includes('SUPER') || lower === 'admin') {
     return 'ADMIN';
   }
-  if (norm.includes('TEACHER')) return 'TEACHER';
-  if (norm.includes('ACCOUNTANT') || norm.includes('BURSAR')) return 'ACCOUNTANT';
+  if (lower === 'bursar' || norm.includes('ACCOUNTANT') || norm.includes('BURSAR')) return 'ACCOUNTANT';
+  if (lower === 'store_master' || norm.includes('STORE') || norm.includes('INVENTORY')) return 'STORE_MANAGER';
+  if (lower === 'ict_teacher' || lower === 'ict' || norm.includes('ICT') || norm.includes('TECHNICIAN')) return 'TEACHER';
+  if (lower.includes('teacher') || norm.includes('TEACHER')) return 'TEACHER';
   if (norm.includes('SECRETARY') || norm.includes('CLERK')) return 'SECRETARY';
-  if (norm.includes('STORE') || norm.includes('INVENTORY')) return 'STORE_MANAGER';
-  if (norm.includes('ICT') || norm.includes('TECHNICIAN')) return 'ICT';
   return norm || 'TEACHER';
 }
 
