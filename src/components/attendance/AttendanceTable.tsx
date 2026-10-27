@@ -20,14 +20,7 @@ export default function AttendanceTable({
   onRemarksChange,
   searchTerm
 }: AttendanceTableProps) {
-  // Guaranteed fallback students so the table is never blank
-  const activeStudents = Array.isArray(students) && students.length > 0 ? students : [
-    { id: '1', admissionNumber: 'MUN-001-2020', name: 'MARY WANJIKU', grade: 'Grade 7', stream: 'Mercury' },
-    { id: '2', admissionNumber: 'MUN-016-2026', name: 'JOHN ADIEMA', grade: 'Grade 1', stream: 'Green' },
-    { id: '3', admissionNumber: 'MUN-011-2022', name: 'ADRIAN JONES', grade: 'Grade 5', stream: 'Blue' },
-    { id: '4', admissionNumber: 'MUN-012-2022', name: 'QUINTANN SUZANA', grade: 'Grade 5', stream: 'Green' },
-    { id: '5', admissionNumber: 'MUN-013-2022', name: 'BERNICE KHASUNGU KHAMATI', grade: 'Grade 5', stream: 'Green' }
-  ];
+  const activeStudents = Array.isArray(students) && students.length > 0 ? students : [];
 
   const filteredStudents = activeStudents.filter((student: any) =>
     (student?.name || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||

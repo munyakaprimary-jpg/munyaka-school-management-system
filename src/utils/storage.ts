@@ -156,16 +156,10 @@ export interface TermFeesConfig {
 
 export const getStoredLearners = (): any[] => {
   try {
-    const keys = ['learners', 'school_learners_master', 'munyaka_learners', 'students', 'school_students_v1'];
-    for (const key of keys) {
-      const data = localStorage.getItem(key);
-      if (data) {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.students)) return parsed.students;
-        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.learners)) return parsed.learners;
-      }
-    }
+    const data = localStorage.getItem('munyaka_learners');
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    if (Array.isArray(parsed)) return parsed;
     return [];
   } catch {
     return [];
