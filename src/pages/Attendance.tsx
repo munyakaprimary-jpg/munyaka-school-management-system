@@ -155,19 +155,15 @@ export default function Attendance() {
 
       // 2. Fallback to direct keys if needed
       if (list.length === 0) {
-        const keys = ['munyaka_learners_db', 'munyaka_central_db', 'munyaka_learners', 'school_learners_v1', 'school_learners_data', 'learners'];
-        for (const key of keys) {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            try {
-              const parsed = JSON.parse(raw);
-              const items = Array.isArray(parsed) ? parsed : (parsed.learners || parsed.students || parsed.data || []);
-              if (Array.isArray(items) && items.length > 0) {
-                list = items;
-                break;
-              }
-            } catch (e) {}
-          }
+        const raw = localStorage.getItem('munyaka_learners');
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            const items = Array.isArray(parsed) ? parsed : (parsed.learners || parsed.students || parsed.data || []);
+            if (Array.isArray(items)) {
+              list = items;
+            }
+          } catch (e) {}
         }
       }
 

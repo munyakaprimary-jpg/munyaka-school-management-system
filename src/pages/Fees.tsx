@@ -778,7 +778,7 @@ const Fees = () => {
             }
             return learner;
           });
-          localStorage.setItem('munyaka_learners_db', JSON.stringify(updatedLearners));
+          localStorage.setItem('munyaka_learners', JSON.stringify(updatedLearners));
         }
       }
     } catch (err) {
