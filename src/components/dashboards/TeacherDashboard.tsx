@@ -33,6 +33,40 @@ export default function TeacherDashboard() {
 
   const teacherName = user?.name || (user as any)?.username || 'Teacher';
   const teacherRole = user?.role || 'subject_teacher';
+  const title = String((user as any)?.title || (user as any)?.category || '').toLowerCase();
+  const hasAssignedClass = Boolean((user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade);
+
+  // Safely guard layout frame or specialized staff with no homeroom
+  if (!hasAssignedClass || title.includes('library') || title.includes('ict') || title.includes('bursar') || title.includes('accountant') || title.includes('support')) {
+    return (
+      <div className="space-y-8 pb-12 max-w-5xl mx-auto px-4">
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-700 to-cyan-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+          <div className="space-y-3 relative z-10">
+            <Badge className="bg-white/20 text-white font-bold uppercase text-[10px]">Specialized Staff Portal</Badge>
+            <h1 className="text-2xl md:text-3xl font-black">Welcome, {teacherName}!</h1>
+            <p className="text-emerald-100 text-sm md:text-base max-w-xl font-medium">
+              You are signed in as <span className="font-bold underline">{teacherName}</span> ({title || teacherRole}). Access your specialized departmental workstation below.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3 mt-6 relative z-10">
+            {title.includes('library') ? (
+              <Button onClick={() => navigate('/library')} className="bg-white text-emerald-800 font-bold rounded-xl">Open Library Management</Button>
+            ) : title.includes('ict') ? (
+              <Button onClick={() => navigate('/inventory')} className="bg-white text-emerald-800 font-bold rounded-xl">Open ICT Lab Inventory</Button>
+            ) : title.includes('bursar') || title.includes('accountant') ? (
+              <Button onClick={() => navigate('/fees')} className="bg-white text-emerald-800 font-bold rounded-xl">Open Fee Collections & Ledger</Button>
+            ) : (
+              <>
+                <Button onClick={() => navigate('/staff/attendance')} className="bg-white text-emerald-800 font-bold rounded-xl">Staff Attendance</Button>
+                <Button onClick={() => navigate('/announcements')} className="bg-teal-600 text-white font-bold rounded-xl border border-teal-400">School Notices</Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const assignedClass = (user as any)?.assignedClass || (user as any)?.gradeStream || 'Grade 4 Blue';
   const assignedGrade = (user as any)?.assignedGrade || 'Grade 4';
   const assignedStream = user?.assignedStream || 'Blue';
