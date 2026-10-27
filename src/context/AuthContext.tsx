@@ -580,16 +580,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         const loggedUser: User = {
           id: matchedStaff.id || matchedStaff.staffId || 'staff-' + Date.now(),
-          name: matchedStaff.name || 'Staff Member',
+          name: matchedStaff.name || matchedStaff.fullName || 'Staff Member',
           email: matchedStaff.email || `${cleanInput}@munyaka.sc.ke`,
-          phone: matchedStaff.phone || '+254 700 000 000',
+          phone: matchedStaff.phone || matchedStaff.phoneNumber || '+254 700 000 000',
           role: normalizedRole,
+          title: matchedStaff.title || matchedStaff.category || matchedStaff.designation || 'Staff',
+          permissions: matchedStaff.permissions || matchedStaff.assignedSubjects || [],
+          assignedClasses: matchedStaff.assignedClasses || matchedStaff.assignedGrade ? [matchedStaff.assignedGrade] : [],
           avatar: matchedStaff.avatar || 'ST'
         };
         setUser(loggedUser);
         localStorage.setItem('munyaka_session', JSON.stringify(loggedUser));
+        localStorage.setItem('munyaka_current_user', JSON.stringify(loggedUser));
         persistCurrentAuthRole(loggedUser.role);
-        console.log('[AuthContext.login] Login successful for staff/support member:', { name: loggedUser.name, role: loggedUser.role });
+        console.log('[AuthContext.login] Login successful for staff/support member:', { name: loggedUser.name, role: loggedUser.role, title: loggedUser.title });
         showSuccess(`Welcome back, ${loggedUser.name}!`);
         return true;
       }
