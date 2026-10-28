@@ -1,10 +1,11 @@
 /**
- * RBAC Permission Evaluator Guard
+ * RBAC Permission Evaluator Guard & Menu Filtering Helper
  * Exact role and title permission evaluations for staff members.
  */
 
-import { getPermissionsMatrix, resolveRole, roleHas as matrixRoleHas } from '@/rbac/permissionMatrix';
+import { roleHas as matrixRoleHas } from '@/rbac/permissionMatrix';
 import { getCurrentSessionUser, SessionUser } from '@/services/authService';
+import { APP_SIDEBAR_MENUS, SidebarMenuItem } from '@/constants/sidebarMenus';
 
 export interface RBACCheckOptions {
   user?: SessionUser | null;
@@ -22,10 +23,9 @@ export function evaluatePermission(permissionKey: string, user?: SessionUser | n
   if (!currentUser) return false;
 
   const role = String(currentUser.role || '').toUpperCase();
-  const title = String(currentUser.title || '').toLowerCase();
 
   // Admin or Owner roles have full access
-  if (role === 'ADMIN' || role === 'OWNER' || role === 'HOI' || role === 'SUPER_ADMIN' || role === 'SYSADMIN') {
+  if (role === 'ADMIN' || role === 'OWNER' || role === 'HOI' || role === 'SUPER_ADMIN' || role === 'SYSADMIN' || role === 'DHOI') {
     return true;
   }
 
@@ -50,7 +50,7 @@ export function hasRoleOrTitle(options: RBACCheckOptions): boolean {
 
   if (options.requiredRole) {
     const reqRole = options.requiredRole.toLowerCase();
-    if (userRole === reqRole || resolveRole(user.role).toLowerCase() === reqRole) {
+    if (userRole === reqRole) {
       return true;
     }
   }
@@ -70,4 +70,50 @@ export function hasRoleOrTitle(options: RBACCheckOptions): boolean {
  */
 export function canAccessModule(moduleKey: string): boolean {
   return evaluatePermission(moduleKey);
+}
+
+/**
+ * Retrieves the active user from localStorage ('munyaka_current_user') or session service
+ */
+export function getActiveUserSession(): SessionUser | null {
+  try {
+    const raw = localStorage.getItem('munyaka_current_user');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return parsed as SessionUser;
+      }
+    }
+  } catch (e) {
+    // ignore parsing errors
+  }
+  return getCurrentSessionUser();
+}
+
+/**
+ * Filters APP_SIDEBAR_MENUS based on the active user's rbacRole / role (read from localStorage 'munyaka_current_user').
+ * Strictly restricts staff_registry, fees_finance, settings, admin_control, data_harmonization, tenants_campuses,
+ * and central_data_apk away from teaching roles, while allowing specialized workstation access.
+ */
+export function getFilteredSidebarMenus(customUser?: SessionUser | null): SidebarMenuItem[] {
+  const user = customUser || getActiveUserSession();
+  
+  const rawRole = (user as any)?.rbacRole || user?.role || 'TEACHER';
+  const roleKey = String(rawRole).toLowerCase().trim();
+
+  // Admin / Owner / Management roles have access to all menus
+  const isSuperAdminOrOwner = ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin'].includes(roleKey);
+
+  return APP_SIDEBAR_MENUS.filter(menu => {
+    // If super admin / owner, allow all except specific role checks if any
+    if (isSuperAdminOrOwner) {
+      // Payment & Subscriptions / Owner only checks if applicable
+      if (menu.key === 'fees_finance' && roleKey === 'owner') return true;
+      return true;
+    }
+
+    // Check if user's roleKey is explicitly in allowedRoles for this menu
+    const allowed = menu.allowedRoles.map(r => r.toLowerCase());
+    return allowed.includes(roleKey);
+  });
 }

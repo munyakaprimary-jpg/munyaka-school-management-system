@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { roleHasModulePermission } from '@/rbac/permissionMatrixHelper';
+import { getFilteredSidebarMenus, SidebarMenuItem } from '@/utils/rbacGuard';
 import {
   LayoutDashboard,
   Users,
@@ -51,16 +51,51 @@ import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
 
-interface NavItem {
-  name: string;
-  path: string;
-  icon: any;
-  moduleKey: string;
-}
+// Icon mapping helper for SidebarMenuItem iconName string
+const ICON_MAP: Record<string, any> = {
+  LayoutDashboard,
+  Users,
+  Layers,
+  BookOpen,
+  Award,
+  Contact2,
+  Key,
+  School,
+  CreditCard,
+  User,
+  MessageSquare,
+  Bell,
+  Clock,
+  CheckSquare,
+  ClipboardCheck,
+  LogIn,
+  Fingerprint,
+  FileSpreadsheet,
+  FileText,
+  BarChart3,
+  Laptop,
+  Monitor,
+  Keyboard,
+  Target,
+  FolderHeart,
+  Library,
+  Box,
+  Wallet,
+  Shield,
+  ShieldCheck,
+  UserCheck,
+  Archive,
+  ArrowUpCircle,
+  Settings,
+  Gamepad2,
+  Database,
+  Server,
+  Wifi
+};
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [, setRefreshCount] = useState(0);
+  const [refreshCount, setRefreshCount] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
@@ -86,107 +121,16 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     navigate('/login');
   };
 
-  const allNavItems: NavItem[] = [
-    { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard, moduleKey: 'dashboard' },
-    { name: 'Data Harmonization', path: '/admin/harmonization', icon: ShieldCheck, moduleKey: 'server' },
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard, moduleKey: 'dashboard' },
-    { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi, moduleKey: 'timetable' },
-    { name: 'Learners', path: '/learners', icon: Users, moduleKey: 'learners' },
-    { name: 'Staff Registry', path: '/staff-registry', icon: UserCheck, moduleKey: 'staff' },
-    { name: 'Games Hub', path: '/games', icon: Gamepad2, moduleKey: 'dashboard' },
-    { name: 'Grades & Streams', path: '/grades', icon: Layers, moduleKey: 'timetable' },
-    { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen, moduleKey: 'assessments' },
-    { name: 'Exam Types', path: '/exam-types', icon: Award, moduleKey: 'assessments' },
-    { name: 'Timetable', path: '/timetable', icon: Clock, moduleKey: 'timetable' },
-    { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, moduleKey: 'attendance' },
-    { name: 'Learner Attendance', path: '/attendance', icon: ClipboardCheck, moduleKey: 'attendance' },
-    { name: 'Daily Check-In', path: '/staff-checkin', icon: LogIn, moduleKey: 'attendance' },
-    { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, moduleKey: 'assessments' },
-    { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText, moduleKey: 'assessments' },
-    { name: 'Results Analysis', path: '/analysis', icon: BarChart3, moduleKey: 'reports' },
-    { name: 'Digital Hub', path: '/digital-hub', icon: Laptop, moduleKey: 'library' },
-    { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor, moduleKey: 'inventory' },
-    { name: 'Library & E-Resources', path: '/library', icon: Library, moduleKey: 'library' },
-    { name: 'Tools & Inventory', path: '/inventory', icon: Box, moduleKey: 'inventory' },
-    { name: 'Fees & Finance', path: '/fees', icon: Wallet, moduleKey: 'fees' },
-    { name: 'Report Cards', path: '/reports', icon: FileText, moduleKey: 'reports' },
-    { name: 'Settings', path: '/settings', icon: Settings, moduleKey: 'settings' },
-  ];
+  // Read active user from localStorage('munyaka_current_user') & state and filter menu items
+  const currentUserStorage = (() => {
+    try {
+      const raw = localStorage.getItem('munyaka_current_user');
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return user;
+  })();
 
-  // Filter navigation items based on user role and RBAC permission matrix
-  const userRole = user?.role || 'TEACHER';
-  const rbacRole = user?.rbacRole || userRole;
-  const upperRbac = String(rbacRole).toUpperCase();
-  const upperRole = String(userRole).toUpperCase();
-  
-  const isAdminOrSuper = upperRbac === 'ADMIN' || upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN';
-
-  const navItems = allNavItems.filter(item => {
-    const role = user?.role || 'TEACHER';
-    const rbacRole = user?.rbacRole || role;
-    const upperRbac = String(rbacRole).toUpperCase();
-    const upperRole = String(role).toUpperCase();
-    
-    const isAdminOrSuper = upperRbac === 'ADMIN' || upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN';
-
-    // If Admin/Super, allow (with standard restrictions below)
-    if (isAdminOrSuper) {
-      if (item.name === 'Payment & Subscriptions') {
-        return upperRole === 'OWNER';
-      }
-      return true;
-    }
-
-    const isTeacherVariant = upperRole.includes('TEACHER') || upperRole.includes('EDUCATOR') || upperRbac.includes('TEACHER');
-
-    if (isTeacherVariant) {
-      // STRICTLY HIDE from all teaching roles: Staff Registry, Fees & Ledgers, System Settings & RBAC.
-      if (
-        item.name.includes('Staff Registry') ||
-        item.name.includes('Fees') ||
-        item.name.includes('Finance') ||
-        item.name.includes('Settings') ||
-        item.path === '/staff-registry' ||
-        item.path === '/fees' ||
-        item.path === '/settings' ||
-        item.path === '/system-management'
-      ) {
-        return false;
-      }
-
-      // ALWAYS SHOW for Teachers: Dashboard, Daily Check-In (Attendance), Timetable & CBC Assessments, Notices.
-      const alwaysShowNames = ['Dashboard', 'Daily Check-In', 'Timetable', 'Enter Marks', 'Marked Scripts', 'Results Analysis'];
-      if (alwaysShowNames.includes(item.name)) {
-        return true;
-      }
-
-      // CONDITIONALLY SHOW based on rbacRole:
-      // - Show 'My Class / Learners' if role is 'class_teacher'
-      if (item.name === 'Learners' || item.name.includes('Learners')) {
-        return upperRbac === 'CLASS_TEACHER' || upperRole === 'CLASS_TEACHER';
-      }
-
-      // - Show 'ICT Lab & Hardware' if role is 'ict_teacher', 'lab_teacher', or 'tools_inventory_teacher'
-      if (item.name.includes('ICT') || item.name.includes('Tools') || item.name.includes('Inventory')) {
-        return upperRbac === 'ICT_TEACHER' || upperRbac === 'LAB_TEACHER' || upperRbac === 'TOOLS_INVENTORY_TEACHER';
-      }
-
-      // - Show 'Library Catalog' if role is 'library_teacher'
-      if (item.name.includes('Library')) {
-        return upperRbac === 'LIBRARY_TEACHER';
-      }
-
-      // Check other general module permissions
-      return roleHasModulePermission(role, item.moduleKey, rbacRole);
-    }
-
-    // Default permission check
-    if (item.moduleKey === 'staff') {
-      return isAdminOrSuper;
-    }
-    return roleHasModulePermission(role, item.moduleKey, rbacRole);
-  });
-
+  const navItems = getFilteredSidebarMenus(currentUserStorage);
   const activePath = location.pathname;
 
   return (
@@ -219,11 +163,11 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
           {navItems.map((item, idx) => {
-            const Icon = item.icon;
+            const Icon = ICON_MAP[item.iconName] || LayoutDashboard;
             const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
             return (
               <NavLink
-                key={idx}
+                key={item.key || idx}
                 to={item.path}
                 className={cn(
                   "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
@@ -248,11 +192,11 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             <div className="flex items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-700 flex items-center justify-center text-white font-bold text-sm shrink-0 border border-slate-700">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  {currentUserStorage?.name ? currentUserStorage.name.charAt(0).toUpperCase() : 'U'}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-200 truncate">{user?.name || 'User'}</p>
-                  <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider truncate">{user?.role || 'Staff'}</p>
+                  <p className="text-xs font-bold text-slate-200 truncate">{currentUserStorage?.name || 'User'}</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider truncate">{(currentUserStorage as any)?.rbacRole || currentUserStorage?.role || 'Staff'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
