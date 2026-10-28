@@ -10,7 +10,7 @@ export interface RolePermissions {
   [key: string]: boolean;
 }
 
-export const ROLES = ['ADMIN', 'HOI', 'DHOI', 'TEACHER', 'ACCOUNTANT', 'SECRETARY', 'STORE_MANAGER', 'ICT'] as const;
+export const ROLES = ['ADMIN', 'DHOI', 'CLASS_TEACHER', 'SUBJECT_TEACHER', 'ICT_TEACHER', 'LAB_TEACHER', 'LIBRARY_TEACHER', 'TOOLS_INVENTORY_TEACHER'] as const;
 
 export const PERMISSIONS = [
   { key: 'dashboard', label: 'Dashboard & Overview' },
@@ -34,16 +34,6 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RolePermissions> = {
     communication: true,
     settings: true,
   },
-  HOI: {
-    dashboard: true,
-    learners: true,
-    assessments: true,
-    fees: true,
-    library: true,
-    inventory: true,
-    communication: true,
-    settings: true,
-  },
   DHOI: {
     dashboard: true,
     learners: true,
@@ -54,7 +44,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RolePermissions> = {
     communication: true,
     settings: false,
   },
-  TEACHER: {
+  CLASS_TEACHER: {
     dashboard: false,
     learners: true,
     assessments: true,
@@ -64,27 +54,47 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RolePermissions> = {
     communication: false,
     settings: false,
   },
-  ACCOUNTANT: {
+  SUBJECT_TEACHER: {
     dashboard: false,
     learners: true,
-    assessments: false,
-    fees: true,
-    library: false,
+    assessments: true,
+    fees: false,
+    library: true,
     inventory: false,
-    communication: true,
+    communication: false,
     settings: false,
   },
-  SECRETARY: {
+  ICT_TEACHER: {
     dashboard: false,
     learners: true,
     assessments: false,
     fees: false,
     library: false,
-    inventory: false,
-    communication: true,
+    inventory: true,
+    communication: false,
     settings: false,
   },
-  STORE_MANAGER: {
+  LAB_TEACHER: {
+    dashboard: false,
+    learners: false,
+    assessments: true,
+    fees: false,
+    library: false,
+    inventory: true,
+    communication: false,
+    settings: false,
+  },
+  LIBRARY_TEACHER: {
+    dashboard: false,
+    learners: false,
+    assessments: false,
+    fees: false,
+    library: true,
+    inventory: false,
+    communication: false,
+    settings: false,
+  },
+  TOOLS_INVENTORY_TEACHER: {
     dashboard: false,
     learners: false,
     assessments: false,
@@ -93,28 +103,18 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RolePermissions> = {
     inventory: true,
     communication: false,
     settings: false,
-  },
-  ICT: {
-    dashboard: false,
-    learners: false,
-    assessments: false,
-    fees: false,
-    library: false,
-    inventory: true,
-    communication: false,
-    settings: true,
   },
 };
 
 export const ROLE_DEFAULT_LANDING: Record<string, string> = {
   ADMIN: '/dashboard',
-  HOI: '/dashboard',
   DHOI: '/dashboard',
-  TEACHER: '/assessments',
-  ACCOUNTANT: '/fees',
-  SECRETARY: '/learners',
-  STORE_MANAGER: '/inventory',
-  ICT: '/inventory',
+  CLASS_TEACHER: '/assessments',
+  SUBJECT_TEACHER: '/assessments',
+  ICT_TEACHER: '/inventory',
+  LAB_TEACHER: '/assessments',
+  LIBRARY_TEACHER: '/library',
+  TOOLS_INVENTORY_TEACHER: '/inventory',
 };
 
 export function getDefaultLandingPage(role: string): string {
@@ -125,15 +125,18 @@ export function getDefaultLandingPage(role: string): string {
 export function resolveRole(role: string): string {
   const norm = String(role || '').toUpperCase().trim();
   const lower = String(role || '').toLowerCase().trim();
-  if (norm.includes('ADMIN') || norm.includes('HOI') || norm.includes('DHOI') || norm.includes('OWNER') || norm.includes('SUPER') || lower === 'admin') {
+  if (norm.includes('ADMIN') || norm.includes('HOI') || norm.includes('OWNER') || norm.includes('SUPER') || lower === 'admin') {
     return 'ADMIN';
   }
-  if (lower === 'bursar' || norm.includes('ACCOUNTANT') || norm.includes('BURSAR')) return 'ACCOUNTANT';
-  if (lower === 'store_master' || norm.includes('STORE') || norm.includes('INVENTORY')) return 'STORE_MANAGER';
-  if (lower === 'ict_teacher' || lower === 'ict' || norm.includes('ICT') || norm.includes('TECHNICIAN')) return 'TEACHER';
-  if (lower.includes('teacher') || norm.includes('TEACHER')) return 'TEACHER';
-  if (norm.includes('SECRETARY') || norm.includes('CLERK')) return 'SECRETARY';
-  return norm || 'TEACHER';
+  if (lower === 'dhoi') return 'DHOI';
+  if (lower === 'class_teacher') return 'CLASS_TEACHER';
+  if (lower === 'subject_teacher') return 'SUBJECT_TEACHER';
+  if (lower === 'ict_teacher') return 'ICT_TEACHER';
+  if (lower === 'lab_teacher') return 'LAB_TEACHER';
+  if (lower === 'library_teacher') return 'LIBRARY_TEACHER';
+  if (lower === 'tools_inventory_teacher') return 'TOOLS_INVENTORY_TEACHER';
+  if (lower.includes('teacher') || norm.includes('TEACHER')) return 'CLASS_TEACHER';
+  return norm || 'CLASS_TEACHER';
 }
 
 export function roleHas(role: string, permissionKey: string): boolean {
@@ -145,7 +148,7 @@ export function roleHas(role: string, permissionKey: string): boolean {
   return !!perms[permissionKey];
 }
 
-const STORAGE_KEY = 'munyaka_rbac_permissions';
+const STORAGE_KEY = 'munyaka_rbac_matrix';
 
 export function getPermissionsMatrix(): Record<string, RolePermissions> {
   if (typeof window === 'undefined') return DEFAULT_ROLE_PERMISSIONS;
