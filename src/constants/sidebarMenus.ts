@@ -12,7 +12,6 @@ export interface SidebarMenuItem {
   allowedRoles: string[]; // e.g. ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher']
 }
 
-// All standard roles recognized in the system
 export const ALL_ROLES = [
   'admin',
   'dhoi',
@@ -261,7 +260,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
     path: '/digital-hub',
     iconName: 'Laptop',
     moduleKey: 'library',
-    allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
+    allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'ict_lab_devices',
@@ -293,7 +292,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
     path: '/portfolio',
     iconName: 'FolderHeart',
     moduleKey: 'assessments',
-    allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
+    allowedRoles: ['admin', 'dhoi', 'class_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'library_e_resources',
@@ -309,7 +308,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
     path: '/study-corner',
     iconName: 'BookOpen',
     moduleKey: 'library',
-    allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'library_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
+    allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'tools_inventory',
