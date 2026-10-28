@@ -104,10 +104,10 @@ const MODULE_PERMISSIONS = [
 const DEFAULT_RBAC_MATRIX: Record<string, Record<string, boolean>> = {
   class_teacher: { dashboard: false, learners: true, assessments: true, fees: false, library: true, inventory: false, communication: false, settings: false },
   subject_teacher: { dashboard: false, learners: true, assessments: true, fees: false, library: true, inventory: false, communication: false, settings: false },
-  ict_teacher: { dashboard: false, learners: true, assessments: false, fees: false, library: false, inventory: true, communication: false, settings: false },
+  ict_teacher: { dashboard: false, learners: true, assessments: true, fees: false, library: false, inventory: true, communication: false, settings: false },
   lab_teacher: { dashboard: false, learners: false, assessments: true, fees: false, library: false, inventory: true, communication: false, settings: false },
-  library_teacher: { dashboard: false, learners: false, assessments: false, fees: false, library: true, inventory: false, communication: false, settings: false },
-  tools_inventory_teacher: { dashboard: false, learners: false, assessments: false, fees: false, library: false, inventory: true, communication: false, settings: false },
+  library_teacher: { dashboard: false, learners: false, assessments: true, fees: false, library: true, inventory: false, communication: false, settings: false },
+  tools_inventory_teacher: { dashboard: false, learners: false, assessments: true, fees: false, library: false, inventory: true, communication: false, settings: false },
   admin: { dashboard: true, learners: true, assessments: true, fees: true, library: true, inventory: true, communication: true, settings: true },
   dhoi: { dashboard: true, learners: true, assessments: true, fees: true, library: true, inventory: true, communication: true, settings: false }
 };

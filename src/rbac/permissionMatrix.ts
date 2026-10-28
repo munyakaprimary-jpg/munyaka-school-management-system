@@ -67,7 +67,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RolePermissions> = {
   ICT_TEACHER: {
     dashboard: false,
     learners: true,
-    assessments: false,
+    assessments: true,
     fees: false,
     library: false,
     inventory: true,
@@ -87,7 +87,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RolePermissions> = {
   LIBRARY_TEACHER: {
     dashboard: false,
     learners: false,
-    assessments: false,
+    assessments: true,
     fees: false,
     library: true,
     inventory: false,
@@ -97,7 +97,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RolePermissions> = {
   TOOLS_INVENTORY_TEACHER: {
     dashboard: false,
     learners: false,
-    assessments: false,
+    assessments: true,
     fees: false,
     library: false,
     inventory: true,
