@@ -528,20 +528,29 @@ export default function StaffRegistry() {
       ];
 
   // Helper function to check if a category is a teaching role
-    const categoryIsTeaching = (cat: string) => {
-      return cat !== 'Bursar' && cat !== 'Store Master';
-    };
-  
-    // Refined condition to determine if staff member is teaching staff
-        // Includes: Teaching, HOI, DHOI, category === 'Teaching', or has TSC number
-        const isTeachingStaff = (staff: StaffMember) => {
-          return (
-            staff.category === ('Teaching' as any) ||
-              staff.category === 'HOI' ||
-            staff.category === 'DHOI' ||
-            Boolean(staff.tscNumber && staff.tscNumber.trim() !== '' && staff.tscNumber !== 'N/A')
-          );
-        };
+      const categoryIsTeaching = (cat: string) => {
+        return cat !== 'Bursar' && cat !== 'Store Master';
+      };
+   
+      // Non-teaching roles that should NOT see assigned grades/streams
+      const nonTeachingRoles = ['bursar', 'store_master', 'support_staff', 'accountant', 'sec_admin'];
+   
+      // Refined condition to determine if staff member is teaching staff
+          // Includes: Teaching, HOI, DHOI, category === 'Teaching', or has TSC number
+          // Excludes: non-teaching roles like Bursar, Store Master, etc.
+          const isTeachingStaff = (staff: StaffMember) => {
+            const category = String(staff.category || '').toLowerCase();
+            const isNonTeaching = nonTeachingRoles.includes(category);
+            
+            return (
+              !isNonTeaching && (
+                staff.category === ('Teaching' as any) ||
+                staff.category === 'HOI' ||
+                staff.category === 'DHOI' ||
+                Boolean(staff.tscNumber && staff.tscNumber.trim() !== '' && staff.tscNumber !== 'N/A')
+              )
+            );
+          };
   const filteredLearningAreasForClasses = useMemo(() => {
     // If no classes selected, show all available learning areas
     if (!assignedClasses || assignedClasses.length === 0) {
