@@ -215,7 +215,7 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
   // Normalization helpers
   const normalize = (val: unknown): string => {
     if (!val) return "";
-    return String(val).toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+    return String(val || "").toLowerCase().trim().replace(/[^a-z0-9]/g, "");
   };
 
   const getGradeLabel = (gradeVal: string): string => {
@@ -240,8 +240,8 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
     return (learnersList || []).filter(l => {
       // Grade filter
       if (selectedGradeFilter !== "all") {
-        const gradeObj = (gradesData || []).find(g => g.id === selectedGradeFilter);
-        const targetGradeName = gradeObj ? gradeObj.name : selectedGradeFilter;
+        const gradeObj = (gradesData || []).find(g => g?.id === selectedGradeFilter);
+        const targetGradeName = gradeObj ? (gradeObj?.name || "") : selectedGradeFilter;
         const studentGradeNorm = normalize(l?.grade);
         const targetGradeNorm = normalize(targetGradeName);
         const gradeIdNorm = normalize(selectedGradeFilter);
@@ -257,8 +257,8 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
 
       // Stream filter
       if (selectedStreamFilter !== "all") {
-        const streamObj = (availableStreamsForFilter || []).find(s => s.id === selectedStreamFilter || normalize(s.name) === normalize(selectedStreamFilter));
-        const targetStreamName = streamObj ? streamObj.name : selectedStreamFilter;
+        const streamObj = (availableStreamsForFilter || []).find(s => s?.id === selectedStreamFilter || normalize(s?.name) === normalize(selectedStreamFilter));
+        const targetStreamName = streamObj ? (streamObj?.name || "") : selectedStreamFilter;
         const studentStreamNorm = normalize(l?.stream);
         const targetStreamNorm = normalize(targetStreamName);
 
@@ -273,11 +273,11 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
       // Search query filter
       if ((searchQuery || "").trim()) {
         const q = (searchQuery || "").toLowerCase().trim();
-        const matchesGrade = l?.grade && String(l.grade).toLowerCase().includes(q);
-        const matchesStream = l?.stream && String(l.stream).toLowerCase().includes(q);
+        const matchesGrade = l?.grade && String(l?.grade || "").toLowerCase().includes(q);
+        const matchesStream = l?.stream && String(l?.stream || "").toLowerCase().includes(q);
         const matchesQuery =
           String(l?.name || "").toLowerCase().includes(q) ||
-          (l?.admNo && String(l.admNo).toLowerCase().includes(q)) ||
+          (l?.admNo && String(l?.admNo || "").toLowerCase().includes(q)) ||
           matchesGrade ||
           matchesStream;
         if (!matchesQuery) return false;
