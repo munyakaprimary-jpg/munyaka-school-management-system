@@ -228,10 +228,10 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
     if (selectedGradeFilter === "all") {
       // Gather all unique streams across all grades
       const allStreamsSet = new Set<string>();
-      (gradesData || []).forEach(g => (g?.streams || []).forEach(s => s && allStreamsSet.add(s.name)));
-      return Array.from(allStreamsSet).map(s => ({ id: s.toLowerCase(), name: s }));
+      (gradesData || []).forEach(g => (g?.streams || []).forEach(s => s && s?.name && allStreamsSet.add(s.name)));
+      return Array.from(allStreamsSet).map(s => ({ id: String(s || "").toLowerCase(), name: s }));
     }
-    const gradeObj = (gradesData || []).find(g => g.id === selectedGradeFilter || normalize(g.name) === normalize(selectedGradeFilter));
+    const gradeObj = (gradesData || []).find(g => g?.id === selectedGradeFilter || normalize(g?.name) === normalize(selectedGradeFilter));
     return gradeObj?.streams || [];
   }, [selectedGradeFilter, gradesData]);
 
