@@ -90,7 +90,7 @@ import LearningAreas from "./pages/LearningAreas";
 import ExamTypes from "./pages/ExamTypes";
 import NotFound from "./pages/NotFound";
 import Promote from "./pages/Promote";
-import StaffAttendancePage from "./pages/StaffAttendance";
+import StaffAttendance from "@/components/attendance/StaffAttendance";
 import StaffCheckIn from "./pages/StaffCheckIn";
 import StaffCheckInSelector from "./pages/StaffCheckInSelector";
 import AttendanceMonitor from "./pages/AttendanceMonitor";
