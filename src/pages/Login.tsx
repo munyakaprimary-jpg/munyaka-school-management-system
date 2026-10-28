@@ -1,80 +1,30 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRoleLandingPage } from '@/rbac/landingPageMapping';
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Loader2,
-  Shield,
-  Key,
-  Eye,
-  EyeOff,
-  Settings2,
-  Crown,
-  ChevronLeft,
-  ShieldAlert,
-  Unlock,
-  Users,
-  CreditCard,
-  ArrowRight,
-  Send,
-  Mail,
-  User,
-  KeyRound,
-  GraduationCap,
-  BookOpen,
-  Package,
-  Beaker,
-  Monitor,
-  Briefcase,
-  type LucideIcon,
-} from 'lucide-react';
-import { auth } from '@/config/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { Loader2, Shield, Key, Eye, EyeOff, Unlock, Mail, ArrowRight, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { teacherLogin, checkServerHealth } from '@/services/mobileAuthService';
-import { getStaffMaster } from '@/services/staffMasterService';
-import { getApiBaseUrl } from '@/lib/apiBase';
-import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { verifyStaffLogin } from '@/services/staffMasterService';
-import {
-  MUNYAKA_ADMIN_PASSWORD,
-  DEFAULT_ADMIN_PASSWORD,
-  getActiveAdminPassword,
-} from '@/services/adminCredentials';
-import type { LoginFailure, LoginSuccess } from '@/services/mobileAuthService';
+import { getActiveAdminPassword } from '@/services/adminCredentials';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
-import CoverPage from './CoverPage';
 
 /** True when a custom admin password has been saved to localStorage. */
 const hasCustomAdminPassword = (): boolean => {
   try {
-    const stored = localStorage.getItem(MUNYAKA_ADMIN_PASSWORD);
+    const stored = localStorage.getItem('munyaka_admin_password');
     return stored != null && String(stored).trim().length > 0;
   } catch {
     return false;
   }
 };
 
-// ─── Admin role configs ─────────────────────────────────────────────────────
-//
-// NOTE: Owner and Super Admin are TWO DISTINCT entities in this app:
-//   - owner        → BILLING-ONLY role.   Lands on Owner Dashboard. Only sees
-//                    subscription / payment / financial-health widgets.
-//                    No access to learners, attendance, settings, etc.
-//   - admin  → OPERATIONAL FULL ADMIN role.  Manages users, RBAC, ICT
-//                    systems, system settings, etc.  No special billing privs.
-//
-// The owner and admin share the same ADMIN PIN override flow
-// so they can both authenticate when the lock screen is active, but they have
-// entirely separate permission matrices.
-
+// ─── Admin role configs ──────────────────────────────────────────────────────
 type AdminRole = 'admin' | 'owner';
 
 interface RoleConfig {
@@ -86,8 +36,6 @@ interface RoleConfig {
   userName: string;
   userRole: 'owner' | 'admin';
   redirectPath: string;
-  icon: LucideIcon;
-  primaryColor: 'indigo' | 'amber';
   defaultPassword: string;
 }
 
@@ -101,82 +49,19 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     userName: 'School Administrator',
     userRole: 'admin',
     redirectPath: '/system-management',
-    icon: Settings2,
-    primaryColor: 'indigo',
-    defaultPassword: DEFAULT_ADMIN_PASSWORD,
+    defaultPassword: 'munyaka2026',
   },
   owner: {
     id: 'owner',
     label: 'School Owner',
     description: 'Billing & Subscription Console — Owner Dashboard',
-    fullDescription: 'Dedicated access to subscriptions, payment management, financial health, and seat utilization. No access to operational routes (learners, attendance, settings).',
+    fullDescription: 'Dedicated access to subscriptions, payment management, financial health, and seat utilization.',
     email: 'jamesndiki@gmail.com',
     userName: 'School Owner',
     userRole: 'owner',
     redirectPath: '/dashboard',
-    icon: Crown,
-    primaryColor: 'amber',
     defaultPassword: 'munyaka2026',
   },
-};
-
-// ─── Post-login redirect ────────────────────────────────────────────────────
-// All authenticated users (regardless of role) land on the main dashboard.
-// This intentionally bypasses any secondary landing / role-selection screens.
-
-function getStaffRedirectPath(_systemRole: string): string {
-  return '/dashboard';
-}
-
-// ─── Role card for admin tab ─────────────────────────────────────────────────
-
-interface RoleCardProps {
-  role: RoleConfig;
-  onClick: () => void;
-  bgColor: string;
-  textColor: string;
-  borderColor: string;
-  featureIcons: { Icon: LucideIcon; label: string }[];
-  /** Whether a custom PIN has been set for this role. */
-  hasCustomPassword: boolean;
-}
-
-const RoleCard: React.FC<RoleCardProps> = ({
-  role, onClick, bgColor, textColor, borderColor, featureIcons, hasCustomPassword,
-}) => {
-  const Icon = role.icon;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full p-5 md:p-6 rounded-3xl border-2 bg-white hover:shadow-xl transition-all duration-300 text-left group active:scale-[0.98]",
-        borderColor,
-      )}
-    >
-      <div className="flex items-start gap-4">
-        <div className={cn("p-3 md:p-4 rounded-2xl shrink-0 transition-transform group-hover:scale-110", bgColor, textColor)}>
-          <Icon size={28} className="md:hidden" />
-          <Icon size={32} className="hidden md:inline" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <h3 className="text-lg md:text-xl font-black text-slate-900">{role.label}</h3>
-            <ArrowRight size={18} className={cn("shrink-0 transition-transform group-hover:translate-x-1", textColor)} />
-          </div>
-          <p className="text-xs md:text-sm text-slate-500 font-medium mb-3">{role.description}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {featureIcons.map(({ Icon: FeatureIcon, label }, idx) => (
-              <div key={idx} className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold", bgColor, textColor)}>
-                <FeatureIcon size={10} />
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </button>
-  );
 };
 
 // ─── Main Login page ──────────────────────────────────────────────────────────
@@ -184,9 +69,6 @@ const RoleCard: React.FC<RoleCardProps> = ({
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, user, setUser } = useAuth();
-
-  // ── Cover page state (default to false so login page appears directly) ────────────────────────────────────────────────────
-  const [showCover, setShowCover] = useState(false);
 
   // ── Admin state ──────────────────────────────────────────────────────────
   const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
@@ -196,622 +78,412 @@ const Login: React.FC = () => {
   const [isAdminVerifying, setIsAdminVerifying] = useState(false);
 
   // ── Staff state ──────────────────────────────────────────────────────────
-    const [staffId, setStaffId] = useState('');
-    const [staffPassword, setStaffPassword] = useState('');
-    const [showStaffPassword, setShowStaffPassword] = useState(false);
-    const [staffAuthError, setStaffAuthError] = useState('');
-    const [isStaffVerifying, setIsStaffVerifying] = useState(false);
-    const [selectedSupportRole, setSelectedSupportRole] = useState<string | null>(null);
+  const [staffId, setStaffId] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
+  const [staffAuthError, setStaffAuthError] = useState('');
+  const [isStaffVerifying, setIsStaffVerifying] = useState(false);
 
   // ── Forgot password modal ───────────────────────────────────────────────
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
-  // Student / Parent Portal login state & handler
-  const [studentPortalInput, setStudentPortalInput] = useState("");
-  const [studentLoginError, setStudentLoginError] = useState<string | null>(null);
+  // ── Redirect already-authenticated users straight to the dashboard (Once only) ─────────
+  useEffect(() => {
+    const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+    const session = localStorage.getItem('munyaka_session');
+    if (isAuth && session && !window.location.hash.includes('dashboard')) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate]);
 
-  const handleStudentPortalLogin = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleanInput = studentPortalInput.trim().toLowerCase();
-    if (!cleanInput) {
-      setStudentLoginError("Please enter an Admission Number or Assessment Number.");
+  // ── Admin handlers ────────────────────────────────────────────────────────
+  const handleAdminLogin = async (e?: { preventDefault?: () => void }) => {
+    e?.preventDefault?.();
+    if (!selectedAdminRole) return;
+
+    const entered = String(adminPassword || '').trim().replace(/\n$/, '');
+
+    if (!entered) {
+      setAdminAuthError('Please enter your password.');
       return;
     }
 
-    try {
-      const registeredStudents = JSON.parse(localStorage.getItem('munyaka_students') || localStorage.getItem('school_learners_data') || '[]');
-      const matchedStudent = registeredStudents.find((student: any) => {
-        const adm = (student.admissionNumber || student.admissionNo || student.admNo || '').trim().toLowerCase();
-        const assess = (student.assessmentNumber || student.assessmentNo || student.assessNo || '').trim().toLowerCase();
-        const id = (student.id || '').trim().toLowerCase();
-
-        return (adm && adm === cleanInput) ||
-               (assess && assess === cleanInput) ||
-               (id && id === cleanInput);
-      });
-
-      if (matchedStudent) {
-        localStorage.setItem('active_learner', JSON.stringify(matchedStudent));
-        setUser({
-          id: matchedStudent.id || matchedStudent.admissionNumber || 'learner-1',
-          name: matchedStudent.name || matchedStudent.fullName || 'Student',
-          email: matchedStudent.email || `${matchedStudent.admissionNumber || 'student'}@munyaka.sc.ke`,
-          role: 'student'
-        });
-        setStudentLoginError(null);
-        navigate('/student/portal');
-      } else {
-        setStudentLoginError("No matching record found. Please verify your Admission Number or Assessment Number.");
-      }
-    } catch (err) {
-      console.error("[Login] Student login verification error:", err);
-      setStudentLoginError("An error occurred during verification. Please try again.");
-    }
-  };
-
-  // ── Redirect already-authenticated users straight to the dashboard (Once only) ─────────
-    useEffect(() => {
-      const isAuth = localStorage.getItem('isAuthenticated') === 'true';
-      const session = localStorage.getItem('munyaka_session');
-      if (isAuth && session && !window.location.hash.includes('dashboard')) {
-        navigate('/dashboard', { replace: true });
-      }
-    }, [navigate]); // Safe guard with navigate dependency
-
-  // ── Admin handlers ────────────────────────────────────────────────────────
-  const handleRoleSelect = (role: AdminRole) => {
-    setSelectedAdminRole(role);
-    setAdminPassword('');
+    setIsAdminVerifying(true);
     setAdminAuthError('');
-  };
+    await new Promise(r => setTimeout(r, 600));
 
-  const handleBackToRoleSelect = () => {
-    setSelectedAdminRole(null);
-    setAdminPassword('');
-    setAdminAuthError('');
-  };
+    const config = ROLE_CONFIGS[selectedAdminRole];
+    const officialPassword = getActiveAdminPassword();
+    const expectedPin = selectedAdminRole === 'owner' 
+      ? (localStorage.getItem('munyaka_owner_password') || officialPassword) 
+      : officialPassword;
 
-  const handleAdminLogin = async (e?: { preventDefault?: () => void }) => {
-      e?.preventDefault?.();
-      if (!selectedAdminRole) return;
-  
-      // Normalise the entered PIN: trim whitespace and strip newlines
-      const entered = String(adminPassword || '').trim().replace(/\n$/, '');
-  
-      if (!entered) {
-        setAdminAuthError('Please enter your password.');
-        return;
-      }
-  
-      setIsAdminVerifying(true);
-      setAdminAuthError('');
-      await new Promise(r => setTimeout(r, 600));
-  
-      const config = ROLE_CONFIGS[selectedAdminRole];
-  
-      // Retrieve saved local master PINs using getActiveAdminPassword() as single source of truth
-      const officialPassword = getActiveAdminPassword();
-      const savedAdminPin = localStorage.getItem('admin_pin') || localStorage.getItem('munyaka_admin_password') || officialPassword;
-      const savedOwnerPin = localStorage.getItem('owner_pin') || localStorage.getItem('munyaka_owner_password') || officialPassword;
-      const expectedPin = selectedAdminRole === 'owner' ? (localStorage.getItem('munyaka_owner_password') || officialPassword) : officialPassword;
+    if (entered === expectedPin || entered === officialPassword || entered === 'munyaka' || entered === 'munyaka2026') {
+      const userData = {
+        id: selectedAdminRole === 'owner' ? 'owner-1' : 'admin-1',
+        name: config.userName,
+        email: config.email,
+        role: selectedAdminRole,
+        roleLabel: config.label,
+        rbacRole: selectedAdminRole,
+        title: selectedAdminRole === 'owner' ? 'School Owner' : 'School Administrator',
+        identifier: selectedAdminRole === 'owner' ? 'jamesndiki@gmail.com' : 'sysadmin@munyaka.sc.ke'
+      };
+      localStorage.setItem('munyaka_session', JSON.stringify(userData));
+      localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
 
-      // 1. Instant Local Access Verification (Works Offline & Bypasses Cloud Errors)
-      if (entered === expectedPin || entered === officialPassword || entered === 'munyaka' || entered === 'munyaka2026' || entered === savedAdminPin || entered === savedOwnerPin) {
-        // Also persist munyaka_session so AuthContext and ProtectedRoute immediately recognize the authenticated state
-        const userData = {
-          id: selectedAdminRole === 'owner' ? 'owner-1' : 'admin-1',
-          name: config.userName,
-          email: config.email,
-          role: selectedAdminRole,
-          roleLabel: config.label
-        };
-        localStorage.setItem('munyaka_session', JSON.stringify(userData));
-        localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
-
-        if (setUser) {
-          setUser(userData);
-        }
-
-        const success = await login(config.email, entered);
-        if (success || true) {
-          const adminSession = {
-            role: selectedAdminRole,
-            roleLabel: config.label,
-            roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
-            timestamp: Date.now(),
-          };
-          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-          localStorage.setItem('isAuthenticated', 'true');
-          localStorage.setItem('userRole', selectedAdminRole);
-          showSuccess(`Welcome, ${config.userName}!`);
-          setIsAdminVerifying(false);
-          navigate('/dashboard', { replace: true });
-          return;
-        }
+      if (setUser) {
+        setUser(userData);
       }
 
-      // 2. Secondary Cloud Firebase Auth Attempt
-      if (auth) {
-        try {
-          const adminEmail = localStorage.getItem('admin_email') || 'jamesndiki@gmail.com';
-            const userData = {
-              id: selectedAdminRole === 'owner' ? 'owner-1' : 'admin-1',
-              name: config.userName,
-              email: config.email,
-              role: selectedAdminRole,
-              roleLabel: config.label
-            };
-            localStorage.setItem('munyaka_session', JSON.stringify(userData));
-            localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
-            if (setUser) {
-              setUser(userData);
-            }
-
-            const adminSession = {
-              role: selectedAdminRole,
-              roleLabel: config.label,
-              roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
-              timestamp: Date.now(),
-            };
-            localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.setItem('userRole', selectedAdminRole);
-            showSuccess(`Welcome, ${config.userName}!`);
-            setIsAdminVerifying(false);
-            navigate('/dashboard', { replace: true });
-            return;
-        } catch (fbErr: any) {
-          console.warn('[Login] Firebase Auth fallback failed:', fbErr);
-        }
-      }
-
-      setAdminAuthError(`Invalid password for ${config.label}.`);
-      showError('Login failed. Invalid password.');
+      const adminSession = {
+        role: selectedAdminRole,
+        roleLabel: config.label,
+        roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+        timestamp: Date.now(),
+      };
+      localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userRole', selectedAdminRole);
+      showSuccess(`Welcome, ${config.userName}!`);
       setIsAdminVerifying(false);
-    };
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+
+    setAdminAuthError(`Invalid password for ${config.label}.`);
+    showError('Login failed. Invalid password.');
+    setIsAdminVerifying(false);
+  };
 
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
-      e?.preventDefault?.();
-      
-      const trimmedId = String(staffId || '').trim();
-      const trimmedPass = String(staffPassword || '').trim();
-  
-      if (!trimmedId) {
-        setStaffAuthError('Please enter your school email or staff ID.');
-        return;
-      }
+    e?.preventDefault?.();
 
-      if (!trimmedPass) {
-        setStaffAuthError('Please enter your access code (e.g. MUN-1234).');
-        return;
-      }
-  
-      setIsStaffVerifying(true);
-      setStaffAuthError('');
+    const trimmedId = String(staffId || '').trim();
+    const trimmedPass = String(staffPassword || '').trim();
 
-      const verification = verifyStaffLogin(trimmedId, trimmedPass);
+    if (!trimmedId) {
+      setStaffAuthError('Please enter your school email or staff ID.');
+      return;
+    }
 
-      if (!verification.success || !verification.user) {
-        setStaffAuthError(verification.error || 'Authentication failed. Please check your credentials.');
-        setIsStaffVerifying(false);
-        return;
-      }
+    if (!trimmedPass) {
+      setStaffAuthError('Please enter your access code (e.g. MUN-1234).');
+      return;
+    }
 
-      const matched = verification.user;
+    setIsStaffVerifying(true);
+    setStaffAuthError('');
 
-      const userData = {
-        id: matched.id || matched.staffId || `staff-${Date.now()}`,
-        name: matched.name || 'Staff Member',
-        email: matched.email || trimmedId,
-        phone: matched.phone || '',
-        role: String(matched.systemRole || matched.role || 'staff').trim().toLowerCase(),
-        title: matched.title || matched.category || matched.designation || 'Staff',
-        assignedClass: matched.assignedGrade || matched.assignedClass || '',
-        staff_id: matched.staffId || '',
-        avatar: (matched.name || 'U')
-          .split(' ')
-          .map(n => n[0] || '')
-          .join('')
-          .substring(0, 2)
-          .toUpperCase(),
-      };
+    const verification = verifyStaffLogin(trimmedId, trimmedPass);
 
-      try {
-        localStorage.setItem('munyaka_session', JSON.stringify(userData));
-        localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
-      } catch { /* ignore */ }
-
-      if (setUser) {
-        setUser({ ...userData, role: (userData.role as any) || 'staff' });
-      }
-
-      showSuccess(`Welcome, ${userData.name}!`);
-      
-      // Redirect user dynamically to their specialized landing page based on role and title
-      const landingPage = getRoleLandingPage(userData.role, undefined, userData);
-      navigate(landingPage, { replace: true });
+    if (!verification.success || !verification.user) {
+      setStaffAuthError(verification.error || 'Authentication failed. Please check your credentials.');
       setIsStaffVerifying(false);
+      return;
+    }
+
+    const matched = verification.user;
+
+    const userData = {
+      id: matched.id || matched.staffId || `staff-${Date.now()}`,
+      name: matched.name || 'Staff Member',
+      email: matched.email || trimmedId,
+      phone: matched.phone || '',
+      role: String(matched.systemRole || matched.role || 'staff').trim().toLowerCase(),
+      title: matched.title || matched.category || matched.designation || 'Staff',
+      identifier: matched.tscNumber || matched.nationalId || matched.id,
+      assignedClass: matched.assignedGrade || matched.assignedClass || '',
+      staff_id: matched.staffId || '',
+      avatar: (matched.name || 'U')
+        .split(' ')
+        .map(n => n[0] || '')
+        .join('')
+        .substring(0, 2)
+        .toUpperCase(),
+    };
+
+    try {
+      localStorage.setItem('munyaka_session', JSON.stringify(userData));
+      localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
+    } catch { /* ignore */ }
+
+    if (setUser) {
+      setUser({ ...userData, role: (userData.role as any) || 'staff' });
+    }
+
+    showSuccess(`Welcome, ${userData.name}!`);
+
+    const landingPage = getRoleLandingPage(userData.role, undefined, userData);
+    navigate(landingPage, { replace: true });
+    setIsStaffVerifying(false);
   };
 
-  // ── Lightweight server reachability check on mount (Once only) ──────────────────────
-  useEffect(() => {
-    let isMounted = true;
-    const loggedRef = { current: false };
-    const performHealthCheck = async () => {
-      try {
-        const status = await checkServerHealth();
-        if (!isMounted) return;
-        if (!status.reachable && status.error?.includes('disabled')) {
-          if (!loggedRef.current) {
-            loggedRef.current = true;
-            console.log("[Login] Client-only offline mode active.");
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
-    };
-    performHealthCheck();
-    return () => {
-      isMounted = false;
-    };
-  }, []); // EMPTY DEPENDENCY ARRAY to prevent rapid execution
+  // ── Render ─────────────────────────────────────────────────────────────────────
+  const adminConfig = selectedAdminRole ? ROLE_CONFIGS[selectedAdminRole] : null;
 
-  // ─────────────────────────────────────────────────────────────────────────
-    //  Render — only shown when user is NOT authenticated
-    // ─────────────────────────────────────────────────────────────────────────
-    const adminConfig = selectedAdminRole ? ROLE_CONFIGS[selectedAdminRole] : null;
-    const AdminIcon = adminConfig?.icon;
-    const isAdminIndigo = adminConfig?.primaryColor === 'indigo';
-  
-    // ── Show Cover Page first ─────────────────────────────────────────────────
-    if (showCover) {
-      return (
-        <CoverPage
-          onEnter={() => setShowCover(false)}
-        />
-      );
-    }
-  
+  // ── Show Cover Page first ─────────────────────────────────────────────────
+  if (localStorage.getItem('showCover') === 'true') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-amber-50/20 flex flex-col overflow-y-auto">
         <div className="flex-1 flex items-center justify-center p-4 py-8">
           <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-500">
-  
-            {/* ── Header ── */}
-                      <div className="text-center space-y-3">
-                        {/* Back to Cover button */}
-                        <button
-                          type="button"
-                          onClick={() => setShowCover(true)}
-                          className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-500 hover:text-indigo-700 transition-colors mb-2 group"
-                        >
-                          <ArrowRight
-                            size={14}
-                            className="rotate-180 transition-transform group-hover:-translate-x-1"
-                          />
-                          <span>Back to Cover</span>
-                        </button>
-                        <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-indigo-600 to-amber-500 rounded-3xl shadow-2xl shadow-indigo-200 mb-2">
-                          <Shield size={32} className="text-white md:hidden" />
-                          <Shield size={40} className="text-white hidden md:inline" />
-                        </div>
-                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-                          Munyaka School Management
-                        </h1>
-                        <p className="text-sm md:text-base text-slate-500 font-medium max-w-md mx-auto">
-                          Select your role to access the appropriate portal
-                        </p>
-                      </div>
-
-          {/* ── Portal Access Tabs ── */}
-          <Tabs defaultValue="staff" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
-                          <TabsTrigger
-                            value="admin"
-                            className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                          >
-                            <Settings2 size={12} className="mr-1 shrink-0" />
-                            <span className="hidden sm:inline">Admin</span>
-                            <span className="sm:hidden">Admin</span>
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="super"
-                            className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                          >
-                            <Crown size={12} className="mr-1 shrink-0" />
-                            <span className="hidden sm:inline">Owner</span>
-                            <span className="sm:hidden">Owner</span>
-                          </TabsTrigger>
-              <TabsTrigger
-                value="staff"
-                className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
+            <div className="text-center space-y-3">
+              <button
+                type="button"
+                onClick={() => localStorage.setItem('showCover', 'false')}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-500 hover:text-indigo-700 transition-colors mb-2 group"
               >
-                <User size={12} className="mr-1 shrink-0" />
-                <span className="hidden sm:inline">Staff</span>
-                <span className="sm:hidden">Staff</span>
-              </TabsTrigger>
-            </TabsList>
-
-            {/* ── ADMIN TAB ── */}
-                        <TabsContent value="admin" className="mt-4 space-y-4">
-                          <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
-                            <CardContent className="p-6 md:p-8 space-y-6">
-                              <div className="text-center">
-                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-indigo-50 text-indigo-600 shadow-indigo-100 mb-4">
-                                  <Settings2 size={32} />
-                                </div>
-                                <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                                  {ROLE_CONFIGS.admin.label}
-                                </h2>
-                                <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
-                                  {ROLE_CONFIGS.admin.fullDescription}
-                                </p>
-                              </div>
-                              {adminAuthError && selectedAdminRole === 'admin' && (
-                                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                                  <ShieldAlert size={18} className="shrink-0" />
-                                  <span>{adminAuthError}</span>
-                                </div>
-                              )}
-                              <form onSubmit={(e) => { setSelectedAdminRole('admin'); handleAdminLogin(e); }} className="space-y-5">
-                                <div className="space-y-2">
-                                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
-                                  <div className="relative">
-                                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                    <Input
-                                      type={showAdminPassword ? 'text' : 'password'}
-                                      value={adminPassword}
-                                      onChange={e => { setSelectedAdminRole('admin'); setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
-                                      placeholder="Enter your password"
-                                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => setShowAdminPassword(!showAdminPassword)}
-                                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                                    >
-                                      {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                  </div>
-                                  <p className="text-[10px] text-slate-400 font-medium pt-1">
-                                    {hasCustomAdminPassword() ? (
-                                      <span className="flex items-center gap-1">
-                                        <KeyRound size={9} />
-                                        Custom PIN — set via Configuration &rarr; Owner Security
-                                      </span>
-                                    ) : null}
-                                  </p>
-                                </div>
-                                <Button
-                                  type="submit"
-                                  disabled={isAdminVerifying || !String(adminPassword || '').trim()}
-                                  className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
-                                >
-                                  {isAdminVerifying && selectedAdminRole === 'admin' ? (
-                                    <><Loader2 className="animate-spin" size={20} /> Verifying...</>
-                                  ) : (
-                                    <><Unlock size={20} /> Sign In</>
-                                  )}
-                                </Button>
-                              </form>
-                            </CardContent>
-                          </Card>
-                        </TabsContent>
-
-            {/* ── OWNER TAB ── */}
-            <TabsContent value="super" className="mt-4 space-y-4">
-              <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
-                <CardContent className="p-6 md:p-8 space-y-6">
-                  <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-amber-50 text-amber-600 shadow-amber-100 mb-4">
-                      <Crown size={32} />
-                    </div>
-                    <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                      {ROLE_CONFIGS.owner.label}
-                    </h2>
-                    <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
-                      {ROLE_CONFIGS.owner.fullDescription}
-                    </p>
-                  </div>
-                  {adminAuthError && selectedAdminRole === 'owner' && (
-                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                      <ShieldAlert size={18} className="shrink-0" />
-                      <span>{adminAuthError}</span>
-                    </div>
-                  )}
-                  <form onSubmit={(e) => { setSelectedAdminRole('owner'); handleAdminLogin(e); }} className="space-y-5">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
-                      <div className="relative">
-                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <Input
-                          type={showAdminPassword ? 'text' : 'password'}
-                          value={adminPassword}
-                          onChange={e => { setSelectedAdminRole('owner'); setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
-                          placeholder="Enter your password"
-                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowAdminPassword(!showAdminPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium pt-1">
-                        {hasCustomAdminPassword() ? (
-                          <span className="flex items-center gap-1">
-                            <KeyRound size={9} />
-                            Custom PIN — set via Configuration &rarr; Owner Security
-                          </span>
-                        ) : null}
-                      </p>
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={isAdminVerifying || !String(adminPassword || '').trim()}
-                      className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
-                    >
-                      {isAdminVerifying && selectedAdminRole === 'owner' ? (
-                        <><Loader2 className="animate-spin" size={20} /> Verifying...</>
-                      ) : (
-                        <><Unlock size={20} /> Sign In</>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ── STAFF / TEACHER / BURSAR TAB ── */}
-            <TabsContent value="staff" className="mt-4">
-              <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
-                <CardContent className="p-6 md:p-8 space-y-6">
-                  {staffAuthError && (
-                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                      <ShieldAlert size={18} className="shrink-0" />
-                      <span>{staffAuthError}</span>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleStaffLogin} className="space-y-5">
-                    {/* Email Address */}
-                    <div className="space-y-2">
-                      <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Email Address
-                      </Label>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <Input
-                          id="staff-id"
-                          type="email"
-                          inputMode="email"
-                          autoCapitalize="none"
-                          value={staffId}
-                          onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. jndiki@munyaka.sc.ke"
-                          autoComplete="username"
-                          className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
-                          autoFocus
-                        />
-                      </div>
-                    </div>
-
-                    {/* Access Code */}
-                    <div className="space-y-2">
-                      <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Access Code
-                      </Label>
-                      <div className="relative">
-                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <Input
-                          id="staff-password"
-                          type="password"
-                          value={staffPassword}
-                          onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. MUN-3MDC"
-                          autoComplete="current-password"
-                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-mono font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200 tracking-wider"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowStaffPassword(!showStaffPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium flex items-center justify-between">
-                        <span>Your access code was shared via SMS/email.</span>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold border border-emerald-200">
-                          Demo Code: MUN-9632 or MUN-1234
-                        </span>
-                      </p>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
-                      className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
-                    >
-                      {isStaffVerifying ? (
-                        <><Loader2 className="animate-spin" size={20} /> Signing In...</>
-                      ) : (
-                        <><Unlock size={20} /> Sign In as Staff / Teacher</>
-                      )}
-                    </Button>
-                  </form>
-
-                  {/* Help note */}
-                  <div className="p-4 bg-slate-50 rounded-2xl flex items-start gap-3">
-                    <Send size={16} className="text-slate-400 mt-0.5 shrink-0" />
-                    <p className="text-xs text-slate-500 font-medium">
-                      Don't have credentials? Contact the School Administrator to pre-register your account.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ── SUPPORT STAFF TAB (Removed top tab; support staff authenticate via unified Staff tab) ── */}
-          </Tabs>
-
-          {/* ── Parent & Student Portal Link ── */}
-          <div className="mt-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
+                <ArrowRight
+                  size={14}
+                  className="rotate-180 transition-transform group-hover:-translate-x-1"
+                />
+                <span>Back to Cover</span>
+              </button>
+              <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-indigo-600 to-amber-500 rounded-3xl shadow-2xl shadow-indigo-200 mb-2">
+                <Shield size={32} className="text-white md:hidden" />
+                <Shield size={40} className="text-white hidden md:inline" />
               </div>
-              <div className="relative flex justify-center">
-                <span className="bg-gradient-to-br from-slate-50 via-indigo-50/30 to-amber-50/20 px-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                  or
-                </span>
+              <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                Munyaka School Management
+              </h1>
+              <p className="text-sm md:text-base text-slate-500 font-medium max-w-md mx-auto">
+                Select your role to access the appropriate portal
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-amber-200 via-amber-100/50 to-amber-50 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-amber-300/30 rounded-full filter blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-200/40 rounded-full filter blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-100/20 rounded-full filter blur-3xl"></div>
+      </div>
+
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        {/* Glassmorphism Card Container */}
+        <div className="w-full max-w-md bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+          {/* Inspirational Header */}
+          <div className="bg-gradient-to-r from-amber-50 via-amber-100/50 to-amber-50 p-6 md:p-8 text-center border-b border-amber-200/50">
+            <div className="mb-4">
+              <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg mx-auto">
+                <Shield size={24} className="text-white md:hidden" />
+                <Shield size={32} className="text-white hidden md:inline" />
               </div>
             </div>
-            
-            <button
-              type="button"
-              onClick={() => navigate('/portal')}
-              className="mt-4 w-full p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border-2 border-indigo-100 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 group active:scale-[0.98]"
-            >
-              <div className="flex items-center justify-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all">
-                  <GraduationCap size={20} className="text-white" />
-                </div>
-                <div className="text-left">
-                  <div className="font-black text-slate-800 text-sm">Parent & Student Portal</div>
-                  <div className="text-[11px] text-slate-500 font-medium">View attendance, reports & fees</div>
-                </div>
-                <ArrowRight size={18} className="ml-auto text-indigo-400 group-hover:translate-x-1 transition-transform" />
+            <h2 className="text-2xl md:text-3xl font-extrabold text-slate-800 leading-tight mb-2">
+              Be strong & courageous.
+            </h2>
+            <p className="text-sm text-slate-600 font-medium leading-relaxed mb-4">
+              Do not be afraid or discouraged, for guidance is with you wherever you go.
+            </p>
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="h-px w-8 bg-amber-300/50"></div>
+              <span className="text-xs font-semibold text-amber-700">Joshua 1:9</span>
+              <div className="h-px w-8 bg-amber-300/50"></div>
+            </div>
+          </div>
+
+          {/* Login Form */}
+          <div className="p-6 md:p-8">
+            {/* Admin Login Section */}
+            {selectedAdminRole && (
+              <div className="space-y-5">
+                {adminAuthError && (
+                  <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                    <ShieldAlert size={18} className="shrink-0" />
+                    <span>{adminAuthError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleAdminLogin} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <Input
+                        type={showAdminPassword ? 'text' : 'password'}
+                        value={adminPassword}
+                        onChange={e => { setSelectedAdminRole(null); setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
+                        placeholder="Enter your password"
+                        className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowAdminPassword(!showAdminPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    {hasCustomAdminPassword() && (
+                      <p className="text-[10px] text-slate-400 font-medium flex items-center justify-center gap-1">
+                        <Key size={9} />
+                        Custom PIN — set via Configuration
+                      </p>
+                    )}
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={isAdminVerifying || !String(adminPassword || '').trim()}
+                    className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
+                  >
+                    {isAdminVerifying ? (
+                      <><Loader2 className="animate-spin" size={20} /> Verifying...</>
+                    ) : (
+                      <><Unlock size={20} /> Sign In</>
+                    )}
+                  </Button>
+                </form>
               </div>
-            </button>
+            )}
+
+            {/* Staff Login Form */}
+            {!selectedAdminRole && (
+              <form onSubmit={handleStaffLogin} className="space-y-5">
+                {staffAuthError && (
+                  <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                    <ShieldAlert size={18} className="shrink-0" />
+                    <span>{staffAuthError}</span>
+                  </div>
+                )}
+
+                {/* Email Address */}
+                <div className="space-y-2">
+                  <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Institutional Email
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Input
+                      id="staff-id"
+                      type="email"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      value={staffId}
+                      onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
+                      placeholder="e.g. jndiki@munyaka.sc.ke"
+                      autoComplete="username"
+                      className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-amber-200"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Access Code */}
+                <div className="space-y-2">
+                  <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Secure Access Code
+                  </Label>
+                  <div className="relative">
+                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Input
+                      id="staff-password"
+                      type="password"
+                      value={staffPassword}
+                      onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
+                      placeholder="e.g. MUN-1234"
+                      autoComplete="current-password"
+                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-mono font-bold text-base focus:bg-white focus:ring-2 focus:ring-amber-200 tracking-wider"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowStaffPassword(!showStaffPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
+                  className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
+                >
+                  {isStaffVerifying ? (
+                    <><Loader2 className="animate-spin" size={20} /> Signing In...</>
+                  ) : (
+                    <><Unlock size={20} /> Sign In to Munyaka Portal</>
+                  )}
+                </Button>
+              </form>
+            )}
+
+            {/* Role Selection for Admin/Owner */}
+            {selectedAdminRole === null && (
+              <div className="space-y-3">
+                <Button
+                  type="button"
+                  onClick={() => setSelectedAdminRole('admin')}
+                  className="w-full h-12 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-medium text-sm transition-all"
+                >
+                  <Shield size={18} className="mr-2" />
+                  School Administrator
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setSelectedAdminRole('owner')}
+                  className="w-full h-12 rounded-xl bg-amber-100 hover:bg-amber-200 border border-amber-200 text-amber-700 font-medium text-sm transition-all"
+                >
+                  <Shield size={18} className="mr-2" />
+                  School Owner
+                </Button>
+              </div>
+            )}
+
+            {/* Switch back to staff login */}
+            {selectedAdminRole && (
+              <button
+                type="button"
+                onClick={() => setSelectedAdminRole(null)}
+                className="w-full text-sm text-amber-600 hover:text-amber-700 font-medium py-2"
+              >
+                Use Staff Login
+              </button>
+            )}
+
+            {/* Help note */}
+            <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100 flex items-start gap-3">
+              <Mail size={16} className="text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-slate-500 font-medium">
+                Don't have credentials? Contact the School Administrator to pre-register your account.
+              </p>
+            </div>
           </div>
 
           {/* Footer */}
-          <div className="text-center pt-2 space-y-1">
+          <div className="p-4 border-t border-amber-100/50 bg-amber-50/30 text-center">
             <p className="text-xs text-slate-400 font-medium">
               Having trouble accessing your account?
             </p>
             <button
               type="button"
               onClick={() => setForgotModalOpen(true)}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline underline-offset-2 transition-colors"
+              className="text-xs font-semibold text-amber-600 hover:text-amber-700 hover:underline underline-offset-2 transition-colors"
             >
               Forgot Password / Locked Out?
             </button>
           </div>
         </div>
       </div>
-
-      <ForgotPasswordModal
-        open={forgotModalOpen}
-        onClose={() => setForgotModalOpen(false)}
-      />
-    </div>
-  );
-};
-
-export default Login;
+      
+            <ForgotPasswordModal
+              open={forgotModalOpen}
+              onClose={() => setForgotModalOpen(false)}
+            />
+          </div>
+        );
+      };
+      
+      export default Login;
