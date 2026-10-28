@@ -43,6 +43,7 @@ import { getStaffMaster } from '@/services/staffMasterService';
 import { getApiBaseUrl } from '@/lib/apiBase';
 import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { verifyStaffLogin } from '@/services/staffMasterService';
+import { mapRoleLabelToRbacKey } from '@/constants/roles';
 import {
   MUNYAKA_ADMIN_PASSWORD,
   DEFAULT_ADMIN_PASSWORD,
@@ -407,6 +408,8 @@ const Login: React.FC = () => {
         phone: matched.phone || '',
         role: String(matched.systemRole || matched.role || 'staff').trim().toLowerCase(),
         title: matched.title || matched.category || matched.designation || 'Staff',
+        category: matched.category || matched.role || 'Staff',
+        rbacRole: matched.rbacRole || mapRoleLabelToRbacKey(matched.role || matched.category || matched.designation || 'Staff'),
         assignedClass: matched.assignedGrade || matched.assignedClass || '',
         staff_id: matched.staffId || '',
         avatar: (matched.name || 'U')

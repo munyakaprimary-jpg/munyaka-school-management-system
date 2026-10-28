@@ -59,13 +59,13 @@ export async function authenticateStaff(identifier: string, credentials: string)
 
     const sessionUser: SessionUser = {
       id: matchedStaff.id,
-      name: matchedStaff.fullName,
+      name: matchedStaff.fullName || matchedStaff.name,
       email: matchedStaff.email || `${matchedStaff.id}@munyaka.sc.ke`,
       role: role,
       title: title,
       identifier: staffIdentifier,
       department: matchedStaff.department,
-      avatar: matchedStaff.fullName ? matchedStaff.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'ST',
+      avatar: (matchedStaff.fullName || matchedStaff.name) ? (matchedStaff.fullName || matchedStaff.name).split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'ST',
       permissions: rolePerms
     };
 

@@ -406,7 +406,7 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
 
     // Update student records
     try {
-      for (const key of LEARNER_STORAGE_KEYS) {
+      for (const key of LEARNER_STORAGE_KEY) {
         const raw = localStorage.getItem(key);
         if (raw) {
           const parsed = JSON.parse(raw);

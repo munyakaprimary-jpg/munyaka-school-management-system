@@ -33,6 +33,8 @@ interface User {
   email: string;
   phone?: string;
   role: UserRole;
+  title?: string;
+  identifier?: string;
   avatar?: string;
   /** Optional staff identifier for staffId-based login. */
   staff_id?: string;

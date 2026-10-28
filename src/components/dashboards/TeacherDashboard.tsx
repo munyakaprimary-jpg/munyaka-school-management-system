@@ -33,7 +33,8 @@ export default function TeacherDashboard() {
 
   const teacherName = user?.name || (user as any)?.username || 'Teacher';
   const teacherRole = user?.role || 'subject_teacher';
-  const title = String((user as any)?.title || (user as any)?.category || '').toLowerCase();
+  const staffTitle = String((user as any)?.title || (user as any)?.category || '');
+  const title = staffTitle.toLowerCase();
   const hasAssignedClass = Boolean((user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade);
 
   // Safely guard layout frame or specialized staff with no homeroom
@@ -45,7 +46,7 @@ export default function TeacherDashboard() {
             <Badge className="bg-white/20 text-white font-bold uppercase text-[10px]">Specialized Staff Portal</Badge>
             <h1 className="text-2xl md:text-3xl font-black">Welcome, {teacherName}!</h1>
             <p className="text-emerald-100 text-sm md:text-base max-w-xl font-medium">
-              You are signed in as <span className="font-bold underline">{teacherName}</span> ({title || teacherRole}). Access your specialized departmental workstation below.
+              You are signed in as <span className="font-bold underline">{teacherName}</span> ({staffTitle || teacherRole}). Access your specialized departmental workstation below.
             </p>
           </div>
           <div className="flex flex-wrap gap-3 mt-6 relative z-10">
@@ -99,7 +100,7 @@ export default function TeacherDashboard() {
             Welcome back, {teacherName}!
           </h1>
           <p className="text-blue-100 text-sm md:text-base max-w-xl font-medium">
-            You are signed in as <span className="underline decoration-blue-400 font-bold">{teacherName}</span> ({getFormattedRoleLabel(user || { role: teacherRole })}). Your dashboard is strictly restricted to <span className="font-bold">{fullClassTitle}</span>.
+            You are signed in as <span className="underline decoration-blue-400 font-bold">{teacherName}</span> ({staffTitle || getFormattedRoleLabel(user || { role: teacherRole })}). Your dashboard is strictly restricted to <span className="font-bold">{fullClassTitle}</span>.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 relative z-10">

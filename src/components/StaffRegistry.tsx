@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
+import { mapRoleLabelToRbacKey } from '../constants/roles';
 
 export type StaffCategoryRole =
   | 'Class Teacher'
@@ -43,6 +44,8 @@ export interface StaffMember {
   id: string;
   name: string;
   category: StaffCategoryRole;
+  title: string;
+  rbacRole: string;
   tscNumber?: string;
   nationalId?: string;
   email: string;
@@ -214,6 +217,8 @@ export default function StaffRegistry() {
         id,
         name: staff.name || 'Unnamed Staff',
         category: cat,
+        title: staff.title || cat,
+        rbacRole: staff.rbacRole || mapRoleLabelToRbacKey(cat),
         tscNumber: staff.tscNumber || (cat !== 'Bursar' && cat !== 'Store Master' ? '327775' : undefined),
         nationalId: staff.nationalId || (cat === 'Bursar' || cat === 'Store Master' ? '31452981' : undefined),
         email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
@@ -399,46 +404,50 @@ export default function StaffRegistry() {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fullName.trim()) {
-      toast.error("Full name is required");
-      return;
-    }
-    const teachingCategories = ['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'];
-    const isTeacherRole = teachingCategories.includes(category);
-
-    if (isTeacherRole && !tscNumber.trim()) {
-      toast.error("Official TSC Number is required for teaching staff");
-      return;
-    }
-    if (!isTeacherRole && !nationalId.trim()) {
-      toast.error("Kenyan National ID number is required for support/non-teaching staff");
-      return;
-    }
-
-    const fullEmail = email.trim()
-      ? (email.includes('@') ? email.trim() : `${email.trim()}@munyaka.sc.ke`)
-      : `${fullName.toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`;
-
-    const primaryId = isTeacherRole ? tscNumber.trim() : nationalId.trim();
-    const generatedMunId = primaryId ? `MUN-${primaryId}` : `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
-    const staffRecord: StaffMember = {
-      id: editingStaff ? editingStaff.id : generatedMunId,
-      name: fullName.trim(),
-      category,
-      email: fullEmail,
-      phone: phone.trim() || '+254 712 345 678',
-      tscNumber: isTeacherRole ? tscNumber.trim() : undefined,
-      nationalId: !isTeacherRole ? nationalId.trim() : undefined,
-      status,
-      accessCode: accessCode || generateRandomCode(),
-      subjects: isTeacherRole ? selectedSubjects : [],
-      assignedClasses: isTeacherRole ? assignedClasses : [],
-      assignedStreams: isTeacherRole ? assignedStreams : [],
-      homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
-      homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
-      createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
-    };
+      e.preventDefault();
+      if (!fullName.trim()) {
+        toast.error("Full name is required");
+        return;
+      }
+      const teachingCategories = ['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'];
+      const isTeacherRole = teachingCategories.includes(category);
+  
+      if (isTeacherRole && !tscNumber.trim()) {
+        toast.error("Official TSC Number is required for teaching staff");
+        return;
+      }
+      if (!isTeacherRole && !nationalId.trim()) {
+        toast.error("Kenyan National ID number is required for support/non-teaching staff");
+        return;
+      }
+  
+      const fullEmail = email.trim()
+        ? (email.includes('@') ? email.trim() : `${email.trim()}@munyaka.sc.ke`)
+        : `${fullName.toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`;
+  
+      const primaryId = isTeacherRole ? tscNumber.trim() : nationalId.trim();
+      const generatedMunId = primaryId ? `MUN-${primaryId}` : `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
+      const rbacRole = mapRoleLabelToRbacKey(category);
+      const title = category;
+      const staffRecord: StaffMember = {
+        id: editingStaff ? editingStaff.id : generatedMunId,
+        name: fullName.trim(),
+        category,
+        title,
+        rbacRole,
+        email: fullEmail,
+        phone: phone.trim() || '+254 712 345 678',
+        tscNumber: isTeacherRole ? tscNumber.trim() : undefined,
+        nationalId: !isTeacherRole ? nationalId.trim() : undefined,
+        status,
+        accessCode: accessCode || generateRandomCode(),
+        subjects: isTeacherRole ? selectedSubjects : [],
+        assignedClasses: isTeacherRole ? assignedClasses : [],
+        assignedStreams: isTeacherRole ? assignedStreams : [],
+        homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
+        homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
+        createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
+      };
 
     let updatedList: StaffMember[];
     if (editingStaff) {
@@ -463,8 +472,11 @@ export default function StaffRegistry() {
         fullName: staffRecord.name,
         name: staffRecord.name,
         email: fullEmail,
-        role: staffRecord.category,
+        role: staffRecord.rbacRole,
         designation: staffRecord.category,
+        title: staffRecord.title,
+        category: staffRecord.category,
+        rbacRole: staffRecord.rbacRole,
         staffId: staffRecord.tscNumber || staffRecord.id,
         tscNumber: staffRecord.tscNumber,
         nationalId: (staffRecord as any).nationalId || null,

@@ -73,6 +73,13 @@ export interface MasterStaffRecord {
   activatedAt?: string;
   lastLogin?: string;
   profileComplete?: boolean;
+  title?: string;
+  category?: string;
+  rbacRole?: string;
+  assignedClass?: string;
+  accessKey?: string;
+  designation?: string;
+  fullName?: string;
 }
 
 export const TEACHING_SYSTEM_ROLES: MasterSystemRole[] = [
