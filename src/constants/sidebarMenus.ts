@@ -177,7 +177,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'daily_checkin',
     name: 'Daily Check-In',
-    path: '/staff-checkin',
+    path: '/portal/attendance',
     iconName: 'LogIn',
     moduleKey: 'attendance',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin', 'staff', 'teacher']
