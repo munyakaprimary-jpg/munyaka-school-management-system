@@ -180,7 +180,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
     path: '/staff-checkin',
     iconName: 'LogIn',
     moduleKey: 'attendance',
-    allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
+    allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin', 'staff', 'teacher']
   },
   {
     key: 'attendance_monitor',
