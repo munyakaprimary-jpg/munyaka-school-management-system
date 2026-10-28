@@ -30,7 +30,7 @@ import {
 import { exportAllData, parseAndImportBackup } from '@/utils/storage';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
-const RBAC_STORAGE_KEY = 'munyaka_rbac_permissions';
+const RBAC_STORAGE_KEY = 'munyaka_rbac_matrix';
 
 interface SystemSettings {
   schoolName: string;
@@ -80,32 +80,36 @@ const DEFAULT_SETTINGS: SystemSettings = {
 };
 
 const SYSTEM_ROLES = [
-  { id: 'admin', name: 'Administrators', description: 'Full access to institutional control center, staff records, and financial ledgers.' },
-  { id: 'teacher', name: 'Teachers', description: 'Access to mark entry, learner attendance, lesson plans, and CBC assessments.' },
-  { id: 'bursar', name: 'Bursars', description: 'Access to fee collections, payment records, and financial summaries.' },
-  { id: 'librarian', name: 'Librarians', description: 'Access to library catalog, book checkouts, and e-resource inventories.' },
-  { id: 'ict_technician', name: 'ICT Technicians', description: 'Access to lab devices, digital literacy hubs, and network monitoring.' },
-  { id: 'developer', name: 'Platform Developers', description: 'Full access to multi-tenant configurations, schema migrations, and raw database backups.' }
+  { id: 'class_teacher', name: 'Class Teacher', description: 'Access to classroom registers, learner attendance, and CBC assessments.' },
+  { id: 'subject_teacher', name: 'Subject Teacher', description: 'Access to subject mark entry and learning areas.' },
+  { id: 'ict_teacher', name: 'ICT Teacher', description: 'Access to lab devices, digital literacy hubs, and ICT hardware inventory.' },
+  { id: 'lab_teacher', name: 'Lab Teacher', description: 'Access to science lab equipment and practical assessments.' },
+  { id: 'library_teacher', name: 'Library Teacher', description: 'Access to library catalog, book checkouts, and e-resource inventories.' },
+  { id: 'tools_inventory_teacher', name: 'Tools & Inventory Teacher', description: 'Access to school assets, tools, and inventory management.' },
+  { id: 'admin', name: 'HOI (Head of Institution)', description: 'Full access to institutional control center, staff records, and financial ledgers.' },
+  { id: 'dhoi', name: 'DHOI (Deputy Head)', description: 'Access to academic oversight, attendance reports, and school operations.' }
 ];
 
 const MODULE_PERMISSIONS = [
   { id: 'dashboard', name: 'Dashboard & Overview' },
-  { id: 'admissions', name: 'Student Admissions & Profiles' },
-  { id: 'academics', name: 'Timetable & CBC Assessments' },
-  { id: 'finance', name: 'Fees & Financial Ledgers' },
+  { id: 'learners', name: 'Student Admissions & Profiles' },
+  { id: 'assessments', name: 'CBC Marks & Roll Call / Attendance' },
+  { id: 'fees', name: 'Fees & Financial Ledgers' },
   { id: 'library', name: 'Library & E-Resources' },
-  { id: 'ict_labs', name: 'ICT Lab & Hardware Inventory' },
+  { id: 'inventory', name: 'ICT Lab & Hardware Inventory' },
   { id: 'communication', name: 'SMS & Email Communication' },
   { id: 'settings', name: 'System Settings & RBAC' }
 ];
 
 const DEFAULT_RBAC_MATRIX: Record<string, Record<string, boolean>> = {
-  admin: { dashboard: true, admissions: true, academics: true, finance: true, library: true, ict_labs: true, communication: true, settings: true },
-  teacher: { dashboard: true, admissions: false, academics: true, finance: false, library: true, ict_labs: true, communication: true, settings: false },
-  bursar: { dashboard: true, admissions: true, academics: false, finance: true, library: false, ict_labs: false, communication: true, settings: false },
-  librarian: { dashboard: true, admissions: false, academics: false, finance: false, library: true, ict_labs: false, communication: false, settings: false },
-  ict_technician: { dashboard: true, admissions: false, academics: false, finance: false, library: false, ict_labs: true, communication: false, settings: false },
-  developer: { dashboard: true, admissions: true, academics: true, finance: true, library: true, ict_labs: true, communication: true, settings: true }
+  class_teacher: { dashboard: false, learners: true, assessments: true, fees: false, library: true, inventory: false, communication: false, settings: false },
+  subject_teacher: { dashboard: false, learners: true, assessments: true, fees: false, library: true, inventory: false, communication: false, settings: false },
+  ict_teacher: { dashboard: false, learners: true, assessments: false, fees: false, library: false, inventory: true, communication: false, settings: false },
+  lab_teacher: { dashboard: false, learners: false, assessments: true, fees: false, library: false, inventory: true, communication: false, settings: false },
+  library_teacher: { dashboard: false, learners: false, assessments: false, fees: false, library: true, inventory: false, communication: false, settings: false },
+  tools_inventory_teacher: { dashboard: false, learners: false, assessments: false, fees: false, library: false, inventory: true, communication: false, settings: false },
+  admin: { dashboard: true, learners: true, assessments: true, fees: true, library: true, inventory: true, communication: true, settings: true },
+  dhoi: { dashboard: true, learners: true, assessments: true, fees: true, library: true, inventory: true, communication: true, settings: false }
 };
 
 export default function Settings() {
