@@ -99,7 +99,7 @@ export function getActiveUserSession(): SessionUser | null {
 export function getFilteredSidebarMenus(customUser?: SessionUser | null): SidebarMenuItem[] {
   const user = customUser || getActiveUserSession();
   
-  const rawRole = (user as any)?.rbacRole || user?.role || 'TEACHER';
+  const rawRole = (user as any)?.rbacRole || user?.role || 'class_teacher';
   const roleKey = String(rawRole).toLowerCase().trim();
 
   // Admin / Owner / Management roles have access to all menus
@@ -108,7 +108,6 @@ export function getFilteredSidebarMenus(customUser?: SessionUser | null): Sideba
   return APP_SIDEBAR_MENUS.filter(menu => {
     // If super admin / owner, allow all except specific role checks if any
     if (isSuperAdminOrOwner) {
-      // Payment & Subscriptions / Owner only checks if applicable
       if (menu.key === 'fees_finance' && roleKey === 'owner') return true;
       return true;
     }

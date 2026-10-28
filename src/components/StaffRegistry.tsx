@@ -425,7 +425,7 @@ export default function StaffRegistry() {
         name: fullName.trim(),
         category,
         title,
-        rbacRole,
+        rbacRole: (rbacRole || 'class_teacher').toLowerCase().trim(),
         email: fullEmail,
         phone: phone.trim() || '+254 712 345 678',
         tscNumber: isTeacherRole ? tscNumber.trim() : undefined,
@@ -1003,12 +1003,20 @@ export default function StaffRegistry() {
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">Staff Category / Role <span className="text-rose-500">*</span></label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value as StaffCategoryRole)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCategory(val);
+                    }}
                     className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
                   >
-                    {MUNYAKA_STAFF_ROLES.map((roleItem) => (
-                      <option key={roleItem.rbacKey} value={roleItem.label}>{roleItem.label} ({roleItem.category === 'teaching' ? 'Teaching' : 'Non-Teaching'})</option>
-                    ))}
+                    <option value="class_teacher">Class Teacher (class_teacher)</option>
+                    <option value="subject_teacher">Subject Teacher (subject_teacher)</option>
+                    <option value="ict_teacher">ICT Teacher (ict_teacher)</option>
+                    <option value="lab_teacher">Lab Teacher (lab_teacher)</option>
+                    <option value="library_teacher">Library Teacher (library_teacher)</option>
+                    <option value="tools_inventory_teacher">Tools & Inventory Teacher (tools_inventory_teacher)</option>
+                    <option value="admin">Admin / Head of Institution (admin)</option>
+                    <option value="dhoi">Deputy Head of Institution (dhoi)</option>
                   </select>
                 </div>
 

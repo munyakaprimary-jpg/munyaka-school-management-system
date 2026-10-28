@@ -65,6 +65,7 @@ export async function authenticateStaff(identifier: string, credentials: string)
       title: title,
       identifier: staffIdentifier,
       department: matchedStaff.department,
+      rbacRole: (matchedStaff.rbacRole || role || 'class_teacher').toLowerCase().trim(),
       avatar: (matchedStaff.fullName || matchedStaff.name) ? (matchedStaff.fullName || matchedStaff.name).split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'ST',
       permissions: rolePerms
     };
