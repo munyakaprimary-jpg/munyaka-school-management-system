@@ -243,7 +243,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
         { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     // Staff Attendance
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff-checkin', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'ict_technician', 'ict_teacher'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'ict_technician', 'ict_teacher'] },
     { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher'] },
     { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['admin', 'head_teacher'] },
     // Academic Assessment & Analysis
