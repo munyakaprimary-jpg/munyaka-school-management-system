@@ -11,7 +11,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { CentralDataService } from "@/services/centralDataService";
 import SecurityAuthTab from '@/components/settings/SecurityAuthTab';
 import FirestoreSyncTab from '@/components/settings/FirestoreSyncTab';
-import Modal from '@/components/ui/Modal';
+import { DEFAULT_ROLE_PERMISSIONS, PERMISSIONS } from '@/rbac/permissionMatrix';
 import {
   Building,
   Lock,
@@ -80,37 +80,19 @@ const DEFAULT_SETTINGS: SystemSettings = {
 };
 
 const SYSTEM_ROLES = [
-  { id: 'class_teacher', name: 'Class Teacher', description: 'Access to classroom registers, learner attendance, and CBC assessments.' },
-  { id: 'subject_teacher', name: 'Subject Teacher', description: 'Access to subject mark entry and learning areas.' },
-  { id: 'ict_teacher', name: 'ICT Teacher', description: 'Access to lab devices, digital literacy hubs, and ICT hardware inventory.' },
-  { id: 'lab_teacher', name: 'Lab Teacher', description: 'Access to science lab equipment and practical assessments.' },
-  { id: 'library_teacher', name: 'Library Teacher', description: 'Access to library catalog, book checkouts, and e-resource inventories.' },
-  { id: 'tools_inventory_teacher', name: 'Tools & Inventory Teacher', description: 'Access to school assets, tools, and inventory management.' },
-  { id: 'admin', name: 'HOI (Head of Institution)', description: 'Full access to institutional control center, staff records, and financial ledgers.' },
-  { id: 'dhoi', name: 'DHOI (Deputy Head)', description: 'Access to academic oversight, attendance reports, and school operations.' }
+  { id: 'class_teacher', name: 'Class Teacher', description: 'Enable Dashboard, Student Admissions & Profiles, CBC Marks & Roll Call/Attendance, Report Cards. Strictly disable Fees & Finance, Staff Registry, and System Settings.' },
+  { id: 'subject_teacher', name: 'Subject Teacher', description: 'Enable Dashboard, CBC Marks & Roll Call/Attendance, Exam Types. Disable Fees, Staff, and Admin settings.' },
+  { id: 'ict_teacher', name: 'ICT Teacher', description: 'Enable Dashboard, ICT Lab & Devices, Digital Hub. Disable Fees and Staff Registry.' },
+  { id: 'lab_teacher', name: 'Lab Teacher', description: 'Enable Dashboard, ICT Lab & Devices, Digital Hub. Disable Fees and Staff Registry.' },
+  { id: 'library_teacher', name: 'Library Teacher', description: 'Enable Dashboard, Library & E-Resources, Study Corner. Disable Fees and Staff Registry.' },
+  { id: 'tools_inventory_teacher', name: 'Tools & Inventory Teacher', description: 'Enable Dashboard, Tools & Inventory, ICT Lab & Devices. Disable Fees and Staff.' },
+  { id: 'admin', name: 'HOI (Head of Institution)', description: 'Full institutional control permissions across all administrative and academic menus.' },
+  { id: 'dhoi', name: 'DHOI (Deputy Head)', description: 'Full institutional control permissions across all administrative and academic menus.' }
 ];
 
-const MODULE_PERMISSIONS = [
-  { id: 'dashboard', name: 'Dashboard & Overview' },
-  { id: 'learners', name: 'Student Admissions & Profiles' },
-  { id: 'assessments', name: 'CBC Marks & Roll Call / Attendance' },
-  { id: 'fees', name: 'Fees & Financial Ledgers' },
-  { id: 'library', name: 'Library & E-Resources' },
-  { id: 'inventory', name: 'ICT Lab & Hardware Inventory' },
-  { id: 'communication', name: 'SMS & Email Communication' },
-  { id: 'settings', name: 'System Settings & RBAC' }
-];
+const MODULE_PERMISSIONS = PERMISSIONS;
 
-const DEFAULT_RBAC_MATRIX: Record<string, Record<string, boolean>> = {
-  class_teacher: { dashboard: false, learners: true, assessments: true, fees: false, library: true, inventory: false, communication: false, settings: false },
-  subject_teacher: { dashboard: false, learners: true, assessments: true, fees: false, library: true, inventory: false, communication: false, settings: false },
-  ict_teacher: { dashboard: false, learners: true, assessments: true, fees: false, library: false, inventory: true, communication: false, settings: false },
-  lab_teacher: { dashboard: false, learners: false, assessments: true, fees: false, library: false, inventory: true, communication: false, settings: false },
-  library_teacher: { dashboard: false, learners: false, assessments: true, fees: false, library: true, inventory: false, communication: false, settings: false },
-  tools_inventory_teacher: { dashboard: false, learners: false, assessments: true, fees: false, library: false, inventory: true, communication: false, settings: false },
-  admin: { dashboard: true, learners: true, assessments: true, fees: true, library: true, inventory: true, communication: true, settings: true },
-  dhoi: { dashboard: true, learners: true, assessments: true, fees: true, library: true, inventory: true, communication: true, settings: false }
-};
+const DEFAULT_RBAC_MATRIX: Record<string, Record<string, boolean>> = DEFAULT_ROLE_PERMISSIONS;
 
 export default function Settings() {
   const [settings, setSettings] = useState<SystemSettings>(() => {
@@ -171,17 +153,13 @@ export default function Settings() {
       const saved = localStorage.getItem(RBAC_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') return parsed;
+        if (parsed && typeof parsed === 'object') return { ...DEFAULT_ROLE_PERMISSIONS, ...parsed };
       }
     } catch {}
     return DEFAULT_RBAC_MATRIX;
   });
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isResetAuthOpen, setIsResetAuthOpen] = useState(false);
-  const [resetAdminPassword, setResetAdminPassword] = useState('');
-  const [resetAuthError, setResetAuthError] = useState('');
-  const [isVerifyingReset, setIsVerifyingReset] = useState(false);
 
   useEffect(() => {
     try {
@@ -215,6 +193,10 @@ export default function Settings() {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
       localStorage.setItem(RBAC_STORAGE_KEY, JSON.stringify(rbacMatrix));
 
+      // Force immediate session permission re-evaluation
+      window.dispatchEvent(new Event('munyaka_rbac_updated'));
+      window.dispatchEvent(new Event('storage'));
+
       const profilePayload = {
         school_name: settings.schoolName,
         school_code: settings.schoolCode,
@@ -228,19 +210,12 @@ export default function Settings() {
 
       localStorage.setItem('school_profile', JSON.stringify(profilePayload));
 
-      // Saved locally
-      try {
-        console.log("Settings saved locally successfully.");
-      } catch (dbErr) {
-        console.warn("Saved locally:", dbErr);
-      }
-
       if (settings.currentTerm) {
         localStorage.setItem('munyaka_active_term', settings.currentTerm);
         localStorage.setItem('activeTerm', settings.currentTerm);
       }
       localStorage.setItem('munyaka_term_locked', String(settings.isTermLocked));
-      showSuccess("All system settings and RBAC permissions saved securely!");
+      showSuccess("RBAC Permissions Matrix & System Settings saved successfully! Session re-evaluated.");
     } catch (e) {
       showError("Failed to save settings.");
     }
@@ -258,7 +233,7 @@ export default function Settings() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">System Settings & Preferences</h1>
-          <p className="text-indigo-200 text-sm mt-1">Manage institutional profile, academic setup, RBAC roles, security & auth, and database backups.</p>
+          <p className="text-indigo-200 text-sm mt-1">Manage institutional profile, academic setup, RBAC roles mapped to sidebar menus, security & auth, and database backups.</p>
         </div>
         <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg gap-2 shrink-0">
           {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -266,18 +241,18 @@ export default function Settings() {
         </Button>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
+      <Tabs defaultValue="rbac" className="w-full">
         {/* Scrollable sub-navigation container */}
         <div className="w-full overflow-x-auto pb-2 mb-6">
           <TabsList className="bg-white p-1.5 rounded-2xl shadow-sm border h-16 inline-flex min-w-max gap-1">
+            <TabsTrigger value="rbac" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
+              <Users size={14} /> RBAC Roles Matrix
+            </TabsTrigger>
             <TabsTrigger value="profile" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
               <Building size={14} /> School Profile
             </TabsTrigger>
             <TabsTrigger value="academic" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
               <Lock size={14} /> Academic Setup
-            </TabsTrigger>
-            <TabsTrigger value="rbac" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
-              <Users size={14} /> RBAC Roles
             </TabsTrigger>
             <TabsTrigger value="security" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
               <Shield size={14} /> Security & Auth
@@ -291,7 +266,65 @@ export default function Settings() {
           </TabsList>
         </div>
 
-        {/* 1. School Profile */}
+        {/* 1. RBAC Roles & Permissions Matrix */}
+        <TabsContent value="rbac" className="space-y-6">
+          <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
+            <CardHeader className="px-0 pt-0 pb-6 border-b">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <Users className="text-indigo-600" size={22} /> RBAC Roles & Sidebar Menu Permissions Matrix
+                  </CardTitle>
+                  <CardDescription>Configure exact sidebar menu permissions for all 8 precise school roles.</CardDescription>
+                </div>
+                <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2">
+                  <Save className="w-4 h-4" /> Save Permissions Matrix
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="px-0 pt-6 space-y-6">
+              <div className="space-y-6">
+                {SYSTEM_ROLES.map(role => (
+                  <div key={role.id} className="p-5 bg-slate-50/80 rounded-2xl border space-y-4 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-slate-900 text-base">{role.name}</h4>
+                          <Badge variant="outline" className="font-mono text-xs uppercase bg-white">{role.id}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+                      {MODULE_PERMISSIONS.map(mod => {
+                        const isAllowed = Boolean(rbacMatrix[role.id]?.[mod.key]);
+                        return (
+                          <div 
+                            key={mod.key} 
+                            onClick={() => handlePermissionToggle(role.id, mod.key)}
+                            className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
+                              isAllowed 
+                                ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm' 
+                                : 'bg-white border-slate-200 text-slate-400 opacity-60 hover:opacity-100'
+                            }`}
+                          >
+                            <span className="text-xs font-bold truncate pr-2">{mod.label}</span>
+                            <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isAllowed ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                              {isAllowed ? <Check size={12} /> : <X size={12} />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 2. School Profile */}
         <TabsContent value="profile" className="space-y-6">
           <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b">
@@ -335,7 +368,7 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* 2. Academic Setup */}
+        {/* 3. Academic Setup */}
         <TabsContent value="academic" className="space-y-6">
           <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b">
@@ -414,57 +447,6 @@ export default function Settings() {
                   <p className="text-xs text-muted-foreground mt-0.5">Prevent unauthorized edits to past closed terms.</p>
                 </div>
                 <Switch checked={settings.autoLockTerms} onCheckedChange={(val) => setSettings({...settings, autoLockTerms: val})} />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* 3. RBAC Roles & Permissions Matrix */}
-        <TabsContent value="rbac" className="space-y-6">
-          <Card className="border-none shadow-sm rounded-3xl bg-white p-6 sm:p-8">
-            <CardHeader className="px-0 pt-0 pb-6 border-b">
-              <CardTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <Users className="text-indigo-600" size={22} /> RBAC Roles & Granular Permissions Matrix
-              </CardTitle>
-              <CardDescription>Configure module access permissions across all institutional system roles.</CardDescription>
-            </CardHeader>
-            <CardContent className="px-0 pt-6 space-y-6">
-              <div className="space-y-6">
-                {SYSTEM_ROLES.map(role => (
-                  <div key={role.id} className="p-5 bg-slate-50/80 rounded-2xl border space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-slate-900 text-base">{role.name}</h4>
-                          <Badge variant="outline" className="font-mono text-xs uppercase">{role.id}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{role.description}</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                      {MODULE_PERMISSIONS.map(mod => {
-                        const isAllowed = Boolean(rbacMatrix[role.id]?.[mod.id]);
-                        return (
-                          <div 
-                            key={mod.id} 
-                            onClick={() => handlePermissionToggle(role.id, mod.id)}
-                            className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                              isAllowed 
-                                ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm' 
-                                : 'bg-white border-slate-200 text-slate-400 opacity-60 hover:opacity-100'
-                            }`}
-                          >
-                            <span className="text-xs font-bold truncate">{mod.name}</span>
-                            <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isAllowed ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
-                              {isAllowed ? <Check size={12} /> : <X size={12} />}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
               </div>
             </CardContent>
           </Card>

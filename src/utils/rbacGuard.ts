@@ -6,6 +6,7 @@
 import { roleHas as matrixRoleHas } from '@/rbac/permissionMatrix';
 import { getCurrentSessionUser, SessionUser } from '@/services/authService';
 import { APP_SIDEBAR_MENUS, SidebarMenuItem } from '@/constants/sidebarMenus';
+export type { SidebarMenuItem };
 
 export interface RBACCheckOptions {
   user?: SessionUser | null;

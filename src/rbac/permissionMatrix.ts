@@ -2,146 +2,184 @@ export interface RolePermissions {
   dashboard: boolean;
   learners: boolean;
   assessments: boolean;
+  attendance: boolean;
   fees: boolean;
   library: boolean;
   inventory: boolean;
   communication: boolean;
+  reports: boolean;
+  timetable: boolean;
   settings: boolean;
   [key: string]: boolean;
 }
 
-export const ROLES = ['ADMIN', 'DHOI', 'CLASS_TEACHER', 'SUBJECT_TEACHER', 'ICT_TEACHER', 'LAB_TEACHER', 'LIBRARY_TEACHER', 'TOOLS_INVENTORY_TEACHER'] as const;
+export const ROLES = [
+  'admin',
+  'dhoi',
+  'class_teacher',
+  'subject_teacher',
+  'ict_teacher',
+  'lab_teacher',
+  'library_teacher',
+  'tools_inventory_teacher'
+] as const;
 
 export const PERMISSIONS = [
   { key: 'dashboard', label: 'Dashboard & Overview' },
   { key: 'learners', label: 'Student Admissions & Profiles' },
-  { key: 'assessments', label: 'CBC Marks & Roll Call / Attendance' },
-  { key: 'fees', label: 'Fees & Financial Ledgers' },
+  { key: 'assessments', label: 'CBC Marks & Exam Types' },
+  { key: 'attendance', label: 'Roll Call & Attendance' },
+  { key: 'fees', label: 'Fees & Finance' },
   { key: 'library', label: 'Library & E-Resources' },
-  { key: 'inventory', label: 'ICT Lab & Hardware Inventory' },
-  { key: 'communication', label: 'Communication & SMS' },
-  { key: 'settings', label: 'Settings & Security' },
+  { key: 'inventory', label: 'ICT Lab & Devices / Tools & Inventory' },
+  { key: 'communication', label: 'Communication & Notices' },
+  { key: 'reports', label: 'Report Cards & Results' },
+  { key: 'timetable', label: 'Timetable & Classes' },
+  { key: 'settings', label: 'System Settings & Security' },
 ];
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, RolePermissions> = {
-  ADMIN: {
+  admin: {
     dashboard: true,
     learners: true,
     assessments: true,
+    attendance: true,
     fees: true,
     library: true,
     inventory: true,
     communication: true,
+    reports: true,
+    timetable: true,
     settings: true,
   },
-  DHOI: {
+  dhoi: {
     dashboard: true,
     learners: true,
     assessments: true,
+    attendance: true,
     fees: true,
     library: true,
     inventory: true,
     communication: true,
+    reports: true,
+    timetable: true,
     settings: false,
   },
-  CLASS_TEACHER: {
-    dashboard: false,
+  class_teacher: {
+    dashboard: true,
     learners: true,
     assessments: true,
+    attendance: true,
     fees: false,
     library: true,
     inventory: false,
-    communication: false,
+    communication: true,
+    reports: true,
+    timetable: true,
     settings: false,
   },
-  SUBJECT_TEACHER: {
-    dashboard: false,
-    learners: true,
+  subject_teacher: {
+    dashboard: true,
+    learners: false,
     assessments: true,
+    attendance: true,
     fees: false,
     library: true,
     inventory: false,
-    communication: false,
+    communication: true,
+    reports: true,
+    timetable: true,
     settings: false,
   },
-  ICT_TEACHER: {
-    dashboard: false,
-    learners: true,
-    assessments: true,
+  ict_teacher: {
+    dashboard: true,
+    learners: false,
+    assessments: false,
+    attendance: true,
     fees: false,
     library: false,
     inventory: true,
     communication: false,
+    reports: false,
+    timetable: true,
     settings: false,
   },
-  LAB_TEACHER: {
-    dashboard: false,
+  lab_teacher: {
+    dashboard: true,
     learners: false,
-    assessments: true,
+    assessments: false,
+    attendance: true,
     fees: false,
     library: false,
     inventory: true,
     communication: false,
+    reports: false,
+    timetable: true,
     settings: false,
   },
-  LIBRARY_TEACHER: {
-    dashboard: false,
+  library_teacher: {
+    dashboard: true,
     learners: false,
-    assessments: true,
+    assessments: false,
+    attendance: true,
     fees: false,
     library: true,
     inventory: false,
     communication: false,
+    reports: false,
+    timetable: true,
     settings: false,
   },
-  TOOLS_INVENTORY_TEACHER: {
-    dashboard: false,
+  tools_inventory_teacher: {
+    dashboard: true,
     learners: false,
-    assessments: true,
+    assessments: false,
+    attendance: true,
     fees: false,
     library: false,
     inventory: true,
     communication: false,
+    reports: false,
+    timetable: true,
     settings: false,
   },
 };
 
 export const ROLE_DEFAULT_LANDING: Record<string, string> = {
-  ADMIN: '/dashboard',
-  DHOI: '/dashboard',
-  CLASS_TEACHER: '/assessments',
-  SUBJECT_TEACHER: '/assessments',
-  ICT_TEACHER: '/inventory',
-  LAB_TEACHER: '/assessments',
-  LIBRARY_TEACHER: '/library',
-  TOOLS_INVENTORY_TEACHER: '/inventory',
+  admin: '/system-management',
+  dhoi: '/system-management',
+  class_teacher: '/assessments',
+  subject_teacher: '/assessments',
+  ict_teacher: '/ict-lab',
+  lab_teacher: '/ict-lab',
+  library_teacher: '/library',
+  tools_inventory_teacher: '/inventory',
 };
 
 export function getDefaultLandingPage(role: string): string {
-  const norm = String(role || '').toUpperCase().trim();
+  const norm = String(role || '').toLowerCase().trim();
   return ROLE_DEFAULT_LANDING[norm] || '/dashboard';
 }
 
 export function resolveRole(role: string): string {
-  const norm = String(role || '').toUpperCase().trim();
-  const lower = String(role || '').toLowerCase().trim();
-  if (norm.includes('ADMIN') || norm.includes('HOI') || norm.includes('OWNER') || norm.includes('SUPER') || lower === 'admin') {
-    return 'ADMIN';
+  const norm = String(role || '').toLowerCase().trim();
+  if (norm.includes('admin') || norm.includes('hoi') || norm.includes('owner') || norm.includes('super')) {
+    return 'admin';
   }
-  if (lower === 'dhoi') return 'DHOI';
-  if (lower === 'class_teacher') return 'CLASS_TEACHER';
-  if (lower === 'subject_teacher') return 'SUBJECT_TEACHER';
-  if (lower === 'ict_teacher') return 'ICT_TEACHER';
-  if (lower === 'lab_teacher') return 'LAB_TEACHER';
-  if (lower === 'library_teacher') return 'LIBRARY_TEACHER';
-  if (lower === 'tools_inventory_teacher') return 'TOOLS_INVENTORY_TEACHER';
-  if (lower.includes('teacher') || norm.includes('TEACHER')) return 'CLASS_TEACHER';
-  return norm || 'CLASS_TEACHER';
+  if (norm === 'dhoi') return 'dhoi';
+  if (norm === 'class_teacher') return 'class_teacher';
+  if (norm === 'subject_teacher') return 'subject_teacher';
+  if (norm === 'ict_teacher') return 'ict_teacher';
+  if (norm === 'lab_teacher') return 'lab_teacher';
+  if (norm === 'library_teacher') return 'library_teacher';
+  if (norm === 'tools_inventory_teacher') return 'tools_inventory_teacher';
+  if (norm.includes('teacher')) return 'class_teacher';
+  return norm || 'class_teacher';
 }
 
 export function roleHas(role: string, permissionKey: string): boolean {
   const resolved = resolveRole(role);
-  if (resolved === 'ADMIN') return true;
+  if (resolved === 'admin') return true;
   const matrix = getPermissionsMatrix();
   const perms = matrix[resolved] || matrix[role];
   if (!perms) return true;
@@ -155,7 +193,10 @@ export function getPermissionsMatrix(): Record<string, RolePermissions> {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        return { ...DEFAULT_ROLE_PERMISSIONS, ...parsed };
+      }
     }
   } catch (err) {
     console.error('Failed to load permissions matrix:', err);
