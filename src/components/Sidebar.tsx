@@ -126,6 +126,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     if (item.moduleKey === 'staff') {
       return isAdminOrSuper;
     }
+    // Daily Check-In should be visible to all teachers and staff
+    if (item.name === 'Daily Check-In') {
+      return true;
+    }
     // Admin/Owner always see all other items
     if (['ADMIN', 'HOI', 'DHOI', 'SUPER_ADMIN', 'OWNER'].includes(upperRole) || ['ADMIN', 'OWNER'].includes(upperRbac)) {
       return true;
