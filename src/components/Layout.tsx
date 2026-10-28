@@ -305,24 +305,60 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         const isTeacherVariant = roleLower.includes('teacher') || roleLower.includes('educator') || roleLower === 'class_teacher' || roleLower === 'subject_teacher' || roleLower === 'senior_teacher';
 
         if (isTeacherVariant) {
-                  const forbiddenTeacherPaths = [
-                    '/central-data', '/grades', '/staff', '/learning-areas', '/exam-types',
-                    '/system-management', '/staff/access',
-                    '/transferred-archive', '/promote-students', '/admin/control-center',
-                    '/dev/tenants', '/payment-management', '/staff/attendance-monitor',
-                    '/timetable'
-                  ];
+          // ENFORCE TEACHER PORTAL MENU VISIBILITY SPEC:
+          // ALWAYS SHOW for Teachers: Dashboard, Daily Check-In (Attendance), Timetable & CBC Assessments, Notices.
+          // CONDITIONALLY SHOW based on rbacRole / role:
+          // - Show 'My Class / Learners' if role is 'class_teacher' (or has learners permission).
+          // - Show 'ICT Lab & Hardware' if role is 'ict_teacher', 'lab_teacher', or 'tools_inventory_teacher'.
+          // - Show 'Library Catalog' if role is 'library_teacher'.
+          // STRICTLY HIDE from all teaching roles: Staff Registry, Fees & Ledgers, System Settings & RBAC.
+          
+          const label = item.label;
+          const path = item.path;
+
+          // STRICTLY HIDE Staff Registry, Fees & Ledgers, System Settings & RBAC
           if (
-            item.path === '/grades' ||
-            forbiddenTeacherPaths.includes(item.path) ||
-            (item.label.includes("Central Data") && item.path !== '/lan-config') ||
-            item.label.includes("Grades & Streams") ||
-            item.label.includes("Staff Directory") ||
-            item.label.includes("Learning Areas") ||
-            item.label.includes("Exam Types")
+            label.includes('Staff Registry') ||
+            label.includes('Fees') ||
+            label.includes('Finance') ||
+            label.includes('Settings') ||
+            path === '/staff-registry' ||
+            path === '/fees' ||
+            path === '/settings' ||
+            path === '/system-management' ||
+            path === '/admin/control-center'
           ) {
             return false;
           }
+
+          // ALWAYS SHOW: Dashboard, Daily Check-In, Notices, Timetable, CBC Assessments (Enter Marks / Assessments)
+          const alwaysShowTeacherPaths = ['/dashboard', '/staff-checkin', '/notices', '/timetable', '/assessments', '/analysis'];
+          const alwaysShowTeacherLabels = ['Dashboard', 'Daily Check-In', 'Events & Notices', 'Notices', 'Timetable', 'Enter Marks', 'Assessments', 'Results Analysis'];
+
+          if (alwaysShowTeacherPaths.includes(path) || alwaysShowTeacherLabels.some(l => label.includes(l))) {
+            return true;
+          }
+
+          // CONDITIONALLY SHOW:
+          // - 'My Class / Learners' if role is class_teacher (or has learners permission / class teacher role)
+          const rbacRoleLower = String(user.rbacRole || roleLower).toLowerCase();
+          
+          if (label.includes('Learners') || path === '/learners') {
+            return rbacRoleLower.includes('class_teacher') || roleLower.includes('class_teacher') || roleLower === 'teacher';
+          }
+
+          // - 'ICT Lab & Hardware' if role is ict_teacher, lab_teacher, or tools_inventory_teacher
+          if (label.includes('ICT') || label.includes('Inventory') || path === '/ict-lab' || path === '/inventory') {
+            return rbacRoleLower.includes('ict_teacher') || rbacRoleLower.includes('lab_teacher') || rbacRoleLower.includes('tools_inventory_teacher');
+          }
+
+          // - 'Library Catalog' if role is library_teacher
+          if (label.includes('Library') || path === '/library') {
+            return rbacRoleLower.includes('library_teacher');
+          }
+
+          // Default hide other admin/non-teacher modules for teachers
+          return false;
         }
 
         const isIctVariant = roleLower.includes('ict_technician') || roleLower.includes('ict_teacher') || roleLower.includes('ict technician');

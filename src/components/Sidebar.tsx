@@ -122,19 +122,69 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const isAdminOrSuper = upperRbac === 'ADMIN' || upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN';
 
   const navItems = allNavItems.filter(item => {
-    // If the item is Staff Registry, strictly require admin or HOI
+    const role = user?.role || 'TEACHER';
+    const rbacRole = user?.rbacRole || role;
+    const upperRbac = String(rbacRole).toUpperCase();
+    const upperRole = String(role).toUpperCase();
+    
+    const isAdminOrSuper = upperRbac === 'ADMIN' || upperRole === 'ADMIN' || upperRole === 'HOI' || upperRole === 'OWNER' || upperRole === 'SUPER_ADMIN';
+
+    // If Admin/Super, allow (with standard restrictions below)
+    if (isAdminOrSuper) {
+      if (item.name === 'Payment & Subscriptions') {
+        return upperRole === 'OWNER';
+      }
+      return true;
+    }
+
+    const isTeacherVariant = upperRole.includes('TEACHER') || upperRole.includes('EDUCATOR') || upperRbac.includes('TEACHER');
+
+    if (isTeacherVariant) {
+      // STRICTLY HIDE from all teaching roles: Staff Registry, Fees & Ledgers, System Settings & RBAC.
+      if (
+        item.name.includes('Staff Registry') ||
+        item.name.includes('Fees') ||
+        item.name.includes('Finance') ||
+        item.name.includes('Settings') ||
+        item.path === '/staff-registry' ||
+        item.path === '/fees' ||
+        item.path === '/settings' ||
+        item.path === '/system-management'
+      ) {
+        return false;
+      }
+
+      // ALWAYS SHOW for Teachers: Dashboard, Daily Check-In (Attendance), Timetable & CBC Assessments, Notices.
+      const alwaysShowNames = ['Dashboard', 'Daily Check-In', 'Timetable', 'Enter Marks', 'Marked Scripts', 'Results Analysis'];
+      if (alwaysShowNames.includes(item.name)) {
+        return true;
+      }
+
+      // CONDITIONALLY SHOW based on rbacRole:
+      // - Show 'My Class / Learners' if role is 'class_teacher'
+      if (item.name === 'Learners' || item.name.includes('Learners')) {
+        return upperRbac === 'CLASS_TEACHER' || upperRole === 'CLASS_TEACHER';
+      }
+
+      // - Show 'ICT Lab & Hardware' if role is 'ict_teacher', 'lab_teacher', or 'tools_inventory_teacher'
+      if (item.name.includes('ICT') || item.name.includes('Tools') || item.name.includes('Inventory')) {
+        return upperRbac === 'ICT_TEACHER' || upperRbac === 'LAB_TEACHER' || upperRbac === 'TOOLS_INVENTORY_TEACHER';
+      }
+
+      // - Show 'Library Catalog' if role is 'library_teacher'
+      if (item.name.includes('Library')) {
+        return upperRbac === 'LIBRARY_TEACHER';
+      }
+
+      // Check other general module permissions
+      return roleHasModulePermission(role, item.moduleKey, rbacRole);
+    }
+
+    // Default permission check
     if (item.moduleKey === 'staff') {
       return isAdminOrSuper;
     }
-    // Daily Check-In should be visible to all teachers and staff
-    if (item.name === 'Daily Check-In') {
-      return true;
-    }
-    // Admin/Owner always see all other items
-    if (['ADMIN', 'HOI', 'DHOI', 'SUPER_ADMIN', 'OWNER'].includes(upperRole) || ['ADMIN', 'OWNER'].includes(upperRbac)) {
-      return true;
-    }
-    return roleHasModulePermission(userRole, item.moduleKey, rbacRole);
+    return roleHasModulePermission(role, item.moduleKey, rbacRole);
   });
 
   const activePath = location.pathname;
