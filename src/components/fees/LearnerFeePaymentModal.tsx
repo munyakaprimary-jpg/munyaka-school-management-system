@@ -273,11 +273,11 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
       // Search query filter
       if ((searchQuery || "").trim()) {
         const q = (searchQuery || "").toLowerCase().trim();
-        const matchesGrade = l?.grade && l.grade.toLowerCase().includes(q);
-        const matchesStream = l?.stream && l.stream.toLowerCase().includes(q);
+        const matchesGrade = l?.grade && String(l.grade).toLowerCase().includes(q);
+        const matchesStream = l?.stream && String(l.stream).toLowerCase().includes(q);
         const matchesQuery =
-          (l?.name || "").toLowerCase().includes(q) ||
-          (l?.admNo && l.admNo.toLowerCase().includes(q)) ||
+          String(l?.name || "").toLowerCase().includes(q) ||
+          (l?.admNo && String(l.admNo).toLowerCase().includes(q)) ||
           matchesGrade ||
           matchesStream;
         if (!matchesQuery) return false;
