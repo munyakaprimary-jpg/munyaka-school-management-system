@@ -392,7 +392,7 @@ const App = () => {
                           <Route path="/staff-registry" element={<Navigate to="/portal/staff" replace />} />
                           <Route path="/settings" element={<Navigate to="/portal/settings" replace />} />
 
-                          <Route path="*" element={<NotFound />} />
+                          <Route path="*" element={<Navigate to="/portal/dashboard" replace />} />
                         </Routes>
                       </LearnerProvider>
                     </SchoolProvider>
