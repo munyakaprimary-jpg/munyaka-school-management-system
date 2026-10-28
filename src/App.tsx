@@ -90,7 +90,7 @@ import LearningAreas from "./pages/LearningAreas";
 import ExamTypes from "./pages/ExamTypes";
 import NotFound from "./pages/NotFound";
 import Promote from "./pages/Promote";
-import StaffAttendance from "@/components/attendance/StaffAttendance";
+import StaffAttendancePage from "./pages/StaffAttendance";
 import StaffCheckIn from "./pages/StaffCheckIn";
 import StaffCheckInSelector from "./pages/StaffCheckInSelector";
 import AttendanceMonitor from "./pages/AttendanceMonitor";
@@ -474,7 +474,7 @@ const App = () => {
                       <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher']}><AppUnlock><Layout><div className="p-12 text-center font-bold text-slate-500">Staff Management Disabled</div></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/attendance" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><StaffAttendancePage /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/check-in" element={<ProtectedRoute><AppUnlock><Layout><StaffCheckInSelector /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/portal/attendance" element={<ProtectedRoute><AppUnlock><Layout><StaffAttendance /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/portal/attendance" element={<ProtectedRoute><AppUnlock><Layout><StaffAttendancePage /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/attendance-monitor" element={<ProtectedRoute><AppUnlock><Layout><AttendanceMonitor /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff/:id" element={<ProtectedRoute><AppUnlock><Layout><div className="p-12 text-center font-bold text-slate-500">Staff Profile Disabled</div></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/communication" element={<ProtectedRoute><AppUnlock><Layout><SchoolAnnouncements /></Layout></AppUnlock></ProtectedRoute>} />
