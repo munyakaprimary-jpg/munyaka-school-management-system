@@ -35,6 +35,7 @@ interface User {
   role: UserRole;
   title?: string;
   identifier?: string;
+  rbacRole?: string;
   permissions?: string[];
   assignedClasses?: string[];
   avatar?: string;
