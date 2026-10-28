@@ -133,6 +133,23 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const navItems = getFilteredSidebarMenus(currentUserStorage);
   const activePath = location.pathname;
 
+  const handleMenuClick = (e: React.MouseEvent, item: SidebarMenuItem) => {
+    e.preventDefault();
+    
+    // RBAC verification check before routing
+    const roleKey = String((currentUserStorage as any)?.rbacRole || currentUserStorage?.role || 'TEACHER').toLowerCase().trim();
+    const isSuperAdminOrOwner = ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin'].includes(roleKey);
+    const allowed = item.allowedRoles.map(r => r.toLowerCase());
+    const hasAccess = isSuperAdminOrOwner || allowed.includes(roleKey);
+
+    if (!hasAccess) {
+      alert(`Access Denied: Your role (${roleKey}) is not authorized to access "${item.name}".`);
+      return;
+    }
+
+    navigate(item.path);
+  };
+
   return (
     <div className="flex h-screen bg-slate-950 overflow-hidden font-sans">
       <aside className={cn(
@@ -164,13 +181,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
           {navItems.map((item, idx) => {
             const Icon = ICON_MAP[item.iconName] || LayoutDashboard;
-            const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
+            const isActive = activePath === item.path || (item.path !== '/portal/dashboard' && activePath.startsWith(item.path));
             return (
-              <NavLink
+              <a
                 key={item.key || idx}
-                to={item.path}
+                href={`#${item.path}`}
+                onClick={(e) => handleMenuClick(e, item)}
                 className={cn(
-                  "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
+                  "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative cursor-pointer",
                   isActive
                     ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
                     : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
@@ -182,7 +200,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 {isActive && !isCollapsed && (
                   <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0" />
                 )}
-              </NavLink>
+              </a>
             );
           })}
         </div>

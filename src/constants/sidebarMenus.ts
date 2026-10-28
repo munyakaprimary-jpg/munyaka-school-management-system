@@ -1,6 +1,6 @@
 /**
  * Menu-Based RBAC Definitions & Rules
- * Implements APP_SIDEBAR_MENUS, allowedRoles mapping, and filtering utilities.
+ * Implements APP_SIDEBAR_MENUS, allowedRoles mapping, and route mapping registry.
  */
 
 export interface SidebarMenuItem {
@@ -48,16 +48,16 @@ export const ADMIN_OR_MANAGEMENT_ROLES = [
 export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'admin_dashboard',
-    name: 'Admin Dashboard',
-    path: '/system-management',
+    name: 'Dashboard & Overview',
+    path: '/portal/dashboard',
     iconName: 'LayoutDashboard',
     moduleKey: 'dashboard',
-    allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
+    allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin', 'class_teacher', 'subject_teacher']
   },
   {
     key: 'data_harmonization',
-    name: 'Data Harmonization',
-    path: '/admin/harmonization',
+    name: 'Data Harmonization Hub',
+    path: '/portal/data-harmonization',
     iconName: 'ShieldCheck',
     moduleKey: 'server',
     allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -65,7 +65,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'learners',
     name: 'Learners',
-    path: '/learners',
+    path: '/portal/learners',
     iconName: 'Users',
     moduleKey: 'learners',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -73,7 +73,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'staff_registry',
     name: 'Staff Registry',
-    path: '/staff-registry',
+    path: '/portal/staff',
     iconName: 'UserCheck',
     moduleKey: 'staff',
     allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -81,7 +81,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'games_hub',
     name: 'Games Hub',
-    path: '/games',
+    path: '/portal/games-hub',
     iconName: 'Gamepad2',
     moduleKey: 'dashboard',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -89,7 +89,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'grades_streams',
     name: 'Grades & Streams',
-    path: '/grades',
+    path: '/portal/grades-streams',
     iconName: 'Layers',
     moduleKey: 'timetable',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -97,7 +97,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'transferred_archive',
     name: 'Transferred Archive',
-    path: '/transferred-archive',
+    path: '/portal/transferred',
     iconName: 'Archive',
     moduleKey: 'learners',
     allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -105,7 +105,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'learning_areas',
     name: 'Learning Areas',
-    path: '/learning-areas',
+    path: '/portal/learning-areas',
     iconName: 'BookOpen',
     moduleKey: 'assessments',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -113,23 +113,23 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'exam_types',
     name: 'Exam Types',
-    path: '/exam-types',
+    path: '/portal/exam-types',
     iconName: 'Award',
     moduleKey: 'assessments',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'tenants_campuses',
-    name: 'Tenants & Campuses',
-    path: '/tenants',
+    name: 'Tenants / Campuses',
+    path: '/portal/tenants',
     iconName: 'School',
     moduleKey: 'school',
     allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'admin_control',
-    name: 'Admin Control',
-    path: '/admin-control',
+    name: 'Admin Control Center',
+    path: '/portal/admin-control',
     iconName: 'Shield',
     moduleKey: 'settings',
     allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -137,7 +137,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'communication',
     name: 'Communication',
-    path: '/communication',
+    path: '/portal/communication',
     iconName: 'MessageSquare',
     moduleKey: 'communication',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -145,7 +145,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'events_notices',
     name: 'Events & Notices',
-    path: '/notices',
+    path: '/portal/notices',
     iconName: 'Bell',
     moduleKey: 'communication',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -153,15 +153,15 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'timetable',
     name: 'Timetable',
-    path: '/timetable',
+    path: '/portal/timetable',
     iconName: 'Clock',
     moduleKey: 'timetable',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'central_data_apk',
-    name: 'Central Data APK',
-    path: '/central-data',
+    name: 'Central Data & APK',
+    path: '/portal/central-data',
     iconName: 'Database',
     moduleKey: 'server',
     allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -169,7 +169,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'learner_attendance',
     name: 'Learner Attendance',
-    path: '/attendance',
+    path: '/portal/learner-attendance',
     iconName: 'ClipboardCheck',
     moduleKey: 'attendance',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -177,7 +177,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'daily_checkin',
     name: 'Daily Check-In',
-    path: '/staff-checkin',
+    path: '/portal/attendance',
     iconName: 'LogIn',
     moduleKey: 'attendance',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -185,7 +185,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'attendance_monitor',
     name: 'Attendance Monitor',
-    path: '/attendance-monitor',
+    path: '/portal/attendance-monitor',
     iconName: 'Monitor',
     moduleKey: 'attendance',
     allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -193,7 +193,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'attendance_management',
     name: 'Attendance Management',
-    path: '/attendance',
+    path: '/portal/attendance-mgmt',
     iconName: 'CheckSquare',
     moduleKey: 'attendance',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -201,7 +201,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'enter_marks',
     name: 'Enter Marks',
-    path: '/assessments',
+    path: '/portal/enter-marks',
     iconName: 'FileSpreadsheet',
     moduleKey: 'assessments',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -209,7 +209,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'results_analysis',
     name: 'Results Analysis',
-    path: '/analysis',
+    path: '/portal/results-analysis',
     iconName: 'BarChart3',
     moduleKey: 'reports',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -217,31 +217,31 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'grading_review',
     name: 'Grading Review',
-    path: '/grading-review',
+    path: '/portal/grading-review',
     iconName: 'Target',
     moduleKey: 'assessments',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'create_exam',
-    name: 'Create Exam',
-    path: '/exam-creator',
+    name: 'Create Exam / Quiz',
+    path: '/portal/create-exam',
     iconName: 'Award',
     moduleKey: 'assessments',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'question_bank',
-    name: 'Question Bank',
-    path: '/question-creator',
+    name: 'Question Bank & Import',
+    path: '/portal/question-bank',
     iconName: 'BookOpen',
     moduleKey: 'assessments',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'grading_marks',
-    name: 'Grading Marks',
-    path: '/teacher-grading',
+    name: 'Grading & Marks',
+    path: '/portal/grading-marks',
     iconName: 'FileText',
     moduleKey: 'assessments',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -249,7 +249,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'all_set_exams',
     name: 'All Set Exams',
-    path: '/set-exams',
+    path: '/portal/all-set-exams',
     iconName: 'FileText',
     moduleKey: 'assessments',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -257,7 +257,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'digital_hub',
     name: 'Digital Hub',
-    path: '/digital-hub',
+    path: '/portal/digital-hub',
     iconName: 'Laptop',
     moduleKey: 'library',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -265,15 +265,15 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'ict_lab_devices',
     name: 'ICT Lab & Devices',
-    path: '/ict-lab',
+    path: '/portal/ict-lab',
     iconName: 'Monitor',
     moduleKey: 'inventory',
     allowedRoles: ['admin', 'dhoi', 'ict_teacher', 'lab_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'digital_skills',
-    name: 'Digital Skills',
-    path: '/digital-skills',
+    name: 'Digital Skills Assessment',
+    path: '/portal/digital-skills',
     iconName: 'Keyboard',
     moduleKey: 'library',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -281,7 +281,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'practical_competencies',
     name: 'Practical Competencies',
-    path: '/practical-competencies',
+    path: '/portal/practical-competencies',
     iconName: 'Award',
     moduleKey: 'assessments',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'lab_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -289,15 +289,15 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'portfolios',
     name: 'Portfolios',
-    path: '/portfolio',
+    path: '/portal/portfolios',
     iconName: 'FolderHeart',
     moduleKey: 'assessments',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'library_e_resources',
-    name: 'Library E-Resources',
-    path: '/library',
+    name: 'Library & E-Resources',
+    path: '/portal/library',
     iconName: 'Library',
     moduleKey: 'library',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'library_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -305,15 +305,15 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'study_corner',
     name: 'Study Corner',
-    path: '/study-corner',
+    path: '/portal/study-corner',
     iconName: 'BookOpen',
     moduleKey: 'library',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
     key: 'tools_inventory',
-    name: 'Tools Inventory',
-    path: '/inventory',
+    name: 'Tools & Inventory',
+    path: '/portal/tools-inventory',
     iconName: 'Box',
     moduleKey: 'inventory',
     allowedRoles: ['admin', 'dhoi', 'tools_inventory_teacher', 'ict_teacher', 'lab_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -321,7 +321,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'fees_finance',
     name: 'Fees & Finance',
-    path: '/fees',
+    path: '/portal/fees',
     iconName: 'Wallet',
     moduleKey: 'fees',
     allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -329,7 +329,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'report_cards',
     name: 'Report Cards',
-    path: '/reports',
+    path: '/portal/report-cards',
     iconName: 'FileText',
     moduleKey: 'reports',
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -337,7 +337,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'settings',
     name: 'Settings',
-    path: '/settings',
+    path: '/portal/settings',
     iconName: 'Settings',
     moduleKey: 'settings',
     allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
@@ -345,7 +345,7 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
   {
     key: 'promote_learners',
     name: 'Promote Learners',
-    path: '/promote',
+    path: '/portal/promote',
     iconName: 'ArrowUpCircle',
     moduleKey: 'learners',
     allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
