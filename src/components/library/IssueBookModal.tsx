@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, BookOpen, User, Calendar, Hash, ShieldCheck, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, BookOpen, User, Calendar, Hash, ShieldCheck, Check, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,11 +26,16 @@ export interface IssueBookModalProps {
 export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   isOpen,
   onClose,
-  book,
+  book: initialBook,
   onIssueBook,
   onConfirmIssue,
   onSuccess
 }) => {
+  const [catalogItems, setCatalogItems] = useState<any[]>([]);
+  const [selectedBook, setSelectedBook] = useState<any>(initialBook || null);
+  const [itemSearchQuery, setItemSearchQuery] = useState(initialBook?.title || '');
+  const [isItemDropdownOpen, setIsItemDropdownOpen] = useState(false);
+
   const [borrowerName, setBorrowerName] = useState('');
   const [borrowerType, setBorrowerType] = useState<'Student' | 'Staff'>('Student');
   const [grade, setGrade] = useState('Grade 4');
@@ -43,20 +48,53 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      try {
+        const rawStock = localStorage.getItem('munyaka_library_inventory') || 
+                         localStorage.getItem('munyaka_library_books') || 
+                         localStorage.getItem('library_books') || '[]';
+        const parsed = JSON.parse(rawStock);
+        setCatalogItems(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        setCatalogItems([]);
+      }
+
+      if (initialBook) {
+        setSelectedBook(initialBook);
+        setItemSearchQuery(initialBook.title || '');
+      } else if (!selectedBook) {
+        // default to first item if available
+        try {
+          const rawStock = localStorage.getItem('munyaka_library_inventory') || '[]';
+          const parsed = JSON.parse(rawStock);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSelectedBook(parsed[0]);
+            setItemSearchQuery(parsed[0].title || parsed[0].name || '');
+          }
+        } catch {}
+      }
+    }
+  }, [isOpen, initialBook]);
+
   if (!isOpen) return null;
 
-  const stockCount = Number(book?.quantity ?? book?.copies ?? book?.stock ?? 10);
-  const borrowedCount = Number(book?.borrowed ?? 0);
+  const stockCount = Number(selectedBook?.quantity ?? selectedBook?.copies ?? selectedBook?.stock ?? 10);
+  const borrowedCount = Number(selectedBook?.borrowed ?? 0);
   const availableCopies = Math.max(0, stockCount - borrowedCount);
-  const bookTitle = String(book?.title || 'Selected Textbook');
-  const bookCategory = String(book?.category || 'General Inventory');
-  const bookIsbn = String(book?.isbn || 'N/A');
-  const bookId = String(book?.id || `book_${Date.now()}`);
+  const bookTitle = String(selectedBook?.title || selectedBook?.name || 'Selected Textbook');
+  const bookCategory = String(selectedBook?.category || 'General Inventory');
+  const bookIsbn = String(selectedBook?.isbn || 'N/A');
+  const bookId = String(selectedBook?.id || `book_${Date.now()}`);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!borrowerName.trim()) {
       toast({ title: 'Error', description: 'Please enter the borrower name.', variant: 'destructive' });
+      return;
+    }
+    if (!selectedBook) {
+      toast({ title: 'Error', description: 'Please select a book from inventory.', variant: 'destructive' });
       return;
     }
 
@@ -106,6 +144,10 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     }
   };
 
+  const filteredCatalog = catalogItems.filter((item: any) => 
+    String(item.title || item.name || '').toLowerCase().includes(itemSearchQuery.toLowerCase())
+  );
+
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
@@ -115,7 +157,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-emerald-600" /> Issue Textbook / Item
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">Record a circulation loan to a student or staff member.</p>
+            <p className="text-xs text-slate-500 mt-0.5">Search inventory and record a circulation loan.</p>
           </div>
           <button
             onClick={onClose}
@@ -127,18 +169,73 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 
         {/* Form Body Scroll Area */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar">
-          {/* Selected Book Banner */}
-          <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Selected Book</span>
-              <h4 className="text-base font-bold text-slate-900 mt-0.5">{bookTitle}</h4>
-              <p className="text-xs text-slate-600 mt-0.5">{bookCategory} • ISBN: {bookIsbn}</p>
+          {/* Searchable Dropdown for Book Selection */}
+          <div className="relative">
+            <Label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+              Select Book / Item <span className="text-rose-500">*</span>
+            </Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search book title (e.g. Mathematics Grade 4)..."
+                value={itemSearchQuery}
+                onChange={(e) => {
+                  setItemSearchQuery(e.target.value);
+                  setIsItemDropdownOpen(true);
+                }}
+                onFocus={() => setIsItemDropdownOpen(true)}
+                className="pl-9 w-full border-slate-200 rounded-xl text-sm font-medium bg-white"
+              />
             </div>
-            <div className="text-right">
-              <span className="text-lg font-black text-emerald-700">{availableCopies}</span>
-              <span className="text-[10px] text-emerald-600 font-bold block uppercase">Available</span>
-            </div>
+
+            {isItemDropdownOpen && (
+              <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto custom-scrollbar">
+                {filteredCatalog.length === 0 ? (
+                  <div className="p-3 text-xs text-slate-500 text-center">No matching books found in inventory.</div>
+                ) : (
+                  filteredCatalog.map((book: any, idx: number) => {
+                    const title = book.title || book.name || 'Untitled Book';
+                    const availableStock = Number(book.quantity || book.copies || book.stock || 1);
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setSelectedBook(book);
+                          setItemSearchQuery(title);
+                          setIsItemDropdownOpen(false);
+                        }}
+                        className="px-4 py-2.5 hover:bg-emerald-50 cursor-pointer text-xs border-b border-slate-50 last:border-0 flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-bold text-slate-800">{title}</p>
+                          <p className="text-[11px] text-slate-500">{book.category || 'General'} • ISBN: {book.isbn || 'N/A'}</p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                          {availableStock} Avail
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Selected Book Banner Info */}
+          {selectedBook && (
+            <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Active Selection</span>
+                <h4 className="text-base font-bold text-slate-900 mt-0.5">{bookTitle}</h4>
+                <p className="text-xs text-slate-600 mt-0.5">{bookCategory} • ISBN: {bookIsbn}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-lg font-black text-emerald-700">{availableCopies}</span>
+                <span className="text-[10px] text-emerald-600 font-bold block uppercase">Available</span>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -243,7 +340,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || availableCopies <= 0}
+              disabled={isSubmitting || availableCopies <= 0 || !selectedBook}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm"
             >
               {isSubmitting ? 'Issuing...' : 'Confirm Book Issue'}
