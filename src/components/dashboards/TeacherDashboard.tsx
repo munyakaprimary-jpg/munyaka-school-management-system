@@ -76,14 +76,15 @@ export default function TeacherDashboard() {
     } catch { eResources = []; }
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const totalTitles = books.length > 0 ? books.length : 1420;
-    const activeLoans = circulation.filter((c: any) => c?.status === 'ISSUED' || c?.status === 'active' || !c?.returnDate).length || 28;
+    const todayDate = new Date();
+    const totalTitles = books.length;
+    const activeLoans = circulation.filter((c: any) => c?.status === 'ISSUED').length;
     const overdueReturns = circulation.filter((c: any) => {
-      const isIssued = c?.status === 'ISSUED' || c?.status === 'active' || !c?.returnDate;
+      const isIssued = c?.status === 'ISSUED';
       const due = c?.dueDate || c?.returnDeadline;
-      return isIssued && due && due < todayStr;
-    }).length || 3;
-    const digitalResourcesCount = eResources.length > 0 ? eResources.length : 86;
+      return isIssued && due && new Date(due) < todayDate;
+    }).length;
+    const digitalResourcesCount = eResources.length;
 
     return (
       <div className="space-y-8 pb-12 max-w-6xl mx-auto px-4">
