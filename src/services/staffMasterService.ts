@@ -113,6 +113,7 @@ export const isLibrarianDesignation = (role: string): boolean => {
 
 export const mapDesignationToSystemRole = (role: string): MasterSystemRole => {
   const r = (role || '').toLowerCase().trim();
+  if (r.includes('library') || r === 'library teacher' || r === 'librarian') return 'librarian';
   if (r === 'subject teacher') return 'subject_teacher';
   if (r === 'class teacher') return 'class_teacher';
   if (r === 'senior teacher') return 'senior_teacher';
@@ -127,6 +128,7 @@ export const mapDesignationToSystemRole = (role: string): MasterSystemRole => {
   if (r.includes('deputy')) return 'head_teacher';
   if (r.includes('senior')) return 'senior_teacher';
   if (r.includes('class')) return 'class_teacher';
+  if (r.includes('library') || r.includes('librarian')) return 'librarian';
   if (r.includes('subject') || (r.includes('teacher') && !r.includes('class') && !r.includes('senior') && !r.includes('head'))) return 'subject_teacher';
   if (r.includes('librarian')) return 'librarian';
   if (r.includes('bursar') || r.includes('account')) return 'bursar';

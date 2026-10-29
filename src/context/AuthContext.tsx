@@ -156,6 +156,7 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
     case 'librarian':
     case 'library':
     case 'library_assistant':
+    case 'library_teacher':
       return 'librarian';
     case 'storekeeper':
     case 'stores':

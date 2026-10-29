@@ -118,7 +118,7 @@ interface CurrentUser {
 const STORAGE_KEY = 'munyaka_library_data';
 const USER_KEY = 'munyaka_current_user';
 
-const FULL_ACCESS_ROLES = ['library_teacher', 'admin', 'dhoi'];
+const FULL_ACCESS_ROLES = ['library_teacher', 'librarian', 'admin', 'dhoi'];
 const VIEW_ONLY_ROLES = ['class_teacher', 'subject_teacher'];
 
 const GRADES = [
