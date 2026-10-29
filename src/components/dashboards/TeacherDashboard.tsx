@@ -72,10 +72,10 @@ export default function TeacherDashboard() {
 
     const getLibraryBooks = () => {
       try {
-        const primary = localStorage.getItem(LIBRARY_STORAGE_KEY);
+        const primary = localStorage.getItem('munyaka_library_inventory');
         if (primary) return JSON.parse(primary);
 
-        const secondary = localStorage.getItem('munyaka_library_inventory');
+        const secondary = localStorage.getItem('munyaka_library_books');
         if (secondary) return JSON.parse(secondary);
 
         const tertiary = localStorage.getItem('library_books');
