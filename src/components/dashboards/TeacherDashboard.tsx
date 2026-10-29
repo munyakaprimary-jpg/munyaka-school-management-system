@@ -189,14 +189,43 @@ export default function TeacherDashboard() {
 
         {/* 4 Stat Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex flex-col justify-between">
             <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">TOTAL BOOK STOCK</p>
-              <h3 className="text-3xl font-black text-slate-900">{totalTitles} <span className="text-sm font-medium text-slate-400">({totalVolumes} vols)</span></h3>
-              <p className="text-xs text-emerald-600 font-bold">Catalogued Inventory</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">TOTAL BOOK STOCK</p>
+                <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  {totalVolumes} vols total
+                </span>
+              </div>
+              <h3 className="text-xl font-black text-slate-900">{totalTitles} Unique Titles</h3>
+              
+              {/* Itemized Book Titles & Individual Counts Breakdown */}
+              <div className="mt-3 space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                {books.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">No books cataloged yet.</p>
+                ) : (
+                  books.map((book: any, index: number) => {
+                    const title = book.title || book.name || book.bookTitle || 'Untitled Book';
+                    const count = Number(book.quantity || book.copies || book.stock || 1);
+                    return (
+                      <div key={index} className="flex items-center justify-between text-xs py-1.5 border-b border-slate-100 last:border-0">
+                        <span className="font-semibold text-slate-800 truncate max-w-[210px]" title={title}>
+                          {index + 1}. {title}
+                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700">
+                          {count} {count === 1 ? 'vol' : 'vols'}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <BookOpen className="w-6 h-6" />
+            <div className="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+              <span>Catalogued Inventory</span>
+              <Button onClick={() => navigate('/library')} variant="link" className="p-0 h-auto text-xs font-bold text-emerald-600 hover:text-emerald-700">
+                Manage Stock &rarr;
+              </Button>
             </div>
           </Card>
 
