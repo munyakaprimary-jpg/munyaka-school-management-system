@@ -754,7 +754,8 @@ export default function StaffRegistry() {
           <table className="w-full text-left border-collapse min-w-[1200px]">
                       <thead>
                         <tr className="border-b border-slate-150 bg-slate-50/70 text-slate-600 text-xs font-semibold uppercase tracking-wider">
-                          <th className="py-3.5 px-4 min-w-[220px] whitespace-nowrap">Staff Member</th>
+                          <th className="py-3.5 px-4 min-w-[200px] whitespace-nowrap">STAFF MEMBER</th>
+                          <th className="py-3.5 px-3 min-w-[170px] whitespace-nowrap">ASSIGNED ROLE / RBAC</th>
                           <th className="py-3.5 px-3 min-w-[150px] whitespace-nowrap">Contact Info</th>
                           <th className="py-3.5 px-3 min-w-[120px] whitespace-nowrap">Official ID / TSC No.</th>
                           <th className="py-3.5 px-3 min-w-[180px] whitespace-nowrap">Subjects</th>
@@ -767,7 +768,7 @@ export default function StaffRegistry() {
             <tbody className="divide-y divide-slate-100 text-sm text-slate-600">
               {filteredStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                  <td colSpan={9} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <AlertCircle className="w-8 h-8 text-slate-300" />
                       <span className="font-medium text-slate-500">No staff members found matching criteria</span>
@@ -778,12 +779,27 @@ export default function StaffRegistry() {
               ) : (
                 filteredStaff.map((staff, idx) => {
                   const statusConfig = getStatusBadgeConfig(staff.status);
+                  const formatRoleLabel = (roleKey: string) => {
+                    const norm = String(roleKey || '').toLowerCase().trim();
+                    if (norm === 'library_teacher' || norm === 'librarian') return 'Library Teacher';
+                    if (norm === 'ict_teacher' || norm === 'ict') return 'ICT Teacher';
+                    if (norm === 'class_teacher') return 'Class Teacher';
+                    if (norm === 'subject_teacher') return 'Subject Teacher';
+                    if (norm === 'dhoi') return 'Deputy Head of Institution';
+                    if (norm === 'hoi' || norm === 'head_teacher') return 'Head of Institution';
+                    if (norm === 'bursar' || norm === 'accountant') return 'Bursar';
+                    if (norm === 'store_master' || norm === 'storekeeper') return 'Store Master';
+                    if (norm === 'lab_teacher') return 'Lab Teacher';
+                    return roleKey.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                  };
+
                   return (
-                    <tr 
+                    <tr
                       key={staff.id || `staff-${idx}`}
                       className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors duration-150 group"
                     >
-                      <td className="py-3.5 px-4 max-w-[220px]">
+                      {/* Column 1: Staff Name & Avatar */}
+                      <td className="py-3.5 px-4 max-w-[200px]">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
                             {staff.name ? staff.name.split(' ').pop()?.charAt(0) : 'S'}
@@ -792,19 +808,15 @@ export default function StaffRegistry() {
                             <span className="font-semibold text-slate-800 block text-sm group-hover:text-indigo-600 transition-colors truncate" title={staff.name}>
                               {staff.name}
                             </span>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border mt-1 ${
-                                staff.category === 'HOI' || staff.category === 'DHOI'
-                                  ? 'bg-amber-50 text-amber-700 border-amber-150'
-                                  : staff.category === 'Bursar' || staff.category === 'Store Master'
-                                    ? 'bg-slate-50 text-slate-700 border-slate-150'
-                                    : 'bg-indigo-50 text-indigo-700 border-indigo-150'
-                              }`}>
-                                {staff.category || 'Class Teacher'}
-                              </span>
-                            </div>
                           </div>
                         </div>
+                      </td>
+
+                      {/* Column 2: Dedicated Role Badge */}
+                      <td className="py-3.5 px-3 max-w-[170px]">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          {formatRoleLabel(staff.rbacRole || staff.category)}
+                        </span>
                       </td>
 
                       <td className="py-3.5 px-3 max-w-[150px]">
