@@ -21,6 +21,12 @@ export function evaluatePermission(permissionKey: string, user?: SessionUser | n
   const currentUser = user || getCurrentSessionUser();
   if (!currentUser) return false;
 
+  // Explicitly allow Daily Check-In / attendance / staff check-in routes and modules for any authenticated staff member
+  const normKey = String(permissionKey || '').toLowerCase();
+  if (normKey === 'daily_checkin' || normKey === 'attendance' || normKey === '/staff/check-in' || normKey === '/staff-checkin') {
+    return true;
+  }
+
   const role = String(currentUser.role || '').toUpperCase();
   const title = String(currentUser.title || '').toLowerCase();
 

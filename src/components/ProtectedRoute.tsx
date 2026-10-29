@@ -48,7 +48,8 @@ const ProtectedRoute = ({
   let targetModuleKey = moduleKey;
   if (!targetModuleKey) {
     const path = location.pathname;
-    if (path.startsWith('/settings')) targetModuleKey = 'settings';
+    if (path === '/staff/check-in' || path === '/staff-checkin') targetModuleKey = 'daily_checkin';
+    else if (path.startsWith('/settings')) targetModuleKey = 'settings';
     else if (path.startsWith('/fees')) targetModuleKey = 'fees';
     else if (path.startsWith('/assessments') || path.startsWith('/learning-areas') || path.startsWith('/exam-types')) targetModuleKey = 'assessments';
     else if (path.startsWith('/students')) targetModuleKey = 'students';
@@ -61,8 +62,9 @@ const ProtectedRoute = ({
     else if (path.startsWith('/server') || path.startsWith('/system-management') || path.startsWith('/admin/harmonization')) targetModuleKey = 'server';
   }
 
-  // Check RBAC permission matrix for the module
-  const hasRbacPermission = isOwnerOrSuper || isAdmin || !targetModuleKey || roleHasModulePermission(user.role, targetModuleKey);
+  // Check RBAC permission matrix for the module (Daily Check-In & check-in paths are always permitted for any authenticated user)
+  const isCheckInPath = location.pathname === '/staff/check-in' || location.pathname === '/staff-checkin';
+  const hasRbacPermission = isCheckInPath || isOwnerOrSuper || isAdmin || !targetModuleKey || roleHasModulePermission(user.role, targetModuleKey) || targetModuleKey === 'daily_checkin';
 
   if (!hasRbacPermission) {
     const landingPage = getRoleLandingPage(user.role);

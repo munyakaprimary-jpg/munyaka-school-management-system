@@ -243,7 +243,34 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
         { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
     // Staff Attendance
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'ict_technician', 'ict_teacher'] },
+    {
+      key: 'daily_checkin',
+      icon: LogIn,
+      label: 'Daily Check-In',
+      path: '/staff/check-in',
+      allowedRoles: [
+        'admin',
+        'dhoi',
+        'class_teacher',
+        'subject_teacher',
+        'ict_teacher',
+        'lab_teacher',
+        'library_teacher',
+        'tools_inventory_teacher',
+        'support_staff',
+        'staff',
+        'head_teacher',
+        'teacher',
+        'senior_teacher',
+        'bursar',
+        'ict_technician',
+        'secretary',
+        'store_manager',
+        'ict',
+        'owner'
+      ],
+      roles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'support_staff', 'staff', 'head_teacher', 'teacher', 'senior_teacher', 'bursar', 'ict_technician', 'secretary', 'store_manager', 'ict', 'owner']
+    },
     { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher'] },
     { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['admin', 'head_teacher'] },
     // Academic Assessment & Analysis

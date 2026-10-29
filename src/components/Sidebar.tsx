@@ -56,6 +56,7 @@ interface NavItem {
   path: string;
   icon: any;
   moduleKey: string;
+  allowedRoles?: string[];
 }
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
@@ -100,7 +101,33 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Timetable', path: '/timetable', icon: Clock, moduleKey: 'timetable' },
     { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, moduleKey: 'attendance' },
     { name: 'Learner Attendance', path: '/attendance', icon: ClipboardCheck, moduleKey: 'attendance' },
-    { name: 'Daily Check-In', path: '/staff/check-in', icon: LogIn, moduleKey: 'attendance' },
+    {
+      name: 'Daily Check-In',
+      path: '/staff/check-in',
+      icon: LogIn,
+      moduleKey: 'daily_checkin',
+      allowedRoles: [
+        'admin',
+        'dhoi',
+        'class_teacher',
+        'subject_teacher',
+        'ict_teacher',
+        'lab_teacher',
+        'library_teacher',
+        'tools_inventory_teacher',
+        'support_staff',
+        'staff',
+        'head_teacher',
+        'teacher',
+        'senior_teacher',
+        'bursar',
+        'ict_technician',
+        'secretary',
+        'store_manager',
+        'ict',
+        'owner'
+      ]
+    },
     { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, moduleKey: 'assessments' },
     { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText, moduleKey: 'assessments' },
     { name: 'Results Analysis', path: '/analysis', icon: BarChart3, moduleKey: 'reports' },
@@ -116,6 +143,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   // Filter navigation items based on user role and RBAC permission matrix
   const userRole = user?.role || 'TEACHER';
   const navItems = allNavItems.filter(item => {
+    // Daily Check-In is explicitly allowed for all roles
+    if (item.moduleKey === 'daily_checkin' || item.path === '/staff/check-in') {
+      return true;
+    }
     // Admin/Owner always see all
     if (['ADMIN', 'HOI', 'DHOI', 'SUPER_ADMIN', 'OWNER'].includes(String(userRole).toUpperCase())) {
       return true;
