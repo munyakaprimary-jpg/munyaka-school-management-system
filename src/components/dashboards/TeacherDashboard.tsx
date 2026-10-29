@@ -70,24 +70,55 @@ export default function TeacherDashboard() {
     const CIRCULATION_STORAGE_KEY = 'munyaka_library_circulation';
     const ERESOURCES_STORAGE_KEY = 'munyaka_library_eresources';
 
+    const getLibraryBooks = () => {
+      try {
+        const primary = localStorage.getItem(LIBRARY_STORAGE_KEY);
+        if (primary) return JSON.parse(primary);
+
+        const secondary = localStorage.getItem('munyaka_library_inventory');
+        if (secondary) return JSON.parse(secondary);
+
+        const tertiary = localStorage.getItem('library_books');
+        if (tertiary) return JSON.parse(tertiary);
+
+        return [];
+      } catch {
+        return [];
+      }
+    };
+
+    const getLibraryCirculation = () => {
+      try {
+        const primary = localStorage.getItem(CIRCULATION_STORAGE_KEY);
+        if (primary) return JSON.parse(primary);
+
+        const secondary = localStorage.getItem('munyaka_library_loans');
+        if (secondary) return JSON.parse(secondary);
+
+        return [];
+      } catch {
+        return [];
+      }
+    };
+
+    const getLibraryEResources = () => {
+      try {
+        const primary = localStorage.getItem(ERESOURCES_STORAGE_KEY);
+        if (primary) return JSON.parse(primary);
+
+        const secondary = localStorage.getItem('munyaka_study_materials');
+        if (secondary) return JSON.parse(secondary);
+
+        return [];
+      } catch {
+        return [];
+      }
+    };
+
     const loadLibraryData = () => {
-      try {
-        const rawBooks = localStorage.getItem(LIBRARY_STORAGE_KEY) ||
-                         localStorage.getItem('munyaka_library_inventory') || '[]';
-        setBooks(JSON.parse(rawBooks));
-      } catch { setBooks([]); }
-
-      try {
-        const rawCirc = localStorage.getItem(CIRCULATION_STORAGE_KEY) ||
-                        localStorage.getItem('munyaka_library_loans') || '[]';
-        setCirculation(JSON.parse(rawCirc));
-      } catch { setCirculation([]); }
-
-      try {
-        const rawRes = localStorage.getItem(ERESOURCES_STORAGE_KEY) ||
-                       localStorage.getItem('munyaka_study_materials') || '[]';
-        setEResources(JSON.parse(rawRes));
-      } catch { setEResources([]); }
+      setBooks(getLibraryBooks());
+      setCirculation(getLibraryCirculation());
+      setEResources(getLibraryEResources());
     };
 
     React.useEffect(() => {
