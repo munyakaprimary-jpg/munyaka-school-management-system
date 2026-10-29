@@ -443,11 +443,11 @@ export default function Attendance() {
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 p-6 rounded-2xl text-white shadow-xl">
     <div>
-      <div className="flex items-center gap-2 mb-1">
-        <Badge variant="outline" className="bg-white/20 text-white border-white/30 text-xs px-2.5 py-0.5">
+      <div className="flex flex-wrap items-center gap-2 mb-1">
+        <Badge variant="outline" className="bg-white/20 text-white border-white/30 text-xs px-2.5 py-0.5 whitespace-nowrap">
           Teacher Portal
         </Badge>
-        <Badge variant="outline" className="bg-emerald-500/30 text-emerald-100 border-emerald-400/40 text-xs flex items-center gap-1">
+        <Badge variant="outline" className="bg-emerald-500/30 text-emerald-100 border-emerald-400/40 text-xs flex items-center gap-1 whitespace-nowrap">
           <Sparkles className="w-3 h-3" /> Master Directory Sync (`munyaka_learners_db`)
         </Badge>
       </div>
