@@ -409,14 +409,36 @@ export default function StaffRegistry() {
         toast.error("Full name is required");
         return;
       }
-      const teachingCategories = ['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'];
-      const isTeacherRole = teachingCategories.includes(category);
+      
+      const assignedRole = rbacRole || category;
+      const TEACHING_ROLES = [
+        'class_teacher',
+        'subject_teacher',
+        'ict_teacher',
+        'lab_teacher',
+        'library_teacher',
+        'tools_inventory_teacher',
+        'hoi',
+        'dhoi',
+        'admin',
+        'head_teacher',
+        'senior_teacher',
+        'class teacher',
+        'subject teacher',
+        'ict teacher',
+        'lab teacher',
+        'library teacher'
+      ];
+      const isTeachingStaff = TEACHING_ROLES.includes(assignedRole) ||
+                              TEACHING_ROLES.includes(category.toLowerCase()) ||
+                              category.toLowerCase().includes('teacher') ||
+                              category === 'HOI' || category === 'DHOI';
   
-      if (isTeacherRole && !tscNumber.trim()) {
+      if (isTeachingStaff && !tscNumber.trim()) {
         toast.error("Official TSC Number is required for teaching staff");
         return;
       }
-      if (!isTeacherRole && !nationalId.trim()) {
+      if (!isTeachingStaff && !nationalId.trim()) {
         toast.error("Kenyan National ID number is required for support/non-teaching staff");
         return;
       }
@@ -425,25 +447,25 @@ export default function StaffRegistry() {
         ? (email.includes('@') ? email.trim() : `${email.trim()}@munyaka.sc.ke`)
         : `${fullName.toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`;
   
-      const primaryId = isTeacherRole ? tscNumber.trim() : nationalId.trim();
+      const primaryId = isTeachingStaff ? tscNumber.trim() : nationalId.trim();
       const generatedMunId = primaryId ? `MUN-${primaryId}` : `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
-      const rbacRole = mapRoleLabelToRbacKey(category);
+      const rbacRoleKey = mapRoleLabelToRbacKey(category);
       const title = category;
       const staffRecord: StaffMember = {
         id: editingStaff ? editingStaff.id : generatedMunId,
         name: fullName.trim(),
         category,
         title,
-        rbacRole,
+        rbacRole: rbacRoleKey,
         email: fullEmail,
         phone: phone.trim() || '+254 712 345 678',
-        tscNumber: isTeacherRole ? tscNumber.trim() : undefined,
-        nationalId: !isTeacherRole ? nationalId.trim() : undefined,
+        tscNumber: isTeachingStaff ? tscNumber.trim() : undefined,
+        nationalId: !isTeachingStaff ? nationalId.trim() : undefined,
         status,
         accessCode: accessCode || generateRandomCode(),
-        subjects: isTeacherRole ? selectedSubjects : [],
-        assignedClasses: isTeacherRole ? assignedClasses : [],
-        assignedStreams: isTeacherRole ? assignedStreams : [],
+        subjects: isTeachingStaff ? selectedSubjects : [],
+        assignedClasses: isTeachingStaff ? assignedClasses : [],
+        assignedStreams: isTeachingStaff ? assignedStreams : [],
         homeroomGrade: category === 'Class Teacher' ? homeroomGrade : undefined,
         homeroomStream: category === 'Class Teacher' ? homeroomStream : undefined,
         createdAt: editingStaff ? editingStaff.createdAt : new Date().toISOString()
@@ -548,24 +570,39 @@ export default function StaffRegistry() {
       const nonTeachingRoles = ['bursar', 'store_master', 'support_staff', 'accountant', 'sec_admin'];
    
       // Refined condition to determine if staff member is teaching staff
-          // Includes: Teaching, HOI, DHOI, category === 'Teaching', or has TSC number
-          // Excludes: non-teaching roles like Bursar, Store Master, etc.
+          // Using comprehensive TEACHING_ROLES array
           const isTeachingStaff = (staff: StaffMember) => {
-            const category = String(staff.category || '').toLowerCase();
-            const rbacRole = String(staff.rbacRole || '').toLowerCase();
+            const category = String(staff.category || '').toLowerCase().trim();
+            const rbacRole = String(staff.rbacRole || '').toLowerCase().trim();
+            
+            const TEACHING_ROLES = [
+              'class_teacher',
+              'subject_teacher',
+              'ict_teacher',
+              'lab_teacher',
+              'library_teacher',
+              'tools_inventory_teacher',
+              'hoi',
+              'dhoi',
+              'admin',
+              'class teacher',
+              'subject teacher',
+              'ict teacher',
+              'lab teacher',
+              'library teacher'
+            ];
+
+            const assignedRole = rbacRole || category;
+            const isTeaching = TEACHING_ROLES.includes(assignedRole) ||
+                               category.includes('teacher') ||
+                               rbacRole.includes('teacher') ||
+                               category === 'hoi' || category === 'dhoi' ||
+                               rbacRole === 'hoi' || rbacRole === 'dhoi';
+
+            const nonTeachingRoles = ['bursar', 'store_master', 'support_staff', 'accountant', 'sec_admin', 'store master'];
             const isNonTeaching = nonTeachingRoles.includes(category) || nonTeachingRoles.includes(rbacRole);
             
-            return (
-              !isNonTeaching && (
-                staff.category === ('Teaching' as any) ||
-                staff.category === 'HOI' ||
-                staff.category === 'DHOI' ||
-                rbacRole === 'hoi' ||
-                rbacRole === 'dhoi' ||
-                rbacRole === 'admin' ||
-                Boolean(staff.tscNumber && staff.tscNumber.trim() !== '' && staff.tscNumber !== 'N/A')
-              )
-            );
+            return isTeaching && !isNonTeaching;
           };
   const filteredLearningAreasForClasses = useMemo(() => {
     // If no classes selected, show all available learning areas
@@ -1084,16 +1121,94 @@ export default function StaffRegistry() {
 
                 <div>
                   <label className="text-xs font-semibold text-slate-600 block mb-1.5">
-                    {['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'].includes(category) ? 'Official TSC Number *' : 'Kenyan National ID Number *'}
+                    {(() => {
+                      const assignedRole = mapRoleLabelToRbacKey(category) || category.toLowerCase();
+                      const TEACHING_ROLES = [
+                        'class_teacher',
+                        'subject_teacher',
+                        'ict_teacher',
+                        'lab_teacher',
+                        'library_teacher',
+                        'tools_inventory_teacher',
+                        'hoi',
+                        'dhoi',
+                        'admin',
+                        'head_teacher',
+                        'senior_teacher'
+                      ];
+                      const isTeachingStaffRole = TEACHING_ROLES.includes(assignedRole) ||
+                                                  TEACHING_ROLES.includes(category.toLowerCase()) ||
+                                                  category.toLowerCase().includes('teacher') ||
+                                                  category === 'HOI' || category === 'DHOI';
+                      return isTeachingStaffRole ? 'Official TSC Number *' : 'Kenyan National ID Number *';
+                    })()}
                   </label>
                   <div className="relative">
                     <Award className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder={['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'].includes(category) ? 'e.g. 327775' : 'e.g. 31452981'}
-                      value={['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'].includes(category) ? tscNumber : nationalId}
+                      placeholder={(() => {
+                        const assignedRole = mapRoleLabelToRbacKey(category) || category.toLowerCase();
+                        const TEACHING_ROLES = [
+                          'class_teacher',
+                          'subject_teacher',
+                          'ict_teacher',
+                          'lab_teacher',
+                          'library_teacher',
+                          'tools_inventory_teacher',
+                          'hoi',
+                          'dhoi',
+                          'admin',
+                          'head_teacher',
+                          'senior_teacher'
+                        ];
+                        const isTeachingStaffRole = TEACHING_ROLES.includes(assignedRole) ||
+                                                    TEACHING_ROLES.includes(category.toLowerCase()) ||
+                                                    category.toLowerCase().includes('teacher') ||
+                                                    category === 'HOI' || category === 'DHOI';
+                        return isTeachingStaffRole ? 'e.g. 327775' : 'e.g. 31452981';
+                      })()}
+                      value={(() => {
+                        const assignedRole = mapRoleLabelToRbacKey(category) || category.toLowerCase();
+                        const TEACHING_ROLES = [
+                          'class_teacher',
+                          'subject_teacher',
+                          'ict_teacher',
+                          'lab_teacher',
+                          'library_teacher',
+                          'tools_inventory_teacher',
+                          'hoi',
+                          'dhoi',
+                          'admin',
+                          'head_teacher',
+                          'senior_teacher'
+                        ];
+                        const isTeachingStaffRole = TEACHING_ROLES.includes(assignedRole) ||
+                                                    TEACHING_ROLES.includes(category.toLowerCase()) ||
+                                                    category.toLowerCase().includes('teacher') ||
+                                                    category === 'HOI' || category === 'DHOI';
+                        return isTeachingStaffRole ? tscNumber : nationalId;
+                      })()}
                       onChange={(e) => {
-                        if (['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'].includes(category)) {
+                        const assignedRole = mapRoleLabelToRbacKey(category) || category.toLowerCase();
+                        const TEACHING_ROLES = [
+                          'class_teacher',
+                          'subject_teacher',
+                          'ict_teacher',
+                          'lab_teacher',
+                          'library_teacher',
+                          'tools_inventory_teacher',
+                          'hoi',
+                          'dhoi',
+                          'admin',
+                          'head_teacher',
+                          'senior_teacher'
+                        ];
+                        const isTeachingStaffRole = TEACHING_ROLES.includes(assignedRole) ||
+                                                    TEACHING_ROLES.includes(category.toLowerCase()) ||
+                                                    category.toLowerCase().includes('teacher') ||
+                                                    category === 'HOI' || category === 'DHOI';
+                        if (isTeachingStaffRole) {
                           setTscNumber(e.target.value);
                         } else {
                           setNationalId(e.target.value);
@@ -1104,9 +1219,29 @@ export default function StaffRegistry() {
                     />
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">
-                    {['Class Teacher', 'Subject Teacher', 'Senior Teacher', 'Head Teacher'].includes(category)
-                      ? 'Official Teachers Service Commission (TSC) registration number.'
-                      : 'Official Kenyan National ID number for non-teaching staff.'}
+                    {(() => {
+                      const assignedRole = mapRoleLabelToRbacKey(category) || category.toLowerCase();
+                      const TEACHING_ROLES = [
+                        'class_teacher',
+                        'subject_teacher',
+                        'ict_teacher',
+                        'lab_teacher',
+                        'library_teacher',
+                        'tools_inventory_teacher',
+                        'hoi',
+                        'dhoi',
+                        'admin',
+                        'head_teacher',
+                        'senior_teacher'
+                      ];
+                      const isTeachingStaffRole = TEACHING_ROLES.includes(assignedRole) ||
+                                                  TEACHING_ROLES.includes(category.toLowerCase()) ||
+                                                  category.toLowerCase().includes('teacher') ||
+                                                  category === 'HOI' || category === 'DHOI';
+                      return isTeachingStaffRole
+                        ? 'Official Teachers Service Commission (TSC) registration number.'
+                        : 'Official Kenyan National ID number for non-teaching staff.';
+                    })()}
                   </p>
                 </div>
 
