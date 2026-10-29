@@ -50,36 +50,32 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const getInventoryItems = () => {
-    const keys = [
-      'munyaka_library_inventory',
-      'munyaka_library_books',
-      'library_inventory',
-      'library_books'
-    ];
-    for (const key of keys) {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        } catch {}
+  // 1. Direct synchronous getter for live inventory
+  const getMasterInventory = (): any[] => {
+    try {
+      const keys = ['munyaka_library_inventory', 'munyaka_library_books', 'library_inventory'];
+      for (const k of keys) {
+        const str = localStorage.getItem(k);
+        if (str) {
+          const parsed = JSON.parse(str);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
       }
+    } catch (err) {
+      console.error('Failed reading inventory:', err);
     }
     return [];
   };
 
   useEffect(() => {
     if (isOpen) {
-      const items = getInventoryItems();
+      const stock = getMasterInventory();
       if (initialBook) {
         setSelectedBook(initialBook);
         setItemSearchQuery(initialBook.title || initialBook.name || initialBook.bookTitle || '');
-      } else if (items.length > 0) {
-        setSelectedBook(items[0]);
-        setItemSearchQuery(items[0].title || items[0].name || items[0].bookTitle || '');
+      } else if (stock.length > 0) {
+        setSelectedBook(stock[0]);
+        setItemSearchQuery(stock[0].title || stock[0].name || stock[0].bookTitle || '');
       } else {
         setSelectedBook(null);
         setItemSearchQuery('');
@@ -89,12 +85,12 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 
   if (!isOpen) return null;
 
-  const rawItems = getInventoryItems();
-  const searchFilteredItems = rawItems.filter((item: any) => {
-    const title = String(item.title || item.name || item.bookTitle || '').toLowerCase();
-    const category = String(item.category || item.type || '').toLowerCase();
-    const query = itemSearchQuery.toLowerCase();
-    return title.includes(query) || category.includes(query);
+  // 2. Filter dynamically based on search query
+  const masterStock = getMasterInventory();
+  const searchMatches = masterStock.filter((item: any) => {
+    const title = (item.title || item.name || item.bookTitle || '').toString().toLowerCase();
+    const query = (itemSearchQuery || '').toString().toLowerCase().trim();
+    return query === '' || title.includes(query);
   });
 
   const stockCount = Number(selectedBook?.quantity ?? selectedBook?.copies ?? selectedBook?.stock ?? 10);
@@ -205,10 +201,10 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 
             {isItemDropdownOpen && (
               <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
-                {searchFilteredItems.length === 0 ? (
+                {searchMatches.length === 0 ? (
                   <div className="px-4 py-3 text-sm text-gray-500 italic">No matching books found in inventory.</div>
                 ) : (
-                  searchFilteredItems.map((book: any, idx: number) => {
+                  searchMatches.map((book: any, idx: number) => {
                     const title = book.title || book.name || book.bookTitle || 'Untitled';
                     const avail = Number(book.quantity || book.copies || book.stock || 1);
                     return (
@@ -219,13 +215,13 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
                           setItemSearchQuery(title);
                           setIsItemDropdownOpen(false);
                         }}
-                        className="px-4 py-2.5 hover:bg-emerald-50 cursor-pointer text-xs border-b border-gray-100 last:border-0 flex items-center justify-between"
+                        className="px-4 py-2.5 hover:bg-emerald-50 cursor-pointer text-sm border-b border-gray-100 last:border-0 flex items-center justify-between"
                       >
                         <div>
                           <p className="font-semibold text-gray-800">{title}</p>
-                          <p className="text-[11px] text-gray-500">{book.category || book.type || 'General'} • ISBN: {book.isbn || 'N/A'}</p>
+                          <p className="text-xs text-gray-500">{book.category || book.type || 'General'} • ISBN: {book.isbn || 'N/A'}</p>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
                           {avail} Avail
                         </span>
                       </div>
