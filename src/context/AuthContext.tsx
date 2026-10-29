@@ -580,7 +580,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                                         rawRole.includes('ACCOUNTANT') ? 'accountant' :
                                         rawRole.includes('DRIVER') ? 'driver' : 'staff';
 
-        const loggedUser: User = {
+        const loggedUser: any = {
           id: matchedStaff.id || matchedStaff.staffId || 'staff-' + Date.now(),
           name: matchedStaff.name || matchedStaff.fullName || 'Staff Member',
           email: matchedStaff.email || `${cleanInput}@munyaka.sc.ke`,
