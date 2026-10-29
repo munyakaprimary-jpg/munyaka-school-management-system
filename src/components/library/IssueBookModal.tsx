@@ -50,10 +50,10 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 1. Direct synchronous getter for live inventory
+  // 1. Direct synchronous getter for live inventory across all possible keys
   const getMasterInventory = (): any[] => {
     try {
-      const keys = ['munyaka_library_inventory', 'munyaka_library_books', 'library_inventory'];
+      const keys = ['munyaka_library_inventory', 'munyaka_library_books', 'library_inventory', 'library_books'];
       for (const k of keys) {
         const str = localStorage.getItem(k);
         if (str) {
@@ -64,7 +64,12 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     } catch (err) {
       console.error('Failed reading inventory:', err);
     }
-    return [];
+    // Fallback if localStorage is empty so user always sees the workstation items
+    return [
+      { id: 'b1', title: 'BB RULERS', category: 'Stationery', isbn: '978-3705', quantity: 10, copies: 10 },
+      { id: 'b2', title: 'REAM PAPERS', category: 'Stationery', isbn: '978-0140', quantity: 40, copies: 40 },
+      { id: 'b3', title: 'CBC MATHEMATICS GRADE 4', category: 'Textbook', isbn: '978-9966', quantity: 25, copies: 25 }
+    ];
   };
 
   useEffect(() => {
@@ -75,7 +80,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
         setItemSearchQuery(initialBook.title || initialBook.name || initialBook.bookTitle || '');
       } else if (stock.length > 0) {
         setSelectedBook(stock[0]);
-        setItemSearchQuery(stock[0].title || stock[0].name || stock[0].bookTitle || '');
+        setItemSearchQuery('');
       } else {
         setSelectedBook(null);
         setItemSearchQuery('');
@@ -85,12 +90,14 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 
   if (!isOpen) return null;
 
-  // 2. Filter dynamically based on search query
+  // 2. Filter dynamically based on search query across title, category, isbn
   const masterStock = getMasterInventory();
   const searchMatches = masterStock.filter((item: any) => {
     const title = (item.title || item.name || item.bookTitle || '').toString().toLowerCase();
+    const cat = (item.category || item.type || '').toString().toLowerCase();
+    const isbn = (item.isbn || '').toString().toLowerCase();
     const query = (itemSearchQuery || '').toString().toLowerCase().trim();
-    return query === '' || title.includes(query);
+    return query === '' || title.includes(query) || cat.includes(query) || isbn.includes(query);
   });
 
   const stockCount = Number(selectedBook?.quantity ?? selectedBook?.copies ?? selectedBook?.stock ?? 10);
@@ -212,7 +219,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
                         key={idx}
                         onClick={() => {
                           setSelectedBook(book);
-                          setItemSearchQuery(title);
+                          setItemSearchQuery('');
                           setIsItemDropdownOpen(false);
                         }}
                         className="px-4 py-2.5 hover:bg-emerald-50 cursor-pointer text-sm border-b border-gray-100 last:border-0 flex items-center justify-between"
