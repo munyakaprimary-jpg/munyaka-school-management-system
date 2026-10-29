@@ -182,7 +182,7 @@ export default function TeacherDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
             <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Titles & Volumes</p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">TOTAL BOOK STOCK</p>
               <h3 className="text-3xl font-black text-slate-900">{totalTitles} <span className="text-sm font-medium text-slate-400">({totalVolumes} vols)</span></h3>
               <p className="text-xs text-emerald-600 font-bold">Catalogued Inventory</p>
             </div>
