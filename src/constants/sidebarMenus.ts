@@ -175,13 +175,13 @@ export const APP_SIDEBAR_MENUS: SidebarMenuItem[] = [
     allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin']
   },
   {
-    key: 'daily_checkin',
-    name: 'Daily Check-In',
-    path: '/portal/attendance',
-    iconName: 'LogIn',
-    moduleKey: 'attendance',
-    allowedRoles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin', 'staff', 'teacher']
-  },
+      key: 'daily_checkin',
+      name: 'Daily Check-In',
+      path: '/portal/attendance',
+      iconName: 'LogIn',
+      moduleKey: 'attendance',
+      allowedRoles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin']
+    },
   {
     key: 'attendance_monitor',
     name: 'Attendance Monitor',
