@@ -738,23 +738,45 @@ export default function Attendance() {
               <div className="inline-flex rounded-lg p-1 bg-slate-200/80 border border-slate-300 w-full h-9">
                 <button
                   type="button"
-                  onClick={() => setActiveSession('morning')}
+                  onClick={() => {
+                    const parseTimeToMinutes = (timeStr: string) => {
+                      const [hours, minutes] = (timeStr || '09:40').split(':').map(Number);
+                      return (isNaN(hours) ? 9 : hours) * 60 + (isNaN(minutes) ? 40 : minutes);
+                    };
+                    const now = new Date();
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                    const morningCutoffMins = parseTimeToMinutes(morningCutoffTime);
+                    const isMorningLocked = currentMinutes >= morningCutoffMins && !bypassCutoff && !manualMorningLock;
+                    if (isMorningLocked && (!isAdmin || !bypassCutoff)) {
+                      toast.error(`Session is locked based on the configured cutoff time (${morningCutoffTime})`);
+                      return;
+                    }
+                    setActiveSession('morning');
+                  }}
                   className={`flex-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     activeSession === 'morning'
                       ? 'bg-emerald-600 text-white shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  } ${morningLocked && (!isAdmin || !bypassCutoff) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  title={morningLocked && (!isAdmin || !bypassCutoff) ? `Session is locked based on the configured cutoff time (${morningCutoffTime})` : ''}
                 >
                   <Clock className="w-3.5 h-3.5" />
+                  {morningLocked && (!isAdmin || !bypassCutoff) ? <Lock className="w-3 h-3 ml-1" /> : null}
                   Morning Roll Call
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    const currentHour = new Date().getHours();
-                    const isAfternoonLocked = currentHour >= 15 || afternoonLocked;
+                    const parseTimeToMinutes = (timeStr: string) => {
+                      const [hours, minutes] = (timeStr || '15:00').split(':').map(Number);
+                      return (isNaN(hours) ? 15 : hours) * 60 + (isNaN(minutes) ? 0 : minutes);
+                    };
+                    const now = new Date();
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                    const afternoonCutoffMins = parseTimeToMinutes(afternoonCutoffTime);
+                    const isAfternoonLocked = currentMinutes >= afternoonCutoffMins && !bypassCutoff && !manualAfternoonLock;
                     if (isAfternoonLocked && (!isAdmin || !bypassCutoff)) {
-                      toast.error('Afternoon roll call is locked after 15:00');
+                      toast.error(`Session is locked based on the configured cutoff time (${afternoonCutoffTime})`);
                       return;
                     }
                     setActiveSession('afternoon');
@@ -763,11 +785,11 @@ export default function Attendance() {
                     activeSession === 'afternoon'
                       ? 'bg-indigo-600 text-white shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
-                  } ${(new Date().getHours() >= 15 || afternoonLocked) && (!isAdmin || !bypassCutoff) ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  title={(new Date().getHours() >= 15 || afternoonLocked) && (!isAdmin || !bypassCutoff) ? 'Afternoon roll call is locked after 15:00' : ''}
+                  } ${afternoonLocked && (!isAdmin || !bypassCutoff) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  title={afternoonLocked && (!isAdmin || !bypassCutoff) ? `Session is locked based on the configured cutoff time (${afternoonCutoffTime})` : ''}
                 >
                   <Clock className="w-3.5 h-3.5" />
-                  {(new Date().getHours() >= 15 || afternoonLocked) && (!isAdmin || !bypassCutoff) ? <Lock className="w-3 h-3 ml-1" /> : null}
+                  {afternoonLocked && (!isAdmin || !bypassCutoff) ? <Lock className="w-3 h-3 ml-1" /> : null}
                   Afternoon Roll Call
                 </button>
               </div>
