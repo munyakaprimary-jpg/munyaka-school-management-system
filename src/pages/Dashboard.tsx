@@ -11,13 +11,21 @@ import { isTeacherRole } from "@/utils/roleHelper";
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   
-  const userRole = user?.role || '';
+  const storedUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+
+  const userRole = storedUser.rbacRole || storedUser.role || user?.role || '';
   const roleLower = String(userRole).toLowerCase().trim();
   const resolvedR = resolveRole(userRole);
 
-  const isLibrarian = roleLower.includes('librarian') || roleLower.includes('library') || resolvedR === 'librarian' || resolvedR === 'library_teacher';
+  const isLibrarian = roleLower.includes('librarian') || roleLower.includes('library') || resolvedR === 'librarian' || resolvedR === 'library_teacher' || roleLower === 'library_teacher';
   if (isLibrarian && !roleLower.includes('admin')) {
-    return <LibrarianPortalView />;
+    return <TeacherDashboard />;
   }
 
   const isIctTechnician = roleLower === 'ict_technician' || roleLower === 'ict_teacher' || roleLower.includes('ict') || resolvedR === 'ict_technician' || resolvedR === 'ict_teacher';
