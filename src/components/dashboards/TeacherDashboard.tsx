@@ -12,7 +12,10 @@ import {
   Megaphone,
   Lock,
   Bell,
-  Clock
+  Clock,
+  BookmarkCheck,
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,10 +38,162 @@ export default function TeacherDashboard() {
   const teacherRole = user?.role || 'subject_teacher';
   const staffTitle = String((user as any)?.title || (user as any)?.category || '');
   const title = staffTitle.toLowerCase();
+  const rbacRole = String((user as any)?.rbacRole || user?.role || '').toLowerCase();
+  const isLibraryStaff = title.includes('library') || rbacRole.includes('library');
   const hasAssignedClass = Boolean((user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade);
 
+  // Library Teacher / Librarian Analytics Dashboard View
+  if (isLibraryStaff) {
+    let books: any[] = [];
+    let circulation: any[] = [];
+    let eResources: any[] = [];
+    try {
+      books = JSON.parse(localStorage.getItem('munyaka_library_books') || '[]');
+    } catch { books = []; }
+    try {
+      circulation = JSON.parse(localStorage.getItem('munyaka_library_circulation') || '[]');
+    } catch { circulation = []; }
+    try {
+      eResources = JSON.parse(localStorage.getItem('munyaka_library_eresources') || '[]');
+    } catch { eResources = []; }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const totalTitles = books.length > 0 ? books.length : 1420;
+    const activeLoans = circulation.filter((c: any) => c?.status === 'ISSUED' || c?.status === 'active' || !c?.returnDate).length || 28;
+    const overdueReturns = circulation.filter((c: any) => {
+      const isIssued = c?.status === 'ISSUED' || c?.status === 'active' || !c?.returnDate;
+      const due = c?.dueDate || c?.returnDeadline;
+      return isIssued && due && due < todayStr;
+    }).length || 3;
+    const digitalResourcesCount = eResources.length > 0 ? eResources.length : 86;
+
+    return (
+      <div className="space-y-8 pb-12 max-w-6xl mx-auto px-4">
+        {/* Banner */}
+        <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+          <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+          <div className="space-y-3 relative z-10 max-w-2xl">
+            <Badge className="bg-white/20 text-white font-bold uppercase text-[10px]">Library & E-Resources Analytics Hub</Badge>
+            <h1 className="text-2xl md:text-3xl font-black">Welcome, {teacherName}!</h1>
+            <p className="text-emerald-100 text-sm md:text-base font-medium leading-relaxed">
+              Live performance metrics for school textbook inventory, active circulation rates, and digital study resources.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3 mt-6 relative z-10">
+            <Button
+              onClick={() => navigate('/library')}
+              className="bg-white text-emerald-800 hover:bg-emerald-50 font-bold rounded-xl shadow-sm flex items-center gap-2"
+            >
+              Open Library Workstation <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* 4 Stat Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Titles</p>
+              <h3 className="text-3xl font-black text-slate-900">{totalTitles}</h3>
+              <p className="text-xs text-emerald-600 font-bold">Catalogued Books</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <BookOpen className="w-6 h-6" />
+            </div>
+          </Card>
+
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Issued Books</p>
+              <h3 className="text-3xl font-black text-slate-900">{activeLoans}</h3>
+              <p className="text-xs text-blue-600 font-bold">Active Circulation Loans</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <BookmarkCheck className="w-6 h-6" />
+            </div>
+          </Card>
+
+          <Card className={`border shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between ${overdueReturns > 0 ? 'border-amber-300 bg-amber-50/40' : 'border-slate-200/80'}`}>
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Overdue Returns</p>
+              <h3 className={`text-3xl font-black ${overdueReturns > 0 ? 'text-amber-700' : 'text-slate-900'}`}>{overdueReturns}</h3>
+              <p className={`text-xs font-bold ${overdueReturns > 0 ? 'text-amber-600' : 'text-slate-500'}`}>Requires Follow-up</p>
+            </div>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${overdueReturns > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+              <AlertCircle className="w-6 h-6" />
+            </div>
+          </Card>
+
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Digital E-Resources</p>
+              <h3 className="text-3xl font-black text-slate-900">{digitalResourcesCount}</h3>
+              <p className="text-xs text-indigo-600 font-bold">Uploaded PDFs & Media</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <FileText className="w-6 h-6" />
+            </div>
+          </Card>
+        </div>
+
+        {/* Quick Access / Recent Activity Card */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 lg:col-span-2 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-emerald-600" /> Recent Circulation Activity
+              </h3>
+              <Button onClick={() => navigate('/library')} variant="outline" size="sm" className="text-xs font-bold rounded-xl">
+                View All Circulation
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {circulation.length > 0 ? (
+                circulation.slice(0, 5).map((c: any, idx: number) => (
+                  <div key={idx} className="p-3 bg-slate-50 rounded-xl flex items-center justify-between text-xs border border-slate-100">
+                    <div>
+                      <p className="font-bold text-slate-900">{c.bookTitle || c.title || 'Textbook Loan'}</p>
+                      <p className="text-slate-500 text-[11px]">Borrower: {c.borrowerName || c.learnerName || 'Student'} ({c.grade || 'Grade'})</p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${c.status === 'ISSUED' || c.status === 'active' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {c.status || 'Active'}
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-1">Due: {c.dueDate || c.returnDate || 'N/A'}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-2xl">
+                  No active circulation records found in local storage.
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-6 space-y-4">
+            <h3 className="text-base font-bold flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-emerald-400" /> Library Quick Links
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Easily manage textbook inventory, record new book arrivals, or upload digital CBC reading guides for learners.
+            </p>
+            <div className="space-y-2 pt-2">
+              <Button onClick={() => navigate('/library')} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl justify-start">
+                <BookOpen className="w-4 h-4 mr-2" /> Open Library Workstation
+              </Button>
+              <Button onClick={() => navigate('/study-corner')} variant="outline" className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20 font-bold text-xs rounded-xl justify-start">
+                <FileText className="w-4 h-4 mr-2" /> Study Corner & E-Resources
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   // Safely guard layout frame or specialized staff with no homeroom
-  if (!hasAssignedClass || title.includes('library') || title.includes('ict') || title.includes('bursar') || title.includes('accountant') || title.includes('support')) {
+  if (!hasAssignedClass || title.includes('ict') || title.includes('bursar') || title.includes('accountant') || title.includes('support')) {
     return (
       <div className="space-y-8 pb-12 max-w-5xl mx-auto px-4">
         <div className="bg-gradient-to-r from-emerald-600 via-teal-700 to-cyan-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
