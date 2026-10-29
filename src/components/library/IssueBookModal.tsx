@@ -1,291 +1,255 @@
-"use client";
+import React, { useState } from 'react';
+import { X, BookOpen, User, Calendar, Hash, ShieldCheck, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/components/ui/use-toast';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Modal from '@/components/ui/Modal';
-import { BookOpen, AlertCircle, Loader2, Calendar, Plus, Minus } from 'lucide-react';
-import { Book } from '@/types/library';
-
-interface IssueBookModalProps {
+export interface IssueBookModalProps {
   isOpen: boolean;
   onClose: () => void;
-  book: Book | null;
-  onIssueBook: (bookId: string, borrowerName: string, borrowerType: 'Student' | 'Staff', dueDate: string, quantity: number, grade?: string, stream?: string) => Promise<void>;
+  book?: {
+    id?: string;
+    title?: string;
+    category?: string;
+    isbn?: string;
+    quantity?: number;
+    copies?: number;
+    stock?: number;
+    borrowed?: number;
+  } | null;
+  onIssueBook?: (bookId: string, borrowerName: string, borrowerType: 'Student' | 'Staff', dueDate: string, quantity: number, grade?: string, stream?: string) => Promise<void>;
+  onConfirmIssue?: (issueData: any) => void;
+  onSuccess?: () => void;
 }
 
 export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   isOpen,
   onClose,
   book,
-  onIssueBook
+  onIssueBook,
+  onConfirmIssue,
+  onSuccess
 }) => {
-  const [borrowerName, setBorrowerName] = useState("");
-  const [borrowerType, setBorrowerType] = useState<'Student' | 'Staff'>("Student");
-  const [selectedGrade, setSelectedGrade] = useState("");
-  const [selectedStream, setSelectedStream] = useState("");
-  const [quantity, setQuantity] = useState<number>(1);
-  
-  // Default due date to 14 days from today
-  const defaultDueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const [dueDate, setDueDate] = useState(defaultDueDate);
-  
+  const [borrowerName, setBorrowerName] = useState('');
+  const [borrowerType, setBorrowerType] = useState<'Student' | 'Staff'>('Student');
+  const [grade, setGrade] = useState('Grade 4');
+  const [stream, setStream] = useState('Blue');
+  const [dueDate, setDueDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    return d.toISOString().split('T')[0];
+  });
+  const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
 
-  const availableCopies = book ? Math.max(0, book.stock - book.borrowed) : 0;
+  if (!isOpen) return null;
 
-  // Generate grades range from PP1 to Grade 9
-  const gradeOptions = useMemo(() => [
-    "PP1", "PP2",
-    ...Array.from({ length: 9 }, (_, i) => `Grade ${i + 1}`)
-  ], []);
-
-  const streamOptions = useMemo(() => ["Blue", "Green", "Yellow", "Alpha", "Beta"], []);
-
-  useEffect(() => {
-    if (isOpen) {
-      setBorrowerName("");
-      setBorrowerType("Student");
-      setSelectedGrade("");
-      setSelectedStream("");
-      setQuantity(1);
-      setDueDate(defaultDueDate);
-      setErrorMsg("");
-      setIsSubmitting(false);
-    }
-  }, [isOpen, defaultDueDate]);
-
-  if (!book) return null;
-
-  const handleDecreaseQuantity = () => {
-    setQuantity(prev => Math.max(1, prev - 1));
-    setErrorMsg("");
-  };
-
-  const handleIncreaseQuantity = () => {
-    setQuantity(prev => Math.min(availableCopies, prev + 1));
-    setErrorMsg("");
-  };
-
-  const handleQuantityInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value, 10);
-    if (isNaN(val)) {
-      setQuantity(1);
-    } else {
-      setQuantity(Math.max(1, Math.min(availableCopies, val)));
-    }
-    setErrorMsg("");
-  };
+  const stockCount = Number(book?.quantity ?? book?.copies ?? book?.stock ?? 10);
+  const borrowedCount = Number(book?.borrowed ?? 0);
+  const availableCopies = Math.max(0, stockCount - borrowedCount);
+  const bookTitle = String(book?.title || 'Selected Textbook');
+  const bookCategory = String(book?.category || 'General Inventory');
+  const bookIsbn = String(book?.isbn || 'N/A');
+  const bookId = String(book?.id || `book_${Date.now()}`);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(borrowerName || '').trim()) {
-      setErrorMsg("Please enter the name of the borrower.");
-      return;
-    }
-
-    if (borrowerType === 'Student' && (!selectedGrade || !selectedStream)) {
-      setErrorMsg("Please select both a class grade and stream.");
-      return;
-    }
-
-    if (availableCopies <= 0) {
-      setErrorMsg("No copies available for issue.");
+    if (!borrowerName.trim()) {
+      toast({ title: 'Error', description: 'Please enter the borrower name.', variant: 'destructive' });
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMsg("");
-
     try {
-      await onIssueBook(book.id, String(borrowerName || '').trim(), borrowerType, dueDate, quantity, selectedGrade, selectedStream);
+      const issueData = {
+        bookId,
+        bookTitle,
+        borrowerName: borrowerName.trim(),
+        borrowerType,
+        dueDate,
+        quantity: Number(quantity),
+        grade,
+        stream,
+        status: 'ISSUED',
+        issuedDate: new Date().toISOString().split('T')[0]
+      };
+
+      if (onConfirmIssue) {
+        onConfirmIssue(issueData);
+      }
+      if (onIssueBook) {
+        await onIssueBook(bookId, borrowerName.trim(), borrowerType, dueDate, Number(quantity), grade, stream);
+      }
+
+      // Persist in localStorage circulation log
+      try {
+        const rawCirc = localStorage.getItem('munyaka_library_circulation') || localStorage.getItem('munyaka_library_loans') || '[]';
+        const circList = JSON.parse(rawCirc);
+        circList.unshift({
+          id: `circ_${Date.now()}`,
+          ...issueData
+        });
+        localStorage.setItem('munyaka_library_circulation', JSON.stringify(circList));
+        localStorage.setItem('munyaka_library_loans', JSON.stringify(circList));
+      } catch (err) {
+        console.error('Error saving circulation record:', err);
+      }
+
+      toast({ title: 'Success', description: `Successfully issued "${bookTitle}" to ${borrowerName.trim()}` });
+      if (onSuccess) onSuccess();
       onClose();
-    } catch (err) {
-      setErrorMsg("Failed to process book checkout.");
+    } catch (err: any) {
+      toast({ title: 'Error', description: err?.message || 'Failed to issue book.', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Issue Library Book"
-      description={`Checkout "${book.title}" to a learner or staff member.`}
-      maxWidth="max-w-xl"
-      footer={
-        <div className="flex justify-end gap-2 w-full">
-          <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="rounded-xl font-bold">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isSubmitting || availableCopies <= 0}
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="animate-spin" size={16} /> Processing...
-              </>
-            ) : (
-              <>
-                <BookOpen size={16} /> Issue {quantity} Copy{quantity > 1 ? 'ies' : ''}
-              </>
-            )}
-          </Button>
-        </div>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {errorMsg && (
-          <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-            <AlertCircle size={16} className="shrink-0" /> {errorMsg}
-          </div>
-        )}
-
-        {/* Selected Book Summary Card */}
-        <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 flex items-center justify-between">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-150 w-full max-w-lg overflow-hidden animate-slide-up flex flex-col">
+        {/* Header */}
+        <div className="p-5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-indigo-900">{book.title}</p>
-            <p className="text-xs font-bold text-slate-500 mt-0.5">{book.author} • ISBN: {book.isbn}</p>
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-emerald-600" /> Issue Textbook / Item
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">Record a circulation loan to a student or staff member.</p>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-xl font-black text-indigo-700">{availableCopies}</p>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">In Stock</p>
-          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full border border-slate-200 hover:border-slate-300 flex items-center justify-center text-slate-400 hover:text-slate-600 bg-white transition-all text-lg font-medium"
+          >
+            &times;
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-5">
-          
-          {/* 1. Borrower Name (Full Width) */}
-          <div className="space-y-1.5 md:col-span-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Borrower Name</Label>
-            <Input 
-              value={borrowerName} 
-              onChange={e => { setBorrowerName(e.target.value); setErrorMsg(""); }}
-              placeholder="e.g. Brian Kiptoo"
-              className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-900"
-              autoFocus
-            />
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Selected Book Banner */}
+          <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Selected Book</span>
+              <h4 className="text-base font-bold text-slate-900 mt-0.5">{bookTitle}</h4>
+              <p className="text-xs text-slate-600 mt-0.5">{bookCategory} • ISBN: {bookIsbn}</p>
+            </div>
+            <div className="text-right">
+              <span className="text-lg font-black text-emerald-700">{availableCopies}</span>
+              <span className="text-[10px] text-emerald-600 font-bold block uppercase">Available</span>
+            </div>
           </div>
 
-          {/* 2. Borrower Type */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Borrower Type</Label>
-            <Select value={borrowerType} onValueChange={(val: 'Student' | 'Staff') => {
-              setBorrowerType(val);
-              if (val !== 'Student') {
-                setSelectedGrade("");
-                setSelectedStream("");
-              }
-              setErrorMsg("");
-            }}>
-              <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="Student">Student / Learner</SelectItem>
-                <SelectItem value="Staff">Staff Member</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 3. Conditional Class / Grade */}
-          {borrowerType === 'Student' ? (
-            <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade</Label>
-                <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                  <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
-                    <SelectValue placeholder="Grade..." />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl">
-                    {gradeOptions.map(grade => (
-                      <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Stream</Label>
-                <Select value={selectedStream} onValueChange={setSelectedStream}>
-                  <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
-                    <SelectValue placeholder="Stream..." />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl">
-                    {streamOptions.map(stream => (
-                      <SelectItem key={stream} value={stream}>{stream}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          ) : (
-            <div className="hidden md:block" />
-          )}
-
-          {/* 4. Quantity Stepper */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Quantity</Label>
-              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
-                Max: {availableCopies}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleDecreaseQuantity}
-                disabled={quantity <= 1 || availableCopies <= 0}
-                className="h-12 w-12 rounded-xl border-slate-200 shrink-0 hover:bg-slate-100"
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 mb-1">Borrower Type</Label>
+              <select
+                value={borrowerType}
+                onChange={(e) => setBorrowerType(e.target.value as any)}
+                className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               >
-                <Minus size={16} />
-              </Button>
-              
-              <Input 
+                <option value="Student">Student (Learner)</option>
+                <option value="Staff">Staff Member</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold text-slate-600 mb-1">Quantity</Label>
+              <Input
                 type="number"
                 min={1}
-                max={availableCopies}
+                max={Math.max(1, availableCopies)}
                 value={quantity}
-                onChange={handleQuantityInputChange}
-                disabled={availableCopies <= 0}
-                className="h-12 rounded-xl bg-slate-50 border-none font-black text-center text-base"
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                className="w-full border-slate-200 rounded-xl text-sm"
               />
-              
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleIncreaseQuantity}
-                disabled={quantity >= availableCopies || availableCopies <= 0}
-                className="h-12 w-12 rounded-xl border-slate-200 shrink-0 hover:bg-slate-100"
-              >
-                <Plus size={16} />
-              </Button>
             </div>
           </div>
 
-          {/* 5. Return Due Date */}
-          <div className="space-y-1.5 md:col-span-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Return Due Date</Label>
+          <div>
+            <Label className="text-xs font-semibold text-slate-600 mb-1">Borrower Full Name <span className="text-rose-500">*</span></Label>
             <div className="relative">
-              <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input 
-                type="date"
-                value={dueDate}
-                onChange={e => setDueDate(e.target.value)}
-                className="h-12 pl-10 rounded-xl bg-slate-50 border-none font-bold"
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                type="text"
+                required
+                placeholder={borrowerType === 'Student' ? 'e.g. Brian Kiprop' : 'e.g. Mr. Omwamba'}
+                value={borrowerName}
+                onChange={(e) => setBorrowerName(e.target.value)}
+                className="pl-9 border-slate-200 rounded-xl text-sm"
               />
             </div>
           </div>
 
-        </div>
-      </form>
-    </Modal>
+          {borrowerType === 'Student' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-semibold text-slate-600 mb-1">Grade / Class</Label>
+                <select
+                  value={grade}
+                  onChange={(e) => setGrade(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none"
+                >
+                  <option value="Grade 1">Grade 1</option>
+                  <option value="Grade 2">Grade 2</option>
+                  <option value="Grade 3">Grade 3</option>
+                  <option value="Grade 4">Grade 4</option>
+                  <option value="Grade 5">Grade 5</option>
+                  <option value="Grade 6">Grade 6</option>
+                  <option value="Grade 7">Grade 7</option>
+                  <option value="Grade 8">Grade 8</option>
+                  <option value="Grade 9">Grade 9</option>
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-600 mb-1">Stream</Label>
+                <select
+                  value={stream}
+                  onChange={(e) => setStream(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none"
+                >
+                  <option value="Blue">Blue</option>
+                  <option value="Red">Red</option>
+                  <option value="Green">Green</option>
+                  <option value="Gold">Gold</option>
+                  <option value="Mercury">Mercury</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-600 mb-1">Due Date (Return Deadline)</Label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                type="date"
+                required
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="pl-9 border-slate-200 rounded-xl text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="border-slate-200 text-slate-600 font-bold text-xs rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || availableCopies <= 0}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm"
+            >
+              {isSubmitting ? 'Issuing...' : 'Confirm Book Issue'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 };
