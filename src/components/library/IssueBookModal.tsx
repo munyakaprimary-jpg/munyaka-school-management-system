@@ -107,8 +107,8 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-150 w-full max-w-lg overflow-hidden animate-slide-up flex flex-col">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
         {/* Header */}
         <div className="p-5 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
           <div>
@@ -125,8 +125,8 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Form Body Scroll Area */}
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar">
           {/* Selected Book Banner */}
           <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
             <div>
@@ -231,7 +231,8 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             </div>
           </div>
 
-          <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+          {/* Fixed Footer Actions inside form or bottom bar */}
+          <div className="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
             <Button
               type="button"
               variant="outline"
