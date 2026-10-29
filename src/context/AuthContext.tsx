@@ -35,9 +35,6 @@ interface User {
   role: UserRole;
   title?: string;
   identifier?: string;
-  rbacRole?: string;
-  permissions?: string[];
-  assignedClasses?: string[];
   avatar?: string;
   /** Optional staff identifier for staffId-based login. */
   staff_id?: string;

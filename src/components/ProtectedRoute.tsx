@@ -62,7 +62,7 @@ const ProtectedRoute = ({
   }
 
   // Check RBAC permission matrix for the module
-  const hasRbacPermission = isOwnerOrSuper || isAdmin || !targetModuleKey || roleHasModulePermission(user.role, targetModuleKey, user.rbacRole);
+  const hasRbacPermission = isOwnerOrSuper || isAdmin || !targetModuleKey || roleHasModulePermission(user.role, targetModuleKey);
 
   if (!hasRbacPermission) {
     const landingPage = getRoleLandingPage(user.role);

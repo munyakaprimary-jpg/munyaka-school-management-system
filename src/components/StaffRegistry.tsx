@@ -21,9 +21,18 @@ import {
 import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
-import { MUNYAKA_STAFF_ROLES, mapRoleLabelToRbacKey, StaffRoleItem } from '../constants/roles';
+import { mapRoleLabelToRbacKey } from '../constants/roles';
 
-export type StaffCategoryRole = string;
+export type StaffCategoryRole =
+  | 'Class Teacher'
+  | 'Subject Teacher'
+  | 'ICT Teacher'
+  | 'Lab Teacher'
+  | 'Bursar'
+  | 'Library Teacher'
+  | 'HOI'
+  | 'DHOI'
+  | 'Store Master';
 
 export interface StaffAllocationRecord {
   subject: string;
@@ -1006,29 +1015,31 @@ export default function StaffRegistry() {
                     onChange={(e) => setCategory(e.target.value as StaffCategoryRole)}
                     className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500"
                   >
-                    {MUNYAKA_STAFF_ROLES.map((roleItem) => (
-                      <option key={roleItem.rbacKey} value={roleItem.label}>{roleItem.label} ({roleItem.category === 'teaching' ? 'Teaching' : 'Non-Teaching'})</option>
-                    ))}
+                    <option value="Class Teacher">Class Teacher</option>
+                    <option value="Subject Teacher">Subject Teacher</option>
+                    <option value="ICT Teacher">ICT Teacher</option>
+                    <option value="Lab Teacher">Lab Teacher</option>
+                    <option value="Bursar">Bursar</option>
+                    <option value="Library Teacher">Library Teacher</option>
+                    <option value="HOI">HOI</option>
+                    <option value="DHOI">DHOI</option>
+                    <option value="Store Master">Store Master</option>
                   </select>
                 </div>
 
-                {/* Conditional Homeroom Grade & Stream Selector for teaching roles */}
-                {(() => {
-                  const matchedRoleObj = MUNYAKA_STAFF_ROLES.find(r => r.label === category || r.rbacKey === category);
-                  const isNonTeaching = matchedRoleObj ? matchedRoleObj.category === 'non_teaching' : (category === 'HOI' || category === 'DHOI');
-                  return !isNonTeaching;
-                })() && (
+                {/* Conditional Homeroom Grade & Stream Selector for Class Teacher */}
+                {category === 'Class Teacher' && (
                   <div className="sm:col-span-2 p-4 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl space-y-3">
                     <div className="flex items-center gap-2">
                       <GraduationCap className="w-4 h-4 text-emerald-600" />
                       <div>
-                        <h4 className="text-xs font-bold text-emerald-900">Assigned Grades & Streams</h4>
-                        <p className="text-[11px] text-emerald-700">Select the primary classroom or stream supervised by this teacher.</p>
+                        <h4 className="text-xs font-bold text-emerald-900">Assigned Homeroom Grade & Stream</h4>
+                        <p className="text-[11px] text-emerald-700">Select the primary homeroom class supervised by this Class Teacher.</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Assigned Grade</label>
+                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Grade</label>
                         <select
                           value={homeroomGrade}
                           onChange={(e) => setHomeroomGrade(e.target.value)}
@@ -1040,7 +1051,7 @@ export default function StaffRegistry() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Assigned Stream</label>
+                        <label className="text-[11px] font-semibold text-emerald-800 block mb-1">Homeroom Stream</label>
                         <select
                           value={homeroomStream}
                           onChange={(e) => setHomeroomStream(e.target.value)}

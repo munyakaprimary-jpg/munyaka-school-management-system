@@ -115,13 +115,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   // Filter navigation items based on user role and RBAC permission matrix
   const userRole = user?.role || 'TEACHER';
-  const rbacRole = user?.rbacRole || userRole;
   const navItems = allNavItems.filter(item => {
     // Admin/Owner always see all
-    if (['ADMIN', 'HOI', 'DHOI', 'SUPER_ADMIN', 'OWNER'].includes(String(userRole).toUpperCase()) || ['ADMIN', 'OWNER'].includes(String(rbacRole).toUpperCase())) {
+    if (['ADMIN', 'HOI', 'DHOI', 'SUPER_ADMIN', 'OWNER'].includes(String(userRole).toUpperCase())) {
       return true;
     }
-    return roleHasModulePermission(userRole, item.moduleKey, rbacRole);
+    return roleHasModulePermission(userRole, item.moduleKey);
   });
 
   const activePath = location.pathname;

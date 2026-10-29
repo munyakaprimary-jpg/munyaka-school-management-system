@@ -125,8 +125,8 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
 // All authenticated users (regardless of role) land on the main dashboard.
 // This intentionally bypasses any secondary landing / role-selection screens.
 
-function getStaffRedirectPath(_systemRole: string, userData?: any): string {
-  return getRoleLandingPage(_systemRole, undefined, userData);
+function getStaffRedirectPath(_systemRole: string): string {
+  return '/dashboard';
 }
 
 // ─── Role card for admin tab ─────────────────────────────────────────────────
@@ -430,6 +430,8 @@ const Login: React.FC = () => {
       }
 
       showSuccess(`Welcome, ${userData.name}!`);
+      
+      // Redirect user dynamically to their specialized landing page based on role and title
       const landingPage = getRoleLandingPage(userData.role, undefined, userData);
       navigate(landingPage, { replace: true });
       setIsStaffVerifying(false);
