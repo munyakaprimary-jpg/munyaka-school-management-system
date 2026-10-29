@@ -33,9 +33,8 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   onConfirmIssue,
   onSuccess
 }) => {
-  const [catalogItems, setCatalogItems] = useState<any[]>([]);
   const [selectedBook, setSelectedBook] = useState<any>(initialBook || null);
-  const [itemSearchQuery, setItemSearchQuery] = useState(initialBook?.title || initialBook?.name || '');
+  const [itemSearchQuery, setItemSearchQuery] = useState(initialBook?.title || initialBook?.name || initialBook?.bookTitle || '');
   const [isItemDropdownOpen, setIsItemDropdownOpen] = useState(false);
 
   const [borrowerName, setBorrowerName] = useState('');
@@ -50,21 +49,13 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchInventory = () => {
+  const getLiveInventory = () => {
     try {
-      const keys = [
-        'munyaka_library_inventory',
-        'munyaka_library_books',
-        'library_inventory',
-        'library_books'
-      ];
-      for (const key of keys) {
-        const data = localStorage.getItem(key);
-        if (data) {
-          const parsed = JSON.parse(data);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
+      for (const key of ['munyaka_library_inventory', 'munyaka_library_books', 'library_inventory', 'library_books']) {
+        const val = localStorage.getItem(key);
+        if (val) {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
         }
       }
       return [];
@@ -75,9 +66,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      const items = fetchInventory();
-      setCatalogItems(items);
-
+      const items = getLiveInventory();
       if (initialBook) {
         setSelectedBook(initialBook);
         setItemSearchQuery(initialBook.title || initialBook.name || initialBook.bookTitle || '');
@@ -89,6 +78,14 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   }, [isOpen, initialBook]);
 
   if (!isOpen) return null;
+
+  const allInventory = getLiveInventory();
+  const filteredCatalog = allInventory.filter((item: any) => {
+    const title = (item.title || item.name || item.bookTitle || '').toLowerCase();
+    const category = (item.category || '').toLowerCase();
+    const q = itemSearchQuery.toLowerCase();
+    return title.includes(q) || category.includes(q);
+  });
 
   const stockCount = Number(selectedBook?.quantity ?? selectedBook?.copies ?? selectedBook?.stock ?? 10);
   const borrowedCount = Number(selectedBook?.borrowed ?? 0);
@@ -155,13 +152,6 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     }
   };
 
-  const filteredCatalog = catalogItems.filter((item: any) => {
-    const name = String(item.title || item.name || item.bookTitle || '').toLowerCase();
-    const isbn = String(item.isbn || '').toLowerCase();
-    const query = itemSearchQuery.toLowerCase();
-    return name.includes(query) || isbn.includes(query);
-  });
-
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-slide-up">
@@ -204,13 +194,13 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             </div>
 
             {isItemDropdownOpen && (
-              <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto custom-scrollbar">
+              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
                 {filteredCatalog.length === 0 ? (
-                  <div className="p-3 text-xs text-slate-500 text-center">No matching books found in inventory.</div>
+                  <div className="px-4 py-3 text-sm text-gray-500 italic">No matching books found in inventory.</div>
                 ) : (
                   filteredCatalog.map((book: any, idx: number) => {
-                    const title = book.title || book.name || book.bookTitle || 'Untitled Book';
-                    const availableStock = Number(book.quantity || book.copies || book.stock || 1);
+                    const title = book.title || book.name || book.bookTitle || 'Untitled';
+                    const avail = Number(book.quantity || book.copies || book.stock || 1);
                     return (
                       <div
                         key={idx}
@@ -219,14 +209,14 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
                           setItemSearchQuery(title);
                           setIsItemDropdownOpen(false);
                         }}
-                        className="px-4 py-2.5 hover:bg-emerald-50 cursor-pointer text-xs border-b border-slate-50 last:border-0 flex items-center justify-between"
+                        className="px-4 py-2.5 hover:bg-green-50 cursor-pointer text-sm border-b border-gray-100 last:border-0 flex items-center justify-between"
                       >
                         <div>
-                          <p className="font-bold text-slate-800">{title}</p>
-                          <p className="text-[11px] text-slate-500">{book.category || 'General'} • ISBN: {book.isbn || 'N/A'}</p>
+                          <p className="font-semibold text-gray-800">{title}</p>
+                          <p className="text-xs text-gray-500">{book.category || 'General'} • ISBN: {book.isbn || 'N/A'}</p>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
-                          {availableStock} Avail
+                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                          {avail} Avail
                         </span>
                       </div>
                     );
