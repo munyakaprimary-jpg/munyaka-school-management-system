@@ -750,14 +750,24 @@ export default function Attendance() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveSession('afternoon')}
+                  onClick={() => {
+                    const currentHour = new Date().getHours();
+                    const isAfternoonLocked = currentHour >= 15 || afternoonLocked;
+                    if (isAfternoonLocked && (!isAdmin || !bypassCutoff)) {
+                      toast.error('Afternoon roll call is locked after 15:00');
+                      return;
+                    }
+                    setActiveSession('afternoon');
+                  }}
                   className={`flex-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                     activeSession === 'afternoon'
                       ? 'bg-indigo-600 text-white shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  } ${(new Date().getHours() >= 15 || afternoonLocked) && (!isAdmin || !bypassCutoff) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  title={(new Date().getHours() >= 15 || afternoonLocked) && (!isAdmin || !bypassCutoff) ? 'Afternoon roll call is locked after 15:00' : ''}
                 >
                   <Clock className="w-3.5 h-3.5" />
+                  {(new Date().getHours() >= 15 || afternoonLocked) && (!isAdmin || !bypassCutoff) ? <Lock className="w-3 h-3 ml-1" /> : null}
                   Afternoon Roll Call
                 </button>
               </div>
