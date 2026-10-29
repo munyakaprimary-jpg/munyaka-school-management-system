@@ -62,28 +62,67 @@ export default function TeacherDashboard() {
 
   // Library Teacher / Librarian Analytics Dashboard View
   if (isLibraryStaff) {
-    let books: any[] = [];
-    let circulation: any[] = [];
-    let eResources: any[] = [];
-    try {
-      books = JSON.parse(localStorage.getItem('munyaka_library_books') || '[]');
-    } catch { books = []; }
-    try {
-      circulation = JSON.parse(localStorage.getItem('munyaka_library_circulation') || '[]');
-    } catch { circulation = []; }
-    try {
-      eResources = JSON.parse(localStorage.getItem('munyaka_library_eresources') || '[]');
-    } catch { eResources = []; }
+    const [books, setBooks] = React.useState<any[]>([]);
+    const [circulation, setCirculation] = React.useState<any[]>([]);
+    const [eResources, setEResources] = React.useState<any[]>([]);
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const LIBRARY_STORAGE_KEY = 'munyaka_library_books';
+    const CIRCULATION_STORAGE_KEY = 'munyaka_library_circulation';
+    const ERESOURCES_STORAGE_KEY = 'munyaka_library_eresources';
+
+    const loadLibraryData = () => {
+      try {
+        const rawBooks = localStorage.getItem(LIBRARY_STORAGE_KEY) ||
+                         localStorage.getItem('munyaka_library_inventory') || '[]';
+        setBooks(JSON.parse(rawBooks));
+      } catch { setBooks([]); }
+
+      try {
+        const rawCirc = localStorage.getItem(CIRCULATION_STORAGE_KEY) ||
+                        localStorage.getItem('munyaka_library_loans') || '[]';
+        setCirculation(JSON.parse(rawCirc));
+      } catch { setCirculation([]); }
+
+      try {
+        const rawRes = localStorage.getItem(ERESOURCES_STORAGE_KEY) ||
+                       localStorage.getItem('munyaka_study_materials') || '[]';
+        setEResources(JSON.parse(rawRes));
+      } catch { setEResources([]); }
+    };
+
+    React.useEffect(() => {
+      loadLibraryData();
+      const handleStorageChange = (e: StorageEvent) => {
+        if (!e.key || e.key.includes('library') || e.key.includes('study')) {
+          loadLibraryData();
+        }
+      };
+      window.addEventListener('storage', handleStorageChange);
+      const interval = setInterval(loadLibraryData, 2000);
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        clearInterval(interval);
+      };
+    }, []);
+
     const todayDate = new Date();
     const totalTitles = books.length;
-    const activeLoans = circulation.filter((c: any) => c?.status === 'ISSUED').length;
+    const totalVolumes = books.reduce((acc: number, item: any) => {
+      return acc + (Number(item.quantity || item.copies || item.stock || item.totalCopies || 1));
+    }, 0);
+
+    const activeLoans = circulation.filter((c: any) => {
+      const st = String(c?.status || '').toUpperCase();
+      return st === 'ISSUED' || st === 'ACTIVE' || st === 'BORROWED' || !c?.returnDate;
+    }).length;
+
     const overdueReturns = circulation.filter((c: any) => {
-      const isIssued = c?.status === 'ISSUED';
+      const st = String(c?.status || '').toUpperCase();
+      const isIssued = st === 'ISSUED' || st === 'ACTIVE' || st === 'BORROWED' || !c?.returnDate;
       const due = c?.dueDate || c?.returnDeadline;
       return isIssued && due && new Date(due) < todayDate;
     }).length;
+
     const digitalResourcesCount = eResources.length;
 
     return (
@@ -112,9 +151,9 @@ export default function TeacherDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
             <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Titles</p>
-              <h3 className="text-3xl font-black text-slate-900">{totalTitles}</h3>
-              <p className="text-xs text-emerald-600 font-bold">Catalogued Books</p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Titles & Volumes</p>
+              <h3 className="text-3xl font-black text-slate-900">{totalTitles} <span className="text-sm font-medium text-slate-400">({totalVolumes} vols)</span></h3>
+              <p className="text-xs text-emerald-600 font-bold">Catalogued Inventory</p>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <BookOpen className="w-6 h-6" />
