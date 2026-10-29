@@ -383,7 +383,20 @@ export const LibraryResourcesView: React.FC = () => {
     setCurrentUser(getCurrentUser());
   }, []);
 
-  const rbacRole = currentUser?.rbacRole || 'guest';
+  const rbacRole = currentUser?.rbacRole || currentUser?.role || 'staff';
+  const userName = currentUser?.name || currentUser?.fullName || 'Staff Member';
+
+  const formatRole = (role: unknown): string => {
+    const norm = String(role || '').toLowerCase().trim();
+    if (norm === 'library_teacher' || norm === 'librarian') return 'Librarian & Asset Manager';
+    if (norm === 'subject_teacher') return 'Subject Teacher';
+    if (norm === 'class_teacher') return 'Class Teacher';
+    if (norm === 'admin') return 'Administrator';
+    const parts = String(role || '').split('_');
+    return parts.map((w: string) => String(w).charAt(0).toUpperCase() + String(w).slice(1)).join(' ');
+  };
+
+  const formattedRole = formatRole(rbacRole);
   const canEdit = hasFullAccess(rbacRole);
   const isReadOnly = isViewOnly(rbacRole);
 
@@ -610,22 +623,23 @@ export const LibraryResourcesView: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">
-            Library & E-Resources Workstation
-          </h1>
-          <p className="text-slate-600">
-            CBC Learning Resources Management System
-            {rbacRole && (
-              <span className="ml-3 text-sm text-slate-500">
-                (Role: <span className="font-medium text-slate-700">{rbacRole}</span>
-                {canEdit && <span className="text-green-600"> — Full Access</span>}
-                {isReadOnly && <span className="text-amber-600"> — View Only</span>}
-                {!canEdit && !isReadOnly && <span className="text-red-600"> — No Access</span>}
-                )
-              </span>
-            )}
-          </p>
+        <div className="mb-8 bg-gradient-to-r from-amber-800 to-amber-950 p-6 rounded-2xl shadow-xl text-white">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider bg-amber-700/50 px-3 py-1 rounded-full text-amber-200 border border-amber-500/30">
+                  {rbacRole === 'library_teacher' || rbacRole === 'librarian' ? 'Librarian & Asset Portal' : `${formattedRole} Workstation`}
+                </span>
+                <span className="text-xs text-amber-300 font-medium">{userName}</span>
+              </div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1">
+                Library & E-Resources Workstation
+              </h1>
+              <p className="text-amber-100 text-sm">
+                You are signed in as {formattedRole}. Ready to browse textbooks, reference guides, exercise books, and instructional assets.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Metrics Banner */}
