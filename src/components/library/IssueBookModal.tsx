@@ -14,6 +14,7 @@ export interface IssueBookModalProps {
     name?: string;
     bookTitle?: string;
     category?: string;
+    type?: string;
     isbn?: string;
     quantity?: number;
     copies?: number;
@@ -34,7 +35,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   onSuccess
 }) => {
   const [selectedBook, setSelectedBook] = useState<any>(initialBook || null);
-  const [itemSearchQuery, setItemSearchQuery] = useState(initialBook?.title || initialBook?.name || initialBook?.bookTitle || '');
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [isItemDropdownOpen, setIsItemDropdownOpen] = useState(false);
 
   const [borrowerName, setBorrowerName] = useState('');
@@ -49,49 +50,58 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const getLiveInventory = () => {
-    try {
-      for (const key of ['munyaka_library_inventory', 'munyaka_library_books', 'library_inventory', 'library_books']) {
-        const val = localStorage.getItem(key);
-        if (val) {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
+  const getInventoryItems = () => {
+    const keys = [
+      'munyaka_library_inventory',
+      'munyaka_library_books',
+      'library_inventory',
+      'library_books'
+    ];
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        } catch {}
       }
-      return [];
-    } catch {
-      return [];
     }
+    return [];
   };
 
   useEffect(() => {
     if (isOpen) {
-      const items = getLiveInventory();
+      const items = getInventoryItems();
       if (initialBook) {
         setSelectedBook(initialBook);
         setItemSearchQuery(initialBook.title || initialBook.name || initialBook.bookTitle || '');
-      } else if (!selectedBook && items.length > 0) {
+      } else if (items.length > 0) {
         setSelectedBook(items[0]);
         setItemSearchQuery(items[0].title || items[0].name || items[0].bookTitle || '');
+      } else {
+        setSelectedBook(null);
+        setItemSearchQuery('');
       }
     }
   }, [isOpen, initialBook]);
 
   if (!isOpen) return null;
 
-  const allInventory = getLiveInventory();
-  const filteredCatalog = allInventory.filter((item: any) => {
-    const title = (item.title || item.name || item.bookTitle || '').toLowerCase();
-    const category = (item.category || '').toLowerCase();
-    const q = itemSearchQuery.toLowerCase();
-    return title.includes(q) || category.includes(q);
+  const rawItems = getInventoryItems();
+  const searchFilteredItems = rawItems.filter((item: any) => {
+    const title = String(item.title || item.name || item.bookTitle || '').toLowerCase();
+    const category = String(item.category || item.type || '').toLowerCase();
+    const query = itemSearchQuery.toLowerCase();
+    return title.includes(query) || category.includes(query);
   });
 
   const stockCount = Number(selectedBook?.quantity ?? selectedBook?.copies ?? selectedBook?.stock ?? 10);
   const borrowedCount = Number(selectedBook?.borrowed ?? 0);
   const availableCopies = Math.max(0, stockCount - borrowedCount);
   const bookTitle = String(selectedBook?.title || selectedBook?.name || selectedBook?.bookTitle || 'Selected Textbook');
-  const bookCategory = String(selectedBook?.category || 'General Inventory');
+  const bookCategory = String(selectedBook?.category || selectedBook?.type || 'General Inventory');
   const bookIsbn = String(selectedBook?.isbn || 'N/A');
   const bookId = String(selectedBook?.id || `book_${Date.now()}`);
 
@@ -195,10 +205,10 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 
             {isItemDropdownOpen && (
               <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
-                {filteredCatalog.length === 0 ? (
+                {searchFilteredItems.length === 0 ? (
                   <div className="px-4 py-3 text-sm text-gray-500 italic">No matching books found in inventory.</div>
                 ) : (
-                  filteredCatalog.map((book: any, idx: number) => {
+                  searchFilteredItems.map((book: any, idx: number) => {
                     const title = book.title || book.name || book.bookTitle || 'Untitled';
                     const avail = Number(book.quantity || book.copies || book.stock || 1);
                     return (
@@ -209,13 +219,13 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
                           setItemSearchQuery(title);
                           setIsItemDropdownOpen(false);
                         }}
-                        className="px-4 py-2.5 hover:bg-green-50 cursor-pointer text-sm border-b border-gray-100 last:border-0 flex items-center justify-between"
+                        className="px-4 py-2.5 hover:bg-emerald-50 cursor-pointer text-xs border-b border-gray-100 last:border-0 flex items-center justify-between"
                       >
                         <div>
                           <p className="font-semibold text-gray-800">{title}</p>
-                          <p className="text-xs text-gray-500">{book.category || 'General'} • ISBN: {book.isbn || 'N/A'}</p>
+                          <p className="text-[11px] text-gray-500">{book.category || book.type || 'General'} • ISBN: {book.isbn || 'N/A'}</p>
                         </div>
-                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
                           {avail} Avail
                         </span>
                       </div>
