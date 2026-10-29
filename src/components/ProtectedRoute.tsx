@@ -62,14 +62,7 @@ const ProtectedRoute = ({
   }
 
   // Check RBAC permission matrix for the module
-  let hasRbacPermission = isOwnerOrSuper || isAdmin || !targetModuleKey || roleHasModulePermission(user.role, targetModuleKey, user.rbacRole);
-
-  // Strictly protect staff registry / management against any non-admin / teacher roles
-  if (targetModuleKey === 'staff') {
-    if (!isAdmin && !isOwnerOrSuper) {
-      hasRbacPermission = false;
-    }
-  }
+  const hasRbacPermission = isOwnerOrSuper || isAdmin || !targetModuleKey || roleHasModulePermission(user.role, targetModuleKey, user.rbacRole);
 
   if (!hasRbacPermission) {
     const landingPage = getRoleLandingPage(user.role);

@@ -220,20 +220,56 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   }, [location.pathname]);
 
   const menuItems = [
-      // ── Dashboard — position #1 for ALL roles; the Dashboard component
-      // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
-      // based on the user's session role.  Only one Dashboard entry exists.
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin'] },
-      { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
-      { icon: Users, label: 'Learners', path: '/learners', roles: ['admin', 'dhoi', 'class_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin'] },
-      { icon: UserCheck, label: 'Staff Registry', path: '/staff-registry', roles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin'] },
-      { icon: FileSpreadsheet, label: 'CBC Marks Entry', path: '/assessments', roles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin'] },
-      { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin'] },
-      { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'dhoi', 'ict_teacher', 'lab_teacher', 'tools_inventory_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin'] },
-      { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'library_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin'] },
-      { icon: Box, label: 'Tools Inventory', path: '/inventory', roles: ['admin', 'dhoi', 'tools_inventory_teacher', 'ict_teacher', 'lab_teacher', 'owner', 'hoi', 'super_admin', 'sysadmin'] },
-      { icon: LogIn, label: 'Daily Check-In', path: '/staff-checkin', roles: ['admin', 'dhoi', 'owner', 'hoi', 'super_admin', 'sysadmin', 'class_teacher', 'subject_teacher', 'teacher', 'head_teacher'] },
-  ];
+    // ── Dashboard — position #1 for ALL roles; the Dashboard component
+    // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
+    // based on the user's session role.  Only one Dashboard entry exists.
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'owner'] },
+    { icon: ShieldCheck, label: 'Data Harmonization Hub', path: '/admin/harmonization', roles: ['admin'] },
+    { icon: Users, label: 'Learners', path: '/learners', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
+        { icon: UserCheck, label: 'Staff Registry', path: '/staff-registry', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar'] },
+    { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
+        { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
+    { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin'] },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
+    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
+    { icon: School, label: 'Tenants / Campuses', path: '/dev/tenants', roles: ['owner', 'admin'] },
+    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
+    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
+        { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
+        { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'head_teacher'] },
+        { icon: MessageSquare, label: 'Teacher Communication', path: '/teacher-communication', roles: ['teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'parent', 'student', 'ict_technician', 'ict_teacher'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin'] },
+        { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
+        { icon: ClipboardCheck, label: 'Learner Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    // Staff Attendance
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'bursar', 'ict_technician', 'ict_teacher'] },
+    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher'] },
+    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['admin', 'head_teacher'] },
+    // Academic Assessment & Analysis
+    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'] },
+    // Assessments & Exams
+    { icon: ClipboardList, label: 'Assessments & Exams', path: '', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'], section: true },
+    { icon: ClipboardCheck, label: 'Grading Review', path: '/grading', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: ClipboardList, label: 'Create Exam / Quiz', path: '/assessments/create', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
+    // Digital Hub & ICT
+    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'ict_technician', 'ict_teacher'] },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher', 'ict_technician', 'ict_teacher'] },
+    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'ict_technician', 'ict_teacher'] },
+    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
+    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
+    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
+        { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'parent', 'librarian', 'ict_technician', 'ict_teacher'] },
+        { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar'] },
+    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student'] },
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
+        { icon: GraduationCap, label: 'Promote Learners', path: '/promote', roles: ['admin', 'head_teacher'] },
+      ];
 
   // Route-level role denylist: these roles are blocked even if listed in item.roles.
   // Used to enforce that OWNER cannot access administrative routes like /fees.
@@ -269,60 +305,24 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         const isTeacherVariant = roleLower.includes('teacher') || roleLower.includes('educator') || roleLower === 'class_teacher' || roleLower === 'subject_teacher' || roleLower === 'senior_teacher';
 
         if (isTeacherVariant) {
-          // ENFORCE TEACHER PORTAL MENU VISIBILITY SPEC:
-          // ALWAYS SHOW for Teachers: Dashboard, Daily Check-In (Attendance), Timetable & CBC Assessments, Notices.
-          // CONDITIONALLY SHOW based on rbacRole / role:
-          // - Show 'My Class / Learners' if role is 'class_teacher' (or has learners permission).
-          // - Show 'ICT Lab & Hardware' if role is 'ict_teacher', 'lab_teacher', or 'tools_inventory_teacher'.
-          // - Show 'Library Catalog' if role is 'library_teacher'.
-          // STRICTLY HIDE from all teaching roles: Staff Registry, Fees & Ledgers, System Settings & RBAC.
-          
-          const label = item.label;
-          const path = item.path;
-
-          // STRICTLY HIDE Staff Registry, Fees & Ledgers, System Settings & RBAC
+                  const forbiddenTeacherPaths = [
+                    '/central-data', '/grades', '/staff', '/learning-areas', '/exam-types',
+                    '/system-management', '/staff/access',
+                    '/transferred-archive', '/promote-students', '/admin/control-center',
+                    '/dev/tenants', '/payment-management', '/staff/attendance-monitor',
+                    '/timetable'
+                  ];
           if (
-            label.includes('Staff Registry') ||
-            label.includes('Fees') ||
-            label.includes('Finance') ||
-            label.includes('Settings') ||
-            path === '/staff-registry' ||
-            path === '/fees' ||
-            path === '/settings' ||
-            path === '/system-management' ||
-            path === '/admin/control-center'
+            item.path === '/grades' ||
+            forbiddenTeacherPaths.includes(item.path) ||
+            (item.label.includes("Central Data") && item.path !== '/lan-config') ||
+            item.label.includes("Grades & Streams") ||
+            item.label.includes("Staff Directory") ||
+            item.label.includes("Learning Areas") ||
+            item.label.includes("Exam Types")
           ) {
             return false;
           }
-
-          // ALWAYS SHOW: Dashboard, Daily Check-In, Notices, Timetable, CBC Assessments (Enter Marks / Assessments)
-          const alwaysShowTeacherPaths = ['/dashboard', '/staff-checkin', '/notices', '/timetable', '/assessments', '/analysis'];
-          const alwaysShowTeacherLabels = ['Dashboard', 'Daily Check-In', 'Events & Notices', 'Notices', 'Timetable', 'Enter Marks', 'Assessments', 'Results Analysis'];
-
-          if (alwaysShowTeacherPaths.includes(path) || alwaysShowTeacherLabels.some(l => label.includes(l))) {
-            return true;
-          }
-
-          // CONDITIONALLY SHOW:
-          // - 'My Class / Learners' if role is class_teacher (or has learners permission / class teacher role)
-          const rbacRoleLower = String(user.rbacRole || roleLower).toLowerCase();
-          
-          if (label.includes('Learners') || path === '/learners') {
-            return rbacRoleLower.includes('class_teacher') || roleLower.includes('class_teacher') || roleLower === 'teacher';
-          }
-
-          // - 'ICT Lab & Hardware' if role is ict_teacher, lab_teacher, or tools_inventory_teacher
-          if (label.includes('ICT') || label.includes('Inventory') || path === '/ict-lab' || path === '/inventory') {
-            return rbacRoleLower.includes('ict_teacher') || rbacRoleLower.includes('lab_teacher') || rbacRoleLower.includes('tools_inventory_teacher');
-          }
-
-          // - 'Library Catalog' if role is library_teacher
-          if (label.includes('Library') || path === '/library') {
-            return rbacRoleLower.includes('library_teacher');
-          }
-
-          // Default hide other admin/non-teacher modules for teachers
-          return false;
         }
 
         const isIctVariant = roleLower.includes('ict_technician') || roleLower.includes('ict_teacher') || roleLower.includes('ict technician');

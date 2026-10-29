@@ -407,9 +407,9 @@ const Login: React.FC = () => {
         email: matched.email || trimmedId,
         phone: matched.phone || '',
         role: String(matched.systemRole || matched.role || 'staff').trim().toLowerCase(),
-        title: matched.title || matched.category || matched.designation || 'Teacher',
+        title: matched.title || matched.category || matched.designation || 'Staff',
         category: matched.category || matched.role || 'Staff',
-        rbacRole: (matched.rbacRole || mapRoleLabelToRbacKey(matched.role || matched.category || matched.designation || 'Class Teacher')).toLowerCase().trim(),
+        rbacRole: matched.rbacRole || mapRoleLabelToRbacKey(matched.role || matched.category || matched.designation || 'Staff'),
         assignedClass: matched.assignedGrade || matched.assignedClass || '',
         staff_id: matched.staffId || '',
         avatar: (matched.name || 'U')
