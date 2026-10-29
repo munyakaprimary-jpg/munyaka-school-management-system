@@ -87,12 +87,17 @@ export const TEACHING_SYSTEM_ROLES: MasterSystemRole[] = [
   'senior_teacher',
   'class_teacher',
   'subject_teacher',
+  'ict_teacher',
+  'hoi' as any,
+  'dhoi' as any,
+  'admin' as any,
 ];
 
 export const isNonTeachingDesignation = (role: string): boolean => {
   const r = (role || '').toLowerCase();
-  // Ensure all teaching designations (including Class Teacher, Subject Teacher, Senior Teacher, Head Teacher, Deputy Head Teacher)
-  // are strictly recognized as teaching and NEVER flagged as non-teaching.
+  if (r.includes('hoi') || r.includes('dhoi') || r.includes('head') || r.includes('deputy') || r.includes('admin')) {
+    return false;
+  }
   if (
     r.includes('teacher') ||
     r.includes('head') ||

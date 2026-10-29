@@ -7,6 +7,9 @@ export type MasterSystemRole =
   | 'class_teacher'
   | 'subject_teacher'
   | 'ict_teacher'
+  | 'hoi'
+  | 'dhoi'
+  | 'admin'
   | 'bursar'
   | 'support_admin'
   | 'support_staff'
@@ -26,10 +29,14 @@ export type AccessStatus = 'Pre-Registered' | 'Pending Invite' | 'Active' | 'Sus
  */
 export const TEACHING_ROLES: SystemRole[] = [
   'head_teacher',
+  'deputy_head_teacher' as any,
   'senior_teacher',
   'class_teacher',
   'subject_teacher',
   'ict_teacher',
+  'hoi' as any,
+  'dhoi' as any,
+  'admin' as any,
 ];
 
 /**

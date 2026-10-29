@@ -552,13 +552,17 @@ export default function StaffRegistry() {
           // Excludes: non-teaching roles like Bursar, Store Master, etc.
           const isTeachingStaff = (staff: StaffMember) => {
             const category = String(staff.category || '').toLowerCase();
-            const isNonTeaching = nonTeachingRoles.includes(category);
+            const rbacRole = String(staff.rbacRole || '').toLowerCase();
+            const isNonTeaching = nonTeachingRoles.includes(category) || nonTeachingRoles.includes(rbacRole);
             
             return (
               !isNonTeaching && (
                 staff.category === ('Teaching' as any) ||
                 staff.category === 'HOI' ||
                 staff.category === 'DHOI' ||
+                rbacRole === 'hoi' ||
+                rbacRole === 'dhoi' ||
+                rbacRole === 'admin' ||
                 Boolean(staff.tscNumber && staff.tscNumber.trim() !== '' && staff.tscNumber !== 'N/A')
               )
             );
