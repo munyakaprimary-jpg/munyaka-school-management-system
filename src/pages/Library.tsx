@@ -1,10 +1,10 @@
 "use client";
 
 import React from 'react';
-import { LibraryResourcesView } from '@/components/library/LibraryResourcesView';
+import { LibrarianPortalView } from '@/pages/LibrarianPortalView';
 
 const Library = () => {
-  return <LibraryResourcesView />;
+  return <LibrarianPortalView />;
 };
 
 export default Library;
