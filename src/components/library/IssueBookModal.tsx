@@ -11,6 +11,8 @@ export interface IssueBookModalProps {
   book?: {
     id?: string;
     title?: string;
+    name?: string;
+    bookTitle?: string;
     category?: string;
     isbn?: string;
     quantity?: number;
@@ -33,7 +35,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 }) => {
   const [catalogItems, setCatalogItems] = useState<any[]>([]);
   const [selectedBook, setSelectedBook] = useState<any>(initialBook || null);
-  const [itemSearchQuery, setItemSearchQuery] = useState(initialBook?.title || '');
+  const [itemSearchQuery, setItemSearchQuery] = useState(initialBook?.title || initialBook?.name || '');
   const [isItemDropdownOpen, setIsItemDropdownOpen] = useState(false);
 
   const [borrowerName, setBorrowerName] = useState('');
@@ -48,31 +50,40 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const fetchInventory = () => {
+    try {
+      const keys = [
+        'munyaka_library_inventory',
+        'munyaka_library_books',
+        'library_inventory',
+        'library_books'
+      ];
+      for (const key of keys) {
+        const data = localStorage.getItem(key);
+        if (data) {
+          const parsed = JSON.parse(data);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
-      try {
-        const rawStock = localStorage.getItem('munyaka_library_inventory') || 
-                         localStorage.getItem('munyaka_library_books') || 
-                         localStorage.getItem('library_books') || '[]';
-        const parsed = JSON.parse(rawStock);
-        setCatalogItems(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        setCatalogItems([]);
-      }
+      const items = fetchInventory();
+      setCatalogItems(items);
 
       if (initialBook) {
         setSelectedBook(initialBook);
-        setItemSearchQuery(initialBook.title || '');
-      } else if (!selectedBook) {
-        // default to first item if available
-        try {
-          const rawStock = localStorage.getItem('munyaka_library_inventory') || '[]';
-          const parsed = JSON.parse(rawStock);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setSelectedBook(parsed[0]);
-            setItemSearchQuery(parsed[0].title || parsed[0].name || '');
-          }
-        } catch {}
+        setItemSearchQuery(initialBook.title || initialBook.name || initialBook.bookTitle || '');
+      } else if (!selectedBook && items.length > 0) {
+        setSelectedBook(items[0]);
+        setItemSearchQuery(items[0].title || items[0].name || items[0].bookTitle || '');
       }
     }
   }, [isOpen, initialBook]);
@@ -82,7 +93,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const stockCount = Number(selectedBook?.quantity ?? selectedBook?.copies ?? selectedBook?.stock ?? 10);
   const borrowedCount = Number(selectedBook?.borrowed ?? 0);
   const availableCopies = Math.max(0, stockCount - borrowedCount);
-  const bookTitle = String(selectedBook?.title || selectedBook?.name || 'Selected Textbook');
+  const bookTitle = String(selectedBook?.title || selectedBook?.name || selectedBook?.bookTitle || 'Selected Textbook');
   const bookCategory = String(selectedBook?.category || 'General Inventory');
   const bookIsbn = String(selectedBook?.isbn || 'N/A');
   const bookId = String(selectedBook?.id || `book_${Date.now()}`);
@@ -144,9 +155,12 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     }
   };
 
-  const filteredCatalog = catalogItems.filter((item: any) => 
-    String(item.title || item.name || '').toLowerCase().includes(itemSearchQuery.toLowerCase())
-  );
+  const filteredCatalog = catalogItems.filter((item: any) => {
+    const name = String(item.title || item.name || item.bookTitle || '').toLowerCase();
+    const isbn = String(item.isbn || '').toLowerCase();
+    const query = itemSearchQuery.toLowerCase();
+    return name.includes(query) || isbn.includes(query);
+  });
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
@@ -178,7 +192,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 type="text"
-                placeholder="Search book title (e.g. Mathematics Grade 4)..."
+                placeholder="Search book title (e.g. reams, rulers, mathematics)..."
                 value={itemSearchQuery}
                 onChange={(e) => {
                   setItemSearchQuery(e.target.value);
@@ -195,7 +209,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
                   <div className="p-3 text-xs text-slate-500 text-center">No matching books found in inventory.</div>
                 ) : (
                   filteredCatalog.map((book: any, idx: number) => {
-                    const title = book.title || book.name || 'Untitled Book';
+                    const title = book.title || book.name || book.bookTitle || 'Untitled Book';
                     const availableStock = Number(book.quantity || book.copies || book.stock || 1);
                     return (
                       <div
