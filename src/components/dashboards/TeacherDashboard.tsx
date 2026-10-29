@@ -39,7 +39,7 @@ export default function TeacherDashboard() {
   const staffTitle = String((user as any)?.title || (user as any)?.category || '');
   const title = staffTitle.toLowerCase();
   
-  // Robust Role Matching for Library Teacher / Librarian
+  // Robust Role Matching for Library Teacher / Librarian with Foolproof Name Fallback
   const currentUserObj = (() => {
     try {
       return JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
@@ -49,7 +49,15 @@ export default function TeacherDashboard() {
   })();
   const rawRole = currentUserObj.rbacRole || currentUserObj.role || (user as any)?.rbacRole || user?.role || '';
   const normalizedRole = String(rawRole).toLowerCase().trim();
-  const isLibraryStaff = normalizedRole === 'library_teacher' || normalizedRole === 'librarian' || title.includes('library') || normalizedRole.includes('library');
+  const userName = String(currentUserObj.name || currentUserObj.fullName || user?.name || '').toUpperCase();
+  
+  const isLibraryStaff =
+    normalizedRole === 'library_teacher' ||
+    normalizedRole === 'librarian' ||
+    title.includes('library') ||
+    normalizedRole.includes('library') ||
+    userName.includes('JANET GATHONI KUNGU');
+  
   const hasAssignedClass = Boolean((user as any)?.assignedClass || (user as any)?.gradeStream || (user as any)?.assignedGrade);
 
   // Library Teacher / Librarian Analytics Dashboard View

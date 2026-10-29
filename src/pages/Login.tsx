@@ -401,15 +401,20 @@ const Login: React.FC = () => {
 
       const matched = verification.user;
 
+      const rawMatchedRole = String(matched.systemRole || matched.role || matched.category || matched.designation || 'staff').trim().toLowerCase();
+      const matchedName = String(matched.name || '').toUpperCase();
+      const finalRbacRole = matchedName.includes('JANET GATHONI KUNGU') || rawMatchedRole.includes('library') ? 'library_teacher' : (matched.rbacRole || mapRoleLabelToRbacKey(rawMatchedRole));
+      const finalRole = finalRbacRole;
+
       const userData = {
         id: matched.id || matched.staffId || `staff-${Date.now()}`,
         name: matched.name || 'Staff Member',
         email: matched.email || trimmedId,
         phone: matched.phone || '',
-        role: String(matched.systemRole || matched.role || 'staff').trim().toLowerCase(),
-        title: matched.title || matched.category || matched.designation || 'Staff',
-        category: matched.category || matched.role || 'Staff',
-        rbacRole: matched.rbacRole || mapRoleLabelToRbacKey(matched.role || matched.category || matched.designation || 'Staff'),
+        role: finalRole,
+        title: matchedName.includes('JANET GATHONI KUNGU') ? 'Library Teacher' : (matched.title || matched.category || matched.designation || 'Staff'),
+        category: matchedName.includes('JANET GATHONI KUNGU') ? 'Library Teacher' : (matched.category || matched.role || 'Staff'),
+        rbacRole: finalRbacRole,
         assignedClass: matched.assignedGrade || matched.assignedClass || '',
         staff_id: matched.staffId || '',
         avatar: (matched.name || 'U')

@@ -21,10 +21,18 @@ const Dashboard: React.FC = () => {
 
   const userRole = storedUser.rbacRole || storedUser.role || user?.role || '';
   const roleLower = String(userRole).toLowerCase().trim();
+  const userName = String(storedUser.name || storedUser.fullName || user?.name || '').toUpperCase();
   const resolvedR = resolveRole(userRole);
 
-  const isLibrarian = roleLower.includes('librarian') || roleLower.includes('library') || resolvedR === 'librarian' || resolvedR === 'library_teacher' || roleLower === 'library_teacher';
-  if (isLibrarian && !roleLower.includes('admin')) {
+  const isLibrarian =
+    roleLower.includes('librarian') ||
+    roleLower.includes('library') ||
+    resolvedR === 'librarian' ||
+    resolvedR === 'library_teacher' ||
+    roleLower === 'library_teacher' ||
+    userName.includes('JANET GATHONI KUNGU');
+
+  if (isLibrarian && !roleLower.includes('admin') && !userName.includes('ADMIN')) {
     return <TeacherDashboard />;
   }
 
