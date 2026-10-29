@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, BookOpen, User, Calendar, Hash, ShieldCheck, Check, Search } from 'lucide-react';
+import { X, BookOpen, User, Calendar, Hash, ShieldCheck, Check, Search, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,7 +50,6 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 1. Direct synchronous getter for live inventory across all possible keys
   const getMasterInventory = (): any[] => {
     try {
       const keys = ['munyaka_library_inventory', 'munyaka_library_books', 'library_inventory', 'library_books'];
@@ -64,7 +63,6 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     } catch (err) {
       console.error('Failed reading inventory:', err);
     }
-    // Fallback if localStorage is empty so user always sees the workstation items
     return [
       { id: 'b1', title: 'BB RULERS', category: 'Stationery', isbn: '978-3705', quantity: 10, copies: 10 },
       { id: 'b2', title: 'REAM PAPERS', category: 'Stationery', isbn: '978-0140', quantity: 40, copies: 40 },
@@ -90,7 +88,15 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 
   if (!isOpen) return null;
 
-  // 2. Filter dynamically based on search query across title, category, isbn
+  const isConsumable = (book: any): boolean => {
+    if (!book) return false;
+    const category = (book.category || book.type || '').toLowerCase();
+    const title = (book.title || book.name || book.bookTitle || '').toLowerCase();
+    
+    const consumableKeywords = ['stationery', 'teaching aids', 'pen', 'paper', 'ream', 'chalk', 'consumable', 'pencil', 'rubber', 'marker'];
+    return consumableKeywords.some(keyword => category.includes(keyword) || title.includes(keyword));
+  };
+
   const masterStock = getMasterInventory();
   const searchMatches = masterStock.filter((item: any) => {
     const title = (item.title || item.name || item.bookTitle || '').toString().toLowerCase();
@@ -107,6 +113,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const bookCategory = String(selectedBook?.category || selectedBook?.type || 'General Inventory');
   const bookIsbn = String(selectedBook?.isbn || 'N/A');
   const bookId = String(selectedBook?.id || `book_${Date.now()}`);
+  const consumableItem = isConsumable(selectedBook);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,11 +133,11 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
         bookTitle,
         borrowerName: borrowerName.trim(),
         borrowerType,
-        dueDate,
+        dueDate: consumableItem ? 'N/A (Consumable)' : dueDate,
         quantity: Number(quantity),
         grade,
         stream,
-        status: 'ISSUED',
+        status: consumableItem ? 'DISPENSED' : 'ISSUED',
         issuedDate: new Date().toISOString().split('T')[0]
       };
 
@@ -138,7 +145,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
         onConfirmIssue(issueData);
       }
       if (onIssueBook) {
-        await onIssueBook(bookId, borrowerName.trim(), borrowerType, dueDate, Number(quantity), grade, stream);
+        await onIssueBook(bookId, borrowerName.trim(), borrowerType, consumableItem ? 'N/A' : dueDate, Number(quantity), grade, stream);
       }
 
       // Persist in localStorage circulation log
@@ -155,11 +162,11 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
         console.error('Error saving circulation record:', err);
       }
 
-      toast({ title: 'Success', description: `Successfully issued "${bookTitle}" to ${borrowerName.trim()}` });
+      toast({ title: 'Success', description: `Successfully ${consumableItem ? 'dispensed' : 'issued'} "${bookTitle}" to ${borrowerName.trim()}` });
       if (onSuccess) onSuccess();
       onClose();
     } catch (err: any) {
-      toast({ title: 'Error', description: err?.message || 'Failed to issue book.', variant: 'destructive' });
+      toast({ title: 'Error', description: err?.message || 'Failed to issue item.', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -331,19 +338,29 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             </div>
           )}
 
-          <div>
-            <Label className="text-xs font-semibold text-slate-600 mb-1">Due Date (Return Deadline)</Label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                type="date"
-                required
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="pl-9 border-slate-200 rounded-xl text-sm"
-              />
+          {/* Conditional Due Date for Consumables vs Returnable Books */}
+          {!consumableItem ? (
+            <div>
+              <Label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                Due Date (Return Deadline)
+              </Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  type="date"
+                  required
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="pl-9 w-full border-slate-200 rounded-xl text-sm"
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-medium flex items-start gap-2">
+              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span><strong>Consumable Item:</strong> Dispensed permanently (no return date or deadline required).</span>
+            </div>
+          )}
 
           {/* Fixed Footer Actions inside form or bottom bar */}
           <div className="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
@@ -360,7 +377,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
               disabled={isSubmitting || availableCopies <= 0 || !selectedBook}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm"
             >
-              {isSubmitting ? 'Issuing...' : 'Confirm Book Issue'}
+              {isSubmitting ? 'Issuing...' : consumableItem ? 'Confirm Dispense Item' : 'Confirm Book Issue'}
             </Button>
           </div>
         </form>
