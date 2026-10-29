@@ -93,7 +93,10 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     const category = (book.category || book.type || '').toLowerCase();
     const title = (book.title || book.name || book.bookTitle || '').toLowerCase();
     
-    const consumableKeywords = ['stationery', 'teaching aids', 'pen', 'paper', 'ream', 'chalk', 'consumable', 'pencil', 'rubber', 'marker'];
+    // Rulers are returnable tools/equipment, NOT consumables (unlike ream papers, chalk, pens)
+    if (title.includes('ruler')) return false;
+
+    const consumableKeywords = ['paper', 'ream', 'chalk', 'consumable', 'marker', 'ink', 'glue'];
     return consumableKeywords.some(keyword => category.includes(keyword) || title.includes(keyword));
   };
 
@@ -338,7 +341,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             </div>
           )}
 
-          {/* Conditional Due Date for Consumables vs Returnable Books */}
+          {/* Conditional Due Date for Consumables vs Returnable Books & Tools (Rulers are returnable equipment) */}
           {!consumableItem ? (
             <div>
               <Label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
@@ -374,7 +377,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || availableCopies <= 0 || !selectedBook}
+              disabled={isSubmitting || availableCopies <= 0 || !selectedGroupCheck(selectedBook)}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm"
             >
               {isSubmitting ? 'Issuing...' : consumableItem ? 'Confirm Dispense Item' : 'Confirm Book Issue'}
@@ -385,3 +388,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     </div>
   );
 };
+
+function selectedGroupCheck(b: any) {
+  return Boolean(b);
+}
