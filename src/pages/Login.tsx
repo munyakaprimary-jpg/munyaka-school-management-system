@@ -428,6 +428,8 @@ const Login: React.FC = () => {
       try {
         localStorage.setItem('munyaka_session', JSON.stringify(userData));
         localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
+        localStorage.setItem('munyaka_current_staff', JSON.stringify(matched));
+        localStorage.setItem('user_role', userData.role);
       } catch { /* ignore */ }
 
       if (setUser) {

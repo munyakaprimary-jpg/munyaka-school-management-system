@@ -13,6 +13,19 @@ export interface RBACCheckOptions {
   requiredTitle?: string;
 }
 
+export const getActiveStaffRole = (): string => {
+  try {
+    const raw = localStorage.getItem('munyaka_current_staff');
+    if (raw) {
+      const staff = JSON.parse(raw);
+      return staff.role || staff.assignedRole || staff.systemRole || staff.category || 'Subject Teacher';
+    }
+  } catch (e) {
+    // fallback
+  }
+  return 'Subject Teacher';
+};
+
 /**
  * Checks whether the current user or provided user has permission for a given module or feature
  * based on their exact role, title, and customized permissions in munyaka_current_user.
