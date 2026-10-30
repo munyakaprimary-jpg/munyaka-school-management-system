@@ -18,6 +18,66 @@ export default function FirestoreSyncTab() {
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // CloudDBSyncCard state
+  const [isSyncingAllModules, setIsSyncingAllModules] = useState(false);
+  const [allModulesStatusMessage, setAllModulesStatusMessage] = useState('');
+  const [lastSyncInfo, setLastSyncInfo] = useState<{ count: number; time: string } | null>(null);
+
+  const handleSyncAllModulesToFirestore = async () => {
+    setIsSyncingAllModules(true);
+    setAllModulesStatusMessage('Reading offline local storage modules...');
+
+    const modules = [
+      { key: 'munyaka_library_inventory', collection: 'library' },
+      { key: 'munyaka_science_lab_inventory', collection: 'science_lab' },
+      { key: 'munyaka_fees_finance', collection: 'finance' },
+      { key: 'munyaka_students', collection: 'students' },
+      { key: 'munyaka_staff', collection: 'staff' },
+    ];
+
+    let totalRecordsSynced = 0;
+
+    try {
+      for (const mod of modules) {
+        setAllModulesStatusMessage(`Pushing ${mod.collection.toUpperCase()} records to Firestore...`);
+        const rawData = localStorage.getItem(mod.key);
+
+        if (rawData) {
+          const parsed = JSON.parse(rawData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const batch = writeBatch(db);
+
+            parsed.forEach((item: any, idx: number) => {
+              const documentId = item.id || item.admNo || `doc_${idx}_${Date.now()}`;
+              const docRef = doc(db, mod.collection, String(documentId));
+              batch.set(docRef, {
+                ...item,
+                syncedAt: new Date().toISOString(),
+                source: 'Cloud DB Sync',
+              }, { merge: true });
+              totalRecordsSynced++;
+            });
+
+            await batch.commit();
+          }
+        }
+      }
+
+      setLastSyncInfo({
+        count: totalRecordsSynced,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      });
+      setAllModulesStatusMessage(`Sync complete! ${totalRecordsSynced} records pushed to Firestore.`);
+      showSuccess(`Successfully synchronized ${totalRecordsSynced} records across all modules to Firestore!`);
+    } catch (err: any) {
+      console.error('Firestore sync error:', err);
+      setAllModulesStatusMessage('Sync failed. Please check internet connectivity or Firestore rules.');
+      showError('Firestore universal batch sync failed');
+    } finally {
+      setIsSyncingAllModules(false);
+    }
+  };
+
   // Cloud counts state
   const [cloudLearnersCount, setCloudLearnersCount] = useState(0);
   const [cloudAssessmentCount, setCloudAssessmentCount] = useState(0);
@@ -2318,6 +2378,52 @@ export default function FirestoreSyncTab() {
         </CardHeader>
 
         <CardContent className="px-0 pt-6 space-y-6">
+          {/* CloudDBSyncCard (Sync All Modules to Firestore) */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">🔥 Firestore Cloud DB Universal Sync</h3>
+                <p className="text-xs text-gray-500">
+                  Batch push all local workstation data (Library, Science Lab, Fees, Students & Staff) to Firestore collections.
+                </p>
+              </div>
+              {lastSyncInfo && (
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {lastSyncInfo.count} Records Synced at {lastSyncInfo.time}
+                </span>
+              )}
+            </div>
+
+            <Button
+              onClick={handleSyncAllModulesToFirestore}
+              disabled={isSyncingAllModules}
+              className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-sm text-white transition-all shadow-md flex items-center justify-center space-x-2 ${
+                isSyncingAllModules ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95'
+              }`}
+            >
+              {isSyncingAllModules ? (
+                <>
+                  <svg className="animate-spin h-4 w-4 text-white mr-2" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span>Syncing All Modules...</span>
+                </>
+              ) : (
+                <>
+                  <span className="mr-1">🔥</span>
+                  <span>Sync All Modules to Firestore</span>
+                </>
+              )}
+            </Button>
+
+            {allModulesStatusMessage && (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700">
+                {allModulesStatusMessage}
+              </div>
+            )}
+          </div>
+
           {/* Error Banner if any */}
           {errorMessage && (
             <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-center justify-between">
