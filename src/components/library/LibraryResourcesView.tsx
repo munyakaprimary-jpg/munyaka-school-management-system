@@ -48,31 +48,22 @@ const formatRole = (role?: string) => {
   if (norm === 'library_teacher' || norm === 'librarian') return 'Librarian & Asset Manager';
   if (norm === 'class_teacher') return 'Class Teacher';
   if (norm === 'subject_teacher') return 'Subject Teacher';
-  if (norm === 'head_teacher') return 'Head Teacher';
   if (norm === 'senior_teacher') return 'Senior Teacher';
-  return role ? role.replace(/_/g, ' ').toUpperCase() : 'Staff Member';
+  if (norm === 'head_teacher') return 'Head Teacher';
+  if (norm === 'dhoi') return 'Deputy Head of Institution';
+  if (norm === 'admin') return 'System Administrator';
+  return 'Staff Member';
 };
 
-export const LibraryResourcesView: React.FC = () => {
+export default function LibraryResourcesView() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
-  const currentUser = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('munyaka_current_user') || '{}');
-    } catch {
-      return {};
-    }
-  }, []);
-
-  const rbacRole = currentUser.rbacRole || currentUser.role || user?.role || 'library_teacher';
-  const userName = currentUser.name || currentUser.fullName || user?.name || 'Janet Gathoni Kungu';
+  const currentUserRole = user?.role || (user as any)?.rbacRole || 'subject_teacher';
 
   const [activeTab, setActiveTab] = useState<'inventory' | 'circulation' | 'eresources'>('inventory');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  // Modals state
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isIssueOpen, setIsIssueOpen] = useState(false);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
@@ -80,7 +71,6 @@ export const LibraryResourcesView: React.FC = () => {
   const [selectedBookForAction, setSelectedBookForAction] = useState<any>(null);
   const [previewDocument, setPreviewDocument] = useState<any>(null);
 
-  // Data states
   const [books, setBooks] = useState<any[]>([]);
   const [circulation, setCirculation] = useState<any[]>([]);
   const [eResources, setEResources] = useState<any[]>([]);
@@ -92,40 +82,40 @@ export const LibraryResourcesView: React.FC = () => {
                        localStorage.getItem('library_books');
       if (rawBooks) {
         const parsed = JSON.parse(rawBooks);
-        setBooks(Array.isArray(parsed) ? parsed : []);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setBooks(parsed);
+        } else {
+          setBooks([]);
+        }
       } else {
-        const initial = [
-          { id: 'b1', title: 'BB RULERS', category: 'Stationery', isbn: '978-3705', quantity: 10, copies: 10 },
-          { id: 'b2', title: 'REAM PAPERS', category: 'Stationery', isbn: '978-0140', quantity: 40, copies: 40 },
-          { id: 'b3', title: 'CBC MATHEMATICS GRADE 4', category: 'Textbook', isbn: '978-9966', quantity: 25, copies: 25 }
-        ];
-        setBooks(initial);
-        localStorage.setItem('munyaka_library_inventory', JSON.stringify(initial));
+        setBooks([]);
       }
-    } catch {
-      setBooks([]);
-    }
 
-    try {
-      const rawCirc = localStorage.getItem('munyaka_library_circulation') || localStorage.getItem('munyaka_library_loans') || '[]';
-      const parsed = JSON.parse(rawCirc);
-      setCirculation(Array.isArray(parsed) ? parsed : []);
-    } catch {
-      setCirculation([]);
-    }
+      const rawCirc = localStorage.getItem('munyaka_library_circulation') || localStorage.getItem('munyaka_library_loans');
+      if (rawCirc) {
+        setCirculation(JSON.parse(rawCirc));
+      } else {
+        setCirculation([]);
+      }
 
-    try {
-      const rawRes = localStorage.getItem('munyaka_library_eresources') || localStorage.getItem('munyaka_study_materials') || '[]';
-      const parsed = JSON.parse(rawRes);
-      setEResources(Array.isArray(parsed) ? parsed : []);
-    } catch {
-      setEResources([]);
+      const rawRes = localStorage.getItem('munyaka_library_eresources') || localStorage.getItem('munyaka_study_materials');
+      if (rawRes) {
+        setEResources(JSON.parse(rawRes));
+      } else {
+        setEResources([]);
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
   useEffect(() => {
     loadData();
-    const handleStorage = () => loadData();
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || e.key.includes('library') || e.key.includes('study')) {
+        loadData();
+      }
+    };
     window.addEventListener('storage', handleStorage);
     const interval = setInterval(loadData, 2000);
     return () => {
@@ -134,347 +124,234 @@ export const LibraryResourcesView: React.FC = () => {
     };
   }, []);
 
-  const formattedRole = formatRole(String(rbacRole));
-  const canEdit = hasFullAccess(String(rbacRole));
-  const isReadOnly = isViewOnly(String(rbacRole));
+  const handleRegisterBook = (bookData: any) => {
+    const updated = [{ ...bookData, id: 'b_' + Date.now() }, ...books];
+    setBooks(updated);
+    localStorage.setItem('munyaka_library_inventory', JSON.stringify(updated));
+    toast({ title: "Success", description: "Book cataloged successfully." });
+    setIsRegisterOpen(false);
+  };
 
-  const totalTitles = books.length;
-  const totalVolumes = books.reduce((acc, b) => acc + Number(b.quantity || b.copies || b.stock || 1), 0);
-  const activeLoans = circulation.filter(c => c?.status === 'ISSUED' || c?.status === 'ACTIVE').length;
-  const overdueCount = circulation.filter(c => {
-    const isIssued = c?.status === 'ISSUED' || c?.status === 'ACTIVE';
-    const due = c?.dueDate;
-    return isIssued && due && new Date(due) < new Date();
-  }).length;
-  const eresourcesCount = eResources.length;
+  const handleConfirmReturn = (logId: string, qtyReturned: number, qtyLost: number) => {
+    const updated = circulation.map(c => {
+      if (c.id === logId) {
+        const returned = (c.returnedQuantity || 0) + qtyReturned;
+        const lost = (c.lostQuantity || 0) + qtyLost;
+        const totalQty = c.quantity || c.copies || 1;
+        const status = returned + lost >= totalQty ? 'RETURNED' : 'PARTIAL';
+        return { ...c, returnedQuantity: returned, lostQuantity: lost, status };
+      }
+      return c;
+    });
+    setCirculation(updated);
+    localStorage.setItem('munyaka_library_circulation', JSON.stringify(updated));
+    toast({ title: "Return Processed", description: `Recorded ${qtyReturned} returned and ${qtyLost} lost.` });
+    setIsReturnOpen(false);
+  };
 
   const handleDeleteBook = (id: string) => {
-    if (!canEdit) {
-      toast({ title: 'Access Denied', description: 'You do not have permission to delete inventory items.', variant: 'destructive' });
-      return;
-    }
     const updated = books.filter(b => b.id !== id);
     setBooks(updated);
     localStorage.setItem('munyaka_library_inventory', JSON.stringify(updated));
-    toast({ title: 'Success', description: 'Item removed from library inventory.' });
+    toast({ title: "Deleted", description: "Book removed from inventory." });
   };
 
+  const filteredBooks = useMemo(() => {
+    return books.filter(b => {
+      const matchSearch = String(b.title || b.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          String(b.isbn || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchCategory = categoryFilter === 'all' || String(b.category || '').toLowerCase() === categoryFilter.toLowerCase();
+      return matchSearch && matchCategory;
+    });
+  }, [books, searchQuery, categoryFilter]);
+
   return (
-    <div className="space-y-8 pb-12 max-w-7xl mx-auto px-4">
+    <div className="space-y-6 pb-12 max-w-7xl mx-auto px-4">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-cyan-900 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
-        <div className="space-y-3 relative z-10 max-w-3xl">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider bg-amber-700/50 px-3 py-1 rounded-full text-amber-200 border border-amber-500/30">
-              {rbacRole === 'library_teacher' || rbacRole === 'librarian' ? 'Librarian & Asset Portal' : `${formattedRole} Workstation`}
-            </span>
-            <span className="text-xs text-amber-300 font-medium">{String(userName || '')}</span>
+        <div className="space-y-3 relative z-10">
+          <div className="flex items-center gap-2">
+            <Badge className="bg-white/20 text-white font-bold uppercase text-[10px]">Librarian & Asset Portal</Badge>
+            <span className="text-xs text-emerald-200 font-medium">• Role: {formatRole(currentUserRole)}</span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-black">Library & E-Resources Management Hub</h1>
-          <p className="text-emerald-100 text-sm md:text-base font-medium leading-relaxed">
-            Manage physical textbook stock, track active student loans, monitor overdue returns, and upload digital CBC reading guides.
+          <h1 className="text-2xl md:text-3xl font-black">Library & E-Resources Workstation</h1>
+          <p className="text-emerald-100 text-sm md:text-base max-w-2xl font-medium leading-relaxed">
+            Manage school textbook inventory, track student book loans, and upload CBC digital reading materials.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 mt-6 relative z-10">
-          {canEdit && (
+          {hasFullAccess(currentUserRole) && (
             <>
               <Button
                 onClick={() => setIsRegisterOpen(true)}
-                className="bg-white text-emerald-900 hover:bg-emerald-50 font-bold rounded-xl shadow-sm flex items-center gap-2"
+                className="bg-white text-emerald-800 hover:bg-emerald-50 font-bold rounded-xl shadow-sm flex items-center gap-2"
               >
-                <Plus className="w-4 h-4" /> Register New Book / Item
+                <Plus className="w-4 h-4" /> Register New Book
               </Button>
               <Button
                 onClick={() => { setSelectedBookForAction(books[0] || null); setIsIssueOpen(true); }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl border border-emerald-500 shadow-sm flex items-center gap-2"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-sm flex items-center gap-2 border border-emerald-500"
               >
-                <BookmarkCheck className="w-4 h-4" /> Issue Item
+                <BookmarkCheck className="w-4 h-4" /> Issue Book Loan
               </Button>
               <Button
                 onClick={() => setIsAddMaterialOpen(true)}
-                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl border border-cyan-500 shadow-sm flex items-center gap-2"
+                className="bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl shadow-sm flex items-center gap-2 border border-teal-500"
               >
-                <FileText className="w-4 h-4" /> Upload E-Resource
+                <FileText className="w-4 h-4" /> Upload E-Resource PDF
               </Button>
             </>
           )}
         </div>
       </div>
 
-      {/* Metrics Cards 4-Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Book Stock</p>
-            <h3 className="text-3xl font-black text-slate-900">{totalTitles} <span className="text-sm font-medium text-slate-400">({totalVolumes} vols)</span></h3>
-            <p className="text-xs text-emerald-600 font-bold">Catalogued Inventory</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <BookOpen className="w-6 h-6" />
-          </div>
-        </Card>
-
-        <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Loans</p>
-            <h3 className="text-3xl font-black text-slate-900">{activeLoans}</h3>
-            <p className="text-xs text-blue-600 font-bold">Currently Issued</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-            <BookmarkCheck className="w-6 h-6" />
-          </div>
-        </Card>
-
-        <Card className={`border shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between ${overdueCount > 0 ? 'border-amber-300 bg-amber-50/40' : 'border-slate-200/80'}`}>
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Overdue Returns</p>
-            <h3 className={`text-3xl font-black ${overdueCount > 0 ? 'text-amber-700' : 'text-slate-900'}`}>{overdueCount}</h3>
-            <p className={`text-xs font-bold ${overdueCount > 0 ? 'text-amber-600' : 'text-slate-500'}`}>Requires Follow-up</p>
-          </div>
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${overdueCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-        </Card>
-
-        <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Digital E-Resources</p>
-            <h3 className="text-3xl font-black text-slate-900">{eresourcesCount}</h3>
-            <p className="text-xs text-indigo-600 font-bold">Uploaded PDFs & Media</p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <FileText className="w-6 h-6" />
-          </div>
-        </Card>
-      </div>
-
-      {/* Tabs navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
-        <button
-          onClick={() => setActiveTab('inventory')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'inventory' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          Book & Item Inventory ({books.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('circulation')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'circulation' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          Circulation & Loans ({circulation.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('eresources')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === 'eresources' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          Digital Study Corner ({eResources.length})
-        </button>
-      </div>
-
-      {/* Search & Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            type="text"
-            placeholder="Search by title, category, or ISBN..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 border-slate-200 rounded-xl text-sm"
-          />
+      {/* Tabs / Filter Navigation */}
+      <div className="flex items-center justify-between border-b pb-4">
+        <div className="flex gap-2 bg-slate-100 p-1 rounded-2xl">
+          <button
+            onClick={() => setActiveTab('inventory')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'inventory' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            📚 Textbook Inventory ({books.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('circulation')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'circulation' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            🔄 Circulation & Loans ({circulation.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('eresources')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTab === 'eresources' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            💻 Digital E-Resources ({eResources.length})
+          </button>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {activeTab === 'inventory' && (
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="bg-white border border-slate-200 rounded-xl py-2 px-3 text-xs font-medium text-slate-700 focus:outline-none"
-            >
-              <option value="all">All Categories</option>
-              <option value="textbook">Textbooks</option>
-              <option value="stationery">Stationery</option>
-              <option value="reference">Reference</option>
-            </select>
-          )}
+
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+            <Input
+              placeholder="Search library..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-10 w-64 rounded-xl text-xs bg-white"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Tab Content */}
+      {/* Tab Content: INVENTORY */}
       {activeTab === 'inventory' && (
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
-                  <th className="py-3.5 px-4">#</th>
-                  <th className="py-3.5 px-4">Title / Item</th>
-                  <th className="py-3.5 px-4">Category</th>
-                  <th className="py-3.5 px-4">ISBN / Code</th>
-                  <th className="py-3.5 px-4 text-center">Total Volumes</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {books.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 italic text-sm">
-                      No books or items cataloged in inventory yet. Click "Register New Book / Item" above to add stock.
-                    </td>
-                  </tr>
-                ) : (
-                  books
-                    .filter(b => {
-                      const t = String(b.title || b.name || '').toLowerCase();
-                      const cat = String(b.category || '').toLowerCase();
-                      const isbn = String(b.isbn || '').toLowerCase();
-                      const q = searchQuery.toLowerCase();
-                      const matchesSearch = t.includes(q) || cat.includes(q) || isbn.includes(q);
-                      const matchesCategory = categoryFilter === 'all' || cat.includes(categoryFilter);
-                      return matchesSearch && matchesCategory;
-                    })
-                    .map((book, index) => {
-                      const title = book.title || book.name || 'Untitled';
-                      const category = book.category || 'General';
-                      const isbn = book.isbn || 'N/A';
-                      const copies = Number(book.quantity || book.copies || book.stock || 1);
-                      return (
-                        <tr key={book.id || index} className="hover:bg-slate-50/80 transition-all">
-                          <td className="py-3.5 px-4 font-mono text-xs text-slate-400">{index + 1}</td>
-                          <td className="py-3.5 px-4 font-bold text-slate-900">{title}</td>
-                          <td className="py-3.5 px-4">
-                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                              {category}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 font-mono text-xs text-slate-600">{isbn}</td>
-                          <td className="py-3.5 px-4 text-center font-bold text-emerald-700">{copies} vols</td>
-                          <td className="py-3.5 px-4 text-right space-x-2">
-                            {canEdit && (
-                              <>
-                                <Button
-                                  onClick={() => { setSelectedBookForAction(book); setIsIssueOpen(true); }}
-                                  size="sm"
-                                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-lg border border-emerald-200"
-                                >
-                                  Issue
-                                </Button>
-                                <Button
-                                  onClick={() => handleDeleteBook(book.id)}
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredBooks.length === 0 ? (
+            <div className="col-span-full py-16 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+              <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <h3 className="font-bold text-slate-700 text-sm">No textbook inventory found</h3>
+              <p className="text-xs text-slate-500 mt-1">Register new books or check back later.</p>
+            </div>
+          ) : (
+            filteredBooks.map((book: any, idx: number) => {
+              const title = book.title || book.name || 'Untitled Book';
+              const qty = Number(book.quantity || book.copies || book.stock || 1);
+              const author = book.author || 'CBC Curriculum';
+              const category = book.category || 'Textbook';
+              const isbn = book.isbn || 'N/A';
+              return (
+                <Card key={book.id || idx} className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge className="bg-emerald-50 text-emerald-700 border-none font-bold text-[10px]">{category}</Badge>
+                      <span className="text-xs font-bold text-slate-500">ISBN: {isbn}</span>
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-base line-clamp-2">{title}</h3>
+                    <p className="text-xs text-slate-500">Author / Publisher: {author}</p>
+                  </div>
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Stock Available</span>
+                      <span className="text-sm font-black text-emerald-700">{qty} volumes</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {hasFullAccess(currentUserRole) && (
+                        <>
+                          <Button onClick={() => { setSelectedBookForAction(book); setIsIssueOpen(true); }} size="sm" variant="outline" className="text-xs h-8 rounded-xl font-bold">
+                            Issue
+                          </Button>
+                          <Button onClick={() => handleDeleteBook(book.id)} size="sm" variant="ghost" className="text-rose-600 hover:text-rose-700 h-8 w-8 p-0">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })
+          )}
         </div>
       )}
 
+      {/* Tab Content: CIRCULATION */}
       {activeTab === 'circulation' && (
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden space-y-4">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="font-bold text-slate-900 text-sm">Active & Past Circulation Loans</h3>
-            {canEdit && (
-              <Button
-                onClick={() => setIsReturnOpen(true)}
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl"
-              >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-slate-900 text-base">Active Textbook Loans & Circulation</h3>
+            {hasFullAccess(currentUserRole) && (
+              <Button onClick={() => setIsReturnOpen(true)} size="sm" className="bg-emerald-600 text-xs font-bold rounded-xl">
                 Process Return
               </Button>
             )}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
-                  <th className="py-3.5 px-4">Book / Item</th>
-                  <th className="py-3.5 px-4">Borrower</th>
-                  <th className="py-3.5 px-4">Type</th>
-                  <th className="py-3.5 px-4">Issued Date</th>
-                  <th className="py-3.5 px-4">Due Date</th>
-                  <th className="py-3.5 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {circulation.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 italic text-sm">
-                      No active circulation records. Use the "Issue Item" button above to record a loan.
-                    </td>
-                  </tr>
-                ) : (
-                  circulation.map((c, index) => {
-                    const isOverdue = c?.dueDate && new Date(c.dueDate) < new Date() && c?.status === 'ISSUED';
-                    return (
-                      <tr key={c.id || index} className="hover:bg-slate-50/80 transition-all">
-                        <td className="py-3.5 px-4 font-bold text-slate-900">{c.bookTitle || 'Textbook Loan'}</td>
-                        <td className="py-3.5 px-4 font-medium text-slate-700">{c.borrowerName || 'Student'}</td>
-                        <td className="py-3.5 px-4 text-xs font-bold text-slate-500">{c.borrowerType || 'Student'}</td>
-                        <td className="py-3.5 px-4 text-xs font-mono text-slate-600">{c.issuedDate || 'Today'}</td>
-                        <td className={`py-3.5 px-4 text-xs font-mono font-bold ${isOverdue ? 'text-rose-600' : 'text-slate-600'}`}>
-                          {c.dueDate || 'N/A'}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                            c.status === 'RETURNED' ? 'bg-slate-100 text-slate-600' :
-                            isOverdue ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'
-                          }`}>
-                            {isOverdue ? 'OVERDUE' : (c.status || 'ISSUED')}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            {circulation.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-500">
+                No active circulation loans recorded.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {circulation.map((c: any, idx: number) => (
+                  <div key={idx} className="p-4 flex items-center justify-between text-xs">
+                    <div>
+                      <p className="font-bold text-slate-900 text-sm">{c.bookTitle || c.title || 'Textbook Loan'}</p>
+                      <p className="text-slate-500">Borrower: {c.borrowerName || c.learnerName || 'Student'} ({c.grade || 'Grade'})</p>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${c.status === 'ISSUED' || c.status === 'active' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {c.status || 'Active'}
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-1">Due: {c.dueDate || c.returnDate || 'N/A'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
 
+      {/* Tab Content: E-RESOURCES */}
       {activeTab === 'eresources' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {eResources.length === 0 ? (
-            <div className="col-span-3 py-16 text-center text-slate-500 bg-white rounded-2xl border border-slate-200">
-              <FileText className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-              <p className="text-sm font-semibold">No digital e-resources uploaded yet.</p>
-              <p className="text-xs text-slate-400 mt-1">Upload study guides, PDF notes, or CBC curriculum aids for learners and staff.</p>
+            <div className="col-span-full py-16 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <h3 className="font-bold text-slate-700 text-sm">No digital e-resources uploaded yet</h3>
+              <p className="text-xs text-slate-500 mt-1">Upload CBC study guides, notes, or past papers.</p>
             </div>
           ) : (
             eResources.map((res: any, idx: number) => (
-              <Card key={idx} className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 space-y-3">
-                <div className="flex items-center justify-between">
-                  <Badge className="bg-indigo-50 text-indigo-700 font-bold border-none text-[10px]">
-                    {res.grade || 'CBC E-Resource'}
-                  </Badge>
-                  <span className="text-[10px] font-mono text-slate-400">{res.date || 'Today'}</span>
+              <Card key={idx} className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold text-[10px]">{res.strand || 'CBC Study Material'}</Badge>
+                  <h3 className="font-bold text-slate-900 text-base">{res.title || 'Untitled Document'}</h3>
+                  <p className="text-xs text-slate-500 line-clamp-2">{res.description || 'No description provided.'}</p>
                 </div>
-                <h4 className="font-bold text-slate-900 text-base">{res.title || res.name}</h4>
-                <p className="text-xs text-slate-600 line-clamp-2">{res.description || 'Uploaded digital study material.'}</p>
-                <div className="pt-2 flex items-center justify-between">
-                  <Button
-                    onClick={() => setPreviewDocument(res)}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs font-bold rounded-xl text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                  >
-                    Preview Document
+                <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-400">{res.grade || 'All Grades'}</span>
+                  <Button onClick={() => setPreviewDocument(res)} size="sm" variant="outline" className="text-xs h-8 rounded-xl font-bold flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" /> Preview PDF
                   </Button>
                 </div>
               </Card>
@@ -487,7 +364,7 @@ export const LibraryResourcesView: React.FC = () => {
       <RegisterBookModal
         isOpen={isRegisterOpen}
         onClose={() => setIsRegisterOpen(false)}
-        onRegisterBook={() => loadData()}
+        onRegisterBook={handleRegisterBook}
       />
 
       <IssueBookModal
@@ -498,11 +375,11 @@ export const LibraryResourcesView: React.FC = () => {
       />
 
       <ProcessReturnModal
-              isOpen={isReturnOpen}
-              onClose={() => setIsReturnOpen(false)}
-              log={selectedBookForAction}
-              onConfirmReturn={() => loadData()}
-            />
+        isOpen={isReturnOpen}
+        onClose={() => setIsReturnOpen(false)}
+        log={selectedBookForAction}
+        onConfirmReturn={handleConfirmReturn}
+      />
 
       {isAddMaterialOpen && (
         <AddMaterialModal

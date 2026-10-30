@@ -410,7 +410,7 @@ export default function StaffRegistry() {
         return;
       }
       
-      const assignedRole = rbacRole || category;
+      const assignedRole = category;
       const TEACHING_ROLES = [
         'class_teacher',
         'subject_teacher',
