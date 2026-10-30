@@ -27,7 +27,7 @@ import { toast } from '@/components/ui/use-toast';
 import { RegisterBookModal } from '@/components/library/RegisterBookModal';
 import { IssueBookModal } from '@/components/library/IssueBookModal';
 import { ProcessReturnModal } from '@/components/library/ProcessReturnModal';
-import { AddMaterialModal } from '@/components/AddMaterialModal';
+import AddMaterialModal from '@/components/AddMaterialModal';
 import { DocumentPreviewModal } from '@/components/DocumentPreviewModal';
 
 const FULL_ACCESS_ROLES = ['library_teacher', 'librarian', 'admin', 'dhoi', 'super_admin'];
@@ -487,7 +487,7 @@ export const LibraryResourcesView: React.FC = () => {
       <RegisterBookModal
         isOpen={isRegisterOpen}
         onClose={() => setIsRegisterOpen(false)}
-        onSuccess={() => loadData()}
+        onRegisterBook={() => loadData()}
       />
 
       <IssueBookModal
@@ -498,10 +498,11 @@ export const LibraryResourcesView: React.FC = () => {
       />
 
       <ProcessReturnModal
-        isOpen={isReturnOpen}
-        onClose={() => setIsReturnOpen(false)}
-        onSuccess={() => loadData()}
-      />
+              isOpen={isReturnOpen}
+              onClose={() => setIsReturnOpen(false)}
+              log={selectedBookForAction}
+              onConfirmReturn={() => loadData()}
+            />
 
       <AddMaterialModal
         isOpen={isAddMaterialOpen}
