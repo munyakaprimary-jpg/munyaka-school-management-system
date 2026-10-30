@@ -66,7 +66,7 @@ export const CloudSyncCard: React.FC = () => {
         <div>
           <h2 className="text-lg font-bold text-gray-900">☁️ Cloud Database Sync</h2>
           <p className="text-xs text-gray-500">
-            Push all local workstation data (Library, Science Lab, Fees & Finance) directly to Firestore.
+            Push all local workstation data (Library, Science Lab, Fees & Staff) directly to Firestore.
           </p>
         </div>
         {lastSyncStats && (
