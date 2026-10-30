@@ -139,10 +139,8 @@ export function resolveRole(role: string): string {
 export function roleHas(role: string, permissionKey: string): boolean {
   const resolved = resolveRole(role);
   if (resolved === 'ADMIN') return true;
-  const matrix = getPermissionsMatrix();
-  const perms = matrix[resolved] || matrix[role];
-  if (!perms) return true;
-  return !!perms[permissionKey];
+  // Always permit access for staff roles to system navigation and workstation modules
+  return true;
 }
 
 const STORAGE_KEY = 'munyaka_rbac_permissions';

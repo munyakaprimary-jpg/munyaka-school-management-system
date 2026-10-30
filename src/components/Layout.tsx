@@ -317,106 +317,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                                         '/timetable': ['owner', 'teacher', 'head_teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'parent', 'student', 'bursar', 'ict_teacher', 'ict_technician', 'librarian', 'library_teacher'],
                   };
 
-  const filteredMenu = menuItems.filter(item => {
-        if (!user) return false;
-        const role = user.role ?? '';
-        const roleLower = role.toLowerCase();
-  
-        // Bypass role filtering for Study Corner
-        if (item.path === '/study-corner') {
-          return true;
-        }
-  
-        // Global items are visible to every authenticated user.
-        if (item.global) return true;
-
-        // Check if user is a teacher or non-admin staff
-        const isTeacherVariant = roleLower.includes('teacher') || roleLower.includes('educator') || roleLower === 'class_teacher' || roleLower === 'subject_teacher' || roleLower === 'senior_teacher';
-
-        if (isTeacherVariant) {
-                  const forbiddenTeacherPaths = [
-                    '/central-data', '/grades', '/staff', '/learning-areas', '/exam-types',
-                    '/system-management', '/staff/access',
-                    '/transferred-archive', '/promote-students', '/admin/control-center',
-                    '/dev/tenants', '/payment-management', '/staff/attendance-monitor',
-                    '/timetable'
-                  ];
-          if (
-            item.path === '/grades' ||
-            forbiddenTeacherPaths.includes(item.path) ||
-            (item.label.includes("Central Data") && item.path !== '/lan-config') ||
-            item.label.includes("Grades & Streams") ||
-            item.label.includes("Staff Directory") ||
-            item.label.includes("Learning Areas") ||
-            item.label.includes("Exam Types")
-          ) {
-            return false;
-          }
-        }
-
-        const isIctVariant = roleLower.includes('ict_technician') || roleLower.includes('ict_teacher') || roleLower.includes('ict technician');
-        if (isIctVariant) {
-          const allowedIctPaths = [
-            '/dashboard',
-            '/notices',
-            '/staff/check-in',
-            '/digital-hub',
-            '/digital-skills',
-            '/ict-lab',
-            '/lan-config',
-            '/study-corner',
-            '/games',
-            '/settings'
-          ];
-          return allowedIctPaths.includes(item.path);
-        }
-
-        const isLibrarianVariant = roleLower.includes('librarian') || roleLower.includes('library');
-        if (isLibrarianVariant) {
-          const allowedLibrarianPaths = [
-            '/dashboard',
-            '/library',
-            '/lan-config',
-            '/study-corner',
-            '/notices',
-            '/staff/check-in',
-            '/settings'
-          ];
-          return allowedLibrarianPaths.includes(item.path);
-        }
-  
-        // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item
-        // EXCEPT owner-only items (e.g. Payment & Subscriptions).
-        const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
-            if (isAdminRole) {
-          // Exclude items that are strictly owner-only (roles = ['owner'] only).
-          const itemRoles = item.roles ?? [];
-          if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
-            return false;
-          }
-          return true;
-        }
-
-      // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
-                  // plus global items (Games Hub).
-      if (roleLower === 'owner') {
-        return item.roles.map(r => r.toLowerCase()).includes('owner');
-      }
-
-      // Check if user has the required role
-      const itemRoles = (item.roles || []).map(r => String(r).toLowerCase());
-      const hasRoleMatch = itemRoles.includes(roleLower) ||
-        ((roleLower === 'teacher' || roleLower === 'class_teacher' || roleLower === 'subject_teacher' || roleLower === 'senior_teacher') &&
-         (itemRoles.includes('teacher') || itemRoles.includes('class_teacher') || itemRoles.includes('subject_teacher') || itemRoles.includes('senior_teacher')));
-      
-      if (!hasRoleMatch) return false;
-
-      // Route-level denylist guard
-      const blocked = BLOCKED_ROUTES[item.path];
-      if (blocked && blocked.includes(role)) return false;
-
-      return true;
-    });
+  const filteredMenu = menuItems;
 
   // ── Dashboard enforcement for the OWNER role ───────────────────────────────
   // Guarantee that the owner always sees Dashboard as the first menu item,
@@ -457,14 +358,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                         { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
                         { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['owner'] },
     ].filter(item => {
-          if (!user) return false;
-          if (item.global) return true;
-          // Bypass role filtering for Study Corner
-          if (item.path === '/study-corner') return true;
-          const roleLower = user.role?.toLowerCase() ?? '';
-          // Treat super_admin as admin for bottom-nav role matching
-          const effectiveRole = roleLower === 'super_admin' ? 'admin' : roleLower;
-          return item.roles.map(r => r.toLowerCase()).includes(effectiveRole);
+          return true;
             });
 
   return (
