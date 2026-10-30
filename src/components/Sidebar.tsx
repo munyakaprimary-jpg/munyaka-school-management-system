@@ -1,50 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { roleHasModulePermission } from '@/rbac/permissionMatrixHelper';
 import {
   LayoutDashboard,
   Users,
   Layers,
   BookOpen,
   Award,
-  Contact2,
-  Key,
-  School,
-  CreditCard,
-  User,
-  MessageSquare,
-  Bell,
   Clock,
   CheckSquare,
   ClipboardCheck,
   LogIn,
-  Fingerprint,
   FileSpreadsheet,
   FileText,
   BarChart3,
   Laptop,
   Monitor,
-  Keyboard,
-  Target,
-  FolderHeart,
   Library,
   Box,
   Wallet,
-  Shield,
   ShieldCheck,
   UserCheck,
-  Archive,
-  ArrowUpCircle,
   Settings,
   Gamepad2,
   ChevronLeft,
   ChevronRight,
   LogOut,
-  ChevronDown,
-  Database,
-  Server,
-  Wifi
+  Wifi,
+  Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -53,10 +36,9 @@ import { useMobileBackButton } from '@/hooks/useMobileBackButton';
 
 interface NavItem {
   name: string;
-  path: string;
+  href: string;
   icon: any;
-  moduleKey: string;
-  allowedRoles?: string[];
+  allowedRoles: string[];
 }
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
@@ -87,72 +69,44 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     navigate('/login');
   };
 
-  const allNavItems: NavItem[] = [
-    { name: 'Admin Dashboard', path: '/system-management', icon: LayoutDashboard, moduleKey: 'dashboard' },
-    { name: 'Data Harmonization', path: '/admin/harmonization', icon: ShieldCheck, moduleKey: 'server' },
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard, moduleKey: 'dashboard' },
-    { name: 'Teacher LAN Config', path: '/teacher-lan-config', icon: Wifi, moduleKey: 'timetable' },
-    { name: 'Learners', path: '/learners', icon: Users, moduleKey: 'learners' },
-    { name: 'Staff Registry', path: '/staff-registry', icon: UserCheck, moduleKey: 'staff' },
-    { name: 'Games Hub', path: '/games', icon: Gamepad2, moduleKey: 'dashboard' },
-    { name: 'Grades & Streams', path: '/grades', icon: Layers, moduleKey: 'timetable' },
-    { name: 'Learning Areas', path: '/learning-areas', icon: BookOpen, moduleKey: 'assessments' },
-    { name: 'Exam Types', path: '/exam-types', icon: Award, moduleKey: 'assessments' },
-    { name: 'Timetable', path: '/timetable', icon: Clock, moduleKey: 'timetable' },
-    { name: 'Attendance Management', path: '/attendance', icon: CheckSquare, moduleKey: 'attendance' },
-    { name: 'Learner Attendance', path: '/attendance', icon: ClipboardCheck, moduleKey: 'attendance' },
-    {
-      name: 'Daily Check-In',
-      path: '/staff/check-in',
-      icon: LogIn,
-      moduleKey: 'daily_checkin',
-      allowedRoles: [
-        'admin',
-        'dhoi',
-        'class_teacher',
-        'subject_teacher',
-        'ict_teacher',
-        'lab_teacher',
-        'library_teacher',
-        'tools_inventory_teacher',
-        'support_staff',
-        'staff',
-        'head_teacher',
-        'teacher',
-        'senior_teacher',
-        'bursar',
-        'ict_technician',
-        'secretary',
-        'store_manager',
-        'ict',
-        'owner'
-      ]
-    },
-    { name: 'Enter Marks', path: '/assessments', icon: FileSpreadsheet, moduleKey: 'assessments' },
-    { name: 'Marked Scripts', path: '/assessments/marked-scripts', icon: FileText, moduleKey: 'assessments' },
-    { name: 'Results Analysis', path: '/analysis', icon: BarChart3, moduleKey: 'reports' },
-    { name: 'Digital Hub', path: '/digital-hub', icon: Laptop, moduleKey: 'library' },
-    { name: 'ICT Lab & Devices', path: '/ict-lab', icon: Monitor, moduleKey: 'inventory' },
-    { name: 'Library & E-Resources', path: '/library', icon: Library, moduleKey: 'library' },
-    { name: 'Tools & Inventory', path: '/inventory', icon: Box, moduleKey: 'inventory' },
-    { name: 'Fees & Finance', path: '/fees', icon: Wallet, moduleKey: 'fees' },
-    { name: 'Report Cards', path: '/reports', icon: FileText, moduleKey: 'reports' },
-    { name: 'Settings', path: '/settings', icon: Settings, moduleKey: 'settings' },
-  ];
+  const getCurrentRole = (): string => {
+    try {
+      const raw = localStorage.getItem('munyaka_current_staff');
+      if (raw) {
+        const staff = JSON.parse(raw);
+        return (staff.role || staff.assignedRole || '').toLowerCase();
+      }
+    } catch (e) {}
+    if (user?.role) {
+      return String(user.role).toLowerCase();
+    }
+    return '';
+  };
 
-  // Filter navigation items based on user role and RBAC permission matrix
-  const userRole = user?.role || 'TEACHER';
-  const navItems = allNavItems.filter(item => {
-    // Daily Check-In is explicitly allowed for all roles
-    if (item.moduleKey === 'daily_checkin' || item.path === '/staff/check-in') {
-      return true;
-    }
-    // Admin/Owner always see all
-    if (['ADMIN', 'HOI', 'DHOI', 'SUPER_ADMIN', 'OWNER'].includes(String(userRole).toUpperCase())) {
-      return true;
-    }
-    return roleHasModulePermission(userRole, item.moduleKey);
-  });
+  const activeRole = getCurrentRole();
+
+  const navigationItems: NavItem[] = [
+    { name: 'Home / Dashboard', href: '/', icon: LayoutDashboard, allowedRoles: ['all'] },
+    { name: 'Admin Dashboard', href: '/system-management', icon: ShieldCheck, allowedRoles: ['admin', 'hoi', 'dhoi', 'super_admin', 'owner'] },
+    { name: 'Library Workstation', href: '/library', icon: Library, allowedRoles: ['library teacher', 'library_teacher', 'ict teacher', 'ict_teacher', 'hoi', 'dhoi', 'admin', 'super_admin', 'owner'] },
+    { name: 'Academic CBC Portal', href: '/academics', icon: BookOpen, allowedRoles: ['subject teacher', 'subject_teacher', 'class teacher', 'class_teacher', 'ict teacher', 'ict_teacher', 'hoi', 'dhoi', 'admin', 'super_admin', 'owner', 'teacher'] },
+    { name: 'Staff Directory', href: '/staff-registry', icon: UserCheck, allowedRoles: ['hoi', 'dhoi', 'admin', 'super_admin', 'owner', 'ict teacher', 'ict_technician', 'ict'] },
+    { name: 'Financials & Fees', href: '/fees', icon: Wallet, allowedRoles: ['hoi', 'dhoi', 'admin', 'super_admin', 'owner', 'finance', 'bursar'] },
+    { name: 'Learners', href: '/learners', icon: Users, allowedRoles: ['all'] },
+    { name: 'Teacher LAN Config', href: '/teacher-lan-config', icon: Wifi, allowedRoles: ['ict teacher', 'ict_teacher', 'ict', 'admin', 'hoi', 'dhoi', 'super_admin', 'owner'] },
+    { name: 'Games Hub', href: '/games', icon: Gamepad2, allowedRoles: ['all'] },
+    { name: 'Grades & Streams', href: '/grades', icon: Layers, allowedRoles: ['admin', 'hoi', 'dhoi', 'super_admin', 'owner', 'class teacher', 'class_teacher', 'teacher'] },
+    { name: 'Timetable', href: '/timetable', icon: Clock, allowedRoles: ['all'] },
+    { name: 'Attendance Management', href: '/attendance', icon: CheckSquare, allowedRoles: ['admin', 'hoi', 'dhoi', 'super_admin', 'owner', 'class teacher', 'class_teacher', 'teacher', 'support_staff'] },
+    { name: 'Daily Check-In', href: '/staff/check-in', icon: LogIn, allowedRoles: ['all'] },
+    { name: 'Enter Marks', href: '/assessments', icon: FileSpreadsheet, allowedRoles: ['subject teacher', 'subject_teacher', 'class teacher', 'class_teacher', 'teacher', 'admin', 'hoi', 'dhoi', 'super_admin', 'owner'] },
+    { name: 'Results Analysis', href: '/analysis', icon: BarChart3, allowedRoles: ['admin', 'hoi', 'dhoi', 'super_admin', 'owner', 'teacher', 'subject teacher', 'subject_teacher'] },
+    { name: 'Digital Hub', href: '/digital-hub', icon: Laptop, allowedRoles: ['all'] },
+    { name: 'ICT Lab & Devices', href: '/ict-lab', icon: Monitor, allowedRoles: ['ict teacher', 'ict_teacher', 'ict', 'ict_technician', 'admin', 'hoi', 'dhoi', 'super_admin', 'owner'] },
+    { name: 'Tools & Inventory', href: '/inventory', icon: Box, allowedRoles: ['admin', 'hoi', 'dhoi', 'super_admin', 'owner', 'store_manager', 'tools_inventory_teacher', 'support_staff'] },
+    { name: 'Report Cards', href: '/reports', icon: FileText, allowedRoles: ['admin', 'hoi', 'dhoi', 'super_admin', 'owner', 'class teacher', 'class_teacher', 'teacher'] },
+    { name: 'Settings', href: '/settings', icon: Settings, allowedRoles: ['admin', 'hoi', 'dhoi', 'super_admin', 'owner'] },
+  ];
 
   const activePath = location.pathname;
 
@@ -185,27 +139,60 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         </div>
 
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
-          {navItems.map((item, idx) => {
+          {navigationItems.map((item, idx) => {
             const Icon = item.icon;
-            const isActive = activePath === item.path || (item.path !== '/' && activePath.startsWith(item.path));
+            const isAllowed = item.allowedRoles.includes('all') || 
+                              item.allowedRoles.some(r => activeRole.includes(r.toLowerCase()) || activeRole === r.toLowerCase());
+            const isActive = activePath === item.href || (item.href !== '/' && activePath.startsWith(item.href));
+
+            if (isAllowed) {
+              return (
+                <NavLink
+                  key={idx}
+                  to={item.href}
+                  className={cn(
+                    "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
+                    isActive
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
+                      : "text-slate-300 hover:text-white hover:bg-slate-800/80"
+                  )}
+                  title={isCollapsed ? item.name : undefined}
+                >
+                  <Icon size={20} className={cn("transition-transform group-hover:scale-110 shrink-0", isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200")} />
+                  {!isCollapsed && <span className="truncate flex-1">{item.name}</span>}
+                  {isActive && !isCollapsed && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0" />
+                  )}
+                </NavLink>
+              );
+            }
+
+            if (isCollapsed) {
+              return (
+                <div
+                  key={idx}
+                  title={`Restricted: Outside your workstation role (${item.name})`}
+                  className="flex items-center justify-center p-3 rounded-xl text-slate-600 bg-slate-900/40 cursor-not-allowed select-none opacity-60"
+                >
+                  <Icon size={20} className="text-slate-600 shrink-0" />
+                </div>
+              );
+            }
+
             return (
-              <NavLink
+              <div
                 key={idx}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
-                  isActive
-                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/25"
-                    : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/60"
-                )}
-                title={isCollapsed ? item.name : undefined}
+                title="Restricted: Outside your workstation role"
+                className="flex items-center justify-between px-3.5 py-3 rounded-xl text-slate-500 bg-slate-900/50 cursor-not-allowed select-none border border-slate-800/40"
               >
-                <Icon size={20} className={cn("transition-transform group-hover:scale-110 shrink-0", isActive ? "text-white" : "text-slate-400 group-hover:text-slate-200")} />
-                {!isCollapsed && <span className="truncate flex-1">{item.name}</span>}
-                {isActive && !isCollapsed && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0" />
-                )}
-              </NavLink>
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <Icon size={20} className="text-slate-600 shrink-0" />
+                  <span className="line-through truncate text-slate-500 font-medium text-sm">{item.name}</span>
+                </div>
+                <span className="text-[10px] uppercase tracking-wider bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md font-semibold shrink-0 flex items-center gap-1 border border-slate-700/50">
+                  <Lock size={10} /> Locked
+                </span>
+              </div>
             );
           })}
         </div>
@@ -215,11 +202,11 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             <div className="flex items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-700 flex items-center justify-center text-white font-bold text-sm shrink-0 border border-slate-700">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  {user?.name ? user.name.charAt(0).toUpperCase() : (activeRole ? activeRole.charAt(0).toUpperCase() : 'U')}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-200 truncate">{user?.name || 'User'}</p>
-                  <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider truncate">{user?.role || 'Staff'}</p>
+                  <p className="text-xs font-bold text-slate-200 truncate">{user?.name || activeRole || 'User'}</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider truncate">{activeRole || user?.role || 'Staff'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
