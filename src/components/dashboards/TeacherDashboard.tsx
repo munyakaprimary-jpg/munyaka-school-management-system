@@ -137,6 +137,28 @@ export default function TeacherDashboard() {
       };
     }, []);
 
+    const getStoredLibraryStock = () => {
+      try {
+        const raw = localStorage.getItem('munyaka_library_inventory') ||
+                      localStorage.getItem('munyaka_library_books') ||
+                      localStorage.getItem('library_inventory');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (err) {
+        console.error('Error reading stock:', err);
+      }
+      return [];
+    };
+
+    const liveStockItems = getStoredLibraryStock();
+
+    // Calculate total physical volume sum across all items
+    const totalVolumeSum = liveStockItems.reduce((acc: number, item: any) => {
+      return acc + Number(item.quantity || item.copies || item.stock || 1);
+    }, 0);
+
     const todayDate = new Date();
     const totalTitles = books.length;
     const totalVolumes = books.reduce((acc: number, item: any) => {
@@ -182,30 +204,30 @@ export default function TeacherDashboard() {
         {/* 4 Stat Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border border-slate-200/80 shadow-sm rounded-2xl bg-white p-6 flex flex-col justify-between">
-            <div className="space-y-1">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">TOTAL BOOK STOCK</p>
-                <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  {totalVolumes} vols total
+                <span className="text-xs font-semibold tracking-wider text-gray-400 uppercase">Total Book Stock</span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
+                  {totalVolumeSum} vols total
                 </span>
               </div>
-              <h3 className="text-xl font-black text-slate-900">{totalTitles} Unique Titles</h3>
-              
-              {/* Itemized Book Titles & Individual Counts Breakdown */}
-              <div className="mt-3 space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                {books.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic">No books cataloged yet.</p>
+
+              <h3 className="text-xl font-bold text-gray-900">
+                {liveStockItems.length} Unique Titles
+              </h3>
+
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {liveStockItems.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">No books cataloged yet.</p>
                 ) : (
-                  books.map((book: any, index: number) => {
-                    const title = book.title || book.name || book.bookTitle || 'Untitled Book';
-                    const count = Number(book.quantity || book.copies || book.stock || 1);
+                  liveStockItems.map((book: any, idx: number) => {
+                    const title = book.title || book.name || book.bookTitle || 'Untitled';
+                    const qty = Number(book.quantity || book.copies || book.stock || 1);
                     return (
-                      <div key={index} className="flex items-center justify-between text-xs py-1.5 border-b border-slate-100 last:border-0">
-                        <span className="font-semibold text-slate-800 truncate max-w-[210px]" title={title}>
-                          {index + 1}. {title}
-                        </span>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700">
-                          {count} {count === 1 ? 'vol' : 'vols'}
+                      <div key={idx} className="flex items-center justify-between text-sm py-1 border-b border-gray-50 last:border-0">
+                        <span className="font-medium text-gray-800 truncate max-w-[220px]">{idx + 1}. {title}</span>
+                        <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                          {qty} vols
                         </span>
                       </div>
                     );
