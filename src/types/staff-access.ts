@@ -76,17 +76,24 @@ export const SYSTEM_ROLE_LABELS: Record<SystemRole, { label: string; color: stri
 
 export interface StaffMember {
   id: string;
-  name: string;
+  staffId?: string;
+  name?: string;
+  fullName?: string;
   tscNumber?: string;
   nationalId?: string;
   email: string;
   phone?: string;
-  category: string;
-  rbacRole: MasterSystemRole | string;
+  category?: string;
+  rbacRole?: MasterSystemRole | string;
+  systemRole?: MasterSystemRole | string;
+  department?: string;
   status: AccessStatus;
   subjects?: string[];
+  assignedSubjects?: string[];
   assignedClasses?: string[];
   assignedStreams?: string[];
+  assignedGrade?: string;
+  assignedStream?: string;
   homeroomGrade?: string;
   homeroomStream?: string;
   tempAccessCode?: string;
@@ -95,3 +102,5 @@ export interface StaffMember {
   lastLogin?: string;
   profileComplete?: boolean;
 }
+
+export type PreRegisteredStaff = StaffMember;
