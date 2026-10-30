@@ -27,7 +27,8 @@ import {
   ChevronRight,
   LogOut,
   Wifi,
-  Lock
+  Lock,
+  FlaskConical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { name: 'Enter Marks', href: '/assessments', icon: FileSpreadsheet, allowedRoles: ['subject teacher', 'subject_teacher', 'class teacher', 'class_teacher', 'teacher', 'admin', 'hoi', 'dhoi', 'super_admin', 'owner'] },
     { name: 'Results Analysis', href: '/analysis', icon: BarChart3, allowedRoles: ['admin', 'hoi', 'dhoi', 'super_admin', 'owner', 'teacher', 'subject teacher', 'subject_teacher'] },
     { name: 'Digital Hub', href: '/digital-hub', icon: Laptop, allowedRoles: ['all'] },
+    { name: 'Science Lab Workstation', href: '/science-lab', icon: FlaskConical, allowedRoles: ['science teacher', 'science_teacher', 'lab teacher', 'lab_teacher', 'ict teacher', 'ict_teacher', 'hoi', 'dhoi', 'admin', 'super_admin', 'owner', 'teacher'] },
     { name: 'ICT Lab & Devices', href: '/ict-lab', icon: Monitor, allowedRoles: ['ict teacher', 'ict_teacher', 'ict', 'ict_technician', 'admin', 'hoi', 'dhoi', 'super_admin', 'owner'] },
     { name: 'Tools & Inventory', href: '/inventory', icon: Box, allowedRoles: ['admin', 'hoi', 'dhoi', 'super_admin', 'owner', 'store_manager', 'tools_inventory_teacher', 'support_staff'] },
     { name: 'Report Cards', href: '/reports', icon: FileText, allowedRoles: ['admin', 'hoi', 'dhoi', 'super_admin', 'owner', 'class teacher', 'class_teacher', 'teacher'] },
