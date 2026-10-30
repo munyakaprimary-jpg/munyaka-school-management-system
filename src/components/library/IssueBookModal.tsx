@@ -48,6 +48,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     return d.toISOString().split('T')[0];
   });
   const [quantity, setQuantity] = useState(1);
+  const [selectedUnit, setSelectedUnit] = useState('Pieces');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getMasterInventory = (): any[] => {
@@ -93,7 +94,6 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     const category = (book.category || book.type || '').toLowerCase();
     const title = (book.title || book.name || book.bookTitle || '').toLowerCase();
     
-    // Rulers are returnable tools/equipment, NOT consumables (unlike ream papers, chalk, pens)
     if (title.includes('ruler')) return false;
 
     const consumableKeywords = ['paper', 'ream', 'chalk', 'consumable', 'marker', 'ink', 'glue'];
@@ -138,6 +138,8 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
         borrowerType,
         dueDate: consumableItem ? 'N/A (Consumable)' : dueDate,
         quantity: Number(quantity),
+        unit: selectedUnit,
+        quantityFormatted: `${quantity} ${selectedUnit}`,
         grade,
         stream,
         status: consumableItem ? 'DISPENSED' : 'ISSUED',
@@ -165,7 +167,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
         console.error('Error saving circulation record:', err);
       }
 
-      toast({ title: 'Success', description: `Successfully ${consumableItem ? 'dispensed' : 'issued'} "${bookTitle}" to ${borrowerName.trim()}` });
+      toast({ title: 'Success', description: `Successfully ${consumableItem ? 'dispensed' : 'issued'} ${quantity} ${selectedUnit} of "${bookTitle}" to ${borrowerName.trim()}` });
       if (onSuccess) onSuccess();
       onClose();
     } catch (err: any) {
@@ -264,29 +266,51 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             </div>
           )}
 
+          {/* Quantity & Unit Selection Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-xs font-semibold text-slate-600 mb-1">Borrower Type</Label>
-              <select
-                value={borrowerType}
-                onChange={(e) => setBorrowerType(e.target.value as any)}
-                className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-              >
-                <option value="Student">Student (Learner)</option>
-                <option value="Staff">Staff Member</option>
-              </select>
-            </div>
-            <div>
-              <Label className="text-xs font-semibold text-slate-600 mb-1">Quantity</Label>
+              <Label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                Quantity *
+              </Label>
               <Input
                 type="number"
-                min={1}
+                min="1"
                 max={Math.max(1, availableCopies)}
                 value={quantity}
                 onChange={(e) => setQuantity(Number(e.target.value))}
                 className="w-full border-slate-200 rounded-xl text-sm"
               />
             </div>
+
+            <div>
+              <Label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                Unit Type *
+              </Label>
+              <select
+                value={selectedUnit}
+                onChange={(e) => setSelectedUnit(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              >
+                <option value="Pieces">Pieces</option>
+                <option value="Boxes">Boxes</option>
+                <option value="Packets">Packets</option>
+                <option value="Reams">Reams</option>
+                <option value="Copies">Copies</option>
+                <option value="Sets">Sets</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs font-semibold text-slate-600 mb-1">Borrower Type</Label>
+            <select
+              value={borrowerType}
+              onChange={(e) => setBorrowerType(e.target.value as any)}
+              className="w-full bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            >
+              <option value="Student">Student (Learner)</option>
+              <option value="Staff">Staff Member</option>
+            </select>
           </div>
 
           <div>
@@ -341,7 +365,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             </div>
           )}
 
-          {/* Conditional Due Date for Consumables vs Returnable Books & Tools (Rulers are returnable equipment) */}
+          {/* Conditional Due Date for Consumables vs Returnable Books & Tools */}
           {!consumableItem ? (
             <div>
               <Label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
@@ -377,7 +401,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || availableCopies <= 0 || !selectedGroupCheck(selectedBook)}
+              disabled={isSubmitting || availableCopies <= 0 || !selectedBook}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm"
             >
               {isSubmitting ? 'Issuing...' : consumableItem ? 'Confirm Dispense Item' : 'Confirm Book Issue'}
@@ -388,7 +412,3 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     </div>
   );
 };
-
-function selectedGroupCheck(b: any) {
-  return Boolean(b);
-}
