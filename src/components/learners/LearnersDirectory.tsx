@@ -56,16 +56,54 @@ const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
 
 export default function LearnersDirectory() {
   const navigate = useNavigate();
-  const [learnersList, setLearnersList] = useState<any[]>(() => {
-    try {
-      const unified = localStorage.getItem('munyaka_learners');
-      if (unified) {
-        const parsed = JSON.parse(unified);
-        if (Array.isArray(parsed)) return parsed.map(formatLearnerDoc);
+  const fetchLearnersFromStorage = () => {
+    const studentKeys = ['munyaka_students', 'munyaka_pupils', 'students_directory', 'school_students', 'munyaka_learners', 'munyaka_learners_v2', 'school_learners_data'];
+    
+    for (const key of studentKeys) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map(formatLearnerDoc);
+          }
+        } catch (e) {}
       }
-    } catch {}
+    }
+
+    // Fallback: Extract student names/admission numbers from finance/fee records if student directory is empty
+    const financeKeys = ['munyaka_fees_finance', 'munyaka_fees', 'fees_records'];
+    for (const fKey of financeKeys) {
+      const rawFinance = localStorage.getItem(fKey);
+      if (rawFinance) {
+        try {
+          const parsedFinance = JSON.parse(rawFinance);
+          if (Array.isArray(parsedFinance) && parsedFinance.length > 0) {
+            // Map unique students from finance records
+            const uniqueStudentsMap = new Map();
+            parsedFinance.forEach((record: any) => {
+              const name = record.studentName || record.name || record.student;
+              const admNo = record.admNo || record.admissionNumber;
+              if (name && !uniqueStudentsMap.has(name)) {
+                uniqueStudentsMap.set(name, {
+                  id: record.id || admNo || Math.random().toString(),
+                  name: name,
+                  admNo: admNo || 'N/A',
+                  grade: record.grade || record.class || 'Grade 4-9',
+                  balance: record.balance || 'KES 0'
+                });
+              }
+            });
+            return Array.from(uniqueStudentsMap.values()).map(formatLearnerDoc);
+          }
+        } catch (e) {}
+      }
+    }
+
     return [];
-  });
+  };
+
+  const [learnersList, setLearnersList] = useState<any[]>(fetchLearnersFromStorage);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
