@@ -42,7 +42,7 @@ import { teacherLogin, checkServerHealth } from '@/services/mobileAuthService';
 import { getStaffMaster } from '@/services/staffMasterService';
 import { getApiBaseUrl } from '@/lib/apiBase';
 import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
-import { verifyStaffLogin } from '@/services/staffMasterService';
+import { verifyStaffLogin, setActiveStaffSession } from '@/services/staffMasterService';
 import { mapRoleLabelToRbacKey } from '@/constants/roles';
 import {
   MUNYAKA_ADMIN_PASSWORD,
@@ -428,8 +428,8 @@ const Login: React.FC = () => {
       try {
         localStorage.setItem('munyaka_session', JSON.stringify(userData));
         localStorage.setItem('munyaka_current_user', JSON.stringify(userData));
-        localStorage.setItem('munyaka_current_staff', JSON.stringify(matched));
         localStorage.setItem('user_role', userData.role);
+        setActiveStaffSession(matched);
       } catch { /* ignore */ }
 
       if (setUser) {

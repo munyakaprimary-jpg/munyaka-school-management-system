@@ -352,3 +352,42 @@ export const verifyStaffLogin = (identifier: string, pass: string): { success: b
   }
 };
 export const isTeachingRole = (_role: string) => true;
+
+/**
+ * Dynamically resolves active staff role from canonical staff directory (munyaka_staff)
+ * and persists the full live staff record to munyaka_current_staff.
+ */
+export const setActiveStaffSession = (selectedUser: { id?: string; email?: string; name?: string }) => {
+  try {
+    const rawStaffList = localStorage.getItem('munyaka_staff') || localStorage.getItem('munyaka_staff_directory') || '[]';
+    let liveStaffRecord = selectedUser;
+
+    try {
+      const staffDirectory = JSON.parse(rawStaffList);
+      if (Array.isArray(staffDirectory)) {
+        // Match strictly by ID, Email, or Name
+        const found = staffDirectory.find((s: any) =>
+          (s.id && selectedUser.id && s.id === selectedUser.id) ||
+          (s.email && selectedUser.email && s.email.toLowerCase() === selectedUser.email.toLowerCase()) ||
+          (s.name && selectedUser.name && s.name.toLowerCase() === selectedUser.name.toLowerCase()) ||
+          (s.fullName && selectedUser.name && s.fullName.toLowerCase() === selectedUser.name.toLowerCase())
+        );
+        if (found) {
+          liveStaffRecord = found;
+        }
+      }
+    } catch (parseErr) {
+      console.warn('Error parsing staff directory during session set:', parseErr);
+    }
+
+    // Persist full matched object
+    localStorage.setItem('munyaka_current_staff', JSON.stringify(liveStaffRecord));
+    
+    // Trigger a lightweight event so sidebar updates instantly without full reload
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('staff_session_updated'));
+    }
+  } catch (e) {
+    console.error('Failed to sync staff session:', e);
+  }
+};

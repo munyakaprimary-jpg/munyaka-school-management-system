@@ -70,21 +70,35 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     navigate('/login');
   };
 
-  const getCurrentRole = (): string => {
+  const [currentStaff, setCurrentStaff] = useState<any>(() => {
     try {
-      const raw = localStorage.getItem('munyaka_current_staff');
-      if (raw) {
-        const staff = JSON.parse(raw);
-        return (staff.role || staff.assignedRole || '').toLowerCase();
-      }
-    } catch (e) {}
-    if (user?.role) {
-      return String(user.role).toLowerCase();
+      return JSON.parse(localStorage.getItem('munyaka_current_staff') || '{}');
+    } catch {
+      return {};
     }
-    return '';
-  };
+  });
 
-  const activeRole = getCurrentRole();
+  useEffect(() => {
+    const handleSessionChange = () => {
+      try {
+        setCurrentStaff(JSON.parse(localStorage.getItem('munyaka_current_staff') || '{}'));
+      } catch (e) {}
+    };
+
+    window.addEventListener('staff_session_updated', handleSessionChange);
+    window.addEventListener('storage', handleSessionChange);
+    window.addEventListener('munyaka_rbac_updated', handleSessionChange);
+    return () => {
+      window.removeEventListener('staff_session_updated', handleSessionChange);
+      window.removeEventListener('storage', handleSessionChange);
+      window.removeEventListener('munyaka_rbac_updated', handleSessionChange);
+    };
+  }, []);
+
+  const staffName = currentStaff.name || currentStaff.fullName || user?.name || 'Staff Member';
+  const staffRole = currentStaff.role || currentStaff.assignedRole || user?.role || 'Staff';
+  const initials = staffName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+  const activeRole = (currentStaff.role || currentStaff.assignedRole || user?.role || '').toLowerCase();
 
   const navigationItems: NavItem[] = [
     { name: 'Home / Dashboard', href: '/', icon: LayoutDashboard, allowedRoles: ['all'] },
@@ -203,12 +217,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           {!isCollapsed ? (
             <div className="flex items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/80">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-700 flex items-center justify-center text-white font-bold text-sm shrink-0 border border-slate-700">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : (activeRole ? activeRole.charAt(0).toUpperCase() : 'U')}
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white font-bold flex items-center justify-center text-sm shrink-0 border border-indigo-500/30">
+                  {initials}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-200 truncate">{user?.name || activeRole || 'User'}</p>
-                  <p className="text-[10px] text-slate-400 uppercase font-mono tracking-wider truncate">{activeRole || user?.role || 'Staff'}</p>
+                  <h4 className="text-sm font-bold text-slate-200 truncate">{staffName}</h4>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+                    {staffRole}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
