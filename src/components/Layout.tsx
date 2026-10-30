@@ -59,6 +59,7 @@ import {
     Home,
     ShieldCheck,
     Loader2,
+    FlaskConical,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -285,6 +286,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: BookOpenCheck, label: 'All Set Exams', path: '/assessments/list', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student'] },
     // Digital Hub & ICT
     { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'student', 'ict_technician', 'ict_teacher'] },
+    { icon: FlaskConical, label: 'Science Lab Workstation', path: '/science-lab', global: true },
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher', 'ict_technician', 'ict_teacher'] },
     { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'ict_technician', 'ict_teacher'] },
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher'] },
