@@ -134,6 +134,7 @@ import MarkedScriptsPage from "./pages/MarkedScriptsPage";
 import SchoolAnnouncements from "./pages/SchoolAnnouncements";
 import TeacherCommunication from "./pages/TeacherCommunication";
 import Inventory from "./pages/Inventory";
+import { LibraryResourcesView as Library } from "./components/library/LibraryResourcesView";
 import { SchoolProvider } from "./context/SchoolContext";
 import { LearnerProvider } from './context/LearnerContext';
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
