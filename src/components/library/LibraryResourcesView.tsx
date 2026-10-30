@@ -504,17 +504,17 @@ export const LibraryResourcesView: React.FC = () => {
               onConfirmReturn={() => loadData()}
             />
 
-      <AddMaterialModal
-        isOpen={isAddMaterialOpen}
-        onClose={() => setIsAddMaterialOpen(false)}
-        onSuccess={() => loadData()}
-      />
+      {isAddMaterialOpen && (
+        <AddMaterialModal
+          onClose={() => setIsAddMaterialOpen(false)}
+          onSave={() => loadData()}
+        />
+      )}
 
       {previewDocument && (
         <DocumentPreviewModal
-          isOpen={Boolean(previewDocument)}
+          file={previewDocument}
           onClose={() => setPreviewDocument(null)}
-          document={previewDocument}
         />
       )}
     </div>
