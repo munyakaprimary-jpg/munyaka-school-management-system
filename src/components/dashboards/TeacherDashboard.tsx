@@ -70,18 +70,23 @@ export default function TeacherDashboard() {
     const CIRCULATION_STORAGE_KEY = 'munyaka_library_circulation';
     const ERESOURCES_STORAGE_KEY = 'munyaka_library_eresources';
 
-    const getRealInventory = () => {
-          try {
-            const raw = localStorage.getItem('munyaka_library_inventory');
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed)) return parsed;
-            }
-          } catch (e) {
-            console.error(e);
-          }
-          return [];
-        };
+    const fetchDashboardInventory = () => {
+              const keys = ['munyaka_library_inventory', 'munyaka_library_books', 'library_inventory', 'library_books'];
+              for (const key of keys) {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                  try {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                      return parsed;
+                    }
+                  } catch (e) {
+                    // skip parse errors
+                  }
+                }
+              }
+              return [];
+            };
 
     const getLibraryCirculation = () => {
       try {
@@ -112,10 +117,10 @@ export default function TeacherDashboard() {
     };
 
     const loadLibraryData = () => {
-      setBooks(getRealInventory());
-      setCirculation(getLibraryCirculation());
-      setEResources(getLibraryEResources());
-    };
+          setBooks(fetchDashboardInventory());
+          setCirculation(getLibraryCirculation());
+          setEResources(getLibraryEResources());
+        };
 
     React.useEffect(() => {
       loadLibraryData();
