@@ -15,7 +15,7 @@ import {
   X
 } from 'lucide-react';
 
-export const ScienceLabView: React.FC = () => {
+export default function ScienceLab() {
   const [labStock, setLabStock] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
