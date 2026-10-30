@@ -70,31 +70,18 @@ export default function TeacherDashboard() {
     const CIRCULATION_STORAGE_KEY = 'munyaka_library_circulation';
     const ERESOURCES_STORAGE_KEY = 'munyaka_library_eresources';
 
-    const getLibraryBooks = () => {
-      try {
-        const rawStock = localStorage.getItem('munyaka_library_inventory') ||
-                         localStorage.getItem('munyaka_library_books') ||
-                         localStorage.getItem('library_books');
-        if (rawStock) {
-          const parsed = JSON.parse(rawStock);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
+    const getRealInventory = () => {
+          try {
+            const raw = localStorage.getItem('munyaka_library_inventory');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) return parsed;
+            }
+          } catch (e) {
+            console.error(e);
           }
-        }
-        // Fallback demo/initial seed if completely empty so it shows 30 volumes matching workstation
-        return [
-          { title: 'CBC Mathematics Grade 4', quantity: 10, copies: 10 },
-          { title: 'English Language Activities Grade 5', quantity: 12, copies: 12 },
-          { title: 'Kiswahili Lugha Gredi ya 6', quantity: 8, copies: 8 }
-        ];
-      } catch {
-        return [
-          { title: 'CBC Mathematics Grade 4', quantity: 10, copies: 10 },
-          { title: 'English Language Activities Grade 5', quantity: 12, copies: 12 },
-          { title: 'Kiswahili Lugha Gredi ya 6', quantity: 8, copies: 8 }
-        ];
-      }
-    };
+          return [];
+        };
 
     const getLibraryCirculation = () => {
       try {
@@ -125,7 +112,7 @@ export default function TeacherDashboard() {
     };
 
     const loadLibraryData = () => {
-      setBooks(getLibraryBooks());
+      setBooks(getRealInventory());
       setCirculation(getLibraryCirculation());
       setEResources(getLibraryEResources());
     };
