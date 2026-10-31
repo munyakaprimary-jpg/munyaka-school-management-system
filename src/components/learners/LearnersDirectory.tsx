@@ -429,8 +429,8 @@ export default function LearnersDirectory() {
               <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-black uppercase text-slate-400 tracking-wider">
                 <th className="py-4 px-6">Learner Name</th>
                 <th className="py-4 px-6">Adm No</th>
-                <th className="py-4 px-6">Grade / Class</th>
-                <th className="py-4 px-6">Stream</th>
+                <th className="py-4 px-6">Identifier (Assessment / Birth Cert)</th>
+                <th className="py-4 px-6">Grade / Stream</th>
                 <th className="py-4 px-6">Parent Contact</th>
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
@@ -446,6 +446,9 @@ export default function LearnersDirectory() {
                 displayedLearners.map(learner => {
                   const name = learner.name || learner.fullName || 'Unnamed Learner';
                   const adm = learner.admissionNumber || learner.admissionNo || learner.admNo || '-';
+                  const identifier = (learner.assessmentNo && learner.assessmentNo !== '—')
+                    ? learner.assessmentNo
+                    : (learner.birthCertNo || learner.identifierNo || learner.birthCertificateNo || learner.assessmentNumber || '—');
                   const grade = learner.grade || learner.gradeLevel || learner.class || '-';
                   const stream = learner.stream || '-';
                   const contact = learner.parentPhone || learner.guardianPhone || learner.phone || '-';
@@ -465,6 +468,7 @@ export default function LearnersDirectory() {
                         </div>
                       </td>
                       <td className="py-4 px-6 font-mono font-medium text-slate-600">{adm}</td>
+                      <td className="py-4 px-6 font-mono text-xs font-bold text-slate-700">{identifier}</td>
                       <td className="py-4 px-6 font-bold text-slate-700">{grade}</td>
                       <td className="py-4 px-6">
                         <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">

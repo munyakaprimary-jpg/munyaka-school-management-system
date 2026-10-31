@@ -60,14 +60,18 @@ export default function AddLearnerModal({
       const existingLearners = JSON.parse(existingRaw);
       
       const generatedAdmNo = formData.admNo || generateCohortAdmissionNumber(formData.grade, existingLearners);
+      const identifierValue = formData.assessmentNo.trim().toUpperCase() || '—';
 
       const newLearnerRecord = {
         id: `learner_${Date.now()}`,
         admNo: generatedAdmNo,
         admissionNumber: generatedAdmNo,
         admissionNo: generatedAdmNo,
-        assessmentNo: formData.assessmentNo || '—',
-        assessmentNumber: formData.assessmentNo || '—',
+        assessmentNo: identifierValue,
+        assessmentNumber: identifierValue,
+        birthCertNo: identifierValue,
+        birthCertificateNo: identifierValue,
+        identifierNo: identifierValue,
         name: formData.name.trim(),
         fullName: formData.name.trim(),
         grade: formData.grade,
