@@ -561,6 +561,18 @@ export default function Attendance() {
         </p>
       </div>
     </div>
+
+  {/* Time Lock Status Banners */}
+  {morningLocked && (!isAdmin || !bypassCutoff) && (
+    <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl shadow-sm flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <Clock className="w-5 h-5 text-amber-600" />
+        <div>
+          <p className="text-sm font-bold text-amber-900">Morning attendance is locked after {morningCutoffTime}.</p>
+          <p className="text-xs text-amber-700">Submissions and status updates for morning sessions are restricted. {isAdmin ? 'Administrators can bypass using the toggle above or adjust cutoff time.' : ''}</p>
+        </div>
+      </div>
+      <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Morning Locked</Badge>
     </div>
   )}
 
