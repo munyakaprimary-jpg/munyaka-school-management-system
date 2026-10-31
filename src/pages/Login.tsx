@@ -35,7 +35,15 @@ import {
 } from 'lucide-react';
 
 // Helper function to render text with colored bold highlights
-const renderStyledQuote = (text: string) => {
+const renderStyledQuote = (text: string, colorId: string = 'indigo') => {
+  const colorMap: Record<string, string> = {
+    indigo: 'text-indigo-600 dark:text-indigo-400',
+    emerald: 'text-emerald-600 dark:text-emerald-400',
+    amber: 'text-amber-600 dark:text-amber-400',
+    rose: 'text-rose-600 dark:text-rose-400',
+  };
+  const activeColorClass = colorMap[colorId] || colorMap.indigo;
+
   // Splits text by markdown double asterisks **keyword**
   const parts = text.split(/(\*\*.*?\*\*)/g);
   
@@ -43,7 +51,7 @@ const renderStyledQuote = (text: string) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       const cleanText = part.slice(2, -2);
       return (
-        <span key={index} className="font-extrabold text-indigo-600 dark:text-indigo-400 drop-shadow-sm px-1">
+        <span key={index} className={`font-extrabold ${activeColorClass} drop-shadow-sm px-1`}>
           {cleanText}
         </span>
       );
