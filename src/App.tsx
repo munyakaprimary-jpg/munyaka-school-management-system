@@ -35,9 +35,20 @@ import AdminProfile from "./pages/AdminProfile";
 import { ExportSuccessShareModal } from "@/components/teacher/ExportSuccessShareModal";
 
 function GlobalExportListener() {
+  useEffect(() => {
+    // Remove fragmented keys that cause desync
+    const obsoleteKeys = [
+      'munyaka_students',
+      'munyaka_pupils',
+      'munyaka_staff',
+      'munyaka_staff_db',
+      'munyaka_staff_directory',
+      'munyaka_staff_master'
+    ];
+    obsoleteKeys.forEach((key) => localStorage.removeItem(key));
+  }, []);
+
   const [modalState, setModalState] = useState<{
-    isOpen: boolean;
-    filename: string;
     data: string;
     mimeType: string;
     nativeUri?: string;

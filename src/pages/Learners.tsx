@@ -33,6 +33,7 @@ import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
 import { CentralDataService } from '@/services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
+import { getStoredLearners, saveLearner } from '@/utils/centralStorage';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
 import { migrateExistingAdmissionNumbers } from '@/utils/migrateExistingAdmissionNumbers';
 import { db } from '@/config/firebase';
@@ -62,7 +63,7 @@ const normalizeGradeStr = (val: string) => {
 import { generateCohortAdmissionNumber } from '../utils/admissionUtils';
 
 const generateAdmissionNumber = (studentGrade: string, _admissionYear: string = '2026') => {
-  const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
+  const existingLearners = getStoredLearners();
   return generateCohortAdmissionNumber(studentGrade, existingLearners);
 };
 
@@ -455,7 +456,7 @@ export default function Students() {
     }
 
     if (!editingId) {
-      const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || '[]');
+      const existingLearners = getStoredLearners();
       const duplicateFound = existingLearners.find((learner: any) => {
         const existingId = (learner.idValue || learner.assessmentNumber || learner.assessmentNo || learner.birthCertificateNo || learner.birthCertNo || '').trim().toUpperCase();
         return existingId === cleanValue && cleanValue !== '';

@@ -448,9 +448,9 @@ export default function LearnersDirectory() {
                 displayedLearners.map(learner => {
                   const name = learner.name || learner.fullName || 'Unnamed Learner';
                   const adm = learner.admissionNumber || learner.admissionNo || learner.admNo || '-';
-                  const identifier = (learner.assessmentNo && learner.assessmentNo !== '—')
+                  const identifier = learner.assessmentNo && learner.assessmentNo !== '—'
                     ? learner.assessmentNo
-                    : (learner.birthCertNo || learner.identifierNo || learner.birthCertificateNo || learner.assessmentNumber || '—');
+                    : (learner.birthCertNo || learner.birthCertificateNo || '—');
                   const grade = learner.grade || learner.gradeLevel || learner.class || '-';
                   const stream = learner.stream || '-';
                   const contact = learner.parentPhone || learner.guardianPhone || learner.phone || '-';
