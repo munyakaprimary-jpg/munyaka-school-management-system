@@ -359,12 +359,58 @@ export default function FirestoreSyncTab() {
     setErrorMessage(null);
     try {
       // Learners Collection
-      const learnersSnap = await getDocs(collection(db, 'learners')).catch(() => ({ size: 0, docs: [] }));
-      setCloudLearnersCount(learnersSnap?.size || 0);
-      const learnersDocs = (learnersSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
-      setCloudLearnersList(learnersDocs);
-
-      // Fees Collection (dedicated 'fees' Firestore collection)
+            const learnersSnap = await getDocs(collection(db, 'learners')).catch(() => ({ size: 0, docs: [] }));
+            const learnersCount = learnersSnap?.size || 0;
+            setCloudLearnersCount(learnersCount);
+            const learnersDocs = (learnersSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
+            setCloudLearnersList(learnersDocs);
+      
+            // If there are no learners, set all other module counts to zero for accurate and factual data
+            if (learnersCount === 0) {
+              setCloudFeesCount(0);
+              setCloudFeesList([]);
+              setCloudLibraryCount(0);
+              setCloudLibraryList([]);
+              setCloudAssessmentCount(0);
+              setCloudAssessmentMarks([]);
+              setCloudGradesCount(0);
+              setCloudGradesList([]);
+              setCloudStreamsCount(0);
+              setCloudStreamsList([]);
+              setCloudAttendanceCount(0);
+              setCloudAttendanceList([]);
+              setCloudExamsCount(0);
+              setCloudExamsList([]);
+              setCloudGamesCount(0);
+              setCloudGamesList([]);
+              setCloudIctLabCount(0);
+              setCloudIctLabList([]);
+              setCloudStoreCount(0);
+              setCloudStoreList([]);
+              setCloudStaffCount(0);
+              setCloudStaffList([]);
+              setCloudReportCardsCount(0);
+              setCloudReportCardsList([]);
+              setCloudLearningAreasCount(0);
+              setCloudLearningAreasList([]);
+              setCloudExamTypesCount(0);
+              setCloudExamTypesList([]);
+              setCloudCommunicationCount(0);
+              setCloudCommunicationList([]);
+              setCloudEventsNoticesCount(0);
+              setCloudEventsNoticesList([]);
+              setCloudTimetablesCount(0);
+              setCloudTimetablesList([]);
+              setCloudUsersCount(0);
+              setCloudUsersList([]);
+      
+              setTestStatus('success');
+              setErrorMessage(null);
+              showSuccess('Connected to Firebase Firestore successfully! No learners found — all other modules show zero.');
+              return;
+            }
+      
+            // Fees Collection (dedicated 'fees' Firestore collection)
       const feesSnap = await getDocs(collection(db, 'fees')).catch(() => ({ size: 0, docs: [] }));
       setCloudFeesCount(feesSnap?.size || 0);
       const feesDocs = (feesSnap?.docs || []).map((doc: any) => ({ id: doc.id, ...(doc.data() || {}) }));
