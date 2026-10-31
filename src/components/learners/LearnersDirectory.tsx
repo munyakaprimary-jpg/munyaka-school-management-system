@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,24 +21,16 @@ import {
   Trash
 } from 'lucide-react';
 import { db } from '@/config/firebase';
-import { collection, onSnapshot, addDoc, setDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { showSuccess, showError } from '@/utils/toast';
-import { CentralDataService } from '@/services/centralDataService';
-import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
-import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
+import { getStoredLearners, Learner } from '../../utils/centralStorage';
 import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
-import { getNormalizedLearners } from '@/utils/dataLoader';
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 
 const LEARNER_ID_PREFIX = 'learner-';
 
-/**
- * Normalized deleted-record check. Compares the bare id, the `learner-` prefixed id
- * and the admission/assessment numbers so `17898...` and `learner-17898...`
- * resolve to the same record.
- */
 const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
   if (!item) return true;
   const id = String(item.id || item._id || '').trim();
@@ -56,214 +48,48 @@ const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
 
 export default function LearnersDirectory() {
   const navigate = useNavigate();
-  const fetchLearnersFromStorage = () => {
-    const studentKeys = ['munyaka_learners', 'munyaka_learners_v2', 'munyaka_pupils', 'students_directory', 'school_students', 'school_learners_data'];
-    
-    for (const key of studentKeys) {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const valid = parsed
-                .map(formatLearnerDoc)
-                .filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && s.name !== 'Unnamed Learner' && !s.name.includes('Unknown') && !s.name.includes('Unnamed') && s.name.trim() !== '');
-            if (valid.length > 0) {
-              return valid;
-            }
-          }
-        } catch (e) {}
-      }
-    }
 
-    return [];
-  };
+  const [learners, setLearners] = useState<Learner[]>(getStoredLearners);
+  const [selectedLearner, setSelectedLearner] = useState<Learner | null>(null);
 
-  const [learnersList, setLearnersList] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter((l: any) => l && l.name && l.name !== 'Unnamed Learner' && l.name !== 'Unknown Learner');
-          if (cleaned.length !== parsed.length) {
-            localStorage.setItem('munyaka_learners', JSON.stringify(cleaned));
-          }
-          if (cleaned.length > 0) return cleaned.map(formatLearnerDoc);
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
+  // Reactive state update when data changes anywhere in the app
+  useEffect(() => {
+    const syncData = () => setLearners(getStoredLearners());
+    window.addEventListener('munyaka_storage_update', syncData);
+    window.addEventListener('storage', syncData);
+    window.addEventListener('learners_updated', syncData);
+    window.addEventListener('students-updated', syncData);
+    window.addEventListener('munyaka:data-changed', syncData);
+    return () => {
+      window.removeEventListener('munyaka_storage_update', syncData);
+      window.removeEventListener('storage', syncData);
+      window.removeEventListener('learners_updated', syncData);
+      window.removeEventListener('students-updated', syncData);
+      window.removeEventListener('munyaka:data-changed', syncData);
+    };
+  }, []);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
   const [streamFilter, setStreamFilter] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedLearner, setSelectedLearner] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<any>(null);
-  const [authPassword, setAuthPassword] = useState('');
-  const [authError, setAuthError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [showPass, setShowPass] = useState(false);
 
   const requestDelete = (learner: any) => {
     setPendingDelete(learner);
-    setAuthPassword('');
-    setAuthError('');
     setIsAuthOpen(true);
   };
 
-  // Active table states kept in sync for immediate UI re-render
-  const [learners, setLearners] = useState<any[]>([]);
-  const [filteredLearners, setFilteredLearners] = useState<any[]>([]);
-  const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
-
-  useEffect(() => {
-    ['munyaka_learners', 'munyaka_students'].forEach((key) => {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          const cleaned = parsed.filter((l: any) => l && l.name && l.name !== 'Unnamed Learner' && l.name !== 'Unknown Learner');
-          if (cleaned.length !== parsed.length) {
-            localStorage.setItem(key, JSON.stringify(cleaned));
-            setLearnersList(cleaned.map(formatLearnerDoc));
-          }
-        } catch (e) {}
-      }
-    });
-  }, []);
-  useEffect(() => {
-    const UNIFIED_KEY = 'munyaka_learners_v2';
-    const DELETED_KEY = 'deleted_learner_ids';
-
-    const applyList = (raw: any[]) => {
-      const formatted = raw.map(formatLearnerDoc);
-      setLearnersList(formatted);
-      setLearners(formatted);
-    };
-
-    const loadFromStorage = () => {
-      try {
-        const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-        const unified = localStorage.getItem('munyaka_learners');
-        if (unified) {
-          const parsed = JSON.parse(unified);
-          if (Array.isArray(parsed)) {
-            const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
-            applyList(filtered);
-            return;
-          }
-        }
-      } catch {}
-      applyList([]);
-    };
-
-    loadFromStorage();
-
-    let unsubscribe: (() => void) | undefined;
-    if (db) {
-      try {
-        unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
-          const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-
-          const cloudLearners = snapshot.docs.map(docSnap => ({
-            id: docSnap.id,
-            ...docSnap.data()
-          }));
-
-          const cleanCloudList = cloudLearners.filter((item: any) => !isDeletedRecord(item, deletedIds));
-
-          const currentLocal = JSON.parse(localStorage.getItem(UNIFIED_KEY) || '[]');
-          const localMap = new Map();
-
-          currentLocal.forEach((l: any) => {
-            if (isDeletedRecord(l, deletedIds)) return;
-            const lId = String(l.id || l._id || '').trim();
-            const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
-            localMap.set(lId || lAdm, l);
-          });
-
-          cleanCloudList.forEach((l: any) => {
-            const lId = String(l.id || l._id || '').trim();
-            const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
-            const key = lId || lAdm;
-            if (key && !localMap.has(key)) {
-              localMap.set(key, l);
-            }
-          });
-
-          const unifiedList = Array.from(localMap.values()).filter(
-            (item: any) => !isDeletedRecord(item, deletedIds)
-          );
-
-          localStorage.setItem(UNIFIED_KEY, JSON.stringify(unifiedList));
-          applyList(unifiedList);
-        }, (error) => {
-          console.warn("[Firestore Listener] Offline or sync error, using local fallback:", error);
-        });
-      } catch (e) {
-        console.warn("[Firestore Listener] Init error:", e);
-      }
-    }
-
-    window.addEventListener('learners_updated', loadFromStorage);
-    window.addEventListener('students-updated', loadFromStorage);
-    window.addEventListener('storage', loadFromStorage);
-    window.addEventListener('munyaka:data-changed', loadFromStorage);
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-      window.removeEventListener('learners_updated', loadFromStorage);
-      window.removeEventListener('students-updated', loadFromStorage);
-      window.removeEventListener('storage', loadFromStorage);
-      window.removeEventListener('munyaka:data-changed', loadFromStorage);
-    };
-  }, []);
-
-  // Derive filtered learners whenever the source list or filters change
-  useEffect(() => {
-    const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
-    const next = (learnersList || []).filter(learner => {
-      const name = (learner.name || learner.fullName || '').toLowerCase();
-      const adm = (learner.admissionNumber || learner.admissionNo || learner.admNo || '').toLowerCase();
-      const grade = (learner.grade || learner.gradeLevel || learner.class || '').toLowerCase();
-      const stream = (learner.stream || '').toLowerCase();
-
-      const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean);
-      const gradeMatch = gradeFilter === 'all' || grade.includes(gradeFilter.toLowerCase());
-      const streamMatch = streamFilter === 'all' || stream === streamFilter.toLowerCase();
-
-      return nameMatch && gradeMatch && streamMatch;
-    });
-    setFilteredLearners(next);
-    setDisplayedLearners(next);
-  }, [learnersList, searchTerm, gradeFilter, streamFilter]);
-
-  const handleLearnerAdded = (newLearner: any) => {
-    const formatted = formatLearnerDoc(newLearner);
-    setLearnersList(prev => [formatted, ...prev]);
-    setLearners(prev => [formatted, ...prev]);
-    setFilteredLearners(prev => [formatted, ...prev]);
-    setDisplayedLearners(prev => [formatted, ...prev]);
-    const addedGrade = newLearner.gradeLevel || newLearner.grade || 'all';
-    setGradeFilter(addedGrade);
-  };
-
-  // Force immediate UI table re-render: synchronize filtered learners state upon deletion
   const handleDeleteLearner = async (learnerToDelete: any) => {
     if (!learnerToDelete) return;
-
-    // Normalize identifiers: `17898...` and `learner-17898...` are the same learner
     const sourceId = learnerToDelete.id || learnerToDelete._id || learnerToDelete.learnerId || '';
     const targetRawId = toRawLearnerId(sourceId);
     const targetPrefixedId = targetRawId ? LEARNER_ID_PREFIX + targetRawId : '';
-    const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || '').trim();
+    const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learner.admNo || '').trim();
 
-    // 1. Run Storage Purge Service with a normalized target (raw + prefixed ids)
     if (typeof purgeLearnerPermanently === 'function') {
       await purgeLearnerPermanently({
         ...learnerToDelete,
@@ -274,11 +100,10 @@ export default function LearnersDirectory() {
       });
     }
 
-    // 2. Direct Filter Function (prefix-insensitive)
     const isNotTarget = (item: any) => {
       const itemSourceId = item.id || item._id || item.learnerId || '';
       const itemRawId = toRawLearnerId(itemSourceId);
-      const itemAdm = String(item.admissionNo || item.admissionNumber || '').trim();
+      const itemAdm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
 
       const matches =
         (targetRawId && itemRawId === targetRawId) ||
@@ -288,19 +113,11 @@ export default function LearnersDirectory() {
       return !matches;
     };
 
-    // 3. Mutate ALL Active Table States
-    if (typeof setLearnersList === 'function') {
-      setLearnersList((prev: any[]) => prev.filter(isNotTarget));
-    }
-    if (typeof setLearners === 'function') {
-      setLearners((prev: any[]) => prev.filter(isNotTarget));
-    }
-    if (typeof setFilteredLearners === 'function') {
-      setFilteredLearners((prev: any[]) => prev.filter(isNotTarget));
-    }
-    if (typeof setDisplayedLearners === 'function') {
-      setDisplayedLearners((prev: any[]) => prev.filter(isNotTarget));
-    }
+    const updated = learners.filter(isNotTarget);
+    setLearners(updated);
+    localStorage.setItem('munyaka_learners_v2', JSON.stringify(updated));
+    localStorage.setItem('munyaka_learners', JSON.stringify(updated));
+    window.dispatchEvent(new Event('munyaka_storage_update'));
   };
 
   const handleVerifyAuth = async () => {
@@ -308,17 +125,11 @@ export default function LearnersDirectory() {
     await new Promise(r => setTimeout(r, 200));
 
     if (pendingDelete) {
-      const learnerToDelete = pendingDelete;
-      // Executes the permanent central purge (dual Firestore doc-id delete)
-      // and forces an immediate UI table re-render across all local states
-      await handleDeleteLearner(learnerToDelete);
-
+      await handleDeleteLearner(pendingDelete);
       showSuccess("Learner deleted successfully.");
     }
     setIsAuthOpen(false);
     setPendingDelete(null);
-    setAuthPassword('');
-    setAuthError('');
     setIsVerifying(false);
   };
 
@@ -335,29 +146,50 @@ export default function LearnersDirectory() {
         'learners',
         'cached_learners',
         'school_learners',
-        'deleted_learner_ids'
+        'deleted_learner_ids',
+        'munyaka_learners'
       ];
 
-      // Completely remove all fragment keys
       for (const key of legacyKeys) {
         localStorage.removeItem(key);
       }
 
-      // Reset the single master key to empty
-      localStorage.setItem('munyaka_learners', JSON.stringify([]));
-      
-      window.location.reload();
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify([]));
+      setLearners([]);
+      window.dispatchEvent(new Event('munyaka_storage_update'));
+      showSuccess("All learners purged successfully.");
     }
   };
 
   const gradesList = useMemo(() => {
     const set = new Set<string>();
-    (learnersList || []).forEach(l => {
-      const g = l.grade || l.gradeLevel || l.class;
+    (learners || []).forEach(l => {
+      const g = l.grade;
       if (g) set.add(g);
     });
     return Array.from(set).sort();
-  }, [learnersList]);
+  }, [learners]);
+
+  const filteredLearners = useMemo(() => {
+    const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
+    return (learners || []).filter(learner => {
+      const name = (learner.name || '').toLowerCase();
+      const adm = (learner.admNo || '').toLowerCase();
+      const grade = (learner.grade || '').toLowerCase();
+      const stream = (learner.stream || '').toLowerCase();
+
+      const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean);
+      const gradeMatch = gradeFilter === 'all' || grade.includes(gradeFilter.toLowerCase());
+      const streamMatch = streamFilter === 'all' || stream === streamFilter.toLowerCase();
+
+      return nameMatch && gradeMatch && streamMatch;
+    });
+  }, [learners, searchTerm, gradeFilter, streamFilter]);
+
+  const handleLearnerAdded = (newLearner: any) => {
+    const updated = getStoredLearners();
+    setLearners(updated);
+  };
 
   return (
     <div className="space-y-6 pb-16 animate-in fade-in">
@@ -440,29 +272,20 @@ export default function LearnersDirectory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {displayedLearners.length === 0 ? (
+              {filteredLearners.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-16 text-center text-slate-400 font-medium">
                     No learners found matching your criteria.
                   </td>
                 </tr>
               ) : (
-                displayedLearners.map(learner => {
-                  const name = learner.name || learner.fullName || 'Unnamed Learner';
-                  const adm = learner.admissionNumber || learner.admissionNo || learner.admNo || '-';
-                  const identifier = learner.assessmentNo && learner.assessmentNo !== '—' && learner.assessmentNo !== ''
-                    ? learner.assessmentNo
-                    : (learner.birthCertNo && learner.birthCertNo !== '—' && learner.birthCertNo !== ''
-                        ? learner.birthCertNo
-                        : (learner.birthCertificateNo && learner.birthCertificateNo !== '—' && learner.birthCertificateNo !== ''
-                            ? learner.birthCertificateNo
-                            : (learner.identifierNo && learner.identifierNo !== '—' && learner.identifierNo !== ''
-                                ? learner.identifierNo
-                                : '—')));
-                  const grade = learner.grade || learner.gradeLevel || learner.class || '-';
+                filteredLearners.map(learner => {
+                  const name = learner.name || 'Unnamed Learner';
+                  const adm = learner.admNo || '-';
+                  const grade = learner.grade || '-';
                   const stream = learner.stream || '-';
-                  const contact = learner.parentPhone || learner.guardianPhone || learner.phone || '-';
-                  const lId = learner.id || learner._id || adm;
+                  const contact = learner.phone || '-';
+                  const lId = learner.id || adm;
 
                   return (
                     <tr key={lId} className="hover:bg-slate-50/50 transition-colors">
@@ -478,7 +301,11 @@ export default function LearnersDirectory() {
                         </div>
                       </td>
                       <td className="py-4 px-6 font-mono font-medium text-slate-600">{adm}</td>
-                      <td className="py-4 px-6 font-mono text-xs font-bold text-slate-700">{identifier}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700 font-mono font-bold">
+                        {learner.assessmentNo && learner.assessmentNo !== '—' && learner.assessmentNo !== ''
+                          ? learner.assessmentNo
+                          : learner.birthCertNo || '—'}
+                      </td>
                       <td className="py-4 px-6 font-bold text-slate-700">{grade}</td>
                       <td className="py-4 px-6">
                         <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
@@ -488,18 +315,13 @@ export default function LearnersDirectory() {
                       <td className="py-4 px-6 font-medium text-slate-600">{contact}</td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedLearner(learner);
-                              setIsDetailModalOpen(true);
-                            }}
-                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
-                            title="View Details"
+                          <button
+                            onClick={() => setSelectedLearner(learner)}
+                            title="View Learner Profile"
+                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 inline-flex items-center justify-center transition-colors"
                           >
-                            <Eye size={16} />
-                          </Button>
+                            <Eye className="w-4 h-4 text-indigo-600" />
+                          </button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -527,6 +349,61 @@ export default function LearnersDirectory() {
         onLearnerAdded={handleLearnerAdded}
       />
 
+      {/* Learner Profile Modal */}
+      {selectedLearner && (
+        <Modal
+          isOpen={!!selectedLearner}
+          onClose={() => setSelectedLearner(null)}
+          title="Learner Profile"
+          description={`Detailed profile and information for ${selectedLearner.name}`}
+        >
+          <div className="space-y-6 py-2">
+            <div className="flex items-center gap-4 bg-indigo-50/50 p-4 rounded-2xl">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black text-2xl shadow-md">
+                {selectedLearner.name.charAt(0)}
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900">{selectedLearner.name}</h3>
+                <p className="text-sm font-bold text-indigo-600">Admission No: {selectedLearner.admNo}</p>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Grade: {selectedLearner.grade} • Stream: {selectedLearner.stream}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="bg-slate-50 p-4 rounded-2xl">
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Assessment / Birth Cert No</span>
+                <span className="font-mono font-bold text-slate-800">
+                  {selectedLearner.assessmentNo && selectedLearner.assessmentNo !== '—' && selectedLearner.assessmentNo !== ''
+                    ? selectedLearner.assessmentNo
+                    : selectedLearner.birthCertNo || '—'}
+                </span>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl">
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Gender & DOB</span>
+                <span className="font-bold text-slate-800">{selectedLearner.gender || '—'} • {selectedLearner.dob || '—'}</span>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl">
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Parent / Guardian Name</span>
+                <span className="font-bold text-slate-800">{selectedLearner.parentName || '—'}</span>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl">
+                <span className="text-xs font-bold uppercase text-slate-400 block mb-1">Phone Contact</span>
+                <span className="font-mono font-bold text-slate-800">{selectedLearner.phone || '—'}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                onClick={() => setSelectedLearner(null)}
+                className="rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 h-11"
+              >
+                Close Profile
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Confirmation Modal */}
       <Modal
         isOpen={isAuthOpen}
@@ -550,7 +427,7 @@ export default function LearnersDirectory() {
         }
       >
         <div className="py-2 text-sm text-slate-600 font-medium">
-          This record will be purged immediately from local storage, legacy caches, and Firestore.
+          This record will be purged immediately from local storage and central storage.
         </div>
       </Modal>
     </div>
