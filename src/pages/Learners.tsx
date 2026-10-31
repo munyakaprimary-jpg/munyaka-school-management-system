@@ -666,10 +666,6 @@ export default function Students() {
       window.location.reload();
     }
   };
-        window.location.reload();
-      }
-    }
-  };
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
