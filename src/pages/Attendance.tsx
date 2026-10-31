@@ -69,7 +69,7 @@ export default function Attendance() {
     return (isNaN(hours) ? 0 : hours) * 60 + (isNaN(minutes) ? 0 : minutes);
   };
 
-  export const checkSessionLockStatus = (
+  const checkSessionLockStatus = (
     morningCutoffStr = '09:40',
     afternoonCutoffStr = '15:00',
     isBypassed = false,
