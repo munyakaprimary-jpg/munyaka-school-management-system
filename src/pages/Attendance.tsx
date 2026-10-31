@@ -63,30 +63,72 @@ export default function Attendance() {
   const roleStr = String((user as any)?.role || '');
   const isAdmin = roleStr === 'admin' || roleStr === 'head_teacher' || roleStr === 'owner' || user?.email?.includes('admin');
 
-  const checkIsLocked = (session: 'morning' | 'afternoon') => {
-    if (session === 'morning' && manualMorningLock) return true;
-    if (session === 'afternoon' && manualAfternoonLock) return true;
-
-    if (isAdmin && bypassCutoff) return false;
-    
-    const now = new Date();
-    const currentHours = now.getHours();
-    const currentMinutes = now.getMinutes();
-    const currentTimeMinutes = currentHours * 60 + currentMinutes;
-
-    if (session === 'morning') {
-      const [mHours, mMinutes] = morningCutoffTime.split(':').map(Number);
-      const cutoffMinutes = (isNaN(mHours) ? 9 : mHours) * 60 + (isNaN(mMinutes) ? 40 : mMinutes);
-      return currentTimeMinutes > cutoffMinutes;
-    } else {
-      const [aHours, aMinutes] = afternoonCutoffTime.split(':').map(Number);
-      const cutoffMinutes = (isNaN(aHours) ? 15 : aHours) * 60 + (isNaN(aMinutes) ? 0 : aMinutes);
-      return currentTimeMinutes >= cutoffMinutes;
-    }
+  // Helper function to convert "HH:MM" string to minutes from midnight
+  const timeToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = (timeStr || '00:00').split(':').map(Number);
+    return (isNaN(hours) ? 0 : hours) * 60 + (isNaN(minutes) ? 0 : minutes);
   };
 
-  const morningLocked = checkIsLocked('morning');
-  const afternoonLocked = checkIsLocked('afternoon');
+  export const checkSessionLockStatus = (
+    morningCutoffStr = '09:40',
+    afternoonCutoffStr = '15:00',
+    isBypassed = false,
+    manualMorningOverride?: 'Locked' | 'Unlocked',
+    manualAfternoonOverride?: 'Locked' | 'Unlocked'
+  ) => {
+    if (isBypassed) {
+      return { isMorningOpen: true, isAfternoonOpen: true };
+    }
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Standard Windows in Minutes
+    const morningStartMinutes = 8 * 60; // 08:00 AM
+    const morningCutoffMinutes = timeToMinutes(morningCutoffStr);
+
+    const afternoonStartMinutes = 14 * 60; // 02:00 PM / 14:00
+    const afternoonCutoffMinutes = timeToMinutes(afternoonCutoffStr);
+
+    // Evaluate Morning Status
+    let isMorningOpen = currentMinutes >= morningStartMinutes && currentMinutes <= morningCutoffMinutes;
+    if (manualMorningOverride === 'Unlocked') isMorningOpen = true;
+    if (manualMorningOverride === 'Locked') isMorningOpen = false;
+
+    // Evaluate Afternoon Status
+    let isAfternoonOpen = currentMinutes >= afternoonStartMinutes && currentMinutes <= afternoonCutoffMinutes;
+    if (manualAfternoonOverride === 'Unlocked') isAfternoonOpen = true;
+    if (manualAfternoonOverride === 'Locked') isAfternoonOpen = false;
+
+    return { isMorningOpen, isAfternoonOpen };
+  };
+
+  const checkIsLocked = (session: 'morning' | 'afternoon') => {
+    const manualMorning = manualMorningLock ? 'Locked' : (bypassCutoff ? 'Unlocked' : undefined);
+    const manualAfternoon = manualAfternoonLock ? 'Locked' : (bypassCutoff ? 'Unlocked' : undefined);
+
+    const { isMorningOpen, isAfternoonOpen } = checkSessionLockStatus(
+      morningCutoffTime,
+      afternoonCutoffTime,
+      bypassCutoff,
+      manualMorning,
+      manualAfternoon
+    );
+
+    if (session === 'morning') return !isMorningOpen;
+    return !isAfternoonOpen;
+  };
+
+  const { isMorningOpen, isAfternoonOpen } = checkSessionLockStatus(
+    morningCutoffTime,
+    afternoonCutoffTime,
+    bypassCutoff,
+    manualMorningLock ? 'Locked' : undefined,
+    manualAfternoonLock ? 'Locked' : undefined
+  );
+
+  const morningLocked = !isMorningOpen;
+  const afternoonLocked = !isAfternoonOpen;
 
   const handleMorningCutoffChange = (newVal: string) => {
     setMorningCutoffTime(newVal);
@@ -522,6 +564,24 @@ export default function Attendance() {
             <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
           </Button>
         </div>
+      </div>
+
+  {/* Status Indicators & Helper Message */}
+      <div className="space-y-4">
+        {/* Status Indicators */}
+        <div className="flex gap-3">
+          <span className={`px-3 py-1 rounded-lg text-xs font-bold text-white ${isMorningOpen ? 'bg-emerald-600' : 'bg-rose-600'}`}>
+            Morning Session: {isMorningOpen ? 'Unlocked (Active)' : 'Locked'}
+          </span>
+          <span className={`px-3 py-1 rounded-lg text-xs font-bold text-white ${isAfternoonOpen ? 'bg-emerald-600' : 'bg-rose-600'}`}>
+            Afternoon Session: {isAfternoonOpen ? 'Unlocked (Active)' : 'Locked'}
+          </span>
+        </div>
+
+        {/* Helper Message */}
+        <p className="text-xs text-slate-500">
+          * Morning marking active 08:00 AM – {morningCutoffTime}. Afternoon marking active 02:00 PM – {afternoonCutoffTime}.
+        </p>
       </div>
 
   {/* Time Lock Status Banners */}
