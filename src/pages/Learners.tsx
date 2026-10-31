@@ -60,11 +60,27 @@ const normalizeGradeStr = (val: string) => {
 };
 
 const generateAdmissionNumber = (studentGrade: string, admissionYear: string = '2026') => {
-  // Generate a random 4-character alphanumeric string (e.g., 7K9A)
-  const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-  
-  // Format: MUN-[RANDOM_CODE]-[GRADE_1_ENTRY_YEAR]
-  return `MUN-${randomCode}-${admissionYear}`;
+  // 1. Retrieve all registered students from localStorage (or munyaka_learners / munyaka_learners_v2)
+  const students = JSON.parse(
+    localStorage.getItem('munyaka_students') ||
+    localStorage.getItem('munyaka_learners') ||
+    localStorage.getItem('munyaka_learners_v2') ||
+    '[]'
+  );
+
+  // 2. Filter ONLY students who belong to this exact grade
+  const studentsInThisGrade = students.filter((s: any) => {
+    const sGrade = s.grade || s.gradeLevel || s.gradeAndStream || '';
+    const gradeMatch = sGrade === studentGrade || sGrade.includes(studentGrade);
+    return gradeMatch;
+  });
+
+  // 3. The sequence starts at 1 for this grade, incrementing only by the count of students in THIS grade
+  const nextSeq = studentsInThisGrade.length + 1;
+  const paddedSeq = String(nextSeq).padStart(3, '0');
+
+  // 4. Return format: MUN-[001]-[YEAR] scoped exclusively to the grade
+  return `MUN-${paddedSeq}-${admissionYear}`;
 };
 
 // Re-sequence all existing learners with a single continuous unbroken global sequence
