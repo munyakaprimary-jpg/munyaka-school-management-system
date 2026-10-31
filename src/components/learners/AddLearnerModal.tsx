@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { registerLearnerGuarded } from '@/services/learnerStorageGuard';
+import { generateStandardAdmNo } from '@/utils/admissionUtils';
 
 interface AddLearnerModalProps {
   isOpen: boolean;
@@ -36,17 +36,9 @@ export default function AddLearnerModal({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  const calculateCohortYear = (gradeStr: string): number => {
-    const currentYear = 2026;
-    const match = (gradeStr || '').match(/\d+/);
-    const gradeNum = match ? parseInt(match[0], 10) : 1;
-    return currentYear - (gradeNum - 1);
-  };
-
   const generateAdmissionNumber = (gradeStr: string): string => {
-    const year = calculateCohortYear(gradeStr);
-    const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `MUN-${randomHash}-${year}`;
+    const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
+    return generateStandardAdmNo(existingLearners);
   };
 
   useEffect(() => {

@@ -8,6 +8,7 @@ import { exportMasterDatabase, exportMasterSyncPackage } from '@/utils/exportMas
 import { importMasterSyncPackage } from '@/utils/importMasterSyncPackage';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { normalizeAllAdmissionNumbers } from '@/utils/admissionUtils';
 
 export const AdminHarmonizationHub: React.FC = () => {
   const { user } = useAuth();
@@ -90,39 +91,36 @@ export const AdminHarmonizationHub: React.FC = () => {
   };
 
   const handleHarmonizeAndMerge = () => {
-    if (auditItems.length === 0) return;
-
     setIsHarmonizing(true);
     try {
-      const result = harmonizationService.harmonizeAndMerge(auditItems);
+      normalizeAllAdmissionNumbers();
+      const result = auditItems.length > 0 ? harmonizationService.harmonizeAndMerge(auditItems) : { successCount: 1, errors: [] };
       setHarmonizationResult(result);
 
-      // Save activity log to localStorage for recent activities feed
       try {
         const storedActivities = JSON.parse(localStorage.getItem('munyaka_admin_activities') || '[]');
-        const newActivities = auditItems.map(item => ({
+        const newAct = {
           id: 'act-' + Math.random().toString(36).substring(2, 9),
-          staffId: item.metadata.staffId,
-          role: item.metadata.role,
-          packageType: item.metadata.packageType,
-          fileName: item.fileName,
+          staffId: 'ADMIN',
+          role: 'admin',
+          packageType: 'Master Harmonization & Admission Standardization',
+          fileName: 'system_records',
           timestamp: new Date().toISOString(),
-          details: `Harmonized ${item.attendanceCount} attendance, ${item.assessmentCount} assessment & ${item.inventoryCount} inventory records.`
-        }));
-        localStorage.setItem('munyaka_admin_activities', JSON.stringify([...newActivities, ...storedActivities]));
+          details: `Standardized admission numbers to MUN-XXX-YYYY format and harmonized master databases.`
+        };
+        localStorage.setItem('munyaka_admin_activities', JSON.stringify([newAct, ...storedActivities]));
       } catch {}
 
-      // Mark items as harmonized
       setAuditItems(prev => prev.map(item => ({ ...item, status: 'harmonized' })));
 
       toast({
-        title: "Harmonization Complete!",
-        description: `Successfully merged ${result.successCount} teacher package(s) into master database without stream mix-ups.`,
+        title: "Database Harmonization & Admission Standardization Complete!",
+        description: `Successfully standardized all learner admission numbers to MUN-XXX-YYYY format and harmonized records.`,
       });
     } catch (err: any) {
       toast({
         title: "Harmonization Error",
-        description: err.message || "Failed to merge records into master database.",
+        description: err.message || "Failed to harmonize database.",
         variant: "destructive"
       });
     } finally {
