@@ -33,6 +33,24 @@ import {
   Briefcase,
   type LucideIcon,
 } from 'lucide-react';
+
+// Helper function to render text with colored bold highlights
+const renderStyledQuote = (text: string) => {
+  // Splits text by markdown double asterisks **keyword**
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      const cleanText = part.slice(2, -2);
+      return (
+        <span key={index} className="font-extrabold text-indigo-600 dark:text-indigo-400 drop-shadow-sm px-1">
+          {cleanText}
+        </span>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+};
 import { auth } from '@/config/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useAuth } from '@/context/AuthContext';
@@ -516,9 +534,9 @@ const Login: React.FC = () => {
                       </div>
 
                       {/* Inspirational Quote Banner */}
-                      <div className="w-full max-w-lg mx-auto my-4 px-4 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-center shadow-sm">
-                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 tracking-wide uppercase">
-                          {localStorage.getItem('munyaka_login_quote') || 'STRONG MINDS DISCUSS IDEAS, AVERAGE MINDS DISCUSS EVENTS, AND WEAK MINDS DISCUSS PEOPLE.'}
+                      <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-gradient-to-r from-indigo-50/80 via-purple-50/80 to-slate-50/80 dark:from-slate-800/80 dark:via-slate-800/60 dark:to-slate-800/80 border border-indigo-100 dark:border-slate-700/60 rounded-xl text-center shadow-sm backdrop-blur-sm">
+                        <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide uppercase leading-relaxed">
+                          {renderStyledQuote(localStorage.getItem('munyaka_login_quote') || 'STRONG MINDS DISCUSS **IDEAS**, AVERAGE MINDS DISCUSS **EVENTS**, AND WEAK MINDS DISCUSS **PEOPLE**.')}
                         </p>
                       </div>
 
