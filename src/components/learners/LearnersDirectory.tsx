@@ -81,19 +81,19 @@ export default function LearnersDirectory() {
 
   const [learnersList, setLearnersList] = useState<any[]>(() => {
     try {
-      const raw = localStorage.getItem('munyaka_students');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed.filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && s.name !== 'Unnamed Learner' && !s.name.includes('Unknown') && !s.name.includes('Unnamed') && s.name.trim() !== '');
+      const saved = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter((l: any) => l && l.name && l.name !== 'Unnamed Learner' && l.name !== 'Unknown Learner');
           if (cleaned.length !== parsed.length) {
-            localStorage.setItem('munyaka_students', JSON.stringify(cleaned));
+            localStorage.setItem('munyaka_learners', JSON.stringify(cleaned));
           }
           if (cleaned.length > 0) return cleaned.map(formatLearnerDoc);
         }
       }
     } catch (e) {}
-    return fetchLearnersFromStorage();
+    return [];
   });
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -107,17 +107,19 @@ export default function LearnersDirectory() {
   const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
 
   useEffect(() => {
-    const raw = localStorage.getItem('munyaka_learners');
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        const cleaned = parsed.filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && s.name !== 'Unnamed Learner' && !s.name.includes('Unknown') && !s.name.includes('Unnamed') && s.name.trim() !== '');
-        if (cleaned.length !== parsed.length) {
-          localStorage.setItem('munyaka_learners', JSON.stringify(cleaned));
-          setLearnersList(cleaned.map(formatLearnerDoc));
-        }
-      } catch (e) {}
-    }
+    ['munyaka_learners', 'munyaka_students'].forEach((key) => {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          const cleaned = parsed.filter((l: any) => l && l.name && l.name !== 'Unnamed Learner' && l.name !== 'Unknown Learner');
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(key, JSON.stringify(cleaned));
+            setLearnersList(cleaned.map(formatLearnerDoc));
+          }
+        } catch (e) {}
+      }
+    });
   }, []);
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
