@@ -58,60 +58,35 @@ export default function Attendance() {
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [historicalRecords, setHistoricalRecords] = useState<any[]>([]);
 
-  // Time-Window Checker helpers & constants
-  const timeToMinutes = (timeStr: string): number => {
-    const [hours, minutes] = (timeStr || '00:00').split(':').map(Number);
-    return (isNaN(hours) ? 0 : hours) * 60 + (isNaN(minutes) ? 0 : minutes);
-  };
+  // Time Lock & Role check helper
+  const { user } = useAuth();
+  const roleStr = String((user as any)?.role || '');
+  const isAdmin = roleStr === 'admin' || roleStr === 'head_teacher' || roleStr === 'owner' || user?.email?.includes('admin');
 
-  const checkSessionLockStatus = (
-    morningCutoffStr = morningCutoffTime,
-    afternoonCutoffStr = afternoonCutoffTime,
-    isBypassed = isAdmin && bypassCutoff,
-    manualMorningOverride?: 'Locked' | 'Unlocked',
-    manualAfternoonOverride?: 'Locked' | 'Unlocked'
-  ) => {
-    if (manualMorningOverride === 'Unlocked') return { isMorningOpen: true, isAfternoonOpen: false }; // wait, check both independently
+  const checkIsLocked = (session: 'morning' | 'afternoon') => {
+    if (session === 'morning' && manualMorningLock) return true;
+    if (session === 'afternoon' && manualAfternoonLock) return true;
+
+    if (isAdmin && bypassCutoff) return false;
     
     const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const currentTimeMinutes = currentHours * 60 + currentMinutes;
 
-    // Standard Windows in Minutes
-    const morningStartMinutes = 8 * 60; // 08:00 AM
-    const morningCutoffMinutes = timeToMinutes(morningCutoffStr);
-
-    const afternoonStartMinutes = 14 * 60; // 02:00 PM / 14:00
-    const afternoonCutoffMinutes = timeToMinutes(afternoonCutoffStr);
-
-    // Evaluate Morning Status
-    let isMorningOpen = (currentMinutes >= morningStartMinutes && currentMinutes <= morningCutoffMinutes);
-    if (manualMorningLock) isMorningOpen = false;
-    if (manualMorningOverride === 'Unlocked' || (isBypassed && manualMorningOverride !== 'Locked')) {
-      if (manualMorningOverride === 'Unlocked' || isBypassed) isMorningOpen = true;
+    if (session === 'morning') {
+      const [mHours, mMinutes] = morningCutoffTime.split(':').map(Number);
+      const cutoffMinutes = (isNaN(mHours) ? 9 : mHours) * 60 + (isNaN(mMinutes) ? 40 : mMinutes);
+      return currentTimeMinutes > cutoffMinutes;
+    } else {
+      const [aHours, aMinutes] = afternoonCutoffTime.split(':').map(Number);
+      const cutoffMinutes = (isNaN(aHours) ? 15 : aHours) * 60 + (isNaN(aMinutes) ? 0 : aMinutes);
+      return currentTimeMinutes >= cutoffMinutes;
     }
-    if (manualMorningOverride === 'Locked') isMorningOpen = false;
-
-    // Evaluate Afternoon Status
-    let isAfternoonOpen = (currentMinutes >= afternoonStartMinutes && currentMinutes <= afternoonCutoffMinutes);
-    if (manualAfternoonLock) isAfternoonOpen = false;
-    if (manualAfternoonOverride === 'Unlocked' || (isBypassed && manualAfternoonOverride !== 'Locked')) {
-      if (manualAfternoonOverride === 'Unlocked' || isBypassed) isAfternoonOpen = true;
-    }
-    if (manualAfternoonOverride === 'Locked') isAfternoonOpen = false;
-
-    return { isMorningOpen, isAfternoonOpen };
   };
 
-  const { isMorningOpen, isAfternoonOpen } = checkSessionLockStatus(
-    morningCutoffTime,
-    afternoonCutoffTime,
-    isAdmin && bypassCutoff,
-    manualMorningLock ? 'Locked' : undefined,
-    manualAfternoonLock ? 'Locked' : undefined
-  );
-
-  const morningLocked = !isMorningOpen;
-  const afternoonLocked = !isAfternoonOpen;
+  const morningLocked = checkIsLocked('morning');
+  const afternoonLocked = checkIsLocked('afternoon');
 
   const handleMorningCutoffChange = (newVal: string) => {
     setMorningCutoffTime(newVal);
@@ -484,7 +459,7 @@ export default function Attendance() {
 
     <div className="flex flex-wrap items-center gap-3">
       {isAdmin && (
-        <div className="flex flex-wrap items-center gap-2">
+        <>
           <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
               {bypassCutoff ? <Unlock className="w-4 h-4 text-emerald-300" /> : <Lock className="w-4 h-4 text-amber-300" />}
@@ -506,7 +481,7 @@ export default function Attendance() {
           <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
               {manualMorningLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
-              <span>Morning:</span>
+              <span>Manual Morning:</span>
             </div>
             <Button
               size="sm"
@@ -521,7 +496,7 @@ export default function Attendance() {
           <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
               {manualAfternoonLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
-              <span>Afternoon:</span>
+              <span>Manual Afternoon:</span>
             </div>
             <Button
               size="sm"
@@ -532,28 +507,12 @@ export default function Attendance() {
               {manualAfternoonLock ? 'Locked' : 'Unlocked'}
             </Button>
           </div>
-        </div>
+        </>
       )}
-    </div>
-      </div>
 
-      {/* Status Indicators & Helper Message per specification */}
-      <div className="space-y-4">
-        {/* Status Indicators */}
-        <div className="flex flex-wrap gap-3">
-          <span className={`px-3 py-1 rounded-lg text-xs font-bold text-white shadow-sm ${isMorningOpen ? 'bg-emerald-600' : 'bg-rose-600'}`}>
-            Morning Session: {isMorningOpen ? 'Unlocked (Active)' : 'Locked'}
-          </span>
-          <span className={`px-3 py-1 rounded-lg text-xs font-bold text-white shadow-sm ${isAfternoonOpen ? 'bg-emerald-600' : 'bg-rose-600'}`}>
-            Afternoon Session: {isAfternoonOpen ? 'Unlocked (Active)' : 'Locked'}
-          </span>
-        </div>
-
-        {/* Helper Message */}
-        <p className="text-xs text-slate-500 font-medium">
-          * Morning marking active 08:00 AM – {morningCutoffTime}. Afternoon marking active 02:00 PM – {afternoonCutoffTime}.
-        </p>
-      </div>
+      <Button
+        onClick={() => {
+          loadMasterLearners();
           loadRollCallRecords();
           toast.success('Refreshed learners & attendance data');
         }}
@@ -631,24 +590,6 @@ export default function Attendance() {
     </Card>
   )}
 
-      {/* Status Indicators & Helper Message per specification */}
-      <div className="space-y-4">
-        {/* Status Indicators */}
-        <div className="flex flex-wrap gap-3">
-          <span className={`px-3 py-1 rounded-lg text-xs font-bold text-white shadow-sm ${isMorningOpen ? 'bg-emerald-600' : 'bg-rose-600'}`}>
-            Morning Session: {isMorningOpen ? 'Unlocked (Active)' : 'Locked'}
-          </span>
-          <span className={`px-3 py-1 rounded-lg text-xs font-bold text-white shadow-sm ${isAfternoonOpen ? 'bg-emerald-600' : 'bg-rose-600'}`}>
-            Afternoon Session: {isAfternoonOpen ? 'Unlocked (Active)' : 'Locked'}
-          </span>
-        </div>
-
-        {/* Helper Message */}
-        <p className="text-xs text-slate-500 font-medium">
-          * Morning marking active 08:00 AM – {morningCutoffTime}. Afternoon marking active 02:00 PM – {afternoonCutoffTime}.
-        </p>
-      </div>
-
       {/* Stats Overview */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '1rem', width: '100%' }}>
         <Card className="border-emerald-100 shadow-sm bg-gradient-to-br from-white to-emerald-50/30">
@@ -691,7 +632,25 @@ export default function Attendance() {
             </div>
           </CardContent>
         </Card>
-      </div>
+
+        <Card className="border-indigo-100 shadow-sm bg-gradient-to-br from-white to-indigo-50/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Present (Afternoon)</p>
+              <h3 className="text-xl font-bold text-indigo-600 mt-1">{presentAfternoonCount}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {totalLearnersCount > 0 ? `${Math.round((presentAfternoonCount / totalLearnersCount) * 100)}% rate` : '0%'}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 shadow-inner">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-orange-100 shadow-sm bg-gradient-to-br from-white to-orange-50/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
               <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Absent (Afternoon)</p>
               <h3 className="text-xl font-bold text-orange-600 mt-1">{absentAfternoonCount}</h3>
               <p className="text-[10px] text-orange-600 font-medium mt-1">Follow-up needed</p>
