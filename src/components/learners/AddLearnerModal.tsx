@@ -24,98 +24,79 @@ export default function AddLearnerModal({
   availableGrades = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'],
   availableStreams = ['BLUE', 'RED', 'GREEN', 'YELLOW']
 }: AddLearnerModalProps) {
-  const [fullName, setFullName] = useState('');
-  const [admissionNumber, setAdmissionNumber] = useState('');
-  const [assessmentNumber, setAssessmentNumber] = useState('');
-  const [idType, setIdType] = useState<'assessment' | 'birthCert'>('assessment');
-  const [idValue, setIdValue] = useState('');
-  const [gradeLevel, setGradeLevel] = useState('Grade 6');
-  const [stream, setStream] = useState('BLUE');
-  const [gender, setGender] = useState('Female');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [parentName, setParentName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    admNo: '',
+    assessmentNo: '',
+    grade: 'Grade 1',
+    stream: 'BLUE',
+    gender: 'Female',
+    dob: '',
+    parentName: '',
+    phone: '',
+  });
+
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (gradeLevel) {
-      const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
-      const freshAdmNo = generateCohortAdmissionNumber(gradeLevel, existingLearners);
-      setAdmissionNumber(freshAdmNo);
+    if (formData.grade) {
+      const existingRaw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]';
+      const existingLearners = JSON.parse(existingRaw);
+      const freshAdmNo = generateCohortAdmissionNumber(formData.grade, existingLearners);
+      setFormData(prev => ({ ...prev, admNo: freshAdmNo }));
     }
-  }, [gradeLevel]);
+  }, [formData.grade]);
 
-  const handleRegisterLearner = async (e: React.FormEvent) => {
+  const handleSaveLearner = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim()) {
+    if (!formData.name.trim()) {
       showError("Please enter full name.");
-      return;
-    }
-
-    const cleanValue = idValue.trim().toUpperCase();
-    if (!cleanValue) {
-      showError(`Please enter a valid ${idType === 'assessment' ? 'Assessment Number' : 'Birth Certificate Number'}.`);
-      return;
-    }
-
-    const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
-    const duplicateFound = existingLearners.find((learner: any) => {
-      const existingId = (learner.idValue || learner.assessmentNumber || learner.assessmentNo || learner.birthCertificateNo || learner.birthCertNo || '').trim().toUpperCase();
-      return existingId === cleanValue && cleanValue !== '';
-    });
-
-    if (duplicateFound) {
-      showError(
-        `DUPLICATE REGISTRATION BLOCKED:\n\nA learner named "${duplicateFound.fullName || duplicateFound.name}" (${duplicateFound.gradeLevel || duplicateFound.grade || 'N/A'}) is already registered with this ${idType === 'assessment' ? 'Assessment' : 'Birth Certificate'} number (${cleanValue}).`
-      );
       return;
     }
 
     setIsSaving(true);
     try {
-      const learnerId = `learner-${Date.now()}`;
-      const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
-      const genAdm = admissionNumber.trim() || generateCohortAdmissionNumber(gradeLevel, existingLearners);
+      const existingRaw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]';
+      const existingLearners = JSON.parse(existingRaw);
+      
+      const generatedAdmNo = formData.admNo || generateCohortAdmissionNumber(formData.grade, existingLearners);
 
-      const parts = fullName.trim().split(/\s+/);
-      const firstName = parts[0] || '';
-      const middleName = parts.length > 2 ? parts.slice(1, -1).join(' ') : '';
-      const lastName = parts.length > 1 ? parts[parts.length - 1] : '';
-      const constructedName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim() || fullName.trim() || 'New Learner';
-
-      const newLearner = {
-        id: learnerId,
-        name: constructedName,
-        fullName: constructedName,
-        firstName: firstName,
-        middleName: middleName,
-        lastName: lastName,
-        admissionNumber: genAdm,
-        admissionNo: genAdm,
-        admNo: genAdm,
-        idType: idType,
-        idValue: cleanValue,
-        assessmentNumber: idType === 'assessment' ? cleanValue : '',
-        assessmentNo: idType === 'assessment' ? cleanValue : '',
-        birthCertificateNo: idType === 'birthCert' ? cleanValue : '',
-        gradeLevel: gradeLevel,
-        grade: gradeLevel,
-        class: gradeLevel,
-        stream: stream,
-        gender: gender,
-        dateOfBirth: dateOfBirth,
-        parentName: parentName.trim(),
-        phoneNumber: phoneNumber.trim(),
+      const newLearnerRecord = {
+        id: `learner_${Date.now()}`,
+        admNo: generatedAdmNo,
+        admissionNumber: generatedAdmNo,
+        admissionNo: generatedAdmNo,
+        assessmentNo: formData.assessmentNo || '—',
+        assessmentNumber: formData.assessmentNo || '—',
+        name: formData.name.trim(),
+        fullName: formData.name.trim(),
+        grade: formData.grade,
+        gradeLevel: formData.grade,
+        stream: formData.stream,
+        gender: formData.gender,
+        dob: formData.dob || '—',
+        dateOfBirth: formData.dob || '—',
+        parentName: formData.parentName || '—',
+        phone: formData.phone || '—',
+        phoneNumber: formData.phone || '—',
         status: 'Active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      await registerLearnerGuarded(newLearner);
+      await registerLearnerGuarded(newLearnerRecord);
 
-      showSuccess("Learner successfully registered and saved to central directory!");
+      // Also ensure it's written cleanly to munyaka_students and munyaka_learners
+      const updatedStudents = [newLearnerRecord, ...existingLearners];
+      localStorage.setItem('munyaka_students', JSON.stringify(updatedStudents));
+      localStorage.setItem('munyaka_learners', JSON.stringify(updatedStudents));
+
+      // Dispatch storage event so the directory table refreshes instantly
+      window.dispatchEvent(new Event('storage'));
+      
+      showSuccess("Learner successfully registered and saved to directory!");
       if (onLearnerAdded) {
-        onLearnerAdded(newLearner);
+        onLearnerAdded(newLearnerRecord);
       }
       onClose();
     } catch (err: any) {
@@ -131,12 +112,12 @@ export default function AddLearnerModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Register New Learner"
-      description="Add a new learner directly to the central storage and Firestore directory."
+      description="Add a new learner directly to the central storage and directory."
       footer={
         <>
           <Button variant="ghost" onClick={onClose} className="rounded-xl font-bold">Cancel</Button>
           <Button
-            onClick={handleRegisterLearner}
+            onClick={handleSaveLearner}
             disabled={isSaving}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 shadow-lg shadow-indigo-100"
           >
@@ -146,12 +127,12 @@ export default function AddLearnerModal({
         </>
       }
     >
-      <form onSubmit={handleRegisterLearner} className="space-y-4">
+      <form onSubmit={handleSaveLearner} className="space-y-4">
         <div className="space-y-2">
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name *</Label>
           <Input
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            value={formData.name}
+            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             placeholder="e.g. John Kamau"
             className="rounded-xl h-12 bg-slate-50 border-none font-bold"
             required
@@ -160,90 +141,85 @@ export default function AddLearnerModal({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admission No</Label>
-            <Input
-              value={admissionNumber}
-              onChange={(e) => setAdmissionNumber(e.target.value)}
-              placeholder="e.g. MUN-450-2025"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-            />
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade</Label>
+            <Select
+              value={formData.grade}
+              onValueChange={(val) => setFormData(prev => ({ ...prev, grade: val }))}
+            >
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+                <SelectValue placeholder="Select Grade" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl shadow-xl">
+                {availableGrades.map((g) => (
+                  <SelectItem key={g} value={g} className="font-bold">{g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
           <div className="space-y-2">
-            <label className="block text-xs font-black uppercase text-slate-400 tracking-widest">
-              IDENTIFIER TYPE & NUMBER <span className="text-red-500">*</span>
-            </label>
-            <div className="flex gap-2">
-              <select
-                value={idType}
-                onChange={(e) => setIdType(e.target.value as 'assessment' | 'birthCert')}
-                className="px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="assessment">Assessment No (UPI)</option>
-                <option value="birthCert">Birth Certificate No</option>
-              </select>
-              <input
-                type="text"
-                required
-                value={idValue}
-                onChange={(e) => setIdValue(e.target.value)}
-                placeholder={idType === 'assessment' ? 'e.g. ASS-827361' : 'e.g. BC-10928374'}
-                className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <p className="text-[10px] text-slate-500">
-              * Mandatory field used to verify learner identity and prevent duplicate registration.
-            </p>
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Stream</Label>
+            <Select
+              value={formData.stream}
+              onValueChange={(val) => setFormData(prev => ({ ...prev, stream: val }))}
+            >
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+                <SelectValue placeholder="Select Stream" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl shadow-xl">
+                {availableStreams.map((s) => (
+                  <SelectItem key={s} value={s} className="font-bold">{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade Level</Label>
-            <Select value={gradeLevel} onValueChange={setGradeLevel}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                <SelectValue placeholder="Select Grade" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {availableGrades.map(g => (
-                  <SelectItem key={g} value={g}>{g}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admission No (Auto)</Label>
+            <Input
+              value={formData.admNo}
+              onChange={(e) => setFormData(prev => ({ ...prev, admNo: e.target.value }))}
+              placeholder="MUN-001-2026"
+              className="rounded-xl h-12 bg-slate-50 border-none font-mono font-bold"
+            />
           </div>
+
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Stream</Label>
-            <Select value={stream} onValueChange={setStream}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                <SelectValue placeholder="Select Stream" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {availableStreams.map(s => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assessment No / UPI</Label>
+            <Input
+              value={formData.assessmentNo}
+              onChange={(e) => setFormData(prev => ({ ...prev, assessmentNo: e.target.value }))}
+              placeholder="Assessment / Birth Cert No"
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+            />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Gender</Label>
-            <Select value={gender} onValueChange={setGender}>
+            <Select
+              value={formData.gender}
+              onValueChange={(val) => setFormData(prev => ({ ...prev, gender: val }))}
+            >
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
                 <SelectValue placeholder="Select Gender" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Male">Male</SelectItem>
+              <SelectContent className="rounded-xl shadow-xl">
+                <SelectItem value="Female" className="font-bold">Female</SelectItem>
+                <SelectItem value="Male" className="font-bold">Male</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Date of Birth</Label>
             <Input
               type="date"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
+              value={formData.dob}
+              onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value }))}
               className="rounded-xl h-12 bg-slate-50 border-none font-bold"
             />
           </div>
@@ -253,17 +229,18 @@ export default function AddLearnerModal({
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Parent / Guardian Name</Label>
             <Input
-              value={parentName}
-              onChange={(e) => setParentName(e.target.value)}
+              value={formData.parentName}
+              onChange={(e) => setFormData(prev => ({ ...prev, parentName: e.target.value }))}
               placeholder="e.g. Mary Kamau"
               className="rounded-xl h-12 bg-slate-50 border-none font-bold"
             />
           </div>
+
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone Number</Label>
             <Input
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              value={formData.phone}
+              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               placeholder="e.g. 0712345678"
               className="rounded-xl h-12 bg-slate-50 border-none font-bold"
             />
