@@ -560,64 +560,71 @@ export default function Attendance() {
           * Morning marking active 08:00 AM – {morningCutoffTime}. Afternoon marking active 02:00 PM – {afternoonCutoffTime}.
         </p>
       </div>
-    </div>
-    </div>
-  )}
 
-  {afternoonLocked && (!isAdmin || !bypassCutoff) && (
-    <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl shadow-sm flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <Clock className="w-5 h-5 text-amber-600" />
-        <div>
-          <p className="text-sm font-bold text-amber-900">Afternoon attendance is locked after {afternoonCutoffTime}.</p>
-          <p className="text-xs text-amber-700">Submissions and status updates for afternoon sessions are restricted. {isAdmin ? 'Administrators can bypass using the toggle above or adjust cutoff time.' : ''}</p>
+      {morningLocked && (!isAdmin || !bypassCutoff) && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5 text-amber-600" />
+            <div>
+              <p className="text-sm font-bold text-amber-900">Morning attendance is locked after {morningCutoffTime}.</p>
+              <p className="text-xs text-amber-700">Submissions and status updates for morning sessions are restricted. {isAdmin ? 'Administrators can bypass using the toggle above or adjust cutoff time.' : ''}</p>
+            </div>
+          </div>
+          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Morning Locked</Badge>
         </div>
-      </div>
-      <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Afternoon Locked</Badge>
-    </div>
-  )}
+      )}
 
-  {/* Admin Cutoff Settings Box */}
-  {isAdmin && (
-    <Card className="border-indigo-100 bg-indigo-50/40 shadow-sm">
-      <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-            <Clock className="w-5 h-5" />
+      {afternoonLocked && (!isAdmin || !bypassCutoff) && (
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5 text-amber-600" />
+            <div>
+              <p className="text-sm font-bold text-amber-900">Afternoon attendance is locked after {afternoonCutoffTime}.</p>
+              <p className="text-xs text-amber-700">Submissions and status updates for afternoon sessions are restricted. {isAdmin ? 'Administrators can bypass using the toggle above or adjust cutoff time.' : ''}</p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-sm font-bold text-indigo-950">Configurable Attendance Cutoff Times</h4>
-            <p className="text-xs text-indigo-700">Customize the exact locking hours for morning and afternoon sessions across the school.</p>
-          </div>
+          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">Afternoon Locked</Badge>
         </div>
+      )}
 
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
-            <span className="text-xs font-semibold text-slate-700">Morning Cutoff:</span>
-            <input
-              type="time"
-              value={morningCutoffTime}
-              onChange={(e) => handleMorningCutoffChange(e.target.value)}
-              className="text-xs font-mono font-bold text-indigo-900 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
+      {/* Admin Cutoff Settings Box */}
+      {isAdmin && (
+        <Card className="border-indigo-100 bg-indigo-50/40 shadow-sm">
+          <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-indigo-950">Configurable Attendance Cutoff Times</h4>
+                <p className="text-xs text-indigo-700">Customize the exact locking hours for morning and afternoon sessions across the school.</p>
+              </div>
+            </div>
 
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
-            <span className="text-xs font-semibold text-slate-700">Afternoon Cutoff:</span>
-            <input
-              type="time"
-              value={afternoonCutoffTime}
-              onChange={(e) => handleAfternoonCutoffChange(e.target.value)}
-              className="text-xs font-mono font-bold text-indigo-900 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )}
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
+                <span className="text-xs font-semibold text-slate-700">Morning Cutoff:</span>
+                <input
+                  type="time"
+                  value={morningCutoffTime}
+                  onChange={(e) => handleMorningCutoffChange(e.target.value)}
+                  className="text-xs font-mono font-bold text-indigo-900 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
 
-      {/* Status Indicators & Helper Message per specification */}
-      <div className="space-y-4">
+              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-200">
+                <span className="text-xs font-semibold text-slate-700">Afternoon Cutoff:</span>
+                <input
+                  type="time"
+                  value={afternoonCutoffTime}
+                  onChange={(e) => handleAfternoonCutoffChange(e.target.value)}
+                  className="text-xs font-mono font-bold text-indigo-900 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
         {/* Status Indicators */}
         <div className="flex flex-wrap gap-3">
           <span className={`px-3 py-1 rounded-lg text-xs font-bold text-white shadow-sm ${isMorningOpen ? 'bg-emerald-600' : 'bg-rose-600'}`}>
