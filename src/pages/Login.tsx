@@ -542,41 +542,11 @@ const Login: React.FC = () => {
                       </div>
 
                       {/* Inspirational Quote Banner */}
-                      {(() => {
-                        const config = getQuoteConfig();
-                        const colorMap: Record<string, string> = {
-                          indigo: 'text-indigo-600 dark:text-indigo-400 font-bold',
-                          emerald: 'text-emerald-600 dark:text-emerald-400 font-bold',
-                          amber: 'text-amber-600 dark:text-amber-400 font-bold',
-                          rose: 'text-rose-600 dark:text-rose-400 font-bold',
-                        };
-                        const activeColorClass = colorMap[config.colorId] || colorMap.indigo;
-
-                        let rawText = config.text || '';
-                        if (config.isUppercase) {
-                          rawText = rawText.toUpperCase();
-                        }
-
-                        const parts = rawText.split(/(\*\*.*?\*\*)/g);
-
-                        return (
-                          <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl text-center shadow-sm">
-                            <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 tracking-wide leading-relaxed">
-                              {parts.map((part, index) => {
-                                if (part.startsWith('**') && part.endsWith('**')) {
-                                  const keyword = part.slice(2, -2);
-                                  return (
-                                    <span key={index} className={`${activeColorClass} px-0.5`}>
-                                      {keyword}
-                                    </span>
-                                  );
-                                }
-                                return <span key={index}>{part}</span>;
-                              })}
-                            </p>
-                          </div>
-                        );
-                      })()}
+                      <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-gradient-to-r from-indigo-50/80 via-purple-50/80 to-slate-50/80 dark:from-slate-800/80 dark:via-slate-800/60 dark:to-slate-800/80 border border-indigo-100 dark:border-slate-700/60 rounded-xl text-center shadow-sm backdrop-blur-sm">
+                        <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide uppercase leading-relaxed">
+                          {renderStyledQuote(localStorage.getItem('munyaka_login_quote') || 'STRONG MINDS DISCUSS **IDEAS**, AVERAGE MINDS DISCUSS **EVENTS**, AND WEAK MINDS DISCUSS **PEOPLE**.')}
+                        </p>
+                      </div>
 
           {/* ── Portal Access Tabs ── */}
           <Tabs defaultValue="staff" className="w-full">
