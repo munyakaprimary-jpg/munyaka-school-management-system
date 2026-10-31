@@ -106,24 +106,14 @@ export default function LearnersDirectory() {
   const [pendingDelete, setPendingDelete] = useState<any>(null);
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [showPass, setShowPass] = useState(false);
 
   const requestDelete = (learner: any) => {
     setPendingDelete(learner);
     setAuthPassword('');
     setAuthError('');
     setIsAuthOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (pendingDelete) {
-      const idToDelete = pendingDelete.id || pendingDelete.admNo;
-      const updated = learners.filter((l: any) => l.id !== idToDelete && l.admNo !== idToDelete);
-      setLearners(updated);
-      localStorage.setItem('munyaka_learners_v2', JSON.stringify(updated));
-    }
-    setIsAuthOpen(false);
-    setPendingDelete(null);
-    setAuthPassword('');
   };
 
   // Active table states kept in sync for immediate UI re-render
@@ -139,15 +129,13 @@ export default function LearnersDirectory() {
           const parsed = JSON.parse(raw);
           const cleaned = parsed.filter((l: any) => l && l.name && l.name !== 'Unnamed Learner' && l.name !== 'Unknown Learner');
           if (cleaned.length !== parsed.length) {
-                localStorage.setItem(key, JSON.stringify(cleaned));
-                setLearnersList(cleaned.map(formatLearnerDoc));
-              }
-            } catch (e) {}
+            localStorage.setItem(key, JSON.stringify(cleaned));
+            setLearnersList(cleaned.map(formatLearnerDoc));
           }
-        });
-      }, []);
-    
-      // Direct Real-Time Listener reacting to 'learners_updated' and Firestore snapshot
+        } catch (e) {}
+      }
+    });
+  }, []);
   useEffect(() => {
     const UNIFIED_KEY = 'munyaka_learners_v2';
     const DELETED_KEY = 'deleted_learner_ids';
@@ -313,13 +301,6 @@ export default function LearnersDirectory() {
     if (typeof setDisplayedLearners === 'function') {
       setDisplayedLearners((prev: any[]) => prev.filter(isNotTarget));
     }
-  };
-
-  const requestDelete = (learner: any) => {
-    setPendingDelete(learner);
-    setAuthPassword('');
-    setAuthError('');
-    setIsAuthOpen(true);
   };
 
   const handleVerifyAuth = async () => {
