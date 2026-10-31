@@ -69,3 +69,5 @@ export const saveStaffMember = (staffData: any) => {
 
   window.dispatchEvent(new Event('storage'));
 };
+
+export const saveStaff = saveStaffMember;

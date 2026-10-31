@@ -33,7 +33,7 @@ import { downloadCSV, generateCSVHeader } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
 import { CentralDataService } from '@/services/centralDataService';
 import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
-import { getStoredLearners, saveLearner } from '@/utils/centralStorage';
+import { getStoredLearners, saveLearnerRecord as saveLearner } from '@/utils/centralStorage';
 import { checkGradePermission } from '@/utils/gradePermissionGuard';
 import { migrateExistingAdmissionNumbers } from '@/utils/migrateExistingAdmissionNumbers';
 import { db } from '@/config/firebase';

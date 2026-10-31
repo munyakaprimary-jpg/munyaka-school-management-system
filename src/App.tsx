@@ -48,8 +48,8 @@ function GlobalExportListener() {
   }, []);
 
   const [modalState, setModalState] = useState<{
-    isOpen?: boolean;
-    filename?: string;
+    isOpen: boolean;
+    filename: string;
     data: string;
     mimeType: string;
     nativeUri?: string;

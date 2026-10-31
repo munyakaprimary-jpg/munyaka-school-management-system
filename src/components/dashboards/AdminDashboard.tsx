@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import CentralDataService from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
-import { getStoredLearners, saveLearner, getStoredStaff, saveStaffMember } from '../../utils/centralStorage';
+import { getStoredLearners, saveLearnerRecord as saveLearner, getStoredStaff, saveStaffMember } from '../../utils/centralStorage';
 import { useCentralData } from '../../hooks/useCentralData';
 import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon, FileText, ShieldCheck, Database, ArrowRight, Sparkles, Upload, QrCode, Camera, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';

@@ -102,6 +102,29 @@ export default function LearnersDirectory() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedLearner, setSelectedLearner] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<any>(null);
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+
+  const requestDelete = (learner: any) => {
+    setPendingDelete(learner);
+    setAuthPassword('');
+    setAuthError('');
+    setIsAuthOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (pendingDelete) {
+      const idToDelete = pendingDelete.id || pendingDelete.admNo;
+      const updated = learners.filter((l: any) => l.id !== idToDelete && l.admNo !== idToDelete);
+      setLearners(updated);
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify(updated));
+    }
+    setIsAuthOpen(false);
+    setPendingDelete(null);
+    setAuthPassword('');
+  };
 
   // Active table states kept in sync for immediate UI re-render
   const [learners, setLearners] = useState<any[]>([]);
@@ -116,19 +139,15 @@ export default function LearnersDirectory() {
           const parsed = JSON.parse(raw);
           const cleaned = parsed.filter((l: any) => l && l.name && l.name !== 'Unnamed Learner' && l.name !== 'Unknown Learner');
           if (cleaned.length !== parsed.length) {
-            localStorage.setItem(key, JSON.stringify(cleaned));
-            setLearnersList(cleaned.map(formatLearnerDoc));
+                localStorage.setItem(key, JSON.stringify(cleaned));
+                setLearnersList(cleaned.map(formatLearnerDoc));
+              }
+            } catch (e) {}
           }
-        } catch (e) {}
-      }
-    });
-  }, []);
-  const [authPassword, setAuthPassword] = useState('');
-  const [authError, setAuthError] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [showPass, setShowPass] = useState(false);
-
-  // Direct Real-Time Listener reacting to 'learners_updated' and Firestore snapshot
+        });
+      }, []);
+    
+      // Direct Real-Time Listener reacting to 'learners_updated' and Firestore snapshot
   useEffect(() => {
     const UNIFIED_KEY = 'munyaka_learners_v2';
     const DELETED_KEY = 'deleted_learner_ids';
