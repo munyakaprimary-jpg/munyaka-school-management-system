@@ -518,7 +518,7 @@ const Login: React.FC = () => {
                       {/* Inspirational Quote Banner */}
                       <div className="w-full max-w-lg mx-auto my-4 px-4 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-center shadow-sm">
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 tracking-wide uppercase">
-                          "Strong minds discuss <span className="font-bold text-indigo-600 dark:text-indigo-400">IDEAS</span>, average minds discuss <span className="font-bold text-indigo-600 dark:text-indigo-400">EVENTS</span>, and weak minds discuss people."
+                          {localStorage.getItem('munyaka_login_quote') || 'STRONG MINDS DISCUSS IDEAS, AVERAGE MINDS DISCUSS EVENTS, AND WEAK MINDS DISCUSS PEOPLE.'}
                         </p>
                       </div>
 

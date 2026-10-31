@@ -28,6 +28,7 @@ import {
   Cloud
 } from 'lucide-react';
 import { exportAllData, parseAndImportBackup } from '@/utils/storage';
+import { AdminQuoteSettings } from '@/components/admin/AdminQuoteSettings';
 
 const SETTINGS_STORAGE_KEY = 'munyaka_system_settings';
 const RBAC_STORAGE_KEY = 'munyaka_rbac_permissions';
@@ -281,6 +282,9 @@ export default function Settings() {
             <TabsTrigger value="supabase" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
               <Cloud size={14} /> Cloud DB (Firestore)
             </TabsTrigger>
+            <TabsTrigger value="quote" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
+              <Shield size={14} /> Login Quote
+            </TabsTrigger>
             <TabsTrigger value="storage" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
               <Database size={14} /> Database & Backups
             </TabsTrigger>
@@ -474,6 +478,11 @@ export default function Settings() {
         {/* Cloud DB (Firestore) */}
         <TabsContent value="supabase" className="space-y-6">
           <FirestoreSyncTab />
+        </TabsContent>
+
+        {/* Login Quote Manager */}
+        <TabsContent value="quote" className="space-y-6">
+          <AdminQuoteSettings />
         </TabsContent>
 
         {/* 5. Database & Backups */}
