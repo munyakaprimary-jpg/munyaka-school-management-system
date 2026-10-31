@@ -12,6 +12,24 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { migrateLegacyLearnerIds } from '@/utils/migrateLegacyLearnerIds';
 import { HarmonizedLearnerService } from '@/services/harmonizedLearnerService';
 
+/**
+ * Returns true when the learners directory is empty across all known localStorage keys.
+ * Used to prevent sync modules from creating fallback/default records when there are zero learners.
+ */
+const hasZeroLearners = (): boolean => {
+  const keys = ['munyaka_learners_v2', 'munyaka_learners', 'learners'];
+  for (const key of keys) {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return false;
+      } catch {}
+    }
+  }
+  return true;
+};
+
 export default function FirestoreSyncTab() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
@@ -725,7 +743,7 @@ export default function FirestoreSyncTab() {
         }
       }
 
-      if (rawData.length === 0) {
+      if (rawData.length === 0 && !hasZeroLearners()) {
         try {
           const { defaultCommunications } = await import('@/data/defaultCommunications');
           if (Array.isArray(defaultCommunications)) {
@@ -876,7 +894,7 @@ export default function FirestoreSyncTab() {
         }
       }
 
-      if (rawData.length === 0) {
+      if (rawData.length === 0 && !hasZeroLearners()) {
         try {
           const { defaultExamTypes } = await import('@/data/defaultExamTypes');
           if (Array.isArray(defaultExamTypes)) {
@@ -998,13 +1016,22 @@ export default function FirestoreSyncTab() {
       }
 
       // If nothing found in local storage or incomplete, load comprehensiveCBC learning areas
-      try {
-        const { defaultCbcLearningAreas } = await import('@/data/defaultCbcLearningAreas');
-        if (Array.isArray(defaultCbcLearningAreas) && defaultCbcLearningAreas.length > 0) {
-          // Merge or seed if rawData is missing categories
-          rawData = [...defaultCbcLearningAreas, ...rawData];
-        }
-      } catch {}
+      if (rawData.length === 0 && !hasZeroLearners()) {
+        try {
+          const { defaultCbcLearningAreas } = await import('@/data/defaultCbcLearningAreas');
+          if (Array.isArray(defaultCbcLearningAreas) && defaultCbcLearningAreas.length > 0) {
+            // Merge or seed if rawData is missing categories
+            rawData = [...defaultCbcLearningAreas, ...rawData];
+          }
+        } catch {}
+      } else if (rawData.length > 0) {
+        try {
+          const { defaultCbcLearningAreas } = await import('@/data/defaultCbcLearningAreas');
+          if (Array.isArray(defaultCbcLearningAreas) && defaultCbcLearningAreas.length > 0) {
+            rawData = [...defaultCbcLearningAreas, ...rawData];
+          }
+        } catch {}
+      }
 
       // Flatten or map cluster / section records into individual learning area documents
       const learningAreaRecords: any[] = [];
@@ -1216,26 +1243,26 @@ export default function FirestoreSyncTab() {
         });
       }
 
-      if (recordsToSync.length === 0) {
-        // Create at least one fallback record so collection is populated
-        const fallbackDocId = 'fee_adm001_initial_balance'.toLowerCase().replace(/\s+/g, '_');
-        recordsToSync.push({
-          id: fallbackDocId,
-          admission_number: 'ADM001',
-          student_name: 'Sample Student',
-          grade: 'Grade 1',
-          stream: 'Blue',
-          amount: 15000,
-          balance: 5000,
-          total_fee: 20000,
-          status: 'Outstanding Balance',
-          payment_method: 'mpesa',
-          transaction_ref: 'MPESA_TEST_01',
-          payment_date: new Date().toISOString().split('T')[0],
-          fee_structures: feeStructures,
-          synced_at: new Date().toISOString()
-        });
-      }
+      if (recordsToSync.length === 0 && !hasZeroLearners()) {
+              // Create at least one fallback record so collection is populated
+              const fallbackDocId = 'fee_adm001_initial_balance'.toLowerCase().replace(/\s+/g, '_');
+              recordsToSync.push({
+                id: fallbackDocId,
+                admission_number: 'ADM001',
+                student_name: 'Sample Student',
+                grade: 'Grade 1',
+                stream: 'Blue',
+                amount: 15000,
+                balance: 5000,
+                total_fee: 20000,
+                status: 'Outstanding Balance',
+                payment_method: 'mpesa',
+                transaction_ref: 'MPESA_TEST_01',
+                payment_date: new Date().toISOString().split('T')[0],
+                fee_structures: feeStructures,
+                synced_at: new Date().toISOString()
+              });
+            }
 
       const batch = writeBatch(db);
       recordsToSync.forEach((record) => {
@@ -1303,7 +1330,7 @@ export default function FirestoreSyncTab() {
       }
 
       // Fallback defaults if storage is completely empty so sync demo works out of the box
-      if (!hardwareItems.length && !labAccessories.length && !maintenanceLogs.length && !studentAllocations.length) {
+      if (!hardwareItems.length && !labAccessories.length && !maintenanceLogs.length && !studentAllocations.length && !hasZeroLearners()) {
         hardwareItems = [
           { id: 'ICT-SRV-01', name: 'Rack Server Alpha', category: 'Servers', status: 'Online', assignedUser: 'Lab Admin (Mr. Juma)', location: 'Server Room A' },
           { id: 'ICT-PC-102', name: 'Workstation i7 32GB', category: 'Computers', status: 'Active', assignedUser: 'Student: Alex Kiprono (Form 4)', location: 'Station 12' },
@@ -1415,7 +1442,7 @@ export default function FirestoreSyncTab() {
         console.error("Error reading equipment from localStorage:", e);
       }
 
-      if (!storeItems.length && !stationery.length && !consumables.length && !equipment.length) {
+      if (!storeItems.length && !stationery.length && !consumables.length && !equipment.length && !hasZeroLearners()) {
         storeItems = [
           { id: 'SKU-CHKL-01', name: 'Exercise Books 96pg', category: 'Stationery', quantity: 450, unitPrice: 65, status: 'In Stock' },
           { id: 'SKU-PEN-02', name: 'Ballpoint Pens Blue (Box of 50)', category: 'Stationery', quantity: 120, unitPrice: 450, status: 'In Stock' },
@@ -1595,7 +1622,7 @@ export default function FirestoreSyncTab() {
         }
       }
 
-      if (!reportRecords.length) {
+      if (!reportRecords.length && !hasZeroLearners()) {
         reportRecords = [
           { studentAdmission: 'ADM-2025-001', studentName: 'Brian Kiprop', grade: 'Grade 8', stream: 'East', term: 'Term 1', year: '2025', overallLevel: 'Exceeding Expectation', attendanceSummary: '72/75 Days', teacherComments: 'Exceptional academic performance and leadership in ICT.', generatedDate: '2025-04-10' },
           { studentAdmission: 'ADM-2025-002', studentName: 'Amina Mohamed', grade: 'Grade 8', stream: 'West', term: 'Term 1', year: '2025', overallLevel: 'Meeting Expectation', attendanceSummary: '70/75 Days', teacherComments: 'Consistent effort shown across all subjects.', generatedDate: '2025-04-10' }
@@ -1673,7 +1700,7 @@ export default function FirestoreSyncTab() {
         }
       }
 
-      if (rawExams.length === 0) {
+      if (rawExams.length === 0 && !hasZeroLearners()) {
         rawExams = [{
           id: 'exam_mathematics_grade_6_mid_term_1',
           title: 'Mathematics Mid-Term Assessment',
