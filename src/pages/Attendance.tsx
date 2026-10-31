@@ -71,8 +71,6 @@ export default function Attendance() {
     manualMorningOverride?: 'Locked' | 'Unlocked',
     manualAfternoonOverride?: 'Locked' | 'Unlocked'
   ) => {
-    if (manualMorningOverride === 'Unlocked') return { isMorningOpen: true, isAfternoonOpen: false }; // wait, check both independently
-    
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -86,17 +84,13 @@ export default function Attendance() {
     // Evaluate Morning Status
     let isMorningOpen = (currentMinutes >= morningStartMinutes && currentMinutes <= morningCutoffMinutes);
     if (manualMorningLock) isMorningOpen = false;
-    if (manualMorningOverride === 'Unlocked' || (isBypassed && manualMorningOverride !== 'Locked')) {
-      if (manualMorningOverride === 'Unlocked' || isBypassed) isMorningOpen = true;
-    }
+    if (manualMorningOverride === 'Unlocked' || isBypassed) isMorningOpen = true;
     if (manualMorningOverride === 'Locked') isMorningOpen = false;
 
     // Evaluate Afternoon Status
     let isAfternoonOpen = (currentMinutes >= afternoonStartMinutes && currentMinutes <= afternoonCutoffMinutes);
     if (manualAfternoonLock) isAfternoonOpen = false;
-    if (manualAfternoonOverride === 'Unlocked' || (isBypassed && manualAfternoonOverride !== 'Locked')) {
-      if (manualAfternoonOverride === 'Unlocked' || isBypassed) isAfternoonOpen = true;
-    }
+    if (manualAfternoonOverride === 'Unlocked' || isBypassed) isAfternoonOpen = true;
     if (manualAfternoonOverride === 'Locked') isAfternoonOpen = false;
 
     return { isMorningOpen, isAfternoonOpen };
@@ -566,20 +560,7 @@ export default function Attendance() {
           * Morning marking active 08:00 AM – {morningCutoffTime}. Afternoon marking active 02:00 PM – {afternoonCutoffTime}.
         </p>
       </div>
-
-      <Button
-        onClick={() => {
-          loadMasterLearners();
-          loadRollCallRecords();
-          toast.success('Refreshed learners & attendance data');
-        }}
-        variant="outline"
-        className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
-      >
-        <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
-      </Button>
     </div>
-  </div>
 
   {/* Time Lock Status Banners */}
   {morningLocked && (!isAdmin || !bypassCutoff) && (
