@@ -35,18 +35,6 @@ import AdminProfile from "./pages/AdminProfile";
 import { ExportSuccessShareModal } from "@/components/teacher/ExportSuccessShareModal";
 
 function GlobalExportListener() {
-  useEffect(() => {
-    const legacyKeys = [
-      'munyaka_students',
-      'munyaka_pupils',
-      'munyaka_staff',
-      'munyaka_staff_db',
-      'munyaka_staff_directory',
-      'munyaka_staff_master',
-    ];
-    legacyKeys.forEach((key) => localStorage.removeItem(key));
-  }, []);
-
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     filename: string;
@@ -58,568 +46,120 @@ function GlobalExportListener() {
     isOpen: false,
     filename: '',
     data: '',
-    mimeType: 'application/json',
-    nativeUri: undefined,
+    mimeType: '',
     title: ''
   });
 
   useEffect(() => {
-    const handleExportEvent = (e: any) => {
-      const { filename, data, mimeType, nativeUri, title } = e.detail || {};
-      if (filename) {
+    const handleShowExportModal = (e: CustomEvent) => {
+      if (e.detail) {
         setModalState({
           isOpen: true,
-          filename,
-          data: data || '',
-          mimeType: mimeType || 'application/json',
-          nativeUri,
-          title: title || 'File Successfully Generated & Downloaded'
+          filename: e.detail.filename || 'export.csv',
+          data: e.detail.data || '',
+          mimeType: e.detail.mimeType || 'text/csv',
+          nativeUri: e.detail.nativeUri,
+          title: e.detail.title || 'Export Successful'
         });
       }
     };
 
-    window.addEventListener('munyaka_file_exported', handleExportEvent);
+    window.addEventListener('munyaka_show_export_modal' as any, handleShowExportModal as any);
     return () => {
-      window.removeEventListener('munyaka_file_exported', handleExportEvent);
+      window.removeEventListener('munyaka_show_export_modal' as any, handleShowExportModal as any);
     };
   }, []);
 
   return (
     <ExportSuccessShareModal
-      isOpen={Boolean(modalState.isOpen)}
+      isOpen={modalState.isOpen}
       onClose={() => setModalState(prev => ({ ...prev, isOpen: false }))}
-      filename={modalState.filename || 'export.json'}
+      filename={modalState.filename}
       data={modalState.data}
       mimeType={modalState.mimeType}
       nativeUri={modalState.nativeUri}
       title={modalState.title}
-      description="File generated & downloaded successfully! Instantly beam this file via Quick Share to the Admin Harmonization Hub or WhatsApp."
     />
   );
-}
-import GradesStreams from "./pages/GradesStreams";
-import LearningAreas from "./pages/LearningAreas";
-import ExamTypes from "./pages/ExamTypes";
-import NotFound from "./pages/NotFound";
-import Promote from "./pages/Promote";
-import StaffAttendancePage from "./pages/StaffAttendance";
-import StaffCheckIn from "./pages/StaffCheckIn";
-import StaffCheckInSelector from "./pages/StaffCheckInSelector";
-import AttendanceMonitor from "./pages/AttendanceMonitor";
-import DigitalHub from "./pages/DigitalHub";
-import DigitalLiteracyVideos from "./pages/DigitalLiteracyVideos";
-import ICTLabManagement from "./pages/ICTLabManagement";
-import SystemAndAccountManagement from "./pages/SystemAndAccountManagement";
-import DigitalSkillsAssessment from "./pages/DigitalSkillsAssessment";
-import PracticalCompetencies from "./pages/PracticalCompetencies";
-import { safeWrite } from "@/utils/storageUtils";
-import ScienceLab from "./pages/ScienceLab";
-import StudyCorner from "./pages/StudyCorner";
-import CentralDataService from "./pages/CentralDataService";
-import PaymentManagement from "./pages/PaymentManagement";
-import OwnersDashboard from "./pages/ownersDashboard";
-import GamesHub from "./pages/GamesHub";
-import AppUnlock from "./components/AppUnlock";
-import ProfileSettings from "./pages/ProfileSettings";
-import AdminControlCenter from "./pages/AdminControlCenter";
-import MobileSettings from "./pages/MobileSettings";
-import LANServerConfig from "./pages/LANServerConfig";
-import TeacherLanConfig from "./pages/TeacherLanConfig";
-import AdminHarmonizationHub from "./components/admin/AdminHarmonizationHub";
-import TeacherExportView from "./pages/TeacherExportView";
-import LibrarianPortalView from "./pages/LibrarianPortalView";
-import ICTTechnicalPortalView from "./pages/ICTTechnicalPortalView";
-import BursarPortalView from "./pages/BursarPortalView";
-import HeadteacherPortalView from "./pages/HeadteacherPortalView";
-import SupportStaffPortalView from "./pages/SupportStaffPortalView";
-import SecurityPortalView from "./pages/SecurityPortalView";
-import AssessmentSettings from "./pages/AssessmentSettings";
-import QuestionCreator from "./pages/QuestionCreator";
-import LearnerAssessment from "./pages/LearnerAssessment";
-import GradingReview from "./pages/GradingReview";
-import AssessmentImport from "./pages/AssessmentImport";
-import LearnerAssessmentPage from "./pages/LearnerAssessmentPage";
-import TeacherGradingPage from "./pages/TeacherGradingPage";
-import ExamCreatorPage from "./pages/ExamCreatorPage";
-import SetExamsListPage from "./pages/SetExamsListPage";
-import MarkedScriptsPage from "./pages/MarkedScriptsPage";
-import SchoolAnnouncements from "./pages/SchoolAnnouncements";
-import TeacherCommunication from "./pages/TeacherCommunication";
-import Inventory from "./pages/Inventory";
-import Library from "./components/library/LibraryResourcesView";
-import { SchoolProvider } from "./context/SchoolContext";
-import { LearnerProvider } from './context/LearnerContext';
-import { AppErrorBoundary } from "./components/AppErrorBoundary";
-import AuthGate from "./components/AuthGate";
-import { startHeartbeatService, stopHeartbeatService } from "./services/deviceHeartbeat";
-import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
-import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
-import { initializeCentralStorage } from "./utils/centralDbInit";
-import { runBillingAutoLockCheck } from "./utils/billingAutoLock";
-
-// Execute unified central storage initialization on application load
-initializeCentralStorage();
-
-// Execute billing auto-lock check on application boot
-if (typeof window !== 'undefined') {
-  try {
-    runBillingAutoLockCheck();
-    // Set up daily interval for background auto-lock check
-    setInterval(() => {
-      runBillingAutoLockCheck();
-    }, 24 * 60 * 60 * 1000); // 24 hours
-  } catch (err) {
-    console.error('Failed to run billing auto-lock check on boot:', err);
-  }
-
-  // Start background device heartbeat service on app boot/mount
-  try {
-    const serverUrl = localStorage.getItem('lan_server_url') || 'http://10.53.221.196:5000';
-    startHeartbeatService(serverUrl);
-  } catch (err) {
-    console.error('Failed to start device heartbeat service on boot:', err);
-  }
-}
-
-// ── Critical Central Database Initialization ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Initialize and hydrate state from remote central DB on boot
-
-// ── Legacy Key Auto-Migration (One-time safe migration) ──────────────────
-const MIGRATION_DONE_FLAG = 'munyaka_legacy_migration_v2_done';
-
-const migrateStorageKey = (oldKey: string, newKey: string) => {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    const oldData = localStorage.getItem(oldKey);
-    const newData = localStorage.getItem(newKey);
-    
-    // If new key is empty but old key has valid data, preserve and copy over
-    if ((!newData || newData === '[]') && oldData && oldData !== '[]') {
-      localStorage.setItem(newKey, oldData);
-      // Remove old redundant key to reclaim localStorage quota
-      localStorage.removeItem(oldKey);
-    }
-  } catch (err) {
-    console.warn(`[migrateStorageKey] Skipped migrating ${oldKey} to ${newKey} to protect quota:`, err);
-  }
-};
-
-// Run migrations for all modules on boot exactly once
-export function runLegacyKeyMigrations() {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    if (localStorage.getItem(MIGRATION_DONE_FLAG)) return;
-    
-    migrateStorageKey('learners', 'munyaka_learners');
-    migrateStorageKey('students', 'munyaka_learners');
-    migrateStorageKey('staff', 'munyaka_staff');
-    migrateStorageKey('assessments', 'munyaka_assessments');
-    migrateStorageKey('marks', 'munyaka_assessments');
-
-    localStorage.setItem(MIGRATION_DONE_FLAG, 'true');
-  } catch (err) {
-    console.warn('[runLegacyKeyMigrations] Protected from storage quota error:', err);
-  }
-}
-
-// ── Consolidated Staff Migration Script ────────────────────────────────
-try {
-  const legacyStaffKeys = ['munyaka_staff', 'munyaka_staff_db', 'munyaka_staff_directory', 'munyaka_staff_master'];
-  let consolidatedStaff: any[] = [];
-
-  legacyStaffKeys.forEach((key) => {
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          consolidatedStaff = [...consolidatedStaff, ...parsed];
-        }
-      } catch (e) {}
-    }
-  });
-
-  const currentPrimary = localStorage.getItem('munyaka_staff_v2');
-  if (currentPrimary) {
-    try {
-      const parsed = JSON.parse(currentPrimary);
-      if (Array.isArray(parsed)) {
-        consolidatedStaff = [...consolidatedStaff, ...parsed];
-      }
-    } catch (e) {}
-  }
-
-  const uniqueStaff = Array.from(
-    new Map(consolidatedStaff.map((s) => [s.id || s.idNo || s.email, s])).values()
-  );
-
-  localStorage.setItem('munyaka_staff_v2', JSON.stringify(uniqueStaff));
-
-  legacyStaffKeys.forEach((key) => localStorage.removeItem(key));
-} catch (e) {}
-
-// Purge old mock/unknown records from local storage on load
-try {
-  const raw = localStorage.getItem('munyaka_learners');
-  if (raw) {
-    const parsed = JSON.parse(raw);
-    const filtered = parsed.filter((s: any) =>
-      s && s.name && s.name !== 'Unknown Learner' && s.name !== 'Unnamed Learner' && !s.name.includes('Unknown') && !s.name.includes('Unnamed') && s.name.trim() !== ''
-    );
-    if (filtered.length !== parsed.length) {
-      localStorage.setItem('munyaka_learners', JSON.stringify(filtered));
-    }
-  }
-} catch (e) {
-  localStorage.removeItem('munyaka_learners');
-}
-
-// ── LocalStorage keys that hold active learner rows ────────────────────────
-const LEARNER_STORAGE_KEYS = [
-  'munyaka_students',
-  'munyaka_master_learner_list'
-];
-const FEE_LEDGER_KEYS = [
-  'munyaka_fees_records',
-  'munyaka_student_fees',
-  'munyaka_payment_records',
-  'munyaka_transactions',
-];
-
-// ── One-time fee sanitizer ────────────────────────────────────────────────
-// Gated by a localStorage flag so it runs at most once per browser.
-// Resets all hardcoded fee fields on every stored learner to 0 and
-// clears any pre-seeded fee ledger so the app starts from a clean slate.
-const FEE_SANITIZER_FLAG = 'munyaka_fee_sanitizer_v1';
-
-// ── One-time learner purge ────────────────────────────────────────────────
-// Forces the active learners array to an empty `[]` state on first
-// launch. Also writes the empty list to every legacy learner storage
-// key so any subsequent hydrate cannot fall back to a seed file. This
-// is the last migration in the chain; after it runs the table renders
-// its proper "no learners" empty state.
-const LEARNER_PURGE_FLAG = 'munyaka_learner_purge_v1';
-function runOneTimeLearnerPurge(): void {
-  // Disabled permanently to prevent registered learners from disappearing during system changes
-}
-
-function runOneTimeFeeSanitizer(): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  if (window.localStorage.getItem(FEE_SANITIZER_FLAG) === 'done') return;
-
-  try {
-    // 1. Reset all hardcoded fee fields on every stored learner row.
-    for (const key of LEARNER_STORAGE_KEYS) {
-      const raw = window.localStorage.getItem(key);
-      if (!raw) continue;
-      let parsed: unknown;
-      try { parsed = JSON.parse(raw); } catch { continue; }
-      if (!Array.isArray(parsed) || parsed.length === 0) continue;
-
-      let mutated = false;
-      const cleaned = parsed.map((row) => {
-        if (!row || typeof row !== 'object') return row;
-        const r = row as Record<string, unknown>;
-        const next = { ...r };
-        let changed = false;
-        // The fields the brief asked us to normalize. They collapse to 0
-        // when the row has no custom ledger entries.
-        const feeFields: Array<keyof typeof r> = [
-          'totalBilled', 'totalPaid', 'balance', 'feeBalance',
-          'total', 'paid', 'amountOwed', 'outstandingBalance', 'arrears',
-        ];
-        for (const f of feeFields) {
-          if (f in next) {
-            const v = next[f];
-            if (typeof v === 'number' && v !== 0) {
-              next[f] = 0;
-              changed = true;
-            } else if (v !== 0 && v !== undefined) {
-              next[f] = 0;
-              changed = true;
-            }
-          }
-        }
-        // Always start with an empty fee history.
-        if ('feeHistory' in next) {
-          if (!Array.isArray(next.feeHistory) || (next.feeHistory as unknown[]).length > 0) {
-            next.feeHistory = [];
-            changed = true;
-          }
-        }
-        if (changed) mutated = true;
-        return next;
-      });
-
-      if (mutated) {
-        try {
-          window.localStorage.setItem(key, JSON.stringify(cleaned));
-        } catch (err) {
-          console.error(`[fee-sanitizer] Failed to persist "${key}":`, err);
-        }
-      }
-    }
-
-    // 2. Clear pre-seeded fee ledgers so the app boots with empty ledgers.
-    // Real fee records are only ever written through the Fees page.
-    for (const key of FEE_LEDGER_KEYS) {
-      try {
-        const raw = window.localStorage.getItem(key);
-        if (!raw) continue;
-        let parsed: unknown;
-        try { parsed = JSON.parse(raw); } catch { continue; }
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Keep payment records / transactions intact if they exist as
-          // user-entered data — only clear the legacy `fees_records` shape
-          // that pre-seeded per-student ledgers into the store.
-          if (key === 'munyaka_fees_records' || key === 'munyaka_student_fees') {
-            window.localStorage.setItem(key, JSON.stringify({}));
-          }
-        } else if (key === 'munyaka_fees_records' || key === 'munyaka_student_fees') {
-          // Force-write {} so the next hydrate cannot fall back to seed.
-          window.localStorage.setItem(key, JSON.stringify({}));
-        }
-      } catch {
-        /* no-op */
-      }
-    }
-
-    // 3. Hard purge — remove any pre-seeded mock transaction entries that
-    //    reference the legacy hardcoded amounts (45000, 52000, 38000, 68000,
-    //    72000, 55000, 89000, 95000, 61000). These were used to fake the
-    //    school-wide fee trend chart and must be wiped so the chart shows
-    //    real data only.
-    const LEGACY_MOCK_AMOUNTS = new Set([
-      45000, 52000, 38000, 68000, 72000, 55000, 89000, 95000, 61000,
-      12000, 8000, 4000, 15000, 18000, 20000,
-    ]);
-    for (const key of FEE_LEDGER_KEYS) {
-      try {
-        const raw = window.localStorage.getItem(key);
-        if (!raw) continue;
-        let parsed: unknown;
-        try { parsed = JSON.parse(raw); } catch { continue; }
-        if (!Array.isArray(parsed) || parsed.length === 0) continue;
-        // Keep only entries that are NOT pre-seeded mock values.
-        const cleaned = parsed.filter((row: any) => {
-          if (!row || typeof row !== 'object') return true;
-          const amt = typeof row.amount === 'number' ? row.amount : null;
-          if (amt === null) return true;
-          // Drop rows whose only evidence of being a mock is the exact
-          // legacy amount AND a REF-style reference.
-          const isLegacyRef = typeof row.ref === 'string' && /^REF00\d$/.test(row.ref);
-          if (LEGACY_MOCK_AMOUNTS.has(amt) && isLegacyRef) return false;
-          return true;
-        });
-        if (cleaned.length !== parsed.length) {
-          window.localStorage.setItem(key, JSON.stringify(cleaned));
-        }
-      } catch {
-        /* no-op */
-      }
-    }
-
-    window.localStorage.setItem(FEE_SANITIZER_FLAG, 'done');
-    console.info('[fee-sanitizer] Reset hardcoded fee fields on stored learners.');
-  } catch (err) {
-    console.error('[fee-sanitizer] Unexpected failure:', err);
-  }
 }
 
 const queryClient = new QueryClient();
 
-const App = () => {
-
+export function AppContent() {
+  // Startup Storage Sanitizer
   useEffect(() => {
-      try {
-        localStorage.removeItem('munyaka_students');
-        const existingDb = localStorage.getItem('munyaka_central_db');
-        const learnersRaw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]';
-        const activeLearners = JSON.parse(learnersRaw);
+    const OBSOLETE_KEYS = [
+      'munyaka_students',
+      'munyaka_pupils',
+      'munyaka_staff',
+      'munyaka_staff_db',
+      'munyaka_staff_directory',
+      'munyaka_staff_master',
+    ];
 
-        if (!existingDb) {
-                const initialDb = {
-                  learners: activeLearners.length > 0 ? activeLearners : ((initialSeedData as any).learners || (initialSeedData as any).students || []),
-                  staff: initialSeedData.staff || [],
-                };
-                const ok = safeWrite('munyaka_central_db', initialDb, { operation: 'seed' });
-                if (!ok) {
-                  console.error('Storage quota exceeded during initial seed. Please clear old records.');
-                } else {
-                  window.dispatchEvent(new Event('central_db_updated'));
-                }
-              } else {
-                const parsed = JSON.parse(existingDb);
-                if (parsed.students) {
-                  delete parsed.students;
-                }
-                if (!parsed.learners) {
-                  parsed.learners = activeLearners.length > 0 ? activeLearners : ((initialSeedData as any).learners || (initialSeedData as any).students || []);
-                } else if (activeLearners.length > 0) {
-                  // Merge active learners
-                  parsed.learners = activeLearners;
-                }
-                const ok = safeWrite('munyaka_central_db', parsed, { operation: 're-seed' });
-                if (!ok) {
-                  console.error('Storage quota exceeded while re-seeding munyaka_central_db. Please clear old records.');
-                } else {
-                  window.dispatchEvent(new Event('central_db_updated'));
-                }
-              }
-      } catch (err) {
-        console.error("Failed to seed munyaka_central_db:", err);
-      }
-  
-      // Initialize admin_pin and owner_pin in localStorage to 'munyaka' if they do not exist yet
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          if (!localStorage.getItem('admin_pin')) {
-            localStorage.setItem('admin_pin', 'munyaka');
-          }
-          if (!localStorage.getItem('owner_pin')) {
-            localStorage.setItem('owner_pin', 'munyaka');
-          }
-        } catch {
-          /* localStorage unavailable — non-fatal */
-        }
-      }
-    }, []);
-
-  // ── One-time learner-data migrations ───────────────────────────────────
-    // Sequential, independently-gated migrations run on first launch:
-    //
-    //   1. Assessment-number cleanup — removes fake MUN-XXX values that
-    //      may have leaked into the `assessment` (KNEC/NEMIS) field.
-    //
-    //   2. Legacy admNo → admissionNo — copies the old-school admission
-    //      number from `admNo` into `admissionNo` for pre-column records.
-    //
-    //   3. Admission-number backfill (v6) — generates `MUN-{family}-{seq}/{year}`
-    //      for any learner still missing `admissionNo`. Supports PP1/PP2.
-    //
-    //   4. Fee sanitizer (v1) — resets all hardcoded fee fields on stored
-    //      learners to 0 and clears pre-seeded fee ledgers.
-    //
-    // Each is idempotent and gated by its own localStorage flag.
-    useEffect(() => {
-      // Auto-seeding disabled to respect user purge & reset state.
-      // If local storage is empty, it remains empty ([]).
-      runOneTimeAssessmentCleanup();
-      runOneTimeLegacyAdmNoMigration();
-      runOneTimeAdmissionNoBackfill();
-      runOneTimeFeeSanitizer();
-      runOneTimeLearnerPurge();
-    }, []);
+    // Purge legacy storage fragmentation
+    OBSOLETE_KEYS.forEach((key) => localStorage.removeItem(key));
+  }, []);
 
   return (
-    <AppErrorBoundary>
-      <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
-      <HashRouter>
-          <AuthProvider>
-            <AuthGate>
-              <NotificationProvider>
-                <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-                  <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <GlobalExportListener />
-                    <SchoolProvider>
-                      <LearnerProvider>
-                      <Routes>
-                        {/* Public Routes */}
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/portal" element={<ParentPortal />} />
-                      <Route path="/reset-password" element={<PasswordResetCallback />} />
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased selection:bg-indigo-500 selection:text-white">
+      <GlobalExportListener />
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/cover" element={<CoverPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/parent-portal" element={<ParentPortal />} />
+        <Route path="/auth/callback" element={<PasswordResetCallback />} />
 
-                      {/* Protected Routes */}
-                      <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/learners" element={<ProtectedRoute><AppUnlock><Layout><Learners /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/learners/archive" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/learners/:id" element={<ProtectedRoute><AppUnlock><Layout><LearnerProfile /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/students/:id" element={<ProtectedRoute><AppUnlock><Layout><LearnerProfile /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/grades" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><GradesStreams /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/learning-areas" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><LearningAreas /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/exam-types" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ExamTypes /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/staff" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher']}><AppUnlock><Layout><div className="p-12 text-center font-bold text-slate-500">Staff Management Disabled</div></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/staff/attendance" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><StaffAttendancePage /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/staff/check-in" element={<ProtectedRoute allowedRoles={['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'support_staff', 'staff', 'teacher', 'head_teacher', 'bursar', 'secretary', 'store_manager', 'ict', 'owner']}><AppUnlock><Layout><StaffCheckInSelector /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/staff-checkin" element={<ProtectedRoute allowedRoles={['admin', 'dhoi', 'class_teacher', 'subject_teacher', 'ict_teacher', 'lab_teacher', 'library_teacher', 'tools_inventory_teacher', 'support_staff', 'staff', 'teacher', 'head_teacher', 'bursar', 'secretary', 'store_manager', 'ict', 'owner']}><AppUnlock><Layout><StaffCheckIn /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/staff/attendance-monitor" element={<ProtectedRoute><AppUnlock><Layout><AttendanceMonitor /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/staff/:id" element={<ProtectedRoute><AppUnlock><Layout><div className="p-12 text-center font-bold text-slate-500">Staff Profile Disabled</div></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/communication" element={<ProtectedRoute><AppUnlock><Layout><SchoolAnnouncements /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/teacher-communication" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher']}><AppUnlock><Layout><TeacherCommunication /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/notices" element={<ProtectedRoute><AppUnlock><Layout><NoticeAndEvents defaultTab="announcements" /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/timetable" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><Timetable /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/registration" element={<ProtectedRoute><AppUnlock><Layout><Registration /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/attendance" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><Attendance /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/assessments" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><Assessments /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/assessment-settings" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><AssessmentSettings /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/admin/harmonization" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminHarmonizationHub /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/admin-harmonization-hub" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><AdminHarmonizationHub /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/teacher/export" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'admin']}><AppUnlock><Layout><TeacherExportView /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/teacher-export" element={<ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'subject_teacher', 'head_teacher', 'admin']}><AppUnlock><Layout><TeacherExportView /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/librarian/portal" element={<ProtectedRoute allowedRoles={['librarian', 'library_teacher', 'admin']}><AppUnlock><Layout><LibrarianPortalView /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/ict/portal" element={<ProtectedRoute allowedRoles={['ict_teacher', 'ict_technician', 'admin']}><AppUnlock><Layout><ICTTechnicalPortalView /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/bursar/portal" element={<ProtectedRoute allowedRoles={['bursar', 'admin']}><AppUnlock><Layout><BursarPortalView /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/headteacher/portal" element={<ProtectedRoute allowedRoles={['head_teacher', 'senior_teacher', 'admin']}><AppUnlock><Layout><HeadteacherPortalView /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/support/portal" element={<ProtectedRoute allowedRoles={['support', 'maintenance', 'admin']}><AppUnlock><Layout><SupportStaffPortalView /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/security/portal" element={<ProtectedRoute allowedRoles={['security', 'guard', 'admin']}><AppUnlock><Layout><SecurityPortalView /></Layout></AppUnlock></ProtectedRoute>} />
-                                            <Route path="/question-creator" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><QuestionCreator /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/student-assessment" element={<ProtectedRoute><AppUnlock><Layout><LearnerAssessment /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/grading" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><GradingReview /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/assessments/import" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><AssessmentImport /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/assessments/student" element={<LearnerAssessmentPage />} />
-                      <Route path="/assessments/grading" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><TeacherGradingPage /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/assessments/create" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ExamCreatorPage /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/assessments/list" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher', 'student']}><AppUnlock><Layout><SetExamsListPage /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/assessments/marked-scripts" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><MarkedScriptsPage /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/analysis" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><ResultsAnalysis /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/portfolio" element={<ProtectedRoute><AppUnlock><Layout><Portfolio /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/staff-registry" element={<ProtectedRoute><AppUnlock><Layout><StaffRegistry /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/science-lab" element={<ProtectedRoute><AppUnlock><Layout><ScienceLab /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/library" element={<ProtectedRoute><AppUnlock><Layout><Library /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/inventory" element={<ProtectedRoute><AppUnlock><Layout><Inventory /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/fees" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><Fees /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/central-data" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><CentralDataService /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><ReportCards /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/settings" element={<ProtectedRoute><AppUnlock><Layout><Settings /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/profile" element={<ProtectedRoute><AppUnlock><Layout><AdminProfile /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/promote" element={<ProtectedRoute><AppUnlock><Layout><Promote /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/digital-hub" element={<ProtectedRoute><AppUnlock><Layout><DigitalHub /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/digital-literacy-videos" element={<ProtectedRoute><AppUnlock><Layout><DigitalLiteracyVideos /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/ict-lab" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher', 'ICT_TEACHER', 'ICT_TECHNICIAN']}><AppUnlock><Layout><ICTLabManagement /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/system-management" element={<ProtectedRoute allowedRoles={['admin', 'head_teacher']}><AppUnlock><Layout><SystemAndAccountManagement /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/owner/subscriptions" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><PaymentManagement /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/subscriptions" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><PaymentManagement /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/payment-management" element={<ProtectedRoute><AppUnlock><Layout><PaymentManagement /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/dev/tenants" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><OwnersDashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/digital-skills" element={<ProtectedRoute><AppUnlock><Layout><DigitalSkillsAssessment /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/practical-competencies" element={<ProtectedRoute><AppUnlock><Layout><PracticalCompetencies /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/study-corner" element={<ProtectedRoute><AppUnlock><Layout><StudyCorner /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/games" element={<ProtectedRoute><AppUnlock><Layout><GamesHub /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/settings/profile" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><ProfileSettings /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/admin/control-center" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner', 'bursar', 'parent', 'student']}><AppUnlock><Layout><AdminControlCenter /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/mobile/settings" element={<ProtectedRoute><AppUnlock><Layout><MobileSettings /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/lan-config" element={<ProtectedRoute allowedRoles={['owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'admin', 'bursar', 'support_staff', 'librarian']}><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/lan-server-config" element={<ProtectedRoute allowedRoles={['owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'admin', 'bursar', 'support_staff', 'librarian']}><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/teacher-lan-config" element={<ProtectedRoute allowedRoles={['owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'admin', 'bursar', 'support_staff', 'librarian']}><AppUnlock><Layout><TeacherLanConfig /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="/server" element={<ProtectedRoute allowedRoles={['owner', 'ict_technician', 'ict_teacher', 'teacher', 'class_teacher', 'subject_teacher', 'senior_teacher', 'admin', 'bursar', 'support_staff', 'librarian']}><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                    </LearnerProvider>
-                  </SchoolProvider>
-                  </TooltipProvider>
-                </ThemeProvider>
-              </NotificationProvider>
-            </AuthGate>
-          </AuthProvider>
-        </HashRouter>
-      </div>
-    </AppErrorBoundary>
+        {/* Protected Dashboard Routes inside App Layout */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/learners" element={<Learners />} />
+          <Route path="/learners/archive" element={<TransferredLearnersArchive />} />
+          <Route path="/learners/:id" element={<LearnerProfile />} />
+          <Route path="/registration" element={<Registration />} />
+          <Route path="/attendance" element={<Attendance />} />
+          <Route path="/assessments" element={<Assessments />} />
+          <Route path="/analysis" element={<ResultsAnalysis />} />
+          <Route path="/report-cards" element={<ReportCards />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/fees" element={<Fees />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/staff" element={<StaffRegistry />} />
+          <Route path="/timetable" element={<Timetable />} />
+          <Route path="/notices" element={<NoticeAndEvents />} />
+          <Route path="/admin-profile" element={<AdminProfile />} />
+        </Route>
+
+        {/* Catch-all redirect */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <ForcePasswordResetModal />
+    </div>
   );
-};
+}
 
-export default App;
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        <TooltipProvider>
+          <NotificationProvider>
+            <HashRouter>
+              <AuthProvider>
+                <AppContent />
+              </AuthProvider>
+            </HashRouter>
+          </NotificationProvider>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
