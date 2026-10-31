@@ -31,12 +31,14 @@ export const saveLearnerRecord = (learner: any) => {
   // Harmonize with central DB object
   const centralRaw = localStorage.getItem(STORAGE_KEYS.CENTRAL_DB);
   let central = centralRaw ? JSON.parse(centralRaw) : { learners: [], staff: [] };
-  delete central.students; // Wipe obsolete legacy key
+  delete (central as any).students; // Wipe obsolete legacy key
   central.learners = updated;
   localStorage.setItem(STORAGE_KEYS.CENTRAL_DB, JSON.stringify(central));
 
   window.dispatchEvent(new Event('storage'));
 };
+
+export const saveLearner = saveLearnerRecord;
 
 export const getStoredStaff = (): any[] => {
   try {
@@ -53,7 +55,7 @@ export const getStoredStaff = (): any[] => {
   return [];
 };
 
-export const saveLearner = saveLearnerRecord;
+export const saveStaffMember = (staffData: any) => {
   const existing = getStoredStaff();
   const filtered = existing.filter((s: any) => s.id !== staffData.id && s.email !== staffData.email && s.tscNo !== staffData.tscNo);
   const updated = [staffData, ...filtered];
