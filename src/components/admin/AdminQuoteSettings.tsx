@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const COLOR_PRESETS = [
   { id: 'indigo', name: 'Indigo', textClass: 'text-indigo-600 dark:text-indigo-400', bgClass: 'from-indigo-50 to-slate-50 dark:from-slate-800 dark:to-slate-800' },
@@ -8,16 +8,15 @@ const COLOR_PRESETS = [
 ];
 
 export const AdminQuoteSettings = () => {
-  // Load initial config from localStorage
-  const getInitialConfig = () => {
+  const loadConfig = () => {
     const raw = localStorage.getItem('munyaka_login_quote_config');
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
         return {
-          text: parsed.text || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
+          text: parsed.text || localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
           colorId: parsed.colorId || 'indigo',
-          isUppercase: !!parsed.isUppercase,
+          isUppercase: parsed.isUppercase ?? false,
         };
       } catch (e) {}
     }
@@ -28,25 +27,42 @@ export const AdminQuoteSettings = () => {
     };
   };
 
-  const initial = getInitialConfig();
+  const initial = loadConfig();
   const [quoteText, setQuoteText] = useState(initial.text);
   const [selectedColor, setSelectedColor] = useState(initial.colorId);
   const [isUppercase, setIsUppercase] = useState(initial.isUppercase);
   const [savedNotice, setSavedNotice] = useState(false);
 
+  // Sync state if storage changes externally
+  useEffect(() => {
+    const handleSync = () => {
+      const latest = loadConfig();
+      setQuoteText(latest.text);
+      setSelectedColor(latest.colorId);
+      setIsUppercase(latest.isUppercase);
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('munyaka_storage_update', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('munyaka_storage_update', handleSync);
+    };
+  }, []);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    const config = {
+    const updatedConfig = {
       text: quoteText,
       colorId: selectedColor,
-      isUppercase,
+      isUppercase: isUppercase,
     };
-    localStorage.setItem('munyaka_login_quote_config', JSON.stringify(config));
-    localStorage.setItem('munyaka_login_quote', quoteText); // Fallback string
-    
+
+    localStorage.setItem('munyaka_login_quote_config', JSON.stringify(updatedConfig));
+    localStorage.setItem('munyaka_login_quote', quoteText);
+
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('munyaka_storage_update'));
-    
+
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 3000);
   };
