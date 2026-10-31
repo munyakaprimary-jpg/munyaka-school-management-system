@@ -152,7 +152,8 @@ const WordScramble: React.FC<WordScrambleProps> = ({ onBack }) => {
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    const key = (e?.key || '').toLowerCase();
+    if (key === "enter") {
       e.preventDefault();
       checkAnswer();
     }

@@ -158,7 +158,8 @@ const SpeedMath: React.FC<SpeedMathProps> = ({ onBack }) => {
   }, [input, problem, isRunning, isOver, streak]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    const key = (e?.key || '').toLowerCase();
+    if (key === "enter") {
       e.preventDefault();
       submit();
     }

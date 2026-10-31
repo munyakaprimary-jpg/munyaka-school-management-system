@@ -98,8 +98,9 @@ const InlineTimeCell: React.FC<InlineTimeCellProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSave();
-    if (e.key === 'Escape') handleCancel();
+    const key = (e?.key || '').toLowerCase();
+    if (key === 'enter') handleSave();
+    if (key === 'escape') handleCancel();
   };
 
   // ── Edit mode ──────────────────────────────────────────────────────────────
