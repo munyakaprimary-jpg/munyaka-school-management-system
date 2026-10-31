@@ -210,6 +210,42 @@ export function runLegacyKeyMigrations() {
   }
 }
 
+// ── Consolidated Staff Migration Script ────────────────────────────────
+try {
+  const legacyStaffKeys = ['munyaka_staff', 'munyaka_staff_db', 'munyaka_staff_directory', 'munyaka_staff_master'];
+  let consolidatedStaff: any[] = [];
+
+  legacyStaffKeys.forEach((key) => {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          consolidatedStaff = [...consolidatedStaff, ...parsed];
+        }
+      } catch (e) {}
+    }
+  });
+
+  const currentPrimary = localStorage.getItem('munyaka_staff_v2');
+  if (currentPrimary) {
+    try {
+      const parsed = JSON.parse(currentPrimary);
+      if (Array.isArray(parsed)) {
+        consolidatedStaff = [...consolidatedStaff, ...parsed];
+      }
+    } catch (e) {}
+  }
+
+  const uniqueStaff = Array.from(
+    new Map(consolidatedStaff.map((s) => [s.id || s.idNo || s.email, s])).values()
+  );
+
+  localStorage.setItem('munyaka_staff_v2', JSON.stringify(uniqueStaff));
+
+  legacyStaffKeys.forEach((key) => localStorage.removeItem(key));
+} catch (e) {}
+
 // Purge old mock/unknown records from local storage on load
 try {
   const raw = localStorage.getItem('munyaka_learners');
