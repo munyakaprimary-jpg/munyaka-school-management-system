@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { notifyDataChanged } from '@/hooks/useDashboardData';
+import { generateCohortAdmissionNumber } from '../../utils/admissionUtils';
 import {
   Select,
   SelectContent,
@@ -73,21 +74,7 @@ const generateUniqueAdmissionNo = (
   existingLearners: Learner[],
   enrollmentYear: number
 ): string => {
-  const safeGrade = grade || 'Grade 1';
-  const safeLearners = existingLearners || [];
-  const gradeMatch = safeGrade.match(/(\d+)/);
-  const gradeDigit = gradeMatch ? gradeMatch[1] : '0';
-  
-  const cohortLearners = safeLearners.filter((l: Learner) => {
-    const matchesGrade = (l.grade || '').toLowerCase() === safeGrade.toLowerCase();
-    const learnerYear = l.dateOfAdmission
-      ? new Date(l.dateOfAdmission).getFullYear()
-      : null;
-    return matchesGrade && learnerYear === enrollmentYear;
-  });
-  
-  const nextSeq = cohortLearners.length + 1;
-  return `MUN-G${gradeDigit}-${String(nextSeq).padStart(3, '0')}/${enrollmentYear}`;
+  return generateCohortAdmissionNumber(grade, existingLearners);
 };
 
 const todayIso = (): string => new Date().toISOString().split('T')[0];

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { registerLearnerGuarded } from '@/services/learnerStorageGuard';
+import { generateCohortAdmissionNumber } from '../../utils/admissionUtils';
 
 interface AddLearnerModalProps {
   isOpen: boolean;
@@ -36,22 +37,10 @@ export default function AddLearnerModal({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  const calculateCohortYear = (gradeStr: string): number => {
-    const currentYear = 2026;
-    const match = (gradeStr || '').match(/\d+/);
-    const gradeNum = match ? parseInt(match[0], 10) : 1;
-    return currentYear - (gradeNum - 1);
-  };
-
-  const generateAdmissionNumber = (gradeStr: string): string => {
-    const year = calculateCohortYear(gradeStr);
-    const randomHash = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `MUN-${randomHash}-${year}`;
-  };
-
   useEffect(() => {
     if (gradeLevel) {
-      const freshAdmNo = generateAdmissionNumber(gradeLevel);
+      const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
+      const freshAdmNo = generateCohortAdmissionNumber(gradeLevel, existingLearners);
       setAdmissionNumber(freshAdmNo);
     }
   }, [gradeLevel]);
@@ -85,7 +74,8 @@ export default function AddLearnerModal({
     setIsSaving(true);
     try {
       const learnerId = `learner-${Date.now()}`;
-      const genAdm = admissionNumber.trim() || `MUN-${Math.floor(100 + Math.random() * 900)}-2025`;
+      const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
+      const genAdm = admissionNumber.trim() || generateCohortAdmissionNumber(gradeLevel, existingLearners);
 
       const parts = fullName.trim().split(/\s+/);
       const firstName = parts[0] || '';

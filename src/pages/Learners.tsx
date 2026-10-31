@@ -59,12 +59,11 @@ const normalizeGradeStr = (val: string) => {
   return lower;
 };
 
-const generateAdmissionNumber = (studentGrade: string, admissionYear: string = '2026') => {
-  // Generate a random 4-character alphanumeric string (e.g., 7K9A)
-  const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-  
-  // Format: MUN-[RANDOM_CODE]-[GRADE_1_ENTRY_YEAR]
-  return `MUN-${randomCode}-${admissionYear}`;
+import { generateCohortAdmissionNumber } from '../utils/admissionUtils';
+
+const generateAdmissionNumber = (studentGrade: string, _admissionYear: string = '2026') => {
+  const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
+  return generateCohortAdmissionNumber(studentGrade, existingLearners);
 };
 
 // Re-sequence all existing learners with a single continuous unbroken global sequence
