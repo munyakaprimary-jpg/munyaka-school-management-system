@@ -216,7 +216,7 @@ try {
   if (raw) {
     const parsed = JSON.parse(raw);
     const filtered = parsed.filter((s: any) =>
-      s && s.name && s.name !== 'Unknown Learner' && !s.name.includes('Unknown') && s.name.trim() !== ''
+      s && s.name && s.name !== 'Unknown Learner' && s.name !== 'Unnamed Learner' && !s.name.includes('Unknown') && !s.name.includes('Unnamed') && s.name.trim() !== ''
     );
     if (filtered.length !== parsed.length) {
       localStorage.setItem('munyaka_students', JSON.stringify(filtered));
