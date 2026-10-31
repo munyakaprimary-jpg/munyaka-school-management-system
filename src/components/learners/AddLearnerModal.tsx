@@ -37,12 +37,8 @@ export default function AddLearnerModal({
   const [isSaving, setIsSaving] = useState(false);
 
   const generateAdmissionNumber = (gradeStr: string): string => {
-    // Generate a random 4-character alphanumeric string (e.g., 7K9A)
-    const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const grade1EntryYear = '2026';
-    
-    // Format: MUN-[RANDOM_CODE]-[GRADE_1_ENTRY_YEAR]
-    return `MUN-${randomCode}-${grade1EntryYear}`;
+    const existingLearners = JSON.parse(localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]');
+    return generateStandardAdmNo(existingLearners);
   };
 
   useEffect(() => {

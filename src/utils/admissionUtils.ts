@@ -1,7 +1,21 @@
-export const generateStandardAdmNo = (existingLearners: any[], year = '2026'): string => {
+export const generateStandardAdmNo = (existingLearners: any[], year = new Date().getFullYear().toString()): string => {
   const prefix = 'MUN';
-  const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${randomCode}-${year}`;
+  
+  // Find highest existing numeric sequence for the school
+  let maxSeq = 0;
+  existingLearners.forEach((learner) => {
+    const adm = learner.admNo || learner.admissionNumber || learner.admissionNo || '';
+    const match = adm.match(/MUN-(\d+)-\d+/i);
+    if (match) {
+      const seq = parseInt(match[1], 10);
+      if (!isNaN(seq) && seq > maxSeq) {
+        maxSeq = seq;
+      }
+    }
+  });
+
+  const nextSeq = String(maxSeq + 1).padStart(3, '0');
+  return `${prefix}-${nextSeq}-${year}`;
 };
 
 export const normalizeAllAdmissionNumbers = () => {
