@@ -36,19 +36,20 @@ import { ExportSuccessShareModal } from "@/components/teacher/ExportSuccessShare
 
 function GlobalExportListener() {
   useEffect(() => {
-    // Remove fragmented keys that cause desync
-    const obsoleteKeys = [
+    const legacyKeys = [
       'munyaka_students',
       'munyaka_pupils',
       'munyaka_staff',
       'munyaka_staff_db',
       'munyaka_staff_directory',
-      'munyaka_staff_master'
+      'munyaka_staff_master',
     ];
-    obsoleteKeys.forEach((key) => localStorage.removeItem(key));
+    legacyKeys.forEach((key) => localStorage.removeItem(key));
   }, []);
 
   const [modalState, setModalState] = useState<{
+    isOpen?: boolean;
+    filename?: string;
     data: string;
     mimeType: string;
     nativeUri?: string;
@@ -85,9 +86,9 @@ function GlobalExportListener() {
 
   return (
     <ExportSuccessShareModal
-      isOpen={modalState.isOpen}
+      isOpen={Boolean(modalState.isOpen)}
       onClose={() => setModalState(prev => ({ ...prev, isOpen: false }))}
-      filename={modalState.filename}
+      filename={modalState.filename || 'export.json'}
       data={modalState.data}
       mimeType={modalState.mimeType}
       nativeUri={modalState.nativeUri}

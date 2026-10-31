@@ -100,6 +100,8 @@ export default function LearnersDirectory() {
   const [gradeFilter, setGradeFilter] = useState('all');
   const [streamFilter, setStreamFilter] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedLearner, setSelectedLearner] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Active table states kept in sync for immediate UI re-render
   const [learners, setLearners] = useState<any[]>([]);
@@ -448,9 +450,15 @@ export default function LearnersDirectory() {
                 displayedLearners.map(learner => {
                   const name = learner.name || learner.fullName || 'Unnamed Learner';
                   const adm = learner.admissionNumber || learner.admissionNo || learner.admNo || '-';
-                  const identifier = learner.assessmentNo && learner.assessmentNo !== '—'
+                  const identifier = learner.assessmentNo && learner.assessmentNo !== '—' && learner.assessmentNo !== ''
                     ? learner.assessmentNo
-                    : (learner.birthCertNo || learner.birthCertificateNo || '—');
+                    : (learner.birthCertNo && learner.birthCertNo !== '—' && learner.birthCertNo !== ''
+                        ? learner.birthCertNo
+                        : (learner.birthCertificateNo && learner.birthCertificateNo !== '—' && learner.birthCertificateNo !== ''
+                            ? learner.birthCertificateNo
+                            : (learner.identifierNo && learner.identifierNo !== '—' && learner.identifierNo !== ''
+                                ? learner.identifierNo
+                                : '—')));
                   const grade = learner.grade || learner.gradeLevel || learner.class || '-';
                   const stream = learner.stream || '-';
                   const contact = learner.parentPhone || learner.guardianPhone || learner.phone || '-';
@@ -483,9 +491,12 @@ export default function LearnersDirectory() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/learners/${lId}`)}
+                            onClick={() => {
+                              setSelectedLearner(learner);
+                              setIsDetailModalOpen(true);
+                            }}
                             className="h-9 w-9 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
-                            title="View Profile"
+                            title="View Details"
                           >
                             <Eye size={16} />
                           </Button>
