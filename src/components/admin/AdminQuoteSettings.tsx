@@ -8,36 +8,30 @@ const COLOR_PRESETS = [
 ];
 
 export const AdminQuoteSettings = () => {
-  const [quoteText, setQuoteText] = useState(() => {
-    const saved = localStorage.getItem('munyaka_login_quote_config');
-    if (saved) {
+  // Load initial config from localStorage
+  const getInitialConfig = () => {
+    const raw = localStorage.getItem('munyaka_login_quote_config');
+    if (raw) {
       try {
-        return JSON.parse(saved).text;
+        const parsed = JSON.parse(raw);
+        return {
+          text: parsed.text || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
+          colorId: parsed.colorId || 'indigo',
+          isUppercase: !!parsed.isUppercase,
+        };
       } catch (e) {}
     }
-    return localStorage.getItem('munyaka_login_quote') || 'Strong minds discuss **ideas**, average minds discuss **events**, and weak minds discuss **people**.';
-  });
-  
-  const [selectedColor, setSelectedColor] = useState(() => {
-    const saved = localStorage.getItem('munyaka_login_quote_config');
-    if (saved) {
-      try {
-        return JSON.parse(saved).colorId || 'indigo';
-      } catch (e) {}
-    }
-    return 'indigo';
-  });
+    return {
+      text: localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
+      colorId: 'indigo',
+      isUppercase: false,
+    };
+  };
 
-  const [isUppercase, setIsUppercase] = useState(() => {
-    const saved = localStorage.getItem('munyaka_login_quote_config');
-    if (saved) {
-      try {
-        return JSON.parse(saved).isUppercase ?? true;
-      } catch (e) {}
-    }
-    return true;
-  });
-
+  const initial = getInitialConfig();
+  const [quoteText, setQuoteText] = useState(initial.text);
+  const [selectedColor, setSelectedColor] = useState(initial.colorId);
+  const [isUppercase, setIsUppercase] = useState(initial.isUppercase);
   const [savedNotice, setSavedNotice] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {
