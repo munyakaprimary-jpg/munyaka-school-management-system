@@ -4,7 +4,24 @@ export const STORAGE_KEYS = {
   CENTRAL_DB: 'munyaka_central_db',
 };
 
-export const getStoredLearners = (): any[] => {
+// Strictly typed Learner Model
+export interface Learner {
+  id: string;
+  admNo: string;
+  assessmentNo?: string;
+  birthCertNo?: string;
+  name: string;
+  grade: string;
+  stream: string;
+  gender: string;
+  dob: string;
+  parentName: string;
+  phone: string;
+  createdAt: string;
+}
+
+// 1. Strict Learner Getter (Guards against empty/poisoned seeds)
+export const getStoredLearners = (): Learner[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.LEARNERS);
     if (raw) {
@@ -16,29 +33,32 @@ export const getStoredLearners = (): any[] => {
       }
     }
   } catch (e) {
-    console.error('Error reading learners storage:', e);
+    console.error('Failed to parse learners:', e);
   }
-  return [];
+  return []; // Clean empty array fallback only
 };
 
-export const saveLearnerRecord = (learner: any) => {
+// 2. Safe Learner Save Routine
+export const saveLearner = (learner: Learner) => {
   const current = getStoredLearners();
   const filtered = current.filter((l) => l.id !== learner.id && l.admNo !== learner.admNo);
   const updated = [learner, ...filtered];
 
   localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(updated));
 
-  // Harmonize with central DB object
+  // Sync to central database object
   const centralRaw = localStorage.getItem(STORAGE_KEYS.CENTRAL_DB);
   let central = centralRaw ? JSON.parse(centralRaw) : { learners: [], staff: [] };
-  delete (central as any).students; // Wipe obsolete legacy key
+  delete (central as any).students; // Wipe obsolete key
   central.learners = updated;
   localStorage.setItem(STORAGE_KEYS.CENTRAL_DB, JSON.stringify(central));
 
-  window.dispatchEvent(new Event('storage'));
+  // Dispatch custom event to notify all listening components across tabs/pages
+  window.dispatchEvent(new Event('munyaka_storage_update'));
 };
 
-export const saveLearner = saveLearnerRecord;
+// Aliases for compatibility with other imports
+export const saveLearnerRecord = saveLearner;
 
 export const getStoredStaff = (): any[] => {
   try {
@@ -67,7 +87,7 @@ export const saveStaffMember = (staffData: any) => {
   central.staff = updated;
   localStorage.setItem(STORAGE_KEYS.CENTRAL_DB, JSON.stringify(central));
 
-  window.dispatchEvent(new Event('storage'));
+  window.dispatchEvent(new Event('munyaka_storage_update'));
 };
 
 export const saveStaff = saveStaffMember;

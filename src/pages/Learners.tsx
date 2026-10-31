@@ -464,7 +464,7 @@ export default function Students() {
 
       if (duplicateFound) {
         showError(
-          `DUPLICATE REGISTRATION BLOCKED:\n\nA learner named "${duplicateFound.fullName || duplicateFound.name}" (${duplicateFound.gradeLevel || duplicateFound.grade || 'N/A'}) is already registered with this ${idType === 'assessment' ? 'Assessment' : 'Birth Certificate'} number (${cleanValue}).`
+          `DUPLICATE REGISTRATION BLOCKED:\n\nA learner named "${duplicateFound.name}" (${duplicateFound.grade || 'N/A'}) is already registered with this ${idType === 'assessment' ? 'Assessment' : 'Birth Certificate'} number (${cleanValue}).`
         );
         setIsSaving(false);
         return;
