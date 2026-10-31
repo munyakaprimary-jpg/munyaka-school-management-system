@@ -481,7 +481,7 @@ export default function LearnersDirectory() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/student/${lId}`)}
+                            onClick={() => navigate(`/learners/${lId}`)}
                             className="h-9 w-9 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
                             title="View Profile"
                           >
