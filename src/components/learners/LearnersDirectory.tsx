@@ -65,36 +65,12 @@ export default function LearnersDirectory() {
         try {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed.map(formatLearnerDoc);
-          }
-        } catch (e) {}
-      }
-    }
-
-    // Fallback: Extract student names/admission numbers from finance/fee records if student directory is empty
-    const financeKeys = ['munyaka_fees_finance', 'munyaka_fees', 'fees_records'];
-    for (const fKey of financeKeys) {
-      const rawFinance = localStorage.getItem(fKey);
-      if (rawFinance) {
-        try {
-          const parsedFinance = JSON.parse(rawFinance);
-          if (Array.isArray(parsedFinance) && parsedFinance.length > 0) {
-            // Map unique students from finance records
-            const uniqueStudentsMap = new Map();
-            parsedFinance.forEach((record: any) => {
-              const name = record.studentName || record.name || record.student;
-              const admNo = record.admNo || record.admissionNumber;
-              if (name && !uniqueStudentsMap.has(name)) {
-                uniqueStudentsMap.set(name, {
-                  id: record.id || admNo || Math.random().toString(),
-                  name: name,
-                  admNo: admNo || 'N/A',
-                  grade: record.grade || record.class || 'Grade 4-9',
-                  balance: record.balance || 'KES 0'
-                });
-              }
-            });
-            return Array.from(uniqueStudentsMap.values()).map(formatLearnerDoc);
+            const valid = parsed
+              .map(formatLearnerDoc)
+              .filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && s.name.trim() !== '');
+            if (valid.length > 0) {
+              return valid;
+            }
           }
         } catch (e) {}
       }
@@ -103,7 +79,22 @@ export default function LearnersDirectory() {
     return [];
   };
 
-  const [learnersList, setLearnersList] = useState<any[]>(fetchLearnersFromStorage);
+  const [learnersList, setLearnersList] = useState<any[]>(() => {
+    try {
+      const raw = localStorage.getItem('munyaka_students');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const cleaned = parsed.filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && s.name.trim() !== '');
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem('munyaka_students', JSON.stringify(cleaned));
+          }
+          if (cleaned.length > 0) return cleaned.map(formatLearnerDoc);
+        }
+      }
+    } catch (e) {}
+    return fetchLearnersFromStorage();
+  });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
@@ -115,9 +106,19 @@ export default function LearnersDirectory() {
   const [filteredLearners, setFilteredLearners] = useState<any[]>([]);
   const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
 
-  // Deletion auth state
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<any | null>(null);
+  useEffect(() => {
+    const raw = localStorage.getItem('munyaka_students');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        const cleaned = parsed.filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && s.name.trim() !== '');
+        if (cleaned.length !== parsed.length) {
+          localStorage.setItem('munyaka_students', JSON.stringify(cleaned));
+          setLearnersList(cleaned.map(formatLearnerDoc));
+        }
+      } catch (e) {}
+    }
+  }, []);
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
