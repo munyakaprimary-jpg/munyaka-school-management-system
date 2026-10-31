@@ -40,7 +40,7 @@ export default function AddLearnerModal({
 
   useEffect(() => {
     if (formData.grade) {
-      const existingRaw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]';
+      const existingRaw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]';
       const existingLearners = JSON.parse(existingRaw);
       const freshAdmNo = generateCohortAdmissionNumber(formData.grade, existingLearners);
       setFormData(prev => ({ ...prev, admNo: freshAdmNo }));
@@ -56,7 +56,7 @@ export default function AddLearnerModal({
 
     setIsSaving(true);
     try {
-      const existingRaw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]';
+      const existingRaw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]';
       const existingLearners = JSON.parse(existingRaw);
       
       const generatedAdmNo = formData.admNo || generateCohortAdmissionNumber(formData.grade, existingLearners);
@@ -90,9 +90,8 @@ export default function AddLearnerModal({
 
       await registerLearnerGuarded(newLearnerRecord);
 
-      // Also ensure it's written cleanly to munyaka_students and munyaka_learners
+      // Also ensure it's written cleanly to munyaka_learners
       const updatedStudents = [newLearnerRecord, ...existingLearners];
-      localStorage.setItem('munyaka_students', JSON.stringify(updatedStudents));
       localStorage.setItem('munyaka_learners', JSON.stringify(updatedStudents));
 
       // Dispatch storage event so the directory table refreshes instantly

@@ -57,7 +57,7 @@ const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
 export default function LearnersDirectory() {
   const navigate = useNavigate();
   const fetchLearnersFromStorage = () => {
-    const studentKeys = ['munyaka_students', 'munyaka_pupils', 'students_directory', 'school_students', 'munyaka_learners', 'munyaka_learners_v2', 'school_learners_data'];
+    const studentKeys = ['munyaka_learners', 'munyaka_learners_v2', 'munyaka_pupils', 'students_directory', 'school_students', 'school_learners_data'];
     
     for (const key of studentKeys) {
       const raw = localStorage.getItem(key);
@@ -107,13 +107,13 @@ export default function LearnersDirectory() {
   const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
 
   useEffect(() => {
-    const raw = localStorage.getItem('munyaka_students');
+    const raw = localStorage.getItem('munyaka_learners');
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
         const cleaned = parsed.filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && s.name !== 'Unnamed Learner' && !s.name.includes('Unknown') && !s.name.includes('Unnamed') && s.name.trim() !== '');
         if (cleaned.length !== parsed.length) {
-          localStorage.setItem('munyaka_students', JSON.stringify(cleaned));
+          localStorage.setItem('munyaka_learners', JSON.stringify(cleaned));
           setLearnersList(cleaned.map(formatLearnerDoc));
         }
       } catch (e) {}

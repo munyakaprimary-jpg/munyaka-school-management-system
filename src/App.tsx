@@ -212,18 +212,18 @@ export function runLegacyKeyMigrations() {
 
 // Purge old mock/unknown records from local storage on load
 try {
-  const raw = localStorage.getItem('munyaka_students');
+  const raw = localStorage.getItem('munyaka_learners');
   if (raw) {
     const parsed = JSON.parse(raw);
     const filtered = parsed.filter((s: any) =>
       s && s.name && s.name !== 'Unknown Learner' && s.name !== 'Unnamed Learner' && !s.name.includes('Unknown') && !s.name.includes('Unnamed') && s.name.trim() !== ''
     );
     if (filtered.length !== parsed.length) {
-      localStorage.setItem('munyaka_students', JSON.stringify(filtered));
+      localStorage.setItem('munyaka_learners', JSON.stringify(filtered));
     }
   }
 } catch (e) {
-  localStorage.removeItem('munyaka_students');
+  localStorage.removeItem('munyaka_learners');
 }
 
 // ── LocalStorage keys that hold active learner rows ────────────────────────
