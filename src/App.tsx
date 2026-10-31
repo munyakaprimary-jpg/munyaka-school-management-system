@@ -210,8 +210,21 @@ export function runLegacyKeyMigrations() {
   }
 }
 
-// Run immediately on module evaluation / boot
-runLegacyKeyMigrations();
+// Purge old mock/unknown records from local storage on load
+try {
+  const raw = localStorage.getItem('munyaka_students');
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    const filtered = parsed.filter((s: any) =>
+      s && s.name && s.name !== 'Unknown Learner' && !s.name.includes('Unknown')
+    );
+    if (filtered.length !== parsed.length) {
+      localStorage.setItem('munyaka_students', JSON.stringify(filtered));
+    }
+  }
+} catch (e) {
+  localStorage.removeItem('munyaka_students');
+}
 
 // ── LocalStorage keys that hold active learner rows ────────────────────────
 const LEARNER_STORAGE_KEYS = [
