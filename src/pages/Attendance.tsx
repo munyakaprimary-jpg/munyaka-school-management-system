@@ -389,7 +389,7 @@ export default function Attendance() {
             return [id, {
               id,
               admissionNo: cleanAdm,
-              name: l.name || l.fullName || l.learnerName || 'Unknown Learner',
+              name: l.name || l.fullName || l.learnerName || '',
               morning: currentData.morning,
               afternoon: existingStudent.afternoon || '',
               status: currentData.morning,
@@ -399,7 +399,7 @@ export default function Attendance() {
             return [id, {
               id,
               admissionNo: cleanAdm,
-              name: l.name || l.fullName || l.learnerName || 'Unknown Learner',
+              name: l.name || l.fullName || l.learnerName || '',
               morning: existingStudent.morning || '',
               afternoon: currentData.afternoon,
               status: existingStudent.status || existingStudent.morning || '',

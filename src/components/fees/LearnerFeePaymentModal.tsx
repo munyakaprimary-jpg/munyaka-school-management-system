@@ -186,7 +186,7 @@ const LearnerFeePaymentModal: React.FC<LearnerFeePaymentModalProps> = ({
           loaded = parsed.map((item: any) => ({
             id: item.id || item.admNo || '',
             admNo: item.admNo || item.id || '',
-            name: item.name || item.studentName || 'Unknown Learner',
+            name: item.name || item.studentName || '',
             grade: item.grade || item.gradeLevel || '',
             stream: item.stream || '',
             gender: item.gender || 'Other',

@@ -67,7 +67,7 @@ export default function LearnersDirectory() {
           if (Array.isArray(parsed) && parsed.length > 0) {
             const valid = parsed
               .map(formatLearnerDoc)
-              .filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && s.name.trim() !== '');
+              .filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && !s.name.includes('Unknown') && s.name.trim() !== '');
             if (valid.length > 0) {
               return valid;
             }
@@ -85,7 +85,7 @@ export default function LearnersDirectory() {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleaned = parsed.filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && s.name.trim() !== '');
+          const cleaned = parsed.filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && !s.name.includes('Unknown') && s.name.trim() !== '');
           if (cleaned.length !== parsed.length) {
             localStorage.setItem('munyaka_students', JSON.stringify(cleaned));
           }
@@ -111,7 +111,7 @@ export default function LearnersDirectory() {
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        const cleaned = parsed.filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && s.name.trim() !== '');
+        const cleaned = parsed.filter((s: any) => s && s.name && s.name !== 'Unknown Learner' && !s.name.includes('Unknown') && s.name.trim() !== '');
         if (cleaned.length !== parsed.length) {
           localStorage.setItem('munyaka_students', JSON.stringify(cleaned));
           setLearnersList(cleaned.map(formatLearnerDoc));

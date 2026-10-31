@@ -884,7 +884,7 @@ const Fees = () => {
 
   const handleEditFee = (studentId: string, termFee: number, feePaid: number, reason: string) => {
     const matchedLearner = studentsFromStore.find(l => l.id === studentId);
-    const studentName = matchedLearner ? matchedLearner.name : "Unknown Learner";
+    const studentName = matchedLearner ? matchedLearner.name : "";
     const studentGrade = matchedLearner ? matchedLearner.grade : "";
 
     // Read current fee record

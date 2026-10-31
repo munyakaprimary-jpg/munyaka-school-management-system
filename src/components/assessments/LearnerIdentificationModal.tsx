@@ -291,7 +291,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
         const loadedStudents = CentralDataService.getLearners() || [];
         const active = loadedStudents.map((s: any) => ({
           ...s,
-          name: s.name || s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Unknown Learner',
+          name: s.name || s.fullName || `${s.firstName || ''} ${s.lastName || ''}`.trim() || '',
           admissionNumber: s.admissionNo || s.admissionNumber || s.assessmentNo || s.id || '',
           id: s.id || s.admNo || s.admissionNo || String(Math.random()),
         })).filter(
