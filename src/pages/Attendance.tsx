@@ -467,86 +467,74 @@ export default function Attendance() {
     <div className="space-y-6 pb-16">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 p-6 rounded-2xl text-white shadow-xl">
-        <div>
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <Badge variant="outline" className="bg-white/20 text-white border-white/30 text-xs px-2.5 py-0.5 whitespace-nowrap">
-              Teacher Portal
-            </Badge>
-            <Badge variant="outline" className="bg-emerald-500/30 text-emerald-100 border-emerald-400/40 text-xs flex items-center gap-1 whitespace-nowrap">
-              <Sparkles className="w-3 h-3" /> Master Directory Sync (`munyaka_learners_db`)
-            </Badge>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight">Learner Attendance & Roll Call</h1>
-          <p className="text-emerald-100 text-sm mt-1">
-            Directly synchronized with the primary master learners database and Admin Roll Call records.
-          </p>
-        </div>
+    <div>
+      <div className="flex flex-wrap items-center gap-2 mb-1">
+        <Badge variant="outline" className="bg-white/20 text-white border-white/30 text-xs px-2.5 py-0.5 whitespace-nowrap">
+          Teacher Portal
+        </Badge>
+        <Badge variant="outline" className="bg-emerald-500/30 text-emerald-100 border-emerald-400/40 text-xs flex items-center gap-1 whitespace-nowrap">
+          <Sparkles className="w-3 h-3" /> Master Directory Sync (`munyaka_learners_db`)
+        </Badge>
+      </div>
+      <h1 className="text-2xl font-black tracking-tight">Learner Attendance & Roll Call</h1>
+      <p className="text-emerald-100 text-sm mt-1">
+        Directly synchronized with the primary master learners database and Admin Roll Call records.
+      </p>
+    </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {isAdmin && (
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-                  {bypassCutoff ? <Unlock className="w-4 h-4 text-emerald-300" /> : <Lock className="w-4 h-4 text-amber-300" />}
-                  <span>Time-Lock Bypass:</span>
-                </div>
-                <Button
-                  size="sm"
-                  variant={bypassCutoff ? 'default' : 'outline'}
-                  className={`h-7 text-xs px-3 ${bypassCutoff ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-none' : 'bg-white/10 text-white hover:bg-white/20 border-white/20'}`}
-                  onClick={() => {
-                    setBypassCutoff(!bypassCutoff);
-                    toast.success(bypassCutoff ? 'Time cutoff lock active.' : 'Time cutoff restrictions bypassed for testing!');
-                  }}
-                >
-                  {bypassCutoff ? 'Bypassed (Dev/Testing)' : 'Enforced'}
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-                  {manualMorningLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
-                  <span>Morning:</span>
-                </div>
-                <Button
-                  size="sm"
-                  variant={manualMorningLock ? 'destructive' : 'outline'}
-                  className={`h-7 text-xs px-3 ${manualMorningLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
-                  onClick={toggleManualMorningLock}
-                >
-                  {manualMorningLock ? 'Locked' : 'Unlocked'}
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
-                  {manualAfternoonLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
-                  <span>Afternoon:</span>
-                </div>
-                <Button
-                  size="sm"
-                  variant={manualAfternoonLock ? 'destructive' : 'outline'}
-                  className={`h-7 text-xs px-3 ${manualAfternoonLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
-                  onClick={toggleManualAfternoonLock}
-                >
-                  {manualAfternoonLock ? 'Locked' : 'Unlocked'}
-                </Button>
-              </div>
+    <div className="flex flex-wrap items-center gap-3">
+      {isAdmin && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+              {bypassCutoff ? <Unlock className="w-4 h-4 text-emerald-300" /> : <Lock className="w-4 h-4 text-amber-300" />}
+              <span>Time-Lock Bypass:</span>
             </div>
-          )}
+            <Button
+              size="sm"
+              variant={bypassCutoff ? 'default' : 'outline'}
+              className={`h-7 text-xs px-3 ${bypassCutoff ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-none' : 'bg-white/10 text-white hover:bg-white/20 border-white/20'}`}
+              onClick={() => {
+                setBypassCutoff(!bypassCutoff);
+                toast.success(bypassCutoff ? 'Time cutoff lock active.' : 'Time cutoff restrictions bypassed for testing!');
+              }}
+            >
+              {bypassCutoff ? 'Bypassed (Dev/Testing)' : 'Enforced'}
+            </Button>
+          </div>
 
-          <Button
-            onClick={() => {
-              loadMasterLearners();
-              loadRollCallRecords();
-              toast.success('Refreshed learners & attendance data');
-            }}
-            variant="outline"
-            className="bg-white/10 text-white border-white/20 hover:bg-white/20 gap-2 text-xs"
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
-          </Button>
+          <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+              {manualMorningLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
+              <span>Morning:</span>
+            </div>
+            <Button
+              size="sm"
+              variant={manualMorningLock ? 'destructive' : 'outline'}
+              className={`h-7 text-xs px-3 ${manualMorningLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
+              onClick={toggleManualMorningLock}
+            >
+              {manualMorningLock ? 'Locked' : 'Unlocked'}
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-xl border border-white/10">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-100">
+              {manualAfternoonLock ? <Lock className="w-4 h-4 text-rose-300" /> : <Unlock className="w-4 h-4 text-emerald-300" />}
+              <span>Afternoon:</span>
+            </div>
+            <Button
+              size="sm"
+              variant={manualAfternoonLock ? 'destructive' : 'outline'}
+              className={`h-7 text-xs px-3 ${manualAfternoonLock ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-white/10 text-white hover:bg-white/25 border-white/20'}`}
+              onClick={toggleManualAfternoonLock}
+            >
+              {manualAfternoonLock ? 'Locked' : 'Unlocked'}
+            </Button>
+          </div>
         </div>
+      )}
+    </div>
       </div>
 
       {/* Status Indicators & Helper Message per specification */}
@@ -566,10 +554,6 @@ export default function Attendance() {
           * Morning marking active 08:00 AM – {morningCutoffTime}. Afternoon marking active 02:00 PM – {afternoonCutoffTime}.
         </p>
       </div>
-
-      <Button
-        onClick={() => {
-          loadMasterLearners();
           loadRollCallRecords();
           toast.success('Refreshed learners & attendance data');
         }}
