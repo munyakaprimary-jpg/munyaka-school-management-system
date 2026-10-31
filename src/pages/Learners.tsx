@@ -647,32 +647,25 @@ export default function Students() {
   }, [streamBreakdown]);
 
   const handlePurgeAndReset = async () => {
-    if (window.confirm("Are you sure you want to completely wipe all learner records, exam submissions, and remnants from local storage and Firestore? This cannot be undone.")) {
-      try {
-        // 1. Clear LocalStorage keys
-        localStorage.removeItem('munyaka_learners');
-        localStorage.removeItem('munyaka_exam_submissions');
-        localStorage.removeItem('munyaka_attendance');
-        localStorage.removeItem('munyaka_learners_v2');
-        localStorage.removeItem('deleted_learner_ids');
+    if (window.confirm("Are you sure you want to purge and reset the entire learners directory? This action cannot be undone.")) {
+      // Clear storage keys
+      localStorage.removeItem('munyaka_learners_v2');
+      localStorage.removeItem('munyaka_central_db');
+      localStorage.removeItem('munyaka_learners');
 
-        // 2. Clear Firestore collections if available
-        if (db) {
-          const collectionsToClear = ['learners', 'students', 'exam_submissions', 'attendance'];
-          for (const colName of collectionsToClear) {
-            const querySnapshot = await getDocs(collection(db, colName));
-            const deletePromises = querySnapshot.docs.map((document) =>
-              deleteDoc(doc(db, colName, document.id))
-            );
-            await Promise.all(deletePromises);
-          }
-        }
+      // Reset state if available
+      if (typeof setStudents === 'function') {
+        setStudents([]);
+      }
 
-        alert("System successfully purged and reset.");
-        window.location.reload();
-      } catch (error) {
-        console.error("Error during purge:", error);
-        alert("Local data cleared, but encountered an error clearing Firestore. Check console.");
+      // Trigger storage sync event for other components
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('munyaka_storage_update'));
+
+      alert("Learners directory has been successfully purged and reset.");
+      window.location.reload();
+    }
+  };
         window.location.reload();
       }
     }
