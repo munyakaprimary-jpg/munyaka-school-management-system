@@ -515,6 +515,13 @@ const Login: React.FC = () => {
                         </p>
                       </div>
 
+                      {/* Inspirational Quote Banner */}
+                      <div className="w-full max-w-lg mx-auto my-4 px-4 py-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-center shadow-sm">
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 tracking-wide uppercase">
+                          "Strong minds discuss <span className="font-bold text-indigo-600 dark:text-indigo-400">IDEAS</span>, average minds discuss <span className="font-bold text-indigo-600 dark:text-indigo-400">EVENTS</span>, and weak minds discuss people."
+                        </p>
+                      </div>
+
           {/* ── Portal Access Tabs ── */}
           <Tabs defaultValue="staff" className="w-full">
             <TabsList className="grid w-full grid-cols-3 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
