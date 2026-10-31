@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { registerLearnerGuarded } from '@/services/learnerStorageGuard';
+import { saveLearnerToStorage } from '@/utils/learnerStorageSync';
 import { generateCohortAdmissionNumber } from '../../utils/admissionUtils';
 
 interface AddLearnerModalProps {
@@ -88,11 +88,7 @@ export default function AddLearnerModal({
         updatedAt: new Date().toISOString()
       };
 
-      await registerLearnerGuarded(newLearnerRecord);
-
-      // Also ensure it's written cleanly to munyaka_learners
-      const updatedStudents = [newLearnerRecord, ...existingLearners];
-      localStorage.setItem('munyaka_learners', JSON.stringify(updatedStudents));
+      saveLearnerToStorage(newLearnerRecord);
 
       // Dispatch storage event so the directory table refreshes instantly
       window.dispatchEvent(new Event('storage'));

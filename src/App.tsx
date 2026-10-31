@@ -384,10 +384,14 @@ const App = () => {
 
   useEffect(() => {
       try {
+        localStorage.removeItem('munyaka_students');
         const existingDb = localStorage.getItem('munyaka_central_db');
+        const learnersRaw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]';
+        const activeLearners = JSON.parse(learnersRaw);
+
         if (!existingDb) {
                 const initialDb = {
-                  students: (initialSeedData as any).students || (initialSeedData as any).learners || [],
+                  learners: activeLearners.length > 0 ? activeLearners : ((initialSeedData as any).learners || (initialSeedData as any).students || []),
                   staff: initialSeedData.staff || [],
                 };
                 const ok = safeWrite('munyaka_central_db', initialDb, { operation: 'seed' });
@@ -398,14 +402,20 @@ const App = () => {
                 }
               } else {
                 const parsed = JSON.parse(existingDb);
-                if (!parsed.students || parsed.students.length === 0) {
-                  parsed.students = (initialSeedData as any).students || (initialSeedData as any).learners || [];
-                  const ok = safeWrite('munyaka_central_db', parsed, { operation: 're-seed' });
-                  if (!ok) {
-                    console.error('Storage quota exceeded while re-seeding munyaka_central_db. Please clear old records.');
-                  } else {
-                    window.dispatchEvent(new Event('central_db_updated'));
-                  }
+                if (parsed.students) {
+                  delete parsed.students;
+                }
+                if (!parsed.learners) {
+                  parsed.learners = activeLearners.length > 0 ? activeLearners : ((initialSeedData as any).learners || (initialSeedData as any).students || []);
+                } else if (activeLearners.length > 0) {
+                  // Merge active learners
+                  parsed.learners = activeLearners;
+                }
+                const ok = safeWrite('munyaka_central_db', parsed, { operation: 're-seed' });
+                if (!ok) {
+                  console.error('Storage quota exceeded while re-seeding munyaka_central_db. Please clear old records.');
+                } else {
+                  window.dispatchEvent(new Event('central_db_updated'));
                 }
               }
       } catch (err) {
