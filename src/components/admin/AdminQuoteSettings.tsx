@@ -52,15 +52,33 @@ export const AdminQuoteSettings = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mt-6 space-y-5">
-      <div>
-        <h3 className="text-lg font-bold text-slate-800 dark:text-white">Login Page Quote Manager</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Update the inspirational banner, text casing, and accent colors displayed on the login page.
-        </p>
-      </div>
-
-      <form onSubmit={handleSave} className="space-y-5">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mt-6 space-y-5">
+        <div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white">Login Page Quote Manager</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Update the inspirational banner, text casing, and accent colors displayed on the login page.
+          </p>
+        </div>
+  
+        {/* Live Preview Section */}
+        <div className="mb-6 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+          <span className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+            Live Preview (How it looks on Login Page)
+          </span>
+          
+          <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-center shadow-sm">
+            <p className={`text-xs sm:text-sm font-bold tracking-wide leading-relaxed ${
+              selectedColor === 'emerald' ? 'text-emerald-600 dark:text-emerald-400' :
+              selectedColor === 'amber' ? 'text-amber-600 dark:text-amber-400' :
+              selectedColor === 'rose' ? 'text-rose-600 dark:text-rose-400' :
+              'text-indigo-600 dark:text-indigo-400'
+            }`}>
+              "{isUppercase ? (quoteText || '').toUpperCase() : quoteText}"
+            </p>
+          </div>
+        </div>
+  
+        <form onSubmit={handleSave} className="space-y-5">
         {/* Text Area */}
         <div>
           <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
