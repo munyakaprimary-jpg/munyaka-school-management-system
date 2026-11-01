@@ -5,6 +5,8 @@ export const buildDefaultClusters = () => {
   ];
 };
 
+export const DEFAULT_CBC_CLUSTERS = buildDefaultClusters();
+
 export const initialSeedData = {
   version: "2.6.0",
   students: [],
