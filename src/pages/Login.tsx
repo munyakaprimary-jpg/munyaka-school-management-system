@@ -34,6 +34,19 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
+// Helper function to safely read quote configuration from localStorage
+const getStoredQuoteConfig = () => {
+  try {
+    const saved = localStorage.getItem('munyaka_login_quote_config');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return {
+    text: localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
+    colorId: 'indigo',
+    isUppercase: false
+  };
+};
+
 // Helper function to render text with colored bold highlights
 const renderStyledQuote = (text: string, colorId: string = 'indigo') => {
   const colorMap: Record<string, string> = {
@@ -229,6 +242,20 @@ const Login: React.FC = () => {
     const [staffAuthError, setStaffAuthError] = useState('');
     const [isStaffVerifying, setIsStaffVerifying] = useState(false);
     const [selectedSupportRole, setSelectedSupportRole] = useState<string | null>(null);
+
+  // ── Quote config state ──────────────────────────────────────────────────
+  const [quoteConfig, setQuoteConfig] = useState(getStoredQuoteConfig());
+
+  // Listen for localStorage changes (e.g. from another tab) to refresh the quote config
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'munyaka_login_quote_config' || e.key === 'munyaka_login_quote') {
+        setQuoteConfig(getStoredQuoteConfig());
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   // ── Forgot password modal ───────────────────────────────────────────────
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
@@ -543,10 +570,10 @@ const Login: React.FC = () => {
 
                       {/* Inspirational Quote Banner */}
                       <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-gradient-to-r from-indigo-50/80 via-purple-50/80 to-slate-50/80 dark:from-slate-800/80 dark:via-slate-800/60 dark:to-slate-800/80 border border-indigo-100 dark:border-slate-700/60 rounded-xl text-center shadow-sm backdrop-blur-sm">
-                        <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide uppercase leading-relaxed">
-                          {renderStyledQuote(localStorage.getItem('munyaka_login_quote') || 'STRONG MINDS DISCUSS **IDEAS**, AVERAGE MINDS DISCUSS **EVENTS**, AND WEAK MINDS DISCUSS **PEOPLE**.')}
-                        </p>
-                      </div>
+                                              <p className={quoteConfig.isUppercase ? 'text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide uppercase leading-relaxed' : 'text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide leading-relaxed'}>
+                                                {renderStyledQuote(quoteConfig.text, quoteConfig.colorId)}
+                                              </p>
+                                            </div>
 
           {/* ── Portal Access Tabs ── */}
           <Tabs defaultValue="staff" className="w-full">
