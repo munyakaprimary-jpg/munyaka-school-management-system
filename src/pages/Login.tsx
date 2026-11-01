@@ -1,36 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRoleLandingPage } from '@/rbac/landingPageMapping';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Loader2,
   Shield,
-  Key,
   Eye,
   EyeOff,
-  Settings2,
   Crown,
-  ChevronLeft,
-  ShieldAlert,
-  Unlock,
-  Users,
-  CreditCard,
   ArrowRight,
-  Send,
-  Mail,
-  User,
-  KeyRound,
   GraduationCap,
-  BookOpen,
-  Package,
-  Beaker,
-  Monitor,
-  Briefcase,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -82,34 +64,11 @@ const renderStyledQuote = (text: string, colorId: string = 'indigo') => {
   });
 };
 
-import { auth } from '@/config/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
-import { cn } from '@/lib/utils';
-import { teacherLogin, checkServerHealth } from '@/services/mobileAuthService';
-import { getStaffMaster } from '@/services/staffMasterService';
-import { getApiBaseUrl } from '@/lib/apiBase';
-import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
-import { verifyStaffLogin, setActiveStaffSession } from '@/services/staffMasterService';
-import { mapRoleLabelToRbacKey } from '@/constants/roles';
-import {
-  MUNYAKA_ADMIN_PASSWORD,
-  DEFAULT_ADMIN_PASSWORD,
-  getActiveAdminPassword,
-} from '@/services/adminCredentials';
-import type { LoginFailure, LoginSuccess } from '@/services/mobileAuthService';
+import { getActiveAdminPassword } from '@/services/adminCredentials';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 import CoverPage from './CoverPage';
-
-const hasCustomAdminPassword = (): boolean => {
-  try {
-    const stored = localStorage.getItem(MUNYAKA_ADMIN_PASSWORD);
-    return stored != null && String(stored).trim().length > 0;
-  } catch {
-    return false;
-  }
-};
 
 type AdminRole = 'admin' | 'owner';
 
@@ -129,6 +88,15 @@ export default function Login() {
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
   
+  const [showCover, setShowCover] = useState(() => {
+    try {
+      const skipped = sessionStorage.getItem('munyaka_skipped_cover');
+      return !skipped;
+    } catch {
+      return true;
+    }
+  });
+
   const [activeTab, setActiveTab] = useState<'student' | 'staff' | 'admin' | 'owner'>('student');
   const [studentPortalInput, setStudentPortalInput] = useState('');
   const [isStudentLoading, setIsStudentLoading] = useState(false);
@@ -164,6 +132,13 @@ export default function Login() {
       window.removeEventListener('munyaka:quote-updated', handleStorage);
     };
   }, []);
+
+  const handleEnterPortal = () => {
+    try {
+      sessionStorage.setItem('munyaka_skipped_cover', 'true');
+    } catch {}
+    setShowCover(false);
+  };
 
   const handleStudentPortalLogin = async () => {
     const cleanInput = String(studentPortalInput || '').trim().toLowerCase();
@@ -297,9 +272,12 @@ export default function Login() {
     }
   };
 
+  if (showCover) {
+    return <CoverPage onEnter={handleEnterPortal} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-indigo-900/30 via-slate-950/80 to-slate-950 pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4">
@@ -499,12 +477,18 @@ export default function Login() {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center flex items-center justify-between">
+            <button
+              onClick={() => setShowCover(true)}
+              className="text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+            >
+              ← Back to Cover
+            </button>
             <button
               onClick={() => setIsForgotOpen(true)}
               className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
             >
-              Forgot Password / Access Code?
+              Forgot Password?
             </button>
           </div>
         </div>
