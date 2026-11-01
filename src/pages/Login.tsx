@@ -568,12 +568,43 @@ const Login: React.FC = () => {
                         </p>
                       </div>
 
-                      {/* Inspirational Quote Banner */}
-                      <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-gradient-to-r from-indigo-50/80 via-purple-50/80 to-slate-50/80 dark:from-slate-800/80 dark:via-slate-800/60 dark:to-slate-800/80 border border-indigo-100 dark:border-slate-700/60 rounded-xl text-center shadow-sm backdrop-blur-sm">
-                                              <p className={quoteConfig.isUppercase ? 'text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide uppercase leading-relaxed' : 'text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide leading-relaxed'}>
-                                                {renderStyledQuote(quoteConfig.text, quoteConfig.colorId)}
-                                              </p>
-                                            </div>
+                      {/* Dynamic Quote Banner */}
+                      {(() => {
+                        const getQuoteConfig = () => {
+                          try {
+                            const saved = localStorage.getItem('munyaka_login_quote_config');
+                            if (saved) return JSON.parse(saved);
+                          } catch (e) {}
+                          return {
+                            text: localStorage.getItem('munyaka_login_quote') || 'Even if we lack every thing in life, i pray we never lack the favour of God',
+                            colorId: 'indigo',
+                            isUppercase: false
+                          };
+                        };
+
+                        const config = getQuoteConfig();
+
+                        // Define explicit color text classes
+                        const colorMap: Record<string, string> = {
+                          indigo: 'text-indigo-600 dark:text-indigo-400 font-bold',
+                          emerald: 'text-emerald-600 dark:text-emerald-400 font-bold',
+                          amber: 'text-amber-600 dark:text-amber-400 font-bold',
+                          rose: 'text-rose-600 dark:text-rose-400 font-bold',
+                        };
+
+                        const activeColorClass = colorMap[config.colorId] || colorMap.indigo;
+                        const textToDisplay = config.isUppercase
+                          ? (config.text || '').toUpperCase()
+                          : (config.text || '');
+
+                        return (
+                          <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl text-center shadow-sm">
+                            <p className={`text-xs sm:text-sm tracking-wide leading-relaxed ${activeColorClass}`}>
+                              "{textToDisplay}"
+                            </p>
+                          </div>
+                        );
+                      })()}
 
           {/* ── Portal Access Tabs ── */}
           <Tabs defaultValue="staff" className="w-full">
