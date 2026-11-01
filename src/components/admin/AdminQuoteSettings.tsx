@@ -146,8 +146,12 @@ export const AdminQuoteSettings = () => {
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Text Style Dropdown Selector */}
+        {/* Settings Row: Text Style & Flashing Toggle */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-2">
+          
+          {/* 1. Text Style Dropdown */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
               Text Style / Casing
@@ -164,25 +168,26 @@ export const AdminQuoteSettings = () => {
               <option value="italic">Italicized Banner Style</option>
             </select>
           </div>
-          
-          {/* Flashing Animation Toggle */}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                        Flashing Animation
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsFlashing(!isFlashing)}
-                        className={`px-4 py-1.5 text-xs font-semibold rounded-lg border transition-all ${
-                          isFlashing
-                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 animate-pulse'
-                            : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
-                        }`}
-                      >
-                        {isFlashing ? 'ON (Pulsing)' : 'OFF'}
-                      </button>
-                    </div>
-                  </div>
+
+          {/* 2. Flashing Animation Toggle */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+              Flashing Animation
+            </label>
+            <button
+              type="button"
+              onClick={() => setIsFlashing(!isFlashing)}
+              className={`w-full px-4 py-2.5 rounded-xl border font-semibold text-sm transition-all shadow-sm ${
+                isFlashing
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-600 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+              }`}
+            >
+              {isFlashing ? 'ON (Pulsing)' : 'OFF (Static)'}
+            </button>
+          </div>
+
+        </div>
 
         {/* Submit Button */}
         <div className="flex items-center justify-between pt-3">
