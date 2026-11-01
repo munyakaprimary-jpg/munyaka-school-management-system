@@ -260,7 +260,7 @@ export default function Login() {
           localStorage.setItem('munyaka_active_role', 'admin');
           localStorage.setItem('munyaka_portal_session', JSON.stringify({ role: 'admin', user: localAdmin }));
           showSuccess('Admin login successful!');
-          navigate('/admin');
+          navigate('/dashboard');
           return;
         }
       }
@@ -280,7 +280,7 @@ export default function Login() {
           }
         }));
         showSuccess('Admin login successful!');
-        navigate('/admin');
+        navigate('/dashboard');
         return;
       }
 
