@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { generateLearnerId, formatLearnerDoc, findExistingLearner, dedupeLearnersById } from '../services/learnerService';
+import { generateLearnerId, formatLearnerDoc, findExistingLearner, dedupeLearnersById, deduplicateLearners } from '../services/learnerService';
 import { bundleAllLearnersToCentral } from '../services/bundleAllLearners';
 import { purgeLearnerPermanently } from '../services/purgeLearnerService';
 import { useAuth } from './AuthContext';
@@ -73,7 +73,7 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
           parsedList = JSON.parse(storedLocal);
         } catch {}
 
-        const learnersList = dedupeLearnersById((Array.isArray(parsedList) ? parsedList : []).map(formatLearnerDoc));
+        const learnersList = deduplicateLearners((Array.isArray(parsedList) ? parsedList : []).map(formatLearnerDoc));
 
         if (isMounted) {
           setLearners(filterLearnersForUser(learnersList));

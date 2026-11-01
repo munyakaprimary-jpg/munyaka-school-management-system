@@ -24,7 +24,7 @@ import { db } from '@/config/firebase';
 import { collection, onSnapshot, addDoc, setDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import { showSuccess, showError } from '@/utils/toast';
 import { CentralDataService } from '@/services/centralDataService';
-import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
+import { generateLearnerId, formatLearnerDoc, findExistingLearner, deduplicateLearners } from '@/services/learnerService';
 import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
 import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
 import { getNormalizedLearners } from '@/utils/dataLoader';
@@ -156,7 +156,7 @@ export default function LearnersDirectory() {
         if (unified) {
           const parsed = JSON.parse(unified);
           if (Array.isArray(parsed)) {
-            const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
+            const filtered = deduplicateLearners(parsed.map(formatLearnerDoc)).filter((item: any) => !isDeletedRecord(item, deletedIds));
             applyList(filtered);
             return;
           }

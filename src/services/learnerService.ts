@@ -37,15 +37,19 @@ export const findExistingLearner = (learners: Learner[], idValue: string): Learn
   });
 };
 
+export const deduplicateLearners = (learnersList: any[]) => {
+  const seen = new Set();
+  return (learnersList || []).filter((item) => {
+    if (!item) return false;
+    const key = item.admissionNo || item.admNo || item.assessmentNo || item.upi || item.id || item._id;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 export const deduplicateLearnersById = (learners: Learner[]): Learner[] => {
-  const map = new Map<string, Learner>();
-  for (const l of learners) {
-    const key = l.id || l.admNo || l.name;
-    if (key && !map.has(key)) {
-      map.set(key, l);
-    }
-  }
-  return Array.from(map.values());
+  return deduplicateLearners(learners);
 };
 
 export const dedupeLearnersById = deduplicateLearnersById;
