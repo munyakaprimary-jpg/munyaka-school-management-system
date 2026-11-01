@@ -41,8 +41,9 @@ const getStoredQuoteConfig = () => {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && typeof parsed === 'object') {
+        const textValue = String(parsed.text || localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.');
         return {
-          text: String(parsed.text || localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.'),
+          text: textValue,
           colorId: String(parsed.colorId || 'indigo'),
           isUppercase: Boolean(parsed.isUppercase),
           isFlashing: Boolean(parsed.isFlashing)
@@ -172,7 +173,17 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
   },
 };
 
-// ─── Post-login redirect ────────────────────────────────────────────────────
+  // Handle keydown for form submission
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    try {
+      const safeKey = String(e?.key || '').toLowerCase();
+      if (safeKey === 'enter') {
+        if (studentPortalInput && studentPortalInput.trim().length > 0) {
+          handleStudentPortalLogin();
+        }
+      }
+    } catch (err) {}
+  };
 // All authenticated users (regardless of role) land on the main dashboard.
 // This intentionally bypasses any secondary landing / role-selection screens.
 
