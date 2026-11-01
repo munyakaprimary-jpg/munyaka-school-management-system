@@ -248,7 +248,6 @@ export const addStaffMaster = (record: Omit<MasterStaffRecord, 'id' | 'staffId' 
     tscNumber: record.tscNumber,
     role: record.role,
     systemRole: record.systemRole,
-    department: record.department,
     assignedGrade: record.assignedGrade,
     assignedStream: record.assignedStream,
     assignedSubjects: record.assignedSubjects,
