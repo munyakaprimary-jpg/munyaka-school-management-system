@@ -15,33 +15,37 @@ export const AdminQuoteSettings = () => {
       try {
         const parsed = JSON.parse(raw);
         return {
-          text: parsed.text || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
-          colorId: parsed.colorId || 'indigo',
-          isUppercase: !!parsed.isUppercase,
-        };
+              text: parsed.text || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
+              colorId: parsed.colorId || 'indigo',
+              isUppercase: !!parsed.isUppercase,
+              isFlashing: !!parsed.isFlashing,
+            };
       } catch (e) {}
     }
     return {
-      text: localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
-      colorId: 'indigo',
-      isUppercase: false,
-    };
+          text: localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
+          colorId: 'indigo',
+          isUppercase: false,
+          isFlashing: false,
+        };
   };
 
   const initial = getInitialConfig();
-  const [quoteText, setQuoteText] = useState(initial.text);
-  const [selectedColor, setSelectedColor] = useState(initial.colorId);
-  const [isUppercase, setIsUppercase] = useState(initial.isUppercase);
-  const [savedNotice, setSavedNotice] = useState(false);
+    const [quoteText, setQuoteText] = useState(initial.text);
+    const [selectedColor, setSelectedColor] = useState(initial.colorId);
+    const [isUppercase, setIsUppercase] = useState(initial.isUppercase);
+    const [isFlashing, setIsFlashing] = useState(initial.isFlashing ?? false);
+    const [savedNotice, setSavedNotice] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    const config = {
-      text: quoteText,
-      colorId: selectedColor,
-      isUppercase,
-    };
-    localStorage.setItem('munyaka_login_quote_config', JSON.stringify(config));
+      e.preventDefault();
+      const config = {
+        text: quoteText,
+        colorId: selectedColor,
+        isUppercase,
+        isFlashing,
+      };
+      localStorage.setItem('munyaka_login_quote_config', JSON.stringify(config));
     localStorage.setItem('munyaka_login_quote', quoteText); // Fallback string
     
     window.dispatchEvent(new Event('storage'));
@@ -118,19 +122,37 @@ export const AdminQuoteSettings = () => {
           </div>
 
           {/* Text Transformation Toggle */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-              Text Case
-            </label>
-            <button
-              type="button"
-              onClick={() => setIsUppercase(!isUppercase)}
-              className="px-4 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
-            >
-              {isUppercase ? 'UPPERCASE' : 'Standard Case'}
-            </button>
-          </div>
-        </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+                        Text Case
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsUppercase(!isUppercase)}
+                        className="px-4 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+                      >
+                        {isUppercase ? 'UPPERCASE' : 'Standard Case'}
+                      </button>
+                    </div>
+          
+                    {/* Flashing Animation Toggle */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
+                        Flashing Animation
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsFlashing(!isFlashing)}
+                        className={`px-4 py-1.5 text-xs font-semibold rounded-lg border transition-all ${
+                          isFlashing
+                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 animate-pulse'
+                            : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                        }`}
+                      >
+                        {isFlashing ? 'ON (Pulsing)' : 'OFF'}
+                      </button>
+                    </div>
+                  </div>
 
         {/* Submit Button */}
         <div className="flex items-center justify-between pt-3">

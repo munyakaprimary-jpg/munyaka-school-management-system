@@ -43,7 +43,8 @@ const getStoredQuoteConfig = () => {
   return {
     text: localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
     colorId: 'indigo',
-    isUppercase: false
+    isUppercase: false,
+    isFlashing: false
   };
 };
 
@@ -571,16 +572,17 @@ const Login: React.FC = () => {
                       {/* Dynamic Quote Banner */}
                       {(() => {
                         const getQuoteConfig = () => {
-                          try {
-                            const saved = localStorage.getItem('munyaka_login_quote_config');
-                            if (saved) return JSON.parse(saved);
-                          } catch (e) {}
-                          return {
-                            text: localStorage.getItem('munyaka_login_quote') || 'Even if we lack every thing in life, i pray we never lack the favour of God',
-                            colorId: 'indigo',
-                            isUppercase: false
-                          };
-                        };
+                                                  try {
+                                                    const saved = localStorage.getItem('munyaka_login_quote_config');
+                                                    if (saved) return JSON.parse(saved);
+                                                  } catch (e) {}
+                                                  return {
+                                                    text: localStorage.getItem('munyaka_login_quote') || 'Even if we lack every thing in life, i pray we never lack the favour of God',
+                                                    colorId: 'indigo',
+                                                    isUppercase: false,
+                                                    isFlashing: false
+                                                  };
+                                                };
 
                         const config = getQuoteConfig();
 
@@ -598,12 +600,12 @@ const Login: React.FC = () => {
                           : (config.text || '');
 
                         return (
-                          <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl text-center shadow-sm">
-                            <p className={`text-xs sm:text-sm tracking-wide leading-relaxed ${activeColorClass}`}>
-                              "{textToDisplay}"
-                            </p>
-                          </div>
-                        );
+                                                  <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl text-center shadow-sm">
+                                                    <p className={`text-xs sm:text-sm tracking-wide leading-relaxed ${activeColorClass} ${config.isFlashing ? 'animate-pulse' : ''}`}>
+                                                      "{textToDisplay}"
+                                                    </p>
+                                                  </div>
+                                                );
                       })()}
 
           {/* ── Portal Access Tabs ── */}
