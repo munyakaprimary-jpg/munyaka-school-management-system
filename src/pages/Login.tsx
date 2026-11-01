@@ -178,7 +178,9 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     try {
       const safeKey = String(e?.key || '').toLowerCase();
       if (safeKey === 'enter') {
-        // Form submission keydown handler
+        if (studentPortalInput && studentPortalInput.trim().length > 0) {
+          handleStudentPortalLogin();
+        }
       }
     } catch (err) {}
   };
