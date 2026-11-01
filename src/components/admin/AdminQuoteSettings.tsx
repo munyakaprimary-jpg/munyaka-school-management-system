@@ -8,6 +8,17 @@ const COLOR_PRESETS = [
 ];
 
 export const AdminQuoteSettings = () => {
+  // Helper function to apply chosen text style to quote text
+  const formatQuoteText = (text: string, style: string) => {
+    if (!text) return '';
+    switch (style) {
+      case 'uppercase': return text.toUpperCase();
+      case 'lowercase': return text.toLowerCase();
+      case 'title': return text.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.substr(1).toLowerCase());
+      default: return text;
+    }
+  };
+
   // Load initial config from localStorage
   const getInitialConfig = () => {
     const raw = localStorage.getItem('munyaka_login_quote_config');
@@ -17,7 +28,7 @@ export const AdminQuoteSettings = () => {
         return {
               text: parsed.text || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
               colorId: parsed.colorId || 'indigo',
-              isUppercase: !!parsed.isUppercase,
+              textStyle: parsed.textStyle || 'standard',
               isFlashing: !!parsed.isFlashing,
             };
       } catch (e) {}
@@ -25,7 +36,7 @@ export const AdminQuoteSettings = () => {
     return {
           text: localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
           colorId: 'indigo',
-          isUppercase: false,
+          textStyle: 'standard',
           isFlashing: false,
         };
   };
@@ -33,7 +44,7 @@ export const AdminQuoteSettings = () => {
   const initial = getInitialConfig();
     const [quoteText, setQuoteText] = useState(initial.text);
     const [selectedColor, setSelectedColor] = useState(initial.colorId);
-    const [isUppercase, setIsUppercase] = useState(initial.isUppercase);
+    const [textStyle, setTextStyle] = useState(initial.textStyle);
     const [isFlashing, setIsFlashing] = useState(initial.isFlashing ?? false);
     const [savedNotice, setSavedNotice] = useState(false);
 
@@ -42,15 +53,15 @@ export const AdminQuoteSettings = () => {
       const config = {
         text: quoteText,
         colorId: selectedColor,
-        isUppercase,
+        textStyle,
         isFlashing,
       };
       localStorage.setItem('munyaka_login_quote_config', JSON.stringify(config));
     localStorage.setItem('munyaka_login_quote', quoteText); // Fallback string
-    
+
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new Event('munyaka_storage_update'));
-    
+
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 3000);
   };
@@ -65,29 +76,29 @@ export const AdminQuoteSettings = () => {
           </div>
     
           {/* Live Preview Section */}
-          <div className="mb-6 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-            <span className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-              Live Preview (How it looks on Login Page)
-            </span>
-            
-            <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-center shadow-sm">
-              <p
-                className={`text-xs sm:text-sm font-bold tracking-wide leading-relaxed ${
-                  selectedColor === 'emerald' ? 'text-emerald-600 dark:text-emerald-400' :
-                  selectedColor === 'amber' ? 'text-amber-600 dark:text-amber-400' :
-                  selectedColor === 'rose' ? 'text-rose-600 dark:text-rose-400' :
-                  'text-indigo-600 dark:text-indigo-400'
-                }`}
-                style={
-                  isFlashing
-                    ? { animation: 'quoteFlash 1.2s infinite ease-in-out' }
-                    : {}
-                }
-              >
-                "{isUppercase ? (quoteText || '').toUpperCase() : quoteText}"
-              </p>
-            </div>
-          </div>
+                    <div className="mb-6 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                      <span className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                        Live Preview (How it looks on Login Page)
+                      </span>
+                      
+                      <div className="p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-center shadow-sm">
+                        <p
+                          className={`text-xs sm:text-sm font-bold tracking-wide leading-relaxed ${textStyle === 'italic' ? 'italic' : ''} ${
+                            selectedColor === 'emerald' ? 'text-emerald-600 dark:text-emerald-400' :
+                            selectedColor === 'amber' ? 'text-amber-600 dark:text-amber-400' :
+                            selectedColor === 'rose' ? 'text-rose-600 dark:text-rose-400' :
+                            'text-indigo-600 dark:text-indigo-400'
+                          }`}
+                          style={
+                            isFlashing
+                              ? { animation: 'quoteFlash 1.2s infinite ease-in-out' }
+                              : {}
+                          }
+                        >
+                          "{formatQuoteText(quoteText || '', textStyle)}"
+                        </p>
+                      </div>
+                    </div>
     
           {/* Keyframe definition for quote flashing animation */}
           <style>{`
@@ -136,21 +147,25 @@ export const AdminQuoteSettings = () => {
             </div>
           </div>
 
-          {/* Text Transformation Toggle */}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
-                        Text Case
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsUppercase(!isUppercase)}
-                        className="px-4 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
-                      >
-                        {isUppercase ? 'UPPERCASE' : 'Standard Case'}
-                      </button>
-                    </div>
+          {/* Text Style Dropdown Selector */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+              Text Style / Casing
+            </label>
+            <select
+              value={textStyle}
+              onChange={(e) => setTextStyle(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm"
+            >
+              <option value="standard">Standard Case</option>
+              <option value="uppercase">UPPERCASE (ALL CAPS)</option>
+              <option value="lowercase">lowercase (all small letters)</option>
+              <option value="title">Title Case (Capitalize Words)</option>
+              <option value="italic">Italicized Banner Style</option>
+            </select>
+          </div>
           
-                    {/* Flashing Animation Toggle */}
+          {/* Flashing Animation Toggle */}
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
                         Flashing Animation
