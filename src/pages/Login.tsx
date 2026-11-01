@@ -600,13 +600,28 @@ const Login: React.FC = () => {
                           : (config.text || '');
 
                         return (
-                                                  <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl text-center shadow-sm">
-                                                    <p className={`text-xs sm:text-sm tracking-wide leading-relaxed ${activeColorClass} ${config.isFlashing ? 'animate-pulse' : ''}`}>
-                                                      "{textToDisplay}"
-                                                    </p>
-                                                  </div>
-                                                );
+                                                                          <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl text-center shadow-sm">
+                                                                            <p
+                                                                              className={`text-xs sm:text-sm tracking-wide leading-relaxed ${activeColorClass}`}
+                                                                              style={
+                                                                                config.isFlashing
+                                                                                  ? { animation: 'quoteFlash 1.2s infinite ease-in-out' }
+                                                                                  : {}
+                                                                              }
+                                                                            >
+                                                                              "{textToDisplay}"
+                                                                            </p>
+                                                                          </div>
+                                                                        );
                       })()}
+
+                      {/* Keyframe definition for quote flashing animation */}
+                      <style>{`
+                        @keyframes quoteFlash {
+                          0%, 100% { opacity: 1; transform: scale(1); }
+                          50% { opacity: 0.25; transform: scale(0.98); }
+                        }
+                      `}</style>
 
           {/* ── Portal Access Tabs ── */}
           <Tabs defaultValue="staff" className="w-full">
