@@ -148,36 +148,36 @@ export const AdminQuoteSettings = () => {
           </div>
         </div>
 
-        {/* Settings Row: Text Style & Flashing Toggle */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-2">
+        {/* Permanent Single-Row Grid */}
+        <div className="grid grid-cols-2 gap-3 items-center mb-6">
           
           {/* 1. Text Style Dropdown */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-              Text Style / Casing
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 truncate">
+              Text Style
             </label>
             <select
               value={textStyle}
               onChange={(e) => setTextStyle(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm"
+              className="w-full px-3 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 truncate"
             >
-              <option value="standard">Standard Case</option>
-              <option value="uppercase">UPPERCASE (ALL CAPS)</option>
-              <option value="lowercase">lowercase (all small letters)</option>
-              <option value="title">Title Case (Capitalize Words)</option>
-              <option value="italic">Italicized Banner Style</option>
+              <option value="standard">Standard</option>
+              <option value="uppercase">UPPERCASE</option>
+              <option value="lowercase">lowercase</option>
+              <option value="title">Title Case</option>
+              <option value="italic">Italicized</option>
             </select>
           </div>
 
           {/* 2. Flashing Animation Toggle */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 truncate">
               Flashing Animation
             </label>
             <button
               type="button"
               onClick={() => setIsFlashing(!isFlashing)}
-              className={`w-full px-4 py-2.5 rounded-xl border font-semibold text-sm transition-all shadow-sm ${
+              className={`w-full px-3 py-2.5 rounded-xl border font-semibold text-xs sm:text-sm transition-all shadow-sm truncate ${
                 isFlashing
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-600 text-emerald-700 dark:text-emerald-300'
                   : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
