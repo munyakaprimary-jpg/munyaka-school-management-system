@@ -4,6 +4,10 @@ import { initialSeedData } from '@/data/initialSeedData';
  * Ensures LocalStorage has default state initialized on first boot.
  * Does NOT auto-populate hardcoded students if storage is cleared.
  */
+export const initializeCentralStorage = () => {
+  initializeCentralDb();
+};
+
 export const initializeCentralDb = () => {
   try {
     const existingDb = localStorage.getItem('munyaka_central_db');
