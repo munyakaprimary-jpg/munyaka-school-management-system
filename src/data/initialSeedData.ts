@@ -7,6 +7,19 @@ export const buildDefaultClusters = () => {
 
 export const DEFAULT_CBC_CLUSTERS = buildDefaultClusters();
 
+export const initialExams = [];
+export const initialExamSchedules = [];
+export const initialExamTypes = [];
+export const initialMarks = [];
+export const initialQuestions = [];
+export const initialStudents = [];
+export const initialReportCards = [];
+export const initialFeeStructures = [];
+export const initialFeePayments = [];
+export const initialStudyCorner = [];
+export const initialLibraryBooks = [];
+export const initialLibraryLogs = [];
+
 export const initialSeedData = {
   version: "2.6.0",
   students: [],

@@ -309,31 +309,6 @@ export default function LearnersDirectory() {
     }
   };
 
-  const purgeAllLearnersDataCompletely = async () => {
-    if (window.confirm("Are you sure you want to completely purge and reset the learners directory?")) {
-      const legacyKeys = [
-        'munyaka_learners_v2',
-        'munyaka_learners_db',
-        'school_learners_data',
-        'school_learners_master',
-        'munyaka_students',
-        'munyaka_students_master',
-        'students',
-        'learners',
-        'cached_learners',
-        'school_learners',
-        'deleted_learner_ids'
-      ];
-
-      for (const key of legacyKeys) {
-        localStorage.removeItem(key);
-      }
-
-      localStorage.setItem('munyaka_learners', JSON.stringify([]));
-      window.location.reload();
-    }
-  };
-
   const gradesList = useMemo(() => {
     const set = new Set<string>();
     (learnersList || []).forEach(l => {
@@ -362,13 +337,6 @@ export default function LearnersDirectory() {
               <Trash2 size={18} /> Delete Selected ({selectedIds.length})
             </Button>
           )}
-          <Button
-            onClick={purgeAllLearnersDataCompletely}
-            variant="destructive"
-            className="rounded-2xl font-bold bg-slate-800 hover:bg-slate-900 text-white h-12 px-5 shadow-lg flex items-center gap-2"
-          >
-            <Trash size={18} /> Purge All Data
-          </Button>
           <Button
             onClick={() => setIsAddModalOpen(true)}
             className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-6 shadow-lg shadow-indigo-100"
