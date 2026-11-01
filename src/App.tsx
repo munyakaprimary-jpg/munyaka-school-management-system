@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '@/config/firebase';
 import { initialSeedData } from "@/data/initialSeedData";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
