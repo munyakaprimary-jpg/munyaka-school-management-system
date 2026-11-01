@@ -109,6 +109,9 @@ export default function LearnersDirectory() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
+  // Row Checkbox & Selected IDs State
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const requestDelete = (learner: any) => {
     setPendingDelete(learner);
     setAuthPassword('');
@@ -120,6 +123,54 @@ export default function LearnersDirectory() {
   const [learners, setLearners] = useState<any[]>([]);
   const [filteredLearners, setFilteredLearners] = useState<any[]>([]);
   const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
+
+  // Filter out auto-generated ghost placeholders from display
+  const displayLearners = useMemo(() => {
+    return (displayedLearners || []).filter((l: any) => {
+      const isUnnamed = !l.fullName && !l.name || l.fullName === 'Unnamed Learner' || l.name === 'Unnamed Learner';
+      const isMockAdm = (typeof l.admissionNo === 'string' && l.admissionNo.startsWith('MUN-')) ||
+                        (typeof l.admissionNumber === 'string' && l.admissionNumber.startsWith('MUN-'));
+      // Hide phantom seeded records
+      return !(isUnnamed && isMockAdm);
+    });
+  }, [displayedLearners]);
+
+  // Handle master select all checkbox
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const allIds = displayLearners.map((l: any) => l.id || l._id || l.admissionNo || l.admissionNumber).filter(Boolean);
+      setSelectedIds(allIds);
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  // Handle Delete Selected Button
+  const handleDeleteSelected = () => {
+    try {
+      const remaining = learners.filter((l: any) => {
+        const lId = l.id || l._id || l.admissionNo || l.admissionNumber;
+        return !selectedIds.includes(lId);
+      });
+      setLearners(remaining);
+      setLearnersList(remaining);
+      setFilteredLearners(remaining);
+      setDisplayedLearners(remaining);
+      localStorage.setItem('munyaka_central_db', JSON.stringify({ learners: remaining, staff: [] }));
+      localStorage.setItem('munyaka_learners_v2', JSON.stringify(remaining));
+      localStorage.setItem('munyaka_learners', JSON.stringify(remaining));
+      setSelectedIds([]);
+      showSuccess("Selected learners deleted successfully.");
+    } catch (err) {
+      showError("Failed to delete selected learners.");
+    }
+  };
 
   useEffect(() => {
     ['munyaka_learners', 'munyaka_students'].forEach((key) => {
@@ -307,19 +358,21 @@ export default function LearnersDirectory() {
     setIsVerifying(true);
     await new Promise(r => setTimeout(r, 200));
 
-    if (pendingDelete) {
-      const learnerToDelete = pendingDelete;
-      // Executes the permanent central purge (dual Firestore doc-id delete)
-      // and forces an immediate UI table re-render across all local states
-      await handleDeleteLearner(learnerToDelete);
-
-      showSuccess("Learner deleted successfully.");
+    try {
+      if (pendingDelete) {
+        const learnerToDelete = pendingDelete;
+        await handleDeleteLearner(learnerToDelete);
+        showSuccess("Learner deleted successfully.");
+      }
+    } catch (e) {
+      showError("Failed to delete learner.");
+    } finally {
+      setIsAuthOpen(false);
+      setPendingDelete(null);
+      setAuthPassword('');
+      setAuthError('');
+      setIsVerifying(false);
     }
-    setIsAuthOpen(false);
-    setPendingDelete(null);
-    setAuthPassword('');
-    setAuthError('');
-    setIsVerifying(false);
   };
 
   const purgeAllLearnersDataCompletely = async () => {
@@ -338,14 +391,11 @@ export default function LearnersDirectory() {
         'deleted_learner_ids'
       ];
 
-      // Completely remove all fragment keys
       for (const key of legacyKeys) {
         localStorage.removeItem(key);
       }
 
-      // Reset the single master key to empty
       localStorage.setItem('munyaka_learners', JSON.stringify([]));
-      
       window.location.reload();
     }
   };
@@ -369,10 +419,19 @@ export default function LearnersDirectory() {
           <p className="text-xs text-slate-500 font-medium mt-0.5">Manage school enrollment, student records, and profiles</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
+          {selectedIds.length > 0 && (
+            <Button
+              onClick={handleDeleteSelected}
+              variant="destructive"
+              className="rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white h-12 px-5 shadow-lg shadow-rose-100 flex items-center gap-2"
+            >
+              <Trash2 size={18} /> Delete Selected ({selectedIds.length})
+            </Button>
+          )}
           <Button
             onClick={purgeAllLearnersDataCompletely}
             variant="destructive"
-            className="rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white h-12 px-5 shadow-lg shadow-rose-100 flex items-center gap-2"
+            className="rounded-2xl font-bold bg-slate-800 hover:bg-slate-900 text-white h-12 px-5 shadow-lg flex items-center gap-2"
           >
             <Trash size={18} /> Purge All Data
           </Button>
@@ -431,6 +490,14 @@ export default function LearnersDirectory() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                <th className="py-4 px-4 w-12 text-center">
+                  <input
+                    type="checkbox"
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                    onChange={handleSelectAll}
+                    checked={displayLearners.length > 0 && selectedIds.length === displayLearners.length}
+                  />
+                </th>
                 <th className="py-4 px-6">Learner Name</th>
                 <th className="py-4 px-6">Adm No</th>
                 <th className="py-4 px-6">Identifier (Assessment / Birth Cert)</th>
@@ -440,14 +507,14 @@ export default function LearnersDirectory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {displayedLearners.length === 0 ? (
+              {displayLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="py-16 text-center text-slate-400 font-medium">
                     No learners found matching your criteria.
                   </td>
                 </tr>
               ) : (
-                displayedLearners.map(learner => {
+                displayLearners.map(learner => {
                   const name = learner.name || learner.fullName || 'Unnamed Learner';
                   const adm = learner.admissionNumber || learner.admissionNo || learner.admNo || '-';
                   const identifier = learner.assessmentNo && learner.assessmentNo !== '—' && learner.assessmentNo !== ''
@@ -463,9 +530,18 @@ export default function LearnersDirectory() {
                   const stream = learner.stream || '-';
                   const contact = learner.parentPhone || learner.guardianPhone || learner.phone || '-';
                   const lId = learner.id || learner._id || adm;
+                  const isChecked = selectedIds.includes(lId);
 
                   return (
-                    <tr key={lId} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={lId} className={`hover:bg-slate-50/50 transition-colors ${isChecked ? 'bg-indigo-50/40' : ''}`}>
+                      <td className="py-4 px-4 text-center">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                          checked={isChecked}
+                          onChange={() => handleSelectOne(lId)}
+                        />
+                      </td>
                       <td className="py-4 px-6 font-bold text-slate-900">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
