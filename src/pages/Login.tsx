@@ -64,6 +64,7 @@ const renderStyledQuote = (text: string, colorId: string = 'indigo') => {
   });
 };
 
+import { verifyStaffLogin, setActiveStaffSession } from '@/services/staffMasterService';
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { getActiveAdminPassword } from '@/services/adminCredentials';
@@ -207,15 +208,25 @@ export default function Login() {
     setStaffAuthError('');
 
     try {
+      // 1. First check staff master service verification (supports access codes like MUN-9632)
+      const staffVerify = verifyStaffLogin(emailInput, passInput);
+      if (staffVerify.success && staffVerify.user) {
+        setActiveStaffSession(staffVerify.user);
+        showSuccess(`Welcome back, ${staffVerify.user.name}!`);
+        navigate('/dashboard');
+        return;
+      }
+
+      // 2. Fallback to AuthContext login
       const success = await authLogin(emailInput, passInput);
       if (success) {
         showSuccess('Staff login successful!');
         navigate('/dashboard');
       } else {
-        setStaffAuthError('Invalid email or password/access code.');
+        setStaffAuthError(staffVerify.error || 'Invalid email or password/access code.');
       }
-    } catch (e) {
-      setStaffAuthError('Authentication error. Please check your credentials.');
+    } catch (e: any) {
+      setStaffAuthError(e?.message || 'Authentication error. Please check your credentials.');
     } finally {
       setIsStaffLoading(false);
     }
