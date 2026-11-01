@@ -40,9 +40,9 @@ export const bundleAllLearnersToCentral = async () => {
     learnerMap.set(mapKey, standardized);
   };
 
-  // A. Gather from static seed data fallback (now empty [] by default)
+  // A. Gather from static seed data fallback (empty by default)
   const seedStudents = (initialSeedData as any)?.students || (initialSeedData as any)?.learners || [];
-  if (Array.isArray(seedStudents)) {
+  if (Array.isArray(seedStudents) && seedStudents.length > 0) {
     seedStudents.forEach(addLearnerToMap);
   }
 

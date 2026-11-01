@@ -439,7 +439,7 @@ const App = () => {
 
         if (!existingDb) {
                 const initialDb = {
-                  learners: activeLearners.length > 0 ? activeLearners : ((initialSeedData as any).learners || (initialSeedData as any).students || []),
+                  learners: activeLearners,
                   staff: initialSeedData.staff || [],
                 };
                 const ok = safeWrite('munyaka_central_db', initialDb, { operation: 'seed' });
@@ -454,10 +454,12 @@ const App = () => {
                   delete parsed.students;
                 }
                 if (!parsed.learners) {
-                  parsed.learners = activeLearners.length > 0 ? activeLearners : ((initialSeedData as any).learners || (initialSeedData as any).students || []);
+                  parsed.learners = activeLearners;
                 } else if (activeLearners.length > 0) {
                   // Merge active learners
                   parsed.learners = activeLearners;
+                }
+                const ok = safeWrite('munyaka_central_db', parsed, { operation: 're-seed' });
                 }
                 const ok = safeWrite('munyaka_central_db', parsed, { operation: 're-seed' });
                 if (!ok) {
