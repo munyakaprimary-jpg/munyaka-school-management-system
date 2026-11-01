@@ -39,7 +39,6 @@ export const initialSeedData = {
 export const INITIAL_SEED_DATA = initialSeedData;
 export const SEED_VERSION = initialSeedData.version;
 export const initialStaff = [];
-export const initialStudents = [];
 export const initialLearners = [];
 export const initialGrades = initialSeedData.grades;
 export const initialStreams = initialSeedData.streams;
