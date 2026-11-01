@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,33 +12,20 @@ import {
   Edit,
   Trash2,
   Eye,
-  Download,
-  ArrowRightLeft,
-  Lock,
-  AlertCircle,
   Loader2,
-  RefreshCw,
   Trash
 } from 'lucide-react';
 import { db } from '@/config/firebase';
-import { collection, onSnapshot, addDoc, setDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { showSuccess, showError } from '@/utils/toast';
-import { CentralDataService } from '@/services/centralDataService';
-import { generateLearnerId, formatLearnerDoc, findExistingLearner, deduplicateLearners } from '@/services/learnerService';
-import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
+import { formatLearnerDoc } from '@/services/learnerService';
 import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
-import { getNormalizedLearners } from '@/utils/dataLoader';
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 
 const LEARNER_ID_PREFIX = 'learner-';
 
-/**
- * Normalized deleted-record check. Compares the bare id, the `learner-` prefixed id
- * and the admission/assessment numbers so `17898...` and `learner-17898...`
- * resolve to the same record.
- */
 const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
   if (!item) return true;
   const id = String(item.id || item._id || '').trim();
@@ -63,7 +50,14 @@ export default function LearnersDirectory() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter((l: any) => l && (l.fullName || l.name) && (l.fullName !== 'Unnamed Learner' && l.name !== 'Unnamed Learner'));
+          const cleaned = parsed.filter((l: any) => {
+            if (!l) return false;
+            const fullName = String(l.fullName || l.name || '').trim();
+            const admNo = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
+            const isUnnamed = !fullName || fullName === 'Unnamed Learner' || fullName === 'Unknown Learner' || fullName.includes('Unnamed');
+            const isSeedPattern = admNo.startsWith('MUN-00') || admNo.startsWith('MUN-01') || admNo.startsWith('MUN-02');
+            return !(isUnnamed || isSeedPattern);
+          });
           if (cleaned.length > 0) return cleaned.map(formatLearnerDoc);
         }
       }
@@ -92,14 +86,14 @@ export default function LearnersDirectory() {
   const [learners, setLearners] = useState<any[]>([]);
   const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
 
-  // Filter out auto-generated ghost placeholders from display
+  // Filter out auto-generated ghost placeholders and seed patterns entirely
   const displayLearners = useMemo(() => {
     return (displayedLearners || []).filter((l: any) => {
-      const fullName = l.fullName || l.name || '';
-      const isUnnamed = !fullName || fullName === 'Unnamed Learner';
-      const admNo = l.admissionNo || l.admissionNumber || l.admNo || '';
-      const isMockAdm = typeof admNo === 'string' && admNo.startsWith('MUN-');
-      return !(isUnnamed && isMockAdm);
+      const fullName = String(l?.fullName || l?.name || '').trim();
+      const admNo = String(l?.admissionNo || l?.admissionNumber || l?.admNo || '').trim();
+      const isUnnamed = !fullName || fullName === 'Unnamed Learner' || fullName === 'Unknown Learner' || fullName.includes('Unnamed');
+      const isSeedPattern = admNo.startsWith('MUN-00') || admNo.startsWith('MUN-01') || admNo.startsWith('MUN-02');
+      return !(isUnnamed || isSeedPattern);
     });
   }, [displayedLearners]);
 
@@ -156,7 +150,7 @@ export default function LearnersDirectory() {
         if (unified) {
           const parsed = JSON.parse(unified);
           if (Array.isArray(parsed)) {
-            const filtered = deduplicateLearners(parsed.map(formatLearnerDoc)).filter((item: any) => !isDeletedRecord(item, deletedIds));
+            const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
             applyList(filtered);
             return;
           }
@@ -309,6 +303,31 @@ export default function LearnersDirectory() {
     }
   };
 
+  const purgeAllLearnersDataCompletely = async () => {
+    if (window.confirm("Are you sure you want to completely purge and reset the learners directory?")) {
+      const legacyKeys = [
+        'munyaka_learners_v2',
+        'munyaka_learners_db',
+        'school_learners_data',
+        'school_learners_master',
+        'munyaka_students',
+        'munyaka_students_master',
+        'students',
+        'learners',
+        'cached_learners',
+        'school_learners',
+        'deleted_learner_ids'
+      ];
+
+      for (const key of legacyKeys) {
+        localStorage.removeItem(key);
+      }
+
+      localStorage.setItem('munyaka_learners', JSON.stringify([]));
+      window.location.reload();
+    }
+  };
+
   const gradesList = useMemo(() => {
     const set = new Set<string>();
     (learnersList || []).forEach(l => {
@@ -337,6 +356,13 @@ export default function LearnersDirectory() {
               <Trash2 size={18} /> Delete Selected ({selectedIds.length})
             </Button>
           )}
+          <Button
+            onClick={purgeAllLearnersDataCompletely}
+            variant="destructive"
+            className="rounded-2xl font-bold bg-slate-800 hover:bg-slate-900 text-white h-12 px-5 shadow-lg flex items-center gap-2"
+          >
+            <Trash size={18} /> Purge All Data
+          </Button>
           <Button
             onClick={() => setIsAddModalOpen(true)}
             className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-6 shadow-lg shadow-indigo-100"
