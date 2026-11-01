@@ -1,3 +1,10 @@
+export const buildDefaultClusters = () => {
+  return [
+    { id: 'cluster-1', name: 'Mathematics Activities', grade: 'Grade 1', learningAreas: ['Mathematics'] },
+    { id: 'cluster-2', name: 'Language Activities', grade: 'Grade 1', learningAreas: ['English', 'Kiswahili'] }
+  ];
+};
+
 export const initialSeedData = {
   version: "2.6.0",
   students: [],
@@ -87,5 +94,6 @@ export const initialStaff = initialSeedData.staff;
 export const initialStudents = [];
 export const initialGrades = initialSeedData.grades;
 export const initialStreams = initialSeedData.streams;
+export const initialConfiguredStreams = initialSeedData.streams;
 
 export default initialSeedData;
