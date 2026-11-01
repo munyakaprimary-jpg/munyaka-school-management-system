@@ -38,7 +38,17 @@ import {
 const getStoredQuoteConfig = () => {
   try {
     const saved = localStorage.getItem('munyaka_login_quote_config');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          text: String(parsed.text || localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.'),
+          colorId: String(parsed.colorId || 'indigo'),
+          isUppercase: Boolean(parsed.isUppercase),
+          isFlashing: Boolean(parsed.isFlashing)
+        };
+      }
+    }
   } catch (e) {}
   return {
     text: localStorage.getItem('munyaka_login_quote') || 'Great minds discuss ideas, average minds discuss events, and growing minds learn from everything.',
@@ -50,6 +60,7 @@ const getStoredQuoteConfig = () => {
 
 // Helper function to render text with colored bold highlights
 const renderStyledQuote = (text: string, colorId: string = 'indigo') => {
+  const safeText = String(text || '');
   const colorMap: Record<string, string> = {
     indigo: 'text-indigo-600 dark:text-indigo-400',
     emerald: 'text-emerald-600 dark:text-emerald-400',
@@ -59,7 +70,7 @@ const renderStyledQuote = (text: string, colorId: string = 'indigo') => {
   const activeColorClass = colorMap[colorId] || colorMap.indigo;
 
   // Splits text by markdown double asterisks **keyword**
-  const parts = text.split(/(\*\*.*?\*\*)/g);
+  const parts = safeText.split(/(\*\*.*?\*\*)/g);
   
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
