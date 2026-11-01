@@ -287,7 +287,7 @@ export default function LearnersDirectory() {
 
   const handleVerifyAuth = async () => {
     setIsVerifying(true);
-    await new Promise(r => setTimeout(r, 200));
+    await new Response(r => setTimeout(r, 200));
 
     try {
       if (pendingDelete) {
@@ -300,31 +300,6 @@ export default function LearnersDirectory() {
       setIsAuthOpen(false);
       setPendingDelete(null);
       setIsVerifying(false);
-    }
-  };
-
-  const purgeAllLearnersDataCompletely = async () => {
-    if (window.confirm("Are you sure you want to completely purge and reset the learners directory?")) {
-      const legacyKeys = [
-        'munyaka_learners_v2',
-        'munyaka_learners_db',
-        'school_learners_data',
-        'school_learners_master',
-        'munyaka_students',
-        'munyaka_students_master',
-        'students',
-        'learners',
-        'cached_learners',
-        'school_learners',
-        'deleted_learner_ids'
-      ];
-
-      for (const key of legacyKeys) {
-        localStorage.removeItem(key);
-      }
-
-      localStorage.setItem('munyaka_learners', JSON.stringify([]));
-      window.location.reload();
     }
   };
 
@@ -344,7 +319,7 @@ export default function LearnersDirectory() {
         <div>
           <BackButton />
           <h1 className="text-2xl font-black text-slate-900 mt-2">Learners Directory</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage school enrollment, student records, and profiles</p>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage school enrollment, student records, and profiles matching registration specifications</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {selectedIds.length > 0 && (
@@ -356,13 +331,6 @@ export default function LearnersDirectory() {
               <Trash2 size={18} /> Delete Selected ({selectedIds.length})
             </Button>
           )}
-          <Button
-            onClick={purgeAllLearnersDataCompletely}
-            variant="destructive"
-            className="rounded-2xl font-bold bg-slate-800 hover:bg-slate-900 text-white h-12 px-5 shadow-lg flex items-center gap-2"
-          >
-            <Trash size={18} /> Purge All Data
-          </Button>
           <Button
             onClick={() => setIsAddModalOpen(true)}
             className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-6 shadow-lg shadow-indigo-100"
@@ -378,7 +346,7 @@ export default function LearnersDirectory() {
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <Input
-              placeholder="Search by name, adm no or UPI..."
+              placeholder="Search by full name, admission no or UPI..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-11 rounded-2xl h-12 bg-slate-50 border-none font-medium"
@@ -412,12 +380,12 @@ export default function LearnersDirectory() {
         </div>
       </div>
 
-      {/* Table - Aligned 1:1 with Registration Modal Schema */}
-      <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+      {/* Rebuilt Table Matrix matching Registration Modal Structure 1:1 */}
+      <div className="bg-white rounded-3xl shadow-sm overflow-hidden border border-slate-100">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-black uppercase text-slate-500 tracking-wider">
                 <th className="py-4 px-4 w-12 text-center">
                   <input
                     type="checkbox"
@@ -426,20 +394,25 @@ export default function LearnersDirectory() {
                     checked={displayLearners.length > 0 && selectedIds.length === displayLearners.length}
                   />
                 </th>
-                <th className="py-4 px-6">Admission No</th>
-                <th className="py-4 px-6">Assessment No / UPI</th>
-                <th className="py-4 px-6">Full Name</th>
-                <th className="py-4 px-6">Grade & Stream</th>
-                <th className="py-4 px-6">Gender</th>
-                <th className="py-4 px-6">Guardian Details</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="py-4 px-5">Admission No</th>
+                <th className="py-4 px-5">Assessment No / UPI</th>
+                <th className="py-4 px-5">Full Name</th>
+                <th className="py-4 px-5">Grade / Stream</th>
+                <th className="py-4 px-5">Gender</th>
+                <th className="py-4 px-5">Parent / Guardian</th>
+                <th className="py-4 px-5">Contact Phone</th>
+                <th className="py-4 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {displayLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center text-slate-400 font-medium">
-                    No learners found matching your criteria.
+                  <td colSpan={9} className="py-20 text-center text-slate-400 font-medium">
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <Users className="text-slate-300" size={40} />
+                      <p className="text-sm font-bold text-slate-600">No registered learners found.</p>
+                      <p className="text-xs text-slate-400">Click "Register New Learner" to add students to this directory.</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -451,12 +424,13 @@ export default function LearnersDirectory() {
                   const stream = learner.stream ? `(${learner.stream})` : '';
                   const gradeStream = `${grade} ${stream}`.trim();
                   const gender = learner.gender || '—';
-                  const guardian = learner.guardian || learner.parentName || learner.guardianPhone || learner.parentPhone || '—';
+                  const guardian = learner.guardian || learner.parentName || '—';
+                  const contact = learner.parentPhone || learner.guardianPhone || learner.phone || '—';
                   const lId = learner.id || learner._id || admissionNo;
                   const isChecked = selectedIds.includes(lId);
 
                   return (
-                    <tr key={lId} className={`hover:bg-slate-50/50 transition-colors ${isChecked ? 'bg-indigo-50/40' : ''}`}>
+                    <tr key={lId} className={`hover:bg-slate-50/60 transition-colors ${isChecked ? 'bg-indigo-50/50' : ''}`}>
                       <td className="py-4 px-4 text-center">
                         <input
                           type="checkbox"
@@ -465,23 +439,22 @@ export default function LearnersDirectory() {
                           onChange={() => handleSelectOne(lId)}
                         />
                       </td>
-                      <td className="py-4 px-6 font-mono font-bold text-slate-800">{admissionNo}</td>
-                      <td className="py-4 px-6 font-mono text-xs font-semibold text-slate-600">{upiNo}</td>
-                      <td className="py-4 px-6 font-bold text-slate-900">
+                      <td className="py-4 px-5 font-mono font-bold text-slate-900">{admissionNo}</td>
+                      <td className="py-4 px-5 font-mono text-xs font-semibold text-slate-600">{upiNo}</td>
+                      <td className="py-4 px-5 font-bold text-slate-900">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs">
                             {fullName.charAt(0)}
                           </div>
-                          <div>
-                            <div className="font-bold text-slate-900">{fullName}</div>
-                          </div>
+                          <span className="font-bold text-slate-900">{fullName}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 font-bold text-slate-700">{gradeStream}</td>
-                      <td className="py-4 px-6 font-medium text-slate-600">{gender}</td>
-                      <td className="py-4 px-6 font-medium text-slate-600">{guardian}</td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="py-4 px-5 font-bold text-slate-700">{gradeStream}</td>
+                      <td className="py-4 px-5 font-medium text-slate-600">{gender}</td>
+                      <td className="py-4 px-5 font-medium text-slate-700">{guardian}</td>
+                      <td className="py-4 px-5 font-mono text-xs font-medium text-slate-600">{contact}</td>
+                      <td className="py-4 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -489,19 +462,19 @@ export default function LearnersDirectory() {
                               setSelectedLearner(learner);
                               setIsDetailModalOpen(true);
                             }}
-                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                            className="h-8 w-8 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
                             title="View Details"
                           >
-                            <Eye size={16} />
+                            <Eye size={15} />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => requestDelete(learner)}
-                            className="h-9 w-9 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                            className="h-8 w-8 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50"
                             title="Delete Learner"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           </Button>
                         </div>
                       </td>
