@@ -66,16 +66,21 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const initializeLearners = async () => {
       try {
-        // Execute complete bundling service to migrate all legacy keys, seed data, and cloud records into munyaka_learners_v2
-        const bundledList = await bundleAllLearnersToCentral();
-        const learnersList = dedupeLearnersById((bundledList || []).map(formatLearnerDoc));
+        // Disabled automatic bundling/migration of seed learners to ensure an empty state when storage is cleared
+        const storedLocal = localStorage.getItem(STORAGE_KEY_LEARNERS_V2) || localStorage.getItem('munyaka_learners') || '[]';
+        let parsedList = [];
+        try {
+          parsedList = JSON.parse(storedLocal);
+        } catch {}
+
+        const learnersList = dedupeLearnersById((Array.isArray(parsedList) ? parsedList : []).map(formatLearnerDoc));
 
         if (isMounted) {
           setLearners(filterLearnersForUser(learnersList));
           setLoading(false);
         }
       } catch (err) {
-        console.error('[LearnerContext] Initialization & bundling error:', err);
+        console.error('[LearnerContext] Initialization error:', err);
         if (isMounted) {
           setLearners(filterLearnersForUser([]));
           setLoading(false);
