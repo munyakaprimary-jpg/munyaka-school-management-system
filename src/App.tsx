@@ -31,6 +31,7 @@ import Portfolio from "./pages/Portfolio";
 import Fees from "./pages/Fees";
 import Settings from "./pages/Settings";
 import StaffRegistry from "./components/StaffRegistry";
+import StaffStorageScanner from "./components/StaffStorageScanner";
 import Timetable from "./pages/Timetable";
 import NoticeAndEvents from "./pages/NoticeAndEvents";
 import AdminProfile from "./pages/AdminProfile";
@@ -629,6 +630,7 @@ const App = () => {
                       <Route path="/analysis" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><ResultsAnalysis /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/portfolio" element={<ProtectedRoute><AppUnlock><Layout><Portfolio /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/staff-registry" element={<ProtectedRoute><AppUnlock><Layout><StaffRegistry /></Layout></AppUnlock></ProtectedRoute>} />
+                      <Route path="/staff-storage-scanner" element={<ProtectedRoute><AppUnlock><Layout><StaffStorageScanner /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/science-lab" element={<ProtectedRoute><AppUnlock><Layout><ScienceLab /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/library" element={<ProtectedRoute><AppUnlock><Layout><Library /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/inventory" element={<ProtectedRoute><AppUnlock><Layout><Inventory /></Layout></AppUnlock></ProtectedRoute>} />

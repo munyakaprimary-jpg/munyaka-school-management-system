@@ -16,8 +16,10 @@ import {
   AlertCircle,
   Fingerprint,
   Sparkles,
-  Copy
+  Copy,
+  Database
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
@@ -62,6 +64,7 @@ export interface StaffMember {
 }
 
 export default function StaffRegistry() {
+  const navigate = useNavigate();
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
