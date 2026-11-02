@@ -133,55 +133,27 @@ export default function StaffRegistry() {
     setAccessCode(generateRandomCode());
   };
 
-  useEffect(() => {
-    // Load from local storage or fallback to default roster
+  const [staffList, setStaffList] = useState<StaffMember[]>(() => {
     const saved = localStorage.getItem('munyaka_staff');
     let loadedStaff: any[] = [];
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           loadedStaff = parsed;
-        } else {
-          loadedStaff = [
-            { id: 'MUN-9632', name: 'Joseph Wachira', category: 'HOI', title: 'School Administrator', tscNumber: '327775', email: 'jwachira@munyaka.sc.ke', phone: '+254 712 345 678', subjects: ['Mathematics'], assignedClasses: ['Grade 7'], assignedStreams: ['East'], homeroomGrade: 'Grade 7', homeroomStream: 'East', allocations: [{ subject: 'Mathematics', grade: 'Grade 7', stream: 'East' }], accessCode: 'MUN-9632', status: 'Active' },
-            { id: 'MUN-1234', name: 'Ann Nduta', category: 'Class Teacher', title: 'Senior Teacher', tscNumber: '312456', email: 'anduta@munyaka.sc.ke', phone: '+254 722 111 222', subjects: ['English', 'Kiswahili'], assignedClasses: ['Grade 6'], assignedStreams: ['West'], homeroomGrade: 'Grade 6', homeroomStream: 'West', allocations: [{ subject: 'English', grade: 'Grade 6', stream: 'West' }], accessCode: 'MUN-1234', status: 'Active' },
-            { id: 'MUN-1003', name: 'Jecinta', category: 'Subject Teacher', title: 'Teacher II', tscNumber: '315678', email: 'jecinta@munyaka.sc.ke', phone: '+254 733 444 555', subjects: ['Science'], assignedClasses: ['Grade 5'], assignedStreams: ['North'], homeroomGrade: 'Grade 5', homeroomStream: 'North', allocations: [{ subject: 'Science', grade: 'Grade 5', stream: 'North' }], accessCode: 'MUN-1003', status: 'Active' },
-            { id: 'MUN-1004', name: 'David Kiprotich', category: 'Subject Teacher', title: 'Teacher II', tscNumber: '318901', email: 'dkiprotich@munyaka.sc.ke', phone: '+254 711 888 999', subjects: ['Social Studies'], assignedClasses: ['Grade 8'], assignedStreams: ['South'], homeroomGrade: 'Grade 8', homeroomStream: 'South', allocations: [{ subject: 'Social Studies', grade: 'Grade 8', stream: 'South' }], accessCode: 'MUN-1004', status: 'Active' },
-            { id: 'MUN-1005', name: 'Mama Tabby', category: 'Store Master', title: 'Support Staff / Admin', nationalId: '31452981', email: 'mtabby@munyaka.sc.ke', phone: '+254 700 123 456', subjects: [], assignedClasses: [], assignedStreams: [], homeroomGrade: '', homeroomStream: '', allocations: [], accessCode: 'MUN-1005', status: 'Active' },
-            { id: 'MUN-1006', name: 'Md Njuguna', category: 'Class Teacher', title: 'Teacher II', tscNumber: '321122', email: 'mnjuguna@munyaka.sc.ke', phone: '+254 744 556 677', subjects: ['CRE'], assignedClasses: ['Grade 4'], assignedStreams: ['East'], homeroomGrade: 'Grade 4', homeroomStream: 'East', allocations: [{ subject: 'CRE', grade: 'Grade 4', stream: 'East' }], accessCode: 'MUN-1006', status: 'Active' }
-          ];
         }
       } catch (e) {
         console.error(e);
-        loadedStaff = [
-          { id: 'MUN-9632', name: 'Joseph Wachira', category: 'HOI', title: 'School Administrator', tscNumber: '327775', email: 'jwachira@munyaka.sc.ke', phone: '+254 712 345 678', subjects: ['Mathematics'], assignedClasses: ['Grade 7'], assignedStreams: ['East'], homeroomGrade: 'Grade 7', homeroomStream: 'East', allocations: [{ subject: 'Mathematics', grade: 'Grade 7', stream: 'East' }], accessCode: 'MUN-9632', status: 'Active' },
-          { id: 'MUN-1234', name: 'Ann Nduta', category: 'Class Teacher', title: 'Senior Teacher', tscNumber: '312456', email: 'anduta@munyaka.sc.ke', phone: '+254 722 111 222', subjects: ['English', 'Kiswahili'], assignedClasses: ['Grade 6'], assignedStreams: ['West'], homeroomGrade: 'Grade 6', homeroomStream: 'West', allocations: [{ subject: 'English', grade: 'Grade 6', stream: 'West' }], accessCode: 'MUN-1234', status: 'Active' },
-          { id: 'MUN-1003', name: 'Jecinta', category: 'Subject Teacher', title: 'Teacher II', tscNumber: '315678', email: 'jecinta@munyaka.sc.ke', phone: '+254 733 444 555', subjects: ['Science'], assignedClasses: ['Grade 5'], assignedStreams: ['North'], homeroomGrade: 'Grade 5', homeroomStream: 'North', allocations: [{ subject: 'Science', grade: 'Grade 5', stream: 'North' }], accessCode: 'MUN-1003', status: 'Active' },
-          { id: 'MUN-1004', name: 'David Kiprotich', category: 'Subject Teacher', title: 'Teacher II', tscNumber: '318901', email: 'dkiprotich@munyaka.sc.ke', phone: '+254 711 888 999', subjects: ['Social Studies'], assignedClasses: ['Grade 8'], assignedStreams: ['South'], homeroomGrade: 'Grade 8', homeroomStream: 'South', allocations: [{ subject: 'Social Studies', grade: 'Grade 8', stream: 'South' }], accessCode: 'MUN-1004', status: 'Active' },
-          { id: 'MUN-1005', name: 'Mama Tabby', category: 'Store Master', title: 'Support Staff / Admin', nationalId: '31452981', email: 'mtabby@munyaka.sc.ke', phone: '+254 700 123 456', subjects: [], assignedClasses: [], assignedStreams: [], homeroomGrade: '', homeroomStream: '', allocations: [], accessCode: 'MUN-1005', status: 'Active' },
-          { id: 'MUN-1006', name: 'Md Njuguna', category: 'Class Teacher', title: 'Teacher II', tscNumber: '321122', email: 'mnjuguna@munyaka.sc.ke', phone: '+254 744 556 677', subjects: ['CRE'], assignedClasses: ['Grade 4'], assignedStreams: ['East'], homeroomGrade: 'Grade 4', homeroomStream: 'East', allocations: [{ subject: 'CRE', grade: 'Grade 4', stream: 'East' }], accessCode: 'MUN-1006', status: 'Active' }
-        ];
       }
-    } else {
-      loadedStaff = [
-        { id: 'MUN-9632', name: 'Joseph Wachira', category: 'HOI', title: 'School Administrator', tscNumber: '327775', email: 'jwachira@munyaka.sc.ke', phone: '+254 712 345 678', subjects: ['Mathematics'], assignedClasses: ['Grade 7'], assignedStreams: ['East'], homeroomGrade: 'Grade 7', homeroomStream: 'East', allocations: [{ subject: 'Mathematics', grade: 'Grade 7', stream: 'East' }], accessCode: 'MUN-9632', status: 'Active' },
-        { id: 'MUN-1234', name: 'Ann Nduta', category: 'Class Teacher', title: 'Senior Teacher', tscNumber: '312456', email: 'anduta@munyaka.sc.ke', phone: '+254 722 111 222', subjects: ['English', 'Kiswahili'], assignedClasses: ['Grade 6'], assignedStreams: ['West'], homeroomGrade: 'Grade 6', homeroomStream: 'West', allocations: [{ subject: 'English', grade: 'Grade 6', stream: 'West' }], accessCode: 'MUN-1234', status: 'Active' },
-        { id: 'MUN-1003', name: 'Jecinta', category: 'Subject Teacher', title: 'Teacher II', tscNumber: '315678', email: 'jecinta@munyaka.sc.ke', phone: '+254 733 444 555', subjects: ['Science'], assignedClasses: ['Grade 5'], assignedStreams: ['North'], homeroomGrade: 'Grade 5', homeroomStream: 'North', allocations: [{ subject: 'Science', grade: 'Grade 5', stream: 'North' }], accessCode: 'MUN-1003', status: 'Active' },
-        { id: 'MUN-1004', name: 'David Kiprotich', category: 'Subject Teacher', title: 'Teacher II', tscNumber: '318901', email: 'dkiprotich@munyaka.sc.ke', phone: '+254 711 888 999', subjects: ['Social Studies'], assignedClasses: ['Grade 8'], assignedStreams: ['South'], homeroomGrade: 'Grade 8', homeroomStream: 'South', allocations: [{ subject: 'Social Studies', grade: 'Grade 8', stream: 'South' }], accessCode: 'MUN-1004', status: 'Active' },
-        { id: 'MUN-1005', name: 'Mama Tabby', category: 'Store Master', title: 'Support Staff / Admin', nationalId: '31452981', email: 'mtabby@munyaka.sc.ke', phone: '+254 700 123 456', subjects: [], assignedClasses: [], assignedStreams: [], homeroomGrade: '', homeroomStream: '', allocations: [], accessCode: 'MUN-1005', status: 'Active' },
-        { id: 'MUN-1006', name: 'Md Njuguna', category: 'Class Teacher', title: 'Teacher II', tscNumber: '321122', email: 'mnjuguna@munyaka.sc.ke', phone: '+254 744 556 677', subjects: ['CRE'], assignedClasses: ['Grade 4'], assignedStreams: ['East'], homeroomGrade: 'Grade 4', homeroomStream: 'East', allocations: [{ subject: 'CRE', grade: 'Grade 4', stream: 'East' }], accessCode: 'MUN-1006', status: 'Active' }
-      ];
     }
-
-    // Sanitize and deduplicate loaded list to guarantee unique IDs, clean categories, and remove legacy streams
+    // Sanitize and deduplicate loaded list or return empty array if none
     const seenIds = new Set<string>();
     const sanitized: StaffMember[] = loadedStaff
       .filter((staff: any) => {
         const sid = String(staff?.id || staff?.staffId || staff?.staff_id || '');
         return sid.startsWith('MUN-');
       })
-      .map((staff, idx) => {
+      .map((staff) => {
         let id = String(staff.id || staff.staffId || staff.staff_id || '');
         if (!id.startsWith('MUN-')) {
           const num = staff.tscNumber || staff.tsc_no || Math.floor(1000 + Math.random() * 9000);
@@ -210,83 +182,85 @@ export default function StaffRegistry() {
           }).filter(Boolean)
         : [];
 
-      const rawStreams = staff.assignedStreams || staff.streams || [];
-      const cleanStreams = Array.isArray(rawStreams)
-        ? rawStreams.map((s: any) => {
-            if (!s) return '';
-            if (typeof s === 'string') return s;
-            if (typeof s === 'object') {
-              return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
-            }
-            return String(s);
-          }).filter(s => s && s !== 'Mercury')
-        : [];
+        const rawStreams = staff.assignedStreams || staff.streams || [];
+        const cleanStreams = Array.isArray(rawStreams)
+          ? rawStreams.map((s: any) => {
+              if (!s) return '';
+              if (typeof s === 'string') return s;
+              if (typeof s === 'object') {
+                return String(s.stream || s.name || `${s.grade || ''} ${s.stream || ''}`.trim() || JSON.stringify(s));
+              }
+              return String(s);
+            }).filter(s => s && s !== 'Mercury')
+          : [];
 
-      const rawSubjects = staff.subjects || staff.assignedSubjects || [];
-      const cleanSubjects = Array.isArray(rawSubjects)
-        ? rawSubjects.map((sub: any) => {
-            if (!sub) return '';
-            if (typeof sub === 'string') return sub;
-            if (typeof sub === 'object') {
-              return String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub));
-            }
-            return String(sub);
-          }).filter(Boolean)
-        : [];
+        const rawSubjects = staff.subjects || staff.assignedSubjects || [];
+        const cleanSubjects = Array.isArray(rawSubjects)
+          ? rawSubjects.map((sub: any) => {
+              if (!sub) return '';
+              if (typeof sub === 'string') return sub;
+              if (typeof sub === 'object') {
+                return String(sub.name || sub.title || sub.subject || sub.learningArea || JSON.stringify(sub));
+              }
+              return String(sub);
+            }).filter(Boolean)
+          : [];
 
-      const defaultGrade = cleanClasses[0] || 'Grade 7';
-      const defaultStream = cleanStreams[0] || '';
+        const defaultGrade = cleanClasses[0] || 'Grade 7';
+        const defaultStream = cleanStreams[0] || '';
 
-      const cleanAllocations = Array.isArray(staff.allocations)
-        ? staff.allocations
-            .filter((a: any) => a && typeof a === 'object' && a.subject)
-            .map((a: any) => ({
-              subject: String(a.subject),
-              grade: String(a.grade || defaultGrade),
-              stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
-            }))
-        : cleanSubjects.map((sub: string) => ({
-            subject: sub,
-            grade: defaultGrade,
-            stream: defaultStream
-          }));
+        const cleanAllocations = Array.isArray(staff.allocations)
+          ? staff.allocations
+              .filter((a: any) => a && typeof a === 'object' && a.subject)
+              .map((a: any) => ({
+                subject: String(a.subject),
+                grade: String(a.grade || defaultGrade),
+                stream: a.stream && a.stream !== 'Mercury' ? String(a.stream) : defaultStream
+              }))
+          : cleanSubjects.map((sub: string) => ({
+              subject: sub,
+              grade: defaultGrade,
+              stream: defaultStream
+            }));
 
-      let code = staff.accessCode;
-      if (!code || !code.startsWith('MUN-')) {
-        const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-        let randomPart = '';
-        for (let i = 0; i < 4; i++) {
-          randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+        let code = staff.accessCode || staff.code;
+        if (!code || !code.startsWith('MUN-')) {
+          const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+          let randomPart = '';
+          for (let i = 0; i < 4; i++) {
+            randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          code = `MUN-${randomPart}`;
         }
-        code = `MUN-${randomPart}`;
-      }
 
-      return {
-        id,
-        name: staff.name || 'Unnamed Staff',
-        category: cat,
-        title: staff.title || cat,
-        rbacRole: staff.rbacRole || mapRoleLabelToRbacKey(cat),
-        tscNumber: staff.tscNumber || (cat !== 'Bursar' && cat !== 'Store Master' ? '327775' : undefined),
-        nationalId: staff.nationalId || (cat === 'Bursar' || cat === 'Store Master' ? '31452981' : undefined),
-        email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
-        phone: staff.phone || '+254 712 345 678',
-        subjects: cleanSubjects,
-        assignedClasses: cleanClasses,
-        assignedStreams: cleanStreams,
-        homeroomGrade: staff.homeroomGrade || defaultGrade,
-        homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
-        allocations: cleanAllocations,
-        accessCode: code,
-        status: staff.status || 'Active',
-        createdAt: staff.createdAt || new Date().toISOString()
-      };
-    });
+        return {
+          id,
+          name: staff.name || 'Unnamed Staff',
+          category: cat,
+          title: staff.title || cat,
+          rbacRole: staff.rbacRole || mapRoleLabelToRbacKey(cat),
+          tscNumber: staff.tscNumber || (cat !== 'Bursar' && cat !== 'Store Master' ? '327775' : undefined),
+          nationalId: staff.nationalId || (cat === 'Bursar' || cat === 'Store Master' ? '31452981' : undefined),
+          email: staff.email || `${(staff.name || 'staff').toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`,
+          phone: staff.phone || '+254 712 345 678',
+          subjects: cleanSubjects,
+          assignedClasses: cleanClasses,
+          assignedStreams: cleanStreams,
+          homeroomGrade: staff.homeroomGrade || defaultGrade,
+          homeroomStream: staff.homeroomStream && staff.homeroomStream !== 'Mercury' ? staff.homeroomStream : defaultStream,
+          allocations: cleanAllocations,
+          accessCode: code,
+          status: staff.status || 'Active',
+          createdAt: staff.createdAt || new Date().toISOString()
+        };
+      });
 
-    const harmonized = harmonizeStaffCodes(sanitized);
-    setStaffList(harmonized);
-    localStorage.setItem('munyaka_staff', JSON.stringify(harmonized));
-  }, []);
+    return harmonizeStaffCodes(sanitized);
+  });
+
+  useEffect(() => {
+    localStorage.setItem('munyaka_staff', JSON.stringify(staffList));
+  }, [staffList]);
 
   const handleOpenAddModal = () => {
     setEditingStaff(null);
