@@ -33,6 +33,13 @@ export interface StaffRecord {
 }
 
 /**
+ * Generate a short unique ID for records.
+ */
+export function generateId(prefix: string = 'id'): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
  * Normalizes any staff access code to strictly follow the MUN-XXXX format (e.g., MUN-1001, MUN-1002).
  */
 export function normalizeStaffAccessCode(code: string | undefined | null, index: number = 0): string {
