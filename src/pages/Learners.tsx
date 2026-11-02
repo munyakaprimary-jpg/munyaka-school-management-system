@@ -646,27 +646,6 @@ export default function Students() {
     return { totalMale, totalFemale, totalAll };
   }, [streamBreakdown]);
 
-  const handlePurgeAndReset = async () => {
-    if (window.confirm("Are you sure you want to purge and reset the entire learners directory? This action cannot be undone.")) {
-      // Clear storage keys
-      localStorage.removeItem('munyaka_learners_v2');
-      localStorage.removeItem('munyaka_central_db');
-      localStorage.removeItem('munyaka_learners');
-
-      // Reset state if available
-      if (typeof setStudents === 'function') {
-        setStudents([]);
-      }
-
-      // Trigger storage sync event for other components
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new Event('munyaka_storage_update'));
-
-      alert("Learners directory has been successfully purged and reset.");
-      window.location.reload();
-    }
-  };
-
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header action bar */}
@@ -679,13 +658,6 @@ export default function Students() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="destructive"
-            className="rounded-2xl bg-rose-600 hover:bg-rose-700 text-white gap-2 font-bold text-xs sm:text-sm shadow-lg shadow-rose-100"
-            onClick={handlePurgeAndReset}
-          >
-            <Trash2 size={18} /> Purge & Reset Directory
-          </Button>
           <Button
             variant="outline"
             className="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 font-bold text-xs sm:text-sm"
