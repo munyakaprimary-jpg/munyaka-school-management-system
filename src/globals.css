@@ -2,7 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Compact typography for mobile-first design */
+/* Theme styles */
+.theme-light {
+  --app-bg: #f8fafc;
+  --app-text: #0f172a;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+}
+
+.theme-dark {
+  --app-bg: #030712;
+  --app-text: #f8fafc;
+  --card-bg: #0f172a;
+  --card-border: #1e293b;
+}
+
+.theme-navy {
+  --app-bg: #0f172a;
+  --app-text: #f1f5f9;
+  --card-bg: #1e293b;
+  --card-border: #334155;
+}
+
+.theme-amber {
+  --app-bg: #1a0f0a;
+  --app-text: #fef3c7;
+  --card-bg: #261710;
+  --card-border: rgba(120, 53, 15, 0.5);
+}
+
+.theme-emerald {
+  --app-bg: #061810;
+  --app-text: #ecfdf5;
+  --card-bg: #0d261a;
+  --card-border: rgba(6, 78, 59, 0.5);
+}
+
+.theme-purple {
+  --app-bg: #120822;
+  --app-text: #f3e8ff;
+  --card-bg: #1e1035;
+  --card-border: rgba(88, 28, 135, 0.5);
+}
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -114,7 +155,8 @@
   }
 
   html, body {
-    @apply bg-background text-foreground;
+    background-color: var(--app-bg, #f8fafc);
+    color: var(--app-text, #0f172a);
     width: 100%;
     height: 100%;
     overscroll-behavior-y: none;
@@ -124,12 +166,16 @@
 
   body {
     @apply overflow-x-hidden;
+    background-color: var(--app-bg, #f8fafc);
+    color: var(--app-text, #0f172a);
   }
 
   #root {
     width: 100%;
     min-height: 100%;
     @apply flex flex-col overflow-x-hidden;
+    background-color: var(--app-bg, #f8fafc);
+    color: var(--app-text, #0f172a);
   }
 }
 

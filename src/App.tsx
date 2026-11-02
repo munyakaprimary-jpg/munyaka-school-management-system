@@ -543,7 +543,7 @@ const App = () => {
 
   return (
     <AppErrorBoundary>
-      <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+      <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-[var(--app-bg)] text-[var(--app-text)] transition-colors duration-300">
       <HashRouter>
           <AuthProvider>
             <AuthGate>
