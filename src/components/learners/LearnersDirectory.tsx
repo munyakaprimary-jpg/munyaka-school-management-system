@@ -286,22 +286,22 @@ export default function LearnersDirectory() {
   };
 
   const handleVerifyAuth = async () => {
-    setIsVerifying(true);
-    await new Response(r => setTimeout(r, 200));
-
-    try {
-      if (pendingDelete) {
-        await handleDeleteLearner(pendingDelete);
-        showSuccess("Learner deleted successfully.");
+      setIsVerifying(true);
+      await new Promise(resolve => setTimeout(resolve, 200));
+  
+      try {
+        if (pendingDelete) {
+          await handleDeleteLearner(pendingDelete);
+          showSuccess("Learner deleted successfully.");
+        }
+      } catch (e) {
+        showError("Failed to delete learner.");
+      } finally {
+        setIsAuthOpen(false);
+        setPendingDelete(null);
+        setIsVerifying(false);
       }
-    } catch (e) {
-      showError("Failed to delete learner.");
-    } finally {
-      setIsAuthOpen(false);
-      setPendingDelete(null);
-      setIsVerifying(false);
-    }
-  };
+    };
 
   const gradesList = useMemo(() => {
     const set = new Set<string>();
