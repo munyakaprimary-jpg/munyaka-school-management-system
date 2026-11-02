@@ -567,6 +567,12 @@ export default function StaffRegistry() {
     }
   };
 
+  const handleBottomScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
+    }
+  };
+
   // Extract unique learning areas names for subject pill grid
   const availableLearningAreas = Array.isArray(defaultCbcLearningAreas) && defaultCbcLearningAreas.length > 0
     ? defaultCbcLearningAreas.map((la: any) => {
