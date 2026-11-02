@@ -185,7 +185,7 @@ export default function Settings() {
   const handleThemeChange = (newTheme: string) => {
     setCurrentTheme(newTheme);
     localStorage.setItem('munyaka_app_theme', newTheme);
-    setTheme(newTheme);
+    setTheme(newTheme === 'emerald' || newTheme === 'purple' || newTheme === 'amber' ? 'dark' : newTheme);
     showSuccess(`Theme changed to ${newTheme} mode!`);
   };
   const [isResetAuthOpen, setIsResetAuthOpen] = useState(false);
@@ -315,7 +315,9 @@ export default function Settings() {
               <p className="text-sm text-slate-500 mt-1">Choose the primary visual theme for the Munyaka School Management Portal.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            {/* Theme Options Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              
               {/* Light Mode Option */}
               <button
                 type="button"
@@ -356,6 +358,48 @@ export default function Settings() {
               >
                 <div className="font-semibold text-slate-200 text-base">🌙 Dark Mode</div>
                 <p className="text-xs text-slate-400 mt-1">Ultra-dark slate backdrop for low-light environments.</p>
+              </button>
+
+              {/* 🌲 Emerald Forest Theme */}
+              <button
+                type="button"
+                onClick={() => handleThemeChange('emerald')}
+                className={`p-4 rounded-lg border text-left transition-all ${
+                  currentTheme === 'emerald'
+                    ? 'border-emerald-600 bg-emerald-950/40 ring-2 ring-emerald-500'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 bg-white dark:bg-slate-900'
+                }`}
+              >
+                <div className="font-semibold text-emerald-600 dark:text-emerald-400">🌲 Emerald Forest</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Deep green professional tones with crisp contrast.</p>
+              </button>
+
+              {/* 🍇 Royal Purple Theme */}
+              <button
+                type="button"
+                onClick={() => handleThemeChange('purple')}
+                className={`p-4 rounded-lg border text-left transition-all ${
+                  currentTheme === 'purple'
+                    ? 'border-purple-600 bg-purple-950/40 ring-2 ring-purple-500'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-purple-500/50 bg-white dark:bg-slate-900'
+                }`}
+              >
+                <div className="font-semibold text-purple-600 dark:text-purple-400">🍇 Royal Purple</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Sophisticated violet accents over a rich dark layout.</p>
+              </button>
+
+              {/* ☀️ Warm Amber Theme */}
+              <button
+                type="button"
+                onClick={() => handleThemeChange('amber')}
+                className={`p-4 rounded-lg border text-left transition-all ${
+                  currentTheme === 'amber'
+                    ? 'border-amber-600 bg-amber-50/50 dark:bg-amber-950/40 ring-2 ring-amber-500'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-amber-500/50 bg-white dark:bg-slate-900'
+                }`}
+              >
+                <div className="font-semibold text-amber-900 dark:text-amber-400">🍂 Warm Amber</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Inviting earth tones with gentle cream and warm gold highlights.</p>
               </button>
             </div>
           </div>
