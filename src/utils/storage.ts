@@ -40,6 +40,21 @@ export function generateId(prefix: string = 'id'): string {
 }
 
 /**
+ * Emit a custom event so any subscribed hook recomputes.
+ */
+export function notifyDataChanged(key?: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key } }));
+    window.dispatchEvent(new Event('storage-updated'));
+    window.dispatchEvent(new Event('students-updated'));
+    window.dispatchEvent(new Event('munyaka_storage_update'));
+  } catch {
+    /* no-op */
+  }
+}
+
+/**
  * Normalizes any staff access code to strictly follow the MUN-XXXX format (e.g., MUN-1001, MUN-1002).
  */
 export function normalizeStaffAccessCode(code: string | undefined | null, index: number = 0): string {
@@ -129,8 +144,7 @@ export function setStoredLearners(learners: LearnerRecord[]): void {
       return lower !== 'unnamed learner' && lower !== 'unnamed student' && lower !== 'unnamed';
     });
     localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(clean));
-    window.dispatchEvent(new Event('students-updated'));
-    window.dispatchEvent(new Event('munyaka_storage_update'));
+    notifyDataChanged(STORAGE_KEYS.LEARNERS);
   } catch (err) {
     console.error('[storage.ts] Error saving learners:', err);
   }
@@ -188,7 +202,7 @@ export function setStoredStaff(staffList: StaffRecord[]): void {
       };
     });
     localStorage.setItem(STORAGE_KEYS.STAFF, JSON.stringify(normalized));
-    window.dispatchEvent(new Event('munyaka_storage_update'));
+    notifyDataChanged(STORAGE_KEYS.STAFF);
   } catch (err) {
     console.error('[storage.ts] Error saving staff:', err);
   }
@@ -213,8 +227,7 @@ export function readStorage<T>(key: string, fallback: T): T {
 export function writeStorage<T>(key: string, value: T): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key } }));
-    window.dispatchEvent(new Event('munyaka_storage_update'));
+    notifyDataChanged(key);
     return true;
   } catch (err) {
     console.error(`[storage.ts] Failed to write key "${key}":`, err);
