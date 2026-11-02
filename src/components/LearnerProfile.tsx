@@ -45,7 +45,7 @@ const StudentProfile = () => {
         };
       }
 
-      const found = parsed.find(s => s && (String(s.id) === String(id) || String(s.admNo) === String(id) || String(s.admissionNo) === String(id)));
+      const found = parsed.find(s => s && (String(s.id) === String(id) || String(s.admNo) === String(id) || String((s as any).admissionNo) === String(id)));
       if (!found) {
         // Fallback to first available learner or sample
         return {
