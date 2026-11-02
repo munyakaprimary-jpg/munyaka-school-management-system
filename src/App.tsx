@@ -520,8 +520,11 @@ const App = () => {
           <AuthProvider>
             <AuthGate>
               <NotificationProvider>
-                <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-                  <TooltipProvider>
+                {(() => {
+                  const initialTheme = typeof window !== 'undefined' ? localStorage.getItem('munyaka_app_theme') || 'light' : 'light';
+                  return (
+                    <ThemeProvider attribute="class" defaultTheme={initialTheme} enableSystem>
+                      <TooltipProvider>
                     <Toaster />
                     <Sonner />
                     <GlobalExportListener />
@@ -615,6 +618,8 @@ const App = () => {
                   </SchoolProvider>
                   </TooltipProvider>
                 </ThemeProvider>
+                  );
+                })()}
               </NotificationProvider>
             </AuthGate>
           </AuthProvider>
