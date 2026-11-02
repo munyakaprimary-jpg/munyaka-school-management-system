@@ -525,36 +525,29 @@ const App = () => {
       dark: '#030712'
     };
 
-    const handleStorageChange = () => {
+    const applyTheme = () => {
       const currentTheme = localStorage.getItem('munyaka_app_theme') || 'light';
       const root = document.documentElement;
       root.classList.remove('theme-light', 'theme-dark', 'theme-navy', 'theme-amber', 'theme-emerald', 'theme-purple');
       root.classList.add(`theme-${currentTheme}`);
       
-      const bgColor = bgColors[currentTheme] || '#030712';
+      const bgColor = bgColors[currentTheme] || (currentTheme === 'light' ? '#f8fafc' : '#030712');
       document.body.style.backgroundColor = bgColor;
       document.documentElement.style.backgroundColor = bgColor;
     };
 
-    handleStorageChange();
-    window.addEventListener('storage', handleStorageChange);
+    applyTheme();
+    window.addEventListener('storage', applyTheme);
+    window.addEventListener('munyaka_theme_changed', applyTheme as EventListener);
 
     // Also poll/listen for custom theme change events if triggered
     const interval = setInterval(() => {
-      const currentTheme = localStorage.getItem('munyaka_app_theme') || 'light';
-      const root = document.documentElement;
-      if (!root.classList.contains(`theme-${currentTheme}`)) {
-        root.classList.remove('theme-light', 'theme-dark', 'theme-navy', 'theme-amber', 'theme-emerald', 'theme-purple');
-        root.classList.add(`theme-${currentTheme}`);
-        
-        const bgColor = bgColors[currentTheme] || '#030712';
-        document.body.style.backgroundColor = bgColor;
-        document.documentElement.style.backgroundColor = bgColor;
-      }
+      applyTheme();
     }, 500);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', applyTheme);
+      window.removeEventListener('munyaka_theme_changed', applyTheme as EventListener);
       clearInterval(interval);
     };
   }, []);
