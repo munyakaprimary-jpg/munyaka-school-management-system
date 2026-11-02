@@ -14,11 +14,16 @@ export function getRoleLandingPage(role: string, customPermissions?: Record<stri
   if (title.includes('bursar') || title.includes('accountant')) {
     return '/fees';
   }
-  if (staffMember?.assignedClass) {
-    return '/portal';
-  }
-
-  if (customPermissions) {
+  // Staff always land on dashboard; assignedClass no longer redirects to /portal
+    if (normRole === 'STAFF' || normRole === 'STAFF_MEMBER') {
+      return '/dashboard';
+    }
+    if (staffMember?.assignedClass) {
+      // Fallback only for non-staff roles that still have assignedClass
+      return '/dashboard';
+    }
+  
+    if (customPermissions) {
     const modules = [
       { key: 'dashboard', path: '/dashboard' },
       { key: 'assessments', path: '/assessments' },
