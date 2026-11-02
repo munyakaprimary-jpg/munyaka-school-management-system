@@ -222,6 +222,13 @@ export function readStorage<T>(key: string, fallback: T): T {
 }
 
 /**
+ * Alias for readStorage
+ */
+export function lsRead<T>(key: string, fallback: T): T {
+  return readStorage<T>(key, fallback);
+}
+
+/**
  * Generic localStorage write helper
  */
 export function writeStorage<T>(key: string, value: T): boolean {
@@ -233,4 +240,11 @@ export function writeStorage<T>(key: string, value: T): boolean {
     console.error(`[storage.ts] Failed to write key "${key}":`, err);
     return false;
   }
+}
+
+/**
+ * Alias for writeStorage
+ */
+export function lsSet<T>(key: string, value: T): boolean {
+  return writeStorage<T>(key, value);
 }
