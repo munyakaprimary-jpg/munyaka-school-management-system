@@ -550,19 +550,20 @@ export default function StaffRegistry() {
     setIsModalOpen(false);
   };
 
+  // Synchronized horizontal scrollbars
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+
   // Save helper function whenever list changes or new staff is added
   const saveStaffToStorage = (newList: StaffMember[]) => {
     setStaffList(newList);
     localStorage.setItem('munyaka_staff', JSON.stringify(newList));
     localStorage.setItem('munyaka_staff_directory', JSON.stringify(newList));
   };
-      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
-    }
-  };
 
-  const handleBottomScroll = () => {
+  const handleTopScroll = () => {
     if (topScrollRef.current && bottomScrollRef.current) {
-      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
+      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
     }
   };
 
