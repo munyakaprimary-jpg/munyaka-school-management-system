@@ -513,13 +513,26 @@ const App = () => {
       runOneTimeLearnerPurge();
     }, []);
 
-  // Load theme from localStorage and sync document root theme classes
+  // Load theme from localStorage and sync document root theme classes and body background
   useEffect(() => {
+    const bgColors: Record<string, string> = {
+      amber: '#1a0f0a',
+      purple: '#120822',
+      emerald: '#061810',
+      light: '#f8fafc',
+      navy: '#0f172a',
+      dark: '#030712'
+    };
+
     const handleStorageChange = () => {
       const currentTheme = localStorage.getItem('munyaka_app_theme') || 'light';
       const root = document.documentElement;
       root.classList.remove('theme-light', 'theme-dark', 'theme-navy', 'theme-amber', 'theme-emerald', 'theme-purple');
       root.classList.add(`theme-${currentTheme}`);
+      
+      const bgColor = bgColors[currentTheme] || '#030712';
+      document.body.style.backgroundColor = bgColor;
+      document.documentElement.style.backgroundColor = bgColor;
     };
 
     handleStorageChange();
@@ -532,8 +545,12 @@ const App = () => {
       if (!root.classList.contains(`theme-${currentTheme}`)) {
         root.classList.remove('theme-light', 'theme-dark', 'theme-navy', 'theme-amber', 'theme-emerald', 'theme-purple');
         root.classList.add(`theme-${currentTheme}`);
+        
+        const bgColor = bgColors[currentTheme] || '#030712';
+        document.body.style.backgroundColor = bgColor;
+        document.documentElement.style.backgroundColor = bgColor;
       }
-    }, 1000);
+    }, 500);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
