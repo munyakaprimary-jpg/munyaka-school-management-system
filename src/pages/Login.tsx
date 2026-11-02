@@ -970,38 +970,7 @@ const Login: React.FC = () => {
             {/* ── SUPPORT STAFF TAB (Removed top tab; support staff authenticate via unified Staff tab) ── */}
           </Tabs>
 
-          {/* ── Parent & Student Portal Link ── */}
-          <div className="mt-4">
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-slate-800"></div>
-                        </div>
-                        <div className="relative flex justify-center">
-                          <span className="bg-[#0a0f1d] px-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
-                            or
-                          </span>
-                        </div>
-                      </div>
-          
-                      <button
-                        type="button"
-                        onClick={() => navigate('/portal')}
-                        className="mt-4 w-full p-4 rounded-2xl bg-slate-900/80 border-2 border-slate-800 hover:border-indigo-500/50 hover:shadow-lg transition-all duration-300 group active:scale-[0.98]"
-                      >
-                        <div className="flex items-center justify-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all">
-                            <GraduationCap size={20} className="text-white" />
-                          </div>
-                          <div className="text-left">
-                            <div className="font-black text-white text-sm">Parent & Student Portal</div>
-                            <div className="text-[11px] text-slate-400 font-medium">View attendance, reports & fees</div>
-                          </div>
-                          <ArrowRight size={18} className="ml-auto text-indigo-400 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </button>
-                    </div>
-          
-                    {/* Footer */}
+          {/* Footer */}
                     <div className="text-center pt-2 space-y-1">
                       <p className="text-xs text-slate-500 font-medium">
                         Having trouble accessing your account?
