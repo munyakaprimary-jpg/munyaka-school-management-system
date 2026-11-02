@@ -514,7 +514,24 @@ const App = () => {
       runOneTimeLearnerPurge();
     }, []);
 
-  // Load theme from localStorage and sync document root theme classes and body background
+  // One-time startup wipe for clean restart & staff/learner state reset
+  useEffect(() => {
+    try {
+      const WIPE_KEY = 'munyaka_clean_wipe_v3';
+      if (!localStorage.getItem(WIPE_KEY)) {
+        localStorage.removeItem('munyaka_learners');
+        localStorage.removeItem('munyaka_staff');
+        localStorage.removeItem('school_staff_roster');
+        localStorage.removeItem('munyaka_app_learners_v1');
+        localStorage.removeItem('munyaka_app_staff_v1');
+        localStorage.setItem('munyaka_learners', JSON.stringify([]));
+        localStorage.setItem('munyaka_staff', JSON.stringify([]));
+        localStorage.setItem(WIPE_KEY, 'true');
+      }
+    } catch (err) {
+      console.error('Error during clean restart wipe:', err);
+    }
+  }, []);
   useEffect(() => {
     const bgColors: Record<string, string> = {
       amber: '#1a0f0a',
