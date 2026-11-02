@@ -130,7 +130,13 @@ export default function LearnersDirectory() {
     const DELETED_KEY = 'deleted_learner_ids';
 
     const applyList = (raw: any[]) => {
-      const formatted = raw.map(formatLearnerDoc);
+      // Filter out unnamed or blank placeholder records when loading learners
+      const validLearners = (raw || []).filter((learner: any) => {
+        if (!learner) return false;
+        const name = String(learner.name || learner.fullName || learner.learnerName || learner.studentName || '').trim();
+        return name !== '' && name !== 'Unnamed Learner' && name !== 'Unknown Learner' && !name.includes('Unnamed');
+      });
+      const formatted = validLearners.map(formatLearnerDoc);
       setLearnersList(formatted);
       setLearners(formatted);
     };
@@ -233,6 +239,12 @@ export default function LearnersDirectory() {
   }, [learnersList, searchTerm, gradeFilter, streamFilter]);
 
   const handleLearnerAdded = (newLearner: any) => {
+    if (!newLearner) return;
+    const name = String(newLearner.name || newLearner.fullName || newLearner.learnerName || newLearner.studentName || '').trim();
+    if (!name || name === 'Unnamed Learner' || name === 'Unknown Learner' || name.includes('Unnamed')) {
+      showError("A valid learner name is required.");
+      return;
+    }
     const formatted = formatLearnerDoc(newLearner);
     setLearnersList(prev => [formatted, ...prev]);
     setLearners(prev => [formatted, ...prev]);
