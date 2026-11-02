@@ -559,81 +559,81 @@ const Login: React.FC = () => {
     }
   
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-amber-50/20 flex flex-col overflow-y-auto">
-        <div className="flex-1 flex items-center justify-center p-4 py-8">
-          <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-500">
+          <div className="min-h-screen bg-[#0a0f1d] flex flex-col overflow-y-auto">
+            <div className="flex-1 flex items-center justify-center p-4 py-8">
+              <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-500">
   
             {/* ── Header ── */}
                       <div className="text-center space-y-3">
                         {/* Back to Cover button */}
-                        <button
-                          type="button"
-                          onClick={() => setShowCover(true)}
-                          className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-500 hover:text-indigo-700 transition-colors mb-2 group"
-                        >
-                          <ArrowRight
-                            size={14}
-                            className="rotate-180 transition-transform group-hover:-translate-x-1"
-                          />
-                          <span>Back to Cover</span>
-                        </button>
-                        <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-indigo-600 to-amber-500 rounded-3xl shadow-2xl shadow-indigo-200 mb-2">
-                          <Shield size={32} className="text-white md:hidden" />
-                          <Shield size={40} className="text-white hidden md:inline" />
-                        </div>
-                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-                          Munyaka School Management
-                        </h1>
-                        <p className="text-sm md:text-base text-slate-500 font-medium max-w-md mx-auto">
-                          Select your role to access the appropriate portal
-                        </p>
-                      </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowCover(true)}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors mb-2 group"
+                            >
+                              <ArrowRight
+                                size={14}
+                                className="rotate-180 transition-transform group-hover:-translate-x-1"
+                              />
+                              <span>Back to Cover</span>
+                            </button>
+                            <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl shadow-2xl shadow-indigo-500/30 mb-2">
+                              <Shield size={32} className="text-white md:hidden" />
+                              <Shield size={40} className="text-white hidden md:inline" />
+                            </div>
+                            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+                              Munyaka School Management
+                            </h1>
+                            <p className="text-sm md:text-base text-slate-400 font-medium max-w-md mx-auto">
+                              Select your role to access the appropriate portal
+                            </p>
+                          </div>
 
                       {/* Dynamic Quote Banner */}
-                      {(() => {
-                        const getQuoteConfig = () => {
-                                                  try {
-                                                    const saved = localStorage.getItem('munyaka_login_quote_config');
-                                                    if (saved) return JSON.parse(saved);
-                                                  } catch (e) {}
-                                                  return {
-                                                    text: localStorage.getItem('munyaka_login_quote') || 'Even if we lack every thing in life, i pray we never lack the favour of God',
-                                                    colorId: 'indigo',
-                                                    isUppercase: false,
-                                                    isFlashing: false
-                                                  };
-                                                };
-
-                        const config = getQuoteConfig();
-
-                        // Define explicit color text classes
-                        const colorMap: Record<string, string> = {
-                          indigo: 'text-indigo-600 dark:text-indigo-400 font-bold',
-                          emerald: 'text-emerald-600 dark:text-emerald-400 font-bold',
-                          amber: 'text-amber-600 dark:text-amber-400 font-bold',
-                          rose: 'text-rose-600 dark:text-rose-400 font-bold',
-                        };
-
-                        const activeColorClass = colorMap[config.colorId] || colorMap.indigo;
-                        const textToDisplay = config.isUppercase
-                          ? (config.text || '').toUpperCase()
-                          : (config.text || '');
-
-                        return (
-                                                                          <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl text-center shadow-sm">
-                                                                            <p
-                                                                              className={`text-xs sm:text-sm tracking-wide leading-relaxed ${activeColorClass}`}
-                                                                              style={
-                                                                                config.isFlashing
-                                                                                  ? { animation: 'quoteFlash 1.2s infinite ease-in-out' }
-                                                                                  : {}
-                                                                              }
-                                                                            >
-                                                                              "{textToDisplay}"
-                                                                            </p>
-                                                                          </div>
-                                                                        );
-                      })()}
+                                            {(() => {
+                                              const getQuoteConfig = () => {
+                                                                        try {
+                                                                          const saved = localStorage.getItem('munyaka_login_quote_config');
+                                                                          if (saved) return JSON.parse(saved);
+                                                                        } catch (e) {}
+                                                                        return {
+                                                                          text: localStorage.getItem('munyaka_login_quote') || 'Even if we lack every thing in life, i pray we never lack the favour of God',
+                                                                          colorId: 'indigo',
+                                                                          isUppercase: false,
+                                                                          isFlashing: false
+                                                                        };
+                                                                      };
+                      
+                                              const config = getQuoteConfig();
+                      
+                                              // Define explicit color text classes
+                                              const colorMap: Record<string, string> = {
+                                                indigo: 'text-indigo-400 font-bold',
+                                                emerald: 'text-emerald-400 font-bold',
+                                                amber: 'text-amber-400 font-bold',
+                                                rose: 'text-rose-400 font-bold',
+                                              };
+                      
+                                              const activeColorClass = colorMap[config.colorId] || colorMap.indigo;
+                                              const textToDisplay = config.isUppercase
+                                                ? (config.text || '').toUpperCase()
+                                                : (config.text || '');
+                      
+                                              return (
+                                                                                                <div className="w-full max-w-lg mx-auto my-4 px-5 py-3 bg-slate-900/80 border border-slate-800 rounded-xl text-center shadow-lg shadow-black/20">
+                                                                                                  <p
+                                                                                                    className={`text-xs sm:text-sm tracking-wide leading-relaxed ${activeColorClass}`}
+                                                                                                    style={
+                                                                                                      config.isFlashing
+                                                                                                        ? { animation: 'quoteFlash 1.2s infinite ease-in-out' }
+                                                                                                        : {}
+                                                                                                    }
+                                                                                                  >
+                                                                                                    "{textToDisplay}"
+                                                                                                  </p>
+                                                                                                </div>
+                                                                                              );
+                                            })()}
 
                       {/* Keyframe definition for quote flashing animation */}
                       <style>{`
@@ -644,76 +644,150 @@ const Login: React.FC = () => {
                       `}</style>
 
           {/* ── Portal Access Tabs ── */}
-          <Tabs defaultValue="staff" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
-                          <TabsTrigger
-                            value="admin"
-                            className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                          >
-                            <Settings2 size={12} className="mr-1 shrink-0" />
-                            <span className="hidden sm:inline">Admin</span>
-                            <span className="sm:hidden">Admin</span>
-                          </TabsTrigger>
-                          <TabsTrigger
-                            value="super"
-                            className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-                          >
-                            <Crown size={12} className="mr-1 shrink-0" />
-                            <span className="hidden sm:inline">Owner</span>
-                            <span className="sm:hidden">Owner</span>
-                          </TabsTrigger>
-              <TabsTrigger
-                value="staff"
-                className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-              >
-                <User size={12} className="mr-1 shrink-0" />
-                <span className="hidden sm:inline">Staff</span>
-                <span className="sm:hidden">Staff</span>
-              </TabsTrigger>
-            </TabsList>
+                    <Tabs defaultValue="staff" className="w-full">
+                      <TabsList className="grid w-full grid-cols-4 h-12 rounded-2xl bg-slate-900/80 p-1 gap-1 border border-slate-800">
+                        <TabsTrigger
+                          value="student"
+                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                        >
+                          <GraduationCap size={12} className="mr-1 shrink-0" />
+                          <span className="hidden sm:inline">Student</span>
+                          <span className="sm:hidden">Student</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="staff"
+                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                        >
+                          <User size={12} className="mr-1 shrink-0" />
+                          <span className="hidden sm:inline">Staff</span>
+                          <span className="sm:hidden">Staff</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="admin"
+                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                        >
+                          <Settings2 size={12} className="mr-1 shrink-0" />
+                          <span className="hidden sm:inline">Admin</span>
+                          <span className="sm:hidden">Admin</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="super"
+                          className="rounded-xl text-[10px] font-black uppercase tracking-wider data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-400 hover:text-slate-200 transition-all"
+                        >
+                          <Crown size={12} className="mr-1 shrink-0" />
+                          <span className="hidden sm:inline">Owner</span>
+                          <span className="sm:hidden">Owner</span>
+                        </TabsTrigger>
+                      </TabsList>
 
             {/* ── ADMIN TAB ── */}
-                        <TabsContent value="admin" className="mt-4 space-y-4">
-                          <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
+                                    <TabsContent value="admin" className="mt-4 space-y-4">
+                                      <Card className="border-none rounded-3xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl shadow-slate-500/20">
+                                        <CardContent className="p-6 md:p-8 space-y-6">
+                              <div className="text-center">
+                                                              <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-indigo-600/20 text-indigo-400 shadow-indigo-500/20 mb-4">
+                                                                <Settings2 size={32} />
+                                                              </div>
+                                                              <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                                                                {ROLE_CONFIGS.admin.label}
+                                                              </h2>
+                                                              <p className="text-xs md:text-sm text-slate-400 font-medium mt-1">
+                                                                {ROLE_CONFIGS.admin.fullDescription}
+                                                              </p>
+                                                            </div>
+                                                            {adminAuthError && selectedAdminRole === 'admin' && (
+                                                              <div className="p-4 bg-rose-900/20 border border-rose-800/50 rounded-2xl flex items-center gap-3 text-rose-400 text-xs font-bold animate-in slide-in-from-top-2">
+                                                                <ShieldAlert size={18} className="shrink-0" />
+                                                                <span>{adminAuthError}</span>
+                                                              </div>
+                                                            )}
+                                                            <form onSubmit={(e) => { setSelectedAdminRole('admin'); handleAdminLogin(e); }} className="space-y-5">
+                                                              <div className="space-y-2">
+                                                                <Label className="text-xs font-black uppercase tracking-widest text-slate-500">Password</Label>
+                                                                <div className="relative">
+                                                                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                                                  <Input
+                                                                    type={showAdminPassword ? 'text' : 'password'}
+                                                                    value={adminPassword}
+                                                                    onChange={e => { setSelectedAdminRole('admin'); setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
+                                                                    placeholder="Enter your password"
+                                                                    className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder-slate-500"
+                                                                  />
+                                                                  <button
+                                                                    type="button"
+                                                                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                                                                  >
+                                                                    {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                                  </button>
+                                                                </div>
+                                                                <p className="text-[10px] text-slate-500 font-medium pt-1">
+                                                                  {hasCustomAdminPassword() ? (
+                                                                    <span className="flex items-center gap-1">
+                                                                      <KeyRound size={9} />
+                                                                      Custom PIN — set via Configuration &rarr; Owner Security
+                                                                    </span>
+                                                                  ) : null}
+                                                                </p>
+                                                              </div>
+                                                              <Button
+                                                                type="submit"
+                                                                disabled={isAdminVerifying || !String(adminPassword || '').trim()}
+                                                                className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-500"
+                                                              >
+                                                                {isAdminVerifying && selectedAdminRole === 'admin' ? (
+                                                                  <><Loader2 className="animate-spin" size={20} /> Verifying...</>
+                                                                ) : (
+                                                                  <><Unlock size={20} /> Sign In</>
+                                                                )}
+                                                              </Button>
+                                                            </form>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+
+            {/* ── OWNER TAB ── */}
+                        <TabsContent value="super" className="mt-4 space-y-4">
+                          <Card className="border-none rounded-3xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl shadow-slate-500/20">
                             <CardContent className="p-6 md:p-8 space-y-6">
                               <div className="text-center">
-                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-indigo-50 text-indigo-600 shadow-indigo-100 mb-4">
-                                  <Settings2 size={32} />
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-amber-600/20 text-amber-400 shadow-amber-500/20 mb-4">
+                                  <Crown size={32} />
                                 </div>
-                                <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                                  {ROLE_CONFIGS.admin.label}
+                                <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                                  {ROLE_CONFIGS.owner.label}
                                 </h2>
-                                <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
-                                  {ROLE_CONFIGS.admin.fullDescription}
+                                <p className="text-xs md:text-sm text-slate-400 font-medium mt-1">
+                                  {ROLE_CONFIGS.owner.fullDescription}
                                 </p>
                               </div>
-                              {adminAuthError && selectedAdminRole === 'admin' && (
-                                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                              {adminAuthError && selectedAdminRole === 'owner' && (
+                                <div className="p-4 bg-rose-900/20 border border-rose-800/50 rounded-2xl flex items-center gap-3 text-rose-400 text-xs font-bold animate-in slide-in-from-top-2">
                                   <ShieldAlert size={18} className="shrink-0" />
                                   <span>{adminAuthError}</span>
                                 </div>
                               )}
-                              <form onSubmit={(e) => { setSelectedAdminRole('admin'); handleAdminLogin(e); }} className="space-y-5">
+                              <form onSubmit={(e) => { setSelectedAdminRole('owner'); handleAdminLogin(e); }} className="space-y-5">
                                 <div className="space-y-2">
-                                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
+                                  <Label className="text-xs font-black uppercase tracking-widest text-slate-500">Password</Label>
                                   <div className="relative">
-                                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                                     <Input
                                       type={showAdminPassword ? 'text' : 'password'}
                                       value={adminPassword}
-                                      onChange={e => { setSelectedAdminRole('admin'); setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
+                                      onChange={e => { setSelectedAdminRole('owner'); setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
                                       placeholder="Enter your password"
-                                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
+                                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder-slate-500"
                                     />
                                     <button
                                       type="button"
                                       onClick={() => setShowAdminPassword(!showAdminPassword)}
-                                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
                                     >
                                       {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                   </div>
-                                  <p className="text-[10px] text-slate-400 font-medium pt-1">
+                                  <p className="text-[10px] text-slate-500 font-medium pt-1">
                                     {hasCustomAdminPassword() ? (
                                       <span className="flex items-center gap-1">
                                         <KeyRound size={9} />
@@ -725,9 +799,9 @@ const Login: React.FC = () => {
                                 <Button
                                   type="submit"
                                   disabled={isAdminVerifying || !String(adminPassword || '').trim()}
-                                  className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
+                                  className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-500"
                                 >
-                                  {isAdminVerifying && selectedAdminRole === 'admin' ? (
+                                  {isAdminVerifying && selectedAdminRole === 'owner' ? (
                                     <><Loader2 className="animate-spin" size={20} /> Verifying...</>
                                   ) : (
                                     <><Unlock size={20} /> Sign In</>
@@ -738,210 +812,209 @@ const Login: React.FC = () => {
                           </Card>
                         </TabsContent>
 
-            {/* ── OWNER TAB ── */}
-            <TabsContent value="super" className="mt-4 space-y-4">
-              <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
-                <CardContent className="p-6 md:p-8 space-y-6">
-                  <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-amber-50 text-amber-600 shadow-amber-100 mb-4">
-                      <Crown size={32} />
-                    </div>
-                    <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                      {ROLE_CONFIGS.owner.label}
-                    </h2>
-                    <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
-                      {ROLE_CONFIGS.owner.fullDescription}
-                    </p>
-                  </div>
-                  {adminAuthError && selectedAdminRole === 'owner' && (
-                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                      <ShieldAlert size={18} className="shrink-0" />
-                      <span>{adminAuthError}</span>
-                    </div>
-                  )}
-                  <form onSubmit={(e) => { setSelectedAdminRole('owner'); handleAdminLogin(e); }} className="space-y-5">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
-                      <div className="relative">
-                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <Input
-                          type={showAdminPassword ? 'text' : 'password'}
-                          value={adminPassword}
-                          onChange={e => { setSelectedAdminRole('owner'); setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
-                          placeholder="Enter your password"
-                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowAdminPassword(!showAdminPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium pt-1">
-                        {hasCustomAdminPassword() ? (
-                          <span className="flex items-center gap-1">
-                            <KeyRound size={9} />
-                            Custom PIN — set via Configuration &rarr; Owner Security
-                          </span>
-                        ) : null}
-                      </p>
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={isAdminVerifying || !String(adminPassword || '').trim()}
-                      className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
-                    >
-                      {isAdminVerifying && selectedAdminRole === 'owner' ? (
-                        <><Loader2 className="animate-spin" size={20} /> Verifying...</>
-                      ) : (
-                        <><Unlock size={20} /> Sign In</>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ── STAFF / TEACHER / BURSAR TAB ── */}
-            <TabsContent value="staff" className="mt-4">
-              <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
-                <CardContent className="p-6 md:p-8 space-y-6">
-                  {staffAuthError && (
-                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                      <ShieldAlert size={18} className="shrink-0" />
-                      <span>{staffAuthError}</span>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleStaffLogin} className="space-y-5">
-                    {/* Email Address */}
-                    <div className="space-y-2">
-                      <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Email Address
-                      </Label>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <Input
-                          id="staff-id"
-                          type="email"
-                          inputMode="email"
-                          autoCapitalize="none"
-                          value={staffId}
-                          onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. jndiki@munyaka.sc.ke"
-                          autoComplete="username"
-                          className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
-                          autoFocus
-                        />
-                      </div>
-                    </div>
-
-                    {/* Access Code */}
-                    <div className="space-y-2">
-                      <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Access Code
-                      </Label>
-                      <div className="relative">
-                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <Input
-                          id="staff-password"
-                          type="password"
-                          value={staffPassword}
-                          onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. MUN-3MDC"
-                          autoComplete="current-password"
-                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-mono font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200 tracking-wider"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowStaffPassword(!showStaffPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium flex items-center justify-between">
-                        <span>Your access code was shared via SMS/email.</span>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold border border-emerald-200">
-                          Demo Code: MUN-9632 or MUN-1234
-                        </span>
-                      </p>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
-                      className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
-                    >
-                      {isStaffVerifying ? (
-                        <><Loader2 className="animate-spin" size={20} /> Signing In...</>
-                      ) : (
-                        <><Unlock size={20} /> Sign In as Staff / Teacher</>
-                      )}
-                    </Button>
-                  </form>
-
-                  {/* Help note */}
-                  <div className="p-4 bg-slate-50 rounded-2xl flex items-start gap-3">
-                    <Send size={16} className="text-slate-400 mt-0.5 shrink-0" />
-                    <p className="text-xs text-slate-500 font-medium">
-                      Don't have credentials? Contact the School Administrator to pre-register your account.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            {/* ── STUDENT / PARENT TAB ── */}
+                        <TabsContent value="student" className="mt-4">
+                          <Card className="border-none rounded-3xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl shadow-slate-500/20">
+                            <CardContent className="p-6 md:p-8 space-y-6">
+                              <div className="text-center">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-indigo-600/20 text-indigo-400 shadow-indigo-500/20 mb-4">
+                                  <GraduationCap size={32} />
+                                </div>
+                                <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+                                  Student & Parent Portal
+                                </h2>
+                                <p className="text-xs md:text-sm text-slate-400 font-medium mt-1">
+                                  Access your academic records, attendance, and fee statements using your Admission Number or Assessment Number
+                                </p>
+                              </div>
+            
+                              {studentLoginError && (
+                                <div className="p-4 bg-rose-900/20 border border-rose-800/50 rounded-2xl flex items-center gap-3 text-rose-400 text-xs font-bold animate-in slide-in-from-top-2">
+                                  <ShieldAlert size={18} className="shrink-0" />
+                                  <span>{studentLoginError}</span>
+                                </div>
+                              )}
+            
+                              <form onSubmit={handleStudentPortalLogin} className="space-y-5">
+                                <div className="space-y-2">
+                                  <Label htmlFor="student-input" className="text-xs font-black uppercase tracking-widest text-slate-500">
+                                    Admission Number or Assessment Number
+                                  </Label>
+                                  <div className="relative">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                    <Input
+                                      id="student-input"
+                                      type="text"
+                                      value={studentPortalInput}
+                                      onChange={e => { setStudentPortalInput(e.target.value); if (studentLoginError) setStudentLoginError(null); }}
+                                      placeholder="e.g. A827361 or AD2024001"
+                                      className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder-slate-500"
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 font-medium">
+                                    Enter your school-issued Admission Number or Assessment Number
+                                  </p>
+                                </div>
+            
+                                <Button
+                                  type="submit"
+                                  disabled={isStaffVerifying || !String(studentPortalInput || '').trim()}
+                                  className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-500"
+                                >
+                                  <><GraduationCap size={20} /> Access Student Portal</>
+                                </Button>
+                              </form>
+            
+                              {/* Help note */}
+                              <div className="p-4 bg-slate-900/60 rounded-2xl flex items-start gap-3 border border-slate-800">
+                                <Send size={16} className="text-slate-500 mt-0.5 shrink-0" />
+                                <p className="text-xs text-slate-400 font-medium">
+                                  Need help? Contact the school office for your Admission Number or Assessment Number.
+                                </p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+            
+                        {/* ── STAFF / TEACHER / BURSAR TAB ── */}
+                        <TabsContent value="staff" className="mt-4">
+                          <Card className="border-none rounded-3xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-xl shadow-slate-500/20">
+                            <CardContent className="p-6 md:p-8 space-y-6">
+                              {staffAuthError && (
+                                <div className="p-4 bg-rose-900/20 border border-rose-800/50 rounded-2xl flex items-center gap-3 text-rose-400 text-xs font-bold animate-in slide-in-from-top-2">
+                                  <ShieldAlert size={18} className="shrink-0" />
+                                  <span>{staffAuthError}</span>
+                                </div>
+                              )}
+            
+                              <form onSubmit={handleStaffLogin} className="space-y-5">
+                                {/* Email Address */}
+                                <div className="space-y-2">
+                                  <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-500">
+                                    Email Address
+                                  </Label>
+                                  <div className="relative">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                    <Input
+                                      id="staff-id"
+                                      type="email"
+                                      inputMode="email"
+                                      autoCapitalize="none"
+                                      value={staffId}
+                                      onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
+                                      placeholder="e.g. jndiki@munyaka.sc.ke"
+                                      autoComplete="username"
+                                      className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-bold text-base focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 placeholder-slate-500"
+                                      autoFocus
+                                    />
+                                  </div>
+                                </div>
+            
+                                {/* Access Code */}
+                                <div className="space-y-2">
+                                  <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-500">
+                                    Access Code
+                                  </Label>
+                                  <div className="relative">
+                                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                    <Input
+                                      id="staff-password"
+                                      type="password"
+                                      value={staffPassword}
+                                      onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
+                                      placeholder="e.g. MUN-3MDC"
+                                      autoComplete="current-password"
+                                      className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-950/60 border border-slate-800 text-white font-mono font-bold text-base focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 tracking-wider placeholder-slate-500"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowStaffPassword(!showStaffPassword)}
+                                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                                    >
+                                      {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 font-medium flex items-center justify-between">
+                                    <span>Your access code was shared via SMS/email.</span>
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-600/20 text-emerald-400 font-mono text-[10px] font-bold border border-emerald-800/50">
+                                      Demo Code: MUN-9632 or MUN-1234
+                                    </span>
+                                  </p>
+                                </div>
+            
+                                <Button
+                                  type="submit"
+                                  disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
+                                  className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500"
+                                >
+                                  {isStaffVerifying ? (
+                                    <><Loader2 className="animate-spin" size={20} /> Signing In...</>
+                                  ) : (
+                                    <><Unlock size={20} /> Sign In as Staff / Teacher</>
+                                  )}
+                                </Button>
+                              </form>
+            
+                              {/* Help note */}
+                              <div className="p-4 bg-slate-900/60 rounded-2xl flex items-start gap-3 border border-slate-800">
+                                <Send size={16} className="text-slate-500 mt-0.5 shrink-0" />
+                                <p className="text-xs text-slate-400 font-medium">
+                                  Don't have credentials? Contact the School Administrator to pre-register your account.
+                                </p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
 
             {/* ── SUPPORT STAFF TAB (Removed top tab; support staff authenticate via unified Staff tab) ── */}
           </Tabs>
 
           {/* ── Parent & Student Portal Link ── */}
           <div className="mt-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-gradient-to-br from-slate-50 via-indigo-50/30 to-amber-50/20 px-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                  or
-                </span>
-              </div>
-            </div>
-            
-            <button
-              type="button"
-              onClick={() => navigate('/portal')}
-              className="mt-4 w-full p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border-2 border-indigo-100 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 group active:scale-[0.98]"
-            >
-              <div className="flex items-center justify-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all">
-                  <GraduationCap size={20} className="text-white" />
-                </div>
-                <div className="text-left">
-                  <div className="font-black text-slate-800 text-sm">Parent & Student Portal</div>
-                  <div className="text-[11px] text-slate-500 font-medium">View attendance, reports & fees</div>
-                </div>
-                <ArrowRight size={18} className="ml-auto text-indigo-400 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </button>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center pt-2 space-y-1">
-            <p className="text-xs text-slate-400 font-medium">
-              Having trouble accessing your account?
-            </p>
-            <button
-              type="button"
-              onClick={() => setForgotModalOpen(true)}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline underline-offset-2 transition-colors"
-            >
-              Forgot Password / Locked Out?
-            </button>
-          </div>
-        </div>
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-slate-800"></div>
+                        </div>
+                        <div className="relative flex justify-center">
+                          <span className="bg-[#0a0f1d] px-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                            or
+                          </span>
+                        </div>
+                      </div>
+          
+                      <button
+                        type="button"
+                        onClick={() => navigate('/portal')}
+                        className="mt-4 w-full p-4 rounded-2xl bg-slate-900/80 border-2 border-slate-800 hover:border-indigo-500/50 hover:shadow-lg transition-all duration-300 group active:scale-[0.98]"
+                      >
+                        <div className="flex items-center justify-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all">
+                            <GraduationCap size={20} className="text-white" />
+                          </div>
+                          <div className="text-left">
+                            <div className="font-black text-white text-sm">Parent & Student Portal</div>
+                            <div className="text-[11px] text-slate-400 font-medium">View attendance, reports & fees</div>
+                          </div>
+                          <ArrowRight size={18} className="ml-auto text-indigo-400 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </button>
+                    </div>
+          
+                    {/* Footer */}
+                    <div className="text-center pt-2 space-y-1">
+                      <p className="text-xs text-slate-500 font-medium">
+                        Having trouble accessing your account?
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setForgotModalOpen(true)}
+                        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline underline-offset-2 transition-colors"
+                      >
+                        Forgot Password / Locked Out?
+                      </button>
+                    </div>
+                  </div>
       </div>
 
       <ForgotPasswordModal
