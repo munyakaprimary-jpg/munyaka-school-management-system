@@ -521,7 +521,33 @@ const App = () => {
             <AuthGate>
               <NotificationProvider>
                 {(() => {
-                  const initialTheme = typeof window !== 'undefined' ? localStorage.getItem('munyaka_app_theme') || 'light' : 'light';
+                  // Load theme from localStorage and sync document root theme classes
+                  useEffect(() => {
+                    const handleStorageChange = () => {
+                      const currentTheme = localStorage.getItem('munyaka_app_theme') || 'light';
+                      const root = document.documentElement;
+                      root.classList.remove('theme-light', 'theme-dark', 'theme-navy', 'theme-amber', 'theme-emerald', 'theme-purple');
+                      root.classList.add(`theme-${currentTheme}`);
+                    };
+                
+                    handleStorageChange();
+                    window.addEventListener('storage', handleStorageChange);
+                
+                    // Also poll/listen for custom theme change events if triggered
+                    const interval = setInterval(() => {
+                      const currentTheme = localStorage.getItem('munyaka_app_theme') || 'light';
+                      const root = document.documentElement;
+                      if (!root.classList.contains(`theme-${currentTheme}`)) {
+                        root.classList.remove('theme-light', 'theme-dark', 'theme-navy', 'theme-amber', 'theme-emerald', 'theme-purple');
+                        root.classList.add(`theme-${currentTheme}`);
+                      }
+                    }, 1000);
+                
+                    return () => {
+                      window.removeEventListener('storage', handleStorageChange);
+                      clearInterval(interval);
+                    };
+                  }, []);
                   return (
                     <ThemeProvider attribute="class" defaultTheme={initialTheme} enableSystem>
                       <TooltipProvider>

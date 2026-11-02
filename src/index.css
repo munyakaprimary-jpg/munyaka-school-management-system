@@ -3,3 +3,40 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom Theme Palettes */
+html.theme-amber {
+  background-color: #fef3c7;
+  color: #78350f;
+}
+html.theme-amber body {
+  background-color: #fffbeb;
+  color: #78350f;
+}
+
+html.theme-emerald {
+  background-color: #022c22;
+  color: #ecfdf5;
+}
+html.theme-emerald body {
+  background-color: #064e3b;
+  color: #ecfdf5;
+}
+
+html.theme-purple {
+  background-color: #3b0764;
+  color: #f3e8ff;
+}
+html.theme-purple body {
+  background-color: #2e1065;
+  color: #f3e8ff;
+}
+
+html.theme-navy {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+html.theme-navy body {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
