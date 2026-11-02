@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,8 @@ import {
   X,
   Download,
   Upload,
-  Cloud
+  Cloud,
+  Sun
 } from 'lucide-react';
 import { exportAllData, parseAndImportBackup } from '@/utils/storage';
 import { AdminQuoteSettings } from '@/components/admin/AdminQuoteSettings';
@@ -175,6 +177,17 @@ export default function Settings() {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [currentTheme, setCurrentTheme] = useState<string>(() => {
+    return localStorage.getItem('munyaka_app_theme') || theme || 'light';
+  });
+
+  const handleThemeChange = (newTheme: string) => {
+    setCurrentTheme(newTheme);
+    localStorage.setItem('munyaka_app_theme', newTheme);
+    setTheme(newTheme);
+    showSuccess(`Theme changed to ${newTheme} mode!`);
+  };
   const [isResetAuthOpen, setIsResetAuthOpen] = useState(false);
   const [resetAdminPassword, setResetAdminPassword] = useState('');
   const [resetAuthError, setResetAuthError] = useState('');
@@ -270,6 +283,9 @@ export default function Settings() {
             <TabsTrigger value="profile" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
               <Building size={14} /> School Profile
             </TabsTrigger>
+            <TabsTrigger value="appearance" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
+              <Sun size={14} /> Theme & Appearance
+            </TabsTrigger>
             <TabsTrigger value="academic" className="rounded-xl px-5 font-bold text-xs flex items-center gap-2">
               <Lock size={14} /> Academic Setup
             </TabsTrigger>
@@ -290,6 +306,60 @@ export default function Settings() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        {/* Theme & Appearance Tab */}
+        <TabsContent value="appearance" className="space-y-6">
+          <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">Theme & Appearance</h3>
+              <p className="text-sm text-slate-500 mt-1">Choose the primary visual theme for the Munyaka School Management Portal.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              {/* Light Mode Option */}
+              <button
+                type="button"
+                onClick={() => handleThemeChange('light')}
+                className={`p-5 rounded-2xl border text-left transition-all ${
+                  currentTheme === 'light'
+                    ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-500 shadow-sm'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900'
+                }`}
+              >
+                <div className="font-semibold text-slate-900 dark:text-white text-base">☀️ Light Mode</div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">High contrast white background with dark readable text.</p>
+              </button>
+
+              {/* Navy Mode Option */}
+              <button
+                type="button"
+                onClick={() => handleThemeChange('navy')}
+                className={`p-5 rounded-2xl border text-left transition-all ${
+                  currentTheme === 'navy'
+                    ? 'border-indigo-600 bg-slate-800 ring-2 ring-indigo-500 shadow-sm text-white'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900'
+                }`}
+              >
+                <div className="font-semibold text-slate-100 text-base">🌊 Navy Blue</div>
+                <p className="text-xs text-slate-400 mt-1">Balanced deep blue background with soft indigo accents.</p>
+              </button>
+
+              {/* Dark Mode Option */}
+              <button
+                type="button"
+                onClick={() => handleThemeChange('dark')}
+                className={`p-5 rounded-2xl border text-left transition-all ${
+                  currentTheme === 'dark'
+                    ? 'border-indigo-600 bg-slate-950 ring-2 ring-indigo-500 shadow-sm text-white'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900'
+                }`}
+              >
+                <div className="font-semibold text-slate-200 text-base">🌙 Dark Mode</div>
+                <p className="text-xs text-slate-400 mt-1">Ultra-dark slate backdrop for low-light environments.</p>
+              </button>
+            </div>
+          </div>
+        </TabsContent>
 
         {/* 1. School Profile */}
         <TabsContent value="profile" className="space-y-6">
