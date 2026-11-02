@@ -83,7 +83,6 @@ const harmonizeStaffCodes = (staffList: any[]) => {
 
 export default function StaffRegistry() {
   const navigate = useNavigate();
-  const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
