@@ -50,15 +50,7 @@ export default function LearnersDirectory() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter((l: any) => {
-            if (!l) return false;
-            const fullName = String(l.fullName || l.name || '').trim();
-            const admNo = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
-            const isUnnamed = !fullName || fullName === 'Unnamed Learner' || fullName === 'Unknown Learner' || fullName.includes('Unnamed');
-            const isSeedPattern = admNo.startsWith('MUN-00') || admNo.startsWith('MUN-01') || admNo.startsWith('MUN-02');
-            return !(isUnnamed || isSeedPattern);
-          });
-          if (cleaned.length > 0) return cleaned.map(formatLearnerDoc);
+          return parsed.filter(Boolean).map(formatLearnerDoc);
         }
       }
     } catch (e) {}
@@ -419,7 +411,7 @@ export default function LearnersDirectory() {
                 displayLearners.map(learner => {
                   const admissionNo = learner.admissionNo || learner.admissionNumber || learner.admNo || '—';
                   const upiNo = learner.assessmentNo || learner.upi || learner.assessmentNumber || '—';
-                  const fullName = learner.fullName || learner.name || 'Unnamed Learner';
+                  const fullName = learner.fullName || learner.name || learner.learnerName || learner.studentName || (learner.firstName || learner.lastName ? `${learner.firstName || ''} ${learner.lastName || ''}`.trim() : '') || 'Unnamed Learner';
                   const grade = learner.grade || learner.gradeLevel || learner.class || '—';
                   const stream = learner.stream ? `(${learner.stream})` : '';
                   const gradeStream = `${grade} ${stream}`.trim();

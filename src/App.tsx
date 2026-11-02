@@ -303,7 +303,7 @@ const FEE_SANITIZER_FLAG = 'munyaka_fee_sanitizer_v1';
 // its proper "no learners" empty state.
 const LEARNER_PURGE_FLAG = 'munyaka_learner_purge_v1';
 function runOneTimeLearnerPurge(): void {
-  // Disabled permanently to prevent registered learners from disappearing during system changes
+  // Disabled permanently
 }
 
 function runOneTimeFeeSanitizer(): void {

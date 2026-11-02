@@ -862,7 +862,7 @@ export default function Students() {
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {filteredStudents.map((student, idx) => {
                     const sId = student.id || student.admissionNumber || student.admNo || idx;
-                    const sName = student.name || student.fullName || 'Unnamed Learner';
+                    const sName = student.fullName || student.name || student.learnerName || student.studentName || (student.firstName || student.lastName ? `${student.firstName || ''} ${student.lastName || ''}`.trim() : '') || 'Unnamed Learner';
                     const sAdm = student.admissionNumber || student.admNo || '—';
                     const sAss = student.assessmentNo || student.assessmentNumber || student.assessment || student.assNo || '—';
                     const sGender = student.gender || 'Male';
