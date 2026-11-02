@@ -434,7 +434,7 @@ const StudentProfile = () => {
               Please choose a learner from the directory to view their profile.
             </p>
             <Button asChild className="mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
-              <a href="/students">Back to Learners</a>
+              <a href="#/students">Back to Learners</a>
             </Button>
           </div>
         </Card>
