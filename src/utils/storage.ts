@@ -12,6 +12,8 @@ export const STORAGE_KEYS = {
   STAFF: 'munyaka_staff',
   CENTRAL_DB: 'munyaka_central_db',
   SETTINGS: 'munyaka_system_settings',
+  PAYMENT_RECORDS: 'munyaka_fees_records',
+  TRANSACTIONS: 'munyaka_transactions',
 } as const;
 
 export interface LearnerRecord {
@@ -30,6 +32,21 @@ export interface StaffRecord {
   accessCode: string;
   role?: string;
   [key: string]: any;
+}
+
+export interface PaymentRecord {
+  id: string;
+  studentId?: string;
+  studentName?: string;
+  amount?: number;
+  paid?: number;
+  total?: number;
+  method?: string;
+  ref?: string;
+  category?: string;
+  date?: string;
+  status?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -147,6 +164,40 @@ export function setStoredLearners(learners: LearnerRecord[]): void {
     notifyDataChanged(STORAGE_KEYS.LEARNERS);
   } catch (err) {
     console.error('[storage.ts] Error saving learners:', err);
+  }
+}
+
+/**
+ * Retrieve students (alias for getStoredLearners).
+ */
+export function getStudents(): LearnerRecord[] {
+  return getStoredLearners();
+}
+
+/**
+ * Retrieve payment records from localStorage.
+ */
+export function getPaymentRecords(): PaymentRecord[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.PAYMENT_RECORDS) || localStorage.getItem('munyaka_fees');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Save payment records to localStorage.
+ */
+export function setPaymentRecords(records: PaymentRecord[]): boolean {
+  try {
+    localStorage.setItem(STORAGE_KEYS.PAYMENT_RECORDS, JSON.stringify(records));
+    notifyDataChanged(STORAGE_KEYS.PAYMENT_RECORDS);
+    return true;
+  } catch {
+    return false;
   }
 }
 
