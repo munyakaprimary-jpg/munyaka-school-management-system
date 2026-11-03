@@ -335,6 +335,23 @@ export function setPaymentRecords(records: PaymentRecord[]): void {
   lsSet(STORAGE_KEYS.PAYMENT_RECORDS, records);
 }
 
+export function createPaymentRecord(record: PaymentRecord): PaymentRecord {
+  const list = getPaymentRecords();
+  const newRecord = { ...record, id: record.id || `pay_${Date.now()}` };
+  setPaymentRecords([newRecord, ...list]);
+  return newRecord;
+}
+
+export function updatePaymentRecord(id: string, patch: Partial<PaymentRecord>): PaymentRecord | null {
+  const list = getPaymentRecords();
+  const idx = list.findIndex(p => p.id === id);
+  if (idx === -1) return null;
+  const updated = { ...list[idx], ...patch, id };
+  list[idx] = updated;
+  setPaymentRecords(list);
+  return updated;
+}
+
 export function deletePaymentRecord(id: string): boolean {
   try {
     const list = getPaymentRecords();
