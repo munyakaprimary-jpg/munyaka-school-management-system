@@ -39,11 +39,12 @@ export const STORAGE_KEYS = {
 
 export interface Student {
   id: string;
-  admNo?: string;
-  name: string;
+  admissionNo?: string;
+  fullName: string;
   grade?: string;
   stream?: string;
   gender?: string;
+  assessmentNo?: string;
   [key: string]: any;
 }
 
@@ -167,11 +168,11 @@ export function hydrateAllStores(): HydrationReport {
 
   try {
     const seedStudents = (INITIAL_SEED_DATA as any)?.students || (INITIAL_SEED_DATA as any)?.learners || [];
-    if (seedStudents.length > 0 && !localStorage.getItem(STORAGE_KEYS.LEARNERS)) {
-      localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(seedStudents));
-      report.restoredFromSeed.push(STORAGE_KEYS.LEARNERS);
+    if (seedStudents.length > 0 && !localStorage.getItem('munyaka_app_learners_v1')) {
+      localStorage.setItem('munyaka_app_learners_v1', JSON.stringify(seedStudents));
+      report.restoredFromSeed.push('munyaka_app_learners_v1');
     }
-    report.keys.push(STORAGE_KEYS.LEARNERS);
+    report.keys.push('munyaka_app_learners_v1');
 
     const seedStaff = (INITIAL_SEED_DATA as any)?.staff || [];
     if (seedStaff.length > 0 && !localStorage.getItem(STORAGE_KEYS.STAFF)) {
@@ -217,104 +218,71 @@ export function normalizeStaffAccessCode(code: string | undefined | null, index:
 }
 
 /**
- * Retrieve learners from localStorage.
+ * Retrieve learners strictly from munyaka_app_learners_v1.
  * Automatically filters out any blank names or records named "Unnamed Learner" (case-insensitive).
+ * Returns [] if empty.
  */
-export function getStoredLearners(): Student[] {
+export function getLearners(): Student[] {
   try {
-    const keys = [STORAGE_KEYS.LEARNERS, 'munyaka_learners_v2', 'school_learners_data', 'learners', 'pupils'];
-    let rawData: any[] = [];
-
-    for (const key of keys) {
-      const val = localStorage.getItem(key);
-      if (val) {
-        try {
-          const parsed = JSON.parse(val);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            rawData = parsed;
-            break;
-          }
-        } catch {}
-      }
-    }
-
-    if (rawData.length === 0) return [];
-
-    return rawData.filter((item) => {
-      if (!item || typeof item !== 'object') return false;
-      const name = String(item.name || item.fullName || item.studentName || '').trim();
-      if (!name) return false;
-      
-      const lowerName = name.toLowerCase();
-      if (
-        lowerName === 'unnamed learner' ||
-        lowerName === 'unnamed student' ||
-        lowerName === 'unnamed' ||
-        lowerName === 'unknown learner' ||
-        lowerName === 'unknown' ||
-        lowerName === 'null'
-      ) {
-        return false;
-      }
-      return true;
+    const data = localStorage.getItem('munyaka_app_learners_v1');
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((l: any) => {
+      if (!l) return false;
+      const fn = String(l.fullName || l.name || '').trim();
+      if (!fn) return false;
+      const lower = fn.toLowerCase();
+      return lower !== 'unnamed learner' && lower !== 'unnamed student' && lower !== 'unnamed' && lower !== 'unknown learner';
     });
-  } catch (err) {
-    console.error('[storage.ts] Error reading stored learners:', err);
+  } catch (e) {
     return [];
   }
 }
 
 /**
- * Save learners to localStorage.
+ * Save learners strictly to munyaka_app_learners_v1.
  */
-export function setStoredLearners(learners: Student[]): void {
+export function saveLearners(learners: Student[]): void {
   try {
-    const clean = learners.filter((item) => {
-      if (!item) return false;
-      const name = String(item.name || '').trim();
-      if (!name) return false;
-      const lower = name.toLowerCase();
-      return lower !== 'unnamed learner' && lower !== 'unnamed student' && lower !== 'unnamed';
+    const clean = learners.filter((l: any) => {
+      if (!l) return false;
+      const fn = String(l.fullName || l.name || '').trim();
+      if (!fn) return false;
+      const lower = fn.toLowerCase();
+      return lower !== 'unnamed learner' && lower !== 'unnamed student' && lower !== 'unnamed' && lower !== 'unknown learner';
     });
-    localStorage.setItem(STORAGE_KEYS.LEARNERS, JSON.stringify(clean));
-    notifyDataChanged(STORAGE_KEYS.LEARNERS);
+    localStorage.setItem('munyaka_app_learners_v1', JSON.stringify(clean));
+    notifyDataChanged('munyaka_app_learners_v1');
   } catch (err) {
     console.error('[storage.ts] Error saving learners:', err);
   }
 }
 
+export function getStoredLearners(): Student[] {
+  return getLearners();
+}
+
+export function setStoredLearners(learners: Student[]): void {
+  saveLearners(learners);
+}
+
 export function getStudents(): Student[] {
-  return getStoredLearners();
+  return getLearners();
 }
 
 export function setStudents(students: Student[]): boolean {
   try {
-    setStoredLearners(students);
+    saveLearners(students);
     return true;
   } catch {
     return false;
   }
 }
 
-/**
- * Alias for getStoredLearners — retrieves learners from localStorage,
- * automatically filtering out blank names or "Unnamed Learner" records.
- */
-export function getLearners(): Student[] {
-  return getStoredLearners();
-}
-
-/**
- * Alias for setStoredLearners — saves learners to localStorage and
- * notifies subscribers of the data change.
- */
-export function saveLearners(learners: Student[]): void {
-  setStoredLearners(learners);
-}
-
 export function createStudent(input: Omit<Student, 'id'> & { id?: string }): Student {
   const newStudent: Student = {
-    name: input.name ?? 'Unnamed Student',
+    fullName: input.fullName ?? input.name ?? 'Unnamed Student',
     ...input,
     id: input.id ?? generateId('stu'),
   };
@@ -687,7 +655,7 @@ export function exportAllData(): DatabaseBackup {
     version: CURRENT_SCHEMA_VERSION,
     exportDate: new Date().toISOString(),
     school: 'MUNYAKA PRIMARY AND JUNIOR SCHOOL',
-    students: safeRead(STORAGE_KEYS.LEARNERS),
+    students: safeRead('munyaka_app_learners_v1'),
     staff: safeRead(STORAGE_KEYS.STAFF),
     staffPrereg: safeRead(STORAGE_KEYS.STAFF_PREREG),
     fees: safeRead(STORAGE_KEYS.PAYMENT_RECORDS),
@@ -729,7 +697,7 @@ export function importAllData(backup: DatabaseBackup): ImportResult {
     }
   };
 
-  if (backup.students) safeWrite(STORAGE_KEYS.LEARNERS, backup.students, 'Students');
+  if (backup.students) safeWrite('munyaka_app_learners_v1', backup.students, 'Students');
   if (backup.staff) safeWrite(STORAGE_KEYS.STAFF, backup.staff, 'Staff');
   if (backup.staffPrereg) safeWrite(STORAGE_KEYS.STAFF_PREREG, backup.staffPrereg, 'Staff Pre-registration');
   if (backup.fees) safeWrite(STORAGE_KEYS.PAYMENT_RECORDS, backup.fees, 'Fee Records');
