@@ -54,7 +54,8 @@ export default function AddLearnerModal({
 
   const handleSaveLearner = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fullName.trim()) {
+    const studentName = (formData.fullName || '').trim();
+    if (!studentName) {
       showError("Please enter full name.");
       return;
     }
@@ -77,8 +78,10 @@ export default function AddLearnerModal({
         birthCertNo: identifierValue,
         birthCertificateNo: identifierValue,
         identifierNo: identifierValue,
-        name: formData.fullName.trim(),
-        fullName: formData.fullName.trim(),
+        name: studentName,
+        fullName: studentName,
+        learnerName: studentName,
+        studentName: studentName,
         grade: formData.grade,
         gradeLevel: formData.grade,
         stream: formData.stream,
