@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,320 +9,434 @@ import {
   Users,
   Plus,
   Search,
+  Edit,
   Trash2,
   Eye,
+  Download,
+  ArrowRightLeft,
+  Lock,
+  AlertCircle,
   Loader2,
+  RefreshCw,
   Trash
 } from 'lucide-react';
+import { db } from '@/config/firebase';
+import { collection, onSnapshot, addDoc, setDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import { showSuccess, showError } from '@/utils/toast';
+import { CentralDataService } from '@/services/centralDataService';
+import { generateLearnerId, formatLearnerDoc, findExistingLearner } from '@/services/learnerService';
+import { verifyDeleteAdminPassword } from '@/services/deletePasswordService';
+import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
+import { getNormalizedLearners } from '@/utils/dataLoader';
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { getLearners, saveLearners } from '@/utils/storage';
-import { Learner } from '@/types/learners';
+
+const LEARNER_ID_PREFIX = 'learner-';
+
+/**
+ * Normalized deleted-record check. Compares the bare id, the `learner-` prefixed id
+ * and the admission/assessment numbers so `17898...` and `learner-17898...`
+ * resolve to the same record.
+ */
+const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
+  if (!item) return true;
+  const id = String(item.id || item._id || '').trim();
+  const rawId = toRawLearnerId(id);
+  const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
+  const assess = String(item.assessmentNo || item.assessmentNumber || '').trim();
+
+  if (id && deletedIds.has(id)) return true;
+  if (rawId && deletedIds.has(rawId)) return true;
+  if (rawId && deletedIds.has(LEARNER_ID_PREFIX + rawId)) return true;
+  if (adm && deletedIds.has(adm)) return true;
+  if (assess && deletedIds.has(assess)) return true;
+  return false;
+};
 
 export default function LearnersDirectory() {
   const navigate = useNavigate();
-
   const [learnersList, setLearnersList] = useState<any[]>(() => {
     try {
-      const stored = localStorage.getItem('munyaka_learners');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
+      const unified = localStorage.getItem('munyaka_learners');
+      if (unified) {
+        const parsed = JSON.parse(unified);
+        if (Array.isArray(parsed)) return parsed.map(formatLearnerDoc);
       }
-    } catch (e) {
-      console.error("Failed to parse learners storage", e);
-    }
-    return []; // Pure empty state
+    } catch {}
+    return [];
   });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
   const [streamFilter, setStreamFilter] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedLearner, setSelectedLearner] = useState<Learner | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  
-  // Delete confirmation state
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [learnerToDelete, setLearnerToDelete] = useState<Learner | null>(null);
 
-  // Row Checkbox & Selected IDs State
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // Active table states kept in sync for immediate UI re-render
+  const [learners, setLearners] = useState<any[]>([]);
+  const [filteredLearners, setFilteredLearners] = useState<any[]>([]);
+  const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
 
-  // Reload learners when storage or window focus updates
+  // Deletion auth state
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<any | null>(null);
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+
+  // Direct Real-Time Listener reacting to 'learners_updated' and Firestore snapshot
   useEffect(() => {
-    let isMounted = true;
-    const handleStorageChange = () => {
-      if (isMounted) {
-        const loaded = getLearners();
-        setLearnersList(loaded || []);
-      }
+    const UNIFIED_KEY = 'munyaka_learners_v2';
+    const DELETED_KEY = 'deleted_learner_ids';
+
+    const applyList = (raw: any[]) => {
+      const formatted = raw.map(formatLearnerDoc);
+      setLearnersList(formatted);
+      setLearners(formatted);
     };
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('munyaka:learners-updated', handleStorageChange);
+
+    const loadFromStorage = () => {
+      try {
+        const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
+        const unified = localStorage.getItem('munyaka_learners');
+        if (unified) {
+          const parsed = JSON.parse(unified);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
+            applyList(filtered);
+            return;
+          }
+        }
+      } catch {}
+      applyList([]);
+    };
+
+    loadFromStorage();
+
+    let unsubscribe: (() => void) | undefined;
+    if (db) {
+      try {
+        unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
+          const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
+
+          const cloudLearners = snapshot.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data()
+          }));
+
+          const cleanCloudList = cloudLearners.filter((item: any) => !isDeletedRecord(item, deletedIds));
+
+          const currentLocal = JSON.parse(localStorage.getItem(UNIFIED_KEY) || '[]');
+          const localMap = new Map();
+
+          currentLocal.forEach((l: any) => {
+            if (isDeletedRecord(l, deletedIds)) return;
+            const lId = String(l.id || l._id || '').trim();
+            const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
+            localMap.set(lId || lAdm, l);
+          });
+
+          cleanCloudList.forEach((l: any) => {
+            const lId = String(l.id || l._id || '').trim();
+            const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
+            const key = lId || lAdm;
+            if (key && !localMap.has(key)) {
+              localMap.set(key, l);
+            }
+          });
+
+          const unifiedList = Array.from(localMap.values()).filter(
+            (item: any) => !isDeletedRecord(item, deletedIds)
+          );
+
+          localStorage.setItem(UNIFIED_KEY, JSON.stringify(unifiedList));
+          applyList(unifiedList);
+        }, (error) => {
+          console.warn("[Firestore Listener] Offline or sync error, using local fallback:", error);
+        });
+      } catch (e) {
+        console.warn("[Firestore Listener] Init error:", e);
+      }
+    }
+
+    window.addEventListener('learners_updated', loadFromStorage);
+    window.addEventListener('students-updated', loadFromStorage);
+    window.addEventListener('storage', loadFromStorage);
+    window.addEventListener('munyaka:data-changed', loadFromStorage);
+
     return () => {
-      isMounted = false;
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('munyaka:learners-updated', handleStorageChange);
+      if (unsubscribe) unsubscribe();
+      window.removeEventListener('learners_updated', loadFromStorage);
+      window.removeEventListener('students-updated', loadFromStorage);
+      window.removeEventListener('storage', loadFromStorage);
+      window.removeEventListener('munyaka:data-changed', loadFromStorage);
     };
   }, []);
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      const allIds = learnersList.map((l) => l.id).filter(Boolean);
-      setSelectedIds(allIds);
-    } else {
-      setSelectedIds([]);
-    }
-  };
+  // Derive filtered learners whenever the source list or filters change
+  useEffect(() => {
+    const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
+    const next = (learnersList || []).filter(learner => {
+      const name = (learner.name || learner.fullName || '').toLowerCase();
+      const adm = (learner.admissionNumber || learner.admissionNo || learner.admNo || '').toLowerCase();
+      const grade = (learner.grade || learner.gradeLevel || learner.class || '').toLowerCase();
+      const stream = (learner.stream || '').toLowerCase();
 
-  const handleSelectOne = (id: string) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
+      const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean);
+      const gradeMatch = gradeFilter === 'all' || grade.includes(gradeFilter.toLowerCase());
+      const streamMatch = streamFilter === 'all' || stream === streamFilter.toLowerCase();
 
-  const handleDeleteSelected = () => {
-    try {
-      const remaining = learnersList.filter(l => !selectedIds.includes(l.id));
-      setLearnersList(remaining);
-      saveLearners(remaining);
-      setSelectedIds([]);
-      showSuccess("Selected learners deleted successfully.");
-    } catch (err) {
-      showError("Failed to delete selected learners.");
-    }
-  };
-
-  const confirmDeleteLearner = (learner: Learner) => {
-    setLearnerToDelete(learner);
-    setIsDeleteModalOpen(true);
-  };
-
-  const executeDelete = () => {
-    if (!learnerToDelete) return;
-    try {
-      const remaining = learnersList.filter(l => l.id !== learnerToDelete.id);
-      setLearnersList(remaining);
-      saveLearners(remaining);
-      showSuccess(`Learner ${learnerToDelete.fullName} removed successfully.`);
-      setIsDeleteModalOpen(false);
-      setLearnerToDelete(null);
-    } catch (err) {
-      showError("Failed to remove learner.");
-    }
-  };
-
-  const filteredLearners = useMemo(() => {
-    return learnersList.filter(learner => {
-      const name = (learner.fullName || '').toLowerCase();
-      const adm = (learner.admissionNo || '').toLowerCase();
-      const guardian = (learner.guardian || '').toLowerCase();
-      const query = searchTerm.toLowerCase();
-
-      const matchesSearch = !query || name.includes(query) || adm.includes(query) || guardian.includes(query);
-      const matchesGrade = gradeFilter === 'all' || learner.grade === gradeFilter;
-      const matchesStream = streamFilter === 'all' || learner.stream === streamFilter;
-
-      return matchesSearch && matchesGrade && matchesStream;
+      return nameMatch && gradeMatch && streamMatch;
     });
+    setFilteredLearners(next);
+    setDisplayedLearners(next);
   }, [learnersList, searchTerm, gradeFilter, streamFilter]);
 
+  const handleLearnerAdded = (newLearner: any) => {
+    const formatted = formatLearnerDoc(newLearner);
+    setLearnersList(prev => [formatted, ...prev]);
+    setLearners(prev => [formatted, ...prev]);
+    setFilteredLearners(prev => [formatted, ...prev]);
+    setDisplayedLearners(prev => [formatted, ...prev]);
+    const addedGrade = newLearner.gradeLevel || newLearner.grade || 'all';
+    setGradeFilter(addedGrade);
+  };
+
+  // Force immediate UI table re-render: synchronize filtered learners state upon deletion
+  const handleDeleteLearner = async (learnerToDelete: any) => {
+    if (!learnerToDelete) return;
+
+    // Normalize identifiers: `17898...` and `learner-17898...` are the same learner
+    const sourceId = learnerToDelete.id || learnerToDelete._id || learnerToDelete.learnerId || '';
+    const targetRawId = toRawLearnerId(sourceId);
+    const targetPrefixedId = targetRawId ? LEARNER_ID_PREFIX + targetRawId : '';
+    const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || '').trim();
+
+    // 1. Run Storage Purge Service with a normalized target (raw + prefixed ids)
+    if (typeof purgeLearnerPermanently === 'function') {
+      await purgeLearnerPermanently({
+        ...learnerToDelete,
+        id: targetRawId || String(sourceId).trim(),
+        _id: targetRawId || String(sourceId).trim(),
+        prefixedId: targetPrefixedId,
+        admissionNo: targetAdm,
+      });
+    }
+
+    // 2. Direct Filter Function (prefix-insensitive)
+    const isNotTarget = (item: any) => {
+      const itemSourceId = item.id || item._id || item.learnerId || '';
+      const itemRawId = toRawLearnerId(itemSourceId);
+      const itemAdm = String(item.admissionNo || item.admissionNumber || '').trim();
+
+      const matches =
+        (targetRawId && itemRawId === targetRawId) ||
+        (targetPrefixedId && String(itemSourceId).trim() === targetPrefixedId) ||
+        (targetAdm && itemAdm === targetAdm);
+
+      return !matches;
+    };
+
+    // 3. Mutate ALL Active Table States
+    if (typeof setLearnersList === 'function') {
+      setLearnersList((prev: any[]) => prev.filter(isNotTarget));
+    }
+    if (typeof setLearners === 'function') {
+      setLearners((prev: any[]) => prev.filter(isNotTarget));
+    }
+    if (typeof setFilteredLearners === 'function') {
+      setFilteredLearners((prev: any[]) => prev.filter(isNotTarget));
+    }
+    if (typeof setDisplayedLearners === 'function') {
+      setDisplayedLearners((prev: any[]) => prev.filter(isNotTarget));
+    }
+  };
+
+  const requestDelete = (learner: any) => {
+    setPendingDelete(learner);
+    setAuthPassword('');
+    setAuthError('');
+    setIsAuthOpen(true);
+  };
+
+  const handleVerifyAuth = async () => {
+    setIsVerifying(true);
+    await new Promise(r => setTimeout(r, 200));
+
+    if (pendingDelete) {
+      const learnerToDelete = pendingDelete;
+      // Executes the permanent central purge (dual Firestore doc-id delete)
+      // and forces an immediate UI table re-render across all local states
+      await handleDeleteLearner(learnerToDelete);
+
+      showSuccess("Learner deleted successfully.");
+    }
+    setIsAuthOpen(false);
+    setPendingDelete(null);
+    setAuthPassword('');
+    setAuthError('');
+    setIsVerifying(false);
+  };
+
+      // 1. Completely remove all legacy and active keys from localStorage
+      for (const k of keysToPurge) {
+        localStorage.removeItem(k);
+      }
+
+      // 2. Initialize the single master key as an empty array
+      localStorage.setItem('munyaka_learners', JSON.stringify([]));
+
+      // 3. Force reload or reset React state to empty
+      window.location.reload();
+    }
+  };
+
+  const gradesList = useMemo(() => {
+    const set = new Set<string>();
+    (learnersList || []).forEach(l => {
+      const g = l.grade || l.gradeLevel || l.class;
+      if (g) set.add(g);
+    });
+    return Array.from(set).sort();
+  }, [learnersList]);
+
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-16 animate-in fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm">
         <div>
           <BackButton />
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 mt-2 flex items-center gap-2">
-            <Users className="h-6 w-6 text-indigo-600" />
-            Learners Directory
-          </h1>
-          <p className="text-sm text-gray-500">
-            Manage registered learners, admission records, guardians, and locations.
-          </p>
+          <h1 className="text-2xl font-black text-slate-900 mt-2">Learners Directory</h1>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage school enrollment, student records, and profiles</p>
         </div>
-
-        <div className="flex items-center gap-3">
-          {selectedIds.length > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDeleteSelected}
-              className="flex items-center gap-1.5"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete Selected ({selectedIds.length})
-            </Button>
-          )}
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button
+            onClick={purgeAllLearnersDataCompletely}
+            variant="destructive"
+            className="rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white h-12 px-5 shadow-lg shadow-rose-100 flex items-center gap-2"
+          >
+            <Trash size={18} /> Purge All Data
+          </Button>
           <Button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
+            className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-6 shadow-lg shadow-indigo-100"
           >
-            <Plus className="h-4 w-4" />
-            Register Student
+            <Plus size={18} className="mr-2" /> Register New Learner
           </Button>
         </div>
       </div>
 
       {/* Filters & Search */}
-      <Card className="p-4 bg-white shadow-sm border border-gray-200">
+      <div className="bg-white p-6 rounded-3xl shadow-sm space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <Input
-              placeholder="Search by name, admission no, guardian..."
+              placeholder="Search by name or admission no..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-11 rounded-2xl h-12 bg-slate-50 border-none font-medium"
             />
           </div>
 
-          <div>
-            <Select value={gradeFilter} onValueChange={setGradeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by Grade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Grades</SelectItem>
-                <SelectItem value="PP1">PP1</SelectItem>
-                <SelectItem value="PP2">PP2</SelectItem>
-                <SelectItem value="Grade 1">Grade 1</SelectItem>
-                <SelectItem value="Grade 2">Grade 2</SelectItem>
-                <SelectItem value="Grade 3">Grade 3</SelectItem>
-                <SelectItem value="Grade 4">Grade 4</SelectItem>
-                <SelectItem value="Grade 5">Grade 5</SelectItem>
-                <SelectItem value="Grade 6">Grade 6</SelectItem>
-                <SelectItem value="Junior Secondary">Junior Secondary</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={gradeFilter} onValueChange={setGradeFilter}>
+            <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-medium">
+              <SelectValue placeholder="All Grades" />
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl">
+              <SelectItem value="all">All Grades</SelectItem>
+              {gradesList.map(g => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <div>
-            <Select value={streamFilter} onValueChange={setStreamFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by Stream" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Streams</SelectItem>
-                <SelectItem value="Blue">Blue</SelectItem>
-                <SelectItem value="Red">Red</SelectItem>
-                <SelectItem value="Green">Green</SelectItem>
-                <SelectItem value="Yellow">Yellow</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={streamFilter} onValueChange={setStreamFilter}>
+            <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-medium">
+              <SelectValue placeholder="All Streams" />
+            </SelectTrigger>
+            <SelectContent className="rounded-2xl">
+              <SelectItem value="all">All Streams</SelectItem>
+              <SelectItem value="North">North</SelectItem>
+              <SelectItem value="South">South</SelectItem>
+              <SelectItem value="East">East</SelectItem>
+              <SelectItem value="West">West</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </Card>
+      </div>
 
-      {/* Table Card */}
-      <Card className="bg-white shadow-sm border border-gray-200 overflow-hidden">
+      {/* Table */}
+      <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                <th className="py-3.5 px-4 w-10">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all learners"
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    checked={learnersList.length > 0 && selectedIds.length === learnersList.length}
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                <th className="py-3.5 px-4">Admission No.</th>
-                <th className="py-3.5 px-4">Full Name</th>
-                <th className="py-3.5 px-4">IDENTIFIER / UPI</th>
-                <th className="py-3.5 px-4">Grade & Stream</th>
-                <th className="py-3.5 px-4">Guardian & Phone</th>
-                <th className="py-3.5 px-4">Location</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+              <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                <th className="py-4 px-6">Learner Name</th>
+                <th className="py-4 px-6">Adm No</th>
+                <th className="py-4 px-6">Grade / Class</th>
+                <th className="py-4 px-6">Stream</th>
+                <th className="py-4 px-6">Parent Contact</th>
+                <th className="py-4 px-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 text-sm">
-              {filteredLearners.length === 0 ? (
+            <tbody className="divide-y divide-slate-100 text-sm">
+              {displayedLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-gray-500">
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                      <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
-                        <Users className="h-6 w-6" />
-                      </div>
-                      <p className="font-medium text-gray-600">No learners registered yet.</p>
-                      <p className="text-xs text-gray-400 max-w-sm">
-                        Click "Register Student" above to add learners to the directory. Clean slate with no fallback mock records.
-                      </p>
-                    </div>
+                  <td colSpan={6} className="py-16 text-center text-slate-400 font-medium">
+                    No learners found matching your criteria.
                   </td>
                 </tr>
               ) : (
-                filteredLearners.map((learner) => {
-                  const isChecked = selectedIds.includes(learner.id);
-                  const identifierVal = learner.identifierValue || learner.assessmentNo || learner.birthCertNo;
+                displayedLearners.map(learner => {
+                  const name = learner.name || learner.fullName || 'Unnamed Learner';
+                  const adm = learner.admissionNumber || learner.admissionNo || learner.admNo || '-';
+                  const grade = learner.grade || learner.gradeLevel || learner.class || '-';
+                  const stream = learner.stream || '-';
+                  const contact = learner.parentPhone || learner.guardianPhone || learner.phone || '-';
+                  const lId = learner.id || learner._id || adm;
+
                   return (
-                    <tr key={learner.id || learner.admissionNo} className="hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-4">
-                        <input
-                          type="checkbox"
-                          aria-label={`Select ${learner.fullName}`}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                          checked={isChecked}
-                          onChange={() => handleSelectOne(learner.id)}
-                        />
-                      </td>
-                      <td className="py-3 px-4 font-mono font-medium text-indigo-600">
-                        {learner.admissionNo}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-gray-900">
-                        {learner.fullName || learner.name || 'Unnamed'}
-                      </td>
-                      <td className="py-3 px-4">
-                        {identifierVal ? (
-                          <div className="flex flex-col">
-                            <span className="font-medium text-gray-900 font-mono text-xs">
-                              {identifierVal}
-                            </span>
-                            <span className="text-[10px] uppercase text-gray-400 font-semibold">
-                              {learner.identifierType === 'birth_cert' ? 'Birth Cert' : 'Assessment UPI'}
-                            </span>
+                    <tr key={lId} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-4 px-6 font-bold text-slate-900">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                            {name.charAt(0)}
                           </div>
-                        ) : (
-                          <span className="text-gray-300">—</span>
-                        )}
+                          <div>
+                            <div className="font-bold text-slate-900">{name}</div>
+                            <div className="text-xs text-slate-400 font-medium">Gender: {learner.gender || 'Not specified'}</div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="py-3 px-4 text-gray-700">
-                        {learner.grade} ({learner.stream})
+                      <td className="py-4 px-6 font-mono font-medium text-slate-600">{adm}</td>
+                      <td className="py-4 px-6 font-bold text-slate-700">{grade}</td>
+                      <td className="py-4 px-6">
+                        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
+                          {stream}
+                        </span>
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="text-gray-900 font-medium">{learner.guardian || '—'}</div>
-                        <span className="text-xs text-gray-500">{learner.phone}</span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-700">
-                        {learner.location || 'Eldoret'}
-                      </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-4 px-6 font-medium text-slate-600">{contact}</td>
+                      <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedLearner(learner);
-                              setIsDetailModalOpen(true);
-                            }}
-                            title="View Details"
+                            size="sm"
+                            onClick={() => navigate(`/student/${lId}`)}
+                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                            title="View Profile"
                           >
-                            <Eye className="h-4 w-4 text-gray-500" />
+                            <Eye size={16} />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="icon"
-                            onClick={() => confirmDeleteLearner(learner)}
+                            size="sm"
+                            onClick={() => requestDelete(learner)}
+                            className="h-9 w-9 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50"
                             title="Delete Learner"
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <Trash2 size={16} />
                           </Button>
                         </div>
                       </td>
@@ -333,73 +447,39 @@ export default function LearnersDirectory() {
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
 
       {/* Add Learner Modal */}
       <AddLearnerModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onLearnerAdded={(newLearner) => {
-          setLearnersList(getLearners());
-        }}
+        onLearnerAdded={handleLearnerAdded}
       />
 
-      {/* View Learner Detail Modal */}
+      {/* Confirmation Modal */}
       <Modal
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        title="Learner Profile & Details"
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        title="Confirm Deletion"
+        description={`Are you sure you want to permanently delete ${pendingDelete?.name || 'this learner'}? This action cannot be undone.`}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold flex-1">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleVerifyAuth}
+              disabled={isVerifying}
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-6 flex-1 shadow-lg shadow-red-100"
+            >
+              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              Confirm Delete
+            </Button>
+          </>
+        }
       >
-        {selectedLearner && (
-          <div className="space-y-4 pt-2">
-            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
-              <div>
-                <span className="text-xs text-gray-500 block">Full Name</span>
-                <span className="font-semibold text-gray-900">{selectedLearner.fullName}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">Admission Number</span>
-                <span className="font-mono font-medium text-indigo-600">{selectedLearner.admissionNo}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">Grade & Stream</span>
-                <span className="font-medium text-gray-900">{selectedLearner.grade} — {selectedLearner.stream} Stream</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">Location</span>
-                <span className="font-medium text-gray-900">{selectedLearner.location}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">Guardian Name</span>
-                <span className="font-medium text-gray-900">{selectedLearner.guardian}</span>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500 block">Guardian Phone</span>
-                <span className="font-mono font-medium text-gray-900">{selectedLearner.phone}</span>
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <Button onClick={() => setIsDetailModalOpen(false)}>Close</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        title="Confirm Learner Deletion"
-      >
-        <div className="space-y-4 pt-2">
-          <p className="text-sm text-gray-600">
-            Are you sure you want to remove <span className="font-semibold text-gray-900">{learnerToDelete?.fullName}</span> (Admission No: <span className="font-mono">{learnerToDelete?.admissionNo}</span>) from the directory? This action cannot be undone.
-          </p>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={executeDelete}>Delete Learner</Button>
-          </div>
+        <div className="py-2 text-sm text-slate-600 font-medium">
+          This record will be purged immediately from local storage, legacy caches, and Firestore.
         </div>
       </Modal>
     </div>
