@@ -24,20 +24,19 @@ import { Learner } from '@/types/learners';
 export default function LearnersDirectory() {
   const navigate = useNavigate();
 
-  // Initialize strictly from localStorage with zero mock data fallbacks
-  const [learnersList, setLearnersList] = useState<Learner[]>(() => {
+  const [learnersList, setLearnersList] = useState<any[]>(() => {
     try {
-      const unified = localStorage.getItem('munyaka_app_learners_v1');
-      if (unified) {
-        const parsed = JSON.parse(unified);
-        if (Array.isArray(parsed)) {
+      const stored = localStorage.getItem('munyaka_learners');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed;
         }
       }
     } catch (e) {
-      console.error("Failed to load learners", e);
+      console.error("Failed to parse learners storage", e);
     }
-    return [];
+    return []; // Pure empty state
   });
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -322,16 +321,6 @@ export default function LearnersDirectory() {
                             size="icon"
                             onClick={() => confirmDeleteLearner(learner)}
                             title="Delete Learner"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
