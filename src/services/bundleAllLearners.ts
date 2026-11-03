@@ -1,6 +1,7 @@
 import { db } from '../config/firebase';
 import { collection, getDocs, setDoc, doc } from 'firebase/firestore';
 import { initialSeedData } from '../data/initialSeedData';
+import { syncLearnerToFirestore } from './firebaseSync';
 
 const CENTRAL_KEY = 'munyaka_learners_v2';
 const LEGACY_KEYS = ['cached_learners', 'students', 'learners', 'school_learners', 'school_learners_data', 'munyaka_students'];
@@ -104,17 +105,17 @@ export const bundleAllLearnersToCentral = async () => {
   localStorage.setItem(CENTRAL_KEY, JSON.stringify(bundledLearners));
 
   // G. Sync back to Firestore so cloud database is 100% up to date
-  if (db) {
-    for (const learner of bundledLearners) {
-      if (learner.id) {
-        try {
-          await setDoc(doc(db, "learners", learner.id), learner, { merge: true });
-        } catch (err) {
-          // Continue offline sync
+    if (db) {
+      for (const learner of bundledLearners) {
+        if (learner.id) {
+          try {
+            await syncLearnerToFirestore(learner);
+          } catch (err) {
+            // Continue offline sync
+          }
         }
       }
     }
-  }
 
   // H. Clean up and wipe legacy storage keys
   LEGACY_KEYS.forEach((key) => localStorage.removeItem(key));

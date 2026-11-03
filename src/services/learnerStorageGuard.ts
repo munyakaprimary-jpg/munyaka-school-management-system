@@ -1,5 +1,6 @@
 import { db } from '../config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { syncLearnerToFirestore } from './firebaseSync';
 
 const UNIFIED_STORAGE_KEY = 'munyaka_learners_v2';
 
@@ -50,13 +51,13 @@ export const registerLearnerGuarded = async (newLearnerData: any) => {
   });
 
   // E. Sync to Firestore central database
-  if (db) {
-    try {
-      await setDoc(doc(db, "learners", learnerId), formattedLearner, { merge: true });
-    } catch (cloudErr) {
-      console.warn("[Storage Guard] Saved locally (offline-first mode):", cloudErr);
+    if (db) {
+      try {
+        await syncLearnerToFirestore(formattedLearner);
+      } catch (cloudErr) {
+        console.warn("[Storage Guard] Saved locally (offline-first mode):", cloudErr);
+      }
     }
-  }
 
   // F. Dispatch global event to force instant refresh on LearnersDirectory
   window.dispatchEvent(new Event('learners_updated'));
