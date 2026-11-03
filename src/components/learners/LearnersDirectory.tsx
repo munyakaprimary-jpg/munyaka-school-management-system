@@ -161,7 +161,6 @@ export default function LearnersDirectory() {
     }
 
     window.addEventListener('learners_updated', loadFromStorage);
-    window.addEventListener('students-updated', loadFromStorage);
     window.addEventListener('storage', loadFromStorage);
     window.addEventListener('munyaka:data-changed', loadFromStorage);
 
