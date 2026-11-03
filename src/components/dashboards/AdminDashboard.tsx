@@ -1,4 +1,4 @@
-import { getNormalizedLearners, getActiveStaff } from '@/utils/dataLoader';
+import { getNormalizedLearners } from '@/utils/dataLoader';
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,13 +29,13 @@ export const AdminDashboardComponent: React.FC = () => {
 
   const [reactiveLearners, setReactiveLearners] = useState<any[]>(() => getNormalizedLearners());
 
-  const [localStaff, setLocalStaff] = useState<any[]>(() => getActiveStaff());
+  const [localStaff, setLocalStaff] = useState<any[]>(() => getStoredStaff());
 
   useEffect(() => {
     const handleSync = () => {
-      setReactiveLearners(getNormalizedLearners());
-      setLocalStaff(getActiveStaff());
-    };
+          setReactiveLearners(getNormalizedLearners());
+          setLocalStaff(getStoredStaff());
+        };
 
     handleSync();
     window.addEventListener('storage', handleSync);
