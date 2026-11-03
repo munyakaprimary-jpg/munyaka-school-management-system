@@ -61,6 +61,7 @@ const normalizeGradeStr = (val: string) => {
 };
 
 import { purgeAndRebuildLearnerDirectory } from '@/utils/purgeUnnamedLearners';
+import { generateCohortAdmissionNumber } from '@/utils/admissionUtils';
 
 const generateAdmissionNumber = (studentGrade: string, _admissionYear: string = '2026') => {
   const existingLearners = getStoredLearners();
