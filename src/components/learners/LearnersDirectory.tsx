@@ -224,7 +224,7 @@ export default function LearnersDirectory() {
                   />
                 </th>
                 <th className="py-3.5 px-4">Admission No.</th>
-                <th className="py-3.5 px-4">Full Name (Student)</th>
+                <th className="py-3.5 px-4">Full Name</th>
                 <th className="py-3.5 px-4">Grade & Stream</th>
                 <th className="py-3.5 px-4">Guardian & Phone</th>
                 <th className="py-3.5 px-4">Location</th>
@@ -250,7 +250,7 @@ export default function LearnersDirectory() {
                 filteredLearners.map((learner) => {
                   const isChecked = selectedIds.includes(learner.id);
                   return (
-                    <tr key={learner.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={learner.id || learner.admissionNo} className="hover:bg-gray-50 transition-colors">
                       <td className="py-3 px-4">
                         <input
                           type="checkbox"
@@ -261,24 +261,20 @@ export default function LearnersDirectory() {
                         />
                       </td>
                       <td className="py-3 px-4 font-mono font-medium text-indigo-600">
-                        {learner.admissionNo || '—'}
+                        {learner.admissionNo}
                       </td>
-                      <td className="py-3 px-4 font-semibold text-gray-900">
-                        {learner.fullName}
+                      <td className="py-3 px-4 font-bold text-gray-900">
+                        {learner.fullName || learner.name || 'Unnamed'}
                       </td>
                       <td className="py-3 px-4 text-gray-700">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-medium">{learner.grade}</span>
-                          <span className="text-gray-400">•</span>
-                          <span className="text-indigo-600 font-medium">{learner.stream}</span>
-                        </div>
+                        {learner.grade} ({learner.stream})
                       </td>
                       <td className="py-3 px-4">
-                        <div className="text-gray-900 font-medium">{learner.guardian}</div>
-                        <div className="text-xs text-gray-500 font-mono">{learner.phone}</div>
+                        <div className="text-gray-900 font-medium">{learner.guardian || '—'}</div>
+                        <span className="text-xs text-gray-500">{learner.phone}</span>
                       </td>
                       <td className="py-3 px-4 text-gray-700">
-                        {learner.location}
+                        {learner.location || 'Eldoret'}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -298,6 +294,16 @@ export default function LearnersDirectory() {
                             size="icon"
                             onClick={() => confirmDeleteLearner(learner)}
                             title="Delete Learner"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
