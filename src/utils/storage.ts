@@ -173,6 +173,10 @@ export function hydrateAllStores(): HydrationReport {
   };
 
   try {
+    const raw = localStorage.getItem('munyaka_app_learners_v1');
+    if (raw && (raw.includes('MUN-001-2026') || raw.includes('Unnamed Learner') || raw.includes('unnamed learner'))) {
+      localStorage.removeItem('munyaka_app_learners_v1');
+    }
     if (!localStorage.getItem('munyaka_app_learners_v1')) {
       localStorage.setItem('munyaka_app_learners_v1', JSON.stringify([]));
     }
@@ -216,13 +220,20 @@ export function normalizeStaffAccessCode(code: string | undefined | null, index:
  */
 export function getLearners(): Learner[] {
   try {
+    const raw = localStorage.getItem('munyaka_app_learners_v1');
+    if (raw && (raw.includes('MUN-001-2026') || raw.includes('Unnamed Learner') || raw.includes('unnamed learner'))) {
+      localStorage.removeItem('munyaka_app_learners_v1');
+      return [];
+    }
     const data = localStorage.getItem('munyaka_app_learners_v1');
     if (!data) return [];
     const parsed = JSON.parse(data);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter((l: any) => {
       if (!l) return false;
+      const adm = String(l.admissionNo || l.admNo || '').trim();
       const fn = String(l.fullName || l.name || '').trim();
+      if (adm === 'MUN-001-2026' || adm === 'A001') return false;
       if (!fn) return false;
       const lower = fn.toLowerCase();
       return lower !== 'unnamed learner' && lower !== 'unnamed student' && lower !== 'unnamed' && lower !== 'unknown learner';

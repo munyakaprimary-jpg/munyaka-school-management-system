@@ -66,13 +66,24 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const initializeLearners = async () => {
       try {
+        const rawV1 = localStorage.getItem('munyaka_app_learners_v1');
+        if (rawV1 && (rawV1.includes('MUN-001-2026') || rawV1.includes('Unnamed Learner'))) {
+          localStorage.removeItem('munyaka_app_learners_v1');
+        }
+
         const storedLocal = localStorage.getItem(STORAGE_KEY_LEARNERS_V2) || localStorage.getItem('munyaka_learners') || '[]';
         let parsedList = [];
         try {
           parsedList = JSON.parse(storedLocal);
         } catch {}
 
-        const learnersList = deduplicateLearners((Array.isArray(parsedList) ? parsedList : []).map(formatLearnerDoc));
+        const learnersList = deduplicateLearners((Array.isArray(parsedList) ? parsedList : []).map(formatLearnerDoc)).filter(l => {
+          const adm = String(l.admissionNumber || l.admissionNo || '').trim();
+          const fn = String(l.fullName || l.name || '').trim();
+          if (adm === 'MUN-001-2026' || adm === 'A001') return false;
+          if (!fn || fn.toLowerCase() === 'unnamed learner' || fn.toLowerCase() === 'unnamed student') return false;
+          return true;
+        });
 
         if (isMounted) {
           setLearners(filterLearnersForUser(learnersList));
