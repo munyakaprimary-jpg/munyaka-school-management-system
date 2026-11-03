@@ -387,6 +387,23 @@ export function setSubscriptions(subs: Subscription[]): void {
   lsSet(STORAGE_KEYS.SUBSCRIPTIONS, subs);
 }
 
+export function createSubscription(sub: Subscription): Subscription {
+  const list = getSubscriptions();
+  const newSub = { ...sub, id: sub.id || `sub_${Date.now()}` };
+  setSubscriptions([newSub, ...list]);
+  return newSub;
+}
+
+export function updateSubscription(id: string, patch: Partial<Subscription>): Subscription | null {
+  const list = getSubscriptions();
+  const idx = list.findIndex(s => s.id === id);
+  if (idx === -1) return null;
+  const updated = { ...list[idx], ...patch, id };
+  list[idx] = updated;
+  setSubscriptions(list);
+  return updated;
+}
+
 export function deleteSubscription(id: string): boolean {
   try {
     const list = getSubscriptions();
