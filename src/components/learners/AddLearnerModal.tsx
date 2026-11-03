@@ -25,7 +25,7 @@ export default function AddLearnerModal({
   availableStreams = ['BLUE', 'RED', 'GREEN', 'YELLOW']
 }: AddLearnerModalProps) {
   const [formData, setFormData] = useState({
-    name: '',
+    fullName: '',
     admNo: '',
     assessmentNo: '',
     grade: 'Grade 1',
@@ -47,9 +47,14 @@ export default function AddLearnerModal({
     }
   }, [formData.grade]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSaveLearner = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
+    if (!formData.fullName.trim()) {
       showError("Please enter full name.");
       return;
     }
@@ -72,8 +77,8 @@ export default function AddLearnerModal({
         birthCertNo: identifierValue,
         birthCertificateNo: identifierValue,
         identifierNo: identifierValue,
-        name: formData.name.trim(),
-        fullName: formData.name.trim(),
+        name: formData.fullName.trim(),
+        fullName: formData.fullName.trim(),
         grade: formData.grade,
         gradeLevel: formData.grade,
         stream: formData.stream,
@@ -130,8 +135,9 @@ export default function AddLearnerModal({
         <div className="space-y-2">
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name *</Label>
           <Input
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            name="fullName"
+            value={formData.fullName}
+            onChange={handleChange}
             placeholder="e.g. John Kamau"
             className="rounded-xl h-12 bg-slate-50 border-none font-bold"
             required
