@@ -227,6 +227,7 @@ export default function LearnersDirectory() {
                 </th>
                 <th className="py-3.5 px-4">Admission No.</th>
                 <th className="py-3.5 px-4">Full Name</th>
+                <th className="py-3.5 px-4">IDENTIFIER / UPI</th>
                 <th className="py-3.5 px-4">Grade & Stream</th>
                 <th className="py-3.5 px-4">Guardian & Phone</th>
                 <th className="py-3.5 px-4">Location</th>
@@ -236,7 +237,7 @@ export default function LearnersDirectory() {
             <tbody className="divide-y divide-gray-200 text-sm">
               {filteredLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-gray-500">
+                  <td colSpan={8} className="py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
                         <Users className="h-6 w-6" />
@@ -251,6 +252,7 @@ export default function LearnersDirectory() {
               ) : (
                 filteredLearners.map((learner) => {
                   const isChecked = selectedIds.includes(learner.id);
+                  const identifierVal = learner.identifierValue || learner.assessmentNo || learner.birthCertNo;
                   return (
                     <tr key={learner.id || learner.admissionNo} className="hover:bg-gray-50 transition-colors">
                       <td className="py-3 px-4">
@@ -267,6 +269,20 @@ export default function LearnersDirectory() {
                       </td>
                       <td className="py-3 px-4 font-bold text-gray-900">
                         {learner.fullName || learner.name || 'Unnamed'}
+                      </td>
+                      <td className="py-3 px-4">
+                        {identifierVal ? (
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-900 font-mono text-xs">
+                              {identifierVal}
+                            </span>
+                            <span className="text-[10px] uppercase text-gray-400 font-semibold">
+                              {learner.identifierType === 'birth_cert' ? 'Birth Cert' : 'Assessment UPI'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-gray-700">
                         {learner.grade} ({learner.stream})

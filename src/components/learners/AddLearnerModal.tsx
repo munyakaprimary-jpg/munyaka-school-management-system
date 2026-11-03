@@ -48,6 +48,8 @@ export default function AddLearnerModal({
     guardian: '',
     phone: '+254',
     location: 'Eldoret',
+    identifierType: 'assessment' as 'assessment' | 'birth_cert',
+    identifierValue: '',
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -109,6 +111,10 @@ export default function AddLearnerModal({
         guardian: formData.guardian.trim() || '—',
         phone: phone,
         location: formData.location.trim() || 'Eldoret',
+        identifierType: formData.identifierType,
+        identifierValue: formData.identifierValue.trim() || '',
+        assessmentNo: formData.identifierType === 'assessment' ? formData.identifierValue.trim() : undefined,
+        birthCertNo: formData.identifierType === 'birth_cert' ? formData.identifierValue.trim() : undefined,
       };
 
       const updatedList = [newLearner, ...existingLearners];
@@ -174,6 +180,35 @@ export default function AddLearnerModal({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="identifierType">Identifier Type</Label>
+            <Select
+              value={formData.identifierType}
+              onValueChange={(val: any) => handleSelectChange('identifierType', val)}
+            >
+              <SelectTrigger id="identifierType">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="assessment">Assessment Number / UPI</SelectItem>
+                <SelectItem value="birth_cert">Birth Certificate No.</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="identifierValue">Identifier Number</Label>
+            <Input
+              id="identifierValue"
+              name="identifierValue"
+              placeholder={formData.identifierType === 'assessment' ? 'e.g. UPI123456' : 'e.g. BC987654'}
+              value={formData.identifierValue}
+              onChange={handleChange}
+            />
           </div>
         </div>
 

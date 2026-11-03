@@ -7,6 +7,10 @@ export interface Learner {
   guardian: string;
   phone: string;
   location: string;
+  identifierType?: 'assessment' | 'birth_cert';
+  identifierValue?: string;
+  assessmentNo?: string;
+  birthCertNo?: string;
   // Optional legacy/helper fallback fields for cross-module compatibility
   admNo?: string;
   admissionNumber?: string;
