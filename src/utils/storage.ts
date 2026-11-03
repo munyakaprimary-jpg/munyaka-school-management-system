@@ -370,6 +370,28 @@ export function setSubscriptions(subs: Subscription[]): void {
   lsSet(STORAGE_KEYS.SUBSCRIPTIONS, subs);
 }
 
+export function deleteSubscription(id: string): boolean {
+  try {
+    const list = getSubscriptions();
+    const next = list.filter((s: any) => s.id !== id);
+    setSubscriptions(next);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function deleteSubscription(id: string): boolean {
+  try {
+    const list = getSubscriptions();
+    const next = list.filter((s: any) => s.id !== id);
+    setSubscriptions(next);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function exportAllData(): string {
   const backup: Record<string, any> = {};
   for (const key of Object.values(STORAGE_KEYS)) {
