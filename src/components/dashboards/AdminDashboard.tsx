@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import CentralDataService from '../../services/centralDataService';
 import { useSchoolStore } from '../../store/useSchoolStore';
-import { getStoredLearners, saveLearnerRecord as saveLearner, getStoredStaff, saveStaffMember } from '../../utils/centralStorage';
+import { getStoredLearners, getStoredStaff } from '@/utils/storage';
 import { useCentralData } from '../../hooks/useCentralData';
 import { Users, GraduationCap, Briefcase, CheckCircle2, Table as TableIcon, FileText, ShieldCheck, Database, ArrowRight, Sparkles, Upload, QrCode, Camera, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -71,7 +71,7 @@ export const AdminDashboardComponent: React.FC = () => {
       return [];
     }
   })();
-  const staff = localStaff.length > 0 ? localStaff : (CentralDataService.getStaff() || []);
+  const staff = getStoredStaff();
 
   const teaching = staff.filter((s: any) => {
     const roleStr = `${s.role || ''} ${s.type || ''} ${s.category || ''} ${s.systemRole || ''} ${s.department || ''}`.toLowerCase();
