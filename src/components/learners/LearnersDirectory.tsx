@@ -26,8 +26,18 @@ export default function LearnersDirectory() {
 
   // Initialize strictly from localStorage with zero mock data fallbacks
   const [learnersList, setLearnersList] = useState<Learner[]>(() => {
-    const loaded = getLearners();
-    return loaded || [];
+    try {
+      const unified = localStorage.getItem('munyaka_app_learners_v1');
+      if (unified) {
+        const parsed = JSON.parse(unified);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load learners", e);
+    }
+    return [];
   });
 
   const [searchTerm, setSearchTerm] = useState('');
