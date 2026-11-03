@@ -60,7 +60,6 @@ const normalizeGradeStr = (val: string) => {
   return lower;
 };
 
-import { purgeAndRebuildLearnerDirectory } from '@/utils/purgeUnnamedLearners';
 import { generateCohortAdmissionNumber } from '@/utils/admissionUtils';
 
 const generateAdmissionNumber = (studentGrade: string, _admissionYear: string = '2026') => {
@@ -659,18 +658,6 @@ export default function Students() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            className="rounded-2xl border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 gap-2 font-bold text-xs sm:text-sm"
-            onClick={() => {
-              purgeAndRebuildLearnerDirectory();
-              const loaded = CentralDataService.getLearners() || [];
-              setStudents(ensureProperAdmissionNumbers(loaded.map(formatLearnerDoc)));
-              showSuccess("Learner directory purged and rebuilt with clean sample records!");
-            }}
-          >
-            <RefreshCw size={18} /> Purge & Rebuild Directory
-          </Button>
           <Button
             variant="outline"
             className="rounded-2xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-2 font-bold text-xs sm:text-sm"
