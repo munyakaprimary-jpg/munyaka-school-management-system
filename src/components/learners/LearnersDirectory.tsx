@@ -9,67 +9,60 @@ import {
   Users,
   Plus,
   Search,
-  Edit,
   Trash2,
   Eye,
   Loader2,
   Trash
 } from 'lucide-react';
-import { db } from '@/config/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
 import { showSuccess, showError } from '@/utils/toast';
-import { formatLearnerDoc } from '@/services/learnerService';
-import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearnerService';
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 import { getLearners, saveLearners } from '@/utils/storage';
-
-const LEARNER_ID_PREFIX = 'learner-';
-
-const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
-  if (!item) return true;
-  const id = String(item.id || item._id || '').trim();
-  const rawId = toRawLearnerId(id);
-  const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
-  const assess = String(item.assessmentNo || item.assessmentNumber || item.upi || '').trim();
-
-  if (id && deletedIds.has(id)) return true;
-  if (rawId && deletedIds.has(rawId)) return true;
-  if (rawId && deletedIds.has(LEARNER_ID_PREFIX + rawId)) return true;
-  if (adm && deletedIds.has(adm)) return true;
-  if (assess && deletedIds.has(assess)) return true;
-  return false;
-};
+import { Learner } from '@/types/learners';
 
 export default function LearnersDirectory() {
   const navigate = useNavigate();
 
-  // Initialize state directly from centralized storage helper (default to empty array [])
-  const [learnersList, setLearnersList] = useState<any[]>(() => getLearners());
+  // Initialize strictly from localStorage with zero mock data fallbacks
+  const [learnersList, setLearnersList] = useState<Learner[]>(() => {
+    const loaded = getLearners();
+    return loaded || [];
+  });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
   const [streamFilter, setStreamFilter] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedLearner, setSelectedLearner] = useState<any>(null);
+  const [selectedLearner, setSelectedLearner] = useState<Learner | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<any>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
+  
+  // Delete confirmation state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [learnerToDelete, setLearnerToDelete] = useState<Learner | null>(null);
 
   // Row Checkbox & Selected IDs State
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const requestDelete = (learner: any) => {
-    setPendingDelete(learner);
-    setIsAuthOpen(true);
-  };
+  // Reload learners when storage or window focus updates
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const loaded = getLearners();
+      setLearnersList(loaded || []);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('storage-updated', handleStorageChange);
+    window.addEventListener('munyaka_storage_update', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage-updated', handleStorageChange);
+      window.removeEventListener('munyaka_storage_update', handleStorageChange);
+    };
+  }, []);
 
-  // Handle master select all checkbox
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      const allIds = learnersList.map((l: any) => l.id || l._id || l.admissionNo || l.admissionNumber || l.upi).filter(Boolean);
+      const allIds = learnersList.map((l) => l.id).filter(Boolean);
       setSelectedIds(allIds);
     } else {
       setSelectedIds([]);
@@ -82,15 +75,11 @@ export default function LearnersDirectory() {
     );
   };
 
-  // Handle Delete Selected Button
   const handleDeleteSelected = () => {
     try {
-      const remaining = learnersList.filter((l: any) => {
-        const lId = l.id || l._id || l.admissionNo || l.admissionNumber || l.upi;
-        return !selectedIds.includes(lId);
-      });
+      const remaining = learnersList.filter(l => !selectedIds.includes(l.id));
       setLearnersList(remaining);
-      saveLearners(remaining); // Instantly commit to localStorage
+      saveLearners(remaining);
       setSelectedIds([]);
       showSuccess("Selected learners deleted successfully.");
     } catch (err) {
@@ -98,358 +87,219 @@ export default function LearnersDirectory() {
     }
   };
 
-  useEffect(() => {
-    const UNIFIED_KEY = 'munyaka_learners_v2';
-    const DELETED_KEY = 'deleted_learner_ids';
+  const confirmDeleteLearner = (learner: Learner) => {
+    setLearnerToDelete(learner);
+    setIsDeleteModalOpen(true);
+  };
 
-    const applyList = (raw: any[]) => {
-      // Filter out unnamed or blank placeholder records when loading learners
-      const validLearners = (raw || []).filter((learner: any) => {
-        if (!learner) return false;
-        const name = String(learner.name || learner.fullName || learner.learnerName || learner.studentName || '').trim();
-        return name !== '' && name !== 'Unnamed Learner' && name !== 'Unknown Learner' && !name.includes('Unnamed');
-      });
-      const formatted = validLearners.map(formatLearnerDoc);
-      setLearnersList(formatted);
-    };
-
-    const loadFromStorage = () => {
-      try {
-        const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-        const unified = localStorage.getItem(UNIFIED_KEY) || localStorage.getItem('munyaka_learners');
-        if (unified) {
-          const parsed = JSON.parse(unified);
-          if (Array.isArray(parsed)) {
-            const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
-            applyList(filtered);
-            return;
-          }
-        }
-      } catch {}
-      applyList([]);
-    };
-
-    loadFromStorage();
-
-    let unsubscribe: (() => void) | undefined;
-    if (db) {
-      try {
-        unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
-          const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-
-          const cloudLearners = snapshot.docs.map(docSnap => ({
-            id: docSnap.id,
-            ...docSnap.data()
-          }));
-
-          const cleanCloudList = cloudLearners.filter((item: any) => !isDeletedRecord(item, deletedIds));
-
-          const currentLocal = JSON.parse(localStorage.getItem(UNIFIED_KEY) || '[]');
-          const localMap = new Map();
-
-          currentLocal.forEach((l: any) => {
-            if (isDeletedRecord(l, deletedIds)) return;
-            const lId = String(l.id || l._id || '').trim();
-            const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
-            localMap.set(lId || lAdm, l);
-          });
-
-          cleanCloudList.forEach((l: any) => {
-            const lId = String(l.id || l._id || '').trim();
-            const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
-            const key = lId || lAdm;
-            if (key && !localMap.has(key)) {
-              localMap.set(key, l);
-            }
-          });
-
-          const unifiedList = Array.from(localMap.values()).filter(
-            (item: any) => !isDeletedRecord(item, deletedIds)
-          );
-
-          localStorage.setItem(UNIFIED_KEY, JSON.stringify(unifiedList));
-          applyList(unifiedList);
-        }, (error) => {
-          console.warn("[Firestore Listener] Offline or sync error, using local fallback:", error);
-        });
-      } catch (e) {
-        console.warn("[Firestore Listener] Init error:", e);
-      }
+  const executeDelete = () => {
+    if (!learnerToDelete) return;
+    try {
+      const remaining = learnersList.filter(l => l.id !== learnerToDelete.id);
+      setLearnersList(remaining);
+      saveLearners(remaining);
+      showSuccess(`Learner ${learnerToDelete.fullName} removed successfully.`);
+      setIsDeleteModalOpen(false);
+      setLearnerToDelete(null);
+    } catch (err) {
+      showError("Failed to remove learner.");
     }
+  };
 
-    window.addEventListener('learners_updated', loadFromStorage);
-    window.addEventListener('students-updated', loadFromStorage);
-    window.addEventListener('storage', loadFromStorage);
-    window.addEventListener('munyaka:data-changed', loadFromStorage);
+  const filteredLearners = useMemo(() => {
+    return learnersList.filter(learner => {
+      const name = (learner.fullName || '').toLowerCase();
+      const adm = (learner.admissionNo || '').toLowerCase();
+      const guardian = (learner.guardian || '').toLowerCase();
+      const query = searchTerm.toLowerCase();
 
-    return () => {
-      if (unsubscribe) unsubscribe();
-      window.removeEventListener('learners_updated', loadFromStorage);
-      window.removeEventListener('students-updated', loadFromStorage);
-      window.removeEventListener('storage', loadFromStorage);
-      window.removeEventListener('munyaka:data-changed', loadFromStorage);
-    };
-  }, []);
+      const matchesSearch = !query || name.includes(query) || adm.includes(query) || guardian.includes(query);
+      const matchesGrade = gradeFilter === 'all' || learner.grade === gradeFilter;
+      const matchesStream = streamFilter === 'all' || learner.stream === streamFilter;
 
-  // Derive filtered learners whenever the source list or filters change
-  const displayLearners = useMemo(() => {
-    const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
-    return (learnersList || []).filter(learner => {
-      const name = (learner.fullName || learner.name || '').toLowerCase();
-      const adm = (learner.admissionNo || learner.admissionNumber || learner.admNo || '').toLowerCase();
-      const upi = (learner.assessmentNo || learner.upi || '').toLowerCase();
-      const grade = (learner.grade || learner.gradeLevel || learner.class || '').toLowerCase();
-      const stream = (learner.stream || '').toLowerCase();
-
-      const nameMatch = !searchClean || name.includes(searchClean) || adm.includes(searchClean) || upi.includes(searchClean);
-      const gradeMatch = gradeFilter === 'all' || grade.includes(gradeFilter.toLowerCase());
-      const streamMatch = streamFilter === 'all' || stream === streamFilter.toLowerCase();
-
-      return nameMatch && gradeMatch && streamMatch;
+      return matchesSearch && matchesGrade && matchesStream;
     });
   }, [learnersList, searchTerm, gradeFilter, streamFilter]);
 
-  const handleLearnerAdded = (newLearner: any) => {
-    if (!newLearner) return;
-    const name = String(newLearner.name || newLearner.fullName || newLearner.learnerName || newLearner.studentName || '').trim();
-    if (!name || name === 'Unnamed Learner' || name === 'Unknown Learner' || name.includes('Unnamed')) {
-      showError("A valid learner name is required.");
-      return;
-    }
-    const formatted = formatLearnerDoc(newLearner);
-    const updatedList = [formatted, ...learnersList];
-    setLearnersList(updatedList);
-    saveLearners(updatedList); // Instantly commit to localStorage
-    const addedGrade = newLearner.gradeLevel || newLearner.grade || 'all';
-    setGradeFilter(addedGrade);
-  };
-
-  const handleDeleteLearner = async (learnerToDelete: any) => {
-    if (!learnerToDelete) return;
-
-    const sourceId = learnerToDelete.id || learnerToDelete._id || learnerToDelete.learnerId || '';
-    const targetRawId = toRawLearnerId(sourceId);
-    const targetPrefixedId = targetRawId ? LEARNER_ID_PREFIX + targetRawId : '';
-    const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || '').trim();
-
-    if (typeof purgeLearnerPermanently === 'function') {
-      await purgeLearnerPermanently({
-        ...learnerToDelete,
-        id: targetRawId || String(sourceId).trim(),
-        _id: targetRawId || String(sourceId).trim(),
-        prefixedId: targetPrefixedId,
-        admissionNo: targetAdm,
-      });
-    }
-
-    const isNotTarget = (item: any) => {
-      const itemSourceId = item.id || item._id || item.learnerId || '';
-      const itemRawId = toRawLearnerId(itemSourceId);
-      const itemAdm = String(item.admissionNo || item.admissionNumber || '').trim();
-
-      const matches =
-        (targetRawId && itemRawId === targetRawId) ||
-        (targetPrefixedId && String(itemSourceId).trim() === targetPrefixedId) ||
-        (targetAdm && itemAdm === targetAdm);
-
-      return !matches;
-    };
-
-    const updatedList = learnersList.filter(isNotTarget);
-    setLearnersList(updatedList);
-    saveLearners(updatedList); // Instantly commit to localStorage
-  };
-
-  const handleVerifyAuth = async () => {
-      setIsVerifying(true);
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      try {
-        if (pendingDelete) {
-          await handleDeleteLearner(pendingDelete);
-          showSuccess("Learner deleted successfully.");
-        }
-      } catch (e) {
-        showError("Failed to delete learner.");
-      } finally {
-        setIsAuthOpen(false);
-        setPendingDelete(null);
-        setIsVerifying(false);
-      }
-    };
-
-  const gradesList = useMemo(() => {
-    const set = new Set<string>();
-    (learnersList || []).forEach(l => {
-      const g = l.grade || l.gradeLevel || l.class;
-      if (g) set.add(g);
-    });
-    return Array.from(set).sort();
-  }, [learnersList]);
-
   return (
-    <div className="space-y-6 pb-16 animate-in fade-in">
+    <div className="space-y-6 pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <BackButton />
-          <h1 className="text-2xl font-black text-slate-900 mt-2">Learners Directory</h1>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">Manage school enrollment, student records, and profiles matching registration specifications</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 mt-2 flex items-center gap-2">
+            <Users className="h-6 w-6 text-indigo-600" />
+            Learners Directory
+          </h1>
+          <p className="text-sm text-gray-500">
+            Manage registered learners, admission records, guardians, and locations.
+          </p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+
+        <div className="flex items-center gap-3">
           {selectedIds.length > 0 && (
             <Button
-              onClick={handleDeleteSelected}
               variant="destructive"
-              className="rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white h-12 px-5 shadow-lg shadow-rose-100 flex items-center gap-2"
+              size="sm"
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-1.5"
             >
-              <Trash2 size={18} /> Delete Selected ({selectedIds.length})
+              <Trash2 className="h-4 w-4" />
+              Delete Selected ({selectedIds.length})
             </Button>
           )}
           <Button
             onClick={() => setIsAddModalOpen(true)}
-            className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-6 shadow-lg shadow-indigo-100"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
           >
-            <Plus size={18} className="mr-2" /> Register New Learner
+            <Plus className="h-4 w-4" />
+            Register Student
           </Button>
         </div>
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white p-6 rounded-3xl shadow-sm space-y-4">
+      <Card className="p-4 bg-white shadow-sm border border-gray-200">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search by full name, admission no or UPI..."
+              placeholder="Search by name, admission no, guardian..."
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-11 rounded-2xl h-12 bg-slate-50 border-none font-medium"
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
             />
           </div>
 
-          <Select value={gradeFilter} onValueChange={setGradeFilter}>
-            <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-medium">
-              <SelectValue placeholder="All Grades" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="all">All Grades</SelectItem>
-              {gradesList.map(g => (
-                <SelectItem key={g} value={g}>{g}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <Select value={gradeFilter} onValueChange={setGradeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by Grade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Grades</SelectItem>
+                <SelectItem value="PP1">PP1</SelectItem>
+                <SelectItem value="PP2">PP2</SelectItem>
+                <SelectItem value="Grade 1">Grade 1</SelectItem>
+                <SelectItem value="Grade 2">Grade 2</SelectItem>
+                <SelectItem value="Grade 3">Grade 3</SelectItem>
+                <SelectItem value="Grade 4">Grade 4</SelectItem>
+                <SelectItem value="Grade 5">Grade 5</SelectItem>
+                <SelectItem value="Grade 6">Grade 6</SelectItem>
+                <SelectItem value="Junior Secondary">Junior Secondary</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select value={streamFilter} onValueChange={setStreamFilter}>
-            <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-medium">
-              <SelectValue placeholder="All Streams" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="all">All Streams</SelectItem>
-              <SelectItem value="North">North</SelectItem>
-              <SelectItem value="South">South</SelectItem>
-              <SelectItem value="East">East</SelectItem>
-              <SelectItem value="West">West</SelectItem>
-            </SelectContent>
-          </Select>
+          <div>
+            <Select value={streamFilter} onValueChange={setStreamFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by Stream" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Streams</SelectItem>
+                <SelectItem value="Blue">Blue</SelectItem>
+                <SelectItem value="Red">Red</SelectItem>
+                <SelectItem value="Green">Green</SelectItem>
+                <SelectItem value="Yellow">Yellow</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Rebuilt Table Matrix matching Registration Modal Structure 1:1 */}
-      <div className="bg-white rounded-3xl shadow-sm overflow-hidden border border-slate-100">
+      {/* Table Card */}
+      <Card className="bg-white shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-black uppercase text-slate-500 tracking-wider">
-                <th className="py-4 px-4 w-12 text-center">
+              <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="py-3.5 px-4 w-10">
                   <input
                     type="checkbox"
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                    aria-label="Select all learners"
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    checked={learnersList.length > 0 && selectedIds.length === learnersList.length}
                     onChange={handleSelectAll}
-                    checked={displayLearners.length > 0 && selectedIds.length === displayLearners.length}
                   />
                 </th>
-                <th className="py-4 px-5">Admission No</th>
-                <th className="py-4 px-5">Assessment No / UPI</th>
-                <th className="py-4 px-5">Full Name</th>
-                <th className="py-4 px-5">Grade / Stream</th>
-                <th className="py-4 px-5">Gender</th>
-                <th className="py-4 px-5">Parent / Guardian</th>
-                <th className="py-4 px-5">Contact Phone</th>
-                <th className="py-4 px-5 text-right">Actions</th>
+                <th className="py-3.5 px-4">Admission No.</th>
+                <th className="py-3.5 px-4">Full Name (Student)</th>
+                <th className="py-3.5 px-4">Grade & Stream</th>
+                <th className="py-3.5 px-4">Guardian & Phone</th>
+                <th className="py-3.5 px-4">Location</th>
+                <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {displayLearners.length === 0 ? (
+            <tbody className="divide-y divide-gray-200 text-sm">
+              {filteredLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-20 text-center text-slate-400 font-medium">
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                      <Users className="text-slate-300" size={40} />
-                      <p className="text-sm font-bold text-slate-600">No registered learners found.</p>
-                      <p className="text-xs text-slate-400">Click "Register New Learner" to add students to this directory.</p>
+                  <td colSpan={7} className="py-12 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                        <Users className="h-6 w-6" />
+                      </div>
+                      <p className="font-medium text-gray-600">No learners registered yet.</p>
+                      <p className="text-xs text-gray-400 max-w-sm">
+                        Click "Register Student" above to add learners to the directory. Clean slate with no fallback mock records.
+                      </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                displayLearners.map(learner => {
-                  const admissionNo = learner.admissionNo || learner.admissionNumber || learner.admNo || '—';
-                  const upiNo = learner.assessmentNo || learner.upi || learner.assessmentNumber || '—';
-                  const fullName = learner.fullName || learner.name || learner.learnerName || learner.studentName || (learner.firstName || learner.lastName ? `${learner.firstName || ''} ${learner.lastName || ''}`.trim() : '') || 'Unnamed Learner';
-                  const grade = learner.grade || learner.gradeLevel || learner.class || '—';
-                  const stream = learner.stream ? `(${learner.stream})` : '';
-                  const gradeStream = `${grade} ${stream}`.trim();
-                  const gender = learner.gender || '—';
-                  const guardian = learner.guardian || learner.parentName || '—';
-                  const contact = learner.parentPhone || learner.guardianPhone || learner.phone || '—';
-                  const lId = learner.id || learner._id || admissionNo;
-                  const isChecked = selectedIds.includes(lId);
-
+                filteredLearners.map((learner) => {
+                  const isChecked = selectedIds.includes(learner.id);
                   return (
-                    <tr key={lId} className={`hover:bg-slate-50/60 transition-colors ${isChecked ? 'bg-indigo-50/50' : ''}`}>
-                      <td className="py-4 px-4 text-center">
+                    <tr key={learner.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-4">
                         <input
                           type="checkbox"
-                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                          aria-label={`Select ${learner.fullName}`}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                           checked={isChecked}
-                          onChange={() => handleSelectOne(lId)}
+                          onChange={() => handleSelectOne(learner.id)}
                         />
                       </td>
-                      <td className="py-4 px-5 font-mono font-bold text-slate-900">{admissionNo}</td>
-                      <td className="py-4 px-5 font-mono text-xs font-semibold text-slate-600">{upiNo}</td>
-                      <td className="py-4 px-5 font-bold text-slate-900">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs">
-                            {fullName.charAt(0)}
-                          </div>
-                          <span className="font-bold text-slate-900">{fullName}</span>
+                      <td className="py-3 px-4 font-mono font-medium text-indigo-600">
+                        {learner.admissionNo || '—'}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-gray-900">
+                        {learner.fullName}
+                      </td>
+                      <td className="py-3 px-4 text-gray-700">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium">{learner.grade}</span>
+                          <span className="text-gray-400">•</span>
+                          <span className="text-indigo-600 font-medium">{learner.stream}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-5 font-bold text-slate-700">{gradeStream}</td>
-                      <td className="py-4 px-5 font-medium text-slate-600">{gender}</td>
-                      <td className="py-4 px-5 font-medium text-slate-700">{guardian}</td>
-                      <td className="py-4 px-5 font-mono text-xs font-medium text-slate-600">{contact}</td>
-                      <td className="py-4 px-5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-3 px-4">
+                        <div className="text-gray-900 font-medium">{learner.guardian}</div>
+                        <div className="text-xs text-gray-500 font-mono">{learner.phone}</div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-700">
+                        {learner.location}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
                             onClick={() => {
                               setSelectedLearner(learner);
                               setIsDetailModalOpen(true);
                             }}
-                            className="h-8 w-8 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
                             title="View Details"
                           >
-                            <Eye size={15} />
+                            <Eye className="h-4 w-4 text-gray-500" />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            onClick={() => requestDelete(learner)}
-                            className="h-8 w-8 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                            size="icon"
+                            onClick={() => confirmDeleteLearner(learner)}
                             title="Delete Learner"
                           >
-                            <Trash2 size={15} />
+                            <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
                         </div>
                       </td>
@@ -460,39 +310,73 @@ export default function LearnersDirectory() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {/* Add Learner Modal */}
       <AddLearnerModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onLearnerAdded={handleLearnerAdded}
+        onLearnerAdded={(newLearner) => {
+          setLearnersList(getLearners());
+        }}
       />
 
-      {/* Confirmation Modal */}
+      {/* View Learner Detail Modal */}
       <Modal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        title="Confirm Deletion"
-        description={`Are you sure you want to permanently delete ${pendingDelete?.fullName || pendingDelete?.name || 'this learner'}? This action cannot be undone.`}
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold flex-1">
-              Cancel
-            </Button>
-            <Button
-              onClick={handleVerifyAuth}
-              disabled={isVerifying}
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-6 flex-1 shadow-lg shadow-red-100"
-            >
-              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
-              Confirm Delete
-            </Button>
-          </>
-        }
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        title="Learner Profile & Details"
       >
-        <div className="py-2 text-sm text-slate-600 font-medium">
-          This record will be purged immediately from local storage, legacy caches, and Firestore.
+        {selectedLearner && (
+          <div className="space-y-4 pt-2">
+            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+              <div>
+                <span className="text-xs text-gray-500 block">Full Name</span>
+                <span className="font-semibold text-gray-900">{selectedLearner.fullName}</span>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500 block">Admission Number</span>
+                <span className="font-mono font-medium text-indigo-600">{selectedLearner.admissionNo}</span>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500 block">Grade & Stream</span>
+                <span className="font-medium text-gray-900">{selectedLearner.grade} — {selectedLearner.stream} Stream</span>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500 block">Location</span>
+                <span className="font-medium text-gray-900">{selectedLearner.location}</span>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500 block">Guardian Name</span>
+                <span className="font-medium text-gray-900">{selectedLearner.guardian}</span>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500 block">Guardian Phone</span>
+                <span className="font-mono font-medium text-gray-900">{selectedLearner.phone}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button onClick={() => setIsDetailModalOpen(false)}>Close</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Confirm Learner Deletion"
+      >
+        <div className="space-y-4 pt-2">
+          <p className="text-sm text-gray-600">
+            Are you sure you want to remove <span className="font-semibold text-gray-900">{learnerToDelete?.fullName}</span> (Admission No: <span className="font-mono">{learnerToDelete?.admissionNo}</span>) from the directory? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={executeDelete}>Delete Learner</Button>
+          </div>
         </div>
       </Modal>
     </div>

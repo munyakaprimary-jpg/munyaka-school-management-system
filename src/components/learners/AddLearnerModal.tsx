@@ -6,108 +6,121 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { saveLearnerToStorage } from '@/utils/learnerStorageSync';
-import { generateCohortAdmissionNumber } from '../../utils/admissionUtils';
+import { getLearners, saveLearners } from '@/utils/storage';
+import { generateCohortAdmissionNumber } from '@/utils/admissionUtils';
+import { Learner } from '@/types/learners';
 
 interface AddLearnerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLearnerAdded?: (newLearner: any) => void;
-  availableGrades?: string[];
-  availableStreams?: string[];
+  onLearnerAdded?: (newLearner: Learner) => void;
 }
+
+const GRADE_OPTIONS = [
+  'PP1',
+  'PP2',
+  'Grade 1',
+  'Grade 2',
+  'Grade 3',
+  'Grade 4',
+  'Grade 5',
+  'Grade 6',
+  'Junior Secondary'
+];
+
+const STREAM_OPTIONS = [
+  'Blue',
+  'Red',
+  'Green',
+  'Yellow'
+];
 
 export default function AddLearnerModal({
   isOpen,
   onClose,
   onLearnerAdded,
-  availableGrades = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'],
-  availableStreams = ['BLUE', 'RED', 'GREEN', 'YELLOW']
 }: AddLearnerModalProps) {
   const [formData, setFormData] = useState({
     fullName: '',
-    admNo: '',
-    assessmentNo: '',
-    grade: 'Grade 1',
-    stream: 'BLUE',
-    gender: 'Female',
-    dob: '',
-    parentName: '',
-    phone: '',
+    admissionNo: '',
+    grade: 'Grade 4',
+    stream: 'Blue',
+    guardian: '',
+    phone: '+254',
+    location: 'Eldoret',
   });
 
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (formData.grade) {
-      const existingRaw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]';
-      const existingLearners = JSON.parse(existingRaw);
+    if (isOpen) {
+      const existingLearners = getLearners();
       const freshAdmNo = generateCohortAdmissionNumber(formData.grade, existingLearners);
-      setFormData(prev => ({ ...prev, admNo: freshAdmNo }));
+      setFormData(prev => ({
+        ...prev,
+        admissionNo: freshAdmNo,
+        phone: prev.phone && prev.phone !== '' ? prev.phone : '+254',
+        location: prev.location || 'Eldoret'
+      }));
     }
-  }, [formData.grade]);
+  }, [isOpen, formData.grade]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleSelectChange = (field: string, value: string) => {
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'grade') {
+        const existingLearners = getLearners();
+        updated.admissionNo = generateCohortAdmissionNumber(value, existingLearners);
+      }
+      return updated;
+    });
+  };
+
   const handleSaveLearner = async (e: React.FormEvent) => {
     e.preventDefault();
-    const studentName = (formData.fullName || '').trim();
-    if (!studentName) {
+    const fullName = (formData.fullName || '').trim();
+    if (!fullName) {
       showError("Please enter full name.");
+      return;
+    }
+
+    const phone = (formData.phone || '').trim();
+    if (!phone.startsWith('+254')) {
+      showError("Phone number must start with +254.");
       return;
     }
 
     setIsSaving(true);
     try {
-      const existingRaw = localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_learners_v2') || '[]';
-      const existingLearners = JSON.parse(existingRaw);
-      
-      const generatedAdmNo = formData.admNo || generateCohortAdmissionNumber(formData.grade, existingLearners);
-      const identifierValue = formData.assessmentNo.trim().toUpperCase() || '—';
+      const existingLearners = getLearners();
+      const generatedAdmNo = formData.admissionNo || generateCohortAdmissionNumber(formData.grade, existingLearners);
 
-      const newLearnerRecord = {
-        id: `learner_${Date.now()}`,
-        admNo: generatedAdmNo,
-        admissionNumber: generatedAdmNo,
+      const newLearner: Learner = {
+        id: `learner_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         admissionNo: generatedAdmNo,
-        assessmentNo: identifierValue,
-        assessmentNumber: identifierValue,
-        birthCertNo: identifierValue,
-        birthCertificateNo: identifierValue,
-        identifierNo: identifierValue,
-        name: studentName,
-        fullName: studentName,
-        learnerName: studentName,
-        studentName: studentName,
+        fullName: fullName,
         grade: formData.grade,
-        gradeLevel: formData.grade,
         stream: formData.stream,
-        gender: formData.gender,
-        dob: formData.dob || '—',
-        dateOfBirth: formData.dob || '—',
-        parentName: formData.parentName || '—',
-        phone: formData.phone || '—',
-        phoneNumber: formData.phone || '—',
-        status: 'Active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        guardian: formData.guardian.trim() || '—',
+        phone: phone,
+        location: formData.location.trim() || 'Eldoret',
       };
 
-      saveLearnerToStorage(newLearnerRecord);
+      const updatedList = [newLearner, ...existingLearners];
+      saveLearners(updatedList);
 
-      // Dispatch storage event so the directory table refreshes instantly
-      window.dispatchEvent(new Event('storage'));
-      
       showSuccess("Learner successfully registered and saved to directory!");
       if (onLearnerAdded) {
-        onLearnerAdded(newLearnerRecord);
+        onLearnerAdded(newLearner);
       }
       onClose();
     } catch (err: any) {
-      console.error("[AddLearner] Failed to register learner:", err);
+      console.error("[AddLearnerModal] Failed to register learner:", err);
       showError(err?.message || "Failed to save learner. Please check form fields.");
     } finally {
       setIsSaving(false);
@@ -119,140 +132,126 @@ export default function AddLearnerModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Register New Learner"
-      description="Add a new learner directly to the central storage and directory."
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose} className="rounded-xl font-bold">Cancel</Button>
-          <Button
-            onClick={handleSaveLearner}
-            disabled={isSaving}
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 shadow-lg shadow-indigo-100"
-          >
-            {isSaving ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
-            Save Learner
-          </Button>
-        </>
-      }
+      description="Enter learner details to register and save directly to the directory."
     >
-      <form onSubmit={handleSaveLearner} className="space-y-4">
+      <form onSubmit={handleSaveLearner} className="space-y-4 pt-2">
         <div className="space-y-2">
-          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name *</Label>
+          <Label htmlFor="fullName">Student Full Name *</Label>
           <Input
+            id="fullName"
             name="fullName"
+            placeholder="e.g. Brian Kiprop"
             value={formData.fullName}
             onChange={handleChange}
-            placeholder="e.g. John Kamau"
-            className="rounded-xl h-12 bg-slate-50 border-none font-bold"
             required
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade</Label>
+            <Label htmlFor="admissionNo">Admission No.</Label>
+            <Input
+              id="admissionNo"
+              name="admissionNo"
+              placeholder="Auto-generated"
+              value={formData.admissionNo}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="grade">Grade *</Label>
             <Select
               value={formData.grade}
-              onValueChange={(val) => setFormData(prev => ({ ...prev, grade: val }))}
+              onValueChange={(val) => handleSelectChange('grade', val)}
             >
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+              <SelectTrigger id="grade">
                 <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl shadow-xl">
-                {availableGrades.map((g) => (
-                  <SelectItem key={g} value={g} className="font-bold">{g}</SelectItem>
+              <SelectContent>
+                {GRADE_OPTIONS.map((g) => (
+                  <SelectItem key={g} value={g}>{g}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Stream</Label>
+            <Label htmlFor="stream">Stream *</Label>
             <Select
               value={formData.stream}
-              onValueChange={(val) => setFormData(prev => ({ ...prev, stream: val }))}
+              onValueChange={(val) => handleSelectChange('stream', val)}
             >
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+              <SelectTrigger id="stream">
                 <SelectValue placeholder="Select Stream" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl shadow-xl">
-                {availableStreams.map((s) => (
-                  <SelectItem key={s} value={s} className="font-bold">{s}</SelectItem>
+              <SelectContent>
+                {STREAM_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admission No (Auto)</Label>
-            <Input
-              value={formData.admNo}
-              onChange={(e) => setFormData(prev => ({ ...prev, admNo: e.target.value }))}
-              placeholder="Auto-generated on save"
-              className="rounded-xl h-12 bg-slate-50 border-none font-mono font-bold"
-            />
-          </div>
 
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assessment No / UPI</Label>
+            <Label htmlFor="guardian">Guardian Name *</Label>
             <Input
-              value={formData.assessmentNo}
-              onChange={(e) => setFormData(prev => ({ ...prev, assessmentNo: e.target.value }))}
-              placeholder="Assessment / Birth Cert No"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+              id="guardian"
+              name="guardian"
+              placeholder="e.g. Mary Kiprop"
+              value={formData.guardian}
+              onChange={handleChange}
+              required
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Gender</Label>
-            <Select
-              value={formData.gender}
-              onValueChange={(val) => setFormData(prev => ({ ...prev, gender: val }))}
-            >
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                <SelectValue placeholder="Select Gender" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl shadow-xl">
-                <SelectItem value="Female" className="font-bold">Female</SelectItem>
-                <SelectItem value="Male" className="font-bold">Male</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Date of Birth</Label>
+            <Label htmlFor="phone">Phone (+254...) *</Label>
             <Input
-              type="date"
-              value={formData.dob}
-              onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value }))}
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Parent / Guardian Name</Label>
-            <Input
-              value={formData.parentName}
-              onChange={(e) => setFormData(prev => ({ ...prev, parentName: e.target.value }))}
-              placeholder="e.g. Mary Kamau"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone Number</Label>
-            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              placeholder="+254712345678"
               value={formData.phone}
-              onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-              placeholder="e.g. 0712345678"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+              onChange={handleChange}
+              required
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="location">Location *</Label>
+            <Input
+              id="location"
+              name="location"
+              placeholder="e.g. Eldoret"
+              value={formData.location}
+              onChange={handleChange}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className="bg-gray-900 text-white hover:bg-gray-800"
+            disabled={isSaving}
+          >
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Register Student
+          </Button>
         </div>
       </form>
     </Modal>

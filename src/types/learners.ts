@@ -1,14 +1,18 @@
 export interface Learner {
   id: string;
-  admNo: string;
-  admissionNumber?: string;
-  admissionNo?: string;
-  name: string;
+  admissionNo: string;
+  fullName: string;
   grade: string;
   stream: string;
-  gender: string;
   guardian: string;
   phone: string;
+  location: string;
+  // Optional legacy/helper fallback fields for cross-module compatibility
+  admNo?: string;
+  admissionNumber?: string;
+  name?: string;
+  gender?: string;
+  assessmentNo?: string;
   birthCertificateNo?: string;
   status?: string;
   dob?: string;
@@ -28,36 +32,11 @@ export interface Learner {
   coCurricularActivities?: string;
   examType?: string;
   assessment?: string;
-  assessmentNo?: string;
-}
-
-export interface LearnerExamSubmission {
-  id: string;
-  learnerId: string;
-  learnerName: string;
-  examId: string;
-  examTitle: string;
-  submittedAt: string;
-  score?: number;
-  maxScore?: number;
-  status: 'submitted' | 'graded' | 'pending';
-  answers?: Record<string, any>;
-  feedback?: string;
+  parentName?: string;
 }
 
 export interface LearnerFilters {
   searchTerm: string;
   filterGrade: string;
   filterStream: string;
-}
-
-export interface RegistrationForm {
-  fullName: string;
-  admissionNo: string;
-  assessmentNo: string;
-  regGrade: string;
-  regStream: string;
-  guardianName: string;
-  phone: string;
-  address: string;
 }
