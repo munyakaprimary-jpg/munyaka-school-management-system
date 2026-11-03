@@ -113,18 +113,12 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } catch {}
     };
 
-    window.addEventListener('students-updated', handleStorageChange);
-    window.addEventListener('learners-updated', handleStorageChange);
-    window.addEventListener('learners_updated', handleStorageChange);
-    window.addEventListener('munyaka:data-changed', handleStorageChange);
+    window.addEventListener('munyaka:learners-updated', handleStorageChange);
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
       isMounted = false;
-      window.removeEventListener('students-updated', handleStorageChange);
-      window.removeEventListener('learners-updated', handleStorageChange);
-      window.removeEventListener('learners_updated', handleStorageChange);
-      window.removeEventListener('munyaka:data-changed', handleStorageChange);
+      window.removeEventListener('munyaka:learners-updated', handleStorageChange);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, [filterLearnersForUser, setLearners]);

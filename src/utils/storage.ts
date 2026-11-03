@@ -117,10 +117,8 @@ export function generateId(prefix: string = 'id'): string {
 export function notifyDataChanged(key?: string): void {
   if (typeof window === 'undefined') return;
   try {
-    window.dispatchEvent(new CustomEvent('munyaka:data-changed', { detail: { key } }));
+    window.dispatchEvent(new CustomEvent('munyaka:learners-updated', { detail: { key } }));
     window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('storage-updated'));
-    window.dispatchEvent(new Event('students-updated'));
   } catch {
     /* no-op */
   }

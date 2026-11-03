@@ -46,17 +46,19 @@ export default function LearnersDirectory() {
 
   // Reload learners when storage or window focus updates
   useEffect(() => {
+    let isMounted = true;
     const handleStorageChange = () => {
-      const loaded = getLearners();
-      setLearnersList(loaded || []);
+      if (isMounted) {
+        const loaded = getLearners();
+        setLearnersList(loaded || []);
+      }
     };
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('storage-updated', handleStorageChange);
-    window.addEventListener('munyaka_storage_update', handleStorageChange);
+    window.addEventListener('munyaka:learners-updated', handleStorageChange);
     return () => {
+      isMounted = false;
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('storage-updated', handleStorageChange);
-      window.removeEventListener('munyaka_storage_update', handleStorageChange);
+      window.removeEventListener('munyaka:learners-updated', handleStorageChange);
     };
   }, []);
 
