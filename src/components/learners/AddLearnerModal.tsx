@@ -180,7 +180,7 @@ export default function AddLearnerModal({
             <Input
               value={formData.admNo}
               onChange={(e) => setFormData(prev => ({ ...prev, admNo: e.target.value }))}
-              placeholder="MUN-001-2026"
+              placeholder="Auto-generated on save"
               className="rounded-xl h-12 bg-slate-50 border-none font-mono font-bold"
             />
           </div>

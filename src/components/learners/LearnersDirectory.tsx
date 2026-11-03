@@ -394,7 +394,7 @@ export default function LearnersDirectory() {
                 displayLearners.map(learner => {
                   const admissionNo = learner.admissionNo || learner.admissionNumber || learner.admNo || '—';
                   const upiNo = learner.assessmentNo || learner.upi || learner.assessmentNumber || '—';
-                  const fullName = learner.fullName || learner.name || learner.learnerName || learner.studentName || (learner.firstName || learner.lastName ? `${learner.firstName || ''} ${learner.lastName || ''}`.trim() : '') || 'Unnamed Learner';
+                  const fullName = learner.fullName || learner.name || learner.learnerName || learner.studentName || (learner.firstName || learner.lastName ? `${learner.firstName || ''} ${learner.lastName || ''}`.trim() : '') || '—';
                   const grade = learner.grade || learner.gradeLevel || learner.class || '—';
                   const stream = learner.stream ? `(${learner.stream})` : '';
                   const gradeStream = `${grade} ${stream}`.trim();
