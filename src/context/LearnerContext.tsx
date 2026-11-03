@@ -66,7 +66,6 @@ export const LearnerProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const initializeLearners = async () => {
       try {
-        // Disabled automatic bundling/migration of seed learners to ensure an empty state when storage is cleared
         const storedLocal = localStorage.getItem(STORAGE_KEY_LEARNERS_V2) || localStorage.getItem('munyaka_learners') || '[]';
         let parsedList = [];
         try {
