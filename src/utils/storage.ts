@@ -327,6 +327,38 @@ export function setLearningAreas(clusters: LearningAreaCluster[]): void {
   lsSet(STORAGE_KEYS.CBC_LEARNING_AREAS, clusters);
 }
 
+export function createLearningArea(clusterId: string, area: { name: string; type: 'Core' | 'Elective'; periodsPerWeek?: number; description?: string }): any {
+  const clusters = getLearningAreas();
+  const cluster = clusters.find(c => c.id === clusterId);
+  if (!cluster) return null;
+  const newArea = { id: `area_${Date.now()}`, ...area };
+  cluster.learningAreas = cluster.learningAreas || [];
+  cluster.learningAreas.push(newArea);
+  setLearningAreas(clusters);
+  return newArea;
+}
+
+export function updateLearningArea(clusterId: string, areaId: string, patch: any): any {
+  const clusters = getLearningAreas();
+  const cluster = clusters.find(c => c.id === clusterId);
+  if (!cluster || !cluster.learningAreas) return null;
+  const idx = cluster.learningAreas.findIndex(a => a.id === areaId);
+  if (idx === -1) return null;
+  const updated = { ...cluster.learningAreas[idx], ...patch, id: areaId };
+  cluster.learningAreas[idx] = updated;
+  setLearningAreas(clusters);
+  return updated;
+}
+
+export function deleteLearningArea(clusterId: string, areaId: string): boolean {
+  const clusters = getLearningAreas();
+  const cluster = clusters.find(c => c.id === clusterId);
+  if (!cluster || !cluster.learningAreas) return false;
+  cluster.learningAreas = cluster.learningAreas.filter(a => a.id !== areaId);
+  setLearningAreas(clusters);
+  return true;
+}
+
 export function getPaymentRecords(): PaymentRecord[] {
   return lsRead<PaymentRecord[]>(STORAGE_KEYS.PAYMENT_RECORDS, []);
 }
