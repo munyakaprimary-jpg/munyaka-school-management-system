@@ -335,6 +335,17 @@ export function setPaymentRecords(records: PaymentRecord[]): void {
   lsSet(STORAGE_KEYS.PAYMENT_RECORDS, records);
 }
 
+export function deletePaymentRecord(id: string): boolean {
+  try {
+    const list = getPaymentRecords();
+    const next = list.filter((p: any) => p.id !== id);
+    setPaymentRecords(next);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function getTransactions(): any[] {
   return lsRead<any[]>(STORAGE_KEYS.TRANSACTIONS, []);
 }
