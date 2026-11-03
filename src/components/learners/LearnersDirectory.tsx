@@ -23,6 +23,7 @@ import { purgeLearnerPermanently, toRawLearnerId } from '@/services/purgeLearner
 import AddLearnerModal from '@/components/learners/AddLearnerModal';
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
+import { getLearners, saveLearners } from '@/utils/storage';
 
 const LEARNER_ID_PREFIX = 'learner-';
 
@@ -44,18 +45,8 @@ const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
 export default function LearnersDirectory() {
   const navigate = useNavigate();
 
-  const [learnersList, setLearnersList] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_learners') || localStorage.getItem('munyaka_students');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(Boolean).map(formatLearnerDoc);
-        }
-      }
-    } catch (e) {}
-    return [];
-  });
+  // Initialize state directly from centralized storage helper (default to empty array [])
+  const [learnersList, setLearnersList] = useState<any[]>(() => getLearners());
 
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
@@ -75,24 +66,10 @@ export default function LearnersDirectory() {
     setIsAuthOpen(true);
   };
 
-  const [learners, setLearners] = useState<any[]>([]);
-  const [displayedLearners, setDisplayedLearners] = useState<any[]>([]);
-
-  // Filter out auto-generated ghost placeholders and seed patterns entirely
-  const displayLearners = useMemo(() => {
-    return (displayedLearners || []).filter((l: any) => {
-      const fullName = String(l?.fullName || l?.name || '').trim();
-      const admNo = String(l?.admissionNo || l?.admissionNumber || l?.admNo || '').trim();
-      const isUnnamed = !fullName || fullName === 'Unnamed Learner' || fullName === 'Unknown Learner' || fullName.includes('Unnamed');
-      const isSeedPattern = admNo.startsWith('MUN-00') || admNo.startsWith('MUN-01') || admNo.startsWith('MUN-02');
-      return !(isUnnamed || isSeedPattern);
-    });
-  }, [displayedLearners]);
-
   // Handle master select all checkbox
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      const allIds = displayLearners.map((l: any) => l.id || l._id || l.admissionNo || l.admissionNumber || l.upi).filter(Boolean);
+      const allIds = learnersList.map((l: any) => l.id || l._id || l.admissionNo || l.admissionNumber || l.upi).filter(Boolean);
       setSelectedIds(allIds);
     } else {
       setSelectedIds([]);
@@ -108,16 +85,12 @@ export default function LearnersDirectory() {
   // Handle Delete Selected Button
   const handleDeleteSelected = () => {
     try {
-      const remaining = learners.filter((l: any) => {
+      const remaining = learnersList.filter((l: any) => {
         const lId = l.id || l._id || l.admissionNo || l.admissionNumber || l.upi;
         return !selectedIds.includes(lId);
       });
-      setLearners(remaining);
       setLearnersList(remaining);
-      setDisplayedLearners(remaining);
-      localStorage.setItem('munyaka_central_db', JSON.stringify({ learners: remaining, staff: [] }));
-      localStorage.setItem('munyaka_learners_v2', JSON.stringify(remaining));
-      localStorage.setItem('munyaka_learners', JSON.stringify(remaining));
+      saveLearners(remaining); // Instantly commit to localStorage
       setSelectedIds([]);
       showSuccess("Selected learners deleted successfully.");
     } catch (err) {
@@ -138,7 +111,6 @@ export default function LearnersDirectory() {
       });
       const formatted = validLearners.map(formatLearnerDoc);
       setLearnersList(formatted);
-      setLearners(formatted);
     };
 
     const loadFromStorage = () => {
@@ -220,9 +192,9 @@ export default function LearnersDirectory() {
   }, []);
 
   // Derive filtered learners whenever the source list or filters change
-  useEffect(() => {
+  const displayLearners = useMemo(() => {
     const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
-    const next = (learnersList || []).filter(learner => {
+    return (learnersList || []).filter(learner => {
       const name = (learner.fullName || learner.name || '').toLowerCase();
       const adm = (learner.admissionNo || learner.admissionNumber || learner.admNo || '').toLowerCase();
       const upi = (learner.assessmentNo || learner.upi || '').toLowerCase();
@@ -235,7 +207,6 @@ export default function LearnersDirectory() {
 
       return nameMatch && gradeMatch && streamMatch;
     });
-    setDisplayedLearners(next);
   }, [learnersList, searchTerm, gradeFilter, streamFilter]);
 
   const handleLearnerAdded = (newLearner: any) => {
@@ -246,9 +217,9 @@ export default function LearnersDirectory() {
       return;
     }
     const formatted = formatLearnerDoc(newLearner);
-    setLearnersList(prev => [formatted, ...prev]);
-    setLearners(prev => [formatted, ...prev]);
-    setDisplayedLearners(prev => [formatted, ...prev]);
+    const updatedList = [formatted, ...learnersList];
+    setLearnersList(updatedList);
+    saveLearners(updatedList); // Instantly commit to localStorage
     const addedGrade = newLearner.gradeLevel || newLearner.grade || 'all';
     setGradeFilter(addedGrade);
   };
@@ -284,15 +255,15 @@ export default function LearnersDirectory() {
       return !matches;
     };
 
-    setLearnersList((prev: any[]) => prev.filter(isNotTarget));
-    setLearners((prev: any[]) => prev.filter(isNotTarget));
-    setDisplayedLearners((prev: any[]) => prev.filter(isNotTarget));
+    const updatedList = learnersList.filter(isNotTarget);
+    setLearnersList(updatedList);
+    saveLearners(updatedList); // Instantly commit to localStorage
   };
 
   const handleVerifyAuth = async () => {
       setIsVerifying(true);
       await new Promise(resolve => setTimeout(resolve, 200));
-  
+
       try {
         if (pendingDelete) {
           await handleDeleteLearner(pendingDelete);

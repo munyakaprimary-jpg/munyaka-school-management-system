@@ -296,6 +296,22 @@ export function setStudents(students: Student[]): boolean {
   }
 }
 
+/**
+ * Alias for getStoredLearners — retrieves learners from localStorage,
+ * automatically filtering out blank names or "Unnamed Learner" records.
+ */
+export function getLearners(): Student[] {
+  return getStoredLearners();
+}
+
+/**
+ * Alias for setStoredLearners — saves learners to localStorage and
+ * notifies subscribers of the data change.
+ */
+export function saveLearners(learners: Student[]): void {
+  setStoredLearners(learners);
+}
+
 export function createStudent(input: Omit<Student, 'id'> & { id?: string }): Student {
   const newStudent: Student = {
     name: input.name ?? 'Unnamed Student',
