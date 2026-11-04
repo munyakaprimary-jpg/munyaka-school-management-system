@@ -73,6 +73,7 @@ export const learnerService = {
 export const formatLearnerDoc = (l: any) => l;
 export const generateLearnerId = () => `MUN-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`;
 export const findExistingLearner = (list: any[], l: any) => list.find(item => item.id === l.id || item.admissionNumber === l.admissionNumber);
+export const deduplicateLearnersById = (list: any[]) => list;
 export const dedupeLearnersById = (list: any[]) => list;
 export const deduplicateLearners = (list: any[]) => list;
 

@@ -184,7 +184,7 @@ export default function LearnersDirectory() {
     const sourceId = learnerToDelete.id || learnerToDelete._id || learnerToDelete.learnerId || '';
     const targetRawId = toRawLearnerId(sourceId);
     const targetPrefixedId = targetRawId ? LEARNER_ID_PREFIX + targetRawId : '';
-    const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learner.admissionNumber || '').trim();
+    const targetAdm = String(learnerToDelete.admissionNo || learnerToDelete.admissionNumber || learnerToDelete.admNo || '').trim();
 
     if (typeof purgeLearnerPermanently === 'function') {
       await purgeLearnerPermanently({
@@ -199,7 +199,7 @@ export default function LearnersDirectory() {
     const isNotTarget = (item: any) => {
       const itemSourceId = item.id || item._id || item.learnerId || '';
       const itemRawId = toRawLearnerId(itemSourceId);
-      const itemAdm = String(item.admissionNo || item.admissionNumber || item.admissionNumber || '').trim();
+      const itemAdm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
 
       const matches =
         (targetRawId && itemRawId === targetRawId) ||
