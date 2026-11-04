@@ -384,6 +384,7 @@ export default function LearnersDirectory() {
               <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-black uppercase text-slate-400 tracking-wider">
                 <th className="py-4 px-6">Learner Name</th>
                 <th className="py-4 px-6">Adm No</th>
+                <th className="py-4 px-6">Assessment / Birth Cert No</th>
                 <th className="py-4 px-6">Grade / Class</th>
                 <th className="py-4 px-6">Stream</th>
                 <th className="py-4 px-6">Parent Contact</th>
@@ -393,7 +394,7 @@ export default function LearnersDirectory() {
             <tbody className="divide-y divide-slate-100 text-sm">
               {displayedLearners.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="py-16 text-center text-slate-400 font-medium">
                     No learners found matching your criteria.
                   </td>
                 </tr>
@@ -420,6 +421,19 @@ export default function LearnersDirectory() {
                         </div>
                       </td>
                       <td className="py-4 px-6 font-mono font-medium text-slate-600">{adm}</td>
+                      {/* Assessment No / Birth Certificate No */}
+                      <td className="p-3">
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || '—'}
+                          </span>
+                          {learner.identifierType && (
+                            <span className="text-[10px] text-muted-foreground uppercase">
+                              {learner.identifierType}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-4 px-6 font-bold text-slate-700">{grade}</td>
                       <td className="py-4 px-6">
                         <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
