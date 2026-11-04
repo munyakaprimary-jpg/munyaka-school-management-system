@@ -39,7 +39,7 @@ export default function PaymentManagement() {
     const addCampus = useSchoolStore((state) => state.addCampus);
     const deleteCampus = useSchoolStore((state) => state.deleteCampus);
     const updateCampusSeats = useSchoolStore((state) => state.updateCampusSeats);
-  const activeLearnersCount = students?.length > 0 ? students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length : (INITIAL_SEED_DATA?.learners?.length || 31);
+  const activeLearnersCount = students?.length > 0 ? students.filter((s: any) => s.status !== 'TRANSFERRED_OUT' && s.status !== 'ARCHIVED').length : ((INITIAL_SEED_DATA as any)?.learners?.length || 31);
   const feePerLearner = 100;
   const estimatedMonthlyTotal = activeLearnersCount * feePerLearner;
   const activeLearners = activeLearnersCount;
@@ -73,7 +73,7 @@ export default function PaymentManagement() {
         console.error('Error parsing stored invoices:', e);
       }
     }
-    const totalActiveSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
+    const totalActiveSeats = ((INITIAL_SEED_DATA as any).learners?.length || 31) + ((INITIAL_SEED_DATA as any).staff?.length || 6);
     const currentFeePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
     const defaultInvoiceAmount = totalActiveSeats * currentFeePerSeat;
     return [
@@ -127,7 +127,7 @@ export default function PaymentManagement() {
 
   const handleDownloadPDF = (invoice: any) => {
     const feePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
-    const totalSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6); // 37
+    const totalSeats = ((INITIAL_SEED_DATA as any).learners?.length || 31) + ((INITIAL_SEED_DATA as any).staff?.length || 6); // 37
     const invoiceTotal = Number(invoice.amount) || (totalSeats * feePerSeat);
 
     const htmlContent = `
@@ -229,7 +229,7 @@ export default function PaymentManagement() {
   const [paymentPeriod, setPaymentPeriod] = useState('1 Month');
   
   // Dynamic active seats & base monthly total calculation
-  const activeSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6);
+  const activeSeats = ((INITIAL_SEED_DATA as any).learners?.length || 31) + ((INITIAL_SEED_DATA as any).staff?.length || 6);
   const currentFeePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
   const monthlyBaseCommitment = activeSeats * currentFeePerSeat; // e.g. 37 * 100 = 3,700
 
@@ -312,8 +312,8 @@ export default function PaymentManagement() {
   // Real Data from munyaka_central_db and school store
   const { totalActiveStudents, totalActiveStaff, totalCapacity, availableSlots } = useMemo(() => {
     try {
-      const sCount = INITIAL_SEED_DATA.learners.length;
-      const staffCount = INITIAL_SEED_DATA.staff?.length || 6;
+      const sCount = (INITIAL_SEED_DATA as any).learners.length;
+      const staffCount = (INITIAL_SEED_DATA as any).staff?.length || 6;
       const totalAllocated = sCount + staffCount;
       const capacity = Math.max(totalAllocated + 120, 500);
 
@@ -324,8 +324,8 @@ export default function PaymentManagement() {
         availableSlots: Math.max(0, capacity - totalAllocated),
       };
     } catch {}
-    const sCount = INITIAL_SEED_DATA.learners.length;
-    const staffCount = INITIAL_SEED_DATA.staff?.length || 6;
+    const sCount = (INITIAL_SEED_DATA as any).learners.length;
+    const staffCount = (INITIAL_SEED_DATA as any).staff?.length || 6;
     const totalAllocated = sCount + staffCount;
     return {
       totalActiveStudents: sCount,
@@ -373,7 +373,7 @@ export default function PaymentManagement() {
     window.dispatchEvent(new Event('fee_per_seat_updated'));
   };
 
-  const totalSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6); // 37
+  const totalSeats = ((INITIAL_SEED_DATA as any).learners?.length || 31) + ((INITIAL_SEED_DATA as any).staff?.length || 6); // 37
   const currentFee = Number(monthlyFeePerStudent) || 0;
   const estimatedTotal = totalSeats * currentFee;
   const [paymentDueDate, setPaymentDueDate] = useState<string>(() => {
@@ -545,8 +545,8 @@ export default function PaymentManagement() {
           <div className="lg:col-span-2 space-y-5">
             {/* Top-Level Subscription Summary Banner */}
             {(() => {
-              const learnersCount = INITIAL_SEED_DATA.learners?.length || 31;
-              const staffCount = INITIAL_SEED_DATA.staff?.length || 6;
+              const learnersCount = (INITIAL_SEED_DATA as any).learners?.length || 31;
+              const staffCount = (INITIAL_SEED_DATA as any).staff?.length || 6;
               const totalSeats = learnersCount + staffCount;
               const totalCommitment = totalSeats * summaryFeePerSeat;
 
@@ -744,7 +744,7 @@ export default function PaymentManagement() {
                   <Calendar className="text-indigo-600" size={24} /> Monthly Payment & Billing Setting
                 </CardTitle>
                 <p className="text-xs text-slate-500 font-medium mt-1">
-                  Calculated automatically from {activeLearnersCount} active learners and {INITIAL_SEED_DATA.staff.length} active staff synchronized from src/data/InitialSeedData.ts.
+                  Calculated automatically from {activeLearnersCount} active learners and {(INITIAL_SEED_DATA as any).staff.length} active staff synchronized from src/data/InitialSeedData.ts.
                 </p>
               </div>
 
@@ -873,7 +873,7 @@ export default function PaymentManagement() {
               <div className="p-4 bg-white rounded-xl border border-gray-200/80 shadow-sm">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">ACTIVE LEARNERS</span>
                 <div className="text-3xl font-extrabold text-gray-900 mt-2">
-                  {INITIAL_SEED_DATA.learners?.length || 31}
+                  {(INITIAL_SEED_DATA as any).learners?.length || 31}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Billed monthly</p>
               </div>
@@ -882,7 +882,7 @@ export default function PaymentManagement() {
               <div className="p-4 bg-white rounded-xl border border-gray-200/80 shadow-sm">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">ACTIVE STAFF</span>
                 <div className="text-3xl font-extrabold text-gray-900 mt-2">
-                  {INITIAL_SEED_DATA.staff?.length || 6}
+                  {(INITIAL_SEED_DATA as any).staff?.length || 6}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">System user access</p>
               </div>
@@ -1030,7 +1030,7 @@ export default function PaymentManagement() {
 
       {/* Tab 4: Billing History & Invoices */}
       {activeTab === 'invoices' && (() => {
-        const totalActiveSeats = (INITIAL_SEED_DATA.learners?.length || 31) + (INITIAL_SEED_DATA.staff?.length || 6); // 37
+        const totalActiveSeats = ((INITIAL_SEED_DATA as any).learners?.length || 31) + ((INITIAL_SEED_DATA as any).staff?.length || 6); // 37
         const currentFeePerSeat = Number(localStorage.getItem('munyaka_fee_per_seat')) || 100;
         const defaultInvoiceAmount = totalActiveSeats * currentFeePerSeat;
         

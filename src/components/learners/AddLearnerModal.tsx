@@ -106,8 +106,8 @@ export default function AddLearnerModal({
       const identifierValue = formData.identifierValue.trim() || '';
       const regGrade = formData.grade;
       const regStream = formData.stream;
-      const gender = formData.gender || 'Not Specified';
-      const dateOfBirth = formData.dateOfBirth || '';
+      const gender = (formData as any).gender || 'Not Specified';
+      const dateOfBirth = (formData as any).dateOfBirth || '';
       const parentName = formData.guardian.trim() || '—';
 
       const newLearnerData = {

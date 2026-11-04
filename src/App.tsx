@@ -443,7 +443,7 @@ const App = () => {
         if (!existingDb) {
                 const initialDb = {
                   learners: activeLearners.length > 0 ? activeLearners : ((initialSeedData as any).learners || (initialSeedData as any).students || []),
-                  staff: initialSeedData.staff || [],
+                  staff: (initialSeedData as any).staff || [],
                 };
                 const ok = safeWrite('munyaka_central_db', initialDb, { operation: 'seed' });
                 if (!ok) {
