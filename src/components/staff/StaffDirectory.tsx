@@ -1,10 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export interface StaffDirectoryProps {
   staffList?: any[];
 }
 
-export function StaffDirectory({ staffList = [] }: StaffDirectoryProps) {
+export function StaffDirectory({ staffList: externalStaffList = [] }: StaffDirectoryProps) {
+  const [staffList, setStaffList] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_staff');
+      return saved ? JSON.parse(saved) : (externalStaffList.length > 0 ? externalStaffList : []);
+    } catch (e) {
+      console.error('Error loading staff from storage:', e);
+      return [];
+    }
+  });
+
+  // Listen for live updates without losing state
+  useEffect(() => {
+    const handleStaffUpdate = (event: any) => {
+      if (event.detail && Array.isArray(event.detail)) {
+        setStaffList(event.detail);
+      } else {
+        const saved = localStorage.getItem('munyaka_staff');
+        if (saved) {
+          try {
+            setStaffList(JSON.parse(saved));
+          } catch (err) {
+            console.error(err);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('staff-updated', handleStaffUpdate);
+    window.addEventListener('storage', handleStaffUpdate);
+    return () => {
+      window.removeEventListener('staff-updated', handleStaffUpdate);
+      window.removeEventListener('storage', handleStaffUpdate);
+    };
+  }, []);
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Staff Directory</h2>
