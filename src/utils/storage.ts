@@ -2,7 +2,6 @@
 // Central LocalStorage Management Utility
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { Learner } from '@/types/learners';
 
 export const CURRENT_SCHEMA_VERSION = 'persistent-storage-v1';

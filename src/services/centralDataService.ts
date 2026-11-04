@@ -1,4 +1,3 @@
-import { initialSeedData } from '@/data/initialSeedData';
 import { readStorage, writeStorage } from '@/services/persistentStore';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { generateLearnerId, formatLearnerDoc, deduplicateLearnersById as dedupeLearnersById } from '@/services/learnerService';
@@ -87,7 +86,8 @@ export const CentralDataService = {
 
   getStaff: (): any[] => {
     const res = readStorage<any[]>('munyaka_staff_db', []);
-    return res.length > 0 ? res : (initialSeedData.staff || []);
+    // DISABLED: No automatic seeding from initialSeedData. Empty state stays as [].
+    return res || [];
   },
 
   saveStaff: (staffList: any[]): boolean => {

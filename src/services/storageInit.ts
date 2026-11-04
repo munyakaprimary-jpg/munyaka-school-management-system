@@ -1,77 +1,17 @@
-import { initialSeedData } from '@/data/initialSeedData';
-
-// Canonical storage keys — unified namespace used across all modules.
-const CANONICAL_KEYS = {
-  LEARNERS: 'school_learners_data',
-  STUDENTS: 'munyaka_students',
-  STAFF: 'munyaka_staff_directory',
-  STAFF_LEGACY: 'munyaka_staff',
-  EXAMS: 'munyaka_exam_types',
-  LIBRARY: 'munyaka_library_books',
-  TRANSACTIONS: 'munyaka_transactions',
-  FEES_RECORDS: 'munyaka_fees_records',
-  FEE_STRUCTURES: 'munyaka_fee_structures',
-  ATTENDANCE: 'munyaka_attendance_records',
-  GRADES: 'munyaka_grades',
-  LEARNING_AREAS: 'munyaka_learning_areas',
-  ASSESSMENT_SCORES: 'munyaka_assessment_scores',
-  ICT_ASSETS: 'munyaka_ict_assets',
-  NOTICES: 'munyaka_notices',
-  SYSTEM_SETTINGS: 'munyaka_system_settings_v3',
-} as const;
+/**
+ * Storage initialization service.
+ *
+ * DISABLED: No automatic seeding from initialSeedData. When storage is empty,
+ * state stays strictly as [] (pure empty state).
+ */
 
 export const initializeApplicationStorage = (): void => {
-  const gradesData = (initialSeedData as any).grades || [];
-  const configuredStreamsData = (initialSeedData as any).configured_streams || gradesData;
-
-  const seedMappings: Array<{ key: string; data: unknown }> = [
-    { key: CANONICAL_KEYS.LEARNERS, data: (initialSeedData as any).students || (initialSeedData as any).learners || [] },
-    { key: CANONICAL_KEYS.STUDENTS, data: (initialSeedData as any).students || (initialSeedData as any).learners || [] },
-    { key: CANONICAL_KEYS.STAFF, data: initialSeedData.staff },
-    { key: CANONICAL_KEYS.STAFF_LEGACY, data: initialSeedData.staff },
-    { key: CANONICAL_KEYS.EXAMS, data: (initialSeedData as any).exams || [] },
-    { key: CANONICAL_KEYS.LIBRARY, data: (initialSeedData as any).libraryBooks || [] },
-    { key: CANONICAL_KEYS.TRANSACTIONS, data: (initialSeedData as any).transactions || [] },
-    { key: CANONICAL_KEYS.FEES_RECORDS, data: (initialSeedData as any).fees || [] },
-    { key: CANONICAL_KEYS.FEE_STRUCTURES, data: (initialSeedData as any).feeStructures || [] },
-    { key: CANONICAL_KEYS.ATTENDANCE, data: (initialSeedData as any).attendance || [] },
-    { key: CANONICAL_KEYS.GRADES, data: gradesData },
-    { key: CANONICAL_KEYS.LEARNING_AREAS, data: (initialSeedData as any).learningAreas || [] },
-    { key: CANONICAL_KEYS.ASSESSMENT_SCORES, data: (initialSeedData as any).assessmentScores || [] },
-    { key: CANONICAL_KEYS.ICT_ASSETS, data: (initialSeedData as any).ictAssets || [] },
-    { key: CANONICAL_KEYS.NOTICES, data: (initialSeedData as any).notices || [] },
-    { key: CANONICAL_KEYS.SYSTEM_SETTINGS, data: (initialSeedData as any).settings || {} },
-    { key: 'configured_streams', data: configuredStreamsData },
-    { key: 'grades_and_streams', data: gradesData },
-    { key: 'munyaka_grades_streams', data: gradesData },
-  ];
-
-  seedMappings.forEach(({ key, data }) => {
-    const existing = localStorage.getItem(key);
-    if (!existing) {
-      localStorage.setItem(key, JSON.stringify(data));
-      return;
-    }
-    try {
-      const parsed = JSON.parse(existing);
-      // Re-seed ONLY if storage was cleared or set to an empty array
-      if (Array.isArray(parsed) && parsed.length === 0 && Array.isArray(data) && data.length > 0) {
-        localStorage.setItem(key, JSON.stringify(data));
-      }
-    } catch {
-      localStorage.setItem(key, JSON.stringify(data));
-    }
-  });
+  // Deliberately empty - no seeding from initialSeedData
 };
 
-/** Merged StorageInitService from duplicate StorageInitService.ts */
 export const StorageInitService = {
-  init: () => {
-    initializeApplicationStorage();
-  },
-  ensureSeeded: () => {
-    initializeApplicationStorage();
-  }
+  init: () => {},
+  ensureSeeded: () => {},
 };
 
 export default initializeApplicationStorage;

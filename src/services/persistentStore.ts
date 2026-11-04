@@ -338,97 +338,12 @@ import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
  * Hydrate every primary store from INITIAL_SEED_DATA if localStorage is empty.
  * Called at app startup after migrations complete.
  *
- * This mirrors the logic in `utils/storage.ts` hydrateAllStores() but writes
- * through to both IndexedDB and localStorage via writeStorage().
+ * DISABLED: No automatic seeding from INITIAL_SEED_DATA. When localStorage is empty,
+ * state stays strictly as [] (pure empty state).
  */
 export function hydrateFromSeed(): void {
-  const ls = getLocalStorage();
-  if (!ls) return;
-
-  const seedIfAbsent = (key: string, value: unknown) => {
-    if (ls.getItem(key) === null && value !== undefined) {
-      writeStorage(key, value);
-    }
-  };
-
-  // Learners — seed from the hardcoded initialSeedData snapshot on clean installs.
-  const seedStudents = (INITIAL_SEED_DATA as any)?.students || (INITIAL_SEED_DATA as any)?.learners || [];
-  if (Array.isArray(seedStudents) && seedStudents.length > 0) {
-    seedIfAbsent('school_learners_data', seedStudents);
-    seedIfAbsent('munyaka_students', seedStudents);
-  }
-
-  // Staff — also seeded from the hardcoded initialSeedData snapshot.
-  if (Array.isArray(INITIAL_SEED_DATA?.staff) && INITIAL_SEED_DATA.staff.length > 0) {
-    seedIfAbsent('munyaka_staff_directory', INITIAL_SEED_DATA.staff);
-    seedIfAbsent('munyaka_staff', INITIAL_SEED_DATA.staff);
-  }
-
-  // Staff pre-registration
-  if (Array.isArray((INITIAL_SEED_DATA as any).staffPrereg)) {
-    seedIfAbsent('munyaka_staff_prereg', (INITIAL_SEED_DATA as any).staffPrereg);
-  }
-
-  // Grades - empty by default (no hardcoded default grades/streams)
-  if (!localStorage.getItem('munyaka_grades')) {
-    localStorage.setItem('munyaka_grades', JSON.stringify([]));
-  }
-
-  // Exam types
-  if (Array.isArray((INITIAL_SEED_DATA as any).examTypes)) {
-    seedIfAbsent('munyaka_exam_types', (INITIAL_SEED_DATA as any).examTypes);
-  }
-
-  // Learning areas
-  if (Array.isArray((INITIAL_SEED_DATA as any).learningAreas)) {
-    seedIfAbsent('munyaka_learning_areas', (INITIAL_SEED_DATA as any).learningAreas);
-  }
-
-  // Assessment scores
-  if ((INITIAL_SEED_DATA as any).assessmentScores) {
-    seedIfAbsent('munyaka_assessment_scores', (INITIAL_SEED_DATA as any).assessmentScores);
-  }
-
-  // Fee ledgers
-  if (Array.isArray((INITIAL_SEED_DATA as any).fees)) {
-    seedIfAbsent('munyaka_fees_records', (INITIAL_SEED_DATA as any).fees);
-    seedIfAbsent('munyaka_student_fees', (INITIAL_SEED_DATA as any).fees);
-  }
-
-  // Fee structures
-  if (Array.isArray((INITIAL_SEED_DATA as any).feeStructures)) {
-    seedIfAbsent('munyaka_fee_structures', (INITIAL_SEED_DATA as any).feeStructures);
-  }
-
-  // Transactions
-  if (Array.isArray((INITIAL_SEED_DATA as any).transactions)) {
-    seedIfAbsent('munyaka_transactions', (INITIAL_SEED_DATA as any).transactions);
-  }
-
-  // Attendance
-  if ((INITIAL_SEED_DATA as any).attendance) {
-    seedIfAbsent('munyaka_attendance_records', (INITIAL_SEED_DATA as any).attendance);
-  }
-
-  // Library books
-  if (Array.isArray((INITIAL_SEED_DATA as any).libraryBooks)) {
-    seedIfAbsent('munyaka_library_books', (INITIAL_SEED_DATA as any).libraryBooks);
-  }
-
-  // ICT assets
-  if (Array.isArray((INITIAL_SEED_DATA as any).ictAssets)) {
-    seedIfAbsent('munyaka_ict_assets', (INITIAL_SEED_DATA as any).ictAssets);
-  }
-
-  // Notices
-  if (Array.isArray((INITIAL_SEED_DATA as any).notices)) {
-    seedIfAbsent('munyaka_notices', (INITIAL_SEED_DATA as any).notices);
-  }
-
-  // System settings
-  if ((INITIAL_SEED_DATA as any).settings) {
-    seedIfAbsent('munyaka_system_settings_v3', (INITIAL_SEED_DATA as any).settings);
-  }
+  // Deliberately empty - no seeding from INITIAL_SEED_DATA
+  // When localStorage is empty, state stays as [] (pure empty state)
 }
 
 // ─── Persistence helpers (typed CRUD, mirrors utils/storage.ts) ─────────────

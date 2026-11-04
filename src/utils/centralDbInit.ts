@@ -1,5 +1,3 @@
-import { initialSeedData } from '@/data/initialSeedData';
-
 /**
  * Ensures LocalStorage has default state initialized on first boot.
  * Does NOT auto-populate hardcoded students if storage is cleared.
@@ -14,7 +12,7 @@ export const initializeCentralDb = () => {
     if (!existingDb) {
       const defaultDb = {
         learners: [],
-        staff: initialSeedData.staff || [],
+        staff: [],
         settings: {},
         updatedAt: new Date().toISOString()
       };
