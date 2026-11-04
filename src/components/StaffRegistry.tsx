@@ -60,6 +60,10 @@ export interface StaffMember {
   homeroomStream?: string;
   allocations?: StaffAllocationRecord[];
   accessCode: string;
+  teacherCode?: string;
+  code?: string;
+  tempAccessCode?: string;
+  fullName?: string;
   status: 'Active' | 'On Leave' | 'Inactive';
   createdAt?: string;
 }
@@ -470,13 +474,16 @@ export default function StaffRegistry() {
         ? (email.includes('@') ? email.trim() : `${email.trim()}@munyaka.sc.ke`)
         : `${fullName.toLowerCase().replace(/\s+/g, '.')}@munyaka.sc.ke`;
   
-      const primaryId = isTeachingStaff ? tscNumber.trim() : nationalId.trim();
-      const generatedMunId = primaryId ? `MUN-${primaryId}` : `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
+      const generatedMunId = accessCode;
       const rbacRoleKey = mapRoleLabelToRbacKey(category);
       const title = category;
       const staffRecord: StaffMember = {
         id: editingStaff ? editingStaff.id : generatedMunId,
+        accessCode: accessCode,
+        teacherCode: accessCode,
+        code: accessCode,
         name: fullName.trim(),
+        fullName: fullName.trim(),
         category,
         title,
         rbacRole: rbacRoleKey,
@@ -485,7 +492,6 @@ export default function StaffRegistry() {
         tscNumber: isTeachingStaff ? tscNumber.trim() : undefined,
         nationalId: !isTeachingStaff ? nationalId.trim() : undefined,
         status,
-        accessCode: accessCode || generateRandomCode(),
         subjects: isTeachingStaff ? selectedSubjects : [],
         assignedClasses: isTeachingStaff ? assignedClasses : [],
         assignedStreams: isTeachingStaff ? assignedStreams : [],
@@ -514,6 +520,9 @@ export default function StaffRegistry() {
 
       const userProfile = {
         id: staffRecord.id,
+        accessCode: staffRecord.accessCode,
+        teacherCode: staffRecord.accessCode,
+        code: staffRecord.accessCode,
         fullName: staffRecord.name,
         name: staffRecord.name,
         email: fullEmail,
@@ -535,6 +544,7 @@ export default function StaffRegistry() {
         usersList.push(userProfile);
       }
       localStorage.setItem('munyaka_users', JSON.stringify(usersList));
+      window.dispatchEvent(new CustomEvent('staff-updated', { detail: updatedList }));
     } catch (authErr) {
       console.error('Error updating munyaka_users auth profile:', authErr);
     }
@@ -1007,11 +1017,11 @@ export default function StaffRegistry() {
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                                               <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-150 px-2 py-1 rounded-lg">
                                                 <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
-                                                  {staff.accessCode || '—'}
+                                                  {staff.accessCode || staff.teacherCode || staff.code || staff.tempAccessCode || staff.id || '—'}
                                                 </span>
-                                                {staff.accessCode && (
+                                                {(staff.accessCode || staff.teacherCode || staff.code || staff.tempAccessCode) && (
                                                   <button
-                                                    onClick={() => handleCopyCode(staff.accessCode)}
+                                                    onClick={() => handleCopyCode(staff.accessCode || staff.teacherCode || staff.code || staff.tempAccessCode)}
                                                     className="p-1 hover:bg-white rounded hover:text-indigo-600 text-slate-400 border border-transparent hover:border-slate-200 transition-all"
                                                     title="Copy code to clipboard"
                                                   >
