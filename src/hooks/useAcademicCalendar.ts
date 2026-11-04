@@ -53,7 +53,7 @@ export const useAcademicCalendar = (): AcademicCalendar => {
   /** Re-read from localStorage and update state if the data changed. */
   const loadSettings = useCallback(() => {
     try {
-      const ls = getLocalStorage();
+      const ls = typeof window !== 'undefined' ? window.localStorage : null;
       const stored = ls?.getItem(ACADEMIC_SETTINGS_KEY) ?? null;
       const parsed = parseSettings(stored);
       setRawSettings(parsed);
@@ -124,7 +124,7 @@ export const useAcademicCalendar = (): AcademicCalendar => {
  */
 export const getActiveAcademic = (): { activeTerm: string; activeYear: string } => {
   try {
-    const ls = getLocalStorage();
+    const ls = typeof window !== 'undefined' ? window.localStorage : null;
     const raw = ls?.getItem(ACADEMIC_SETTINGS_KEY) ?? null;
     const parsed = parseSettings(raw);
     return parsed ?? { activeTerm: FALLBACK_TERM, activeYear: FALLBACK_YEAR };

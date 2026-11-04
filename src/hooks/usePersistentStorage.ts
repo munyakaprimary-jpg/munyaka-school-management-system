@@ -348,7 +348,7 @@ export function usePersistentStorage(): PersistentStorage {
     },
 
     // ── Payment Records ──
-    addPaymentRecord: (input) => {
+    addPaymentRecord: (input: any) => {
       const created = createPaymentRecord(input);
       refreshAll();
       return created;
