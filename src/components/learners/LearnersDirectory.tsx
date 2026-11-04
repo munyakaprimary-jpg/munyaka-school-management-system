@@ -384,7 +384,9 @@ export default function LearnersDirectory() {
               <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-black uppercase text-slate-400 tracking-wider">
                 <th className="py-4 px-6">Learner Name</th>
                 <th className="py-4 px-6">Adm No</th>
-                <th className="py-4 px-6">Assessment / Birth Cert No</th>
+                <th className="p-3 text-left font-bold text-xs uppercase tracking-wider">
+                  ASSESSMENT / BIRTH CERT. NO.
+                </th>
                 <th className="py-4 px-6">Grade / Class</th>
                 <th className="py-4 px-6">Stream</th>
                 <th className="py-4 px-6">Parent Contact</th>
