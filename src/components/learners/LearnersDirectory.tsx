@@ -62,6 +62,8 @@ export default function LearnersDirectory() {
       const formatted = raw.map(formatLearnerDoc);
       setLearnersList(formatted);
       setLearners(formatted);
+      setFilteredLearners(formatted);
+      setDisplayedLearners(formatted);
     };
 
     const loadFromStorage = () => {
@@ -326,100 +328,97 @@ export default function LearnersDirectory() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-black uppercase text-slate-400 tracking-wider">
-                <th className="p-3">ADMISSION NO.</th>
-                <th className="p-3">ASSESSMENT / BIRTH CERT. NO.</th>
-                <th className="p-3">FULL NAME</th>
-                <th className="p-3">GRADE & STREAM</th>
-                <th className="p-3">GENDER</th>
-                <th className="p-3">DOB</th>
-                <th className="p-3">PARENT / GUARDIAN</th>
-                <th className="p-3">PHONE NUMBER</th>
-                <th className="p-3 text-right">ACTIONS</th>
+      {/* Clean Learner Directory Table Container */}
+      <div className="w-full overflow-x-auto rounded-lg border bg-card shadow-sm">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-muted/50 border-b text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="p-3">ADMISSION NO.</th>
+              <th className="p-3">ASSESSMENT / BIRTH CERT. NO.</th>
+              <th className="p-3">FULL NAME</th>
+              <th className="p-3">GRADE & STREAM</th>
+              <th className="p-3">GENDER</th>
+              <th className="p-3">DOB</th>
+              <th className="p-3">PARENT / GUARDIAN</th>
+              <th className="p-3">PHONE NUMBER</th>
+              <th className="p-3 text-right">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {displayedLearners && displayedLearners.length > 0 ? (
+              displayedLearners.map((learner: any, index: number) => {
+                const lId = learner.id || learner.admissionNumber || learner.admissionNo || index;
+                return (
+                  <tr key={lId} className="hover:bg-muted/30 transition-colors">
+                    {/* Admission No */}
+                    <td className="p-3 font-medium whitespace-nowrap">
+                      {learner.admissionNumber || learner.admissionNo || learner.admNo || learner.id || '—'}
+                    </td>
+
+                    {/* Assessment / Birth Cert No */}
+                    <td className="p-3 whitespace-nowrap font-mono text-xs">
+                      {learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '—'}
+                    </td>
+
+                    {/* Full Name */}
+                    <td className="p-3 font-semibold text-foreground whitespace-nowrap">
+                      {learner.fullName || learner.name || learner.studentName || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || '—'}
+                    </td>
+
+                    {/* Grade & Stream */}
+                    <td className="p-3 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+                        {learner.gradeLevel || learner.grade || ''} {learner.stream ? `(${learner.stream})` : ''}
+                      </span>
+                    </td>
+
+                    {/* Gender */}
+                    <td className="p-3 whitespace-nowrap capitalize">{learner.gender || learner.sex || '—'}</td>
+
+                    {/* DOB */}
+                    <td className="p-3 whitespace-nowrap">{learner.dateOfBirth || learner.dob || '—'}</td>
+
+                    {/* Parent / Guardian */}
+                    <td className="p-3 whitespace-nowrap">{learner.parentName || learner.parentGuardian || learner.guardian || '—'}</td>
+
+                    {/* Phone Number */}
+                    <td className="p-3 whitespace-nowrap">{learner.phoneNumber || learner.phone || learner.parentPhone || '—'}</td>
+
+                    {/* Actions */}
+                    <td className="p-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button
+                          className="h-8 w-8"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => navigate(`/student/${learner.id || learner.admissionNumber || learner.admissionNo}`)}
+                          title="View Profile"
+                        >
+                          <Eye className="h-4 w-4"/>
+                        </Button>
+                        <Button
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => requestDelete(learner)}
+                          title="Delete Learner"
+                        >
+                          <Trash2 className="h-4 w-4"/>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={9} className="p-8 text-center text-muted-foreground">
+                  No learners found. Register a new learner to get started.
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {displayedLearners.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="py-16 text-center text-slate-400 font-medium">
-                    No learners found. Register a new learner to get started.
-                  </td>
-                </tr>
-              ) : (
-                displayedLearners.map(learner => {
-                  const lId = learner.id || learner._id || learner.admissionNumber || learner.admissionNo || 'learner';
-
-                  return (
-                    <tr key={lId} className="hover:bg-slate-50/50 transition-colors">
-                      {/* Admission No */}
-                      <td className="p-3 font-medium">
-                        {learner.admissionNumber || learner.admissionNo || learner.admNo || learner.id || '—'}
-                      </td>
-
-                      {/* Identifier */}
-                      <td className="p-3">
-                        {learner.identifierValue || learner.assessmentNo || learner.birthCertNo || '—'}
-                      </td>
-
-                      {/* Full Name */}
-                      <td className="p-3 font-semibold">
-                        {learner.fullName || learner.name || learner.studentName || '—'}
-                      </td>
-
-                      {/* Grade & Stream */}
-                      <td className="p-3">
-                        <span className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded-md text-xs">
-                          {learner.gradeLevel || learner.grade || ''} {learner.stream ? `(${learner.stream})` : ''}
-                        </span>
-                      </td>
-
-                      {/* Gender */}
-                      <td className="p-3">{learner.gender || learner.sex || '—'}</td>
-
-                      {/* DOB */}
-                      <td className="p-3">{learner.dateOfBirth || learner.dob || '—'}</td>
-
-                      {/* Parent / Guardian */}
-                      <td className="p-3">{learner.parentName || learner.parentGuardian || '—'}</td>
-
-                      {/* Phone Number */}
-                      <td className="p-3">{learner.phoneNumber || learner.phone || '—'}</td>
-
-                      {/* Actions */}
-                      <td className="p-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/student/${lId}`)}
-                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
-                            title="View Profile"
-                          >
-                            <Eye size={16} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => requestDelete(learner)}
-                            className="h-9 w-9 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50"
-                            title="Delete Learner"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Add Learner Modal */}
