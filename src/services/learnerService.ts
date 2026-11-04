@@ -28,7 +28,15 @@ export const getLearners = (): Learner[] => {
   const data = localStorage.getItem(MASTER_KEY);
   if (!data) return [];
   try {
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((l: any) => {
+      const adm = String(l?.admNo || l?.admissionNumber || l?.admissionNo || '').trim();
+      const name = String(l?.name || l?.fullName || '').trim();
+      if (adm === 'MUN-001-2026' || adm === 'A001') return false;
+      if (!name || name.toLowerCase() === 'unnamed learner' || name.toLowerCase() === 'unnamed student') return false;
+      return true;
+    }).map(formatLearnerDoc);
   } catch {
     return [];
   }

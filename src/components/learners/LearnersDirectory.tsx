@@ -56,16 +56,7 @@ const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
 
 export default function LearnersDirectory() {
   const navigate = useNavigate();
-  const [learnersList, setLearnersList] = useState<any[]>(() => {
-    try {
-      const unified = localStorage.getItem('munyaka_learners');
-      if (unified) {
-        const parsed = JSON.parse(unified);
-        if (Array.isArray(parsed)) return parsed.map(formatLearnerDoc);
-      }
-    } catch {}
-    return [];
-  });
+  const [learnersList, setLearnersList] = useState<any[]>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [gradeFilter, setGradeFilter] = useState('all');
