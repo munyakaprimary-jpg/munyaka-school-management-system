@@ -55,7 +55,7 @@ export default function LearnersDirectory() {
   const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
-    const UNIFIED_KEY = 'munyaka_learners_v2';
+    const UNIFIED_KEY = 'munyaka_learners';
     const DELETED_KEY = 'deleted_learner_ids';
 
     const applyList = (raw: any[]) => {
@@ -67,18 +67,18 @@ export default function LearnersDirectory() {
     const loadFromStorage = () => {
       try {
         const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-        const unified = localStorage.getItem('munyaka_learners');
-        if (unified) {
-          const parsed = JSON.parse(unified);
-          if (Array.isArray(parsed)) {
-            const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
-            applyList(filtered);
-            return;
+        
+        let unified = localStorage.getItem(UNIFIED_KEY);
+        if (!unified) {
+          const legacy = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_students');
+          if (legacy) {
+            localStorage.setItem(UNIFIED_KEY, legacy);
+            unified = legacy;
           }
         }
-        const unifiedV2 = localStorage.getItem(UNIFIED_KEY);
-        if (unifiedV2) {
-          const parsed = JSON.parse(unifiedV2);
+
+        if (unified) {
+          const parsed = JSON.parse(unified);
           if (Array.isArray(parsed)) {
             const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
             applyList(filtered);
@@ -152,9 +152,9 @@ export default function LearnersDirectory() {
   useEffect(() => {
     const searchClean = searchTerm.toLowerCase().replace(/\s+/g, '').trim();
     const next = (learnersList || []).filter(learner => {
-      const name = (learner.fullName || learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`).toLowerCase();
+      const name = (learner.fullName || learner.name || learner.studentName || `${learner.firstName || ''} ${learner.lastName || ''}`).toLowerCase();
       const adm = (learner.admissionNumber || learner.admissionNo || learner.admNo || learner.id || '').toLowerCase();
-      const identifier = (learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '').toLowerCase();
+      const identifier = (learner.identifierValue || learner.assessmentNo || learner.birthCertNo || '').toLowerCase();
       const grade = (learner.gradeLevel || learner.grade || '').toLowerCase();
       const stream = (learner.stream || '').toLowerCase();
 
@@ -246,7 +246,7 @@ export default function LearnersDirectory() {
       for (const k of keysToPurge) {
         localStorage.removeItem(k);
       }
-      localStorage.setItem('munyaka_learners_v2', JSON.stringify([]));
+      localStorage.setItem('munyaka_learners', JSON.stringify([]));
       window.location.reload();
     }
   };
@@ -333,7 +333,7 @@ export default function LearnersDirectory() {
             <thead>
               <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-black uppercase text-slate-400 tracking-wider">
                 <th className="p-3">ADMISSION NO.</th>
-                <th className="p-3 text-left font-bold text-xs uppercase tracking-wider">ASSESSMENT / BIRTH CERT. NO.</th>
+                <th className="p-3">ASSESSMENT / BIRTH CERT. NO.</th>
                 <th className="p-3">FULL NAME</th>
                 <th className="p-3">GRADE & STREAM</th>
                 <th className="p-3">GENDER</th>
@@ -357,38 +357,38 @@ export default function LearnersDirectory() {
                   return (
                     <tr key={lId} className="hover:bg-slate-50/50 transition-colors">
                       {/* Admission No */}
-                      <td className="p-3 font-medium whitespace-nowrap">
+                      <td className="p-3 font-medium">
                         {learner.admissionNumber || learner.admissionNo || learner.admNo || learner.id || '—'}
                       </td>
 
-                      {/* Identifier (Assessment / Birth Cert No) */}
-                      <td className="p-3 whitespace-nowrap font-mono text-sm">
+                      {/* Identifier */}
+                      <td className="p-3">
                         {learner.identifierValue || learner.assessmentNo || learner.birthCertNo || '—'}
                       </td>
 
                       {/* Full Name */}
-                      <td className="p-3 font-semibold text-foreground whitespace-nowrap">
-                        {learner.fullName || learner.name || '—'}
+                      <td className="p-3 font-semibold">
+                        {learner.fullName || learner.name || learner.studentName || '—'}
                       </td>
 
                       {/* Grade & Stream */}
-                      <td className="p-3 whitespace-nowrap">
-                        <span className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded-md text-xs font-medium">
+                      <td className="p-3">
+                        <span className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded-md text-xs">
                           {learner.gradeLevel || learner.grade || ''} {learner.stream ? `(${learner.stream})` : ''}
                         </span>
                       </td>
 
                       {/* Gender */}
-                      <td className="p-3 whitespace-nowrap">{learner.gender || learner.sex || '—'}</td>
+                      <td className="p-3">{learner.gender || learner.sex || '—'}</td>
 
                       {/* DOB */}
-                      <td className="p-3 whitespace-nowrap">{learner.dateOfBirth || learner.dob || '—'}</td>
+                      <td className="p-3">{learner.dateOfBirth || learner.dob || '—'}</td>
 
                       {/* Parent / Guardian */}
-                      <td className="p-3 whitespace-nowrap">{learner.parentName || learner.parentGuardian || '—'}</td>
+                      <td className="p-3">{learner.parentName || learner.parentGuardian || '—'}</td>
 
                       {/* Phone Number */}
-                      <td className="p-3 whitespace-nowrap">{learner.phoneNumber || learner.phone || '—'}</td>
+                      <td className="p-3">{learner.phoneNumber || learner.phone || '—'}</td>
 
                       {/* Actions */}
                       <td className="p-3 text-right whitespace-nowrap">

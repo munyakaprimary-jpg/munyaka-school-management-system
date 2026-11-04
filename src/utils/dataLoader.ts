@@ -1,10 +1,10 @@
 import { Learner } from '@/services/learnerService';
 
-const STORAGE_KEY = 'munyaka_learners_v2';
+const STORAGE_KEY = 'munyaka_learners';
 
 export const initializeMasterStore = () => {
   try {
-    const SEED_VERSION_KEY = 'munyaka_seed_version_v4_purge';
+    const SEED_VERSION_KEY = 'munyaka_seed_version_v5_learner_standard';
     if (!localStorage.getItem(SEED_VERSION_KEY)) {
       localStorage.setItem(SEED_VERSION_KEY, 'true');
     }
@@ -16,7 +16,16 @@ export const initializeMasterStore = () => {
 export const getNormalizedLearners = (): any[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      // Check legacy key and migrate if present
+      const legacyRaw = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_students');
+      if (legacyRaw) {
+        localStorage.setItem(STORAGE_KEY, legacyRaw);
+        const parsedLegacy = JSON.parse(legacyRaw);
+        if (Array.isArray(parsedLegacy)) return parsedLegacy;
+      }
+      return [];
+    }
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     

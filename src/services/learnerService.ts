@@ -11,6 +11,7 @@ export interface Learner {
   birthCertificateNo?: string;
   fullName?: string;
   name?: string;
+  studentName?: string;
   firstName?: string;
   lastName?: string;
   gradeLevel?: string;
@@ -27,31 +28,48 @@ export interface Learner {
   [key: string]: any;
 }
 
-const STORAGE_KEY = 'munyaka_learners_v2';
+const STORAGE_KEY = 'munyaka_learners';
 
 export const formatLearnerDoc = (l: any): Learner => {
   if (!l) return {} as Learner;
+  const fullName = l.fullName || l.name || l.studentName || `${l.firstName || ''} ${l.lastName || ''}`.trim() || '';
+  const admissionNumber = l.admissionNumber || l.admissionNo || l.admNo || '';
+  const identifierValue = l.identifierValue || l.assessmentNo || l.assessmentNumber || l.birthCertNo || l.birthCertificateNo || '';
+  const gradeLevel = l.gradeLevel || l.grade || '';
+  const stream = l.stream || '';
+  const gender = l.gender || l.sex || '';
+  const dateOfBirth = l.dateOfBirth || l.dob || '';
+  const parentName = l.parentName || l.parentGuardian || '';
+  const phoneNumber = l.phoneNumber || l.phone || '';
+
   return {
     ...l,
-    id: l.id || l._id || l.admissionNumber || l.admissionNo || `MUN-${Date.now()}`,
-    admissionNumber: l.admissionNumber || l.admissionNo || l.admNo || '',
-    identifierValue: l.identifierValue || l.assessmentNo || l.assessmentNumber || l.birthCertNo || l.birthCertificateNo || '',
+    id: l.id || l._id || admissionNumber || `MUN-${Date.now()}`,
+    admissionNumber,
+    identifierValue,
     identifierType: l.identifierType || (l.birthCertNo ? 'Birth Certificate' : 'Assessment No'),
-    birthCertNo: l.birthCertNo || l.birthCertificateNo || l.identifierValue || '',
-    fullName: l.fullName || l.name || `${l.firstName || ''} ${l.lastName || ''}`.trim() || '',
-    gradeLevel: l.gradeLevel || l.grade || '',
-    stream: l.stream || '',
-    gender: l.gender || l.sex || '',
-    dateOfBirth: l.dateOfBirth || l.dob || '',
-    parentName: l.parentName || l.parentGuardian || '',
-    phoneNumber: l.phoneNumber || l.phone || ''
+    birthCertNo: l.birthCertNo || l.birthCertificateNo || identifierValue,
+    fullName,
+    gradeLevel,
+    stream,
+    gender,
+    dateOfBirth,
+    parentName,
+    phoneNumber
   };
 };
 
 export const learnerService = {
   async getLearners(): Promise<Learner[]> {
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
+      let data = localStorage.getItem(STORAGE_KEY);
+      if (!data) {
+        const legacyData = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_students');
+        if (legacyData) {
+          localStorage.setItem(STORAGE_KEY, legacyData);
+          data = legacyData;
+        }
+      }
       if (!data) return [];
       const parsed = JSON.parse(data);
       if (!Array.isArray(parsed)) return [];
