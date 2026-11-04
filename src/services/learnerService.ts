@@ -15,6 +15,12 @@ export const formatLearnerDoc = (raw: any): Learner => ({
   phone: raw.phone || raw.phoneNumber || '',
   status: raw.status || 'Active',
   dob: raw.dob || raw.dateOfBirth || '',
+  identifierValue: raw.identifierValue || raw.assessmentNo || raw.assessmentNumber || raw.birthCertNo || raw.birthCertificateNo || '',
+  identifierType: raw.identifierType || (raw.birthCertNo || raw.birthCertificateNo ? 'birth_cert' : 'assessment'),
+  assessmentNo: raw.assessmentNo || raw.assessmentNumber || (raw.identifierType === 'assessment' ? raw.identifierValue : ''),
+  assessmentNumber: raw.assessmentNumber || raw.assessmentNo || '',
+  birthCertNo: raw.birthCertNo || raw.birthCertificateNo || (raw.identifierType === 'birth_cert' ? raw.identifierValue : ''),
+  birthCertificateNo: raw.birthCertificateNo || raw.birthCertNo || '',
   ...raw
 });
 

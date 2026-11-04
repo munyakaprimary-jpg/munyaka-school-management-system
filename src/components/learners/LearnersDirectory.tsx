@@ -44,7 +44,7 @@ const isDeletedRecord = (item: any, deletedIds: Set<string>) => {
   const id = String(item.id || item._id || '').trim();
   const rawId = toRawLearnerId(id);
   const adm = String(item.admissionNo || item.admissionNumber || item.admNo || '').trim();
-  const assess = String(item.assessmentNo || item.assessmentNumber || '').trim();
+  const assess = String(item.identifierValue || item.assessmentNo || item.assessmentNumber || item.birthCertNo || item.birthCertificateNo || '').trim();
 
   if (id && deletedIds.has(id)) return true;
   if (rawId && deletedIds.has(rawId)) return true;
@@ -427,7 +427,7 @@ export default function LearnersDirectory() {
                       <td className="p-3">
                         <div className="flex flex-col">
                           <span className="font-medium">
-                            {learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || '—'}
+                            {learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '—'}
                           </span>
                           {learner.identifierType && (
                             <span className="text-[10px] text-muted-foreground uppercase">
