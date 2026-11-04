@@ -333,7 +333,7 @@ export default function LearnersDirectory() {
             <thead>
               <tr className="bg-slate-50/75 border-b border-slate-100 text-[11px] font-black uppercase text-slate-400 tracking-wider">
                 <th className="p-3">ADMISSION NO.</th>
-                <th className="p-3">ASSESSMENT / BIRTH CERT. NO.</th>
+                <th className="p-3 text-left font-bold text-xs uppercase tracking-wider">ASSESSMENT / BIRTH CERT. NO.</th>
                 <th className="p-3">FULL NAME</th>
                 <th className="p-3">GRADE & STREAM</th>
                 <th className="p-3">GENDER</th>
@@ -363,12 +363,12 @@ export default function LearnersDirectory() {
 
                       {/* Identifier (Assessment / Birth Cert No) */}
                       <td className="p-3 whitespace-nowrap font-mono text-sm">
-                        {learner.identifierValue || learner.assessmentNo || learner.assessmentNumber || learner.birthCertNo || learner.birthCertificateNo || '—'}
+                        {learner.identifierValue || learner.assessmentNo || learner.birthCertNo || '—'}
                       </td>
 
                       {/* Full Name */}
                       <td className="p-3 font-semibold text-foreground whitespace-nowrap">
-                        {learner.fullName || learner.name || `${learner.firstName || ''} ${learner.lastName || ''}`.trim() || '—'}
+                        {learner.fullName || learner.name || '—'}
                       </td>
 
                       {/* Grade & Stream */}
@@ -434,7 +434,7 @@ export default function LearnersDirectory() {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         title="Confirm Deletion"
-        description={`Are you sure you want to permanently delete ${pendingDelete?.fullName || pendingDelete?.name || 'this learner'}? This action cannot be undone.`}
+        description={`Are you sure you want to permanently delete ${pendingDelete?.fullName || pendingDelete?.name || pendingDelete?.firstName || 'this learner'}? This action cannot be undone.`}
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold flex-1">
