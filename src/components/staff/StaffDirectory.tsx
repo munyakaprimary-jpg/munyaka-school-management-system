@@ -69,8 +69,8 @@ export function StaffDirectory({ staffList: externalStaffList = [] }: StaffDirec
                   </span>
                 </td>
                 <td className="p-3 whitespace-nowrap font-mono text-xs font-semibold">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-md border">
-                    {staff.accessCode || staff.teacherCode || staff.code || staff.id || '—'}
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-md border text-indigo-700 font-bold">
+                    {staff.accessCode || staff.code || staff.teacherCode || staff.tempAccessCode || staff.id || '—'}
                   </span>
                 </td>
               </tr>
