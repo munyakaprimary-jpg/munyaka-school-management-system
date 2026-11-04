@@ -371,9 +371,9 @@ export function usePersistentStorage(): PersistentStorage {
     // ── Transactions ──
     addTransaction: (tx) => {
       const current = getTransactions();
-      const ok = setTransactions([...current, tx]);
+      setTransactions([...current, tx]);
       refreshAll();
-      return ok;
+      return true;
     },
     setTransactions: (next) => {
       setTransactions(next);
@@ -382,9 +382,9 @@ export function usePersistentStorage(): PersistentStorage {
 
     // ── User Settings ──
     patchSettings: (patch) => {
-      const ok = setUserSettings({ ...getUserSettings(), ...patch } as UserSettings);
+      setUserSettings({ ...getUserSettings(), ...patch } as UserSettings);
       refreshAll();
-      return ok;
+      return true;
     },
     setSettings: (next) => {
       setUserSettings(next);
@@ -392,8 +392,8 @@ export function usePersistentStorage(): PersistentStorage {
     },
 
     // ── Subscriptions ──
-    addSubscription: (input) => {
-      const created = createSubscription(input);
+    addSubscription: (input: Omit<Subscription, 'id'> & { id?: string }) => {
+      const created = createSubscription(input as Subscription);
       refreshAll();
       return created;
     },

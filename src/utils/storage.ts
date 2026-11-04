@@ -470,17 +470,26 @@ export function exportAllData(): string {
   return JSON.stringify(backup, null, 2);
 }
 
-export function parseAndImportBackup(jsonStr: string): boolean {
+export function parseAndImportBackup(jsonStr: string): { success: boolean; keysRestored: string[]; errors: string[] } {
+  const keysRestored: string[] = [];
+  const errors: string[] = [];
   try {
     const data = JSON.parse(jsonStr);
-    if (typeof data !== 'object' || !data) return false;
+    if (typeof data !== 'object' || !data) {
+      return { success: false, keysRestored: [], errors: ['Invalid backup format'] };
+    }
     for (const [k, v] of Object.entries(data)) {
-      localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+      try {
+        localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
+        keysRestored.push(k);
+      } catch (err: any) {
+        errors.push(`Failed to restore ${k}: ${err?.message || err}`);
+      }
     }
     notifyDataChanged();
-    return true;
-  } catch {
-    return false;
+    return { success: true, keysRestored, errors };
+  } catch (err: any) {
+    return { success: false, keysRestored: [], errors: [err?.message || 'Failed to parse JSON backup'] };
   }
 }
 
