@@ -68,21 +68,16 @@ export interface StaffMember {
   createdAt?: string;
 }
 
-// Normalization helper to ensure uniform MUN-XXXX format
+// Normalization helper to keep original access codes intact
 const harmonizeStaffCodes = (staffList: any[]) => {
-  let counter = 1001;
-  return staffList.map((staff, index) => {
-    const code = staff.code || staff.accessCode || '';
-    // Check if code matches MUN-[A-Z]+ format or is missing/invalid
-    const isAlphaFormat = /^MUN-[A-Z]+$/i.test(code);
-    const isValidNumeric = /^MUN-\d{4}$/.test(code);
-
-    if (!isValidNumeric || isAlphaFormat) {
-      // Generate a clean sequential numeric code
-      const newCode = `MUN-${1000 + index + 1}`;
-      return { ...staff, code: newCode, accessCode: newCode };
-    }
-    return { ...staff, accessCode: code };
+  return staffList.map((staff) => {
+    const code = staff.accessCode || staff.code || staff.teacherCode || staff.tempAccessCode || staff.id || `MUN-${Math.floor(1000 + Math.random() * 9000)}`;
+    return {
+      ...staff,
+      accessCode: code,
+      code: code,
+      teacherCode: code
+    };
   });
 };
 
