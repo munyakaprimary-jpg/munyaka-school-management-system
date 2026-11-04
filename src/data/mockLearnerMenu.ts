@@ -19,7 +19,6 @@ import {
   GraduationCap,
   Archive,
 } from "lucide-react";
-];
 
 /**
  * Derive the filter / navigation list dynamically from the dataset.

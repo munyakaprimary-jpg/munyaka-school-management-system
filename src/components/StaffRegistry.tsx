@@ -21,7 +21,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { defaultCbcLearningAreas, MOCK_STAFF } from '../lib/mock-data';
+import { MOCK_STAFF } from '../lib/mock-data';
+const defaultCbcLearningAreas: any[] = [];
 import { useGradesAndStreams } from '../hooks/useGradesStreams';
 import { mapRoleLabelToRbacKey } from '../constants/roles';
 

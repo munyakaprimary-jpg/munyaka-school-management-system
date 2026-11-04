@@ -278,6 +278,16 @@ export default function LearnersDirectory() {
     setIsVerifying(false);
   };
 
+  const purgeAllLearnersDataCompletely = () => {
+    if (window.confirm("Are you sure you want to completely purge all learners data? This action cannot be undone.")) {
+      const keysToPurge = [
+        'munyaka_learners',
+        'munyaka_learners_v2',
+        'school_learners_data',
+        'munyaka_students',
+        'cached_learners',
+        'munyaka_master_learner_list'
+      ];
       // 1. Completely remove all legacy and active keys from localStorage
       for (const k of keysToPurge) {
         localStorage.removeItem(k);
