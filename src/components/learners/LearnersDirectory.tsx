@@ -55,99 +55,59 @@ export default function LearnersDirectory() {
   const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
-    const UNIFIED_KEY = 'munyaka_learners';
-    const DELETED_KEY = 'deleted_learner_ids';
-
-    const applyList = (raw: any[]) => {
-      const formatted = raw.map(formatLearnerDoc);
-      setLearnersList(formatted);
-      setLearners(formatted);
-      setFilteredLearners(formatted);
-      setDisplayedLearners(formatted);
-    };
-
-    const loadFromStorage = () => {
+    const loadLearners = () => {
       try {
-        const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-        
-        let unified = localStorage.getItem(UNIFIED_KEY);
-        if (!unified) {
-          const legacy = localStorage.getItem('munyaka_learners_v2') || localStorage.getItem('munyaka_students');
-          if (legacy) {
-            localStorage.setItem(UNIFIED_KEY, legacy);
-            unified = legacy;
-          }
-        }
-
-        if (unified) {
-          const parsed = JSON.parse(unified);
+        const deletedIds = new Set<string>(JSON.parse(localStorage.getItem('deleted_learner_ids') || '[]'));
+        const saved = localStorage.getItem('munyaka_learners');
+        if (saved) {
+          const parsed = JSON.parse(saved);
           if (Array.isArray(parsed)) {
             const filtered = parsed.filter((item: any) => !isDeletedRecord(item, deletedIds));
-            applyList(filtered);
+            const formatted = filtered.map(formatLearnerDoc);
+            setLearnersList(formatted);
+            setLearners(formatted);
+            setFilteredLearners(formatted);
+            setDisplayedLearners(formatted);
             return;
           }
         }
-      } catch {}
-      applyList([]);
+      } catch (e) {
+        console.error('Error loading learners:', e);
+      }
+      setLearnersList([]);
+      setLearners([]);
+      setFilteredLearners([]);
+      setDisplayedLearners([]);
     };
 
-    loadFromStorage();
+    loadLearners();
+
+    window.addEventListener('learners-updated', loadLearners);
+    window.addEventListener('learners_updated', loadLearners);
+    window.addEventListener('storage', loadLearners);
+    window.addEventListener('sync-queue-updated', loadLearners);
+    window.addEventListener('munyaka:data-changed', loadLearners);
 
     let unsubscribe: (() => void) | undefined;
     if (db) {
       try {
         unsubscribe = onSnapshot(collection(db, "learners"), (snapshot) => {
-          const deletedIds = new Set<string>(JSON.parse(localStorage.getItem(DELETED_KEY) || '[]'));
-
-          const cloudLearners = snapshot.docs.map(docSnap => ({
-            id: docSnap.id,
-            ...docSnap.data()
-          }));
-
-          const cleanCloudList = cloudLearners.filter((item: any) => !isDeletedRecord(item, deletedIds));
-
-          const currentLocal = JSON.parse(localStorage.getItem(UNIFIED_KEY) || '[]');
-          const localMap = new Map();
-
-          currentLocal.forEach((l: any) => {
-            if (isDeletedRecord(l, deletedIds)) return;
-            const lId = String(l.id || l._id || '').trim();
-            const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
-            localMap.set(lId || lAdm, l);
-          });
-
-          cleanCloudList.forEach((l: any) => {
-            const lId = String(l.id || l._id || '').trim();
-            const lAdm = String(l.admissionNo || l.admissionNumber || l.admNo || '').trim();
-            const key = lId || lAdm;
-            if (key && !localMap.has(key)) {
-              localMap.set(key, l);
-            }
-          });
-
-          const unifiedList = Array.from(localMap.values()).filter(
-            (item: any) => !isDeletedRecord(item, deletedIds)
-          );
-
-          localStorage.setItem(UNIFIED_KEY, JSON.stringify(unifiedList));
-          applyList(unifiedList);
+          loadLearners();
         }, (error) => {
-          console.warn("[Firestore Listener] Offline or sync error, using local fallback:", error);
+          console.warn("[Firestore Listener] Offline or sync error:", error);
         });
       } catch (e) {
         console.warn("[Firestore Listener] Init error:", e);
       }
     }
 
-    window.addEventListener('learners_updated', loadFromStorage);
-    window.addEventListener('storage', loadFromStorage);
-    window.addEventListener('munyaka:data-changed', loadFromStorage);
-
     return () => {
       if (unsubscribe) unsubscribe();
-      window.removeEventListener('learners_updated', loadFromStorage);
-      window.removeEventListener('storage', loadFromStorage);
-      window.removeEventListener('munyaka:data-changed', loadFromStorage);
+      window.removeEventListener('learners-updated', loadLearners);
+      window.removeEventListener('learners_updated', loadLearners);
+      window.removeEventListener('storage', loadLearners);
+      window.removeEventListener('sync-queue-updated', loadLearners);
+      window.removeEventListener('munyaka:data-changed', loadLearners);
     };
   }, []);
 

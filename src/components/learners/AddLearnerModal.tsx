@@ -102,27 +102,59 @@ export default function AddLearnerModal({
       const existingLearners = getLearners();
       const generatedAdmNo = formData.admissionNo || generateCohortAdmissionNumber(formData.grade, existingLearners);
 
-      const newLearner: Learner = {
+      const admissionNumber = generatedAdmNo;
+      const identifierValue = formData.identifierValue.trim() || '';
+      const regGrade = formData.grade;
+      const regStream = formData.stream;
+      const gender = formData.gender || 'Not Specified';
+      const dateOfBirth = formData.dateOfBirth || '';
+      const parentName = formData.guardian.trim() || '—';
+
+      const newLearnerData = {
         id: `learner_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        admissionNo: generatedAdmNo,
-        fullName: fullName,
-        grade: formData.grade,
-        stream: formData.stream,
-        guardian: formData.guardian.trim() || '—',
-        phone: phone,
-        location: formData.location.trim() || 'Eldoret',
+        admissionNumber,
+        admissionNo: admissionNumber,
+        identifierValue,
         identifierType: formData.identifierType,
-        identifierValue: formData.identifierValue.trim() || '',
-        assessmentNo: formData.identifierType === 'assessment' ? formData.identifierValue.trim() : undefined,
-        birthCertNo: formData.identifierType === 'birth_cert' ? formData.identifierValue.trim() : undefined,
+        assessmentNo: formData.identifierType === 'assessment' ? identifierValue : undefined,
+        birthCertNo: formData.identifierType === 'birth_cert' ? identifierValue : undefined,
+        fullName,
+        name: fullName,
+        gradeLevel: regGrade,
+        grade: regGrade,
+        stream: regStream,
+        gender,
+        dateOfBirth,
+        parentName,
+        parentGuardian: parentName,
+        phoneNumber: phone,
+        phone,
+        location: formData.location.trim() || 'Eldoret',
+        payload: {
+          admissionNumber,
+          identifierValue,
+          fullName,
+          gradeLevel: regGrade,
+          stream: regStream,
+          gender,
+          dateOfBirth,
+          parentName,
+          phoneNumber: phone
+        }
       };
 
-      const updatedList = [newLearner, ...existingLearners];
+      const updatedList = [newLearnerData, ...existingLearners];
       saveLearners(updatedList);
+
+      const existingLearnersStore = JSON.parse(localStorage.getItem('munyaka_learners') || '[]');
+      const newStoreList = [newLearnerData, ...existingLearnersStore];
+      localStorage.setItem('munyaka_learners', JSON.stringify(newStoreList));
+      window.dispatchEvent(new CustomEvent('learners-updated', { detail: newStoreList }));
+      window.dispatchEvent(new CustomEvent('sync-queue-updated', { detail: newStoreList }));
 
       showSuccess("Learner successfully registered and saved to directory!");
       if (onLearnerAdded) {
-        onLearnerAdded(newLearner);
+        onLearnerAdded(newLearnerData);
       }
       onClose();
     } catch (err: any) {
